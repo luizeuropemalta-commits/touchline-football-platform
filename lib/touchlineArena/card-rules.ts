@@ -20,8 +20,9 @@ export {
 export function touchlineCardTierName(
   tier?: TouchlineCardTierKey | null,
   locale: "pt-BR" | "en" | string = "en",
+  draftLocalesEnabled = false,
 ) {
-  return canonicalTouchlineCardTierName(tier ?? TOUCHLINE_CARD_STARTING_TIER_KEY, locale);
+  return canonicalTouchlineCardTierName(tier ?? TOUCHLINE_CARD_STARTING_TIER_KEY, locale, draftLocalesEnabled);
 }
 
 /** Canonical visual colors shared by every TouchLine card surface. */

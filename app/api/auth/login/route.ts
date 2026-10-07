@@ -4,6 +4,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { ensureTouchlineArenaAccess } from "@/lib/server/touchline-arena-access";
 import { isAllowedLoginPost, safeReturnTo } from "@/lib/server/login-request-security";
 import { shouldSecureLoginCookie } from "@/lib/server/login-cookie-security";
+import { normalizeTouchLineAuthLocale } from "@/lib/touchlineArena/auth-i18n";
+import { isTouchLineSiteLocalesEnabled } from "@/lib/touchlineArena/site-locales-release";
 
 type LoginPayload = {
   email?: unknown;
@@ -48,9 +50,10 @@ function nativeErrorResponse(
 ) {
   const target = new URL(safeLoginPath(loginPath), request.url);
   target.searchParams.set("error", error);
-  if (locale === "pt-BR" || locale === "en-GB") target.searchParams.set("lang", locale);
-  const destination = safeReturnTo(request, returnTo);
-  if (destination !== "/market-transfer") target.searchParams.set("returnTo", destination);
+  const publicLocalesEnabled = isTouchLineSiteLocalesEnabled(target.pathname);
+  if (typeof locale === "string") target.searchParams.set("lang", normalizeTouchLineAuthLocale(locale, publicLocalesEnabled));
+  const destination = safeReturnTo(request, returnTo, publicLocalesEnabled);
+  if (destination !== "/clubowner") target.searchParams.set("returnTo", destination);
   return NextResponse.redirect(target, { status: 303 });
 }
 
@@ -87,7 +90,7 @@ function nativeSessionResponse(
   sessionCookies: SessionCookie[],
   returnTo: unknown,
 ) {
-  const destination = safeReturnTo(request, returnTo);
+  const destination = safeReturnTo(request, returnTo, isTouchLineSiteLocalesEnabled());
   const response = NextResponse.redirect(new URL(destination, request.url), 303);
   response.headers.set("Cache-Control", "no-store");
   response.headers.set("Referrer-Policy", "no-referrer");

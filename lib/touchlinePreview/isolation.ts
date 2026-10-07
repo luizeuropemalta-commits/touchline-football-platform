@@ -86,11 +86,34 @@ export const TOUCHLINE_QA_PREVIEW_ALLOWED_APPLICATION_ENVIRONMENT_KEYS = [
   "TOUCHLINE_GOLDEN_BOOT_ENABLED",
   "TOUCHLINE_GOLDEN_BOOT_REFRESH_ENABLED",
   "TOUCHLINE_GOLDEN_BOOT_REFRESH_SECRET",
+  // QA push uses a dedicated VAPID pair. Only the public key is client-visible;
+  // consent, device registration and delivery validation remain independent.
+  "NEXT_PUBLIC_TOUCHLINE_WEB_PUSH_PUBLIC_KEY",
+  "TOUCHLINE_WEB_PUSH_PRIVATE_KEY",
+  "TOUCHLINE_WEB_PUSH_SUBJECT",
+  // Private one-device QA diagnostic configuration only. Allowing names here
+  // does not enable sending; the authenticated rehearsal route remains gated.
+  "TOUCHLINE_PUSH_REHEARSAL_ENABLED",
+  "TOUCHLINE_PUSH_REHEARSAL_ACCOUNT_ID",
+  "TOUCHLINE_PUSH_REHEARSAL_INSTALLATION_ID",
+  "TOUCHLINE_PUSH_REHEARSAL_ORIGIN",
+  // Exact private worker controls only; HTTP authentication and source policy
+  // remain mandatory. These names never enter the isolated-preview allowlist.
+  "TOUCHLINE_MATCH_PUSH_WORKER_ENABLED",
+  "TOUCHLINE_MATCH_PUSH_WORKER_SECRET",
+  "TOUCHLINE_MATCH_PUSH_SOURCE_AGE_POLICY",
   "TOUCHLINE_OWNER_EMAILS",
+  // Private avatar preparation only. Name admission never enables a route,
+  // selects an account, installs a schema/bucket or grants upload consent.
+  "TOUCHLINE_CLUB_OWNER_AVATAR_READ_ENABLED",
+  "TOUCHLINE_CLUB_OWNER_AVATAR_UPLOAD_ENABLED",
+  "TOUCHLINE_CLUB_OWNER_AVATAR_UPLOAD_ACCOUNT_ID",
   "TOUCHLINE_SITE_OFFLINE",
   // Functional QA is the only Preview contract allowed to call Sportmonks.
   // Isolated previews remain provider-free via the separate allowlist above.
   "SPORTMONKS_API_TOKEN",
+  // Private Fixture guard account binding only; no quota or scheduler activation.
+  "TOUCHLINE_SPORTMONKS_FIXTURE_ACCOUNT_SCOPE",
   // Supabase QA Vault sends this bearer only to the protected server route.
   // It must remain branch-scoped to Preview/qa.
   "TOUCHLINE_LIVE_SYNC_SECRET",

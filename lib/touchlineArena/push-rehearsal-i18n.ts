@@ -1,0 +1,60 @@
+import { resolveTouchlineCatalogueLocale } from "./catalogue-locale.ts";
+
+const en = {
+  pageTitle: "Notification test on this device", pageDescription: "Isolated rehearsal. It does not enable game alerts or change your preferences.",
+  title: "Push rehearsal on this device", description: "A diagnostic separate from game notifications. No football event will be created.",
+  prepare: "Prepare this device", consent: "I authorize one TEST on this device. This does not change game preferences.", send: "Send one test",
+  idle: "Prepare this device. No test is sent in this step.", preparing: "Waiting for permission and registration confirmation…",
+  ready: "Device confirmed for rehearsal. Separately authorize the single test below.",
+  "registered-disabled": "Device registered, but the test is not enabled for this installation. No test sent.",
+  sending: "Requesting one test…", accepted: "Accepted by the push provider. This does not confirm receipt on your device.",
+  unconfirmed: "Outcome unconfirmed. There will be no automatic retry. A registration already started may have been saved.",
+  blocked: "Account or session unconfirmed. Reload this page before continuing.", permission: "Permission not granted. No test sent; review your browser settings.",
+  unsupported: "Push is unavailable in this browser.", unconfigured: "Push is not configured for this device.", storage: "Local storage is unavailable. The test is blocked.",
+  previous: "An earlier attempt exists for this device. No new test was requested.",
+} as const;
+export type TouchlinePushRehearsalCopy = Readonly<Record<keyof typeof en, string>>;
+const pt: TouchlinePushRehearsalCopy = {
+  pageTitle: "Teste de notificação neste aparelho", pageDescription: "Ensaio isolado. Não ativa os avisos de jogos e não altera suas preferências.",
+  title: "Ensaio de push neste dispositivo", description: "Diagnóstico separado das notificações do jogo. Nenhum evento de futebol será criado.",
+  prepare: "Preparar este dispositivo", consent: "Autorizo um único TESTE neste dispositivo. Isso não altera as preferências do jogo.", send: "Enviar um teste",
+  idle: "Prepare este dispositivo. Nenhum teste é enviado nesta etapa.", preparing: "Aguardando permissão e confirmação do cadastro…",
+  ready: "Dispositivo confirmado para o ensaio. Autorize separadamente o único teste abaixo.",
+  "registered-disabled": "Dispositivo cadastrado, mas o teste não está habilitado para esta instalação. Nenhum teste enviado.",
+  sending: "Solicitando um único teste…", accepted: "Aceito pelo provedor de push. Isso não confirma o recebimento no aparelho.",
+  unconfirmed: "Resultado não confirmado. Não haverá reenvio automático. Um cadastro já iniciado pode ter sido salvo.",
+  blocked: "Conta ou sessão não confirmada. Recarregue esta página antes de continuar.", permission: "Permissão não concedida. Nenhum teste enviado; consulte as configurações do navegador.",
+  unsupported: "Push não disponível neste navegador.", unconfigured: "Push não configurado para este dispositivo.", storage: "Armazenamento local indisponível. O teste está bloqueado.",
+  previous: "Há uma tentativa anterior neste dispositivo. Nenhum novo teste foi solicitado.",
+};
+const locales = ["es-ES", "it-IT", "fr-FR", "ar-SA", "tr-TR", "de-DE"] as const;
+type Row = readonly [string, string, string, string, string, string];
+// Presentation drafts only. These strings never authorize permission or delivery.
+export const TOUCHLINE_PUSH_REHEARSAL_DRAFT_STATUS = "draft" as const;
+const rows = {
+  pageTitle: ["Prueba de notificación en este dispositivo", "Test di notifica su questo dispositivo", "Test de notification sur cet appareil", "اختبار إشعار على هذا الجهاز", "Bu cihazda bildirim testi", "Benachrichtigungstest auf diesem Gerät"],
+  pageDescription: ["Ensayo aislado. No activa avisos de partidos ni cambia tus preferencias.", "Prova isolata. Non attiva avvisi delle partite né modifica le preferenze.", "Essai isolé. Il n’active pas les alertes de match et ne modifie pas vos préférences.", "اختبار معزول. لا يفعّل تنبيهات المباريات ولا يغيّر تفضيلاتك.", "Yalıtılmış deneme. Maç uyarılarını etkinleştirmez ve tercihlerinizi değiştirmez.", "Isolierter Test. Er aktiviert keine Spielhinweise und ändert deine Einstellungen nicht."],
+  title: ["Ensayo de push en este dispositivo", "Prova push su questo dispositivo", "Essai push sur cet appareil", "اختبار إشعارات الدفع على هذا الجهاز", "Bu cihazda push denemesi", "Push-Test auf diesem Gerät"],
+  description: ["Diagnóstico separado de las notificaciones del juego. No se creará ningún evento de fútbol.", "Diagnostica separata dalle notifiche di gioco. Non verrà creato alcun evento calcistico.", "Diagnostic distinct des notifications du jeu. Aucun événement de football ne sera créé.", "تشخيص منفصل عن إشعارات اللعبة. لن يُنشأ أي حدث كرة قدم.", "Oyun bildirimlerinden ayrı bir tanılama. Hiçbir futbol olayı oluşturulmaz.", "Von Spielbenachrichtigungen getrennte Diagnose. Es wird kein Fußballereignis erstellt."],
+  prepare: ["Preparar este dispositivo", "Prepara questo dispositivo", "Préparer cet appareil", "تهيئة هذا الجهاز", "Bu cihazı hazırla", "Dieses Gerät vorbereiten"],
+  consent: ["Autorizo una única PRUEBA en este dispositivo. Esto no cambia las preferencias del juego.", "Autorizzo un solo TEST su questo dispositivo. Le preferenze di gioco non cambiano.", "J’autorise un seul TEST sur cet appareil. Cela ne modifie pas les préférences du jeu.", "أوافق على اختبار واحد فقط على هذا الجهاز. لا يغيّر ذلك تفضيلات اللعبة.", "Bu cihazda yalnızca bir TEST için izin veriyorum. Bu, oyun tercihlerini değiştirmez.", "Ich genehmige genau einen TEST auf diesem Gerät. Die Spieleinstellungen bleiben unverändert."],
+  send: ["Enviar una prueba", "Invia un test", "Envoyer un test", "إرسال اختبار واحد", "Bir test gönder", "Einen Test senden"],
+  idle: ["Prepara este dispositivo. En este paso no se envía ninguna prueba.", "Prepara questo dispositivo. In questa fase non viene inviato alcun test.", "Préparez cet appareil. Aucun test n’est envoyé à cette étape.", "هيّئ هذا الجهاز. لا يُرسل أي اختبار في هذه الخطوة.", "Bu cihazı hazırlayın. Bu adımda test gönderilmez.", "Bereite dieses Gerät vor. In diesem Schritt wird kein Test gesendet."],
+  preparing: ["Esperando permiso y confirmación del registro…", "In attesa dell’autorizzazione e della conferma di registrazione…", "En attente de l’autorisation et de la confirmation d’enregistrement…", "بانتظار الإذن وتأكيد التسجيل…", "İzin ve kayıt onayı bekleniyor…", "Berechtigung und Registrierungsbestätigung werden erwartet…"],
+  ready: ["Dispositivo confirmado para el ensayo. Autoriza por separado la única prueba siguiente.", "Dispositivo confermato per la prova. Autorizza separatamente l’unico test qui sotto.", "Appareil confirmé pour l’essai. Autorisez séparément le test unique ci-dessous.", "تم تأكيد الجهاز للاختبار. وافق بشكل منفصل على الاختبار الوحيد أدناه.", "Cihaz deneme için doğrulandı. Aşağıdaki tek teste ayrıca izin verin.", "Gerät für den Test bestätigt. Genehmige den einzelnen Test unten separat."],
+  "registered-disabled": ["Dispositivo registrado, pero la prueba no está habilitada para esta instalación. No se ha enviado ninguna prueba.", "Dispositivo registrato, ma il test non è abilitato per questa installazione. Nessun test inviato.", "Appareil enregistré, mais le test n’est pas activé pour cette installation. Aucun test envoyé.", "تم تسجيل الجهاز، لكن الاختبار غير مفعّل لهذا التثبيت. لم يُرسل أي اختبار.", "Cihaz kaydedildi, ancak test bu kurulum için etkin değil. Test gönderilmedi.", "Gerät registriert, aber der Test ist für diese Installation nicht freigeschaltet. Kein Test gesendet."],
+  sending: ["Solicitando una única prueba…", "Richiesta di un solo test…", "Demande d’un seul test…", "جارٍ طلب اختبار واحد فقط…", "Tek bir test isteniyor…", "Ein einzelner Test wird angefordert…"],
+  accepted: ["Aceptado por el proveedor de push. Esto no confirma la recepción en tu dispositivo.", "Accettato dal provider push. Questo non conferma la ricezione sul dispositivo.", "Accepté par le fournisseur push. Cela ne confirme pas la réception sur votre appareil.", "قبله مزوّد إشعارات الدفع. هذا لا يؤكد استلامه على جهازك.", "Push sağlayıcısı kabul etti. Bu, cihazınıza ulaştığını doğrulamaz.", "Vom Push-Anbieter akzeptiert. Dies bestätigt nicht den Empfang auf deinem Gerät."],
+  unconfirmed: ["Resultado no confirmado. No habrá reenvío automático. Un registro ya iniciado puede haberse guardado.", "Esito non confermato. Non ci sarà alcun reinvio automatico. Una registrazione già avviata potrebbe essere stata salvata.", "Résultat non confirmé. Aucun renvoi automatique n’aura lieu. Un enregistrement déjà commencé peut avoir été sauvegardé.", "النتيجة غير مؤكدة. لن تحدث إعادة إرسال تلقائية. ربما حُفظ تسجيل بدأ بالفعل.", "Sonuç doğrulanmadı. Otomatik yeniden gönderim yapılmayacak. Başlatılmış bir kayıt kaydedilmiş olabilir.", "Ergebnis unbestätigt. Es erfolgt kein automatischer Neuversand. Eine bereits begonnene Registrierung könnte gespeichert worden sein."],
+  blocked: ["Cuenta o sesión no confirmada. Recarga esta página antes de continuar.", "Account o sessione non confermati. Ricarica questa pagina prima di continuare.", "Compte ou session non confirmé. Rechargez cette page avant de continuer.", "الحساب أو الجلسة غير مؤكدين. أعد تحميل هذه الصفحة قبل المتابعة.", "Hesap veya oturum doğrulanmadı. Devam etmeden önce sayfayı yenileyin.", "Konto oder Sitzung unbestätigt. Lade diese Seite neu, bevor du fortfährst."],
+  permission: ["Permiso no concedido. No se ha enviado ninguna prueba; revisa la configuración del navegador.", "Autorizzazione non concessa. Nessun test inviato; controlla le impostazioni del browser.", "Autorisation non accordée. Aucun test envoyé ; consultez les paramètres du navigateur.", "لم يُمنح الإذن. لم يُرسل أي اختبار؛ راجع إعدادات المتصفح.", "İzin verilmedi. Test gönderilmedi; tarayıcı ayarlarını kontrol edin.", "Berechtigung nicht erteilt. Kein Test gesendet; prüfe die Browsereinstellungen."],
+  unsupported: ["Push no está disponible en este navegador.", "Push non è disponibile in questo browser.", "Push n’est pas disponible dans ce navigateur.", "إشعارات الدفع غير متاحة في هذا المتصفح.", "Push bu tarayıcıda kullanılamıyor.", "Push ist in diesem Browser nicht verfügbar."],
+  unconfigured: ["Push no está configurado para este dispositivo.", "Push non è configurato per questo dispositivo.", "Push n’est pas configuré pour cet appareil.", "إشعارات الدفع غير مهيأة لهذا الجهاز.", "Push bu cihaz için yapılandırılmamış.", "Push ist für dieses Gerät nicht eingerichtet."],
+  storage: ["Almacenamiento local no disponible. La prueba está bloqueada.", "Archiviazione locale non disponibile. Il test è bloccato.", "Stockage local indisponible. Le test est bloqué.", "التخزين المحلي غير متاح. الاختبار محظور.", "Yerel depolama kullanılamıyor. Test engellendi.", "Lokaler Speicher nicht verfügbar. Der Test ist gesperrt."],
+  previous: ["Existe un intento anterior en este dispositivo. No se ha solicitado ninguna prueba nueva.", "Esiste un tentativo precedente su questo dispositivo. Non è stato richiesto alcun nuovo test.", "Une tentative antérieure existe sur cet appareil. Aucun nouveau test n’a été demandé.", "توجد محاولة سابقة على هذا الجهاز. لم يُطلب أي اختبار جديد.", "Bu cihazda önceki bir deneme var. Yeni test istenmedi.", "Für dieses Gerät gibt es einen früheren Versuch. Kein neuer Test wurde angefordert."],
+} as const satisfies Record<keyof typeof en, Row>;
+const drafts = Object.fromEntries(locales.map((locale,index)=>[locale,Object.fromEntries(Object.entries(rows).map(([key,values])=>[key,values[index]]))])) as Record<typeof locales[number],TouchlinePushRehearsalCopy>;
+export function getTouchlinePushRehearsalCopy(locale?: string | null, draftLocalesEnabled = false): TouchlinePushRehearsalCopy {
+  const selected = resolveTouchlineCatalogueLocale(locale,draftLocalesEnabled);
+  return selected === "en-GB" ? en : selected === "pt-BR" ? pt : drafts[selected];
+}

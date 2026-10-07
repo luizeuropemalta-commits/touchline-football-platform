@@ -1,3 +1,5 @@
+import { touchlineCoreDrafts, type TouchlineDraftLocale } from "./locale-catalogues/core-drafts.ts";
+
 export const TOUCHLINE_DEFAULT_LOCALE = "en-GB";
 export const TOUCHLINE_LOCALE_STORAGE_KEY = "touchline:locale:v1";
 
@@ -960,11 +962,13 @@ const completeTranslations: Partial<Record<TouchLineLocale, Record<TouchLineTran
   "pt-BR": ptBR,
 };
 
-export function normalizeTouchLineLocale(locale?: string | null): TouchLineLocale {
-  // Public rendering is deliberately limited to the two complete catalogues.
+export function normalizeTouchLineLocale(locale?: string | null, draftLocalesEnabled = false): TouchLineLocale {
+  // Default public rendering stays limited to the two complete catalogues.
+  // An explicit caller opt-in can inspect drafts without marking them complete.
   // Keeping this normalizer narrow makes the URL, SSR HTML language, client
   // state and links agree instead of advertising an incomplete language over
   // English fallback copy.
+  if (draftLocalesEnabled && isTouchLineLocaleApproved(locale)) return locale;
   return locale === "pt-BR" || locale === "en-GB" ? locale : TOUCHLINE_DEFAULT_LOCALE;
 }
 
@@ -980,7 +984,10 @@ export function isTouchLineRtlLocale(locale?: string | null) {
   return TOUCHLINE_RTL_LOCALES.some((candidate) => candidate === locale);
 }
 
-export function touchLineT(locale: string | null | undefined, key: TouchLineTranslationKey) {
-  const normalizedLocale = normalizeTouchLineLocale(locale);
+export function touchLineT(locale: string | null | undefined, key: TouchLineTranslationKey, draftLocalesEnabled = false) {
+  const normalizedLocale = normalizeTouchLineLocale(locale, draftLocalesEnabled);
+  if (draftLocalesEnabled && !isTouchLineLocaleComplete(normalizedLocale)) {
+    return touchlineCoreDrafts[normalizedLocale as TouchlineDraftLocale][key];
+  }
   return completeTranslations[normalizedLocale]?.[key] ?? en[key];
 }

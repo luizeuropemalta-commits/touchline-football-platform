@@ -15,6 +15,36 @@ const page = (rows: unknown[], current = 1, more = false) => ({ data: rows, pagi
 const response = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 type Provider = InstanceType<typeof SportmonksFootballProvider>;
 
+test("guarded stages and every topscorer page preserve the producer observer and reject page two before HTTP", async () => {
+  const order: string[] = [], traces: SportmonksQuotaTrace[] = [];
+  await synthetic(async input => {
+    const url = new URL(String(input));
+    const stage = url.pathname.includes("/stages/");
+    order.push(stage ? "fetch-stages" : `fetch-page-${url.searchParams.get("page")}`);
+    return response({...(stage ? {data:[{id:1,season_id:28083,league_id:8,type_id:223}]} : page([row()],1,true)),
+      rate_limit:{requested_entity:stage?"Stage":"Topscorer",remaining:10,resets_in_seconds:30}});
+  }, async () => {
+    let topscorerPorts = 0;
+    const provider = new SportmonksFootballProvider({fixtureGuard:{accountScope:"qa-main",createPort(context) {
+      assert.equal(context.entity, context.endpoint === "stages" ? "Stage" : "Topscorer");
+      const deny = context.endpoint === "topscorers" && ++topscorerPorts > 1;
+      return {beforeAttempt() { order.push(`admit-${context.endpoint}`); return deny?{allowed:false}:{allowed:true,token:"synthetic-token"}; },
+        afterAttempt({observation}) { order.push(`persist-${observation.operation}`); assert.equal(observation.requestedEntity,context.entity); return {persisted:true}; }};
+    }}});
+    Object.assign(provider,{token:()=>"synthetic-token",baseUrl:()=>"https://sportmonks.invalid/v3/football"});
+    const stages = await provider.getSeasonStages({seasonId:"28083",leagueId:"8",totalBudgetMs:3000,quotaObserver:t=>{traces.push(t);}});
+    assert.equal(stages.ok,true);
+    assert.equal(traces.at(-1)?.coverage,"complete");
+    assert.equal(traces.at(-1)?.observations[0]?.operation,"stages");
+    traces.length=0;
+    const scorers = await provider.getSeasonTopScorers({seasonId:"28083",totalBudgetMs:3000,quotaObserver:t=>{traces.push(t);}});
+    assert.equal(scorers.ok,false); assert.equal("data" in scorers,false);
+    assert.deepEqual(order,["admit-stages","fetch-stages","persist-stages","admit-topscorers","fetch-page-1","persist-topscorers","admit-topscorers"]);
+    assert.equal(traces.at(-1)?.observations[0]?.operation,"topscorers");
+    assert.equal(traces.at(-1)?.coverage,"unknown","denied next page is not complete provider coverage");
+  });
+});
+
 test("quota retains retries, original times and IDs across unobserved cache owners", async () => {
   let calls = 0;
   const traces: SportmonksQuotaTrace[] = [];

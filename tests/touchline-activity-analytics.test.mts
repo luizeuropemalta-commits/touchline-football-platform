@@ -11,7 +11,7 @@ test("classifies every official TouchLine surface without depending on the legac
   assert.equal(touchlineActivityArea("/touchline-clubs/arsenal"), "club");
   assert.equal(touchlineActivityArea("/touchline-players/bukayo-saka"), "player");
   assert.equal(touchlineActivityArea("/touchline-player-card-rankings"), "ranking");
-  assert.equal(touchlineActivityArea("/touchline-tables"), "ranking");
+  assert.equal(touchlineActivityArea("/rankings"), "ranking");
   assert.equal(touchlineActivityArea("/admin/cards"), "admin");
   assert.equal(touchlineActivityArea("/football-search"), "other");
   assert.equal(touchlineActivityArea("/notifications"), "other");

@@ -8,6 +8,7 @@ import {
   buildTouchlineVerifiedMatchFactFields,
 } from "../lib/touchlineArena/card-zoom-details.ts";
 import { resolveTouchlinePublicEditorialCardPresentation } from "../lib/touchlineArena/editorial-card-profile.ts";
+import { TOUCHLINE_EXACT_CARD_CATALOGUES } from "../lib/touchlineArena/exact-card-i18n.ts";
 
 const PLAYER_ID = "d9428888-122b-11e1-b85c-61cd3cbb3210";
 
@@ -215,7 +216,9 @@ test("the shared card never substitutes a football position for pending market v
   );
 
   assert.match(cardSource, /hasPublishedCardProfile \|\| reviewRequired[\s\S]*?cardLabels\.marketValue/);
-  assert.match(cardSource, /reviewRequired[\s\S]*?"PENDING"[\s\S]*?: player\.position/);
+  assert.match(cardSource, /reviewRequired\s*\? exactCopy\.pending\s*: player\.position/);
+  assert.equal(TOUCHLINE_EXACT_CARD_CATALOGUES["en-GB"].pending, "PENDING");
+  assert.equal(TOUCHLINE_EXACT_CARD_CATALOGUES["pt-BR"].pending, "PENDENTE");
 });
 
 test("the zoom receives only the public editorial projection, never internal notes or sources", () => {

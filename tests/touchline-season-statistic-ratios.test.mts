@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { projectSeasonStatisticRatios, seasonPercentageFromCounts } from "../lib/football-data/season-statistic-ratios.ts";
+import { getTouchlinePlayerPerformanceCopy } from "../lib/touchlineArena/player-performance-i18n.ts";
 
 test("legacy summed percentages are reconstructed from covered count pairs without mutating facts", () => {
   const facts = Object.freeze({ passes: 248, "accurate-passes": 226, "accurate-passes-percentage": 463,
@@ -30,9 +31,17 @@ test("unsupported season percentages are unavailable even when a summed value li
 test("profile uses translated labels and calculated rates, never displays raw summed percentage values", () => {
   const page = readFileSync(new URL("../app/touchline-players/[player]/page.tsx", import.meta.url), "utf8");
   assert.match(page, /seasonPercentageFromCounts\(label, statistics\.positionStatistics\)/);
-  assert.match(page, /localizedStatLabel\(label, label, locale\)/);
+  assert.match(page, /localizedStatLabel\(label, label, locale, draftLocalesEnabled\)/);
   assert.match(page, /ratio === null \? text\.unavailable/);
   assert.doesNotMatch(page, /_localizedStatLabel/);
   assert.match(page, /filter\(\(\[label\]\) => label !== "rating"\)/);
-  assert.match(page, /Percentages calculated from available counts/);
+  // Source-binding guard only; actual panel SSR lives in player-performance-i18n.test.
+  const panel = page.split("function SeasonStatisticsPanel(")[1]?.split("function FixtureStatisticsPanel(")[0];
+  assert.ok(panel);
+  assert.match(panel, /const performanceCopy = getTouchlinePlayerPerformanceCopy\(locale, draftLocalesEnabled\);/);
+  assert.match(panel, /\{performanceCopy\.percentageExplanation\}/);
+  assert.equal(getTouchlinePlayerPerformanceCopy("en-GB").percentageExplanation,
+    "Percentages calculated from available counts. Rates remain unavailable without compatible counts.");
+  assert.equal(getTouchlinePlayerPerformanceCopy("pt-BR").percentageExplanation,
+    "Percentuais calculados a partir das contagens disponíveis. Sem contagens compatíveis, a taxa fica indisponível.");
 });

@@ -1,16 +1,20 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import test from "node:test";
+import ts from "typescript";
 import {
   getTouchLineAuthCopy,
+  getTouchLineLoginCopy,
   normalizeTouchLineAdminReturnTo,
   normalizeTouchLineAuthLocale,
+  normalizeTouchLineLoginLocale,
   normalizeTouchLineAuthReturnTo,
   touchLineAuthEntryHref,
   touchLineAuthHref,
   touchLinePostAuthHref,
 } from "../lib/touchlineArena/auth-i18n.ts";
 import { touchlineArenaFirstEntryHref } from "../lib/touchlineArena/arena-intro.ts";
+import { TOUCHLINE_COMPLETE_LOCALES, isTouchLineLocaleComplete } from "../lib/touchlineArena/i18n.ts";
 
 const loginSource = fs.readFileSync(new URL("../app/(auth)/login/page.tsx", import.meta.url), "utf8");
 const registerSource = fs.readFileSync(new URL("../app/(auth)/register/page.tsx", import.meta.url), "utf8");
@@ -19,13 +23,37 @@ const resetSource = fs.readFileSync(new URL("../app/(auth)/reset-password/page.t
 const formSource = fs.readFileSync(new URL("../components/auth-form.tsx", import.meta.url), "utf8");
 const layoutSource = fs.readFileSync(new URL("../components/auth-layout.tsx", import.meta.url), "utf8");
 const languageSwitcherSource = fs.readFileSync(new URL("../components/auth-language-switcher.tsx", import.meta.url), "utf8");
+const accountLocaleMenuSource = fs.readFileSync(new URL("../components/touchline/AccountLocaleMenu.tsx", import.meta.url), "utf8");
 const globalStylesSource = fs.readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
 
 test("auth branding scrolls with its content instead of overlapping the form and introduction", () => {
   const headerRule = globalStylesSource.match(/\.auth-brand-header\s*\{([^}]+)\}/)?.[1];
   assert.ok(headerRule);
+  assert.match(headerRule, /direction:\s*ltr\s*;/);
   assert.match(headerRule, /position:\s*relative\s*;/);
   assert.doesNotMatch(headerRule, /position:\s*(?:sticky|fixed)|\btop\s*:/);
+});
+
+test("login keeps the language selector rounded without an inner blue focus square or home shortcut", () => {
+  assert.match(loginSource, /showArenaHomeLink=\{false\}/);
+  assert.match(loginSource, /brandHref=\{touchLineAuthHref\("\/login", locale, siteLocalesEnabled\)\}/);
+  assert.match(loginSource, /brandSubtitle="TouchLine Futebol Cards"/);
+  assert.match(loginSource, /brandWordmarkClassName="text-\[clamp\(26px,3\.2vw,34px\)\]"/);
+  assert.match(loginSource, /minimalBrandMark/);
+  assert.match(loginSource, /keepLoginLayoutStable/);
+  assert.match(layoutSource, /showArenaHomeLink \? \(/);
+  assert.match(layoutSource, /keepLoginLayoutStable = false/);
+  assert.match(layoutSource, /<section dir=\{keepLoginLayoutStable \? "ltr" : undefined\}/);
+  assert.match(layoutSource, /dir=\{keepLoginLayoutStable && normalizedLocale === "ar-SA" \? "rtl" : undefined\}/);
+  assert.match(layoutSource, /<Logo href=\{brandHref \?\? publicArenaHref\} officialArena subtitle=\{brandSubtitle\} wordmarkClassName=\{brandWordmarkClassName\} showMark=\{showBrandMark\} minimalMark=\{minimalBrandMark\}/);
+  const logoSource = fs.readFileSync(new URL("../components/logo.tsx", import.meta.url), "utf8");
+  assert.match(logoSource, /minimalMark \? "relative grid size-\[4\.5rem\] shrink-0 place-items-center"/);
+  assert.match(logoSource, /size-\[61px\] place-items-center/);
+  assert.doesNotMatch(logoSource, /auth-logo-mark__shine/);
+  assert.match(logoSource, /block w-full text-\[14px\] font-semibold leading-5 text-cyan-100/);
+  assert.match(logoSource, /subtitle = "TouchLine"/);
+  assert.match(globalStylesSource, /\.auth-language-switcher select:focus-visible\s*\{[^}]*outline:\s*none\s*;/);
+  assert.match(globalStylesSource, /\.auth-language-switcher:focus-within\s*\{[^}]*border-color:/);
 });
 const adminEntrySources = [
   ["../app/(app)/admin/page.tsx", "/admin"],
@@ -44,6 +72,62 @@ test("authentication copy is Portuguese for pt-BR and English for unsupported lo
   assert.equal(getTouchLineAuthCopy("en-GB").login.title, "Enter TouchLine");
 });
 
+test("login page can render the six authored draft locales without widening authentication or site gates", () => {
+  const draftLocales = ["es-ES", "it-IT", "fr-FR", "ar-SA", "tr-TR", "de-DE"] as const;
+  for (const locale of draftLocales) {
+    assert.equal(normalizeTouchLineLoginLocale(locale), locale);
+    const copy = getTouchLineLoginCopy(locale);
+    assert.ok(copy.login.title.trim());
+    assert.ok(copy.layout.accessPanelTitle.trim());
+    assert.ok(copy.form.email.trim());
+    assert.ok(copy.form.password.trim());
+    assert.ok(copy.form.signIn.trim());
+    assert.ok(copy.form.signingIn.trim());
+    assert.ok(copy.form.invalidCredentials.trim());
+  }
+  assert.equal(normalizeTouchLineLoginLocale("unknown"), "en-GB");
+  assert.equal(normalizeTouchLineAuthLocale("es-ES"), "en-GB");
+  assert.deepEqual([...TOUCHLINE_COMPLETE_LOCALES], ["en-GB", "pt-BR"]);
+  assert.equal(isTouchLineLocaleComplete("es-ES"), false);
+  assert.equal(getTouchLineAuthCopy("es-ES").form.password, getTouchLineAuthCopy("en-GB").form.password);
+});
+
+test("only login opts into draft display; secondary public routes use a separate trusted release flag", () => {
+  assert.match(loginSource, /normalizeTouchLineLoginLocale\(lang\)/);
+  assert.match(loginSource, /<AuthLayout[^>]*draftLocalesEnabled/);
+  assert.match(loginSource, /draftLocaleEnabled/);
+  for (const source of [registerSource, forgotSource, resetSource]) {
+    const ast = ts.createSourceFile("secondary-auth.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+    const routes = ast.statements.filter((node): node is ts.FunctionDeclaration => ts.isFunctionDeclaration(node)
+      && Boolean(node.modifiers?.some(modifier => modifier.kind === ts.SyntaxKind.DefaultKeyword)));
+    assert.equal(routes.length, 1);
+    const statement = routes[0].body?.statements[0];
+    assert.ok(statement && ts.isReturnStatement(statement) && statement.expression && ts.isCallExpression(statement.expression));
+    const call = statement.expression;
+    assert.equal(call.arguments.length, 3, "public release is separate from the private draft opt-in");
+    assert.equal(call.arguments[0].getText(ast), "props");
+    assert.equal(call.arguments[1].kind, ts.SyntaxKind.FalseKeyword, "public route never enables private draft");
+    assert.match(call.arguments[2].getText(ast), /^isTouchLineSiteLocalesEnabled\("\/(?:register|forgot-password|reset-password)"\)$/);
+    const render = ast.statements.find((node): node is ts.FunctionDeclaration => ts.isFunctionDeclaration(node) && node.name?.text === call.expression.getText(ast));
+    assert.ok(render);
+    assert.equal(render.parameters[1].name.getText(ast), "draftLocalesEnabled");
+    assert.equal(render.parameters[1].initializer?.kind, ts.SyntaxKind.FalseKeyword);
+    assert.equal(render.parameters[2].name.getText(ast), "publicRelease");
+    assert.equal(render.parameters[2].initializer?.kind, ts.SyntaxKind.FalseKeyword);
+    assert.match(render.getText(ast), /draftLocalesEnabled \? normalizeTouchLineLoginLocale\(lang\) : normalizeTouchLineAuthLocale\(lang, (?:siteLocalesEnabled|publicRelease)\)/);
+  }
+  assert.match(formSource, /name="locale" value=\{normalizedLocale\}/);
+  assert.match(formSource, /normalizeTouchLineAuthReturnTo\(returnTo\)/);
+});
+
+test("login language picker offers eight URL-local choices without account preference state", () => {
+  assert.match(languageSwitcherSource, /draftLocalesEnabled/);
+  assert.match(languageSwitcherSource, /TOUCHLINE_APPROVED_LOCALES\.map/);
+  assert.match(languageSwitcherSource, /destination\.searchParams\.set\("lang", nextLocale\)/);
+  assert.match(languageSwitcherSource, /window\.location\.assign\(destination\.toString\(\)\)/);
+  assert.match(languageSwitcherSource, /if \(!context\) return null/);
+});
+
 test("public authentication copy describes TouchLine without beta or test wording", () => {
   for (const locale of ["en-GB", "pt-BR"] as const) {
     const copy = getTouchLineAuthCopy(locale);
@@ -60,8 +144,8 @@ test("authentication destinations preserve the normalized locale", () => {
   assert.equal(touchLineAuthHref("/login?error=1", "pt-BR"), "/login?error=1&lang=pt-BR");
   assert.equal(touchLineAuthHref("/intro", "unknown"), "/intro?lang=en-GB");
   assert.equal(
-    touchLinePostAuthHref("/market-transfer?contractPlayer=10&lang=en-GB", "pt-BR"),
-    "/market-transfer?contractPlayer=10&lang=pt-BR",
+    touchLinePostAuthHref("/clubowner?contractPlayer=10&lang=en-GB", "pt-BR"),
+    "/clubowner?contractPlayer=10&lang=pt-BR",
   );
   assert.equal(
     touchLineAuthEntryHref("/login", "pt-BR", "/admin/finance?lang=pt-BR"),
@@ -79,60 +163,75 @@ test("authentication destinations preserve the normalized locale", () => {
   assert.equal(normalizeTouchLineAuthReturnTo("/login?lang=pt-BR"), null);
   assert.equal(
     normalizeTouchLineAuthReturnTo("/club-owner/new-owner/substitution?lang=en-GB"),
-    "/market-transfer?lang=en-GB",
+    "/clubowner?lang=en-GB",
   );
   assert.equal(normalizeTouchLineAuthReturnTo("/visual-qa/coach-card?lang=en-GB"), "/visual-qa/coach-card?lang=en-GB");
   assert.equal(normalizeTouchLineAdminReturnTo("/admin/social-publications?lang=pt-BR"), "/admin/social-publications?lang=pt-BR");
   assert.equal(normalizeTouchLineAdminReturnTo("/visual-qa/social-confirmed-event?design=goal"), "/visual-qa/social-confirmed-event?design=goal");
   assert.equal(normalizeTouchLineAdminReturnTo("/arena"), "/admin");
   assert.equal(normalizeTouchLineAdminReturnTo("/intro"), "/admin");
-  assert.equal(normalizeTouchLineAdminReturnTo("/market-transfer"), "/admin");
+  assert.equal(normalizeTouchLineAdminReturnTo("/clubowner"), "/admin");
   assert.equal(normalizeTouchLineAdminReturnTo("https://evil.example/steal"), "/admin");
 });
 
 test("all authentication pages read lang and pass the locale to shared UI", () => {
-  for (const source of [loginSource, registerSource, forgotSource]) {
+  for (const source of [registerSource, forgotSource]) {
     assert.match(source, /const \{ lang,[^}]*returnTo[^}]*\} = await searchParams/);
-    assert.match(source, /normalizeTouchLineAuthLocale\(lang\)/);
+    assert.match(source, /normalizeTouchLineAuthLocale\(lang, siteLocalesEnabled\)/);
     assert.match(source, /<AuthLayout[^>]*locale=\{locale\}/);
     assert.match(source, /<AuthForm[^>]*locale=\{locale\}/);
   }
+  assert.match(loginSource, /const \{ lang,[^}]*returnTo[^}]*\} = await searchParams/);
+  assert.match(loginSource, /normalizeTouchLineLoginLocale\(lang\)/);
+  assert.match(loginSource, /<AuthLayout[\s\S]*locale=\{locale\}[\s\S]*draftLocalesEnabled/);
+  assert.match(loginSource, /<AuthForm[\s\S]*locale=\{locale\}[\s\S]*draftLocaleEnabled/);
   assert.match(resetSource, /const \{ lang \} = await searchParams/);
-  assert.match(resetSource, /normalizeTouchLineAuthLocale\(lang\)/);
+  assert.match(resetSource, /normalizeTouchLineAuthLocale\(lang, publicRelease\)/);
   assert.match(resetSource, /<AuthLayout[^>]*locale=\{locale\}/);
   assert.match(resetSource, /<ResetPasswordForm[^>]*locale=\{locale\}/);
 });
 
 test("form links and authentication callbacks retain the selected language", () => {
-  assert.match(formSource, /const arenaHref = touchLinePostAuthHref\(normalizedReturnTo, normalizedLocale\)/);
+  assert.match(formSource, /const arenaHref = touchLinePostAuthHref\(normalizedReturnTo, normalizedLocale, "\/clubowner", publicSiteLocalesEnabled\)/);
   assert.match(formSource, /name="login_path" value=\{entryPath\}/);
   assert.match(formSource, /normalizeTouchLineAuthReturnTo\(returnTo\)/);
-  assert.match(formSource, /touchLineAuthEntryHref\("\/forgot-password", normalizedLocale, normalizedReturnTo\)/);
+  assert.match(formSource, /touchLineAuthEntryHref\("\/forgot-password", normalizedLocale, normalizedReturnTo, publicSiteLocalesEnabled\)/);
   assert.match(formSource, /emailRedirectTo: buildTouchLineAuthCallbackUrl\(firstEntryHref\)/);
-  assert.match(formSource, /const resetPasswordHref = touchLineAuthHref\("\/reset-password", normalizedLocale\)/);
+  assert.match(formSource, /const resetPasswordHref = touchLineAuthHref\("\/reset-password", normalizedLocale, publicSiteLocalesEnabled\)/);
   assert.match(formSource, /resetPasswordForEmail\([\s\S]*buildTouchLineAuthCallbackUrl\(resetPasswordHref\)/);
   assert.match(formSource, /signInWithOAuth\([\s\S]*mode === "register" \? firstEntryHref : arenaHref/);
   assert.match(formSource, /resolveTouchLineAuthOrigin/);
   assert.match(formSource, /NEXT_PUBLIC_TOUCHLINE_AUTH_ORIGIN/);
   assert.doesNotMatch(formSource, /touchline-football-platform/);
-  assert.match(layoutSource, /const publicArenaHref = touchLineAuthHref\("\/intro", normalizedLocale\)/);
-  assert.match(layoutSource, /<Logo href=\{publicArenaHref\}/);
+  assert.match(layoutSource, /const publicArenaHref = touchLineAuthHref\("\/intro", normalizedLocale, siteLocalesEnabled\)/);
+  assert.match(layoutSource, /<Logo href=\{brandHref \?\? publicArenaHref\}/);
   assert.match(layoutSource, /<Link href=\{publicArenaHref\}/);
-  assert.match(layoutSource, /<AuthLanguageSwitcher locale=\{normalizedLocale\}/);
-  assert.match(languageSwitcherSource, /destination\.searchParams\.set\("lang", nextLocale\)/);
-  assert.match(languageSwitcherSource, /TOUCHLINE_LOCALE_STORAGE_KEY/);
-  assert.match(languageSwitcherSource, /"pt-BR"/);
-  assert.match(languageSwitcherSource, /"en-GB"/);
+  assert.match(layoutSource, /<TouchlinePageControls locale=\{normalizedLocale\} accountLocaleContext=\{accountLocaleContext\} draftLocalesEnabled=\{draftLocalesEnabled\}/);
+  const controls = fs.readFileSync(new URL("../components/touchline/TouchlinePageControls.tsx", import.meta.url), "utf8");
+  assert.match(controls, /draftLocalesEnabled = false/);
+  assert.match(controls, /^"use client";/);
+  assert.match(controls, /const contextEnabled = useSiteLocaleRelease\(\)/);
+  assert.match(controls, /const publicRelease = !protectedPath && \(siteLocalesEnabled \?\? contextEnabled\)/);
+  assert.match(controls, /const presentationDraft = !protectedPath && draftLocalesEnabled/);
+  assert.match(controls, /<AuthLanguageSwitcher locale=\{displayLocale\} context=\{accountLocaleContext\} draftLocalesEnabled=\{presentationDraft\} siteLocalesEnabled=\{publicRelease\}/);
+  assert.match(controls, /<AuthAmbientAudio locale=\{displayLocale\} allowDraftLocale=\{presentationDraft \|\| publicRelease\}/);
+  assert.match(layoutSource, /const presentationLocalesEnabled = draftLocalesEnabled \|\| siteLocalesEnabled/);
+  assert.match(layoutSource, /<AuthLeaguePicker locale=\{normalizedLocale\} allowDraftLocales=\{presentationLocalesEnabled\}/);
+  assert.match(languageSwitcherSource, /<AccountLocaleMenu[\s\S]*context=\{context\}[\s\S]*variant="select"/);
+  assert.match(accountLocaleMenuSource, /destination\.searchParams\.set\("lang", nextLocale\)/);
+  assert.match(accountLocaleMenuSource, /TOUCHLINE_LOCALE_STORAGE_KEY/);
+  assert.match(accountLocaleMenuSource, /"pt-BR"/);
+  assert.match(accountLocaleMenuSource, /"en-GB"/);
 });
 
 test("public club exploration opens the ClubHub directory in the selected language", () => {
-  assert.match(formSource, /touchLineAuthHref\("\/touchline-clubs", normalizedLocale\)/);
+  assert.match(formSource, /touchLineAuthHref\("\/touchline-clubs", normalizedLocale, publicSiteLocalesEnabled\)/);
   assert.doesNotMatch(formSource, /touchline-clubs\/(?:manchester-united|crystal-palace)/);
 });
 
 test("login and registration clearly link to each other", () => {
-  assert.match(formSource, /const loginHref = touchLineAuthEntryHref\("\/login", normalizedLocale, normalizedReturnTo\)/);
-  assert.match(formSource, /const registerHref = touchLineAuthEntryHref\("\/register", normalizedLocale, normalizedReturnTo\)/);
+  assert.match(formSource, /const loginHref = touchLineAuthEntryHref\("\/login", normalizedLocale, normalizedReturnTo, publicSiteLocalesEnabled\)/);
+  assert.match(formSource, /const registerHref = touchLineAuthEntryHref\("\/register", normalizedLocale, normalizedReturnTo, publicSiteLocalesEnabled\)/);
   assert.match(formSource, /copy\.newToTouchLine/);
   assert.match(formSource, /copy\.alreadyRegistered/);
   assert.match(formSource, /href=\{registerHref\}/);

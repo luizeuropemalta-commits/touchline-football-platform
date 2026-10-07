@@ -1,0 +1,36 @@
+.header { display: grid; grid-template-columns: minmax(0,1.7fr) minmax(280px,1fr); gap: 18px; margin: 22px 0; }
+.profile, .bank { min-width: 0; border: 1px solid rgba(192,231,162,.2); border-radius: 24px; background: radial-gradient(ellipse at 0 0,rgba(163,255,18,.085),transparent 58%),linear-gradient(135deg,rgba(17,31,26,.96),rgba(6,15,12,.98)); box-shadow: inset 0 1px rgba(255,255,255,.06),0 18px 48px rgba(0,0,0,.16); }
+.profile { padding: clamp(20px,2.5vw,34px); }
+.title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px 18px; padding-bottom: 21px; border-bottom: 1px solid rgba(225,247,214,.1); }
+.title > span, .eyebrow { color: #b9ec8c; font-size: 10px; font-weight: 800; letter-spacing: .16em; }
+.title h1 { margin: 0; color: #f4ffe9; font-size: clamp(30px,3.4vw,44px); line-height: 1.08; letter-spacing: -.04em; }
+.identity { display: grid; grid-template-columns: 132px minmax(0,1fr); align-items: center; gap: 24px; padding-top: 22px; }
+.portrait { display: grid; justify-items: center; gap: 10px; min-width: 0; }
+.portrait > small { max-width: 132px; color: #9eafa3; text-align: center; font-size: 10px; line-height: 1.45; }
+.photoButton { position: relative; width: 116px; height: 116px; padding: 0; border-radius: 50%; }
+.photoButton:disabled { opacity: 1; cursor: not-allowed; }
+.photoButton img { display: block; width: 112px; height: 112px; border-radius: 50%; object-fit: cover; }
+.camera { position: absolute; right: -2px; bottom: 2px; display: grid; place-items: center; width: 30px; height: 30px; border: 1px solid #647e56; border-radius: 50%; color: #d6eac7; background: #162019; }
+.details { min-width: 0; }
+.details h2 { margin: 7px 0 16px; color: #f2f9ec; font-size: clamp(22px,2.2vw,30px); line-height: 1.15; overflow-wrap: anywhere; }
+.facts { display: flex; flex-wrap: wrap; gap: 14px 25px; margin: 0 0 20px; }
+.facts div { min-width: 0; }
+.facts dt { color: #a0b0a5; font-size: 11px; }
+.facts dd { margin: 5px 0 0; color: #e2eedd; font-size: 13px; font-weight: 700; overflow-wrap: anywhere; }
+.bank { display: grid; align-content: center; gap: 15px; padding: clamp(20px,2.5vw,30px); background: radial-gradient(ellipse at 100% 0,rgba(195,202,142,.085),transparent 68%),linear-gradient(135deg,#142019,#09110e); }
+.bankHeading { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; color: #c8e7b1; }
+.bankHeading h2 { margin: 0; color: #edf8e6; font-size: 23px; letter-spacing: -.025em; }
+.bankHeading > span { margin-left: auto; padding: 5px 8px; border: 1px solid rgba(201,219,184,.23); border-radius: 6px; color: #acbda3; font-size: 9px; font-weight: 800; letter-spacing: .12em; }
+.bank > strong { color: #e8f4e0; font-size: 18px; }
+.bank p { margin: 0; color: #b8c8b5; font-size: 13px; line-height: 1.6; }
+.bank > small { color: #95a68f; font-size: 11px; line-height: 1.5; }
+.bank > button { justify-self: start; }
+.portrait:has(.recoveryPanel), .identity:has(.recoveryPanel) .details { grid-column: 1 / -1; }
+.recoveryPanel { min-width: 0; width: 100%; max-width: 360px; justify-self: start; padding-block: 14px; color: #e2eedd; text-align: start; overflow-wrap: anywhere; }
+.recoveryPanel h3, .recoveryPanel h4 { margin: 0 0 10px; }
+.recoveryPanel p { margin: 0 0 12px; font-size: 12px; line-height: 1.5; }
+.recoveryActions { display: flex; flex-wrap: wrap; gap: 10px; margin-block-end: 12px; }
+.recoveryPanel button { max-width: 100%; min-width: 0; }
+.recoveryConfirmation { margin-block: 12px; }
+@media (max-width: 1000px) { .header { grid-template-columns: minmax(0,1.4fr) minmax(260px,1fr); gap: 12px; } .identity { grid-template-columns: 112px minmax(0,1fr); gap: 16px; } .photoButton { width: 104px; height: 104px; } .photoButton img { width: 100px; height: 100px; } }
+@media (max-width: 720px) { .header { grid-template-columns: minmax(0,1fr); } .identity { gap: 15px; } .profile,.bank { border-radius: 18px; padding: 18px; } }

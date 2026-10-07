@@ -18,7 +18,7 @@ test("ClubHub compact cards keep navigation outside the zoom trigger", () => {
   }
   assert.match(squadGrid, /className=\{`club-hub-card-meta \$\{styles.meta\}`\}[\s\S]*?<a\s+href=\{profileHref\}/);
   assert.doesNotMatch(officialLineup, /styles\.playerName/);
-  assert.match(officialLineup, /ariaLabel=\{`\$\{isPortuguese \? "Ampliar card de"/);
+  assert.match(officialLineup, /ariaLabel=\{zoomCopy\.expandCard\.replace\("\{playerName\}", \(\) => card\.name\)\}/);
   assert.doesNotMatch(officialLineup, /styles\.playerLink/);
 });
 
@@ -41,7 +41,7 @@ test("player-card rankings link to the dedicated market and preserve the club", 
   const rankingsPage = source("app/touchline-player-card-rankings/page.tsx");
   const marketLinks = rankingsPage.match(/href=\{marketTransferHref\(club\?\.slug\)\}/g) ?? [];
 
-  assert.match(rankingsPage, /touchlineArenaPanelHref\("market", locale\)/);
+  assert.match(rankingsPage, /touchlineArenaPanelHref\("market", locale, draftLocalesEnabled\)/);
   assert.match(rankingsPage, /clubSlug \? `\$\{marketHref\}&club=\$\{encodeURIComponent\(clubSlug\)\}` : marketHref/);
   assert.equal(marketLinks.length, 2);
   assert.doesNotMatch(rankingsPage, /href=\{`\/arena\?demoLineup=1&skipIntro=1&club=/);

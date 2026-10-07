@@ -6,7 +6,6 @@ export const TOUCHLINE_ARENA_INTRO_STORAGE_KEY = `touchline:arena:intro:v${TOUCH
 
 export const TOUCHLINE_ARENA_OFFICIAL_LOGO = "/touchlineArena/brand/tl-shield-lime.svg";
 export const TOUCHLINE_ARENA_ENTRY_VIDEO = "/touchlineArena/arena/touchline-arena-entry-20260716.mp4";
-export const TOUCHLINE_ARENA_LOOP_VIDEO = "/touchlineArena/arena/touchline-arena-loop-20260716.mp4?v=202607170155";
 export const TOUCHLINE_ARENA_VIDEO_POSTER = "/touchlineArena/arena/touchline-arena-poster-20260722.jpg";
 export const TOUCHLINE_ARENA_INTRO_SLOGAN = "THIS IS NOT A FANTASY.\nTHIS IS REALITY.";
 

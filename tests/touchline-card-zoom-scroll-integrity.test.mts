@@ -20,7 +20,7 @@ test("touch users retain a visible close control while scrolling expanded detail
   const zoomCss = source("components/touchline/cards/TouchlineCardZoom.module.css");
   const close = zoomCss.match(/\.panelWithDetails \.close \{([^}]+)\}/)?.[1] ?? "";
   assert.match(close, /position: sticky/);
-  assert.match(close, /top: 4px/);
+  assert.match(close, /inset-block-start: 4px/);
   assert.match(close, /grid-column: 1 \/ -1/);
   assert.match(close, /grid-row: 1/);
   assert.match(close, /justify-self: end/);

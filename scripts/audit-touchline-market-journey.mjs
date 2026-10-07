@@ -27,7 +27,7 @@ async function run(browserName, browserType) {
       page.on("console", (message) => { if (message.type() === "error") consoleErrors.push(message.text()); });
       page.on("pageerror", (error) => pageErrors.push(error.message));
 
-      const response = await page.goto(`${baseUrl}/market-transfer?lang=pt-BR`, { waitUntil: "domcontentloaded", timeout: 45_000 });
+      const response = await page.goto(`${baseUrl}/clubowner?lang=pt-BR`, { waitUntil: "domcontentloaded", timeout: 45_000 });
       console.log(`[market-journey] ${browserName}/${viewport.id}: DOM ready (${response?.status() ?? "no response"})`);
       // The heading is server-rendered. Wait for the client bundle to finish
       // hydrating before measuring a real interaction; otherwise Playwright can

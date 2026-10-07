@@ -20,9 +20,9 @@ test("global public navigation keeps sports links and the primary Market destina
   assert.deepEqual(items.map((item) => item.href), [
     "/touchline-clubs?lang=pt-BR",
     "/live?lang=pt-BR",
-    "/touchline-tables?lang=pt-BR",
+    "/rankings?lang=pt-BR",
   ]);
-  assert.equal(touchlineGlobalNavigationArenaHref("pt-BR"), "/market-transfer?lang=pt-BR");
+  assert.equal(touchlineGlobalNavigationArenaHref("pt-BR"), "/clubowner?lang=pt-BR");
   assert.equal(resolveTouchlineGlobalNavigationItems("es-ES", "auth")[0]?.href, "/touchline-clubs?lang=en-GB");
   assert.doesNotMatch(JSON.stringify(items), /club-owner|manchester|luiz-lopez/i);
 });
@@ -31,7 +31,7 @@ test("authenticated navigation does not duplicate the game with a separate My Cl
   const items = resolveTouchlineGlobalNavigationItems("en-GB", "authenticated");
 
   assert.deepEqual(items.map((item) => item.key), ["clubHub", "live", "rankings"]);
-  assert.equal(items.at(-1)?.href, "/touchline-tables?lang=en-GB");
+  assert.equal(items.at(-1)?.href, "/rankings?lang=en-GB");
   assert.doesNotMatch(JSON.stringify(items), /luiz-lopez|manchester-united|manchester-city/i);
 });
 
@@ -57,16 +57,17 @@ test("Club Profile, Live and 404 use the shared public navigation without duplic
   const live = source("components/touchline/match-centre/TouchlineMatchCentre.tsx");
   const notFound = source("components/touchline/TouchlineNotFound.tsx");
   const player = source("app/touchline-players/[player]/page.tsx");
-  const tables = source("app/touchline-tables/page.tsx");
+  const tables = source("app/rankings/page.tsx");
   const rankings = source("app/touchline-player-card-rankings/page.tsx");
   const clubDiscovery = source("app/touchline-clubs/page.tsx");
   const navigationStyles = source("components/touchline/TouchlineGlobalNavigation.module.css");
 
   assert.match(clubProfile, /<TouchlineGlobalNavigation[\s\S]*?currentRoute="clubProfile"[\s\S]*?surface="public"[\s\S]*?trustedContext=\{\{/);
   assert.match(coachProfile, /<TouchlineGlobalNavigation[\s\S]*?currentRoute="coachProfile"[\s\S]*?surface="public"/);
-  assert.doesNotMatch(coachProfile, /<Link href=\{`\/market-transfer/);
+  assert.doesNotMatch(coachProfile, /<Link href=\{`\/clubowner/);
   assert.match(live, /<TouchlineGlobalNavigation[\s\S]*?currentRoute="live"[\s\S]*?surface="public"/);
-  assert.match(notFound, /<TouchlineGlobalNavigation locale=\{locale\} currentRoute="notFound" surface="public"/);
+  assert.match(notFound, /<TouchlineGlobalNavigation locale=\{locale\} draftLocalesEnabled=\{draftLocalesEnabled\} currentRoute="notFound" surface="public"/);
+  assert.match(notFound, /draftLocalesEnabled = false/);
   assert.doesNotMatch(live, /className=\{styles\.return\}/);
   assert.doesNotMatch(notFound, /touchlineClubHubHref|touchlineArenaHref/);
   assert.match(notFound, /overflow-visible/);

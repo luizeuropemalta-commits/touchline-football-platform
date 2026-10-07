@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { persistCompetitionFixtureSchedule } from "@/lib/football-data/fixture-schedule-store";
-import { createFootballDataProvider } from "@/lib/football-data/provider-factory";
+import { createGuardedFixtureProvider } from "@/lib/football-data/fixture-provider-server";
 import type { FootballDataProvider, TouchlineFixture } from "@/lib/football-data/types";
 
 const DEFAULT_COMPETITION_ID = "8";
@@ -119,7 +119,7 @@ export async function syncSportmonksFixtureSchedule(
       return result;
     }
 
-    const provider = dependencies.provider ?? createFootballDataProvider("sportmonks");
+    const provider = dependencies.provider ?? createGuardedFixtureProvider(admin);
     const competitionResponse = await provider.getCompetitionById(result.competitionProviderId);
     if (!competitionResponse.ok || !competitionResponse.data) {
       result.status = competitionResponse.ok ? "error" : competitionResponse.error.code === "not_configured" ? "not_configured" : "error";
@@ -149,7 +149,9 @@ export async function syncSportmonksFixtureSchedule(
     const fixtureList = [...fixtures.values()];
     result.fixturesFetched = fixtureList.length;
     const seasonIds = [...new Set(fixtureList.map((fixture) => fixture.seasonId).filter((id): id is string => Boolean(id)))];
-    const seasonResults = await Promise.all(seasonIds.map((seasonId) => provider.getSeasonById(seasonId)));
+    // One durable admission token per provider account; do not race seasons.
+    const seasonResults: Awaited<ReturnType<typeof provider.getSeasonById>>[] = [];
+    for (const seasonId of seasonIds) seasonResults.push(await provider.getSeasonById(seasonId));
     const seasons = seasonResults.flatMap((seasonResult, index) => {
       if (seasonResult.ok && seasonResult.data) return [seasonResult.data];
       result.errors.push(`Season ${seasonIds[index]}: ${seasonResult.ok ? "not found" : seasonResult.error.message}`);

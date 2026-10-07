@@ -1,10 +1,12 @@
 /* eslint-disable @next/next/no-img-element */
+import { isTouchLineSiteLocalesEnabled } from "@/lib/touchlineArena/site-locales-release";
 import type { CSSProperties, ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { localizedCountryLabel } from "@/lib/touchlineArena/country-labels";
 import { localizedPositionLabel } from "@/lib/touchlineArena/position-labels";
 import { formatTouchlineProfileTimestamp as formatOfficialSyncTime } from "@/lib/touchlineArena/profile-timestamp";
+import { getTouchlinePlayerProfileFeedCopy, formatTouchlinePlayerProfileFeedText } from "@/lib/touchlineArena/player-profile-feed-i18n";
 import { isSeasonPercentage, seasonPercentageFromCounts } from "@/lib/football-data/season-statistic-ratios";
 import {
   ArrowRight,
@@ -19,7 +21,16 @@ import {
 } from "lucide-react";
 import TouchlineEliteExactCard from "@/components/touchline/cards/TouchlineEliteExactCard";
 import TouchlineCardZoom from "@/components/touchline/cards/TouchlineCardZoom";
+import { getTouchlineCardZoomCopy } from "@/lib/touchlineArena/card-zoom-i18n";
+import { getTouchlineExactCardCopy } from "@/lib/touchlineArena/exact-card-i18n";
+import { getTouchlineCardMatchFactLabels } from "@/lib/touchlineArena/card-match-fact-i18n";
+import { getTouchlinePlayerPerformanceCopy } from "@/lib/touchlineArena/player-performance-i18n";
+import { localizedStatLabel } from "@/lib/touchlineArena/player-statistic-labels";
 import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
+import TouchlineBrandHeader from "@/components/touchline/TouchlineBrandHeader";
+import type { AccountLocaleContext } from "@/lib/touchlineArena/account-locale-context-server";
+import { hasTouchLineArenaAccess } from "@/lib/touchlineArena/auth-access";
+import { AuthSessionMissingError } from "@supabase/supabase-js";
 import TouchlineLivePresentationRefresh from "@/components/touchline/TouchlineLivePresentationRefresh";
 import { TouchlineCardLeadershipProvider } from "@/components/touchline/cards/TouchlineCardLeadershipProvider";
 import { buildTouchlineCardLeadershipValue } from "@/lib/touchlineArena/card-leadership-authority";
@@ -28,6 +39,7 @@ import {
   CLUB_OWNER_SQUAD_CARDS,
 } from "@/lib/touchlineArena/demo-data";
 import { normalizeTouchLineLocale } from "@/lib/touchlineArena/i18n";
+import { resolveTouchlineCatalogueLocale } from "@/lib/touchlineArena/catalogue-locale";
 import {
   resolveTouchLinePlayerProfile,
   resolveTouchLineUnavailableOfficialProfile,
@@ -64,7 +76,6 @@ import {
 } from "@/lib/touchlineArena/public-card-presentation";
 import { loadTouchlinePublishedCardPresentations } from "@/lib/touchlineArena/card-publication-read-model";
 import {
-  formatTouchlineEditorialCardPrice,
   formatTouchlineMarketValueEur,
   formatTouchlinePublicShirtNumber,
 } from "@/lib/touchlineArena/editorial-card-profile";
@@ -89,6 +100,7 @@ import { resolveTouchlineGlobalNavigationSurface } from "@/lib/touchlineArena/gl
 import { touchlineCardEnginePlayerHref } from "@/lib/touchlineArena/card-engine-links";
 import {
   projectTouchlineCardStatsByPosition,
+  touchlinePlayerPositionKind,
   type TouchlineCardStats,
 } from "@/lib/touchlineArena/position-aware-card-stats";
 import styles from "./player-profile.module.css";
@@ -104,6 +116,25 @@ type PlayerProfilePageProps = {
 
 const copy = {
   en: {
+    preferredLeft: "Left",
+    preferredRight: "Right",
+    preferredBoth: "Both",
+    transferType: "Transfer",
+    freeTransferType: "Free transfer",
+    loanType: "Loan",
+    loanReturnType: "Loan return",
+    loanEndType: "End of loan",
+    rankingGoalkeeper: "Goalkeepers",
+    rankingCentreBack: "Centre-backs",
+    rankingFullBack: "Full-backs",
+    rankingMidfielder: "Midfielders",
+    rankingWinger: "Wingers",
+    rankingStriker: "Strikers",
+    contractAction: "Contract player",
+    contractPlayer: "Contract player",
+    contractTerm: "Contract · 1 season",
+    provisionalShirt: "provisional #00",
+    cardTier: "Card tier",
     eyebrow: "Player profile + card profile",
     realFootball: "Real football",
     touchlineCard: "TouchLine card",
@@ -119,7 +150,6 @@ const copy = {
     points: "Total rating",
     rank: "Position rank",
     rankGroup: "Ranking group",
-    price: "Card price",
     frame: "Current frame",
     shirt: "Shirt number",
     career: "Career path",
@@ -174,6 +204,25 @@ const copy = {
     redCards: "Red cards",
   },
   pt: {
+    preferredLeft: "Esquerdo",
+    preferredRight: "Direito",
+    preferredBoth: "Ambidestro",
+    transferType: "Transferência",
+    freeTransferType: "Transferência livre",
+    loanType: "Empréstimo",
+    loanReturnType: "Retorno de empréstimo",
+    loanEndType: "Fim do empréstimo",
+    rankingGoalkeeper: "Goleiros",
+    rankingCentreBack: "Zagueiros",
+    rankingFullBack: "Laterais",
+    rankingMidfielder: "Meio-campistas",
+    rankingWinger: "Pontas",
+    rankingStriker: "Centroavantes",
+    contractAction: "Contratar",
+    contractPlayer: "Contratar jogador",
+    contractTerm: "Contrato · 1 temporada",
+    provisionalShirt: "#00 provisório",
+    cardTier: "Tier do card",
     eyebrow: "Perfil do jogador + perfil do card",
     realFootball: "Futebol real",
     touchlineCard: "Card TouchLine",
@@ -189,7 +238,6 @@ const copy = {
     points: "Nota total",
     rank: "Rank da posição",
     rankGroup: "Grupo do ranking",
-    price: "Preço do card",
     frame: "Moldura atual",
     shirt: "Número da camisa",
     career: "Trajetória",
@@ -245,6 +293,236 @@ const copy = {
   },
 } as const;
 
+type ProfileCopy = (Omit<typeof copy.en, "totalRating" | "matchHistory" | "minutes" | "rating" | "unavailable"> | Omit<typeof copy.pt, "totalRating" | "matchHistory" | "minutes" | "rating" | "unavailable">) & {
+  readonly totalRating: string;
+  readonly matchHistory: string;
+  readonly minutes: string;
+  readonly rating: string;
+  readonly unavailable: string;
+};
+
+// This is deliberately limited to the profile chrome still rendered by this
+// route. Match facts, performance, card/zoom and country/position labels keep
+// using their existing domain catalogues below; player, club and contract facts
+// remain data and are never translated here. The six catalogues stay behind the
+// application locale-completeness gate in i18n.ts.
+const profileChromeDrafts: Readonly<Record<string, Partial<Record<keyof typeof copy.en, string>>>> = {
+  "es-ES": {
+    preferredLeft: "Izquierdo",
+    preferredRight: "Derecho",
+    preferredBoth: "Ambidiestro",
+    transferType: "Traspaso",
+    freeTransferType: "Traspaso libre",
+    loanType: "Cesión",
+    loanReturnType: "Regreso de cesión",
+    loanEndType: "Fin de cesión",
+    rankingGoalkeeper: "Porteros",
+    rankingCentreBack: "Defensas centrales",
+    rankingFullBack: "Laterales",
+    rankingMidfielder: "Centrocampistas",
+    rankingWinger: "Extremos",
+    rankingStriker: "Delanteros centro",
+    contractAction: "Fichar jugador",
+    contractPlayer: "Fichar jugador",
+    contractTerm: "Contrato · 1 temporada",
+    provisionalShirt: "#00 provisional",
+    cardTier: "Tier del card",
+    eyebrow: "Perfil del jugador + perfil de la tarjeta", position: "Posición", born: "Nacimiento", height: "Altura", weight: "Peso", nationality: "Nacionalidad", foot: "Pie preferido", contract: "Contrato",
+    points: "Valoración total", rank: "Rango de posición", rankGroup: "Grupo de clasificación", frame: "Marco actual", career: "Trayectoria", season: "Temporada TouchLine",
+    seasonCopy: "Las valoraciones de TouchLine, el rango de la tarjeta y el historial verificado de partidos se actualizan aquí a medida que se juegan los encuentros de liga.",
+    current: "Estado actual", currentCopy: "La tarjeta usa la misma presentación verificada de TouchLine en el Market, la plantilla y el perfil del club.", currentClub: "Club actual", openClub: "Abrir perfil del club",
+    awaiting: "El historial de carrera verificado espera la verificación de TouchLine.", fromClub: "Desde", toClub: "Hasta", rankPending: "Pendiente", officialData: "Datos oficiales de fútbol", touchlineCard: "Tarjeta TouchLine", touchlineData: "Datos del juego TouchLine",
+  },
+  "it-IT": {
+    preferredLeft: "Sinistro",
+    preferredRight: "Destro",
+    preferredBoth: "Ambidestro",
+    transferType: "Trasferimento",
+    freeTransferType: "Trasferimento a parametro zero",
+    loanType: "Prestito",
+    loanReturnType: "Rientro dal prestito",
+    loanEndType: "Fine prestito",
+    rankingGoalkeeper: "Portieri",
+    rankingCentreBack: "Difensori centrali",
+    rankingFullBack: "Terzini",
+    rankingMidfielder: "Centrocampisti",
+    rankingWinger: "Ali",
+    rankingStriker: "Centravanti",
+    contractAction: "Ingaggia giocatore",
+    contractPlayer: "Ingaggia giocatore",
+    contractTerm: "Contratto · 1 stagione",
+    provisionalShirt: "n. 00 provvisorio",
+    cardTier: "Tier del card",
+    eyebrow: "Profilo del giocatore + profilo della carta", position: "Posizione", born: "Nascita", height: "Altezza", weight: "Peso", nationality: "Nazionalità", foot: "Piede preferito", contract: "Contratto",
+    points: "Valutazione totale", rank: "Posizione in classifica", rankGroup: "Gruppo di classifica", frame: "Cornice attuale", career: "Percorso di carriera", season: "Stagione TouchLine",
+    seasonCopy: "Le valutazioni TouchLine, la posizione della carta e la cronologia verificata delle partite si aggiornano qui mentre si giocano le gare di campionato.",
+    current: "Stato attuale", currentCopy: "La carta usa la stessa presentazione TouchLine verificata nel Market, nella rosa e nel profilo del club.", currentClub: "Club attuale", openClub: "Apri il profilo del club",
+    awaiting: "La cronologia verificata della carriera attende la verifica TouchLine.", fromClub: "Da", toClub: "A", rankPending: "In attesa", officialData: "Dati ufficiali sul calcio", touchlineCard: "Carta TouchLine", touchlineData: "Dati di gioco TouchLine",
+  },
+  "fr-FR": {
+    preferredLeft: "Gauche",
+    preferredRight: "Droit",
+    preferredBoth: "Ambidextre",
+    transferType: "Transfert",
+    freeTransferType: "Transfert libre",
+    loanType: "Prêt",
+    loanReturnType: "Retour de prêt",
+    loanEndType: "Fin de prêt",
+    rankingGoalkeeper: "Gardiens",
+    rankingCentreBack: "Défenseurs centraux",
+    rankingFullBack: "Arrières latéraux",
+    rankingMidfielder: "Milieux de terrain",
+    rankingWinger: "Ailiers",
+    rankingStriker: "Avant-centres",
+    contractAction: "Recruter le joueur",
+    contractPlayer: "Recruter le joueur",
+    contractTerm: "Contrat · 1 saison",
+    provisionalShirt: "n° 00 provisoire",
+    cardTier: "Tier du card",
+    eyebrow: "Profil du joueur + profil de la carte", position: "Poste", born: "Naissance", height: "Taille", weight: "Poids", nationality: "Nationalité", foot: "Pied préféré", contract: "Contrat",
+    points: "Note totale", rank: "Rang du poste", rankGroup: "Groupe de classement", frame: "Cadre actuel", career: "Parcours", season: "Saison TouchLine",
+    seasonCopy: "Les notes TouchLine, le rang de la carte et l’historique vérifié des matchs se mettent à jour ici au fil des rencontres de championnat.",
+    current: "État actuel", currentCopy: "La carte utilise la même présentation TouchLine vérifiée dans le Market, l’effectif et le profil du club.", currentClub: "Club actuel", openClub: "Ouvrir le profil du club",
+    awaiting: "L’historique de carrière vérifié attend la vérification TouchLine.", fromClub: "De", toClub: "À", rankPending: "En attente", officialData: "Données du football réel", touchlineCard: "Carte TouchLine", touchlineData: "Données du jeu TouchLine",
+  },
+  "ar-SA": {
+    preferredLeft: "اليسرى",
+    preferredRight: "اليمنى",
+    preferredBoth: "كلتا القدمين",
+    transferType: "انتقال",
+    freeTransferType: "انتقال حر",
+    loanType: "إعارة",
+    loanReturnType: "عودة من الإعارة",
+    loanEndType: "نهاية الإعارة",
+    rankingGoalkeeper: "حراس المرمى",
+    rankingCentreBack: "قلوب الدفاع",
+    rankingFullBack: "الأظهرة",
+    rankingMidfielder: "لاعبو الوسط",
+    rankingWinger: "الأجنحة",
+    rankingStriker: "المهاجمون",
+    contractAction: "التعاقد مع اللاعب",
+    contractPlayer: "التعاقد مع اللاعب",
+    contractTerm: "عقد · موسم واحد",
+    provisionalShirt: "رقم 00 مؤقت",
+    cardTier: "Tier البطاقة",
+    eyebrow: "ملف اللاعب + ملف البطاقة", position: "المركز", born: "الميلاد", height: "الطول", weight: "الوزن", nationality: "الجنسية", foot: "القدم المفضلة", contract: "العقد",
+    points: "التقييم الإجمالي", rank: "ترتيب المركز", rankGroup: "مجموعة الترتيب", frame: "الإطار الحالي", career: "المسيرة", season: "موسم TouchLine",
+    seasonCopy: "تتحدث تقييمات TouchLine وترتيب البطاقة وسجل المباريات الموثّق هنا مع إقامة مباريات الدوري.",
+    current: "الحالة الحالية", currentCopy: "تستخدم البطاقة العرض الموثّق نفسه من TouchLine في Market والتشكيلة وملف النادي.", currentClub: "النادي الحالي", openClub: "فتح ملف النادي", officialData: "بيانات كرة القدم الرسمية", touchlineCard: "بطاقة TouchLine",
+    awaiting: "ينتظر سجل المسيرة الموثّق تحقق TouchLine.", fromClub: "من", toClub: "إلى", rankPending: "قيد الانتظار", touchlineData: "بيانات لعبة TouchLine",
+  },
+  "tr-TR": {
+    preferredLeft: "Sol",
+    preferredRight: "Sağ",
+    preferredBoth: "Her iki ayak",
+    transferType: "Transfer",
+    freeTransferType: "Bedelsiz transfer",
+    loanType: "Kiralama",
+    loanReturnType: "Kiradan dönüş",
+    loanEndType: "Kiralama sonu",
+    rankingGoalkeeper: "Kaleciler",
+    rankingCentreBack: "Stoperler",
+    rankingFullBack: "Bekler",
+    rankingMidfielder: "Orta saha oyuncuları",
+    rankingWinger: "Kanat oyuncuları",
+    rankingStriker: "Santrforlar",
+    contractAction: "Oyuncuyla sözleşme yap",
+    contractPlayer: "Oyuncuyla sözleşme yap",
+    contractTerm: "Sözleşme · 1 sezon",
+    provisionalShirt: "geçici #00",
+    cardTier: "Card Tier",
+    eyebrow: "Oyuncu profili + kart profili", position: "Pozisyon", born: "Doğum", height: "Boy", weight: "Kilo", nationality: "Uyruk", foot: "Tercih edilen ayak", contract: "Sözleşme",
+    points: "Toplam değerlendirme", rank: "Pozisyon sırası", rankGroup: "Sıralama grubu", frame: "Geçerli çerçeve", career: "Kariyer yolu", season: "TouchLine sezonu",
+    seasonCopy: "TouchLine değerlendirmeleri, kart sırası ve doğrulanmış maç geçmişi lig maçları oynandıkça burada güncellenir.",
+    current: "Güncel durum", currentCopy: "Kart, Market, kadro ve kulüp profilinde aynı doğrulanmış TouchLine sunumunu kullanır.", currentClub: "Mevcut kulüp", openClub: "Kulüp profilini aç",
+    awaiting: "Doğrulanmış kariyer geçmişi TouchLine doğrulamasını bekliyor.", fromClub: "Kimden", toClub: "Kime", rankPending: "Beklemede", officialData: "Resmî futbol verileri", touchlineCard: "TouchLine kartı", touchlineData: "TouchLine oyun verileri",
+  },
+  "de-DE": {
+    preferredLeft: "Links",
+    preferredRight: "Rechts",
+    preferredBoth: "Beidfüßig",
+    transferType: "Transfer",
+    freeTransferType: "Ablösefreier Transfer",
+    loanType: "Leihe",
+    loanReturnType: "Rückkehr aus Leihe",
+    loanEndType: "Leihende",
+    rankingGoalkeeper: "Torhüter",
+    rankingCentreBack: "Innenverteidiger",
+    rankingFullBack: "Außenverteidiger",
+    rankingMidfielder: "Mittelfeldspieler",
+    rankingWinger: "Flügelspieler",
+    rankingStriker: "Mittelstürmer",
+    contractAction: "Spieler verpflichten",
+    contractPlayer: "Spieler verpflichten",
+    contractTerm: "Vertrag · 1 Saison",
+    provisionalShirt: "vorläufige Nr. 00",
+    cardTier: "Card-Tier",
+    eyebrow: "Spielerprofil + Kartenprofil", position: "Position", born: "Geboren", height: "Größe", weight: "Gewicht", nationality: "Nationalität", foot: "Bevorzugter Fuß", contract: "Vertrag",
+    points: "Gesamtbewertung", rank: "Positionsrang", rankGroup: "Ranggruppe", frame: "Aktueller Rahmen", career: "Karriereweg", season: "TouchLine-Saison",
+    seasonCopy: "TouchLine-Bewertungen, Kartenrang und verifizierte Spielhistorie werden hier aktualisiert, während Ligaspiele stattfinden.",
+    current: "Aktueller Status", currentCopy: "Die Karte verwendet dieselbe verifizierte TouchLine-Darstellung im Market, im Kader und im Clubprofil.", currentClub: "Aktueller Verein", openClub: "Clubprofil öffnen",
+    awaiting: "Die verifizierte Karrierehistorie wartet auf die TouchLine-Prüfung.", fromClub: "Von", toClub: "Zu", rankPending: "Ausstehend", officialData: "Offizielle Fußballdaten", touchlineCard: "TouchLine-Karte", touchlineData: "TouchLine-Spieldaten",
+  },
+};
+
+const frenchPositionRankingLabels = {
+  goalkeeper: "Gardiens",
+  "centre-back": "Défenseurs centraux",
+  "full-back": "Arrières latéraux",
+  midfielder: "Milieux de terrain",
+  winger: "Ailiers",
+  striker: "Avant-centres",
+} as const;
+
+const arabicPositionRankingLabels = {
+  goalkeeper: "حراس المرمى",
+  "centre-back": "قلوب الدفاع",
+  "full-back": "الأظهرة",
+  midfielder: "لاعبو الوسط",
+  winger: "الأجنحة",
+  striker: "المهاجمون",
+} as const;
+
+function getTouchlinePlayerProfileCopy(locale?: string | null, draftLocalesEnabled = false): ProfileCopy {
+  const normalizedLocale = draftLocalesEnabled
+    ? resolveTouchlineCatalogueLocale(locale, true)
+    : normalizeTouchLineLocale(locale);
+  if (normalizedLocale === "pt-BR") return copy.pt;
+  return { ...copy.en, ...profileChromeDrafts[normalizedLocale] } as ProfileCopy;
+}
+
+function localizedProfileRankingGroup(group: string, locale: string, draftLocalesEnabled = false) {
+  const text = getTouchlinePlayerProfileCopy(locale, draftLocalesEnabled);
+  return {
+    goalkeeper: text.rankingGoalkeeper,
+    "centre-back": text.rankingCentreBack,
+    "full-back": text.rankingFullBack,
+    midfielder: text.rankingMidfielder,
+    winger: text.rankingWinger,
+    striker: text.rankingStriker,
+  }[group];
+}
+
+function localizedPreferredFoot(value: string | undefined, locale: string, draftLocalesEnabled = false) {
+  if (!value) return value;
+  const normalized = value.trim().toLowerCase();
+  if (draftLocalesEnabled || locale === "pt-BR") {
+    const text = getTouchlinePlayerProfileCopy(locale, draftLocalesEnabled);
+    return { left: text.preferredLeft, right: text.preferredRight, both: text.preferredBoth }[normalized] ?? value;
+  }
+  if (locale === "ar-SA") return {
+    left: "اليسرى",
+    right: "اليمنى",
+    both: "كلتا القدمين",
+  }[normalized] ?? value;
+  if (locale !== "fr-FR") return value;
+  return {
+    left: "Gauche",
+    right: "Droit",
+    both: "Ambidextre",
+  }[normalized] ?? value;
+}
+
 function languageQuery(locale: string) {
   return `?lang=${encodeURIComponent(locale)}`;
 }
@@ -252,13 +530,24 @@ function languageQuery(locale: string) {
 function formatTransferDate(value: string | undefined, locale: string) {
   if (!value || !Number.isFinite(Date.parse(value))) return value ?? "--";
   return new Intl.DateTimeFormat(locale, {
+    calendar: "gregory",
     month: "short",
     year: "numeric",
     timeZone: "UTC",
   }).format(new Date(value));
 }
 
-function localizedTransferType(value: string, locale: string) {
+function localizedTransferType(value: string, locale: string, draftLocalesEnabled = false) {
+  if (draftLocalesEnabled) {
+    const text = getTouchlinePlayerProfileCopy(locale, true);
+    return {
+      transfer: text.transferType,
+      "free transfer": text.freeTransferType,
+      loan: text.loanType,
+      "loan return": text.loanReturnType,
+      "end of loan": text.loanEndType,
+    }[value.trim().toLowerCase()] ?? value;
+  }
   if (locale !== "pt-BR") return value;
   const normalized = value.trim().toLowerCase();
   return {
@@ -290,101 +579,26 @@ function dataFact(
   );
 }
 
-const ptStatLabels: Record<string, string> = {
-  appearances: "Jogos",
-  starts: "Titularidades",
-  minutes: "Minutos",
-  goals: "Gols",
-  assists: "Assistências",
-  "yellow-cards": "Cartões amarelos",
-  "red-cards": "Cartões vermelhos",
-  fouls: "Faltas",
-  offsides: "Impedimentos",
-  penalties: "Pênaltis",
-  "shots-total": "Finalizações",
-  "shots-on-target": "Finalizações no gol",
-  "shots-off-target": "Finalizações para fora",
-  "shots-blocked": "Finalizações bloqueadas",
-  "blocked-shots": "Chutes bloqueados",
-  "hit-woodwork": "Bolas na trave",
-  passes: "Passes",
-  touches: "Toques na bola",
-  "duels-lost": "Duelos perdidos",
-  "backward-passes": "Passes para trás",
-  "possession-lost": "Perdas de posse",
-  "passes-in-final-third": "Passes no terço final",
-  "cumulative-minutes-played": "Minutos acumulados",
-  "long-balls-won-percentage": "Precisão dos lançamentos longos",
-  "successful-crosses-percentage": "Precisão dos cruzamentos",
-  "accurate-passes": "Passes certos",
-  "accurate-passes-percentage": "Precisão dos passes",
-  "key-passes": "Passes decisivos",
-  "total-crosses": "Cruzamentos",
-  "accurate-crosses": "Cruzamentos certos",
-  "long-balls": "Lançamentos longos",
-  "long-balls-won": "Lançamentos longos certos",
-  "through-balls": "Passes em profundidade",
-  "through-balls-won": "Passes em profundidade certos",
-  tackles: "Desarmes",
-  interceptions: "Interceptações",
-  clearances: "Cortes",
-  "total-duels": "Duelos",
-  "duels-won": "Duelos vencidos",
-  "aerial-won": "Duelos aéreos vencidos",
-  "aerials-won": "Duelos aéreos vencidos",
-  "aerial-duels-won": "Duelos aéreos vencidos",
-  "dribble-attempts": "Tentativas de drible",
-  "successful-dribbles": "Dribles certos",
-  "dribbled-past": "Dribles sofridos",
-  dispossessed: "Perdas de posse",
-  "fouls-drawn": "Faltas sofridas",
-  "goals-conceded": "Gols sofridos",
-  saves: "Defesas",
-  "saves-insidebox": "Defesas dentro da área",
-  "error-lead-to-goal": "Erro que resultou em gol",
-  "clean-sheets": "Jogos sem sofrer gol",
-  cleansheets: "Jogos sem sofrer gol",
-  yellowcards: "Cartões amarelos",
-  redcards: "Cartões vermelhos",
-  "minutes-played": "Minutos jogados",
-  lineups: "Titularidades",
-  bench: "No banco",
-  captain: "Capitão",
-  "team-wins": "Vitórias da equipe",
-  "team-draws": "Empates da equipe",
-  "team-lost": "Derrotas da equipe",
-  "big-chances-created": "Grandes chances criadas",
-  "big-chances-missed": "Grandes chances perdidas",
-  "average-points-per-game": "Média de pontos por jogo",
-  rating: "Nota",
-};
-
-function localizedStatLabel(code: string, fallback: string, locale: string) {
-  const readableFallback = fallback.replace(/[-_]+/g, " ").replace(/^./, (letter) => letter.toUpperCase());
-  if (locale !== "pt-BR") return readableFallback;
-  const normalized = code.toLowerCase().replace(/[_\s]+/g, "-");
-  const normalizedFallback = fallback.toLowerCase().replace(/[_\s]+/g, "-");
-  return ptStatLabels[normalized] ?? ptStatLabels[normalizedFallback] ?? readableFallback;
-}
-
 function measurement(value: string | undefined, unit: "cm" | "kg") {
   if (!value) return undefined;
   return /[a-z]/i.test(value) ? value : `${value} ${unit}`;
 }
 
-function seasonSummaryEntries(statistics: TouchLinePlayerSeasonStatistics, text: typeof copy.en | typeof copy.pt, publishedTotalRating?: number | null) {
+function seasonSummaryEntries(statistics: TouchLinePlayerSeasonStatistics, text: ProfileCopy, publishedTotalRating?: number | null, locale = "en-GB", draftLocalesEnabled = false) {
+  const performanceCopy = getTouchlinePlayerPerformanceCopy(locale, draftLocalesEnabled);
+  const summaryLabels = getTouchlineCardMatchFactLabels(locale, draftLocalesEnabled);
   return [
-    [text.appearances, statistics.summary.appearances],
-    [text.starts, statistics.summary.starts],
-    [text.substituteAppearances, statistics.summary.substituteAppearances],
+    [performanceCopy.appearances, statistics.summary.appearances],
+    [performanceCopy.starts, statistics.summary.starts],
+    [performanceCopy.substituteAppearances, statistics.summary.substituteAppearances],
     [text.minutes, statistics.summary.minutes],
-    [text.goals, statistics.summary.goals],
-    [text.assists, statistics.summary.assists],
+    [summaryLabels.goals, statistics.summary.goals],
+    [summaryLabels.assists, statistics.summary.assists],
     [text.rating, statistics.summary.rating],
     [text.totalRating, publishedTotalRating === undefined ? statistics.summary.totalRating : publishedTotalRating],
-    [text.ratedAppearances, statistics.summary.ratedAppearances],
-    [text.yellowCards, statistics.summary.yellowCards],
-    [text.redCards, statistics.summary.redCards],
+    [performanceCopy.ratedAppearances, statistics.summary.ratedAppearances],
+    [summaryLabels.yellowCards, statistics.summary.yellowCards],
+    [summaryLabels.redCards, statistics.summary.redCards],
   ] as const;
 }
 
@@ -394,15 +608,18 @@ function SeasonStatisticsPanel({
   text,
   locale,
   publishedTotalRating,
+  draftLocalesEnabled = false,
 }: {
   title: string;
   statistics: TouchLinePlayerSeasonStatistics;
-  text: typeof copy.en | typeof copy.pt;
+  text: ProfileCopy;
   locale: string;
   publishedTotalRating?: number | null;
+  draftLocalesEnabled?: boolean;
 }) {
-  const coverageMessage = touchLinePlayerSeasonCoverageMessage(statistics);
-  const entries = seasonSummaryEntries(statistics, text, publishedTotalRating);
+  const performanceCopy = getTouchlinePlayerPerformanceCopy(locale, draftLocalesEnabled);
+  const coverageMessage = touchLinePlayerSeasonCoverageMessage(statistics, locale, draftLocalesEnabled);
+  const entries = seasonSummaryEntries(statistics, text, publishedTotalRating, locale, draftLocalesEnabled);
   const hasStatistics = entries.some(([, value]) => value !== null)
     || Object.keys(statistics.positionStatistics).length > 0;
 
@@ -412,7 +629,7 @@ function SeasonStatisticsPanel({
       <div className={styles.seasonMeta}>
         <strong>{statistics.seasonName ?? text.unavailable}</strong>
         {statistics.competitionName ? <span>{statistics.competitionName}</span> : null}
-        {statistics.latestSyncAt ? <time dateTime={statistics.latestSyncAt}>{formatOfficialSyncTime(statistics.latestSyncAt, locale) ?? text.unavailable}</time> : null}
+        {statistics.latestSyncAt ? <time dateTime={statistics.latestSyncAt}>{formatOfficialSyncTime(statistics.latestSyncAt, locale, draftLocalesEnabled) ?? text.unavailable}</time> : null}
       </div>
       {coverageMessage ? <p className={styles.partialData} data-partial-season-data>{coverageMessage}</p> : null}
       {hasStatistics ? (
@@ -429,7 +646,7 @@ function SeasonStatisticsPanel({
             const ratio = percentage ? seasonPercentageFromCounts(label, statistics.positionStatistics) : null;
             return (
               <div key={label}>
-                <small>{localizedStatLabel(label, label, locale)}</small>
+                <small>{localizedStatLabel(label, label, locale, draftLocalesEnabled)}</small>
                 <strong>{percentage ? ratio === null ? text.unavailable : `${new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(ratio)}%` : String(value)}</strong>
               </div>
             );
@@ -438,14 +655,12 @@ function SeasonStatisticsPanel({
       ) : (
         <div className={styles.pendingSync}>
           <Activity aria-hidden="true" size={22} />
-          <div><strong>{text.unavailable}</strong><small>{text.syncPending}</small></div>
+          <div><strong>{text.unavailable}</strong><small>{performanceCopy.syncPending}</small></div>
         </div>
       )}
       {Object.keys(statistics.positionStatistics).some(isSeasonPercentage) ? (
         <p className={styles.providerNote}>
-          {locale === "pt-BR"
-            ? "Percentuais calculados a partir das contagens disponíveis. Sem contagens compatíveis, a taxa fica indisponível."
-            : "Percentages calculated from available counts. Rates remain unavailable without compatible counts."}
+          {performanceCopy.percentageExplanation}
         </p>
       ) : null}
     </article>
@@ -458,17 +673,20 @@ function FixtureStatisticsPanel({
   matchStats,
   position,
   locale,
+  draftLocalesEnabled = false,
 }: {
   model: TouchLinePlayerStatisticsReadModel;
-  text: typeof copy.en | typeof copy.pt;
+  text: ProfileCopy;
   matchStats: TouchlineCardStats | null | undefined;
   position: string | null | undefined;
   locale: string;
+  draftLocalesEnabled?: boolean;
 }) {
   const current = model.currentOrSelectedFixture;
-  const matchFacts = buildTouchlineVerifiedMatchFactFields({ statistics: matchStats, position }, locale);
+  const performanceCopy = getTouchlinePlayerPerformanceCopy(locale, draftLocalesEnabled);
+  const matchFacts = buildTouchlineVerifiedMatchFactFields({ statistics: matchStats, position }, locale, draftLocalesEnabled);
   const appearanceLabel = (value: "started" | "substitute" | "unused" | "absent" | "unavailable") => {
-    return touchlinePlayerAppearanceLabel(value, locale);
+    return touchlinePlayerAppearanceLabel(value, locale, draftLocalesEnabled);
   };
   return (
     <div className={styles.fixtureStatsGrid}>
@@ -478,7 +696,7 @@ function FixtureStatisticsPanel({
           <div className={styles.fixtureStatsList}>
             {model.matchHistory.map((fixture) => (
               <div key={fixture.fixtureId}>
-                <span>{formatOfficialSyncTime(fixture.fixtureStartsAt, locale) ?? text.unavailable}</span>
+                <span>{formatOfficialSyncTime(fixture.fixtureStartsAt, locale, draftLocalesEnabled) ?? text.unavailable}</span>
                 <strong>{appearanceLabel(fixture.appearanceStatus)}</strong>
                 <small>{fixture.minutes === null ? text.unavailable : `${fixture.minutes} ${text.minutes.toLowerCase()}`}</small>
                 <small className={styles.fixtureRating}>{text.rating}: {fixture.rating === null ? "—" : String(fixture.rating)}</small>
@@ -488,10 +706,10 @@ function FixtureStatisticsPanel({
         ) : <p className={styles.unavailableFixture}>{text.unavailable}</p>}
       </article>
       <article className={styles.officialGroup}>
-        <h3>{text.currentFixture}</h3>
+        <h3>{performanceCopy.currentFixture}</h3>
         {current ? (
           <>
-            <div className={styles.fixtureStatsList}><div><span>{formatOfficialSyncTime(current.fixtureStartsAt, locale) ?? text.unavailable}</span><strong>{appearanceLabel(current.appearanceStatus)}</strong><small>{current.minutes === null ? text.unavailable : `${current.minutes} ${text.minutes.toLowerCase()}`}</small><small className={styles.fixtureRating}>{text.currentMatchPoints}: {current.rating === null ? "—" : String(current.rating)}</small></div></div>
+            <div className={styles.fixtureStatsList}><div><span>{formatOfficialSyncTime(current.fixtureStartsAt, locale, draftLocalesEnabled) ?? text.unavailable}</span><strong>{appearanceLabel(current.appearanceStatus)}</strong><small>{current.minutes === null ? text.unavailable : `${current.minutes} ${text.minutes.toLowerCase()}`}</small><small className={styles.fixtureRating}>{performanceCopy.currentMatchRating}: {current.rating === null ? "—" : String(current.rating)}</small></div></div>
             {matchFacts.length ? (
               <div className={styles.officialStats} data-stat-count={matchFacts.length} data-position-aware-player-facts>
                 {matchFacts.map((fact) => (
@@ -515,19 +733,35 @@ export function generateStaticParams() {
   }));
 }
 
-export default async function TouchLinePlayerProfilePage({
+export default async function TouchLinePlayerProfilePage(props: PlayerProfilePageProps) {
+  return renderPlayerProfilePage(props, isTouchLineSiteLocalesEnabled("/touchline-players/[player]"));
+}
+
+async function renderPlayerProfilePage({
   params,
   searchParams,
-}: PlayerProfilePageProps) {
+}: PlayerProfilePageProps, draftLocalesEnabled = false) {
   const [{ player: playerKey }, query] = await Promise.all([
     params,
     searchParams,
   ]);
-  const locale = normalizeTouchLineLocale(
+  const locale = resolveTouchlineCatalogueLocale(
     Array.isArray(query.lang) ? query.lang[0] : query.lang,
+    draftLocalesEnabled,
   );
-  const text = locale === "pt-BR" ? copy.pt : copy.en;
+  const zoomCopy = getTouchlineCardZoomCopy(locale, draftLocalesEnabled);
+  const exactCopy = getTouchlineExactCardCopy(locale, draftLocalesEnabled);
+  const matchFactLabels = getTouchlineCardMatchFactLabels(locale, draftLocalesEnabled);
+  const text = {
+    ...getTouchlinePlayerProfileCopy(locale, draftLocalesEnabled),
+    totalRating: exactCopy.totalRating,
+    matchHistory: zoomCopy.history,
+    minutes: matchFactLabels.minutes,
+    rating: matchFactLabels.rating,
+    unavailable: touchlinePlayerAppearanceLabel(null, locale, draftLocalesEnabled),
+  };
   const isPortuguese = locale === "pt-BR";
+  const performanceCopy = getTouchlinePlayerPerformanceCopy(locale, draftLocalesEnabled);
   const canonicalLink = parseTouchlineCanonicalProfileLink(query);
   if (canonicalLink.status === "invalid") notFound();
   // Never turn an arbitrary URL into a synthetic footballer. A player page
@@ -541,9 +775,9 @@ export default async function TouchLinePlayerProfilePage({
   if (canonicalLink.status === "valid" && !canonicalResolution) notFound();
   const currentUserPromise = (async () => {
     const supabase = await createClient();
-    return supabase ? (await supabase.auth.getUser()).data.user : null;
+    return supabase ? await supabase.auth.getUser() : null;
   })().then(
-    (user) => ({ ok: true as const, user }),
+    (receipt) => ({ ok: true as const, receipt }),
     (error: unknown) => ({ ok: false as const, error }),
   );
   // Observe auth rejection immediately, but do not hold up public statistics.
@@ -626,7 +860,13 @@ export default async function TouchLinePlayerProfilePage({
   const activeRanking = rankingResult.ranking;
   const authResult = await currentUserPromise;
   if (!authResult.ok) throw authResult.error;
-  const currentUser = authResult.user;
+  const authReceipt = authResult.receipt;
+  const currentUser = authReceipt?.error === null ? authReceipt.data.user ?? null : null;
+  const accountLocaleContext: AccountLocaleContext = authReceipt?.error === null && currentUser && hasTouchLineArenaAccess(currentUser)
+    && typeof currentUser.id === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(currentUser.id)
+    ? { mode: "account", accountId: currentUser.id }
+    : authReceipt && authReceipt.data.user === null && (authReceipt.error === null || authReceipt.error instanceof AuthSessionMissingError)
+      ? { mode: "guest" } : { mode: "unavailable" };
   const navigationSurface = resolveTouchlineGlobalNavigationSurface({
     isAuthenticated: Boolean(currentUser),
     isAdmin: Boolean(currentUser && isOwnerEmail(currentUser.email)),
@@ -659,14 +899,16 @@ export default async function TouchLinePlayerProfilePage({
   });
   const competition = rankingCompetition;
   const zoomMatchHistoryFields = playerStatistics.matchHistory.map((fixture) => {
-    const appearance = touchlinePlayerAppearanceLabel(fixture.appearanceStatus, locale);
+    const appearance = touchlinePlayerAppearanceLabel(fixture.appearanceStatus, locale, draftLocalesEnabled);
     const minutes = fixture.minutes === null
       ? text.unavailable
       : `${fixture.minutes} ${text.minutes.toLowerCase()}`;
     const rating = fixture.rating === null ? "—" : String(fixture.rating);
+    const historyDisplayLabel = formatOfficialSyncTime(fixture.fixtureStartsAt, locale, draftLocalesEnabled) ?? text.unavailable;
     return {
-      label: `${isPortuguese ? "Histórico da partida" : "Match history"} · ${formatOfficialSyncTime(fixture.fixtureStartsAt, locale) ?? text.unavailable}`,
-      value: `${appearance} · ${minutes} · ${isPortuguese ? "Nota" : "Rating"} ${rating}`,
+      label: `${zoomCopy.matchHistoryEntry} · ${historyDisplayLabel}`,
+      historyDisplayLabel,
+      value: `${appearance} · ${minutes} · ${matchFactLabels.rating} ${rating}`,
       kind: "history" as const,
     };
   });
@@ -757,18 +999,20 @@ export default async function TouchLinePlayerProfilePage({
   const tier = editorialCard
     ? touchlineArenaTierForKey(editorialCard.tierKey)
     : developmentTier;
-  const displayedPriceText = editorialCard
-    ? formatTouchlineEditorialCardPrice(editorialCard.cardPrice, locale)
-    : null;
   const hasActiveContractOffer = false;
   const hasPublishedEditorialCard = Boolean(editorialCard);
-  const officialSyncTime = formatOfficialSyncTime(official.fetchedAt, locale);
+  const officialSyncTime = formatOfficialSyncTime(official.fetchedAt, locale, draftLocalesEnabled);
   const rankingGroupLabel = competition.positionGroup
-    ? TOUCHLINE_POSITION_RANKING_LABELS[competition.positionGroup][locale === "pt-BR" ? "pt" : "en"]
+    ? locale === "fr-FR"
+      ? frenchPositionRankingLabels[competition.positionGroup]
+      : locale === "ar-SA"
+        ? arabicPositionRankingLabels[competition.positionGroup]
+        : localizedProfileRankingGroup(competition.positionGroup, locale, draftLocalesEnabled)
+          ?? TOUCHLINE_POSITION_RANKING_LABELS[competition.positionGroup][locale === "pt-BR" ? "pt" : "en"]
     : text.rankPending;
-  const displayPosition = localizedPositionLabel(canonicalIdentity?.position ?? (!officialLookup.providerPlayerId ? official.player?.position : null) ?? card.position, locale);
+  const displayPosition = localizedPositionLabel(canonicalIdentity?.position ?? (!officialLookup.providerPlayerId ? official.player?.position : null) ?? card.position, locale, draftLocalesEnabled);
   const displayShirtNumber = formatTouchlinePublicShirtNumber(card.shirtNumber);
-  const displayNationality = localizedCountryLabel(canonicalIdentity?.nationality ?? (!officialLookup.providerPlayerId ? official.player?.nationality : null) ?? card.countryCode3, locale);
+  const displayNationality = localizedCountryLabel(canonicalIdentity?.nationality ?? (!officialLookup.providerPlayerId ? official.player?.nationality : null) ?? card.countryCode3, locale, draftLocalesEnabled);
   const officialNationality = canonicalIdentity?.nationality?.trim() ?? (!officialLookup.providerPlayerId ? official.player?.nationality?.trim() : null);
   const officialCountryCode3 = touchlineCountryCode3FromName(officialNationality)
     ?? (officialNationality && officialNationality.length <= 3
@@ -789,7 +1033,7 @@ export default async function TouchLinePlayerProfilePage({
     ? touchlineCardTierPalette(tier.key)
     : { accent: TOUCHLINE_NEUTRAL_CARD_ACCENT, secondary: TOUCHLINE_NEUTRAL_CARD_SECONDARY };
   const tierDisplayName = tier
-    ? touchlineCardTierName(tier.key, locale)
+    ? touchlineCardTierName(tier.key, locale, draftLocalesEnabled)
     : null;
   const accent = tierPalette.accent;
   const secondaryAccent = tierPalette.secondary;
@@ -802,21 +1046,23 @@ export default async function TouchLinePlayerProfilePage({
     playerId: exactPlayer.sportmonksPlayerId || card.id,
     playerName: card.name,
     clubId: club?.teamId,
-  });
+  }, draftLocalesEnabled);
   const socialCardVisual = (ariaLabel: string) => editorialCard ? (
-    <TouchlineCardZoom
+    <TouchlineCardZoom draftLocalesEnabled={draftLocalesEnabled}
+      locale={locale}
       ariaLabel={ariaLabel}
       contractHref={hasActiveContractOffer ? marketHref : undefined}
-      contractLabel={locale === "pt-BR" ? "Contratar" : "Contract player"}
-      contractValue={hasActiveContractOffer ? displayedPriceText ?? undefined : undefined}
-      contractTermLabel={hasActiveContractOffer ? (locale === "pt-BR" ? "Contrato · 1 temporada" : "Contract · 1 season") : undefined}
+      contractLabel={text.contractAction}
+      contractTermLabel={hasActiveContractOffer ? text.contractTerm : undefined}
       tierAccent={tierPalette.accent}
       tierLabel={tierDisplayName ?? undefined}
       details={buildTouchlinePlayerCardZoomDetails({
         locale,
+        draftLocalesEnabled,
         name: card.name,
         clubName: card.clubName,
         position: displayPosition,
+        positionKind: touchlinePlayerPositionKind(cardFactPosition),
         nationality: displayNationality,
         editorialCard,
         cardReview: exactPlayer.cardReview,
@@ -824,30 +1070,34 @@ export default async function TouchLinePlayerProfilePage({
         cardEngineHref: currentUser && isOwnerEmail(currentUser.email)
           ? touchlineCardEnginePlayerHref(canonicalPlayerId, locale)
           : null,
-        eyebrow: isPortuguese ? "Perfil oficial do atleta" : "Official player profile",
+        eyebrow: zoomCopy.officialPlayerProfile,
         extraFields: [
           {
-            label: isPortuguese ? "Nota da última partida" : "Last match rating",
+            label: zoomCopy.lastMatchRating,
             value: exactPlayer.matchRating === null ? "—" : String(exactPlayer.matchRating),
             accent: true,
             kind: "rating-last",
+            icon: "rating",
           },
           {
             label: text.totalRating,
             value: cumulativeRatingText,
             accent: true,
             kind: "rating-total",
+            icon: "rating",
+            primary: true,
           },
           ...buildTouchlineVerifiedMatchFactFields({
             statistics: exactPlayer.matchStats,
             position: exactPlayer.position || card.position,
-          }, locale),
+          }, locale, draftLocalesEnabled),
           ...zoomMatchHistoryFields,
         ],
       })}
       expandedContent={(
-        <TouchlineEliteExactCard
+        <TouchlineEliteExactCard draftLocalesEnabled={draftLocalesEnabled}
           player={exactPlayer}
+          hideMarketValuePanel
           layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY}
           playerProfileHref={profileHref}
           runtimeLocaleOverride={locale}
@@ -859,8 +1109,9 @@ export default async function TouchLinePlayerProfilePage({
         />
       )}
     >
-      <TouchlineEliteExactCard
+      <TouchlineEliteExactCard draftLocalesEnabled={draftLocalesEnabled}
         player={exactPlayer}
+        hideMarketValuePanel
         layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY}
         runtimeLocaleOverride={locale}
         rankingMode={previewTier ? "preview" : "live"}
@@ -871,52 +1122,46 @@ export default async function TouchLinePlayerProfilePage({
       />
     </TouchlineCardZoom>
   ) : undefined;
+  const feedCopy = getTouchlinePlayerProfileFeedCopy(locale, draftLocalesEnabled);
   const playerSocialPosts: TouchlineSocialPost[] = [
     {
       id: `card-status-${card.id}-${tier?.key ?? "unpublished"}`,
       kind: "official",
       title: hasPublishedEditorialCard
-        ? (isPortuguese ? "Perfil editorial do card publicado" : "Editorial card profile published")
-        : (isPortuguese ? "Perfil do card TouchLine" : "TouchLine card profile"),
-      body: isPortuguese
-        ? "Tier e preço só aparecem quando a equipa editorial publica este card."
-        : "Tier and price appear only when the editorial team publishes this card.",
+        ? feedCopy.publishedTitle
+        : feedCopy.cardTitle,
+      body: feedCopy.editorialBody,
       meta: "TouchLine",
       accent,
-      badge: tierDisplayName ?? `${cumulativeRatingText} ${isPortuguese ? "nota total" : "total rating"}`,
-      visual: socialCardVisual(`${isPortuguese ? "Ampliar card atual de" : "Open current card for"} ${card.name}`),
+      badge: tierDisplayName ?? `${cumulativeRatingText} ${feedCopy.totalRatingSuffix}`,
+      visual: socialCardVisual(zoomCopy.openCurrentCard.replace("{playerName}", () => card.name)),
       visualTheme: "market",
       metrics: [
         { label: text.totalRating, value: cumulativeRatingText },
-        ...(tierDisplayName ? [{ label: isPortuguese ? "Tier do card" : "Card tier", value: tierDisplayName }] : []),
-        ...(displayedPriceText ? [{ label: isPortuguese ? "Preço do card" : "Card price", value: displayedPriceText }] : []),
+        ...(tierDisplayName ? [{ label: feedCopy.cardTier, value: tierDisplayName }] : []),
       ],
     },
     {
       id: `official-profile-${card.id}-${official.status}`,
       kind: "official",
       title: official.player
-        ? (isPortuguese ? "Dados oficiais do atleta atualizados" : "Official player data updated")
-        : (isPortuguese ? "Dados oficiais adicionais indisponíveis" : "Additional official data unavailable"),
+        ? feedCopy.officialUpdated
+        : feedCopy.officialUnavailable,
       body: official.player
-        ? (isPortuguese
-            ? `Perfil esportivo verificado para ${official.player?.displayName ?? card.name}. Eventos de partida serão publicados aqui sem revelar qualquer estratégia de ClubOwner.`
-            : `Verified football profile for ${official.player?.displayName ?? card.name}. Match events will be published here without revealing any ClubOwner strategy.`)
-        : (isPortuguese
-            ? "O feed aguardará dados verificados antes de publicar desempenho, lesões ou acontecimentos da partida."
-            : "The feed waits for verified data before publishing performance, injuries or match events."),
+        ? formatTouchlinePlayerProfileFeedText(feedCopy.verifiedBody, { playerName: official.player?.displayName ?? card.name })
+        : feedCopy.waitingBody,
       meta: officialSyncTime || "TouchLine Data",
       accent,
       badge: `${displayNationality} · ${displayPosition}`,
       visualImageUrl: profileFlagUrl || undefined,
       visualAlt: displayNationality || card.countryCode3,
-      visualKicker: isPortuguese ? "Perfil oficial" : "Official profile",
+      visualKicker: feedCopy.officialProfile,
       visualValue: profileCountryCode3,
       visualTheme: "profile",
       metrics: [
-        { label: isPortuguese ? "Posição" : "Position", value: displayPosition || "—" },
-        { label: isPortuguese ? "País" : "Country", value: profileCountryCode3 },
-        { label: isPortuguese ? "Verificação" : "Verification", value: isPortuguese ? "TouchLine Verified" : "Verified by TouchLine" },
+        { label: feedCopy.position, value: displayPosition || "—" },
+        { label: feedCopy.country, value: profileCountryCode3 },
+        { label: feedCopy.verification, value: feedCopy.verified },
       ],
     },
   ];
@@ -925,79 +1170,70 @@ export default async function TouchLinePlayerProfilePage({
       {
         id: `simulation-final-whistle-${card.id}`,
         kind: "simulation",
-        title: isPortuguese ? `Fim de jogo: grande atuação de ${card.name}` : `Full time: outstanding display from ${card.name}`,
-        body: isPortuguese
-          ? "Exemplo de publicação automática após o encerramento da partida com a nota TouchLine verificada."
-          : "Example of an automatic full-time post with the verified TouchLine rating.",
-        meta: isPortuguese ? "Demonstração · após a partida" : "Demo · after the match",
+        title: formatTouchlinePlayerProfileFeedText(feedCopy.fullTimeTitle, { playerName: card.name }),
+        body: feedCopy.fullTimeBody,
+        meta: feedCopy.afterMatch,
         accent,
-        badge: isPortuguese ? "Nota 8,7 · nota total simulada 38,0" : "Rating 8.7 · simulated total rating 38.0",
-        visual: socialCardVisual(`${isPortuguese ? "Ampliar card da partida de" : "Open match card for"} ${card.name}`),
+        badge: feedCopy.fullTimeBadge,
+        visual: socialCardVisual(zoomCopy.openMatchCard.replace("{playerName}", () => card.name)),
         visualTheme: "match",
         metrics: [
-          { label: isPortuguese ? "Nota" : "Rating", value: isPortuguese ? "8,7" : "8.7" },
-          { label: isPortuguese ? "Minutos" : "Minutes", value: "90" },
-          { label: isPortuguese ? "Nota total" : "Total rating", value: "38.0" },
+          { label: feedCopy.rating, value: isPortuguese ? "8,7" : "8.7" },
+          { label: feedCopy.minutes, value: "90" },
+          { label: feedCopy.totalRating, value: "38.0" },
         ],
         baseLikeCount: 11_420,
       },
       {
         id: `simulation-goal-${card.id}`,
         kind: "simulation",
-        title: isPortuguese ? `${card.name} marcou para o ${card.clubName}` : `${card.name} scored for ${card.clubName}`,
-        body: isPortuguese
-          ? "A atualização de gol verificada pela TouchLine gera esta comunicação automaticamente para todos os seguidores do atleta."
-          : "The TouchLine Verified goal update generates this communication automatically for every follower of the player.",
-        meta: isPortuguese ? "Demonstração · 67 minutos" : "Demo · 67 minutes",
+        title: formatTouchlinePlayerProfileFeedText(feedCopy.goalTitle, { playerName: card.name, clubName: card.clubName }),
+        body: feedCopy.goalBody,
+        meta: feedCopy.goalMeta,
         accent,
-        badge: isPortuguese ? "1 gol · nota TouchLine verificada" : "1 goal · verified TouchLine rating",
-        visual: socialCardVisual(`${isPortuguese ? "Ampliar card do gol de" : "Open goal card for"} ${card.name}`),
+        badge: feedCopy.goalBadge,
+        visual: socialCardVisual(zoomCopy.openGoalCard.replace("{playerName}", () => card.name)),
         visualTheme: "goal",
         metrics: [
-          { label: isPortuguese ? "Gols" : "Goals", value: "1" },
-          { label: isPortuguese ? "Minuto" : "Minute", value: "67'" },
-          { label: isPortuguese ? "Nota" : "Rating", value: "8.7" },
+          { label: feedCopy.goals, value: "1" },
+          { label: feedCopy.minute, value: "67'" },
+          { label: feedCopy.rating, value: "8.7" },
         ],
         baseLikeCount: 3_018,
       },
       {
         id: `simulation-tier-${card.id}`,
         kind: "simulation",
-        title: isPortuguese ? "A equipa editorial atualizou o tier do card" : "The editorial team updated the card tier",
-        body: isPortuguese
-          ? "Exemplo visual de uma alteração editorial independente de qualquer valuation."
-          : "Visual example of an editorial change independent of any valuation.",
-        meta: isPortuguese ? "Demonstração · revisão editorial" : "Demo · editorial review",
+        title: feedCopy.tierTitle,
+        body: feedCopy.tierBody,
+        meta: feedCopy.tierMeta,
         accent,
-        badge: `${isPortuguese ? "Categoria atualizada" : "Tier updated"}${tierDisplayName ? ` · ${tierDisplayName}` : ""}`,
-        visual: socialCardVisual(`${isPortuguese ? "Ampliar card evoluído de" : "Open upgraded card for"} ${card.name}`),
+        badge: `${feedCopy.tierUpdated}${tierDisplayName ? ` · ${tierDisplayName}` : ""}`,
+        visual: socialCardVisual(zoomCopy.openUpgradedCard.replace("{playerName}", () => card.name)),
         visualTheme: "evolution",
         metrics: [
-          ...(displayedPriceText ? [{ label: isPortuguese ? "Preço do card" : "Card price", value: displayedPriceText }] : []),
-          { label: isPortuguese ? "Evolução" : "Progress", value: isPortuguese ? "Confirmada" : "Confirmed" },
-          { label: "Status", value: isPortuguese ? "Evoluiu" : "Upgraded" },
+          { label: feedCopy.progress, value: feedCopy.confirmed },
+          { label: feedCopy.upgradeStatus, value: feedCopy.upgraded },
         ],
         baseLikeCount: 2_764,
       },
       {
         id: `simulation-availability-${card.id}`,
         kind: "simulation",
-        title: isPortuguese ? "Atualização de disponibilidade do atleta" : "Player availability update",
-        body: isPortuguese
-          ? "Quando a TouchLine verificar lesão, suspensão ou dúvida para a próxima partida, os seguidores recebem uma atualização como esta."
-          : "When TouchLine verifies an injury, suspension or doubt for the next match, followers receive an update like this.",
-        meta: isPortuguese ? "Demonstração · alerta esportivo" : "Demo · football alert",
+        title: feedCopy.availabilityTitle,
+        body: feedCopy.availabilityBody,
+        meta: feedCopy.availabilityMeta,
         accent: "#f59e0b",
-        badge: isPortuguese ? "Situação simulada · aguardando confirmação" : "Simulated status · awaiting confirmation",
+        badge: feedCopy.availabilityBadge,
         visualImageUrl: profileFlagUrl || undefined,
         visualAlt: displayNationality || card.countryCode3,
-        visualKicker: isPortuguese ? "Disponibilidade" : "Availability",
-        visualValue: isPortuguese ? "ATENÇÃO" : "ATTENTION",
+        visualKicker: feedCopy.availability,
+        visualValue: feedCopy.attention,
         visualTheme: "availability",
         metrics: [
-          { label: isPortuguese ? "Situação" : "Status", value: isPortuguese ? "Dúvida" : "Doubt" },
-          { label: isPortuguese ? "Fonte" : "Source", value: isPortuguese ? "Oficial" : "Official" },
-          { label: isPortuguese ? "Próximo passo" : "Next step", value: isPortuguese ? "Revisão" : "Review" },
+          { label: feedCopy.status, value: feedCopy.doubt },
+          { label: feedCopy.source, value: feedCopy.official },
+          { label: feedCopy.nextStep, value: feedCopy.review },
         ],
         baseLikeCount: 864,
       },
@@ -1005,7 +1241,8 @@ export default async function TouchLinePlayerProfilePage({
   }
   return (
     <TouchlineCardLeadershipProvider value={buildTouchlineCardLeadershipValue(activeRanking, null)}>
-    <main className={styles.page} style={pageStyle}>
+    <main className={styles.page} style={pageStyle} dir="ltr">
+      <TouchlineBrandHeader href={profileHref} locale={locale} accountLocaleContext={accountLocaleContext} draftLocalesEnabled={draftLocalesEnabled} />
       <TouchlineLivePresentationRefresh
         initialPlayerRankingSnapshotId={activeRanking.snapshotId}
       />
@@ -1014,7 +1251,9 @@ export default async function TouchLinePlayerProfilePage({
         <div className={styles.topbar}>
           <TouchlineGlobalNavigation
             locale={locale}
+            draftLocalesEnabled={draftLocalesEnabled}
             currentRoute="playerProfile"
+            showAudioControl={false}
             surface={navigationSurface}
             className={styles.profileQuickNav}
           />
@@ -1023,8 +1262,9 @@ export default async function TouchLinePlayerProfilePage({
         <section className={styles.identityBand}>
           <div className={styles.cardColumn}>
             <div className={styles.cardFrame}>
-            <TouchlineEliteExactCard
+            <TouchlineEliteExactCard draftLocalesEnabled={draftLocalesEnabled}
               player={exactPlayer}
+              hideMarketValuePanel
               layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY}
               playerProfileHref={profileHref}
               runtimeLocaleOverride={locale}
@@ -1060,20 +1300,20 @@ export default async function TouchLinePlayerProfilePage({
             </div>
             <p className={styles.roleLine}>
               {displayPosition} · {card.clubName} · {card.shirtNumber === 0
-                ? (isPortuguese ? "#00 provisório" : "provisional #00")
+                ? text.provisionalShirt
                 : displayShirtNumber
                   ? `#${displayShirtNumber}`
                   : "--"}
             </p>
 
             <div className={styles.socialActions}>
-              <TouchlinePlayerSocialActions
+              <TouchlinePlayerSocialActions draftLocalesEnabled={draftLocalesEnabled}
                 providerId={card.id}
                 playerName={card.name}
                 accent={accent}
                 locale={locale}
                 purchaseHref={hasActiveContractOffer ? marketHref : undefined}
-                purchaseLabel={locale === "pt-BR" ? "Contratar jogador" : "Contract player"}
+                purchaseLabel={text.contractPlayer}
               />
             </div>
 
@@ -1081,12 +1321,12 @@ export default async function TouchLinePlayerProfilePage({
               {canonicalIdentity
                 ? [
                     canonicalIdentity.displayName || canonicalIdentity.name,
-                    localizedCountryLabel(canonicalIdentity.nationality, locale),
-                    localizedPositionLabel(canonicalIdentity.position, locale),
+                    localizedCountryLabel(canonicalIdentity.nationality, locale, draftLocalesEnabled),
+                    localizedPositionLabel(canonicalIdentity.position, locale, draftLocalesEnabled),
                   ].filter(Boolean).join(" · ")
                 : !officialLookup.providerPlayerId && official.player
                 ? `${official.player?.displayName ?? card.name} · ${displayNationality} · ${displayPosition}`
-                : text.identityPending}
+                : performanceCopy.identityPending}
             </p>
 
             <div className={styles.sourceLegend}>
@@ -1124,7 +1364,7 @@ export default async function TouchLinePlayerProfilePage({
               {dataFact(
                 <Footprints aria-hidden="true" size={19} />,
                 text.foot,
-                official.player?.preferredFoot,
+                localizedPreferredFoot(official.player?.preferredFoot, locale, draftLocalesEnabled),
               )}
               {dataFact(
                 profileFlagUrl ? (
@@ -1151,6 +1391,7 @@ export default async function TouchLinePlayerProfilePage({
         </section>
 
         <TouchlineSocialFeed
+          draftLocalesEnabled={draftLocalesEnabled}
           entityId={`athlete:${card.id}`}
           entityName={card.name}
           entityImageUrl={club?.logoUrl}
@@ -1160,40 +1401,39 @@ export default async function TouchLinePlayerProfilePage({
           accent={accent}
           locale={locale}
           highlights={[
-            ...(tierDisplayName ? [{ label: isPortuguese ? "Tier do card" : "Card tier", value: tierDisplayName }] : []),
-            ...(displayedPriceText ? [{ label: isPortuguese ? "Preço do card" : "Card price", value: displayedPriceText }] : []),
+            ...(tierDisplayName ? [{ label: text.cardTier, value: tierDisplayName }] : []),
             { label: text.totalRating, value: cumulativeRatingText },
-            { label: isPortuguese ? "Posição" : "Position", value: displayPosition || "—" },
+            { label: text.position, value: displayPosition || "—" },
           ]}
           defaultActionHref={hasActiveContractOffer ? marketHref : undefined}
-          defaultActionLabel={hasActiveContractOffer && displayedPriceText ? `${locale === "pt-BR" ? "Contratar jogador" : "Contract player"} · ${displayedPriceText}` : undefined}
+          defaultActionLabel={hasActiveContractOffer ? text.contractPlayer : undefined}
         />
 
         <section className={styles.officialBand} id="official-performance">
           <div className={styles.sectionHeading}>
             <div>
-              <p className={styles.eyebrow}>{text.officialData}</p>
-              <h2>{text.performance}</h2>
-              <p className={styles.sectionIntro}>{text.performanceCopy}</p>
+              <p className={styles.eyebrow}>{performanceCopy.officialData}</p>
+              <h2>{performanceCopy.performance}</h2>
+              <p className={styles.sectionIntro}>{performanceCopy.performanceCopy}</p>
             </div>
             <BarChart3 aria-hidden="true" size={30} />
           </div>
 
           <div className={styles.syncLine}>
             <div className={styles.syncSource}>
-              <span><i />{touchlinePlayerDataSourceLabel(locale)}</span>
+              <span><i />{touchlinePlayerDataSourceLabel(locale, draftLocalesEnabled)}</span>
               {playerStatistics.previousCompletedSeason.latestSyncAt
-                ? <time dateTime={playerStatistics.previousCompletedSeason.latestSyncAt}>{text.updatedAt} {formatOfficialSyncTime(playerStatistics.previousCompletedSeason.latestSyncAt, locale)}</time>
+                ? <time dateTime={playerStatistics.previousCompletedSeason.latestSyncAt}>{performanceCopy.updatedAt} {formatOfficialSyncTime(playerStatistics.previousCompletedSeason.latestSyncAt, locale, draftLocalesEnabled)}</time>
                 : null}
             </div>
             <div className={styles.syncSeason}>
-              <em>{text.latestSeason}</em>
-              <strong>{playerStatistics.previousCompletedSeason.seasonName ?? text.verifiedSeason}</strong>
+              <em>{performanceCopy.latestSeason}</em>
+              <strong>{playerStatistics.previousCompletedSeason.seasonName ?? performanceCopy.verifiedSeason}</strong>
             </div>
           </div>
           <div className={styles.officialGroups}>
-            <SeasonStatisticsPanel title={text.latestSeason} statistics={playerStatistics.previousCompletedSeason} text={text} locale={locale} />
-            <SeasonStatisticsPanel title={text.currentSeason} statistics={playerStatistics.currentSeason} text={text} locale={locale} publishedTotalRating={totalRatingText} />
+            <SeasonStatisticsPanel title={performanceCopy.latestSeason} statistics={playerStatistics.previousCompletedSeason} text={text} locale={locale} draftLocalesEnabled={draftLocalesEnabled} />
+            <SeasonStatisticsPanel title={performanceCopy.currentSeason} statistics={playerStatistics.currentSeason} text={text} locale={locale} publishedTotalRating={totalRatingText} draftLocalesEnabled={draftLocalesEnabled} />
           </div>
           <FixtureStatisticsPanel
             model={playerStatistics}
@@ -1201,8 +1441,9 @@ export default async function TouchLinePlayerProfilePage({
             matchStats={exactPlayer.matchStats}
             position={cardFactPosition}
             locale={locale}
+            draftLocalesEnabled={draftLocalesEnabled}
           />
-          <p className={styles.providerNote}>{text.fullStats}</p>
+          <p className={styles.providerNote}>{performanceCopy.fullStats}</p>
         </section>
 
         <section className={styles.dataBand}>
@@ -1233,12 +1474,6 @@ export default async function TouchLinePlayerProfilePage({
               <div>
                 <small>{text.frame}</small>
                 <strong>{tierDisplayName}</strong>
-              </div>
-            ) : null}
-            {displayedPriceText ? (
-              <div>
-                <small>{text.price}</small>
-                <strong className={styles.numericMetric}>{displayedPriceText}</strong>
               </div>
             ) : null}
           </div>
@@ -1289,7 +1524,7 @@ export default async function TouchLinePlayerProfilePage({
                   </div>
                   {transfer.type ? (
                     <span className={styles.transferType}>
-                      {localizedTransferType(transfer.type, locale)}
+                      {localizedTransferType(transfer.type, locale, draftLocalesEnabled)}
                     </span>
                   ) : null}
                 </li>

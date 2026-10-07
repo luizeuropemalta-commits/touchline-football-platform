@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import vm from "node:vm";
+import { buildLineupReminderNotification } from "../lib/touchlineFantasy/lineup-reminder-notification.ts";
 import { buildMatchEventNotification } from "../lib/touchlineArena/match-event-notification.ts";
 import { hasTouchlineMatchCentreFixture, selectTouchlineMatchCentreFixture } from "../lib/touchlineArena/match-centre.ts";
 
@@ -15,25 +16,75 @@ const verifiedEvent = {
   },
 } as const;
 
-test("verified goal copy reaches receiver with match points, not an invented goal award", async () => {
+test("optional silent reception preserves visible delivery and normal defaults", async () => {
+  for (const silent of [undefined, false, true, "true", 1, null]) {
+    for (const update of [false, true]) {
+      const worker = receiver();
+      await worker.emit("push", { data: { json: () => ({ title: "TouchLine", silent, update }) } });
+      assert.equal(worker.shown.length, 1);
+      assert.equal(worker.shown[0][1].silent === true, update || silent === true);
+      assert.equal(worker.shown[0][1].renotify, false);
+      assert.equal(worker.shown[0][1].vibrate, undefined);
+    }
+  }
+});
+
+test("lineup reminders display TouchLine branding and open the localized Market", async () => {
+  for (const kind of ["missing_xi", "complete_unconfirmed"] as const) {
+    for (const locale of ["pt-BR", "en-GB"] as const) {
+      const payload = buildLineupReminderNotification({ identityId: "00000000-0000-4000-8000-000000000008", kind, locale });
+      assert.ok(payload);
+      const worker = receiver();
+      await worker.emit("push", { data: { json: () => payload } });
+      assert.equal(worker.shown[0][0], locale === "pt-BR" ? "Seu time está esperando" : "Your team is waiting");
+      assert.equal(worker.shown[0][1].body, payload.body);
+      assert.equal(worker.shown[0][1].icon, "/icons/touchline-192.png");
+      assert.equal(worker.shown[0][1].badge, "/icons/touchline-192.png");
+      assert.equal(worker.shown[0][1].tag, "lineup:00000000-0000-4000-8000-000000000008");
+      assert.equal(worker.shown[0][1].renotify, false);
+      await worker.emit("notificationclick", { notification: { data: worker.shown[0][1].data, close() {} } });
+      assert.deepEqual(worker.opened, [`/clubowner?lang=${locale}`]);
+    }
+  }
+});
+
+test("verified goal copy reaches receiver with compact facts, not a rating or invented goal award", async () => {
   const payload = buildMatchEventNotification(verifiedEvent, "pt-BR");
   assert.ok(payload);
   const worker = receiver();
   await worker.emit("push", { data: { json: () => payload } });
-  assert.equal(worker.shown[0][0], "GOL — Arsenal 1 × 0 Chelsea");
-  assert.equal(worker.shown[0][1].body, "Saka · 23′ · Nota da partida: 8.2");
+  assert.equal(worker.shown[0][0], "Arsenal - Chelsea");
+  assert.equal(worker.shown[0][1].body, "Gol · 23′ · 1 - 0 · Saka");
   assert.equal(worker.shown[0][1].tag, "fixture:123:event:456");
   assert.equal(worker.shown[0][1].icon, "/icons/touchline-event-goal.png");
   assert.equal(worker.shown[0][1].badge, "/icons/touchline-192.png");
 });
 
-test("red-card copy preserves rating points and added time rather than imposing a card penalty", () => {
+test("own-goal and scored penalty notices identify the event without awarding extra points", async () => {
+  for (const [kind, pt, en] of [["own-goal", "Gol contra", "Own goal"], ["penalty", "Gol de pênalti", "Penalty scored"]] as const) {
+    for (const locale of ["pt-BR", "en-GB"] as const) {
+      const payload = buildMatchEventNotification({ ok: true, data: { ...verifiedEvent.data,
+        event: { ...verifiedEvent.data.event, kind },
+      } }, locale);
+      assert.ok(payload);
+      assert.equal(payload.title, "Arsenal - Chelsea");
+      assert.equal(payload.body, `${locale === "pt-BR" ? pt : en} · 23′ · 1 - 0 · Saka`);
+      assert.equal(payload.tag, "fixture:123:event:456");
+      const worker = receiver();
+      await worker.emit("push", { data: { json: () => payload } });
+      assert.equal(worker.shown[0][0], payload.title);
+      assert.equal(worker.shown[0][1].icon, "/icons/touchline-event-goal.png");
+    }
+  }
+});
+
+test("red-card compact copy preserves added time without displaying a rating or card penalty", () => {
   const payload = buildMatchEventNotification({ ok: true, data: { ...verifiedEvent.data,
     event: { ...verifiedEvent.data.event, kind: "second-yellow-red", minute: 90, extraMinute: 3 },
     matchRating: 7.2, touchlinePoints: 7.2,
   } }, "en-GB", true);
-  assert.equal(payload?.title, "RED CARD — Arsenal 1 × 0 Chelsea");
-  assert.equal(payload?.body, "Saka · 90+3′ · Match rating: 7.2");
+  assert.equal(payload?.title, "Arsenal - Chelsea");
+  assert.equal(payload?.body, "Red card · 90+3′ · 1 - 0 · Saka");
   assert.equal(payload?.tag, "fixture:123:event:456");
   assert.equal(payload?.update, true);
   assert.equal(payload?.eventIcon, "red-card");
@@ -84,9 +135,9 @@ test("unverified reader results or mismatched rating points cannot form a notice
   }
 });
 
-test("raw decimal rating is copied without an event bonus prefix", () => {
+test("valid raw decimal rating permits compact copy without exposing points", () => {
   const payload=buildMatchEventNotification({ok:true,data:{...verifiedEvent.data,matchRating:8.09,touchlinePoints:8.09}},"en-GB");
-  assert.equal(payload?.body,"Saka · 23′ · Match rating: 8.09");
+  assert.equal(payload?.body,"Goal · 23′ · 1 - 0 · Saka");
   assert.equal(payload?.tag,"fixture:123:event:456");
 });
 

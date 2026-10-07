@@ -16,11 +16,49 @@ function row(route: string) {
 
 test("inventories every page, API method, proxy, metadata route, and error boundary", () => {
   assert.equal(rows.filter((item) => item.kind === "PAGE").length, 71);
-  assert.equal(rows.filter((item) => item.kind === "API").length, 86);
+  assert.equal(rows.some((item) => item.route === "/visual-qa/arena-main-field"), false);
+  assert.equal(rows.filter((item) => item.kind === "API").length, 94);
   assert.equal(rows.filter((item) => item.kind === "BOUNDARY").length, 7);
   assert.equal(rows.filter((item) => item.kind === "METADATA").length, 3);
   assert.equal(rows.filter((item) => item.kind === "PROXY").length, 1);
   assert.equal(new Set(rows.map((item) => item.route)).size, rows.length);
+});
+
+test("avatar GET inventory stays private read-only; POST preparation requires exact binding and pending activation", () => {
+  const avatar = row("GET /api/account/avatar");
+  assert.equal(avatar.auth, "DEFAULT_OFF_EXACT_QA_CUSTOMER_SESSION");
+  assert.equal(avatar.data, "PRIVATE_CURRENT_AVATAR_ONLY_NO_WRITES");
+  assert.equal(avatar.status, "PENDING_HOSTED_STORAGE_AUTH_AND_RESOURCE_ADMISSION");
+  const upload = row("POST /api/account/avatar");
+  assert.equal(upload.auth, "DEFAULT_OFF_EXACT_QA_CONFIGURED_CUSTOMER_SAME_ORIGIN");
+  assert.equal(upload.role, "CONFIGURED_CLUBOWNER_SELF_NO_ADMIN");
+  assert.equal(upload.data, "PRIVATE_AVATAR_UPLOAD_PREPARATION_EXACT_ACCOUNT_BINDING_REQUIRED");
+  assert.equal(upload.browser, "EXPLICIT_FILE_GESTURE_AND_FRESH_CONTEXT_REQUIRED");
+  assert.equal(upload.status, "PENDING_ACTIVATION_ACCOUNT_STORAGE_RESOURCE_AND_RELOAD_RECOVERY");
+});
+
+test("avatar recovery inventory requires explicit same-origin control and retains durability and activation gates", () => {
+  const recovery = row("POST /api/account/avatar/recovery");
+  assert.equal(recovery.auth, "DEFAULT_OFF_EXACT_QA_CONFIGURED_CUSTOMER_SAME_ORIGIN");
+  assert.equal(recovery.role, "CONFIGURED_CLUBOWNER_SELF_NO_ADMIN");
+  assert.equal(recovery.data, "STATUS_AND_EXPLICIT_GENERATION_FENCE_NO_IMAGE_TRANSPORT");
+  assert.equal(recovery.browser, "EXPLICIT_STATUS_OR_RECOVERY_CONSENT_NO_AUTOMATIC_ACTION");
+  assert.equal(recovery.status, "PENDING_POSTGRES_DURABILITY_BROWSER_AND_ACTIVATION");
+});
+
+test("rehearsal inventory records private configured-account admission and never authorizes an automatic send", () => {
+  const page = row("/notifications/rehearsal");
+  assert.equal(page.auth, "DEFAULT_OFF_EXACT_QA_CONFIGURED_ELIGIBLE_ACCOUNT");
+  assert.equal(page.role, "CONFIGURED_ARENA_USER");
+  assert.equal(page.data, "PRIVATE_REHEARSAL_CONTEXT_PREPARATION_ONLY_NO_SEND");
+  assert.equal(page.browser, "MANUAL_EXPLICIT_CONSENT_ONLY_NO_AUTOMATIC_SEND");
+  assert.equal(page.status, "PENDING_SCHEMA_AUTH_AND_DEVICE_QA");
+  const post = row("POST /api/notifications/rehearsal");
+  assert.equal(post.auth, "DEFAULT_OFF_EXACT_QA_CONFIGURED_ELIGIBLE_ACCOUNT_SAME_ORIGIN_EXPLICIT_CONSENT");
+  assert.equal(post.role, "CONFIGURED_ARENA_USER");
+  assert.equal(post.data, "SINGLE_OWNED_CONFIGURED_INSTALLATION_ONE_ATTEMPT_DIAGNOSTIC_NO_GAME_PREFERENCES");
+  assert.equal(post.browser, "MANUAL_EXPLICIT_CONSENT_ONLY_NO_AUTOMATIC_SEND");
+  assert.equal(post.status, "PENDING_SCHEMA_AUTH_AND_DEVICE_QA");
 });
 
 test("social studio and live-art routes have explicit owner policies without publication readiness", () => {
@@ -45,6 +83,12 @@ test("social studio and live-art routes have explicit owner policies without pub
 });
 
 test("social and fixture interest policies retain pending schema and device gates", () => {
+  assert.equal(row("POST /api/notifications/match-push/dispatch").auth, "DEDICATED_SCHEDULER_SECRET");
+  assert.equal(row("POST /api/notifications/match-push/dispatch").status, "PENDING_SCHEMA_AND_DEVICE_QA");
+  assert.equal(row("GET /api/notifications/match-push/dispatch").status, "METHOD_DISABLED");
+  assert.equal(row("GET /api/notifications/lineup-reminders/dispatch").status, "METHOD_DISABLED");
+  assert.equal(row("POST /api/notifications/lineup-reminders/dispatch").auth, "DEDICATED_SCHEDULER_SECRET");
+  assert.equal(row("POST /api/notifications/lineup-reminders/dispatch").status, "PENDING_SCHEMA_AND_DEVICE_QA");
   const fixture = "/api/notifications/fixtures/[fixtureId]";
   const social = "/api/touchline/players/[playerId]/social";
   assert.equal(row(`GET ${fixture}`).auth, "AUTHENTICATED_ARENA_ACCESS");
@@ -65,7 +109,7 @@ test("records no Server Actions instead of assuming an uninspected mutation surf
 
 test("separates retained public, authenticated, Admin, audit and preview pages from retired ClubOwner routes", () => {
   assert.equal(row("/touchline-clubs").auth, "PUBLIC");
-  assert.equal(row("/market-transfer").auth, "AUTHENTICATED");
+  assert.equal(row("/clubowner").auth, "AUTHENTICATED");
   assert.equal(row("/my-club").auth, "AUTHENTICATED");
   assert.equal(row("/my-club").data, "SUPABASE_OWNER_SQUAD_WALLET_AND_GAMEWEEK");
   assert.equal(rows.some((item) => item.kind === "PAGE" && item.route.startsWith("/club-owner/")), false);
@@ -154,12 +198,13 @@ test("distinguishes read methods, disabled ingestion, local editors, user writes
   assert.equal(row("POST /api/admin/social-publications/template-policy").data, "SUPABASE_SOCIAL_TEMPLATE_VERSION_POLICY");
   assert.equal(row("GET /api/touchline-qa/read/clubhub/[teamId]").auth, "QA_PREVIEW_ONLY");
   assert.equal(row("GET /api/touchline-qa/read/clubhub/[teamId]").role, "LOCAL_READ_MIRROR");
-  assert.equal(row("GET /api/touchline-qa/read/clubhub/[teamId]").data, "SANITIZED_VERSIONED_PUBLIC_CLUBHUB_READ_MODEL");
+  assert.equal(row("GET /api/touchline-qa/read/clubhub/[teamId]").data, "SANITIZED_VERSIONED_FOOTBALL_ONLY_CLUBHUB_FEED_UNAVAILABLE");
   assert.equal(row("GET /api/touchline-qa/read/clubhub/[teamId]").status, "QA_DEPLOY_REQUIRED");
-  assert.equal(row("GET /api/touchline-qa/read/clubhub/[teamId]/feed-art/[publicId]").auth, "QA_PREVIEW_ONLY");
-  assert.equal(row("GET /api/touchline-qa/read/clubhub/[teamId]/feed-art/[publicId]").role, "LOCAL_READ_MIRROR");
-  assert.equal(row("GET /api/touchline-qa/read/clubhub/[teamId]/feed-art/[publicId]").data, "BOUNDED_PUBLISHED_CLUB_FEED_ARTWORK_PROXY");
-  assert.equal(row("GET /api/touchline-qa/read/clubhub/[teamId]/feed-art/[publicId]").browser, "MEDIA_HTTP_CONTRACT");
+  assert.equal(row("GET /api/touchline-qa/read/clubhub/[teamId]/feed-art/[publicId]").auth, "NOT_FOUND");
+  assert.equal(row("GET /api/touchline-qa/read/clubhub/[teamId]/feed-art/[publicId]").role, "NONE");
+  assert.equal(row("GET /api/touchline-qa/read/clubhub/[teamId]/feed-art/[publicId]").data, "RETIRED_NO_READS_OR_ARTWORK");
+  assert.equal(row("GET /api/touchline-qa/read/clubhub/[teamId]/feed-art/[publicId]").browser, "HTTP_404_CONTRACT");
+  assert.equal(row("GET /api/touchline-qa/read/clubhub/[teamId]/feed-art/[publicId]").status, "RETIRED_SOURCE_QA_DEPLOY_REQUIRED");
 });
 
 test("does not claim browser PASS before observed page-by-page QA", () => {
@@ -173,5 +218,5 @@ test("renders the canonical six-column audit table", () => {
   assert.match(markdown, /\| ROUTE \| AUTH \| ROLE \| DATA \| BROWSER \| STATUS \|/);
   assert.match(markdown, /Production was not changed/);
   assert.match(markdown, /Server Actions were not found/);
-  assert.match(markdown, /\/market-transfer/);
+  assert.match(markdown, /\/clubowner/);
 });

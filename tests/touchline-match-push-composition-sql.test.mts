@@ -34,7 +34,7 @@ const subscription = { endpoint, keys: {
 const vapid = { subject: 'mailto:test@example.test', publicKey: signing.getPublicKey().toString('base64url'),
   privateKey: Buffer.alloc(32, 2).toString('base64url') };
 const binding = fingerprint.touchlinePushSubscriptionFingerprint({ installationId, permission: 'granted', subscription });
-const expectedPayload = { title: 'GOAL — Arsenal 1 × 0 Chelsea', body: 'Saka · 23′ · TouchLine Points (match): +5',
+const expectedPayload = { title: 'Arsenal - Chelsea', body: 'Goal · 23′ · 1 - 0 · Saka',
   tag: 'fixture:8:event:9', href: '/live?fixture=8&lang=en-GB', update: false, eventIcon: 'goal' };
 
 function loadServerModule<T>(filename: string, dependencies: Record<string, unknown>): T {
@@ -55,28 +55,45 @@ function loadServerModule<T>(filename: string, dependencies: Record<string, unkn
 // Local composition, NOT hosted PostgREST, provider delivery, or an editorial
 // source integration. Editorial source/checkpoint are explicit doubles. All
 // claimed-reader queries and attempt RPCs below execute SQL as service_role.
-for (const scenario of ['accepted', 'reservation-response-lost', 'opt-out-after-reserve', 'provider-503'] as const) {
+for (const scenario of ['accepted', 'accepted-second-locale', 'reservation-response-lost', 'opt-out-after-reserve', 'opt-out-in-after-reserve', 'provider-503'] as const) {
   test(`single-claim SQL/SDK/encrypted-transport composition: ${scenario}`, { skip: !modulePath }, async () => {
     const { PGlite } = await import(modulePath!);
     const db = new PGlite();
     try {
       await db.exec(`create role anon; create role authenticated; create role service_role bypassrls;
+        create schema auth;
+        create function auth.uid() returns uuid language sql as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
+        create table public.users(id uuid primary key);
+        insert into public.users values('${ownerId}');
+        create function public.touch_updated_at() returns trigger language plpgsql as $$begin new.updated_at=now(); return new; end$$;
         create table public.notification_devices(id uuid primary key,user_id uuid,installation_id uuid,permission text,push_subscription jsonb);
         create table public.football_fixtures(id uuid primary key,provider text,provider_fixture_id text);
-        create table public.notification_preferences(user_id uuid primary key,channels jsonb,settings jsonb,frequency text,explicit_consent_at timestamptz,quiet_hours jsonb);
-        create table public.touchline_fixture_alert_subscriptions(user_id uuid,fixture_id uuid,primary key(user_id,fixture_id));
+        ${readFileSync(new URL('../supabase/migrations/017_touchline_notification_preferences.sql', import.meta.url), 'utf8')}
+        create table public.touchline_fixture_alert_subscriptions(user_id uuid,fixture_id uuid,created_at timestamptz not null default clock_timestamp(),primary key(user_id,fixture_id));
+        grant usage on schema auth,public to authenticated;
         grant usage on schema public to service_role;
         grant select,update on public.notification_devices,public.notification_preferences to service_role;
-        grant select on public.football_fixtures,public.touchline_fixture_alert_subscriptions to service_role;`);
+        grant select on public.football_fixtures to service_role;
+        grant select,insert,delete on public.touchline_fixture_alert_subscriptions to service_role;`);
       await db.query('insert into notification_devices values($1,$2,$3,$4,$5)', [deviceId, ownerId, installationId, 'granted', JSON.stringify(subscription)]);
       await db.query('insert into football_fixtures values($1,$2,$3)', [fixtureId, 'sportmonks', '8']);
-      await db.query(`insert into notification_preferences values($1,'{"push":true}','{"goalsAndEvents":true}','realtime',clock_timestamp()-interval '1 minute',$2)`,
+      await db.query(`insert into notification_preferences(user_id,channels,settings,frequency,explicit_consent_at,quiet_hours) values($1,'{"push":true}','{"goalsAndEvents":true}','realtime',clock_timestamp()-interval '1 minute',$2)`,
         [ownerId, JSON.stringify({ enabled: false, start: '22:00', end: '07:00', timezone: 'UTC' })]);
-      await db.query('insert into touchline_fixture_alert_subscriptions values($1,$2)', [ownerId, fixtureId]);
+      await db.query('insert into touchline_fixture_alert_subscriptions(user_id,fixture_id) values($1,$2)', [ownerId, fixtureId]);
       for (const filename of ['20260924222644_touchline_match_push_outbox.sql', '20260927005940_touchline_match_push_subscription_binding.sql',
-        '20260927023959_touchline_match_push_delivery_kind.sql', '20260927042148_touchline_match_push_attempt_reservation.sql']) {
+        '20260927023959_touchline_match_push_delivery_kind.sql', '20260927042148_touchline_match_push_attempt_reservation.sql',
+        '20261002003838_touchline_match_push_identity_ledger.sql', '20261002010527_touchline_match_push_enrollment.sql',
+        '20261002183141_touchline_notification_game_locale.sql']) {
         await db.exec(`begin;${readFileSync(new URL('../supabase/migrations/' + filename, import.meta.url), 'utf8')}commit;`);
       }
+      const chooseLocale = async (locale: string) => {
+        await db.exec('set role authenticated');
+        try {
+          await db.query("select set_config('request.jwt.claim.sub',$1,false)", [ownerId]);
+          assert.equal((await db.query('select * from public.touchline_set_game_locale($1)', [locale])).rows[0].game_locale, locale);
+        } finally { await db.exec('reset role; set role service_role'); }
+      };
+      await chooseLocale('en-GB');
       await db.exec('set role service_role;');
       assert.equal((await db.query('select current_user as role')).rows[0].role, 'service_role');
       // Real wall clock agrees with SQL and transport. This is not a fake-time,
@@ -86,14 +103,24 @@ for (const scenario of ['accepted', 'reservation-response-lost', 'opt-out-after-
       const baseSource = { sourceProvenance: 'PERSISTED_VERIFIED_CONFIRMED_EVENT', fixtureId: '8', eventId: '9',
         home: { name: 'Arsenal' }, away: { name: 'Chelsea' }, score: { home: 1, away: 0 },
         event: { kind: 'goal', playerName: 'Saka', minute: 23, extraMinute: null },
-        matchRating: 8.2, touchlinePoints: 5, sourceSnapshotAt: sourceTime, contentType: 'GOAL_CONFIRMED' };
+        matchRating: 8.2, touchlinePoints: 8.2, sourceSnapshotAt: sourceTime, contentType: 'GOAL_CONFIRMED' };
       const sourceChecksum = checksumTouchlineConfirmedEventRenderSource(baseSource);
       const editorialSource = { ok: true, data: { ...baseSource, sourceChecksum, sourceRevisionManifest: revisionManifest, sourceRevisionChecksum: revisionChecksum },
         evidence: { canonicalFixtureId: fixtureId, canonicalPlayerId: playerId, fixtureProviderId: '8', eventProviderId: '9', playerProviderId: '3',
           eventSyncedAt: sourceTime, settlementSyncedAt: sourceTime, fixtureUpdatedAt: sourceTime, lastObservedAt: sourceTime, clockRevision: 1 } };
-      // Synthetic fixture setup explicitly attests history; no production
-      // historyComplete resolver is fabricated by this test.
-      const queued = (await db.query(`select public.touchline_enqueue_match_push($1,$2,'9',$3,$4,$5,$6,$7,true) as id`,
+      // Explicit synthetic already-admitted epoch. Admission itself is covered
+      // by runtime-enrollment SQL tests; this proves the actual downstream
+      // reader/transport cannot resurrect an earlier epoch after opt-out/in.
+      const checkpoint = { providerId: '77', fixtureId: '8', typeId: '1', started: 1000,
+        countsFrom: 0, sortOrder: 1, minutes: 20, seconds: 0, ticking: true, hasTimer: true };
+      await db.query(`insert into touchline_match_push_enrollments
+        (device_id,fixture_id,generation,interest_created_at,consent_at,subscription,subscription_fingerprint,baseline,last_checkpoint,excluded_event_ids,needs_baseline)
+        select $1,$2,1,s.created_at,p.explicit_consent_at,$3,$4,$5,$5,array[]::text[],false
+        from touchline_fixture_alert_subscriptions s join notification_preferences p on p.user_id=s.user_id
+        where s.user_id=$6 and s.fixture_id=$2`, [deviceId, fixtureId, JSON.stringify(subscription), binding, JSON.stringify(checkpoint), ownerId]);
+      const queued = (await db.query(`insert into touchline_match_push_outbox
+        (device_id,fixture_id,provider_event_id,source_checksum,source_snapshot_at,payload,expires_at,subscription_fingerprint,delivery_kind,enrollment_generation)
+        values($1,$2,'9',$3,$4,$5,$6,$7,'initial',1) returning id`,
         [deviceId, fixtureId, sourceChecksum, sourceTime, JSON.stringify({ schemaVersion: 1, locale: 'en-GB' }), new Date(started + 90_000).toISOString(), binding])).rows[0].id;
       const claimed = (await db.query('select * from public.touchline_claim_match_push_batch(1)')).rows;
       assert.equal(claimed.length, 1);
@@ -102,22 +129,29 @@ for (const scenario of ['accepted', 'reservation-response-lost', 'opt-out-after-
         leaseUntil: new Date(claimed[0].lease_until).toISOString(), expiresAt: new Date(claimed[0].expires_at).toISOString() };
       const queryContracts: Record<string, { select: string; filters: Record<string, string>; sql: string; values: unknown[] }> = {
         touchline_match_push_outbox: {
-          select: 'id,device_id,fixture_id,provider_event_id,source_checksum,subscription_fingerprint,delivery_kind,lease_until,expires_at',
+          select: 'id,device_id,fixture_id,provider_event_id,source_checksum,subscription_fingerprint,enrollment_generation,delivery_kind,lease_until,expires_at',
           filters: { id: 'eq.' + claim.id, lease_token: 'eq.' + claim.leaseToken, state: 'eq.claimed' },
-          sql: 'select id,device_id,fixture_id,provider_event_id,source_checksum,subscription_fingerprint,delivery_kind,lease_until,expires_at from public.touchline_match_push_outbox where id=$1 and lease_token=$2 and state=$3',
+          sql: 'select id,device_id,fixture_id,provider_event_id,source_checksum,subscription_fingerprint,enrollment_generation,delivery_kind,lease_until,expires_at from public.touchline_match_push_outbox where id=$1 and lease_token=$2 and state=$3',
           values: [claim.id, claim.leaseToken, 'claimed'],
+        },
+        touchline_match_push_enrollments: {
+          select: 'generation,needs_baseline,subscription_fingerprint',
+          filters: { device_id: 'eq.' + deviceId, fixture_id: 'eq.' + fixtureId },
+          sql: 'select generation,needs_baseline,subscription_fingerprint from public.touchline_match_push_enrollments where device_id=$1 and fixture_id=$2',
+          values: [deviceId, fixtureId],
         },
         football_fixtures: { select: 'provider_fixture_id', filters: { id: 'eq.' + fixtureId, provider: 'eq.sportmonks' },
           sql: 'select provider_fixture_id from public.football_fixtures where id=$1 and provider=$2', values: [fixtureId, 'sportmonks'] },
         notification_devices: { select: 'user_id,installation_id,permission,push_subscription', filters: { id: 'eq.' + deviceId },
           sql: 'select user_id,installation_id,permission,push_subscription from public.notification_devices where id=$1', values: [deviceId] },
-        notification_preferences: { select: 'channels,settings,frequency,explicit_consent_at,quiet_hours', filters: { user_id: 'eq.' + ownerId },
-          sql: 'select channels,settings,frequency,explicit_consent_at,quiet_hours from public.notification_preferences where user_id=$1', values: [ownerId] },
+        notification_preferences: { select: 'channels,settings,frequency,explicit_consent_at,quiet_hours,game_locale', filters: { user_id: 'eq.' + ownerId },
+          sql: 'select channels,settings,frequency,explicit_consent_at,quiet_hours,game_locale from public.notification_preferences where user_id=$1', values: [ownerId] },
         touchline_fixture_alert_subscriptions: { select: 'fixture_id', filters: { fixture_id: 'eq.' + fixtureId, user_id: 'eq.' + ownerId },
           sql: 'select fixture_id from public.touchline_fixture_alert_subscriptions where fixture_id=$1 and user_id=$2', values: [fixtureId, ownerId] },
       };
       const bridgeErrors: unknown[] = [];
       const queries: Array<{ table: string; parameters: Record<string, string> }> = [];
+      const preferenceLocales: unknown[] = [];
       const rpcs: Array<{ name: string; args: Record<string, unknown>; result: unknown }> = [];
       const sourceCalls: unknown[] = [];
       const checkpointCalls: unknown[] = [];
@@ -143,7 +177,9 @@ for (const scenario of ['accepted', 'reservation-response-lost', 'opt-out-after-
               assert.deepEqual(parameters, { select: contract.select, ...contract.filters });
               // SQL identifiers/projections are fixed above, never interpolated
               // from a URL. Only a whitelisted exact request reaches this SQL.
-              response = (await db.query(contract.sql, contract.values)).rows;
+              const rows = (await db.query(contract.sql, contract.values)).rows;
+              response = rows;
+              if (table === 'notification_preferences') preferenceLocales.push(rows[0]?.game_locale);
             } else {
               assert.equal(init?.method, 'POST');
               assert.equal(url.search, '');
@@ -166,7 +202,15 @@ for (const scenario of ['accepted', 'reservation-response-lost', 'opt-out-after-
               response = (await db.query(sql, names.map(name => args[name]))).rows[0].ok;
               rpcs.push({ name, args, result: response });
               if (name === 'touchline_reserve_match_push_attempt' && response === true) {
+                if (scenario === 'accepted-second-locale') await chooseLocale('pt-BR');
                 if (scenario === 'opt-out-after-reserve') await db.query(`update public.notification_preferences set channels='{"push":false}' where user_id=$1`, [ownerId]);
+                if (scenario === 'opt-out-in-after-reserve') {
+                  const before = (await db.query('select to_jsonb(s) row from public.touchline_fixture_alert_subscriptions s where user_id=$1 and fixture_id=$2', [ownerId, fixtureId])).rows[0].row;
+                  await db.query('delete from public.touchline_fixture_alert_subscriptions where user_id=$1 and fixture_id=$2', [ownerId, fixtureId]);
+                  await db.query('insert into public.touchline_fixture_alert_subscriptions(user_id,fixture_id,created_at) values($1,$2,$3)', [ownerId, fixtureId, before.created_at]);
+                  const after = (await db.query('select to_jsonb(s) row from public.touchline_fixture_alert_subscriptions s where user_id=$1 and fixture_id=$2', [ownerId, fixtureId])).rows[0].row;
+                  assert.deepEqual(after, before, 'same subscription timestamp must not hide an opt-out/in epoch');
+                }
                 loseReceipt = scenario === 'reservation-response-lost';
               }
             }
@@ -209,18 +253,24 @@ for (const scenario of ['accepted', 'reservation-response-lost', 'opt-out-after-
       // failures cannot masquerade as the expected cancellation/uncertainty.
       assert.deepEqual(bridgeErrors, []);
       const lost = scenario === 'reservation-response-lost';
-      const stopped = scenario === 'opt-out-after-reserve';
-      const expectedState = scenario === 'accepted' ? 'provider_accepted' : stopped ? 'cancelled' : 'uncertain';
+      const stopped = scenario === 'opt-out-after-reserve' || scenario === 'opt-out-in-after-reserve';
+      const expectedState = scenario === 'accepted' || scenario === 'accepted-second-locale' ? 'provider_accepted' : stopped ? 'cancelled' : 'uncertain';
       assert.equal(result, lost ? 'reservation-unconfirmed' : expectedState);
-      const reads = lost ? 1 : 2;
+      const reads = lost || stopped ? 1 : 2;
       assert.deepEqual(sourceCalls, Array.from({ length: reads }, () => ['8', '9']));
       assert.deepEqual(checkpointCalls, Array.from({ length: reads }, () => ['fixture-provider:8']));
       for (const [table, contract] of Object.entries(queryContracts)) {
         const observed = queries.filter(query => query.table === table);
-        assert.equal(observed.length, reads * (table === 'touchline_match_push_outbox' ? 2 : 1), table);
+        const epochRead = table === 'touchline_match_push_outbox' || table === 'touchline_match_push_enrollments';
+        assert.equal(observed.length, reads * (epochRead ? 2 : 1) + (stopped && epochRead ? 1 : 0), table);
         for (const query of observed) assert.deepEqual(query.parameters, { select: contract.select, ...contract.filters });
       }
-      assert.equal(queries.length, reads * 6);
+      assert.equal(queries.length, reads * 8 + (stopped ? 2 : 0));
+      assert.deepEqual(preferenceLocales, scenario === 'accepted-second-locale' ? ['en-GB', 'pt-BR'] : Array(reads).fill('en-GB'));
+      const epoch = (await db.query('select generation,needs_baseline from touchline_match_push_enrollments where device_id=$1 and fixture_id=$2', [deviceId, fixtureId])).rows[0];
+      assert.equal(Number(epoch.generation), scenario === 'opt-out-in-after-reserve' ? 3 : stopped ? 2 : 1);
+      assert.equal(epoch.needs_baseline, stopped);
+      assert.equal(Number((await db.query('select enrollment_generation from touchline_match_push_outbox where id=$1', [claim.id])).rows[0].enrollment_generation), 1);
       assert.equal(rpcs.length, lost ? 1 : 2);
       assert.equal(rpcs[0].name, 'touchline_reserve_match_push_attempt');
       assert.equal(rpcs[0].result, true);
@@ -241,7 +291,13 @@ for (const scenario of ['accepted', 'reservation-response-lost', 'opt-out-after-
       assert.equal(pushRequests.length, sends);
       if (sends) {
         const input = transportInputs[0];
-        assert.deepEqual(JSON.parse(input.payload), expectedPayload);
+        const expectedCopy = scenario === 'accepted-second-locale'
+          ? { ...expectedPayload, body: 'Gol · 23′ · 1 - 0 · Saka', href: '/live?fixture=8&lang=pt-BR' } : expectedPayload;
+        assert.deepEqual(JSON.parse(input.payload), expectedCopy);
+        if (scenario === 'accepted-second-locale') {
+          assert.equal((await db.query('select game_locale from notification_preferences where user_id=$1', [ownerId])).rows[0].game_locale, 'pt-BR');
+          assert.equal((await db.query('select payload from touchline_match_push_outbox where id=$1', [claim.id])).rows[0].payload.locale, 'en-GB', 'queued locale remains stale and non-authoritative');
+        }
         assert.equal(input.expiresAt.getTime(), Math.min(Date.parse(claim.leaseUntil), Date.parse(claim.expiresAt), Date.parse(sourceTime) + 60_000));
         const request = pushRequests[0];
         assert.equal(request.url, endpoint); assert.equal(request.method, 'POST'); assert.equal(request.redirect, 'error');

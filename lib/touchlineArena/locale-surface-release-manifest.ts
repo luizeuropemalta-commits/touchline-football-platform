@@ -34,13 +34,13 @@ export const TOUCHLINE_LOCALE_SURFACE_RELEASE_MANIFEST = [
   {
     id: "live-rankings-and-tables",
     kind: "public",
-    paths: ["/live", "/touchline-player-card-rankings", "/touchline-tables"],
+    paths: ["/live", "/touchline-player-card-rankings", "/rankings"],
     requires: ["content", "shared-data-state", "metadata", "keyboard", "viewport"],
   },
   {
     id: "market-and-card-surfaces",
     kind: "private",
-    paths: ["/market-transfer"],
+    paths: ["/clubowner"],
     requires: ["market-copy", "pending-state", "price-labels", "auth-return", "viewport"],
   },
   {
@@ -52,7 +52,7 @@ export const TOUCHLINE_LOCALE_SURFACE_RELEASE_MANIFEST = [
   {
     id: "private-owner-and-administration",
     kind: "private",
-    paths: ["/market-transfer", "/admin", "/admin/arena", "/inbox"],
+    paths: ["/clubowner", "/admin", "/admin/arena", "/inbox"],
     requires: ["owner-boundary", "auth-copy", "empty-state", "audit-state", "viewport"],
   },
   {

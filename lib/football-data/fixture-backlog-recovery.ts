@@ -6,7 +6,20 @@ import { sanitizeProviderPayloadForPersistence } from "./provider-payload-saniti
 import { selectTouchlineOfficialLineupShirtFacts } from "./card-engine-provisional-lineup-sync.ts";
 
 export type RecoveryScope = { seasonId: string; providerSeasonId: string; competitionId: string };
-export type RecoveryClaim = { fixtureId: string; providerFixtureId: string; attemptCount: number; status: string };
+export type RecoveryClaim = { fixtureId: string; providerFixtureId: string; attemptCount: number; status: string; reservationId?: string };
+
+/** Only called for a provider's proven zero-HTTP deferral. Unconfirmed writes
+ * must not be retried or followed by normal finish in the same run. */
+export async function deferTouchlineFixtureRecovery(admin: SupabaseClient, claim: RecoveryClaim, runId: string) {
+  if (!claim.reservationId || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(claim.reservationId)
+    || !Number.isSafeInteger(claim.attemptCount) || claim.attemptCount < 1 || claim.attemptCount > 8) {
+    throw new Error("recovery-deferral-invalid");
+  }
+  const {data,error} = await admin.rpc("touchline_defer_fixture_recovery", {
+    p_fixture_id:claim.fixtureId,p_run_id:runId,p_reservation_id:claim.reservationId,p_expected_attempt:claim.attemptCount,
+  });
+  if (error || data !== true) throw new Error("recovery-deferral-unconfirmed");
+}
 export const BACKLOG_MAX_PER_RUN = 2;
 export const BACKLOG_DEADLINE_MS = 45_000;
 
@@ -53,7 +66,10 @@ export async function claimTouchlineFixtureRecovery(admin: SupabaseClient, scope
   if (!data) return null;
   const row = data as Record<string, unknown>;
   if (typeof row.fixtureId !== "string" || !/^[1-9]\d*$/.test(String(row.providerFixtureId))
-    || typeof row.attemptCount !== "number" || typeof row.status !== "string") throw new Error("recovery-claim-invalid");
+    || typeof row.attemptCount !== "number" || !Number.isSafeInteger(row.attemptCount)
+    || row.attemptCount < 1 || row.attemptCount > 8 || typeof row.status !== "string"
+    || typeof row.reservationId !== "string"
+    || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(row.reservationId)) throw new Error("recovery-claim-invalid");
   return row as RecoveryClaim;
 }
 
@@ -63,6 +79,7 @@ export async function finishTouchlineFixtureRecovery(admin: SupabaseClient, clai
   const { error } = await admin.rpc("touchline_finish_fixture_recovery", {
     p_fixture_id: claim.fixtureId, p_run_id: runId, p_now: new Date(now).toISOString(),
     p_outcome: outcome, p_error_code: safeCode,
+    p_reservation_id: claim.reservationId ?? null,
     p_next_attempt_at: new Date(now + recoveryDelaySeconds(claim.attemptCount, retryAfter, postponed) * 1000).toISOString(),
   });
   if (error) throw new Error("recovery-finish-failed");
@@ -72,6 +89,7 @@ export async function persistTouchlineRecoveryFeed(admin: SupabaseClient, claim:
   const { data, error } = await admin.rpc("touchline_persist_recovery_feed", {
     p_fixture_id: claim.fixtureId, p_run_id: runId, p_feed: sanitizeProviderPayloadForPersistence(feed),
     p_shirt_facts: selectTouchlineOfficialLineupShirtFacts(feed),
+    p_reservation_id: claim.reservationId ?? null,
   });
   return { persisted: !error, reconciliationReady: !error && data === true, reason: error ? "recovery-fenced-write-failed" : undefined };
 }

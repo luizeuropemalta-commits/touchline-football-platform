@@ -1,0 +1,15 @@
+# Candidata do site novo com oito idiomas — reconciliação antes de publicar
+
+2026-10-07. O proprietário autorizou publicar **o conjunto novo trabalhado localmente**, com os oito idiomas, em `touchline.com.br`, depois de QA e dos gates acordados. Esta autorização não transforma as capturas locais em aprovação hospedada, não autoriza misturar banco QA com produção nem reexecutar migrações já aplicadas. Nesta reconciliação não houve commit, push, build remoto, migração, alteração de flag, alias ou produção.
+
+## Autoridades e estado observado
+
+- Repositório canônico: `/Users/luizlopez/Developer/touchline-market-picker-20260930`; checkout detached em `d84d19181606baa898d468510d8e4750a2525d4f`, com 729 entradas de status: 282 modificadas, 425 não rastreadas e 22 removidas. Inclui `supabase/.temp/` e `tsconfig.tsbuildinfo`, que não entram numa candidata. Manifesto de release e SHA novo ainda não existem.
+- Git remoto `qa` consultado sem push: `30419c494911112f7b793ad8881e5b8e36c4f553`. É descendente do HEAD local e altera 29 caminhos, incluindo Golden Boot/Sportmonks que também mudaram no checkout. Não sobrepor a árvore local ao ramo QA sem revisão de conflitos e preservação do trabalho mais recente.
+- Alias `touchline.com.br`: Vercel `dpl_GDToS5PAGRRD7UhmNEZjKXAS8LzU`, produção READY, SHA `437b318e08c04c1e11f8e290cf652482a4f6a98d`. Não contém as alterações locais ainda não commitadas.
+- A suíte integrada local anterior passou 4713/4713, sem skips; build Webpack isolado passou 139/139. Isso verifica o código **com os seis idiomas novos fechados no caminho público**. As 16 telas foram capturadas com fixture privada de opt-in, não com o gate público aberto. Por exemplo, `app/intro/page.tsx` chama `renderIntroPage(props, false)` e outras entradas fazem o mesmo. Publicar esse código sem integração adicional não entregaria os oito idiomas pedidos.
+- Histórico Supabase QA lido sem SQL de escrita: 25 arquivos de migração local datados de 1–3 de outubro; 16 versões não aparecem diretamente no histórico QA. Uma delas, `20261001194607`, está documentada como já aplicada sob versão hospedada `20261001233034` e **não deve ser repetida**. Restam 15 versões locais sem correspondência direta; incluem projeção Fantasy, notificações, quota/cooldown e avatar. Produção não lista migrações de outubro. É necessário revisar dependência/ordem, prova executável, preimagem, rollback e configuração dos dois ambientes separadamente antes de código que dependa delas.
+
+## Decisão
+
+**NO-GO para deploy agora.** A candidata exata ainda precisa ser formada em árvore limpa sobre o `qa` remoto atual, com manifesto exclusivo de arquivos, seis idiomas integrados no caminho público, testes de gate OFF/ON, revisão independente e reconciliação das migrações. Depois disso: uma única publicação Git-native em QA, testes hospedados com banco QA, e somente então release de produção com configuração de produção e rollback identificado. Preservar a publicação atual até existir substituta validada. Builds remotos consumidos nesta execução: 0.

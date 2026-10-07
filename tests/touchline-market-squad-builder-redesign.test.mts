@@ -35,7 +35,9 @@ test("the canonical squad model still resolves the complete internal journey", (
 
 test("the Market owns one canonical XI editor with coach-first setup", async () => {
   const source = await readFile(stagePath, "utf8");
-  assert.match(source, /ELENCO TITULAR.*STARTING XI/);
+  assert.match(source, /workflowCopy\.startingXI/);
+  const { getTouchlineFantasyMarketWorkflowCopy } = await import("../lib/touchlineFantasy/market-workflow-i18n.ts");
+  assert.deepEqual([getTouchlineFantasyMarketWorkflowCopy("pt-BR").startingXI, getTouchlineFantasyMarketWorkflowCopy("en-GB").startingXI], ["ELENCO TITULAR", "STARTING XI"]);
   assert.match(source, /TouchlinePitchSurface/);
   assert.match(source, /snapshot\?\.formationRegistry\[formationCode\]/);
   assert.match(source, /const selectedCards = geometry\?\.slots\.map/);
@@ -102,19 +104,14 @@ test("canonical XI cards retain the shared expanded card and suppress duplicate 
   assert.doesNotMatch(stage, /className=\{styles\.dugoutSeat\}/);
 });
 
-test("formation vacancies and replacements stay inside the pitch with eligible-only controls", async () => {
-  const [stage, picker] = await Promise.all([
-    readFile(stagePath, "utf8"),
-    readFile(new URL("../app/fantasy/TouchlinePositionPicker.tsx", import.meta.url), "utf8"),
-  ]);
+test("formation vacancies and replacements use the inline list with eligible-only controls", async () => {
+  const stage = await readFile(stagePath, "utf8");
 
-  assert.match(stage, /<TouchlinePositionPicker inline=\{!marketPage\}/);
-  assert.match(stage, /returnFocusRef=\{positionTriggerRef\}/);
+  assert.doesNotMatch(stage, /TouchlinePositionPicker|positionPickerOpen|aria-haspopup/);
+  assert.match(stage, /id="my-club-player-selection" tabIndex=\{-1\} data-open="true" data-inline-selection="true"/);
   assert.match(stage, /touchlineFantasySlotAcceptsPlayer\(activeSlot, player\)/);
   assert.match(stage, /replaceTouchlineFantasyPlayerAtSlot/);
   assert.match(stage, /const editable = snapshot\?\.entitlementActive === true && activeGameweek\?\.state === "MARKET_OPEN" && !deadlineReached/);
   assert.match(stage, /if \(!editable \|\| !geometry\) return false/);
-  assert.match(stage, /if \(!addPlayer\(card\)\) return;[\s\S]*setPositionPickerOpen\(false\)/);
-  assert.match(picker, /useTouchlineDialog<HTMLDivElement>/);
-  assert.match(picker, /open, onDismiss: onClose, label: title, initialFocusRef: closeRef, returnFocusRef/);
+  assert.match(stage, /if \(!addPlayer\(card\)\) return;[\s\S]*scrollToLineupSection\("my-club-xi-pitch"\)/);
 });

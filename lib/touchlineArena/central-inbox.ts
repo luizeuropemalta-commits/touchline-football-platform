@@ -60,18 +60,16 @@ function normalizeCentralDeepLink(value: string | null): string | null {
   try {
     const destination = new URL(value, "https://touchline.local");
     if (destination.origin !== "https://touchline.local") return null;
-    // Preserve existing notices while resolving their retired ranking URL.
-    if (destination.pathname === "/rankings") destination.pathname = "/touchline-tables";
     if (["/arena", "/club-owner"].some((retired) => destination.pathname === retired || destination.pathname.startsWith(`${retired}/`))) {
       const lang = destination.searchParams.get("lang");
-      destination.pathname = "/market-transfer";
+      destination.pathname = "/clubowner";
       destination.search = "";
       destination.hash = "";
       if (lang === "en-GB" || lang === "pt-BR") destination.searchParams.set("lang", lang);
     }
     const path = destination.pathname;
-    const allowed = ["/my-club", "/market-transfer", "/touchline-tables", "/touchline-player-card-rankings", "/live", "/touchline-clubs", "/touchline-players", "/touchline-coaches", "/notifications", "/inbox"].some(
-      (prefix) => path === prefix || path.startsWith(`${prefix}/`),
+    const allowed = ["/my-club", "/clubowner", "/rankings", "/touchline-player-card-rankings", "/live", "/touchline-clubs", "/touchline-players", "/touchline-coaches", "/notifications", "/inbox"].some(
+      (prefix) => path === prefix || (prefix !== "/rankings" && path.startsWith(`${prefix}/`)),
     );
     return allowed ? `${path}${destination.search}${destination.hash}` : null;
   } catch {

@@ -1,0 +1,7 @@
+.controls {
+  /* Same grouping as the login: flex items-center gap-2. Child styles stay canonical. */
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  direction: ltr;
+}

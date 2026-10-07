@@ -2,11 +2,12 @@
 
 import { Bell } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
+import { getTouchlineFixtureAlertCopy } from "@/lib/touchlineArena/fixture-alert-i18n";
 import shared from "../social/TouchlineSocial.module.css";
 import styles from "./TouchlineFixtureAlerts.module.css";
 
-export default function TouchlineFixtureAlerts({ fixtureId, label, locale }: { fixtureId: string; label: string; locale: string }) {
-  const pt = locale === "pt-BR";
+export default function TouchlineFixtureAlerts({ fixtureId, label, locale, draftLocalesEnabled = false }: { fixtureId: string; label: string; locale: string; draftLocalesEnabled?: boolean }) {
+  const copy = getTouchlineFixtureAlertCopy(locale, draftLocalesEnabled);
   const panelId = useId();
   const [open, setOpen] = useState(false);
   const [revision, setRevision] = useState(0);
@@ -61,27 +62,27 @@ export default function TouchlineFixtureAlerts({ fixtureId, label, locale }: { f
 
   return <>
     <div className={`${shared.profileActions} ${styles.trigger}`}>
-      <button type="button" aria-expanded={open} aria-controls={panelId} aria-label={`${pt ? "Alertas" : "Alerts"}: ${label}`}
+      <button type="button" aria-expanded={open} aria-controls={panelId} aria-label={`${copy.alerts}: ${label}`}
         onClick={() => { setOpen((value) => !value); setSubscribed(null); setPhase("loading"); }}>
         {/* Saved interest is not an active push channel. Keep the bell neutral
             until the delivery contract can explicitly confirm mobile alerts. */}
         <Bell size={18} aria-hidden="true" />
       </button>
     </div>
-    {open ? <section id={panelId} className={styles.panel} aria-label={`${pt ? "Alertas" : "Alerts"}: ${label}`}>
+    {open ? <section id={panelId} className={styles.panel} aria-label={`${copy.alerts}: ${label}`}>
       <strong>{label}</strong>
-      <p role="status">{phase === "loading" ? (pt ? "Consultando preferência…" : "Checking preference…")
-        : phase === "saving" ? (pt ? "Salvando preferência…" : "Saving preference…")
-        : phase === "signed-out" ? (pt ? "Entre na Arena para acompanhar esta partida." : "Sign in to Arena to follow this match.")
-        : phase === "disabled" ? (pt ? "Os alertas desta partida ainda não foram ativados." : "Match alerts have not been enabled yet.")
-        : phase === "error" ? (pt ? "Alertas indisponíveis. Não foi possível confirmar sua preferência." : "Alerts unavailable. Your preference could not be confirmed.")
-        : subscribed ? (pt ? "Partida adicionada às suas preferências." : "Match added to your preferences.")
-        : (pt ? "Esta partida ainda não está nas suas preferências." : "This match is not in your preferences yet.")}</p>
-      <p>{pt ? "O envio para o celular ainda não está disponível. Salvar a partida não ativa notificações." : "Mobile delivery is not available yet. Saving this match does not enable notifications."}</p>
+      <p role="status">{phase === "loading" ? copy.loading
+        : phase === "saving" ? copy.saving
+        : phase === "signed-out" ? copy.signedOut
+        : phase === "disabled" ? copy.disabled
+        : phase === "error" ? copy.error
+        : subscribed ? copy.saved
+        : copy.notSaved}</p>
+      <p>{copy.deliveryUnavailable}</p>
       <div className={shared.profileActions}>
-        {phase === "ready" || phase === "saving" ? <button type="button" disabled={phase === "saving"} onClick={() => void save()}>{subscribed ? (pt ? "Remover partida" : "Remove match") : (pt ? "Salvar partida" : "Save match")}</button> : null}
-        {phase === "error" ? <button type="button" onClick={() => { setPhase("loading"); setRevision((value) => value + 1); }}>{pt ? "Consultar novamente" : "Check again"}</button> : null}
-        {phase === "signed-out" ? <a href={`/login?lang=${encodeURIComponent(locale)}`}>{pt ? "Entrar" : "Sign in"}</a> : null}
+        {phase === "ready" || phase === "saving" ? <button type="button" disabled={phase === "saving"} onClick={() => void save()}>{subscribed ? copy.removeMatch : copy.saveMatch}</button> : null}
+        {phase === "error" ? <button type="button" onClick={() => { setPhase("loading"); setRevision((value) => value + 1); }}>{copy.checkAgain}</button> : null}
+        {phase === "signed-out" ? <a href={`/login?lang=${encodeURIComponent(locale)}`}>{copy.signIn}</a> : null}
       </div>
     </section> : null}
   </>;

@@ -9,6 +9,7 @@ import * as fingerprint from '../lib/touchlineArena/push-subscription-fingerprin
 import * as registrationContract from '../lib/touchlineArena/push-device-contract.ts';
 import * as deliveryPolicy from '../lib/touchlineArena/match-push-delivery-policy.ts';
 import * as notification from '../lib/touchlineArena/match-event-notification.ts';
+import * as notificationCopy from '../lib/touchlineArena/notification-i18n.ts';
 
 const id = '11111111-1111-4111-8111-111111111111';
 const deviceId = '22222222-2222-4222-8222-222222222222';
@@ -25,22 +26,43 @@ const claim = { id, leaseToken, leaseUntil: '2026-09-27T02:01:00Z', expiresAt: '
 const js = ts.transpileModule(readFileSync(new URL('../lib/touchlineArena/match-push-claimed-source-server.ts', import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
 
 test('claimed-source adapter binds private queue facts and refuses changed or late results', async () => {
-  const payloadModes = ['valid-revision', 'kind-null', 'kind-unknown', 'kind-changed', 'valid-pt', 'invalid-locale', 'missing-locale', 'formatter-null', 'payload-exact', 'payload-oversize'];
+  const goalLabels: Record<string, string> = { 'en-GB': 'Goal', 'pt-BR': 'Gol', 'es-ES': 'Gol', 'it-IT': 'Gol', 'fr-FR': 'But', 'ar-SA': 'هدف', 'tr-TR': 'Gol', 'de-DE': 'Tor' };
+  const localeModes = Object.keys(goalLabels).map(locale => `valid-account:${locale}`);
+  const epochValues: Record<string, unknown> = {
+    'epoch-null': null, 'epoch-zero': 0, 'epoch-fraction': 1.5,
+    'epoch-unsafe-number': Number.MAX_SAFE_INTEGER + 1, 'epoch-leading-zero': '01',
+    'epoch-overflow': '9223372036854775808', 'valid-epoch-bigint': '9223372036854775807',
+  };
+  const payloadModes = [...localeModes, 'valid-legacy-unknown', 'valid-legacy-missing', 'null-locale', 'prototype-locale', 'valid-sound-refresh', 'valid-revision', 'kind-null', 'kind-unknown', 'kind-changed', 'valid-pt', 'invalid-locale', 'missing-locale', 'formatter-null', 'payload-exact', 'payload-oversize', ...Object.keys(epochValues), 'epoch-mismatch', 'epoch-pending', 'epoch-changed', 'epoch-missing', 'epoch-error'];
   // Padding is computed against the independent public message expectation.
-  const expectedEnglish = { title: 'GOAL — Arsenal 1 × 0 Chelsea', body: 'Saka · 23′ · Match rating: 8.2', tag: 'fixture:8:event:9', href: '/live?fixture=8&lang=en-GB', update: false, eventIcon: 'goal' };
+  const expectedEnglish = { title: 'Arsenal - Chelsea', body: 'Goal · 23′ · 1 - 0 · Saka', tag: 'fixture:8:event:9', href: '/live?fixture=8&lang=en-GB', update: false, eventIcon: 'goal' };
   const paddingBytes = 3072 - Buffer.byteLength(JSON.stringify(expectedEnglish), 'utf8');
   const boundaryName = 'Saka' + 'é'.repeat(Math.floor(paddingBytes / 2)) + 'x'.repeat(paddingBytes % 2);
   for (const mode of [...payloadModes, 'valid', 'missing-binding', 'wrong-fixture', 'changed-checksum', 'revoked', 'rotated-binding', 'aborted', 'unconfigured', 'expired', 'hat-trick', 'aged-during-final-read', 'revision-changed', 'revision-unavailable', 'revision-checksum-changed', 'aged-during-revision', 'aborted-during-revision', 'device-missing', 'device-changed', 'push-off', 'fixture-optout', 'no-consent', 'denied', 'malformed-registration', 'quiet-hours', 'expired-during-revision', 'error-notification_devices', 'error-notification_preferences', 'error-touchline_fixture_alert_subscriptions', 'error-football_fixtures', 'error-touchline_match_push_outbox', 'error-final-claim']) {
     const controller = new AbortController();
     let reads = 0;
+    let enrollmentReads = 0;
     let late = false;
+    const accountLocale = mode.startsWith('valid-account:') ? mode.split(':')[1]
+      : mode === 'valid-pt' ? 'pt-BR' : mode === 'invalid-locale' ? 'en-US'
+      : mode === 'missing-locale' ? undefined : mode === 'null-locale' ? null
+      : mode === 'prototype-locale' ? '__proto__' : 'en-GB';
     const row = { id, device_id: deviceId, fixture_id: fixtureId, provider_event_id: '9', source_checksum: hash,
+      enrollment_generation: mode in epochValues ? epochValues[mode] : 1,
       delivery_kind: mode === 'kind-null' ? null : mode === 'kind-unknown' ? 'unknown' : mode === 'valid-revision' ? 'revision' : 'initial',
       subscription_fingerprint: mode === 'missing-binding' ? null : binding, lease_until: claim.leaseUntil, expires_at: claim.expiresAt };
     const admin = { from(table: string) {
       const filters: Record<string, unknown> = {};
-      const query = { select: () => query, eq: (key: string, value: unknown) => { filters[key] = value; return query; }, abortSignal: (signal: AbortSignal) => { assert.equal(signal, controller.signal); return query; },
+      const query = { select: (columns: string) => { if (table === 'notification_preferences') assert.ok(columns.split(',').includes('game_locale'), 'read account locale with fresh preferences'); return query; }, eq: (key: string, value: unknown) => { filters[key] = value; return query; }, abortSignal: (signal: AbortSignal) => { assert.equal(signal, controller.signal); return query; },
         maybeSingle: async () => {
+          if (table === 'touchline_match_push_enrollments') {
+            enrollmentReads++;
+            assert.deepEqual(filters, { device_id: deviceId, fixture_id: fixtureId });
+            if (mode === 'epoch-missing') return { data: null, error: null };
+            if (mode === 'epoch-error') return { data: null, error: { message: 'synthetic enrollment failure' } };
+            return { data: { generation: mode === 'epoch-mismatch' || (mode === 'epoch-changed' && enrollmentReads > 1) ? 2 : row.enrollment_generation,
+              needs_baseline: mode === 'epoch-pending', subscription_fingerprint: binding }, error: null };
+          }
           if (mode === `error-${table}` || (mode === 'error-final-claim' && table === 'touchline_match_push_outbox' && reads === 1)) return { data: null, error: { message: 'synthetic read failure' } };
           if (table === 'notification_devices') {
             assert.deepEqual(filters, { id: deviceId });
@@ -48,7 +70,7 @@ test('claimed-source adapter binds private queue facts and refuses changed or la
           }
           if (table === 'notification_preferences') {
             assert.deepEqual(filters, { user_id: userId });
-            return { data: { channels: { push: mode !== 'push-off' }, settings: { goalsAndEvents: true }, frequency: 'realtime', explicit_consent_at: mode === 'no-consent' ? null : '2026-09-26T00:00:00Z', quiet_hours: { enabled: mode === 'quiet-hours', start: '22:00', end: '07:00', timezone: 'UTC' } }, error: null };
+            return { data: { game_locale: accountLocale, channels: { push: mode !== 'push-off' }, settings: { goalsAndEvents: true, silentPush: mode === 'valid-sound-refresh' && reads <= 2 }, frequency: 'realtime', explicit_consent_at: mode === 'no-consent' ? null : '2026-09-26T00:00:00Z', quiet_hours: { enabled: mode === 'quiet-hours', start: '22:00', end: '07:00', timezone: 'UTC' } }, error: null };
           }
           if (table === 'touchline_fixture_alert_subscriptions') {
             assert.deepEqual(filters, { fixture_id: fixtureId, user_id: userId });
@@ -67,6 +89,7 @@ test('claimed-source adapter binds private queue facts and refuses changed or la
     const deps: Record<string, unknown> = {
       'server-only': {}, '@/lib/supabase/admin': { createAdminClient: () => admin }, './match-push-source-freshness': freshness,
       './match-event-notification': notification,
+      './notification-i18n': notificationCopy, './notification-i18n.ts': notificationCopy,
       './push-subscription-fingerprint': fingerprint, './push-device-contract': registrationContract, './match-push-delivery-policy': deliveryPolicy,
       './social-source-revision-server': { readTouchlineSocialSourceRevisionCheckpoint: async (keys: string[]) => {
         assert.deepEqual(Array.from(keys), ['fixture-provider:8']);
@@ -87,19 +110,28 @@ test('claimed-source adapter binds private queue facts and refuses changed or la
     const exports = {};
     vm.runInNewContext(js, { exports, Buffer, require: (name: string) => { assert.ok(name in deps); return deps[name]; } });
     const reader = exports as Pick<typeof import('../lib/touchlineArena/match-push-claimed-source-server'), 'readClaimedMatchPushSource'>;
-    const locale = mode === 'valid-pt' ? 'pt-BR' : mode === 'invalid-locale' ? 'en-US' : mode === 'missing-locale' ? undefined : 'en-GB';
+    // Legacy hints deliberately disagree with the account or are malformed/absent.
+    const locale = mode === 'valid-legacy-unknown' ? 'unknown' : mode === 'valid-legacy-missing' ? undefined : 'en-GB';
     const result = await reader.readClaimedMatchPushSource(claim, { signal: controller.signal, locale: locale as 'en-GB' | 'pt-BR',
       now: () => late ? new Date(mode.startsWith('aged-during-') ? now.getTime() + 1001 : claim.leaseUntil) : now,
       maximumAgeMs: mode === 'unconfigured' ? null : { eventSyncedAt: 1000, settlementSyncedAt: 1000, fixtureUpdatedAt: 1000, lastObservedAt: 1000 } });
-    assert.equal(result !== null, ['valid', 'valid-revision', 'valid-pt', 'payload-exact'].includes(mode), mode);
-    if (mode === 'invalid-locale' || mode === 'missing-locale') assert.equal(reads, 0);
+    assert.equal(result !== null, [...localeModes, 'valid-legacy-unknown', 'valid-legacy-missing', 'valid-sound-refresh', 'valid', 'valid-revision', 'valid-pt', 'payload-exact', 'valid-epoch-bigint'].includes(mode), mode);
     if (result) {
       assert.equal(result.deviceId, deviceId); assert.equal(result.registration.installationId, installationId); assert.equal(result.queuedSubscriptionFingerprint, binding); assert.equal(reads, 2);
-      const expected = mode === 'valid-pt' ? { ...expectedEnglish, title: 'GOL — Arsenal 1 × 0 Chelsea', body: 'Saka · 23′ · Nota da partida: 8.2', href: '/live?fixture=8&lang=pt-BR' }
-        : mode === 'payload-exact' ? { ...expectedEnglish, body: boundaryName + ' · 23′ · Match rating: 8.2' }
+      const expected = mode === 'valid-sound-refresh' ? { ...expectedEnglish, silent: true }
+        : mode.startsWith('valid-account:') ? { ...expectedEnglish, body: `${goalLabels[accountLocale as string]} · 23′ · 1 - 0 · Saka`, href: `/live?fixture=8&lang=${accountLocale}` }
+        : mode === 'valid-pt' ? { ...expectedEnglish, body: 'Gol · 23′ · 1 - 0 · Saka', href: '/live?fixture=8&lang=pt-BR' }
+        : mode === 'payload-exact' ? { ...expectedEnglish, body: 'Goal · 23′ · 1 - 0 · ' + boundaryName }
         : mode === 'valid-revision' ? { ...expectedEnglish, update: true } : expectedEnglish;
       assert.deepEqual(JSON.parse(JSON.stringify(result.payload)), expected);
       if (mode === 'payload-exact') assert.equal(Buffer.byteLength(JSON.stringify(result.payload), 'utf8'), 3072);
+      if (mode === 'valid-sound-refresh') {
+        const refreshed = await reader.readClaimedMatchPushSource(claim, { signal: controller.signal, locale: 'en-GB', now: () => now,
+          maximumAgeMs: { eventSyncedAt: 1000, settlementSyncedAt: 1000, fixtureUpdatedAt: 1000, lastObservedAt: 1000 } });
+        assert.ok(refreshed, 'changing only sound must preserve consent and delivery eligibility');
+        assert.deepEqual(JSON.parse(JSON.stringify(refreshed.payload)), expectedEnglish, 'second invocation must not reuse previous silent payload');
+        assert.equal(reads, 4);
+      }
     }
   }
 });

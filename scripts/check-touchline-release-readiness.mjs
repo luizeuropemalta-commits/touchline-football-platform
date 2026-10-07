@@ -77,7 +77,6 @@ export function evaluateTouchlineReleaseReadiness({
   cardNeonFixtureSource,
   ownerPortraitFixtureSource,
   officialTableFixtureSource,
-  arenaMainFieldFixtureSource,
   twentyClubGalleryFixtureSource,
 }) {
   const scripts = packageJson?.scripts ?? {};
@@ -128,15 +127,6 @@ export function evaluateTouchlineReleaseReadiness({
       "locale={locale}",
       "Tabela oficial inicial da liga",
     ]).map((token) => `official-table-fixture:${token}`),
-    ...missingTokens(arenaMainFieldFixtureSource, [
-      "resolveTouchlineVisualQaLocale",
-      "data-visual-qa-locale={locale}",
-      'data-static-arena-score="live"',
-      'data-static-arena-score="final"',
-      'data-static-arena-score="next"',
-      'next: "PRÓXIMO"',
-      'next: "NEXT"',
-    ]).map((token) => `arena-main-field-fixture:${token}`),
     ...missingTokens(twentyClubGalleryFixtureSource, [
       'data-twenty-club-card-gallery="static"',
       "TOUCHLINE_ENGLAND_CLUBS.map",
@@ -189,8 +179,6 @@ export function evaluateTouchlineReleaseReadiness({
       "/visual-qa/club-owner-portrait-neon?lang=pt-BR",
       "/visual-qa/official-league-table-initial?lang=en-GB",
       "/visual-qa/official-league-table-initial?lang=pt-BR",
-      "/visual-qa/arena-main-field?lang=en-GB",
-      "/visual-qa/arena-main-field?lang=pt-BR",
       "/visual-qa/twenty-club-card-gallery?lang=en-GB",
       "/visual-qa/twenty-club-card-gallery?lang=pt-BR",
     ]),
@@ -215,7 +203,7 @@ function parseArgs(args) {
 
 async function readRepositoryInputs(rootDirectory) {
   const read = (path) => readFile(resolve(rootDirectory, path), "utf8");
-  const [packageText, envTemplate, publicOriginSource, proxySource, nextConfigSource, clubHubFixtureSource, cardFixtureSource, cardNeonFixtureSource, ownerPortraitFixtureSource, officialTableFixtureSource, arenaMainFieldFixtureSource, twentyClubGalleryFixtureSource] = await Promise.all([
+  const [packageText, envTemplate, publicOriginSource, proxySource, nextConfigSource, clubHubFixtureSource, cardFixtureSource, cardNeonFixtureSource, ownerPortraitFixtureSource, officialTableFixtureSource, twentyClubGalleryFixtureSource] = await Promise.all([
     read("package.json"),
     read(".env.example"),
     read("lib/touchlineArena/public-origin.ts"),
@@ -226,7 +214,6 @@ async function readRepositoryInputs(rootDirectory) {
     read("app/visual-qa/card-neon-trace/page.tsx"),
     read("app/visual-qa/club-owner-portrait-neon/page.tsx"),
     read("app/visual-qa/official-league-table-initial/page.tsx"),
-    read("app/visual-qa/arena-main-field/page.tsx"),
     read("app/visual-qa/twenty-club-card-gallery/page.tsx"),
   ]);
   return {
@@ -240,7 +227,6 @@ async function readRepositoryInputs(rootDirectory) {
     cardNeonFixtureSource,
     ownerPortraitFixtureSource,
     officialTableFixtureSource,
-    arenaMainFieldFixtureSource,
     twentyClubGalleryFixtureSource,
   };
 }

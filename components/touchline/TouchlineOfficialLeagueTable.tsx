@@ -7,12 +7,14 @@ import { useRouter } from "next/navigation";
 
 import TouchlineClubPerimeterTrace from "@/components/touchline/TouchlineClubPerimeterTrace";
 import type { TouchlineOfficialLeagueTable } from "@/lib/football-data/official-league-table";
+import { getTouchlineOfficialLeagueTableCopy, type TouchlineOfficialLeagueTableCopy as TableCopy } from "@/lib/touchlineArena/official-league-table-i18n";
 
 import styles from "./TouchlineOfficialLeagueTable.module.css";
 
 type Props = Readonly<{
   table: TouchlineOfficialLeagueTable;
   locale: string;
+  draftLocalesEnabled?: boolean;
   variant: "directory" | "profile" | "clubHubRail";
   currentTeamId?: string | null;
   action?: Readonly<{ href: string; label: string }> | null;
@@ -20,114 +22,6 @@ type Props = Readonly<{
   className?: string;
 }>;
 
-type TableCopy = Readonly<{
-  eyebrow: string;
-  title: string;
-  description: string;
-  caption: string;
-  position: string;
-  club: string;
-  played: string;
-  won: string;
-  drawn: string;
-  lost: string;
-  goalsFor: string;
-  goalsAgainst: string;
-  difference: string;
-  points: string;
-  form: string;
-  live: string;
-  stale: string;
-  scoreUnavailable: string;
-  currentClub: string;
-  finalResults: string;
-  seasonStatus: string;
-  seasonLive: string;
-  seasonVerified: string;
-  seasonInitial: string;
-  seasonChecking: string;
-  pendingTitle: string;
-  pendingDescription: string;
-  partialTitle: string;
-  partialDescription: string;
-  unavailableTitle: string;
-  unavailableDescription: string;
-  integrityTitle: string;
-  integrityDescription: string;
-}>;
-
-const copy: Record<"en-GB" | "pt-BR", TableCopy> = {
-  "en-GB": {
-    eyebrow: "TouchLine England League",
-    title: "Official League Table",
-    description: "The one official table combines TouchLine Verified final results with the latest persisted live scores. Live rows and positions are provisional until full time.",
-    caption: "TouchLine England official league table",
-    position: "Pos",
-    club: "Club",
-    played: "P",
-    won: "W",
-    drawn: "D",
-    lost: "L",
-    goalsFor: "GF",
-    goalsAgainst: "GA",
-    difference: "GD",
-    points: "Pts",
-    form: "Form",
-    live: "LIVE",
-    stale: "STALE",
-    scoreUnavailable: "score unavailable",
-    currentClub: "Current club",
-    finalResults: "verified final results",
-    seasonStatus: "Season status",
-    seasonLive: "Live · provisional",
-    seasonVerified: "Verified through latest final",
-    seasonInitial: "Initial standings",
-    seasonChecking: "Integrity check",
-    pendingTitle: "Initial table — all 20 clubs are level.",
-    pendingDescription: "Every club is level on sporting criteria. Continuous positions use alphabetical display order only until a verified result separates them.",
-    partialTitle: "Verified results remain visible; league positions are temporarily withheld.",
-    partialDescription: "TouchLine detected a duplicated fixture observation. No position is published until table integrity is restored.",
-    unavailableTitle: "Official standings are temporarily unavailable.",
-    unavailableDescription: "No league position is shown until TouchLine can verify the canonical result set again.",
-    integrityTitle: "Official standings are being checked.",
-    integrityDescription: "TouchLine found an identity or season consistency issue, so no league position is published.",
-  },
-  "pt-BR": {
-    eyebrow: "TouchLine England League",
-    title: "Tabela Oficial da Liga",
-    description: "A única tabela oficial combina resultados finais verificados com os últimos placares ao vivo persistidos. Linhas e posições ao vivo são provisórias até o fim.",
-    caption: "Tabela oficial da liga TouchLine England",
-    position: "Pos",
-    club: "Clube",
-    played: "J",
-    won: "V",
-    drawn: "E",
-    lost: "D",
-    goalsFor: "GF",
-    goalsAgainst: "GA",
-    difference: "SG",
-    points: "Pts",
-    form: "Forma",
-    live: "AO VIVO",
-    stale: "DESATUALIZADO",
-    scoreUnavailable: "placar indisponível",
-    currentClub: "Clube atual",
-    finalResults: "resultados finais verificados",
-    seasonStatus: "Status da temporada",
-    seasonLive: "Ao vivo · provisória",
-    seasonVerified: "Verificada até o último resultado final",
-    seasonInitial: "Tabela inicial",
-    seasonChecking: "Verificação de integridade",
-    pendingTitle: "Tabela inicial — os 20 clubes estão empatados.",
-    pendingDescription: "Todos os clubes estão empatados nos critérios esportivos. As posições contínuas usam ordem alfabética apenas para apresentação até que um resultado verificado os separe.",
-    partialTitle: "Os resultados verificados continuam visíveis; as posições estão temporariamente suspensas.",
-    partialDescription: "A TouchLine detectou uma observação duplicada de fixture. Nenhuma posição é publicada até a integridade da tabela ser restaurada.",
-    unavailableTitle: "A tabela oficial está temporariamente indisponível.",
-    unavailableDescription: "Nenhuma posição é exibida até a TouchLine verificar novamente o conjunto canônico de resultados.",
-    integrityTitle: "A tabela oficial está sendo verificada.",
-    integrityDescription: "A TouchLine encontrou uma inconsistência de identidade ou temporada; nenhuma posição é publicada.",
-  },
-};
 
 function statusCopy(state: TouchlineOfficialLeagueTable["state"], dictionary: TableCopy) {
   if (state === "pending_no_final") return { title: dictionary.pendingTitle, description: dictionary.pendingDescription, role: "status" as const };
@@ -152,14 +46,14 @@ function seasonStatusCopy(
 export default function TouchlineOfficialLeagueTable({
   table,
   locale,
+  draftLocalesEnabled = false,
   variant,
   currentTeamId = null,
   action = null,
   id,
   className,
 }: Props) {
-  const effectiveLocale = locale === "pt-BR" ? "pt-BR" : "en-GB";
-  const dictionary = copy[effectiveLocale];
+  const dictionary = getTouchlineOfficialLeagueTableCopy(locale, draftLocalesEnabled);
   const status = statusCopy(table.state, dictionary);
   const localeQuery = encodeURIComponent(locale);
   const router = useRouter();
@@ -168,9 +62,7 @@ export default function TouchlineOfficialLeagueTable({
     ? null
     : seasonStatusCopy(table.state, hasLiveFixture, dictionary);
   const hasScrollableViewport = variant === "profile" || variant === "clubHubRail";
-  const scrollLabel = effectiveLocale === "pt-BR"
-    ? "Tabela rolável da liga, 20 clubes"
-    : "Scrollable league table, 20 clubs";
+  const scrollLabel = dictionary.scrollLabel;
 
   useEffect(() => {
     if (!hasLiveFixture) return;

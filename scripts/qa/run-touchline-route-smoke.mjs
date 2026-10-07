@@ -34,7 +34,7 @@ const ALLOWED_API_QUERIES = new Map([
 // Gameweeks, prepare a user XI and reconcile its state. HTTP-method filtering
 // cannot contain those server-side effects. No runtime override is provided.
 const SERVER_EFFECT_PATHS = new Set([
-  "/api/touchline-fantasy/state", "/my-club", "/market-transfer", "/fantasy", "/club-owner/me",
+  "/api/touchline-fantasy/state", "/my-club", "/clubowner", "/fantasy", "/club-owner/me",
 ]);
 // Public directories verified in this repository, not an arbitrary same-origin
 // GET allowance. Keep new routes/resources fail-closed until separately reviewed.
@@ -112,23 +112,23 @@ export function buildSmokeRoutes(config) {
     "/social-publications", "/social-publications/studio",
   ].map((area) => route(`admin${area.replaceAll("/", "-")}`, `/admin${area}${lang}`));
   const routes = [
-    route("root-alias", `/${lang}`, `/arena${lang}`, ".arena-stage"),
-    route("coming-soon-alias", `/coming-soon${lang}`, `/arena${lang}`, ".arena-stage"),
-    route("arena", `/arena${lang}`, `/arena${lang}`, ".arena-stage"),
+    route("root-alias", `/${lang}`, `/intro${lang}`, "[data-touchline-game-entry]"),
+    route("coming-soon-alias", `/coming-soon${lang}`, `/intro${lang}`, "[data-touchline-game-entry]"),
+    route("arena", `/arena${lang}`, `/intro${lang}`, "[data-touchline-game-entry]"),
     route("clubs", `/touchline-clubs${lang}`), route("club", config.clubPath),
     route("player", config.playerPath), route("coach", config.coachPath),
     route("ranking", `/touchline-player-card-rankings${lang}`),
-    route("tables", `/touchline-tables${lang}`), route("live", `/live${lang}`),
+    route("rankings", `/rankings${lang}`), route("live", `/live${lang}`),
   ];
   if (config.persona === "public") return routes.concat([
     "login", "register", "forgot-password", "reset-password", "admin/login",
   ].map((path) => route(path, `/${path}${lang}`)));
   if (config.persona !== "customer") throw failure("PERSONA_INVALID");
   return routes.concat([
-    route("my-club", `/my-club${lang}`, `/my-club${lang}`, "#my-club-squad"),
-    route("market-alias", `/market-transfer${lang}`, `/my-club${lang}&tab=market#my-club-squad`, "#my-club-squad"),
-    route("fantasy-alias", `/fantasy${lang}`, `/my-club${lang}&tab=market#my-club-squad`, "#my-club-squad"),
-    route("self-alias", `/club-owner/me${lang}`, `/my-club${lang}`, "#my-club-squad"),
+    route("my-club", `/my-club${lang}`, `/clubowner${lang}`, "#my-club-xi-pitch"),
+    route("clubowner", `/clubowner${lang}`, `/clubowner${lang}`, "#my-club-xi-pitch"),
+    route("fantasy-alias", `/fantasy${lang}`, `/clubowner${lang}`, "#my-club-xi-pitch"),
+    route("self-alias", `/club-owner/me${lang}`, `/clubowner${lang}`, "#my-club-xi-pitch"),
     ...["inbox", "notifications", "football-search"].map((path) => route(path, `/${path}${lang}`)),
   ]);
 }
@@ -238,7 +238,7 @@ async function provePersona(context, config) {
   } else {
     const location = role.headers().location;
     if (![301, 302, 303, 307, 308].includes(role.status()) || !location
-      || normalizedUrl(location, config.baseUrl) !== normalizedUrl(`/arena?lang=${config.locale}`, config.baseUrl)) throw failure("CUSTOMER_MUST_NOT_BE_ADMIN");
+      || normalizedUrl(location, config.baseUrl) !== normalizedUrl(`/intro?lang=${config.locale}`, config.baseUrl)) throw failure("CUSTOMER_MUST_NOT_BE_ADMIN");
   }
 }
 

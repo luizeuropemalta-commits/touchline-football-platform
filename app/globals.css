@@ -1067,7 +1067,8 @@ a, button { outline: none; }
 .auth-cinematic-original { opacity: 1; }
 
 .auth-brand-header {
-  /* Keep the transparent brand and controls in flow when the form scrolls. */
+  /* Keep brand and controls anchored in the same LTR header positions in every locale. */
+  direction: ltr;
   position: relative;
   z-index: 40;
 }
@@ -1106,6 +1107,12 @@ a, button { outline: none; }
   color: inherit;
   font-size: .65rem;
   font-weight: 900;
+}
+
+.auth-language-switcher select:focus-visible {
+  outline: none;
+  outline-offset: 0;
+  box-shadow: none;
 }
 
 .auth-language-switcher option {

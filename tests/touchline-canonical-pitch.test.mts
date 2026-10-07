@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { getTouchlineCardZoomCopy } from "../lib/touchlineArena/card-zoom-i18n.ts";
 
 import { TOUCHLINE_CLUB_OWNER_XI_SLOTS, TOUCHLINE_STANDARD_433_SLOTS, touchlineCanonicalFormationSlots } from "../lib/touchlineArena/pitch-layout.ts";
 
@@ -9,17 +10,19 @@ const clubHubLineup = readFileSync(new URL("../components/touchline/ClubHubOffic
 const clubLineupBuilder = readFileSync(new URL("../lib/touchlineArena/club-lineup.ts", import.meta.url), "utf8");
 const clubHubLineupCss = readFileSync(new URL("../components/touchline/ClubHubOfficialLineup.module.css", import.meta.url), "utf8");
 const clubHubPage = readFileSync(new URL("../app/touchline-clubs/[club]/page.tsx", import.meta.url), "utf8");
-const tablesClient = readFileSync(new URL("../app/touchline-tables/touchline-tables-client.tsx", import.meta.url), "utf8");
+const tablesClient = readFileSync(new URL("../app/rankings/touchline-tables-client.tsx", import.meta.url), "utf8");
 const pitchSurfaceCss = readFileSync(new URL("../components/touchline/pitch/TouchlinePitchSurface.module.css", import.meta.url), "utf8");
 
 test("Ranking preserves the shared landscape field ratio without a height floor", () => {
-  const css = readFileSync(new URL("../app/touchline-tables/touchline-tables.module.css", import.meta.url), "utf8");
+  const css = readFileSync(new URL("../app/rankings/touchline-tables.module.css", import.meta.url), "utf8");
   const pitch = css.match(/\.pitch\s*\{([^}]+)\}/)?.[1] ?? "";
   assert.match(pitch, /aspect-ratio:\s*105\s*\/\s*68/);
   assert.doesNotMatch(pitch, /min-height:/);
   assert.match(pitchSurfaceCss, /aspect-ratio:\s*105\s*\/\s*68/);
   assert.match(css, /\.pitchPlayer\s*\{[^}]*width: min\(64px, 5\.5%\)/);
-  assert.match(css, /\.positionLabel\s*\{[^}]*right: calc\(100% \+ 4px\)/);
+  const page = readFileSync(new URL("../app/rankings/page.tsx", import.meta.url), "utf8");
+  assert.match(page, /<main className=\{styles\.page\} dir="ltr">/);
+  assert.match(css, /\.positionLabel\s*\{[^}]*inset-inline-end: calc\(100% \+ 4px\)/);
   assert.match(css, /@media \(max-width: 1160px\)[\s\S]*?\.rankStage \{ grid-template-columns: minmax\(0, 1fr\); \}/);
 });
 
@@ -82,12 +85,13 @@ test("ClubHub formation keeps each card as the single visible player identity su
   assert.match(clubHubLineup, /playerProfileHref=\{profileHref\}/);
   assert.doesNotMatch(clubHubLineup, /styles\.playerName/);
   assert.doesNotMatch(clubHubLineupCss, /\.playerName/);
-  assert.match(clubHubLineup, /ariaLabel=\{`\$\{isPortuguese \? "Ampliar card de"/);
+  assert.match(clubHubLineup, /ariaLabel=\{zoomCopy\.expandCard\.replace\("\{playerName\}", \(\) => card\.name\)\}/);
+  assert.equal(getTouchlineCardZoomCopy("pt-BR").expandCard, "Ampliar card de {playerName}");
   assert.doesNotMatch(clubHubLineupCss, /\.playerLink/);
 });
 
 test("ClubHub matchup keeps both crests and its score in a centered premium fixture group", () => {
-  assert.match(clubHubLineup, /<ClubHubLiveFixtureScore fixtureId=\{matchup\.fixtureId\}/);
+  assert.match(clubHubLineup, /<ClubHubLiveFixtureScore draftLocalesEnabled=\{draftLocalesEnabled\} fixtureId=\{matchup\.fixtureId\}/);
   assert.match(clubHubLineupCss, /grid-template-columns: minmax\(270px, 1fr\) minmax\(154px, \.48fr\)/);
   assert.match(clubHubLineupCss, /grid-template-columns: minmax\(0,1fr\) minmax\(54px, auto\) minmax\(0,1fr\)/);
   assert.match(clubHubLineupCss, /\.matchupTeams > b \{ min-width: 54px/);
@@ -120,7 +124,7 @@ test("ClubHub preserves canonical horizontal player coordinates without local ro
 });
 
 test("ClubHub makes an unscheduled opponent explicit without pretending TouchLine is a club", () => {
-  assert.match(clubHubPage, /touchLineT\(locale, "opponentToBeConfirmed"\)/);
+  assert.match(clubHubPage, /touchlineClubHubText\(locale, "opponentToBeConfirmed", draftLocalesEnabled\)/);
   assert.match(clubHubLineup, /className=\{!matchup\.away\.logoUrl \? styles\.matchupTeamPending : undefined\}/);
   assert.match(clubHubLineup, /matchup\.away\.shortCode/);
   assert.doesNotMatch(clubHubPage, /club-hub-fixture-pending-mark/);

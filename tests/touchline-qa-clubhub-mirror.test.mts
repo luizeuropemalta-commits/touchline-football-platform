@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import test from "node:test";
+import { runInNewContext } from "node:vm";
+import ts from "typescript";
 
 import type { TouchlineOfficialLeagueTable } from "../lib/football-data/official-league-table.ts";
 import type { TouchlinePublicFixture, TouchlinePublicVenue } from "../lib/football-data/public-fixture.ts";
@@ -15,6 +18,10 @@ import {
   resolveTouchlineQaReadOrigin,
 } from "../lib/touchlineMirror/qa-clubhub-mirror.ts";
 import { resolveTouchlineDataSource } from "../lib/touchlineMirror/runtime.ts";
+import { findTouchLineClub } from "../lib/touchlineArena/demo-data.ts";
+import { selectPublicClubFixture } from "../lib/football-data/public-fixture-selection.ts";
+import { TOUCHLINE_STADIUM_CATALOG, toTouchlineLiveFixture } from "../lib/touchlineArena/stadium-catalog.ts";
+import type { TouchlineFixture } from "../lib/football-data/types.ts";
 
 const NOW = Date.parse("2026-09-03T18:00:00.000Z");
 const QA_ORIGIN = `https://${TOUCHLINE_QA_READ_HOST}`;
@@ -429,7 +436,7 @@ test("QA mirror accepts only the exact HTTPS QA origin and remains local-only", 
 test("root layout keeps locale sync but disables browser analytics for mirror and invalid modes", async () => {
   const source = await readFile(new URL("../app/layout.tsx", import.meta.url), "utf8");
   assert.match(source, /resolveTouchlineDataSource\(\)/);
-  assert.match(source, /<DocumentLocaleSync initialLocale=\{locale\} \/>/);
+  assert.match(source, /<DocumentLocaleSync initialLocale=\{locale\} draftLocalesEnabled=\{draftLocalesEnabled\} \/>/);
   assert.match(source, /dataSource === "direct"\s*\?\s*<TouchlineActivityTracker \/>\s*:\s*null/);
 });
 
@@ -516,22 +523,103 @@ test("QA endpoint is GET-only, QA-gated, no-store and does not read private requ
   assert.doesNotMatch(source, /cookies\(|headers\(|authorization|SUPABASE_SERVICE_ROLE_KEY|SPORTMONKS_API_TOKEN|TOUCHLINE_LIVE_SYNC_SECRET/);
 });
 
-test("QA feed artwork endpoint exposes only the bounded published proxy contract", async () => {
-  const source = await readFile(
-    new URL("../app/api/touchline-qa/read/clubhub/[teamId]/feed-art/[publicId]/route.ts", import.meta.url),
-    "utf8",
-  );
-  assert.match(source, /export async function GET/);
-  assert.doesNotMatch(source, /export async function (?:POST|PUT|PATCH|DELETE)/);
-  assert.match(source, /inspectTouchlineIsolatedPreviewEnvironment\(\)\.status !== "qa"/);
-  assert.match(source, /PUBLIC_ID\.test\(publicId\)/);
-  assert.match(source, /touchlineQaClubHubFeedPublicId\(candidate\.id\) === publicId/);
-  assert.match(source, /url\.origin === expectedOrigin/);
-  assert.match(source, /pathname\.startsWith\("\/storage\/v1\/object\/sign\/touchline-social-drafts\/"\)/);
-  assert.match(source, /redirect:\s*"manual"/);
-  assert.match(source, /MAX_ARTWORK_BYTES/);
-  assert.match(source, /private, no-store, max-age=0/);
-  assert.doesNotMatch(source, /cookies\(|headers\(|authorization|SPORTMONKS_API_TOKEN|TOUCHLINE_LIVE_SYNC_SECRET/);
+async function routeModule(path: string, dependencies: Record<string, unknown>, extra = {}) {
+  const source = await readFile(new URL(`../${path}`, import.meta.url), "utf8"), exports: Record<string, unknown> = {};
+  runInNewContext(ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2017, module: ts.ModuleKind.CommonJS } }).outputText,
+    { exports, Response, URL, ...extra, fetch: () => { throw Error("NO_NETWORK_ALLOWED"); }, require: (name: string) => {
+      assert.ok(Object.hasOwn(dependencies, name), `forbidden dependency ${name}`); return dependencies[name];
+    } });
+  return exports;
+}
+type QaGet = (request: Request, context: { params: Promise<{ teamId: string }> }) => Promise<Response>;
+async function footballRouteFixture() {
+  const calls: string[] = [], now = Date.now(), stamp = new Date(now - 60_000).toISOString();
+  const freshTable = structuredClone(table); freshTable.asOf = stamp; freshTable.season!.sourceUpdatedAt = stamp;
+  const source = (providerId: string) => ({ provider: "sportmonks" as const, providerId, lastSyncedAt: stamp });
+  const fixture: TouchlineFixture = { id: "sportmonks:19876543", providerId: "19876543", provider: "sportmonks", source: source("19876543"),
+    startsAt: new Date(now + 3_600_000).toISOString(), status: "Not Started", roundName: "Gameweek 3", homeScore: 0, awayScore: 0,
+    homeTeam: { id: "19", providerId: "19", provider: "sportmonks", name: "Arsenal FC", shortCode: "ARS", source: source("19") },
+    awayTeam: { id: "18", providerId: "18", provider: "sportmonks", name: "Chelsea FC", shortCode: "CHE", source: source("18") } };
+  const state = { environment: "qa", failed: "", invalidTable: false, persisted: [fixture], scheduled: [] as TouchlineFixture[] };
+  const read = <T>(name: string, value: () => T) => async () => { calls.push(name); if (state.failed === name) throw Error("PRIVATE_READER_ERROR"); return value(); };
+  const mod = await routeModule("app/api/touchline-qa/read/clubhub/[teamId]/route.ts", {
+    "next/server": createRequire(import.meta.url)("next/server"),
+    "@/lib/football-data/fixture-schedule-store": { readPublicCompetitionFixtures: read("schedule", () => state.scheduled) },
+    "@/lib/football-data/official-league-table-server": { loadTouchlineOfficialLeagueTable: read("table", () => state.invalidTable ? { ...freshTable, rows: [] } : freshTable) },
+    "@/lib/football-data/public-fantasy-snapshot": { readPublicFantasyFixtureSnapshots: read("persisted-football", () => state.persisted.map(fixture => ({ fixture }))) },
+    "@/lib/football-data/public-fixture-selection": { selectPublicClubFixture },
+    "@/lib/touchlineArena/demo-data": { findTouchLineClub },
+    "@/lib/touchlineArena/stadium-catalog": { TOUCHLINE_STADIUM_CATALOG, toTouchlineLiveFixture },
+    "@/lib/touchlineMirror/qa-clubhub-mirror": { createTouchlineQaClubHubMirrorDto },
+    "@/lib/touchlinePreview/isolation": { inspectTouchlineIsolatedPreviewEnvironment: () => ({ status: state.environment }) },
+  });
+  return { calls, state, fixture, freshTable, get: mod.GET as QaGet, module: mod,
+    request: (teamId = "19") => (mod.GET as QaGet)(new Request(`${QA_ORIGIN}/api/touchline-qa/read/clubhub/${teamId}`), { params: Promise.resolve({ teamId }) }) };
+}
+function assertPrivate(response: Response, status: number) {
+  assert.equal(response.status, status); assert.equal(response.headers.get("cache-control"), "private, no-store, max-age=0");
+  assert.equal(response.headers.get("x-content-type-options"), "nosniff"); assert.equal(response.headers.has("location"), false);
+}
+
+test("retired QA feed artwork GET is an unconditional private 404 with no imports, params, environment or I/O", async () => {
+  for (const environment of ["qa", "production", "isolated-preview", "malformed"]) {
+    const mod = await routeModule("app/api/touchline-qa/read/clubhub/[teamId]/feed-art/[publicId]/route.ts", {}, {
+      process: { get env() { throw Error(`ENV_MUST_NOT_BE_READ:${environment}`); } },
+    });
+    assert.deepEqual(Object.keys(mod).sort(), ["GET", "dynamic", "runtime"]);
+    assert.equal(mod.runtime, "nodejs"); assert.equal(mod.dynamic, "force-dynamic");
+    for (const [teamId, publicId] of [["19", "a".repeat(40)], ["arsenal", "bad"], ["", ""], ["999999", "../secret"]]) {
+      const response = await (mod.GET as (request: Request, context: unknown) => Promise<Response>)(
+        new Request(`${QA_ORIGIN}/api/touchline-qa/read/clubhub/${teamId}/feed-art/${publicId}`),
+        { get params() { throw Error("PARAMS_MUST_NOT_BE_READ"); } });
+      assertPrivate(response, 404); assert.deepEqual(await response.json(), { ok: false, error: "Not found" });
+    }
+  }
+});
+
+test("QA football handler preserves v1 facts, zero/null and row order without loading social or its converter", async () => {
+  for (const scores of [0, undefined]) {
+    const h = await footballRouteFixture(); h.fixture.homeScore = scores; h.fixture.awayScore = scores;
+    if (scores === undefined) { h.state.persisted = []; h.state.scheduled = [h.fixture]; }
+    const response = await h.request(); assertPrivate(response, 200); const value = await response.json();
+    const dto = parseTouchlineQaClubHubMirrorDto(value); assert.ok(dto);
+    assert.equal(dto.schemaVersion, 1); assert.deepEqual(dto.feed, { state: "unavailable", items: [] });
+    assert.deepEqual(h.calls, ["table", "persisted-football", "schedule"]);
+    assert.equal(dto.club.teamId, "19"); assert.equal(dto.club.name, "Arsenal FC"); assert.equal(dto.club.homeVenue?.id, "emirates-stadium");
+    assert.equal(dto.nextFixture?.fixtureId, "19876543"); assert.equal(dto.nextFixture?.startsAt, h.fixture.startsAt);
+    assert.equal(dto.nextFixture?.roundName, "Gameweek 3"); assert.equal(dto.nextFixture?.homeScore, scores ?? null); assert.equal(dto.nextFixture?.awayScore, scores ?? null);
+    assert.equal(dto.nextFixture?.venue, null); assert.equal(dto.leagueTable.rows[0].goalsFor, 0); assert.equal(dto.leagueTable.rows[0].liveFixture, null);
+    assert.deepEqual(dto.leagueTable.rows.map(row => row.team.teamId), h.freshTable.rows.map(row => row.team.providerTeamId));
+    assert.equal(dto.leagueTable.season?.providerSeasonId, "28083"); assert.equal(dto.leagueTable.season?.sourceUpdatedAt, h.freshTable.season?.sourceUpdatedAt);
+    assert.doesNotMatch(JSON.stringify(dto), /imagePath|publicId|signedUrl|token|PRIVATE_/);
+  }
+});
+
+test("QA football handler retains guards, canonical club lookup and awaited params before football readers", async () => {
+  for (const environment of ["production", "isolated-preview", "invalid", "local"]) {
+    const h = await footballRouteFixture(); h.state.environment = environment;
+    const response = await h.get(new Request(QA_ORIGIN), { params: new Promise(() => {}) });
+    assertPrivate(response, 404); assert.deepEqual(h.calls, []);
+  }
+  for (const teamId of ["", "arsenal", "unknown", "999999"]) {
+    const h = await footballRouteFixture(); assertPrivate(await h.request(teamId), 404); assert.deepEqual(h.calls, []);
+  }
+  const h = await footballRouteFixture(); let release!: (value: { teamId: string }) => void;
+  const pending = h.get(new Request(QA_ORIGIN), { params: new Promise(resolve => { release = resolve; }) });
+  await Promise.resolve(); assert.deepEqual(h.calls, []); release({ teamId: "19" }); assertPrivate(await pending, 200);
+  const rejected = await footballRouteFixture(); await assert.rejects(rejected.get(new Request(QA_ORIGIN), { params: Promise.reject(Error("PARAMS_REJECTED")) }), /PARAMS_REJECTED/);
+  assert.deepEqual(rejected.calls, []);
+});
+
+test("QA football handler preserves sanitized 503 on reader or model failure and null fixture when no current match exists", async () => {
+  for (const failed of ["table", "persisted-football", "schedule", "invalid-model"]) {
+    const h = await footballRouteFixture(); h.state.failed = failed; h.state.invalidTable = failed === "invalid-model";
+    const response = await h.request(); assertPrivate(response, 503);
+    assert.deepEqual(await response.json(), { ok: false, error: "TL_QA_CLUBHUB_MIRROR_UNAVAILABLE" });
+  }
+  const h = await footballRouteFixture(); h.state.persisted = []; h.state.scheduled = [];
+  const response = await h.request(); assertPrivate(response, 200); const dto = parseTouchlineQaClubHubMirrorDto(await response.json()); assert.ok(dto);
+  assert.equal(dto.nextFixture, null); assert.deepEqual(dto.feed, { state: "unavailable", items: [] });
 });
 
 test("ClubHub selects the mirror only through the local data-source gate", async () => {
@@ -544,8 +632,8 @@ test("ClubHub selects the mirror only through the local data-source gate", async
   assert.match(source, /dataSource === "invalid"/);
   assert.match(source, /if \(dataSource !== "direct"\)[\s\S]*?TOUCHLINE_DEFAULT_FORMATION_GEOMETRY_REGISTRY/);
   assert.match(source, /dataSource === "direct" \? loadTouchLineActiveRanking\(\)/);
-  assert.match(source, /dataSource === "direct"[\s\S]*?readTouchlineClubSocialFeed/);
-  assert.match(source, /loadTouchlineQaMirroredSocialFeed\(club\.teamId, mirrorResultPromise/);
+  assert.doesNotMatch(source, /readTouchlineClubSocialFeed/);
+  assert.doesNotMatch(source, /loadTouchlineQaMirroredSocialFeed/);
   assert.doesNotMatch(mirrorServer, /createAdminClient|createFootballDataProvider|SPORTMONKS_API_TOKEN|SUPABASE_SERVICE_ROLE_KEY/);
   assert.doesNotMatch(mirrorServer, /loadTouchlineOfficialLeagueTable|readPublicPremierSquad|fallback/i);
 });

@@ -25,7 +25,10 @@ const readRequestActiveRanking = cache(async (): Promise<TouchlineActiveRankingS
     .select("snapshot_id")
     .eq("league_key", TOUCHLINE_ENGLAND_LEAGUE_KEY)
     .maybeSingle();
-  if (activeError || !active?.snapshot_id) return TOUCHLINE_PRESEASON_RANKING_STATE;
+  // An unavailable read is not evidence that the competition has not started.
+  // Let the route's retry boundary handle failure without publishing zero ranks.
+  if (activeError) throw new Error("TOUCHLINE_RANKING_READ_UNAVAILABLE");
+  if (!active?.snapshot_id) return TOUCHLINE_PRESEASON_RANKING_STATE;
 
   const snapshotRead = Promise.resolve(admin
     .from("touchline_card_ranking_snapshots")
@@ -45,9 +48,10 @@ const readRequestActiveRanking = cache(async (): Promise<TouchlineActiveRankingS
       (error: unknown) => ({ ok: false as const, error }),
     );
   const { data: record, error } = await snapshotRead;
+  if (error) throw new Error("TOUCHLINE_RANKING_READ_UNAVAILABLE");
   // V2/V3 conversion snapshots remain technical audit history only. A product
   // surface activates only the current fully auditable rating snapshot.
-  if (error || !record || record.status !== "published" || record.source !== "sportmonks-audited" || record.scoring_version !== "player_scoring_v4" || (record.coverage_status !== "complete" && record.coverage_status !== "complete_for_scoring") || record.actual_player_count !== record.expected_player_count) {
+  if (!record || record.status !== "published" || record.source !== "sportmonks-audited" || record.scoring_version !== "player_scoring_v4" || (record.coverage_status !== "complete" && record.coverage_status !== "complete_for_scoring") || record.actual_player_count !== record.expected_player_count) {
     return TOUCHLINE_PRESEASON_RANKING_STATE;
   }
 

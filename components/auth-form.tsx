@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import {
   getTouchLineAuthCopy,
   normalizeTouchLineAuthLocale,
+  normalizeTouchLineLoginLocale,
   normalizeTouchLineAuthReturnTo,
   touchLineAuthEntryHref,
   touchLineAuthHref,
@@ -68,23 +69,33 @@ export function AuthForm({
   returnTo,
   entryPath = "/login",
   initialError = null,
+  draftLocaleEnabled = false,
+  siteLocalesEnabled = false,
 }: {
   mode: Mode;
   locale?: string;
   returnTo?: string;
   entryPath?: "/login" | "/admin/login";
   initialError?: AuthEntryError;
+  draftLocaleEnabled?: boolean;
+  siteLocalesEnabled?: boolean;
 }) {
-  const normalizedLocale = normalizeTouchLineAuthLocale(locale);
-  const copy = getTouchLineAuthCopy(normalizedLocale).form;
-  const normalizedReturnTo = normalizeTouchLineAuthReturnTo(returnTo);
-  const arenaHref = touchLinePostAuthHref(normalizedReturnTo, normalizedLocale);
-  const publicClubHref = touchLineAuthHref("/touchline-clubs", normalizedLocale);
-  const loginHref = touchLineAuthEntryHref("/login", normalizedLocale, normalizedReturnTo);
-  const registerHref = touchLineAuthEntryHref("/register", normalizedLocale, normalizedReturnTo);
-  const forgotPasswordHref = touchLineAuthEntryHref("/forgot-password", normalizedLocale, normalizedReturnTo);
-  const firstEntryHref = touchlineRegistrationEntryHref(normalizedReturnTo, normalizedLocale);
-  const resetPasswordHref = touchLineAuthHref("/reset-password", normalizedLocale);
+  const safeReturnPath = normalizeTouchLineAuthReturnTo(returnTo)?.split(/[?#]/)[0] ?? "";
+  const publicSiteLocalesEnabled = siteLocalesEnabled && entryPath !== "/admin/login"
+    && !["/admin", "/visual-qa"].some((path) => safeReturnPath === path || safeReturnPath.startsWith(`${path}/`));
+  const normalizedLocale = normalizeTouchLineAuthLocale(locale, publicSiteLocalesEnabled);
+  const displayLocale = draftLocaleEnabled
+    ? normalizeTouchLineLoginLocale(locale)
+    : normalizedLocale;
+  const copy = getTouchLineAuthCopy(displayLocale, draftLocaleEnabled || publicSiteLocalesEnabled).form;
+  const normalizedReturnTo = normalizeTouchLineAuthReturnTo(returnTo, publicSiteLocalesEnabled);
+  const arenaHref = touchLinePostAuthHref(normalizedReturnTo, normalizedLocale, "/clubowner", publicSiteLocalesEnabled);
+  const publicClubHref = touchLineAuthHref("/touchline-clubs", normalizedLocale, publicSiteLocalesEnabled);
+  const loginHref = touchLineAuthEntryHref("/login", normalizedLocale, normalizedReturnTo, publicSiteLocalesEnabled);
+  const registerHref = touchLineAuthEntryHref("/register", normalizedLocale, normalizedReturnTo, publicSiteLocalesEnabled);
+  const forgotPasswordHref = touchLineAuthEntryHref("/forgot-password", normalizedLocale, normalizedReturnTo, publicSiteLocalesEnabled);
+  const firstEntryHref = touchlineRegistrationEntryHref(normalizedReturnTo, normalizedLocale, publicSiteLocalesEnabled);
+  const resetPasswordHref = touchLineAuthHref("/reset-password", normalizedLocale, publicSiteLocalesEnabled);
   const socialProviders: Array<{
     provider: SocialAuthProvider;
     enabled: boolean;
@@ -396,11 +407,11 @@ export function AuthForm({
           </div>
         </div>
       )}
-      {mode === "register" && <label className="flex items-start gap-2 pt-1 text-[10px] leading-4 text-[#73807c]"><input required type="checkbox" className="mt-1 accent-[#153f36]"/><span>{copy.terms}</span></label>}
-      {message && <div className={`rounded-xl px-4 py-3 text-xs ${messageTone === "success" ? "bg-[#e7f4df] text-[#2a633b]" : "bg-[#fee8e4] text-[#a5463a]"}`}>{message}</div>}
+      {mode === "register" && <label className="flex items-start gap-2 pt-1 text-xs leading-5 text-[#9caeaa]"><input required type="checkbox" className="mt-1 accent-[#153f36]"/><span>{copy.terms}</span></label>}
+      {message && <div role={messageTone === "error" && mode !== "login" ? "alert" : messageTone === "success" && mode === "forgot" ? "status" : undefined} className={`rounded-xl px-4 py-3 text-xs ${messageTone === "success" ? "bg-[#e7f4df] text-[#2a633b]" : "bg-[#fee8e4] text-[#a5463a]"}`}>{message}</div>}
       <Button type="submit" disabled={loading || isArenaTransitioning} className="w-full">
         {loading || isArenaTransitioning ? (
-          <><Loader2 size={16} className="animate-spin"/>{mode === "login" ? copy.signingIn : null}</>
+          <><Loader2 size={16} className="animate-spin" aria-hidden="true"/>{mode === "login" ? copy.signingIn : mode === "register" ? copy.createAccount : copy.sendReset}</>
         ) : (
           <>{mode==="login"?copy.signIn:mode==="register"?copy.createAccount:copy.sendReset}<ArrowRight size={15}/></>
         )}

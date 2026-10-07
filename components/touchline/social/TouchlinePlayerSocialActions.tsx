@@ -5,20 +5,23 @@ import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { type PlayerSocialKind, type PlayerSocialSummary } from "@/lib/touchlineArena/player-social-contract";
 import { normalizePlayerSocialSubject, requestPlayerSocial } from "@/lib/touchlineArena/player-social-client";
 import { playerSocialInvalidation } from "@/lib/touchlineArena/player-social-invalidation";
+import { formatTouchlinePlayerSocialAria, formatTouchlinePlayerSocialCount, getTouchlinePlayerSocialCopy } from "@/lib/touchlineArena/player-social-i18n";
 import shared from "./TouchlineSocial.module.css";
 import styles from "./TouchlinePlayerSocialActions.module.css";
 
-type Props = { providerId: string; playerName: string; locale: string; accent?: string; purchaseHref?: string; purchaseLabel?: string };
+type Props = { providerId: string; playerName: string; locale: string; draftLocalesEnabled?: boolean; accent?: string; purchaseHref?: string; purchaseLabel?: string };
 
 export default function TouchlinePlayerSocialActions(props: Props) {
   const id = normalizePlayerSocialSubject(props.providerId);
-  return id ? <PlayerSocialActions key={id} {...props} providerId={id} /> : props.purchaseHref
-    ? <div className={shared.profileActions}><a href={props.purchaseHref}>{props.purchaseLabel ?? (props.locale === "pt-BR" ? "Contratar jogador" : "Contract player")}</a></div>
+  if (id) return <PlayerSocialActions key={id} {...props} providerId={id} />;
+  const copy = getTouchlinePlayerSocialCopy(props.locale, props.draftLocalesEnabled);
+  return props.purchaseHref
+    ? <div className={shared.profileActions}><a href={props.purchaseHref}>{props.purchaseLabel ?? copy.contractPlayer}</a></div>
     : null;
 }
 
-function PlayerSocialActions({ providerId, playerName, locale, accent = "#b9ff56", purchaseHref, purchaseLabel }: Props) {
-  const pt = locale === "pt-BR";
+function PlayerSocialActions({ providerId, playerName, locale, draftLocalesEnabled = false, accent = "#b9ff56", purchaseHref, purchaseLabel }: Props) {
+  const copy = getTouchlinePlayerSocialCopy(locale, draftLocalesEnabled);
   const [summary, setSummary] = useState<PlayerSocialSummary | null>(null);
   const [canReact, setCanReact] = useState(false);
   const [phase, setPhase] = useState<"loading" | "ready" | "saving" | "error" | "signed-out">("loading");
@@ -92,28 +95,28 @@ function PlayerSocialActions({ providerId, playerName, locale, accent = "#b9ff56
     }
   }
 
-  const count = (value?: number) => value === undefined ? "—" : new Intl.NumberFormat(pt ? "pt-BR" : "en-GB", { notation: "compact", maximumFractionDigits: 1 }).format(value);
+  const count = (value?: number) => formatTouchlinePlayerSocialCount(value, locale, draftLocalesEnabled);
   const disabled = phase !== "ready" || !canReact;
   return (
-    <section className={styles.toolbar} aria-label={pt ? `Interações com ${playerName}` : `Interactions with ${playerName}`} style={{ "--social-accent": accent } as CSSProperties} onClick={(event) => event.stopPropagation()}>
+    <section className={styles.toolbar} aria-label={formatTouchlinePlayerSocialAria(playerName, locale, draftLocalesEnabled)} style={{ "--social-accent": accent } as CSSProperties} onClick={(event) => event.stopPropagation()}>
       <div className={`${shared.profileActions} ${styles.actions}`} aria-busy={phase === "loading" || phase === "saving"}>
         <button type="button" disabled={disabled} aria-pressed={summary?.following ?? false} onClick={() => void mutate("follow")}>
           <UserPlus aria-hidden="true" size={18} />
-          <span>{summary?.following ? (pt ? "Seguindo" : "Following") : (pt ? "Seguir" : "Follow")}</span>
+          <span>{summary?.following ? copy.following : copy.follow}</span>
           <strong title={summary ? String(summary.followerCount) : undefined}>{count(summary?.followerCount)}</strong>
         </button>
         <button type="button" disabled={disabled} aria-pressed={summary?.liked ?? false} onClick={() => void mutate("like")}>
           <Heart aria-hidden="true" size={18} fill={summary?.liked ? "currentColor" : "none"} />
-          <span>{summary?.liked ? (pt ? "Curtiu" : "Liked") : (pt ? "Curtir" : "Like")}</span>
+          <span>{summary?.liked ? copy.liked : copy.like}</span>
           <strong title={summary ? String(summary.likeCount) : undefined}>{count(summary?.likeCount)}</strong>
         </button>
       </div>
       <p className={styles.status} role="status">
-        {phase === "loading" ? (pt ? "Carregando interações…" : "Loading interactions…") : phase === "saving" ? (pt ? "Salvando…" : "Saving…") : phase === "error" ? (pt ? "Interações indisponíveis. Nenhuma confirmação recebida." : "Interactions unavailable. No confirmation received.") : phase === "signed-out" ? (pt ? "Entre em uma conta com acesso à TouchLine para interagir." : "Sign in with TouchLine access to interact.") : (pt ? "Interações salvas na sua conta." : "Interactions saved to your account.")}
+        {phase === "loading" ? copy.loading : phase === "saving" ? copy.saving : phase === "error" ? copy.error : phase === "signed-out" ? copy.signedOut : copy.saved}
       </p>
-      {phase === "error" ? <button type="button" className={styles.retry} onClick={() => { setPhase("loading"); setRevision((value) => value + 1); }}>{pt ? "Consultar novamente" : "Check again"}</button> : null}
-      {phase === "signed-out" ? <a className={styles.retry} href={`/login?lang=${encodeURIComponent(locale)}`}>{pt ? "Entrar na TouchLine" : "Sign in to TouchLine"}</a> : null}
-      {purchaseHref ? <div className={shared.profileActions}><a href={purchaseHref}>{purchaseLabel ?? (pt ? "Contratar jogador" : "Contract player")}</a></div> : null}
+      {phase === "error" ? <button type="button" className={styles.retry} onClick={() => { setPhase("loading"); setRevision((value) => value + 1); }}>{copy.checkAgain}</button> : null}
+      {phase === "signed-out" ? <a className={styles.retry} href={`/login?lang=${encodeURIComponent(locale)}`}>{copy.signIn}</a> : null}
+      {purchaseHref ? <div className={shared.profileActions}><a href={purchaseHref}>{purchaseLabel ?? copy.contractPlayer}</a></div> : null}
     </section>
   );
 }

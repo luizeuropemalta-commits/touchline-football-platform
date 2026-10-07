@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { playerSocialIdFromProfileHref, requestPlayerSocial, resolvePlayerSocialSubject } from "../lib/touchlineArena/player-social-client.ts";
+import { getTouchlinePlayerSocialCopy, TOUCHLINE_PLAYER_SOCIAL_CATALOGUES } from "../lib/touchlineArena/player-social-i18n.ts";
 
 const summary = { followerCount: 2, likeCount: 3, following: true, liked: false };
 test("already aborted social request never starts transport", async () => {
@@ -95,10 +96,14 @@ test("same-player instances invalidate through GET only after a confirmed mutati
 test("social sign-in copy names the active product, not the retired Arena", () => {
   const client = readFileSync(new URL("../components/touchline/social/TouchlinePlayerSocialActions.tsx", import.meta.url), "utf8");
   assert.doesNotMatch(client, /acesso à Arena|Arena access|Entrar na Arena|Sign in to Arena/);
-  assert.match(client, /Sign in with TouchLine access to interact\./);
-  assert.match(client, /Entre em uma conta com acesso à TouchLine para interagir\./);
-  assert.match(client, /Sign in to TouchLine/);
-  assert.match(client, /Entrar na TouchLine/);
+  assert.equal(getTouchlinePlayerSocialCopy("en-GB").signedOut, "Sign in with TouchLine access to interact.");
+  assert.equal(getTouchlinePlayerSocialCopy("pt-BR").signedOut, "Entre em uma conta com acesso à TouchLine para interagir.");
+  assert.equal(getTouchlinePlayerSocialCopy("en-GB").signIn, "Sign in to TouchLine");
+  assert.equal(getTouchlinePlayerSocialCopy("pt-BR").signIn, "Entrar na TouchLine");
+  assert.match(client, /const copy = getTouchlinePlayerSocialCopy\(locale, draftLocalesEnabled\)/);
+  assert.match(client, /phase === "signed-out" \? copy\.signedOut/);
+  assert.match(client, /\{copy\.signIn\}<\/a>/);
+  assert.doesNotMatch(JSON.stringify(TOUCHLINE_PLAYER_SOCIAL_CATALOGUES), /Arena/);
 });
 
 test("narrow card columns wrap whole social buttons instead of crushing their icons", () => {

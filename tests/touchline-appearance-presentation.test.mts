@@ -21,17 +21,17 @@ test("known participation and unavailable values preserve their meanings", () =>
 });
 
 test("source attribution qualifies match coverage instead of certifying every status", () => {
-  assert.equal(touchlinePlayerDataSourceLabel("pt-BR"), "Fonte: Sportmonks · cobertura por partida");
-  assert.equal(touchlinePlayerDataSourceLabel("en"), "Source: Sportmonks · coverage varies by match");
+  assert.equal(touchlinePlayerDataSourceLabel("pt-BR"), "Fonte: TouchLine · cobertura por partida");
+  assert.equal(touchlinePlayerDataSourceLabel("en"), "Source: TouchLine · coverage varies by match");
 });
 
 test("profile and zoom do not certify inferred absence or universally verified data", async () => {
   const source = await readFile(new URL("../app/touchline-players/[player]/page.tsx", import.meta.url), "utf8");
   assert.doesNotMatch(source, /absent:\s*"(?:Ausente|Absent)"/);
   assert.doesNotMatch(source, /providerVerified:\s*"(?:Verified by TouchLine|Verificado pela TouchLine)"/);
-  assert.match(source, /return touchlinePlayerAppearanceLabel\(value, locale\)/);
-  assert.match(source, /const appearance = touchlinePlayerAppearanceLabel\(fixture.appearanceStatus, locale\)/);
-  assert.match(source, /touchlinePlayerDataSourceLabel\(locale\)/);
+  assert.match(source, /return touchlinePlayerAppearanceLabel\(value, locale, draftLocalesEnabled\)/);
+  assert.match(source, /const appearance = touchlinePlayerAppearanceLabel\(fixture.appearanceStatus, locale, draftLocalesEnabled\)/);
+  assert.match(source, /touchlinePlayerDataSourceLabel\(locale, draftLocalesEnabled\)/);
   assert.match(source, /Unconfirmed participation does not establish an absence or its reason/);
   assert.match(source, /Participação não confirmada não comprova ausência nem seu motivo/);
 });

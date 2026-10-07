@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { getTouchlineOfficialLeagueTableCopy } from "../lib/touchlineArena/official-league-table-i18n.ts";
 
 import {
   resolveTouchlineOfficialLeagueTable,
@@ -437,8 +438,11 @@ test("shared table component and pages keep data loading on the server boundary"
   assert.match(component, /variant: "directory" \| "profile"/);
   assert.match(component, /currentTeamId/);
   assert.match(component, /status && !table\.rows\.length/);
-  assert.match(component, /Initial table — all 20 clubs are level\./);
-  assert.match(component, /Tabela inicial — os 20 clubes estão empatados\./);
+  assert.equal(getTouchlineOfficialLeagueTableCopy("en-GB").pendingTitle, "Initial table — all 20 clubs are level.");
+  assert.equal(getTouchlineOfficialLeagueTableCopy("pt-BR").pendingTitle, "Tabela inicial — os 20 clubes estão empatados.");
+  assert.match(component, /getTouchlineOfficialLeagueTableCopy\(locale, draftLocalesEnabled\)/);
+  assert.match(component, /draftLocalesEnabled = false/);
+  assert.match(component, /title: dictionary\.pendingTitle/);
   assert.match(component, /row\.displayPosition \?\? "—"/);
   assert.doesNotMatch(component, /row\.isTied/);
   assert.doesNotMatch(component, /\{row\.sportsRank\}=/);
@@ -446,18 +450,21 @@ test("shared table component and pages keep data loading on the server boundary"
   assert.match(component, /aria-label=/);
   assert.match(componentStyles, /\.tableWrap \.rankCell \{[\s\S]*?padding: 0;/);
   assert.match(componentStyles, /\.tiedRank \{[\s\S]*?min-width: 44px;[\s\S]*?min-height: 44px;/);
-  assert.match(component, /Season status/);
-  assert.match(component, /Status da temporada/);
+  assert.equal(getTouchlineOfficialLeagueTableCopy("en-GB").seasonStatus, "Season status");
+  assert.equal(getTouchlineOfficialLeagueTableCopy("pt-BR").seasonStatus, "Status da temporada");
+  assert.match(component, /\{dictionary\.seasonStatus\}/);
   assert.match(component, /dictionary\.goalsFor/);
   assert.match(component, /dictionary\.goalsAgainst/);
   assert.match(component, /\{row\.goalsFor\}/);
   assert.match(component, /\{row\.goalsAgainst\}/);
   assert.match(component, /row\.team\.logoUrl[^\n]+loading="lazy"[^\n]+decoding="async"/);
   assert.match(component, /href=\{`\/touchline-clubs\/\$\{row\.team\.slug\}[^\n]+\n\s+prefetch=\{false\}/);
-  assert.match(component, /alphabetical display order only/);
+  assert.match(getTouchlineOfficialLeagueTableCopy("en-GB").pendingDescription, /alphabetical display order only/);
+  assert.match(component, /description: dictionary\.pendingDescription/);
   assert.match(component, /data-live=/);
   assert.match(component, /data-live-stale=/);
-  assert.match(component, /latest persisted live scores/);
+  assert.match(getTouchlineOfficialLeagueTableCopy("en-GB").description, /latest persisted live scores/);
+  assert.match(component, /\{dictionary\.description\}/);
   assert.match(component, /router\.refresh\(\)/);
   assert.match(component, /dictionary\.live/);
   assert.match(component, /table\.rows\.map/);

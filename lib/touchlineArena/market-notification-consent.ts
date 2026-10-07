@@ -6,12 +6,12 @@ export type MarketNotificationPreferences = {
   explicitConsentAt: string | null;
 };
 
-export const GAME_NOTIFICATION_KEYS = ["availability", "confirmedLineup", "goalsAndEvents", "selectedLiveMatches", "leagueLeadership"] as const;
+export const GAME_NOTIFICATION_KEYS = ["availability", "confirmedLineup", "lineupReminders", "goalsAndEvents", "selectedLiveMatches", "leagueLeadership"] as const;
 
 export function gameNotificationSelection(current: MarketNotificationPreferences) {
   const settings = { ...current.settings };
   if (!current.explicitConsentAt) {
-    for (const key of Object.keys(settings)) if (typeof settings[key] === "boolean") settings[key] = false;
+    for (const key of Object.keys(settings)) if (key !== "silentPush" && typeof settings[key] === "boolean") settings[key] = false;
   }
   for (const key of GAME_NOTIFICATION_KEYS) settings[key] = true;
   return settings;
@@ -25,6 +25,16 @@ type Dependencies = {
   save: (value: MarketNotificationPreferences & { explicitConsent: boolean }) => Promise<MarketNotificationPreferences>;
 };
 export type MarketConsentResult = { state: "busy" | "unavailable" | "denied" | "failed" | "partial" | "saved"; preferences?: MarketNotificationPreferences };
+
+function hasConsentTimestamp(value: unknown): boolean {
+  if (typeof value !== "string"
+    || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})$/.test(value)
+    || !Number.isFinite(Date.parse(value))) return false;
+  // Check wall-clock calendar fields separately, preserving PostgREST offsets
+  // and microseconds but rejecting normalized impossible dates (e.g. Feb 30).
+  const wallClock = Date.parse(`${value.slice(0, 19)}Z`);
+  return Number.isFinite(wallClock) && new Date(wallClock).toISOString().slice(0, 19) === value.slice(0, 19);
+}
 
 /** A single mounted controller owns the gesture. Opening/reading is not consent. */
 export function createMarketNotificationConsent(deps: Dependencies) {
@@ -41,16 +51,22 @@ export function createMarketNotificationConsent(deps: Dependencies) {
         if (await deps.register() !== "registered") return { state: "unavailable" };
         registered = true;
       }
-      const preferences = await deps.save({ ...current,
+      const requested = { ...current,
         settings: action === "enable" ? gameNotificationSelection(current) : current.settings,
         channels: action === "pause" ? { in_app: false, push: false, email: false } : { ...current.channels, in_app: true, push: true, email: current.explicitConsentAt ? current.channels.email : false },
         frequency: action === "enable" && current.frequency === "paused" ? "realtime" : action === "pause" ? "paused" : current.frequency,
         explicitConsent: action === "enable",
-      });
+      };
+      const preferences = await deps.save(requested);
       const confirmed = action === "pause"
         ? preferences.frequency === "paused" && !preferences.channels.in_app && !preferences.channels.push
           && !preferences.channels.email && preferences.explicitConsentAt === null
-        : preferences.channels.push;
+        : preferences.channels.push === true && preferences.channels.in_app === true
+          && preferences.channels.email === requested.channels.email
+          && preferences.frequency === requested.frequency
+          && hasConsentTimestamp(preferences.explicitConsentAt)
+          && Object.entries(requested.settings).every(([key, value]) =>
+            typeof value !== "boolean" || preferences.settings[key] === value);
       return { state: confirmed ? "saved" : "partial", preferences };
     } catch {
       return { state: registered ? "partial" : "failed" };

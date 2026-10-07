@@ -1,0 +1,54 @@
+*** Begin Patch
+*** Update File: scripts/qa/run-touchline-route-smoke.mjs
+@@
+-    route("root-alias", `/${lang}`, `/arena${lang}`, ".arena-stage"),
+-    route("coming-soon-alias", `/coming-soon${lang}`, `/arena${lang}`, ".arena-stage"),
+-    route("arena", `/arena${lang}`, `/arena${lang}`, ".arena-stage"),
++    route("root-alias", `/${lang}`, `/intro${lang}`, "[data-touchline-game-entry]"),
++    route("coming-soon-alias", `/coming-soon${lang}`, `/intro${lang}`, "[data-touchline-game-entry]"),
++    route("arena", `/arena${lang}`, `/intro${lang}`, "[data-touchline-game-entry]"),
+@@
+-      || normalizedUrl(location, config.baseUrl) !== normalizedUrl(`/arena?lang=${config.locale}`, config.baseUrl)) throw failure("CUSTOMER_MUST_NOT_BE_ADMIN");
++      || normalizedUrl(location, config.baseUrl) !== normalizedUrl(`/intro?lang=${config.locale}`, config.baseUrl)) throw failure("CUSTOMER_MUST_NOT_BE_ADMIN");
+*** Update File: tests/touchline-route-smoke.test.mts
+@@
+-test("write methods, action GETs, remote origins, callback credentials and unknown APIs are blocked", () => {
++test("entry aliases target only the current intro and never silently advance to ClubOwner", () => {
++  const config = parseSmokeConfig(publicArgs);
++  const aliases = buildSmokeRoutes(config).filter(route => ["root-alias", "coming-soon-alias", "arena"].includes(route.id));
++  assert.equal(aliases.length, 3);
++  for (const alias of aliases) {
++    assert.equal(alias.expected, "/intro?lang=pt-BR");
++    assert.equal(alias.selector, "[data-touchline-game-entry]");
++    assert.equal(isExpectedSmokeDocument(config, alias, config.baseUrl + alias.path), true);
++    assert.equal(isExpectedSmokeDocument(config, alias, `${config.baseUrl}/intro?lang=pt-BR`), true);
++    assert.equal(classifySmokeRequest(config, { method: "GET", url: `${config.baseUrl}/intro?lang=pt-BR`, resourceType: "document" }), null);
++    const evidence = { status: 200, mainReady: true, bodyError: false, issues: [] };
++    assert.equal(assessVisit(config, alias, { ...evidence, finalUrl: `${config.baseUrl}/intro?lang=pt-BR` }).ok, true);
++    for (const finalPath of ["/arena?lang=pt-BR", "/clubowner?lang=pt-BR", "/intro?lang=en-GB", "/intro?lang=pt-BR#unexpected"]) {
++      assert.equal(assessVisit(config, alias, { ...evidence, finalUrl: config.baseUrl + finalPath }).ok, false, finalPath);
++    }
++    for (const path of ["/intro?lang=en-GB", "/intro?lang=pt-BR&skipIntro=1", "/intro?lang=pt-BR&intro=first", "/intro?lang=pt-BR&lang=pt-BR", "/intro?lang=pt-BR&unexpected=1", "/clubowner?lang=pt-BR"]) {
++      assert.equal(isExpectedSmokeDocument(config, alias, config.baseUrl + path), false, path);
++      assert.notEqual(classifySmokeRequest(config, { method: "GET", url: config.baseUrl + path, resourceType: "document" }), null, path);
++    }
++  }
++  assert.equal(classifySmokeRequest(config, { method: "GET", url: `${config.baseUrl}/clubowner?lang=pt-BR`, resourceType: "document" }), "SERVER_SIDE_EFFECT_AUTHORIZATION_REQUIRED");
++});
++
++test("write methods, action GETs, remote origins, callback credentials and unknown APIs are blocked", () => {
+@@
+-  for (const path of ["/arena?lang=pt-BR&_rsc=hash123", "/touchline-clubs/manchester-city?lang=pt-BR&_rsc=hash123",
++  for (const path of ["/intro?lang=pt-BR&_rsc=hash123", "/arena?lang=pt-BR&_rsc=hash123", "/touchline-clubs/manchester-city?lang=pt-BR&_rsc=hash123",
+@@
+-    "/arena?lang=pt-BR&_rsc=a&_rsc=b", "/arena?lang=pt-BR&action=reset", "/arena?lang=pt-BR&unexpected=1"]) {
++    "/arena?lang=pt-BR&_rsc=a&_rsc=b", "/arena?lang=pt-BR&action=reset", "/arena?lang=pt-BR&unexpected=1",
++    "/intro?lang=en-GB&_rsc=hash123", "/intro?lang=pt-BR&_rsc=a&_rsc=b", "/intro?lang=pt-BR&skipIntro=1&_rsc=hash123",
++    "/intro?lang=pt-BR&lang=pt-BR&_rsc=hash123", "/intro?lang=pt-BR&unexpected=1&_rsc=hash123"]) {
+@@
+-            headers: () => adminProbe && !options.admin ? { location: "/arena?lang=pt-BR" } : {},
++            headers: () => adminProbe && !options.admin ? { location: "/intro?lang=pt-BR" } : {},
+@@
+-              else if (parsed.pathname === "/" || parsed.pathname === "/coming-soon") current = `${parsed.origin}/arena?lang=pt-BR`;
++              else if (["/", "/coming-soon", "/arena"].includes(parsed.pathname)) current = `${parsed.origin}/intro?lang=pt-BR`;
+*** End Patch

@@ -38,9 +38,15 @@ const fixture: TouchlineFixture = {
 };
 
 type Input = {
+  fixtureOverride?: TouchlineFixture;
+  now?: number;
+  scheduled?: boolean;
+  history?: Array<{ started_at: string; status: string; cadenceExecuted: boolean }>;
   environment?: Record<string, string | undefined>;
   rankingError?: string;
   playerErrors?: string[];
+  failedFixtureIds?: string[];
+  missingSettlementFixtureIds?: string[];
   coachError?: string;
   liveError?: string;
   feedError?: string;
@@ -59,6 +65,7 @@ type Input = {
   wrongSeason?: boolean;
   backlog?: boolean;
   backlogError?: string;
+  deferralUnconfirmed?: boolean;
   recoveryWriteFailure?: boolean;
   shirtsPending?: boolean;
   noPendingGameweeks?: boolean;
@@ -67,17 +74,26 @@ type Input = {
   cadenceNotDue?: boolean;
   leaseUnavailable?: boolean;
   thrownPlayerError?: boolean;
+  eventObservationStatus?: string;
+  eventObservationThrows?: boolean;
+  pushProducerThrows?: boolean;
+  pushProducerStatus?: string;
 };
 type Write = {
   status: string; error_message: string | null; records_updated: number;
   source_payload: { cadenceExecuted: boolean; playerFixtureRowsWritten: number; snapshotFixtures: number; skippedReason: string | null };
 };
 
+const defaultFixture = fixture;
 function scenario(input: Input = {}) {
+  const fixture = input.fixtureOverride ?? defaultFixture;
+  const now = input.now ?? NOW;
   const writes: Write[] = [];
   const calls: string[] = [];
   const snapshots: TouchlineFixture[][] = [];
-  const logs: Array<{ status: string; errorCount: number }> = [];
+  const eventObservationInputs: unknown[] = [];
+  const pushProducerInputs: unknown[] = [];
+  const logs: Array<{ status: string; errorCount: number; level: string }> = [];
   const admin = {
     from(table: string) {
       if (table === "touchline_fantasy_configs") {
@@ -90,17 +106,27 @@ function scenario(input: Input = {}) {
       }
       assert.equal(table, "football_data_sync_runs");
       let syncType = "";
+      const filters: Record<string, unknown> = {};
       const query = {
         select() { return query; },
-        eq(column: string, value: unknown) { if (column === "sync_type") syncType = String(value); return query; },
+        eq(column: string, value: unknown) { filters[column] = value; if (column === "sync_type") syncType = String(value); return query; },
         not() { return query; }, order() { return query; }, limit() { return query; },
         async maybeSingle() {
+          if (syncType === "live_scores" && input.history) {
+            assert.equal(filters.status, "success");
+            assert.equal(filters["source_payload->>cadenceExecuted"], "true");
+            const previous = input.history.filter(row => row.status === "success" && row.cadenceExecuted)
+              .sort((a, b) => b.started_at.localeCompare(a.started_at))[0];
+            return { data: previous ? { started_at: previous.started_at } : null, error: null };
+          }
           return { data: syncType === "live_scores" && input.cadenceNotDue ? { started_at: new Date(NOW - 1_000).toISOString() } : null, error: null };
         },
         update(value: Write) {
           return { async eq(column: string, id: string) {
             assert.equal(column, "id"); assert.equal(id, RUN_ID);
-            calls.push("complete-run"); writes.push(value); return { error: null };
+            calls.push("complete-run"); writes.push(value);
+            input.history?.push({ started_at: new Date(now).toISOString(), status: value.status, cadenceExecuted: value.source_payload.cadenceExecuted });
+            return { error: null };
           } };
         },
       };
@@ -131,14 +157,14 @@ function scenario(input: Input = {}) {
   };
   const readFixtures = async () => input.noIncomingFixtures ? [] : [fixture];
   const sync = runInNewContext(`${syncSource}\nsyncSportmonksLiveState;`, {
-    decideLiveSyncCadence, mergeCanonicalLiveFixture, reconcilePendingTouchlineFantasyGameweeks,
+    decideLiveSyncCadence, mergeCanonicalLiveFixture, reconcilePendingTouchlineFantasyGameweeks, AbortController,
     recoveryFixtureMatches, BACKLOG_MAX_PER_RUN, BACKLOG_DEADLINE_MS,
     recoveryFeedComplete: () => true,
     process: { env: input.environment ?? { VERCEL_ENV: "preview", TOUCHLINE_QA_SUPABASE_PROJECT_REF: "xgxbwqxjssxxuihuwmgy" } },
     inspectTouchlineProductionSyncRuntime,
     inspectTouchlineIsolatedPreviewEnvironment: () => ({ status: "qa" }),
     touchlineCompetitionCoachAssignments: () => [],
-    console: { info: (message: string) => logs.push(JSON.parse(message)), warn: (message: string) => logs.push(JSON.parse(message)) },
+    console: { info: (message: string) => logs.push({ ...JSON.parse(message), level: "info" }), warn: (message: string) => logs.push({ ...JSON.parse(message), level: "warn" }) },
     readPublicCompetitionFixtures: readFixtures,
     syncSportmonksFixtureSchedule: async () => ({ ok: false, errors: [input.scheduleError] }),
     syncTouchLinePlayerSeasonStatistics: async () => {
@@ -148,14 +174,14 @@ function scenario(input: Input = {}) {
         // ranking-source-incomplete deliberately retains the scorer's valid
         // settlements and may return ok:true with no ordinary errors.
         ok: !input.playerErrors?.length, fixtureRowsWritten: 22,
-        scoringFixtureIds: ["fixture-internal"], failedFixtureIds: [], missingSettlementFixtureIds: [],
+        scoringFixtureIds: ["fixture-internal"], failedFixtureIds: input.failedFixtureIds ?? [], missingSettlementFixtureIds: input.missingSettlementFixtureIds ?? [],
         errors: input.playerErrors ?? [], rankingError: input.rankingError ?? null,
       };
     },
   }, { timeout: 1000 }) as (admin: unknown, options: unknown, dependencies: unknown) => Promise<LiveSyncResult>;
 
-  const run = () => sync(admin, input.cadenceNotDue || input.noIncomingFixtures ? {} : { forceFixtureId: fixture.providerId }, {
-    now: () => NOW,
+  const run = () => sync(admin, input.scheduled || input.cadenceNotDue || input.noIncomingFixtures ? {} : { forceFixtureId: fixture.providerId }, {
+    now: () => now,
     resolveRecoveryScope: async () => ({ seasonId: "active-season", providerSeasonId: "25600", competitionId: "league-a" }),
     claimRecovery: async () => {
       if (!input.backlog) return null;
@@ -164,6 +190,7 @@ function scenario(input: Input = {}) {
       return {fixtureId:`backlog-${index}`,providerFixtureId:String(380+index),status:"NS",attemptCount:1};
     },
     finishRecovery: async (_a: unknown,_c: unknown,_r: unknown,_n: unknown,outcome: string,code: string) => { calls.push(`finish-${outcome}-${code}`); },
+    deferRecovery: async () => { calls.push("defer-recovery"); if(input.deferralUnconfirmed) throw Error("private-release-error"); },
     persistRecoveryFeed: async () => { calls.push("persist-recovery"); return {persisted:!input.recoveryWriteFailure,reconciliationReady:!input.shirtsPending}; },
     acquireRun: async () => { calls.push("lease"); return input.leaseUnavailable
       ? { acquired: false, reason: "live_sync_in_flight" }
@@ -195,9 +222,108 @@ function scenario(input: Input = {}) {
       calls.push("snapshot"); snapshots.push(snapshot);
       return { persisted: !input.snapshotError, reason: input.snapshotError };
     },
+    observeConfirmedEvents: async (value: { fixtureProviderIds: string[]; enabled: boolean; signal: AbortSignal }) => {
+      calls.push("observe-events");
+      eventObservationInputs.push(value);
+      if (input.eventObservationThrows) throw Error("private-observation-details");
+      return { status: input.eventObservationStatus ?? "completed", attempted: 1, observed: 1 };
+    },
+    produceMatchPush: async (value: unknown) => {
+      calls.push("produce-push"); pushProducerInputs.push(value);
+      if (input.pushProducerThrows) throw Error("private-producer-details");
+      return { status: input.pushProducerStatus ?? "completed", prepared: 1, baselined: 1, attempted: 0, storedOrExisting: 0, suppressed: 0 };
+    },
   });
-  return { run, writes, calls, snapshots, logs };
+  return { run, writes, calls, snapshots, logs, eventObservationInputs, pushProducerInputs };
 }
+
+const pushObservationEnvironment = { VERCEL_ENV: "preview", TOUCHLINE_QA_SUPABASE_PROJECT_REF: "xgxbwqxjssxxuihuwmgy", TOUCHLINE_MATCH_PUSH_WORKER_ENABLED: "true" };
+const pushProducerEnvironment = { ...pushObservationEnvironment, TOUCHLINE_MATCH_PUSH_SOURCE_AGE_POLICY: JSON.stringify({
+  eventSyncedAt: 300000, settlementSyncedAt: 300000, fixtureUpdatedAt: 300000, lastObservedAt: 300000,
+  enrollment: { enabled: true, maximumEventLagSeconds: 120, maximumSourceAgeSeconds: 300 },
+}) };
+test("push producer runs only after successful current-cycle observation and explicit configuration", async () => {
+  const s = scenario({ environment: pushProducerEnvironment });
+  const result = await s.run();
+  assert.equal(result.status, "success");
+  assert.equal(s.calls.filter(call => call === "produce-push").length, 1);
+  assert.ok(s.calls.indexOf("produce-push") > s.calls.indexOf("observe-events"));
+  const input = s.pushProducerInputs[0] as { fixtureProviderIds: string[]; enabled: boolean };
+  assert.deepEqual(Array.from(input.fixtureProviderIds), [fixture.providerId]);
+  assert.equal(input.enabled, true);
+});
+test("push producer cannot run from backlog, failed observation, missing configuration or invalid policy", async () => {
+  for (const patch of [{ environment: pushObservationEnvironment }, { eventObservationStatus: "unconfirmed" },
+    { eventObservationThrows: true }, { noIncomingFixtures: true, backlog: true }, { feedPersistenceError: "failed" },
+    { environment: { ...pushProducerEnvironment, TOUCHLINE_MATCH_PUSH_SOURCE_AGE_POLICY: '{' } },
+    { environment: { ...pushProducerEnvironment, TOUCHLINE_MATCH_PUSH_SOURCE_AGE_POLICY: JSON.stringify({ enrollment: { enabled: true } }) } }]) {
+    const s = scenario({ environment: pushProducerEnvironment, ...patch });
+    await s.run(); assert.equal(s.calls.includes("produce-push"), false);
+  }
+});
+test("push producer failure does not repeat football ingestion or expose private error text", async () => {
+  const s = scenario({ environment: pushProducerEnvironment, pushProducerThrows: true });
+  const result = await s.run();
+  assert.equal(s.calls.filter(call => call === "produce-push").length, 1);
+  assert.equal(result.status, "success");
+  assert.equal(s.logs[0].level, "warn");
+  assert.doesNotMatch(JSON.stringify([result, s.writes]), /private-producer/);
+});
+test("two scheduled syncs preserve provider cadence after observation-only failure", async () => {
+  const history: NonNullable<Input["history"]> = [];
+  const finished = { ...fixture, status: "Full Time" };
+  const first = scenario({ environment: pushObservationEnvironment, scheduled: true, history,
+    fixtureOverride: finished, eventObservationStatus: "unconfirmed" });
+  const result = await first.run();
+  assert.equal(result.cadence, "matchday");
+  assert.equal(result.confirmedEventObservation?.status, "unconfirmed");
+  assert.equal(first.calls.filter(call => call === "provider-live").length, 1);
+  const second = scenario({ environment: pushObservationEnvironment, scheduled: true, history,
+    fixtureOverride: finished, now: NOW + 60000 });
+  assert.equal((await second.run()).skippedReason, "cadence_not_due");
+  assert.deepEqual(second.calls, ["lease", "complete-run"]);
+  assert.equal(second.eventObservationInputs.length, 0);
+  const due = scenario({ environment: pushObservationEnvironment, scheduled: true, history,
+    fixtureOverride: finished, now: NOW + 300000 });
+  assert.equal((await due.run()).status, "success");
+  assert.equal(due.calls.filter(call => call === "provider-live").length, 1);
+});
+test("confirmed events observe only after successful persisted current feed, reconciliation and snapshot", async () => {
+  const s = scenario({ environment: pushObservationEnvironment });
+  assert.equal((await s.run()).ok, true);
+  assert.equal(s.calls.filter(call => call === "observe-events").length, 1);
+  assert.ok(s.calls.indexOf("observe-events") > s.calls.indexOf("snapshot"));
+  assert.ok(s.calls.indexOf("observe-events") > s.calls.indexOf("players"));
+  const input = s.eventObservationInputs[0] as { fixtureProviderIds: string[]; enabled: boolean; signal: AbortSignal };
+  assert.deepEqual(Array.from(input.fixtureProviderIds), [fixture.providerId]);
+  assert.equal(input.enabled, true); assert.equal(input.signal.aborted, false);
+});
+test("disabled, failed persistence, scoring or snapshot never advance event observation", async () => {
+  for (const patch of [{ environment: undefined }, { feedPersistenceError: "failed" }, { playerErrors: ["failed"] }, { failedFixtureIds: ["fixture-internal"] }, { missingSettlementFixtureIds: ["fixture-internal"] }, { stateErrors: ["write-failed"] }, { snapshotError: "failed" }, { feedError: "failed" }, { leaseUnavailable: true }, { noIncomingFixtures: true, backlog: true }]) {
+    const s = scenario({ environment: pushObservationEnvironment, ...patch });
+    await s.run(); assert.equal(s.calls.includes("observe-events"), false);
+  }
+});
+test("event observation failure stays separately visible without invalidating successful provider cadence", async () => {
+  for (const patch of [{ eventObservationStatus: "unconfirmed" }, { eventObservationThrows: true }]) {
+    const s = scenario({ environment: pushObservationEnvironment, ...patch });
+    const result = await s.run();
+    assert.equal(result.status, "success"); assert.equal(result.ok, true);
+    assert.equal(s.snapshots.length, 1); assert.equal(s.writes.length, 1);
+    assert.equal(result.confirmedEventObservation?.status, "unconfirmed");
+    const receipt = s.writes[0].source_payload as typeof s.writes[0]["source_payload"] & { confirmedEventObservation: { status: string } };
+    assert.equal(receipt.confirmedEventObservation.status, "unconfirmed");
+    assert.equal(s.logs[0].level, "warn");
+    if (patch.eventObservationThrows) assert.equal(result.confirmedEventObservation?.attempted, null);
+    assert.equal(receipt.cadenceExecuted, true);
+    // A second wake uses this success as the existing cadence anchor. Failure
+    // in notification observation must not refetch football data early.
+    assert.equal(decideLiveSyncCadence([{ ...fixture, status: "Not Started", startsAt: new Date(NOW + 4 * 3600000).toISOString() }], {
+      now: NOW + 60000, lastSuccessfulSyncAt: new Date(NOW).toISOString(),
+    }).due, false);
+    assert.doesNotMatch(JSON.stringify(result), /private-observation/);
+  }
+});
 
 const boundProductionEnvironment = {
   VERCEL_ENV: "production", VERCEL_PROJECT_ID: "prj_GtCzQlIE8AJdm0hSf7GB5yOWejmM",
@@ -242,6 +368,16 @@ test("backlog claims precede fetch, cap two and finish only after canonical pers
   assert.equal(s.calls.filter(c=>c.startsWith("claim-")).length,2);
   assert.ok(s.calls.indexOf("claim-0")<s.calls.indexOf("fetch-380"));
   assert.ok(s.calls.indexOf("states")<s.calls.indexOf("finish-recovered-complete"));
+});
+
+for (const deferralUnconfirmed of [false,true]) test(`zero-HTTP backlog deferral stops without normal finish: ${deferralUnconfirmed}`, async () => {
+  const s=scenario({backlog:true,backlogError:"deferred",deferralUnconfirmed});
+  const result=await s.run();
+  assert.equal(s.calls.filter(c=>c.startsWith("claim-")).length,1);
+  assert.equal(s.calls.filter(c=>c==="defer-recovery").length,1);
+  assert.equal(s.calls.some(c=>c.startsWith("finish-")),false);
+  assert.ok(result.errors.some(e=>e.includes(deferralUnconfirmed ? "recovery-deferral-unconfirmed" : "recovery-deferred")));
+  assert.equal(JSON.stringify(result).includes("private-release-error"),false);
 });
 
 test("backlog 429 stops batch after durable pending outcome", async () => {

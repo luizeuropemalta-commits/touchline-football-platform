@@ -76,9 +76,19 @@ function activeRankingPayload(status: "unique-leader" | "tied") {
 test("renders the approved crown only for the published unique player leader on desktop and phone", async ({ page }, testInfo) => {
   test.skip(!supportedProjects.has(testInfo.project.name), "Crown evidence is intentionally limited to desktop and phone viewports.");
 
-  await page.route("**/api/touchline-arena/card-ranking/active", (route) => route.fulfill({ json: activeRankingPayload("unique-leader") }));
+  let publishedStatus: "unique-leader" | "tied" = "unique-leader";
+  let consumed = 0;
+  await page.route("**/api/touchline-arena/card-ranking/active", (route) => {
+    consumed += 1;
+    return route.fulfill({ json: activeRankingPayload(publishedStatus) });
+  });
   const response = await page.goto(`${visualQaBaseUrl}${visualQaPath}`, { waitUntil: "networkidle" });
   expect(response?.status()).toBe(200);
+  const fixture = page.locator("[data-crown-fixture-status]");
+  await expect(fixture).toHaveAttribute("data-crown-fixture-status", "ready");
+  await expect(fixture).toHaveAttribute("data-crown-fixture-snapshot", snapshotId);
+  await expect(fixture).toHaveAttribute("data-crown-fixture-decision", "unique-leader");
+  expect(consumed).toBeGreaterThan(0);
 
   const crown = page.locator("img[data-touchline-player-leader-crown='true']");
   await expect(crown).toHaveCount(1);
@@ -100,13 +110,60 @@ test("renders the approved crown only for the published unique player leader on 
   expect(geometry.crownTop).toBeGreaterThanOrEqual(0);
   expect(geometry.visibleCrownBottom).toBeLessThan(geometry.cardTop);
 
+  const frame = page.locator("img[data-touchline-card-frame='true']");
+  await expect(frame).toHaveCount(1);
+  await frame.evaluate(async (image: HTMLImageElement) => image.decode());
+  const containment = await frame.evaluate((image) => {
+    const frameRect = image.getBoundingClientRect();
+    const card = image.closest(".touchline-card-surface")!;
+    const cardRect = card.getBoundingClientRect();
+    const crownRect = card.querySelector("[data-touchline-player-leader-crown='true']")!.getBoundingClientRect();
+    return {
+      centerDelta: Math.abs((frameRect.left + frameRect.width / 2) - (crownRect.left + crownRect.width / 2)),
+      frameLeft: frameRect.left,
+      frameRight: frameRect.right,
+      frameBottom: frameRect.bottom + window.scrollY,
+      cardBottom: cardRect.bottom + window.scrollY,
+      documentBottom: document.documentElement.scrollHeight,
+      viewportWidth: document.documentElement.clientWidth,
+    };
+  });
+  expect(containment.centerDelta).toBeLessThanOrEqual(1);
+  expect(containment.frameLeft).toBeGreaterThanOrEqual(0);
+  expect(containment.frameRight).toBeLessThanOrEqual(containment.viewportWidth);
+  expect(containment.frameBottom).toBeLessThanOrEqual(containment.cardBottom + 1);
+  expect(containment.frameBottom).toBeLessThanOrEqual(containment.documentBottom);
+
   await page.screenshot({ path: testInfo.outputPath("player-leader-crown.png"), fullPage: true });
+  const uniqueReads = consumed;
+  publishedStatus = "tied";
+  await page.getByRole("button", { name: "Refresh published ranking" }).click();
+  await expect.poll(() => consumed).toBeGreaterThan(uniqueReads);
+  await expect(fixture).toHaveAttribute("data-crown-fixture-status", "ready");
+  await expect(fixture).toHaveAttribute("data-crown-fixture-decision", "tied");
+  await expect(crown).toHaveCount(0);
+  const tiedReads = consumed;
+  publishedStatus = "unique-leader";
+  await page.getByRole("button", { name: "Refresh published ranking" }).click();
+  await expect.poll(() => consumed).toBeGreaterThan(tiedReads);
+  await expect(fixture).toHaveAttribute("data-crown-fixture-status", "ready");
+  await expect(fixture).toHaveAttribute("data-crown-fixture-decision", "unique-leader");
+  await expect(crown).toHaveCount(1);
 });
 
 test("does not render a crown for a tied published leadership decision", async ({ page }, testInfo) => {
   test.skip(!supportedProjects.has(testInfo.project.name), "Crown evidence is intentionally limited to desktop and phone viewports.");
 
-  await page.route("**/api/touchline-arena/card-ranking/active", (route) => route.fulfill({ json: activeRankingPayload("tied") }));
+  let consumed = 0;
+  await page.route("**/api/touchline-arena/card-ranking/active", (route) => {
+    consumed += 1;
+    return route.fulfill({ json: activeRankingPayload("tied") });
+  });
   await page.goto(`${visualQaBaseUrl}${visualQaPath}`, { waitUntil: "networkidle" });
+  const fixture = page.locator("[data-crown-fixture-status]");
+  await expect(fixture).toHaveAttribute("data-crown-fixture-status", "ready");
+  await expect(fixture).toHaveAttribute("data-crown-fixture-snapshot", snapshotId);
+  await expect(fixture).toHaveAttribute("data-crown-fixture-decision", "tied");
+  expect(consumed).toBeGreaterThan(0);
   await expect(page.locator("[data-touchline-player-leader-crown='true']")).toHaveCount(0);
 });

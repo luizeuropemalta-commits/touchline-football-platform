@@ -1,35 +1,19 @@
 .layout {
   display: grid;
-  height: clamp(920px, calc(100dvh - 48px), 1080px);
-  grid-template-columns: minmax(0, 7fr) minmax(340px, 3fr);
-  align-items: stretch;
+  width: min(920px, 100%);
+  margin-inline: auto;
+  grid-template-columns: minmax(0, 45fr) minmax(0, 55fr);
+  align-items: start;
   gap: clamp(14px, 1.6vw, 24px);
 }
 
-.feed {
-  position: relative;
-  isolation: isolate;
-  height: 100%;
-  min-width: 0;
-  min-height: 0;
-  scroll-margin-top: 96px;
-}
-
-.feed > section {
-  height: 100%;
-  max-height: 100%;
-  margin: 0;
-}
-
-.rail {
+.panel {
   --touchline-perimeter-radius: 28px;
   position: relative;
   isolation: isolate;
-  display: flex;
-  height: 100%;
+  display: block;
   min-width: 0;
   min-height: 0;
-  flex-direction: column;
   overflow: hidden;
   border: 1px solid rgba(163, 255, 18, .34);
   border-radius: 28px;
@@ -54,11 +38,9 @@
   display: grid;
   gap: 14px;
   min-height: 0;
-  flex: 0 0 auto;
   margin: 0;
   overflow: hidden;
   border: 0;
-  border-bottom: 1px solid rgba(163, 255, 18, .2);
   border-radius: 0;
   padding: clamp(20px, 2vw, 28px);
   background: transparent;
@@ -75,34 +57,12 @@
 
 .table {
   min-height: 0;
-  flex: 1 1 auto;
   margin: 0;
 }
 
 @media (max-width: 1120px) {
   .layout {
-    height: auto;
-    align-items: start;
     grid-template-columns: 1fr;
-  }
-
-  .feed,
-  .rail {
-    width: 100%;
-  }
-
-  .feed {
-    height: auto;
-  }
-
-  .feed > section {
-    height: auto;
-    max-height: none;
-  }
-
-  .feed > section[data-scrollable="true"] {
-    height: clamp(640px, calc(100dvh - 32px), 980px);
-    max-height: 980px;
   }
 }
 
@@ -111,7 +71,7 @@
     gap: 12px;
   }
 
-  .rail {
+  .panel {
     border-radius: 22px;
   }
 
@@ -121,9 +81,5 @@
 
   .fixture {
     padding: 18px 16px;
-  }
-
-  .feed > section[data-scrollable="true"] {
-    height: clamp(560px, calc(100dvh - 24px), 840px);
   }
 }

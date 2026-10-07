@@ -5,7 +5,7 @@ import { stripTypeScriptTypes } from "node:module";
 import { runInNewContext } from "node:vm";
 const turn = () => new Promise(resolve => setImmediate(resolve));
 function deferred() { let resolve!: (x: unknown) => void, reject!: (x: unknown) => void; const promise = new Promise((a,b) => { resolve=a; reject=b; }); return { promise, resolve, reject }; }
-function harness(missing = false, constructionError?: Error) {
+function harness(missing = false, constructionError?: Error, activeError: unknown = null) {
   const snapshot = deferred(), leadership = deferred(), reads: string[] = [], filters: unknown[] = [];
   const preseason = { phase: "preseason" };
   const source = stripTypeScriptTypes(readFileSync(new URL("../lib/touchlineArena/card-ranking-server.ts", import.meta.url), "utf8")).replace(/^import\s+[\s\S]*?;\s*$/gm, "").replace(/^export /gm, "");
@@ -14,7 +14,7 @@ function harness(missing = false, constructionError?: Error) {
     const q = { select() { return q; }, eq(key: string, value: unknown) { filters.push([table,key,value]); return q; }, maybeSingle() {
       return { then(fulfilled: (value: unknown) => unknown, rejected: (error: unknown) => unknown) {
         reads.push(table);
-        const pending = table.includes("active_snapshots") ? Promise.resolve({ data: missing ? null : { snapshot_id: "fixed" }, error: null }) : table.includes("leadership") ? leadership.promise : snapshot.promise;
+        const pending = table.includes("active_snapshots") ? Promise.resolve({ data: missing ? null : { snapshot_id: "fixed" }, error: activeError }) : table.includes("leadership") ? leadership.promise : snapshot.promise;
         return pending.then(fulfilled, rejected);
       } };
     } }; return q;
@@ -30,6 +30,31 @@ test("snapshot and leadership start together but state waits for validated leade
   h.leadership.resolve({ data: { ranking_id: "r" }, error: null });
   const state = await result; assert.equal(state.snapshotId, "fixed"); assert.equal(state.players[0].totalRating,0);
   assert.equal(h.filters.filter((x: unknown) => JSON.stringify(x).includes('"snapshot_id","fixed"')).length,2);
+});
+
+test("active publication read failure is unavailable, never a successful preseason", async () => {
+  for (const missing of [false, true]) {
+    const h = harness(missing, undefined, { message: "private database detail" });
+    await assert.rejects(h.load(), { message: "TOUCHLINE_RANKING_READ_UNAVAILABLE" });
+    assert.equal(h.reads.length, 1);
+  }
+});
+
+test("snapshot response error rejects without awaiting decorative leadership and next request recovers", async () => {
+  const h = harness();
+  const result = h.load();
+  const rejected = assert.rejects(result, { message: "TOUCHLINE_RANKING_READ_UNAVAILABLE" });
+  await turn();
+  h.snapshot.resolve({ data: null, error: { message: "private database detail" } });
+  await rejected;
+  h.leadership.reject(new Error("late decorative failure"));
+  await turn();
+  const recovery = harness();
+  const recovered = recovery.load();
+  await turn();
+  recovery.snapshot.resolve(recovery.valid);
+  recovery.leadership.resolve({ data: null, error: null });
+  assert.equal((await recovered).snapshotId, "fixed");
 });
 test("invalid snapshot ignores an observed leadership rejection and missing pointer reads nothing else", async () => {
   const h = harness(), result = h.load(); await turn();

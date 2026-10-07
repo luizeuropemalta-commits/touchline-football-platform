@@ -3,7 +3,8 @@ import {
   TOUCHLINE_ENGLAND_CLUBS,
   findTouchLineClub,
 } from "./demo-data.ts";
-import { touchLineT, type TouchLineLocale } from "./i18n.ts";
+import type { TouchLineLocale } from "./i18n.ts";
+import { touchlineClubHubText } from "./club-hub-profile-i18n.ts";
 
 export type TouchlineClubMatchPreviewTeam = {
   /** Defined only for a canonical local club identity. */
@@ -29,6 +30,7 @@ export function resolveTouchlineClubMatchPreviewTeam(
   team: TouchlineTeam | undefined,
   currentClub: TouchlineClubVisual,
   locale: TouchLineLocale,
+  draftLocalesEnabled = false,
 ): TouchlineClubMatchPreviewTeam {
   const canonicalClub = (team?.providerId
     ? TOUCHLINE_ENGLAND_CLUBS.find((club) => club.teamId === team.providerId)
@@ -54,7 +56,7 @@ export function resolveTouchlineClubMatchPreviewTeam(
     };
   }
 
-  const pendingOpponent = touchLineT(locale, "opponentToBeConfirmed");
+  const pendingOpponent = touchlineClubHubText(locale, "opponentToBeConfirmed", draftLocalesEnabled);
   return {
     name: trimOrNull(team?.name) ?? pendingOpponent,
     shortCode: trimOrNull(team?.shortCode) ?? pendingOpponent,

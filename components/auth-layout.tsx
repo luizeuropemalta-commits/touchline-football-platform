@@ -1,50 +1,72 @@
 import Link from "next/link";
 import { Check, Globe2, Radio, Trophy, Users, Zap } from "lucide-react";
-import { getTouchLineAuthCopy, normalizeTouchLineAuthLocale, touchLineAuthHref } from "@/lib/touchlineArena/auth-i18n";
+import { getTouchLineAuthCopy, getTouchLineLoginCopy, normalizeTouchLineAuthLocale, normalizeTouchLineLoginLocale, touchLineAuthHref } from "@/lib/touchlineArena/auth-i18n";
 import { Logo } from "./logo";
 import { AuthCinematicMedia } from "./auth-cinematic-media";
-import { AuthLanguageSwitcher } from "./auth-language-switcher";
-import { AuthAmbientAudio } from "./auth-ambient-audio";
+import TouchlinePageControls from "./touchline/TouchlinePageControls";
 import { AuthLeaguePicker } from "./auth-league-picker";
+import type { AccountLocaleContext } from "@/lib/touchlineArena/account-locale-context-server";
 
 export function AuthLayout({
   children,
   cinematic = false,
   locale = "en-GB",
   showPanelHeader = true,
+  accountLocaleContext = { mode: "unavailable" },
+  draftLocalesEnabled = false,
+  siteLocalesEnabled = false,
+  showArenaHomeLink = true,
+  brandHref,
+  brandSubtitle,
+  brandWordmarkClassName,
+  showBrandMark = true,
+  minimalBrandMark = false,
+  keepLoginLayoutStable = false,
 }: {
   children: React.ReactNode;
   cinematic?: boolean;
   locale?: string;
   showPanelHeader?: boolean;
+  accountLocaleContext?: AccountLocaleContext;
+  draftLocalesEnabled?: boolean;
+  siteLocalesEnabled?: boolean;
+  showArenaHomeLink?: boolean;
+  brandHref?: string;
+  brandSubtitle?: string;
+  brandWordmarkClassName?: string;
+  showBrandMark?: boolean;
+  minimalBrandMark?: boolean;
+  keepLoginLayoutStable?: boolean;
 }) {
-  const normalizedLocale = normalizeTouchLineAuthLocale(locale);
-  const copy = getTouchLineAuthCopy(normalizedLocale).layout;
-  const publicArenaHref = touchLineAuthHref("/intro", normalizedLocale);
+  const presentationLocalesEnabled = draftLocalesEnabled || siteLocalesEnabled;
+  const normalizedLocale = presentationLocalesEnabled ? normalizeTouchLineLoginLocale(locale) : normalizeTouchLineAuthLocale(locale);
+  const copy = (presentationLocalesEnabled ? getTouchLineLoginCopy(normalizedLocale) : getTouchLineAuthCopy(normalizedLocale)).layout;
+  const publicArenaHref = touchLineAuthHref("/intro", normalizedLocale, siteLocalesEnabled);
 
   return (
-    <main className={`arena-bg console-shell relative min-h-[100dvh] overflow-x-clip bg-[#02050a]${cinematic ? " auth-cinematic" : ""}`}>
+    <main lang={normalizedLocale} dir={normalizedLocale === "ar-SA" ? "rtl" : "ltr"} className={`arena-bg console-shell relative min-h-[100dvh] overflow-x-clip bg-[#02050a]${cinematic ? " auth-cinematic" : ""}`}>
       {cinematic ? <AuthCinematicMedia /> : null}
       <div className="stadium-light stadium-light-left" />
       <div className="stadium-light stadium-light-right" />
       <div className="football-orb" />
       <div className="stadium-skyline" />
 
-      <section className="relative z-10 grid min-h-[100dvh] min-w-0 2xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,.55fr)]">
+      <section dir={keepLoginLayoutStable ? "ltr" : undefined} className="relative z-10 grid min-h-[100dvh] min-w-0 2xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,.55fr)]">
         <div className="auth-entry-content flex min-h-[100dvh] min-w-0 flex-col">
           <header className="auth-brand-header flex shrink-0 items-center justify-between">
-            <Logo href={publicArenaHref} officialArena />
+            <Logo href={brandHref ?? publicArenaHref} officialArena subtitle={brandSubtitle} wordmarkClassName={brandWordmarkClassName} showMark={showBrandMark} minimalMark={minimalBrandMark} />
             <div className="flex items-center gap-2">
-              <AuthAmbientAudio locale={normalizedLocale} />
-              <AuthLanguageSwitcher locale={normalizedLocale} />
-              <Link href={publicArenaHref} className="console-mini-card hidden items-center gap-2 px-4 py-3 text-[10px] font-black text-cyan-200 transition hover:-translate-y-1 sm:inline-flex">
-                <Globe2 size={14}/> {copy.arenaHome}
-              </Link>
+              <TouchlinePageControls locale={normalizedLocale} accountLocaleContext={accountLocaleContext} draftLocalesEnabled={draftLocalesEnabled} siteLocalesEnabled={siteLocalesEnabled} />
+              {showArenaHomeLink ? (
+                <Link href={publicArenaHref} className="console-mini-card hidden items-center gap-2 px-4 py-3 text-[10px] font-black text-cyan-200 transition hover:-translate-y-1 sm:inline-flex">
+                  <Globe2 size={14}/> {copy.arenaHome}
+                </Link>
+              ) : null}
             </div>
           </header>
 
           <div className="grid flex-1 content-center gap-6 py-6 xl:grid-cols-[minmax(0,1fr)_minmax(360px,430px)] xl:items-center">
-            <div className="order-2 min-w-0 max-w-3xl xl:order-1">
+            <div dir={keepLoginLayoutStable && normalizedLocale === "ar-SA" ? "rtl" : undefined} className="order-2 min-w-0 max-w-3xl xl:order-1">
               <div className="mb-5 flex flex-wrap items-center gap-3">
                 <span className="inline-flex items-center gap-2 rounded-full border border-[#a3ff12]/25 bg-[#a3ff12]/[.08] px-3 py-1.5 text-[10px] font-black text-[#b7ff45]"><span className="pulse-live size-1.5 rounded-full bg-[#a3ff12]"/> {copy.arenaOnline}</span>
                 <span className="rounded-full border border-cyan-300/20 bg-cyan-300/[.07] px-3 py-1.5 text-[10px] font-black text-cyan-100">{copy.productAreas}</span>
@@ -58,7 +80,7 @@ export function AuthLayout({
               <p className="mt-6 max-w-xl text-sm leading-7 text-slate-300/80">
                 {cinematic ? copy.cinematicDescription : copy.standardDescription}
               </p>
-              <AuthLeaguePicker locale={normalizedLocale} />
+              <AuthLeaguePicker locale={normalizedLocale} allowDraftLocales={presentationLocalesEnabled} />
 
               <div className="mt-6 grid max-w-2xl gap-3 sm:grid-cols-3">
                 <div className="console-mini-card p-4"><Trophy size={18} className="text-amber-300"/><p className="mt-4 text-[10px] font-black text-slate-400">{copy.cardLabel}</p><p className="mt-1 text-xl font-black">{copy.cardValue}</p></div>
@@ -68,7 +90,7 @@ export function AuthLayout({
             </div>
 
             <div className="premium-ring stadium-scoreboard order-1 w-full max-w-[430px] justify-self-center p-5 sm:p-6 xl:order-2 xl:justify-self-end">
-              <div className="relative z-10">
+              <div className="relative z-10" dir={keepLoginLayoutStable && normalizedLocale === "ar-SA" ? "rtl" : undefined}>
                 {showPanelHeader ? <div className="mb-5 flex items-center justify-between">
                   <div>
                     <p className="text-[10px] font-black text-cyan-200">{cinematic ? copy.onboardingEyebrow : copy.accessPanelEyebrow}</p>
@@ -82,8 +104,8 @@ export function AuthLayout({
           </div>
 
           <footer className="flex shrink-0 items-center justify-between gap-3">
-            <p className="text-[10px] text-slate-500">{copy.rights}</p>
-            <div className="hidden items-center gap-2 text-[10px] font-black text-slate-500 sm:flex"><Radio size={12} className="text-[#a3ff12]"/> {copy.marketOnline}</div>
+            <p dir={keepLoginLayoutStable && normalizedLocale === "ar-SA" ? "rtl" : undefined} className="text-[10px] text-slate-500">{copy.rights}</p>
+            <div dir={keepLoginLayoutStable && normalizedLocale === "ar-SA" ? "rtl" : undefined} className="hidden items-center gap-2 text-[10px] font-black text-slate-500 sm:flex"><Radio size={12} className="text-[#a3ff12]"/> {copy.marketOnline}</div>
           </footer>
         </div>
 
@@ -91,7 +113,7 @@ export function AuthLayout({
           <div className="stadium-stands" />
           <div className="pitch-lines" />
           <div className="manager-silhouette" />
-          <div className="relative z-10 mt-auto flex h-full flex-col justify-end">
+          <div dir={keepLoginLayoutStable && normalizedLocale === "ar-SA" ? "rtl" : undefined} className="relative z-10 mt-auto flex h-full flex-col justify-end">
             <p className="text-[11px] font-black text-cyan-200/80">TouchLine</p>
             <h2 className="font-display mt-5 text-6xl  italic leading-[.86] xl:text-7xl">{copy.asideTitleTop}<br/><span className="text-[#a3ff12]">{copy.asideTitleBottom}</span></h2>
             <div className="mt-9 space-y-4">{copy.features.map(x=><div key={x} className="console-mini-card flex items-center gap-3 p-4 text-[10px] font-bold text-slate-300"><span className="grid size-7 place-items-center rounded-lg border border-[#a3ff12]/25 bg-[#a3ff12]/10 text-[#a3ff12]"><Check size={13} strokeWidth={3}/></span>{x}</div>)}</div>

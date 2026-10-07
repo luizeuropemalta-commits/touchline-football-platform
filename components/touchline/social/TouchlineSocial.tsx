@@ -17,6 +17,7 @@ import {
 import TouchlineClubPerimeterTrace from "@/components/touchline/TouchlineClubPerimeterTrace";
 import { ClubOwnerPortraitPerimeterTrace } from "./ClubOwnerPortraitPerimeterTrace";
 import { shareTouchlinePost, type TouchlineNativeShareResult } from "@/lib/touchlineArena/social-native-share";
+import { getTouchlineSocialFeedCopy, touchlineSocialProfileDetailsLabel } from "@/lib/touchlineArena/social-feed-i18n";
 import styles from "./TouchlineSocial.module.css";
 
 export type TouchlineSocialPost = {
@@ -59,6 +60,8 @@ export function TouchlineSocialProfileHeader({
   clubOwnerPortraitTrace = false,
   portraitTraceActive = false,
   actionsPlacement = "default",
+  locale,
+  draftLocalesEnabled = false,
   children,
 }: {
   kind: string;
@@ -83,6 +86,8 @@ export function TouchlineSocialProfileHeader({
   portraitTraceActive?: boolean;
   /** Keeps private My Club controls beside the owner identity. */
   actionsPlacement?: "default" | "avatar";
+  locale?: string;
+  draftLocalesEnabled?: boolean;
   children?: React.ReactNode;
 }) {
   return (
@@ -127,7 +132,7 @@ export function TouchlineSocialProfileHeader({
           <h1>{name}</h1>
           <p>{subtitle}</p>
           {profileDetails.length ? (
-            <div className={styles.profileDetails} aria-label={`${name} profile details`}>
+            <div className={styles.profileDetails} aria-label={touchlineSocialProfileDetailsLabel(name, locale, draftLocalesEnabled)}>
               {profileDetails.map((detail) => (
                 <span key={detail.label}>
                   <small>{detail.label}</small>
@@ -226,11 +231,11 @@ export function TouchlineSocialProfileActions({
   );
 }
 
-function postKindLabel(kind: TouchlineSocialPost["kind"], locale: string) {
-  const isPortuguese = locale === "pt-BR";
-  if (kind === "official") return isPortuguese ? "Atualização oficial" : "Official update";
-  if (kind === "simulation") return isPortuguese ? "Simulação TouchLine" : "TouchLine simulation";
-  return isPortuguese ? "Publicação do ClubOwner" : "ClubOwner post";
+function postKindLabel(kind: TouchlineSocialPost["kind"], locale: string, draftLocalesEnabled = false) {
+  const copy = getTouchlineSocialFeedCopy(locale, draftLocalesEnabled);
+  if (kind === "official") return copy.officialPost;
+  if (kind === "simulation") return copy.simulationPost;
+  return copy.ownerPost;
 }
 
 function postMonogram(name: string) {
@@ -256,6 +261,7 @@ export function TouchlineSocialFeed({
   defaultActionHref,
   defaultActionLabel,
   emptyMessage,
+  draftLocalesEnabled = false,
 }: {
   entityId: string;
   entityName?: string;
@@ -269,12 +275,11 @@ export function TouchlineSocialFeed({
   defaultActionHref?: string;
   defaultActionLabel?: string;
   emptyMessage?: string;
+  draftLocalesEnabled?: boolean;
 }) {
-  const isPortuguese = locale === "pt-BR";
-  const resolvedEntityRole = entityRole || (isPortuguese ? "Perfil verificado" : "Verified profile");
-  const resolvedEmptyMessage = emptyMessage || (
-    isPortuguese ? "As atualizações oficiais aparecerão aqui." : "Official updates will appear here."
-  );
+  const copy = getTouchlineSocialFeedCopy(locale, draftLocalesEnabled);
+  const resolvedEntityRole = entityRole || copy.verifiedProfile;
+  const resolvedEmptyMessage = emptyMessage || copy.empty;
   const [sharedPosts, setSharedPosts] = useState<Map<string, TouchlineNativeShareResult>>(new Map());
   const [activeKind, setActiveKind] = useState<"all" | TouchlineSocialPost["kind"]>("all");
   const availableKinds = useMemo(() => [...new Set(posts.map((post) => post.kind))], [posts]);
@@ -305,26 +310,24 @@ export function TouchlineSocialFeed({
       className={styles.feed}
       data-club-owner-feed={entityId.startsWith("club-owner:") ? "true" : "false"}
       style={{ "--social-accent": accent } as React.CSSProperties}
-      aria-label={isPortuguese ? "Feed TouchLine" : "TouchLine feed"}
+      aria-label={copy.feed}
     >
       <header className={styles.feedHeading}>
         <div className={styles.feedTitle}>
           <span><Radio aria-hidden="true" size={13} /> TouchLine Pulse</span>
-          <h2>{isPortuguese ? "Central de atualizações" : "Updates centre"}</h2>
+          <h2>{copy.title}</h2>
           <p>
-            {isPortuguese
-              ? "O futebol real encontra a evolução do card em um feed visual, automático e verificado."
-              : "Real football meets card progression in a visual, automatic and verified feed."}
+            {copy.description}
           </p>
         </div>
-        <div className={styles.feedTrust} aria-label={isPortuguese ? "Proteções do feed" : "Feed safeguards"}>
-          <span><BadgeCheck aria-hidden="true" size={15} /> {isPortuguese ? "Dados oficiais" : "Official data"}</span>
-          <span><ShieldCheck aria-hidden="true" size={15} /> {isPortuguese ? "Estratégia privada" : "Private strategy"}</span>
+        <div className={styles.feedTrust} aria-label={copy.safeguards}>
+          <span><BadgeCheck aria-hidden="true" size={15} /> {copy.officialData}</span>
+          <span><ShieldCheck aria-hidden="true" size={15} /> {copy.privateStrategy}</span>
         </div>
       </header>
 
       {highlights.length ? (
-        <div className={styles.feedHighlights} aria-label={isPortuguese ? "Resumo do perfil" : "Profile summary"}>
+        <div className={styles.feedHighlights} aria-label={copy.summary}>
           {highlights.map((highlight) => (
             <div key={highlight.label}>
               <span>{highlight.label}</span>
@@ -345,15 +348,15 @@ export function TouchlineSocialFeed({
           </div>
         </div>
         {availableKinds.length > 1 ? (
-          <nav className={styles.feedFilters} aria-label={isPortuguese ? "Filtrar notícias" : "Filter updates"}>
+          <nav className={styles.feedFilters} aria-label={copy.filters}>
             {(["all", ...availableKinds] as const).map((kind) => (
               <button key={kind} type="button" aria-pressed={activeKind === kind} onClick={() => setActiveKind(kind)}>
                 {kind === "all"
-                  ? (isPortuguese ? "Tudo" : "All")
+                  ? copy.all
                   : kind === "official"
-                    ? (isPortuguese ? "Oficial" : "Official")
+                    ? copy.official
                     : kind === "simulation"
-                      ? (isPortuguese ? "Simulação" : "Simulation")
+                      ? copy.simulation
                       : "ClubOwner"}
               </button>
             ))}
@@ -384,7 +387,7 @@ export function TouchlineSocialFeed({
                     <strong>{entityName}<BadgeCheck aria-hidden="true" size={12} /></strong>
                     <span className={post.kind === "official" ? styles.officialBadge : post.kind === "simulation" ? styles.simulationBadge : styles.ownerBadge}>
                       {post.kind === "official" ? <BadgeCheck aria-hidden="true" size={12} /> : <Sparkles aria-hidden="true" size={12} />}
-                      {postKindLabel(post.kind, locale)}
+                      {postKindLabel(post.kind, locale, draftLocalesEnabled)}
                     </span>
                   </div>
                 </div>
@@ -417,7 +420,7 @@ export function TouchlineSocialFeed({
 
                 <div className={styles.postCopy}>
                   <div className={styles.postStoryLabel}>
-                    <span /> {isPortuguese ? "Em destaque no perfil" : "Featured on profile"}
+                    <span /> {copy.featured}
                   </div>
                   <h3>{post.title}</h3>
                   <p>{post.body}</p>
@@ -428,19 +431,19 @@ export function TouchlineSocialFeed({
               <footer>
                 {/* Post reactions need their own persisted identity; player likes
                     and browser preferences cannot stand in for post totals. */}
-                <button type="button" disabled title={isPortuguese ? "Curtidas indisponíveis: integração de publicações pendente." : "Post likes unavailable: persistence integration pending."}>
+                <button type="button" disabled title={copy.likesUnavailableReason}>
                   <Heart aria-hidden="true" size={18} />
-                  <span>{isPortuguese ? "Curtidas indisponíveis" : "Likes unavailable"}</span>
+                  <span>{copy.likesUnavailable}</span>
                 </button>
                 <button type="button" onClick={() => void sharePost(post)} aria-live="polite">
                   <Share2 aria-hidden="true" size={18} />
                   <span>{sharedPosts.get(post.id) === "shared"
-                    ? (isPortuguese ? "Compartilhado" : "Shared")
+                    ? copy.shared
                     : sharedPosts.get(post.id) === "copied"
-                      ? (isPortuguese ? "Link copiado" : "Post copied")
+                      ? copy.copied
                       : sharedPosts.get(post.id) === "unavailable"
-                        ? (isPortuguese ? "Indisponível" : "Unavailable")
-                        : (isPortuguese ? "Compartilhar" : "Share")}</span>
+                        ? copy.shareUnavailable
+                        : copy.share}</span>
                 </button>
                 {actionHref && actionLabel ? (
                   <a href={actionHref}>

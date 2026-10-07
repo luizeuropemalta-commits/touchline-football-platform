@@ -68,7 +68,7 @@ test("analytics accepts only the exact request origin", () => {
 test("analytics derives its area from the same-origin referring page", () => {
   const requestUrl = "https://touchline-arena-official-git-qa-fifa-agent-plataform.vercel.app/api/touchline-analytics";
   assert.equal(
-    touchlineAnalyticsAreaFromReferrer(requestUrl, `${new URL(requestUrl).origin}/touchline-tables?lang=en-GB`),
+    touchlineAnalyticsAreaFromReferrer(requestUrl, `${new URL(requestUrl).origin}/rankings?lang=en-GB`),
     "ranking",
   );
   assert.equal(

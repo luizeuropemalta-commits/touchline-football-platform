@@ -8,7 +8,7 @@ import ts from "typescript";
 const secret = "x".repeat(48);
 function harness(env: Record<string, string> = {}) {
   const logs: unknown[][] = [];
-  const state = { clients: 0, runs: 0, providers: 0, fail: false, configured: true,
+  const state = { clients: 0, runs: 0, providers: 0, fail: false, configured: true, invokeProvider: false,
     result: { status: "stored", reason: null, leaderCount: 1, publicAwardEligible: false,
       providerQuota: { private: "PRIVATE provider sentinel" } } as Record<string, unknown> };
   const admin = {};
@@ -19,10 +19,11 @@ function harness(env: Record<string, string> = {}) {
       state.clients++; if (state.fail) throw Error("PRIVATE database sentinel");
       return state.configured ? admin : null;
     } },
-    "@/lib/football-data/provider-factory": { createFootballDataProvider() { state.providers++; return {}; } },
+    "@/lib/football-data/fixture-provider-server": { createGuardedFixtureProvider(client: unknown) { assert.equal(client, admin); state.providers++; return {}; } },
     "@/lib/touchlineArena/golden-boot-producer": { async produceGoldenBootSnapshot(input: Record<string, unknown>) {
       state.runs++; assert.equal(input.admin, admin); assert.equal(typeof input.createProvider, "function");
       assert.equal(state.providers, 0, "provider creation belongs after durable admission inside producer");
+      if (state.invokeProvider) (input.createProvider as () => unknown)();
       return state.result;
     } },
   };
@@ -39,6 +40,12 @@ function harness(env: Record<string, string> = {}) {
   };
 }
 const enabled = { TOUCHLINE_GOLDEN_BOOT_REFRESH_ENABLED: "true", TOUCHLINE_GOLDEN_BOOT_REFRESH_SECRET: secret };
+
+test("admitted producer receives only the guarded factory bound to the same admin", async () => {
+  const h=harness(enabled); h.state.invokeProvider=true;
+  assert.equal((await h.post()).status,200);
+  assert.equal(h.state.providers,1); assert.equal(h.state.clients,1);
+});
 function privateResponse(response: Response) {
   for (const key of ["Cache-Control", "CDN-Cache-Control", "Vercel-CDN-Cache-Control"])
     assert.match(response.headers.get(key) ?? "", /no-store/);

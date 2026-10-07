@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { createFootballDataProvider } from "@/lib/football-data/provider-factory";
+import { createGuardedFixtureProvider } from "@/lib/football-data/fixture-provider-server";
 import type { TouchlineCompetition, TouchlinePlayer, TouchlineSquadMember, TouchlineTeam } from "@/lib/football-data/types";
 
 type AdminClient = SupabaseClient;
@@ -42,7 +42,7 @@ export async function syncSportmonksStarterFoundation(
   admin: AdminClient,
   options: SyncOptions = {},
 ): Promise<StarterFoundationSyncResult> {
-  const provider = createFootballDataProvider("sportmonks");
+  const provider = createGuardedFixtureProvider(admin);
   const competitionProviderId = configuredStarterCompetitionId(options.competitionId);
   const clubProviderId = configuredStarterClubId(options.clubId);
 

@@ -10,8 +10,10 @@ export async function GET() {
   const supabase = await createClient();
   const { data: { user } } = supabase ? await supabase.auth.getUser() : { data: { user: null } };
   if (!user) return NextResponse.json({ ok: false, error: "AUTH_REQUIRED" }, { status: 401 });
-  const snapshot = await loadTouchlineFantasySnapshot(user);
-  if (!snapshot) return NextResponse.json({ ok: false, error: "FANTASY_UNAVAILABLE" }, { status: 503 });
+  const snapshot = await loadTouchlineFantasySnapshot(user).catch(() => null);
+  if (!snapshot) return NextResponse.json({ ok: false, error: "FANTASY_UNAVAILABLE" }, {
+    status: 503, headers: { "Cache-Control": "private, no-store" },
+  });
   return NextResponse.json({
     ok: true,
     activeGameweek: snapshot.activeGameweek,

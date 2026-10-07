@@ -1,4 +1,5 @@
 /* eslint-disable @next/next/no-img-element */
+import { isTouchLineSiteLocalesEnabled } from "@/lib/touchlineArena/site-locales-release";
 
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -8,6 +9,8 @@ import TouchlineCoachCard from "@/components/touchline/cards/TouchlineCoachCard"
 import TouchlineCoachPerformance from "@/components/touchline/cards/TouchlineCoachPerformance";
 import TouchlineLivePresentationRefresh from "@/components/touchline/TouchlineLivePresentationRefresh";
 import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
+import TouchlineBrandHeader from "@/components/touchline/TouchlineBrandHeader";
+import { loadAccountLocaleContext } from "@/lib/touchlineArena/account-locale-context-server";
 import navigationStyles from "@/components/touchline/TouchlineGlobalNavigation.module.css";
 import { CalendarDays, Flag, Gem, House, PlaneTakeoff, ShieldCheck, Trophy } from "lucide-react";
 import { TOUCHLINE_ENGLAND_CLUBS } from "@/lib/touchlineArena/demo-data";
@@ -20,7 +23,11 @@ import {
   touchlineCoachClassificationForProviderId,
   TOUCHLINE_LIVE_COACHES,
 } from "@/lib/touchlineArena/live-coaches";
-import { normalizeTouchLineLocale } from "@/lib/touchlineArena/i18n";
+import { resolveTouchlineCatalogueLocale } from "@/lib/touchlineArena/catalogue-locale";
+import { getTouchlineCoachProfileCopy, getTouchlineCoachProfileReason } from "@/lib/touchlineArena/coach-profile-i18n";
+import { getTouchlineCoachCardCopy } from "@/lib/touchlineArena/coach-card-i18n";
+import { getTouchlineMatchCentreCopy } from "@/lib/touchlineArena/match-centre-i18n";
+import { getTouchlineTablesPresentationCopy } from "@/lib/touchlineArena/tables-presentation-i18n";
 
 const TOUCHLINE_ENGLAND_SEASON = "2026-27";
 
@@ -34,61 +41,63 @@ function coachSlug(value: string) {
     .replace(/^-+|-+$/g, "");
 }
 
-function coachReason(reason: string, pt: boolean) {
-  const labels: Record<string, string> = pt ? {
-    "elite-final-position": "Posição final em liga de elite",
-    "elite-relegation-free": "Posição final em liga de elite",
-    promoted: "Clube promovido",
-    newcomer: "Sem temporada sénior completa confirmada",
-    "non-elite-fallback": "Histórico fora das ligas de elite iniciais",
-    "classification-pending": "Histórico em validação",
-  } : {
-    "elite-final-position": "Elite-league final position",
-    "elite-relegation-free": "Elite-league final position",
-    promoted: "Promoted club",
-    newcomer: "No confirmed complete senior season",
-    "non-elite-fallback": "History outside the initial elite leagues",
-    "classification-pending": "History under verification",
-  };
-  return labels[reason] ?? (pt ? "Classificação em validação" : "Classification under verification");
+type CoachProfileMetadataProps = {
+  params: Promise<{ coach: string }>;
+  searchParams?: Promise<{ lang?: string | string[] }>;
+};
+
+export async function generateMetadata(props: CoachProfileMetadataProps): Promise<Metadata> {
+  return generateCoachProfileMetadata(props, isTouchLineSiteLocalesEnabled("/touchline-coaches/[coach]"));
 }
 
-export async function generateMetadata({
+async function generateCoachProfileMetadata({
   params,
-}: {
-  params: Promise<{ coach: string }>;
-}): Promise<Metadata> {
-  const { coach } = await params;
+  searchParams,
+}: CoachProfileMetadataProps, draftLocalesEnabled = false): Promise<Metadata> {
+  const [{ coach }, query] = await Promise.all([params, searchParams]);
+  const requestedLocale = Array.isArray(query?.lang) ? query.lang[0] : query?.lang;
+  const copy = getTouchlineCoachProfileCopy(resolveTouchlineCatalogueLocale(requestedLocale, draftLocalesEnabled), draftLocalesEnabled);
   const found = TOUCHLINE_LIVE_COACHES.find(({ coach: candidate }) => (
     candidate.providerId === coach || coachSlug(candidate.displayName) === coachSlug(coach)
   ));
   return {
-    title: found ? `${found.coach.displayName} | TouchLine England` : "Coach profile | TouchLine England",
+    title: found ? `${found.coach.displayName} | TouchLine England` : copy.metadataFallback,
   };
 }
 
-export default async function TouchlineCoachProfilePage({
-  params,
-  searchParams,
-}: {
+type CoachProfilePageProps = {
   params: Promise<{ coach: string }>;
   searchParams: Promise<{ lang?: string | string[] }>;
-}) {
+};
+
+export default async function TouchlineCoachProfilePage(props: CoachProfilePageProps) {
+  return renderCoachProfilePage(props, isTouchLineSiteLocalesEnabled("/touchline-coaches/[coach]"));
+}
+
+async function renderCoachProfilePage({
+  params,
+  searchParams,
+}: CoachProfilePageProps, draftLocalesEnabled = false) {
   const [{ coach: coachParam }, query] = await Promise.all([params, searchParams]);
   const requestedLocale = Array.isArray(query.lang) ? query.lang[0] : query.lang;
-  const locale = normalizeTouchLineLocale(requestedLocale);
-  const pt = locale === "pt-BR";
+  const locale = resolveTouchlineCatalogueLocale(requestedLocale, draftLocalesEnabled);
+  const copy = getTouchlineCoachProfileCopy(locale, draftLocalesEnabled);
+  const cardCopy = getTouchlineCoachCardCopy(locale, draftLocalesEnabled);
+  const matchCopy = getTouchlineMatchCentreCopy(locale, draftLocalesEnabled);
+  const recordCopy = getTouchlineTablesPresentationCopy(locale, draftLocalesEnabled);
   const entry = TOUCHLINE_LIVE_COACHES.find(({ coach }) => (
     coach.providerId === coachParam || coachSlug(coach.displayName) === coachSlug(coachParam)
   ));
   if (!entry) notFound();
-  const nationalityLabel = localizedCountryLabel(entry.coach.nationality, locale) ?? "—";
+  const nationalityLabel = localizedCountryLabel(entry.coach.nationality, locale, draftLocalesEnabled) ?? "—";
 
   const classification = touchlineCoachClassificationForProviderId(entry.coach.providerId);
   if (!classification) notFound();
   const club = TOUCHLINE_ENGLAND_CLUBS.find((candidate) => candidate.teamId === entry.coach.teamId);
   if (!club) notFound();
-  const coachRanking = await loadTouchLineCoachRanking();
+  const [coachRanking, accountLocaleContext] = await Promise.all([
+    loadTouchLineCoachRanking(), loadAccountLocaleContext(),
+  ]);
   const competition = coachCompetitionFromRanking(coachRanking, entry.coach.providerId, TOUCHLINE_ENGLAND_SEASON);
   const slot = createTouchlineArenaCoachSlot(entry.coach, null, classification.tierKey);
   const scoredSlot = competition ? {
@@ -113,29 +122,31 @@ export default async function TouchlineCoachProfilePage({
     || classification.finalPosition !== null,
   );
   const campaign = competition ? [
-    { key: "home", icon: House, label: pt ? "Campanha em casa" : "Home campaign", record: competition.home },
-    { key: "away", icon: PlaneTakeoff, label: pt ? "Campanha fora" : "Away campaign", record: competition.away },
+    { key: "home", icon: House, label: copy.homeCampaign, record: competition.home },
+    { key: "away", icon: PlaneTakeoff, label: copy.awayCampaign, record: competition.away },
   ] : [];
 
   return (
-    <main className="coach-profile-page">
+    <main className="coach-profile-page" dir="ltr">
+      <TouchlineBrandHeader href={`/touchline-coaches/${encodeURIComponent(entry.coach.providerId)}${profileLocale}`} locale={locale} accountLocaleContext={accountLocaleContext} draftLocalesEnabled={draftLocalesEnabled} />
+      <div className="coach-profile-content">
       <TouchlineLivePresentationRefresh
         initialCoachRankingSnapshotId={coachRanking.snapshotId}
       />
       <div className="coach-profile-nav">
-        <TouchlineGlobalNavigation locale={locale} currentRoute="coachProfile" surface="public" />
+        <TouchlineGlobalNavigation locale={locale} draftLocalesEnabled={draftLocalesEnabled} currentRoute="coachProfile" surface="public" showAudioControl={false} />
         <Link className={navigationStyles.link} href={`/touchline-clubs/${club.slug}${profileLocale}`}>← {club.name}</Link>
       </div>
       <div className="coach-profile-composition">
       <section className="coach-profile-hero">
         <div className="coach-profile-copy">
-          <span>{pt ? "FUTEBOL REAL · TREINADOR" : "REAL FOOTBALL · COACH"}</span>
+          <span>{copy.heroEyebrow}</span>
           <h1>{entry.coach.displayName}</h1>
           <p>{nationalityLabel} · {club.name}</p>
           <dl className="coach-profile-identity-grid">
-            <div><dt>{pt ? "Clube atual" : "Current club"}</dt><dd>{club.name}</dd></div>
-            <div><dt>{pt ? "Nacionalidade" : "Nationality"}</dt><dd>{nationalityLabel}</dd></div>
-            <div><dt>{pt ? "Verificação" : "Verification"}</dt><dd>{pt ? "TouchLine Verified" : "Verified by TouchLine"}</dd></div>
+            <div><dt>{cardCopy.currentClub}</dt><dd>{club.name}</dd></div>
+            <div><dt>{cardCopy.nationality}</dt><dd>{nationalityLabel}</dd></div>
+            <div><dt>{copy.verification}</dt><dd>{copy.verifiedBy}</dd></div>
           </dl>
         </div>
         <div className="coach-profile-card"><TouchlineCoachCard
@@ -146,6 +157,7 @@ export default async function TouchlineCoachProfilePage({
           clubAccent={club.accent}
           countryCode3={entry.countryCode3}
           locale={locale}
+          draftLocalesEnabled={draftLocalesEnabled}
           forceNeonActive
           enableInteractiveNeon={false}
           showLeadershipCrown={competition?.rank === 1}
@@ -153,50 +165,52 @@ export default async function TouchlineCoachProfilePage({
       </section>
       <section className="coach-profile-grid">
         <article className="coach-profile-game-card">
-          <span>{pt ? "TOUCHLINE GAME" : "TOUCHLINE GAME"}</span>
-          <h2>{pt ? "Desempenho da temporada" : "Season performance"}</h2>
+          <span>TOUCHLINE GAME</span>
+          <h2>{copy.performance}</h2>
           <div className="coach-profile-offer-grid">
-            <div><Gem aria-hidden="true" /><span><small>Tier</small><strong>{touchlineCardTierName(classification.tierKey, locale)}</strong></span></div>
-            <div><ShieldCheck aria-hidden="true" /><span><small>{pt ? "Temporada" : "Season"}</small><strong>{competition?.seasonLabel ?? TOUCHLINE_ENGLAND_SEASON}</strong></span></div>
-            <div><Trophy aria-hidden="true" /><span><small>{pt ? "Ranking atual" : "Current rank"}</small><strong>{competition ? `#${competition.rank}` : "—"}</strong></span></div>
-            <div><CalendarDays aria-hidden="true" /><span><small>{pt ? "Partidas" : "Matches"}</small><strong>{matchesPlayed ?? "—"}</strong></span></div>
+            <div><Gem aria-hidden="true" /><span><small>{copy.tier}</small><strong>{touchlineCardTierName(classification.tierKey, locale, draftLocalesEnabled)}</strong></span></div>
+            <div><ShieldCheck aria-hidden="true" /><span><small>{matchCopy.season}</small><strong>{competition?.seasonLabel ?? TOUCHLINE_ENGLAND_SEASON}</strong></span></div>
+            <div><Trophy aria-hidden="true" /><span><small>{copy.currentRank}</small><strong>{competition ? `#${competition.rank}` : "—"}</strong></span></div>
+            <div><CalendarDays aria-hidden="true" /><span><small>{copy.matches}</small><strong>{matchesPlayed ?? "—"}</strong></span></div>
           </div>
-          <TouchlineCoachPerformance contract={null} competition={competition} locale={locale} />
-          <p>{pt ? "Vitórias, empates, derrotas e pontos vêm da classificação canônica da competição e são os mesmos para todos os cards deste treinador." : "Wins, draws, losses and points come from the canonical competition standings and remain identical on every card for this coach."}</p>
-          <p>{pt ? `Classificação: ${coachReason(classification.classificationReason, pt)}. O tier fica fixo durante a temporada.` : `Classification: ${coachReason(classification.classificationReason, pt)}. The tier stays fixed through the season.`}</p>
+          <TouchlineCoachPerformance contract={null} competition={competition} locale={locale} draftLocalesEnabled={draftLocalesEnabled} />
+          <p>{copy.competitionExplanation}</p>
+          <p>{copy.classificationDescription.replace("{reason}", () => getTouchlineCoachProfileReason(classification.classificationReason, locale, draftLocalesEnabled))}</p>
         </article>
         <article className="coach-profile-facts">
-          <span>{pt ? "PERFIL OFICIAL" : "OFFICIAL PROFILE"}</span>
-          <h2>{pt ? "Contexto do treinador" : "Coach context"}</h2>
+          <span>{copy.officialProfile}</span>
+          <h2>{copy.coachContext}</h2>
           <div className="coach-profile-club">
             {club.logoUrl ? <img src={club.logoUrl} alt="" /> : <Flag aria-hidden="true" />}
-            <div><small>{pt ? "CLUBE ATUAL" : "CURRENT CLUB"}</small><strong>{club.name}</strong></div>
+            <div><small>{copy.currentClubHeading}</small><strong>{club.name}</strong></div>
           </div>
           <dl className="coach-profile-fact-grid">
-            <div><dt>{pt ? "Nacionalidade" : "Nationality"}</dt><dd>{nationalityLabel}</dd></div>
-            <div><dt>{pt ? "Temporada" : "Season"}</dt><dd>{competition?.seasonLabel ?? TOUCHLINE_ENGLAND_SEASON}</dd></div>
-            <div><dt>{pt ? "Partidas" : "Matches"}</dt><dd>{matchesPlayed ?? "—"}</dd></div>
-            <div><dt>{pt ? "Tier" : "Tier"}</dt><dd>{touchlineCardTierName(classification.tierKey, locale)}</dd></div>
+            <div><dt>{cardCopy.nationality}</dt><dd>{nationalityLabel}</dd></div>
+            <div><dt>{matchCopy.season}</dt><dd>{competition?.seasonLabel ?? TOUCHLINE_ENGLAND_SEASON}</dd></div>
+            <div><dt>{copy.matches}</dt><dd>{matchesPlayed ?? "—"}</dd></div>
+            <div><dt>{copy.tier}</dt><dd>{touchlineCardTierName(classification.tierKey, locale, draftLocalesEnabled)}</dd></div>
           </dl>
-          {campaign.length ? <section className="coach-profile-campaign" aria-label={pt ? "Campanha da temporada" : "Season campaign"}>
-            <header><span>{pt ? "FORMA DA TEMPORADA" : "SEASON FORM"}</span><strong>{pt ? "Casa e fora" : "Home and away"}</strong></header>
+          {campaign.length ? <section className="coach-profile-campaign" aria-label={copy.seasonCampaign}>
+            <header><span>{copy.seasonForm}</span><strong>{copy.homeAndAway}</strong></header>
             <div>{campaign.map(({ key, icon: Icon, label, record }) => <article key={key}>
               <Icon aria-hidden="true" />
-              <span><small>{label}</small><strong>{record.wins}W · {record.draws}D · {record.losses}L</strong></span>
+              <span><small>{label}</small><strong>{record.wins}{draftLocalesEnabled ? recordCopy.winsShort : "W"} · {record.draws}{draftLocalesEnabled ? recordCopy.drawsShort : "D"} · {record.losses}{draftLocalesEnabled ? recordCopy.lossesShort : "L"}</strong></span>
             </article>)}</div>
           </section> : null}
           {historyAvailable ? (
             <dl className="coach-profile-history-grid">
-              <div><dt>{pt ? "Clube anterior" : "Previous club"}</dt><dd>{classification.sourceClub ?? "—"}</dd></div>
-              <div><dt>{pt ? "Liga anterior" : "Previous league"}</dt><dd>{classification.sourceLeagueName ?? "—"}</dd></div>
-              <div><dt>{pt ? "Posição final" : "Final position"}</dt><dd>{classification.finalPosition === null ? "—" : `#${classification.finalPosition}`}</dd></div>
+              <div><dt>{copy.previousClub}</dt><dd>{classification.sourceClub ?? "—"}</dd></div>
+              <div><dt>{copy.previousLeague}</dt><dd>{classification.sourceLeagueName ?? "—"}</dd></div>
+              <div><dt>{copy.finalPosition}</dt><dd>{classification.finalPosition === null ? "—" : `#${classification.finalPosition}`}</dd></div>
             </dl>
-          ) : <p className="coach-profile-pending">{pt ? "O histórico de clubes e ligas ainda não foi confirmado pela fonte oficial. A TouchLine mantém a classificação pendente em vez de inventar dados." : "Club and league history has not yet been confirmed by the official source. TouchLine keeps the classification pending instead of inventing data."}</p>}
+          ) : <p className="coach-profile-pending">{copy.historyPending}</p>}
         </article>
       </section>
       </div>
+      </div>
       <style>{`
-        .coach-profile-page { min-height: 100dvh; padding: clamp(16px,2.5vw,32px); color:#efffd5; background:radial-gradient(circle at 82% 10%,rgba(181,255,75,.13),transparent 32%),linear-gradient(145deg,#020708,#07140f); }
+        .coach-profile-page { min-height: 100dvh; color:#efffd5; background:radial-gradient(circle at 82% 10%,rgba(181,255,75,.13),transparent 32%),linear-gradient(145deg,#020708,#07140f); }
+        .coach-profile-content { padding: clamp(16px,2.5vw,32px); }
         .coach-profile-nav { display:flex; flex-wrap:wrap; align-items:center; gap:10px; max-width:1180px; margin:0 auto 24px; }
         .coach-profile-nav > nav { width:auto; flex:1 1 560px; margin:0; }
         .coach-profile-hero,.coach-profile-grid { max-width:1180px; margin:0 auto; display:grid; gap:clamp(18px,2.5vw,32px); grid-template-columns:minmax(0,1fr) minmax(240px,300px); }

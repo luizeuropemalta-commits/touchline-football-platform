@@ -510,17 +510,13 @@
 .marketSideColumn > .technicalArea { margin-top: auto; }
 .marketSideColumn .technicalCoach { width: 104px; }
 .marketSideColumn .technicalArea { gap: 8px; }
-.clubOwnerArea { display: grid; gap: 14px; padding: 16px; border: 1px solid #7ebf2a; border-radius: 16px; background: #101b18; min-width: 0; }
-.clubOwnerArea h2 { margin: 0; color: #a3ff12; font-size: 16px; }
-.clubOwnerIdentity { display: flex; align-items: center; gap: 10px; min-width: 0; }
-.clubOwnerIdentity img { width: 64px; height: 64px; object-fit: cover; border-radius: 50%; }
-.clubOwnerIdentity strong { overflow-wrap: anywhere; font-size: 14px; }
-.clubOwnerMetrics { display: grid; gap: 8px; }
-.clubOwnerMetrics > div, .clubOwnerMetrics > a { display: grid; gap: 4px; min-height: 44px; padding: 8px 0; border-top: 1px solid #33433c; text-decoration: none; }
-.clubOwnerMetrics span { color: #bac9bf; font-size: 12px; }
-.clubOwnerMetrics strong { color: #d5ffab; font-size: 20px; }
-.clubOwnerMetrics a:hover strong { color: #a3ff12; }
-.clubOwnerMetrics a:focus-visible { outline: 2px solid #a3ff12; outline-offset: 3px; }
+.ownerSummary { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; margin: 0; }
+.ownerSummary > div { display: grid; align-content: start; gap: 7px; min-width: 0; padding: 15px 18px; border: 1px solid rgba(192,231,162,.16); border-radius: 14px; background: linear-gradient(120deg,rgba(160,212,125,.055),rgba(7,18,12,.86)); }
+.ownerSummary dt { color: #b1c1ac; font-size: 11px; line-height: 1.4; }
+.ownerSummary dd { margin: 0; color: #e8f6dc; font-size: clamp(20px,2.3vw,28px); font-weight: 800; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.ownerSummary a { display: inline-flex; min-height: 44px; align-items: center; color: inherit; text-decoration: none; }
+.ownerSummary a:hover { color: #a3ff12; }
+.ownerSummary a:focus-visible { outline: 2px solid #a3ff12; outline-offset: 3px; }
 @media (max-width: 1000px) {
   .myClubCommand[data-fantasy-context="market"] .myClubCommandGrid { grid-template-columns: minmax(0, 1fr); }
   .technicalArea { grid-template-columns: 140px minmax(0, 1fr); }
@@ -531,7 +527,7 @@
 
 /* The field remains in place while the position catalogue drops over it. */
 .myClubCommand[data-fantasy-context="market"] { --market-border: #7ebf2a; border-color: var(--market-border); }
-.myClubCommand[data-fantasy-context="market"] :is(.myClubSquad, .myClubMarketStatus, .myClubGameweekFooter, .clubOwnerArea, .technicalArea, .myClubSetup, .myClubMarket) { border-color: var(--market-border); }
+.myClubCommand[data-fantasy-context="market"] :is(.myClubSquad, .myClubMarketStatus, .myClubGameweekFooter, .technicalArea, .myClubSetup, .myClubMarket) { border-color: var(--market-border); }
 .myClubCommand[data-fantasy-context="market"] .myClubTacticalPitch {
   --pitch-line: var(--market-border) !important;
   --pitch-line-soft: var(--market-border) !important;
@@ -566,24 +562,46 @@
     width: 100%;
     transform: none;
   }
-  .myClubCommand[data-fantasy-context="market"] .myClubPitchViewport .myClubTacticalSlot > button {
-    display: grid;
-    place-items: center;
-    width: 44px;
-    min-height: 44px;
-    padding: 0;
-    left: calc(50% + 20px);
-  }
-  .myClubCommand[data-fantasy-context="market"] .myClubPitchViewport .myClubTacticalSlot[data-pitch-edge="end"] > button {
-    left: auto;
-    right: calc(50% + 20px);
-  }
 }
 .emptyPosition { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 1px dashed #c2eea1; border-radius: 50%; color: #aaff3e; background: #091410; font-size: 24px; }
 .emptyPosition:focus-visible { outline: 2px solid #efffd2; outline-offset: 3px; }
-.myClubMarket[data-position-overlay="true"] { --lime: #aaff3e; border: 0; padding: 0; border-radius: 0; background: transparent; }
-.myClubMarket[data-position-overlay="true"] .myClubMarketResults { grid-template-columns: repeat(auto-fit, minmax(235px, 1fr)); max-height: none; overflow: visible; }
-.myClubMarket[data-position-overlay="true"] .myClubMarketResults article button { min-height: 44px; font-size: 13px; }
-.myClubMarket[data-position-overlay="true"] .myClubSelectionSummary h3 { font-size: 18px; }
-.myClubMarket[data-position-overlay="true"] .myClubMarketResults article strong { font-size: 14px; }
-.myClubMarket[data-position-overlay="true"] .myClubMarketResults article small { font-size: 12px; }
+.myClubMarket[data-inline-selection="true"] { --lime: #aaff3e; scroll-margin-top: 24px; }
+.myClubMarket[data-inline-selection="true"] .myClubMarketResults { grid-template-columns: repeat(auto-fit, minmax(min(100%,235px), 1fr)); max-height: none; overflow: visible; }
+.myClubMarket[data-inline-selection="true"] .myClubMarketResults article button { min-height: 44px; font-size: 13px; }
+.myClubMarket[data-inline-selection="true"] .myClubSelectionSummary h3 { font-size: 18px; }
+.myClubMarket[data-inline-selection="true"] .myClubMarketResults article strong { font-size: 14px; }
+.myClubMarket[data-inline-selection="true"] .myClubMarketResults article small { font-size: 12px; }
+.myClubSquad { scroll-margin-top: 24px; }
+/* A small red X above the card keeps a full-size hit area on touch screens. */
+.myClubPitchViewport .myClubTacticalSlot > .pitchRemove { position: absolute; z-index: 9; top: -18px; right: auto; left: 50%; display: grid; place-items: start center; width: 44px; height: 44px; min-height: 44px; padding: 0; border: 0; border-radius: 8px; color: #ff707b; background: transparent; box-shadow: none; font-size: 18px; line-height: 1; transform: translateX(-50%); opacity: 1; cursor: pointer; }
+.myClubPitchViewport .myClubTacticalSlot > .pitchRemove::after { content: none; }
+.pitchRemove > span { display: grid; place-items: center; box-sizing: border-box; width: 18px; height: 18px; border: 1px solid rgba(255,112,123,.45); border-radius: 5px; background: #241014; }
+.myClubPitchViewport .myClubTacticalSlot > .pitchRemove:not(:disabled):hover { color: #ffe7e9; background: transparent; }
+.myClubPitchViewport .myClubTacticalSlot > .pitchRemove:focus-visible { outline: 2px solid #ffb3ba; outline-offset: 1px; }
+@media (hover: hover) and (pointer: fine) {
+  .myClubPitchViewport .myClubTacticalSlot > .pitchRemove { opacity: 0; }
+  .myClubPitchViewport .myClubTacticalSlot:hover > .pitchRemove,
+  .myClubPitchViewport .myClubTacticalSlot:focus-within > .pitchRemove { opacity: 1; }
+}
+@media (any-hover: none), (any-pointer: coarse) {
+  .myClubPitchViewport .myClubTacticalSlot > .pitchRemove { opacity: 1; }
+}
+.myClubCommand[data-fantasy-context="market"] .myClubMarketStatus { display: grid; grid-template-columns: minmax(0,1fr) minmax(260px,.8fr); align-items: center; gap: 26px; padding: 22px 26px; border-radius: 20px; background: radial-gradient(ellipse at 100% 0,rgba(177,212,137,.075),transparent 65%),linear-gradient(125deg,#0c1913,#08110e); box-shadow: inset 0 1px rgba(242,255,222,.055); }
+.myClubCommand[data-fantasy-context="market"] .myClubMarketStatus > div { min-width: 0; }
+.myClubCommand[data-fantasy-context="market"] .myClubMarketStatus > div > span { color: #bfd1b2; font-size: 10px; letter-spacing: .16em; }
+.myClubCommand[data-fantasy-context="market"] .myClubMarketStatus > div > small { margin-top: 12px; color: #eff8e8; font-size: clamp(15px,1.5vw,19px); line-height: 1.4; }
+.myClubCommand[data-fantasy-context="market"] .myClubMarketRule { max-width: 600px; margin-top: 12px; color: #9cac99; font-size: 12px; line-height: 1.6; }
+.myClubCommand[data-fantasy-context="market"] .myClubMarketStatus .marketClock { width: 100%; min-width: 0; max-width: none; padding: 16px 18px; border: 1px solid rgba(201,217,170,.17); border-radius: 14px; background: rgba(1,8,5,.34); }
+.myClubCommand[data-fantasy-context="market"] .myClubMarketStatus .clockRule { display: flex; align-items: center; gap: 12px; margin: 0; color: #dccfab; font-size: clamp(24px,2.5vw,34px); letter-spacing: -.025em; }
+.myClubCommand[data-fantasy-context="market"] .myClubMarketStatus .clockRule::before { content: ""; flex: 0 0 auto; width: 8px; height: 8px; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 5px rgba(220,207,171,.065); }
+.myClubCommand[data-fantasy-context="market"] .myClubMarketStatus[data-market-open="true"] .clockRule { color: #cff39c; }
+.myClubCommand[data-fantasy-context="market"] .myClubMarketStatus .clockHeading small { display: none; }
+.myClubCommandStatus[data-round-frame="true"] { display: grid; grid-template-columns: auto auto; align-items: baseline; justify-content: center; gap: 8px 13px; flex: 0 0 auto; align-self: start; width: min(100%,230px); min-width: 165px; padding: 19px 23px; border: 1px solid rgba(215,225,157,.32); border-radius: 18px; background: radial-gradient(ellipse at 50% 0,rgba(211,220,134,.11),transparent 75%),linear-gradient(135deg,#182219,#0a130e); box-shadow: inset 0 1px rgba(246,255,209,.09),0 12px 28px rgba(0,0,0,.16); text-align: center; }
+.myClubCommandStatus[data-round-frame="true"] > span { color: #d0debb; font-size: 16px; font-weight: 700; text-transform: none; letter-spacing: -.02em; }
+.myClubCommandStatus[data-round-frame="true"] > strong { color: #e9f5c4; font-size: 38px; font-variant-numeric: tabular-nums; }
+.myClubCommandStatus[data-round-frame="true"] > small { grid-column: 1 / -1; padding-top: 8px; border-top: 1px solid rgba(218,239,188,.12); color: #afbea3; font-size: 11px; line-height: 1.4; text-transform: none; }
+@media (max-width: 720px) {
+  .myClubCommand[data-fantasy-context="market"] .myClubMarketStatus { grid-template-columns: minmax(0,1fr); gap: 16px; padding: 18px; }
+  .ownerSummary { gap: 7px; }
+  .ownerSummary > div { padding: 11px; }
+}

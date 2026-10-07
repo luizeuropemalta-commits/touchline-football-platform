@@ -14,3 +14,4 @@ ENV_LOCAL_ATALHO_VISIVEL
 playwright-report/
 test-results/
 artifacts/
+supabase/.temp/

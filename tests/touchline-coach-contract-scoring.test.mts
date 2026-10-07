@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { getTouchlineCoachProfileCopy } from "../lib/touchlineArena/coach-profile-i18n.ts";
+import { getTouchlineCoachCardCopy } from "../lib/touchlineArena/coach-card-i18n.ts";
+import { resolveTouchlineCoachZoomPresentation } from "../lib/touchlineArena/coach-zoom-i18n.ts";
+import { getTouchlineCoachPerformanceCopy } from "../lib/touchlineArena/coach-performance-i18n.ts";
+import { getTouchlineClubHubCoachPanelCopy } from "../lib/touchlineArena/club-hub-profile-i18n.ts";
 
 import {
   TOUCHLINE_COACH_SCORING_VERSION,
@@ -207,14 +212,21 @@ test("final provider results are locked while live scores remain provisional", (
 
 test("the compact coach card renders exactly the verified Home or Away context", () => {
   assert.match(coachCard, /fixtureContext === "home"/);
-  assert.match(coachCard, /Home fixture/);
-  assert.match(coachCard, /Away fixture/);
+  assert.equal(getTouchlineCoachCardCopy("en-GB").homeFixtureAria, "Home fixture");
+  assert.equal(getTouchlineCoachCardCopy("en-GB").awayFixtureAria, "Away fixture");
+  assert.match(coachCard, /const copy = getTouchlineCoachCardCopy\(locale, draftLocalesEnabled\)/);
+  assert.match(coachCard, /aria-label=\{copy\.homeFixtureAria\}/);
+  assert.match(coachCard, /aria-label=\{copy\.awayFixtureAria\}/);
   assert.doesNotMatch(coachCard, />AWAY</);
 });
 
 test("public coach profile separates official coach context from the shared TouchLine competition record", () => {
-  assert.match(coachProfile, /OFFICIAL PROFILE/);
-  assert.match(coachProfile, /Coach context/);
+  assert.match(coachProfile, /<span>\{copy\.officialProfile\}<\/span>/);
+  assert.match(coachProfile, /<h2>\{copy\.coachContext\}<\/h2>/);
+  assert.equal(getTouchlineCoachProfileCopy("en-GB").officialProfile, "OFFICIAL PROFILE");
+  assert.equal(getTouchlineCoachProfileCopy("pt-BR").officialProfile, "PERFIL OFICIAL");
+  assert.equal(getTouchlineCoachProfileCopy("en-GB").coachContext, "Coach context");
+  assert.equal(getTouchlineCoachProfileCopy("pt-BR").coachContext, "Contexto do treinador");
   assert.match(coachProfile, /coach-profile-campaign/);
   assert.match(coachProfile, /loadTouchLineCoachRanking/);
   assert.match(coachProfile, /TouchlineCoachPerformance contract=\{null\} competition=\{competition\}/);
@@ -235,15 +247,17 @@ test("public coach profile separates official coach context from the shared Touc
 test("coach zoom centres the shared card between canonical identity and verified TouchLine record", () => {
   assert.match(coachZoom, /details=\{details\}/);
   assert.match(coachZoom, /profileActionKind: "coach"/);
-  assert.match(coachZoom, /Current club/);
-  assert.match(coachZoom, /Nationality/);
-  assert.match(coachZoom, /First-team coach/);
-  assert.match(coachZoom, /Date of birth/);
-  assert.match(coachZoom, /Card tier/);
-  assert.match(coachZoom, /Competition rank/);
-  assert.match(coachZoom, /Home · W-D-L/);
-  assert.match(coachZoom, /Away · W-D-L/);
-  assert.match(coachZoom, /Awaiting verified data/);
+  const { copy } = resolveTouchlineCoachZoomPresentation("en-GB");
+  const expected = {
+    currentClub: "Current club", nationality: "Nationality", firstTeamCoach: "First-team coach",
+    dateOfBirth: "Date of birth", cardTier: "Card tier", competitionRank: "Competition rank",
+    homeRecord: "Home · W-D-L", awayRecord: "Away · W-D-L", awaitingVerifiedData: "Awaiting verified data",
+  } as const;
+  assert.match(coachZoom, /const \{ locale: presentationLocale, copy \} = resolveTouchlineCoachZoomPresentation\(locale, draftLocalesEnabled\)/);
+  for (const key of Object.keys(expected) as (keyof typeof expected)[]) {
+    assert.equal(copy[key], expected[key]);
+    assert.match(coachZoom, new RegExp(`(?:label|value): copy\\.${key}\\b`));
+  }
   assert.doesNotMatch(coachZoom, /birthplace|place of birth/i);
   assert.match(cardZoom, /data-coach-profile-action=\{details\.profileActionKind === "coach"/);
   assert.match(coachPerformance, /PlaneTakeoff/);
@@ -262,7 +276,10 @@ test("coach zoom centres the shared card between canonical identity and verified
   assert.match(coachPerformance, /redCards \?\? "—"/);
   assert.doesNotMatch(coachPerformance, /Discipline data pending/);
   assert.match(coachPerformance, /record\?\.wins \?\? "—"/);
-  assert.match(coachPerformance, /No points have been invented/);
+  assert.equal(getTouchlineCoachPerformanceCopy("en-GB").empty, "This coach has no TouchLine contract with the authenticated account. No points have been invented.");
+  assert.equal(getTouchlineCoachPerformanceCopy("pt-BR").empty, "Este treinador não possui contrato TouchLine com a conta autenticada. Nenhum ponto foi inventado.");
+  assert.match(coachPerformance, /getTouchlineCoachPerformanceCopy\(locale, draftLocalesEnabled\)/);
+  assert.match(coachPerformance, /<p className=\{styles\.empty\}>\{copy\.empty\}<\/p>/);
 });
 
 test("Club Hub always shows the canonical club coach card without claiming an unverified matchday coach", () => {
@@ -272,7 +289,8 @@ test("Club Hub always shows the canonical club coach card without claiming an un
   assert.match(clubCoachPanel, /loadTouchLineCoachRanking\(\)/);
   assert.match(clubCoachPanel, /competition=\{competition\}/);
   assert.match(clubCoachPanel, /TouchlineCoachCardZoom/);
-  assert.match(clubCoachPanel, /Open the card to review Home, Away, W-D-L and all TouchLine Points/);
+  assert.match(clubCoachPanel, /<p>\{copy\.description\}<\/p>/);
+  assert.equal(getTouchlineClubHubCoachPanelCopy("en-GB").description, "Open the card to review Home, Away, W-D-L and all TouchLine Points before visiting the full profile.");
 });
 
 test("TouchLine authority is preserved independently of provider refreshes", async () => {

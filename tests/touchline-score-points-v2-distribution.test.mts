@@ -8,15 +8,14 @@ import {
 } from "../lib/touchlineArena/player-ranking-eligibility.ts";
 
 const read = (path: string) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
-const [store, liveSync, accountSync, authoritativeRoster, rankingRebuild, rankingPage, tablesPage, tablesClient, coachRanking, backup] = await Promise.all([
+const [store, liveSync, authoritativeRoster, rankingRebuild, rankingPage, tablesPage, tablesClient, coachRanking, backup] = await Promise.all([
   read("lib/football-data/player-season-statistics-store.ts"),
   read("lib/football-data/live-sync.ts"),
-  read("lib/touchlineArena/arena-account-sync.ts"),
   read("lib/touchlineArena/authoritative-roster-server.ts"),
   read("lib/touchlineArena/player-ranking-rebuild-server.ts"),
   read("app/touchline-player-card-rankings/page.tsx"),
-  read("app/touchline-tables/page.tsx"),
-  read("app/touchline-tables/touchline-tables-client.tsx"),
+  read("app/rankings/page.tsx"),
+  read("app/rankings/touchline-tables-client.tsx"),
   read("lib/touchlineArena/coach-ranking-server.ts"),
   read("supabase/qa/016_touchline_qa_score_points_engine_v2_backup.sql"),
 ]);
@@ -39,9 +38,7 @@ test("finished and live fixtures enter the same player settlement pipeline", () 
   assert.match(liveSync, /event: "touchline\.live_sync\.completed"/);
 });
 
-test("account and roster readers retain canonical Sportmonks ratings and scoring provenance", () => {
-  assert.match(accountSync, /totalRating: rosterCard\.seasonTotalRating \?\? null/);
-  assert.match(accountSync, /matchRating: rosterCard\.matchRating \?\? null/);
+test("authoritative roster readers retain canonical Sportmonks ratings and scoring provenance", () => {
   assert.match(authoritativeRoster, /football_player_season_statistics[\s\S]*\.eq\("season_id", currentSeasonId\)[\s\S]*\.eq\("scoring_version", "player_scoring_v4"\)/);
   assert.match(authoritativeRoster, /touchline_player_fixture_score_settlements[\s\S]*\.eq\("season_id", currentSeasonId\)[\s\S]*\.eq\("scoring_version", "player_scoring_v4"\)/);
 });

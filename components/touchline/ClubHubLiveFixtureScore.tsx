@@ -12,22 +12,23 @@ type Props = {
   fixtureId: string | null;
   initialFixture: TouchlinePublicFixture | null;
   locale: TouchLineLocale;
+  draftLocalesEnabled?: boolean;
 };
 
-function presentation(fixture: TouchlinePublicFixture | null, locale: TouchLineLocale) {
+function presentation(fixture: TouchlinePublicFixture | null, locale: TouchLineLocale, draftLocalesEnabled = false) {
   if (!fixture) return "VS";
   const hasScore = Number.isFinite(fixture.homeScore) && Number.isFinite(fixture.awayScore);
   const score = hasScore ? `${fixture.homeScore} — ${fixture.awayScore}` : "VS";
   const rawStatus = fixture.status?.trim() ?? "";
   const status = touchlineFixtureState(fixture) === "finished"
-    ? touchlineFixtureStatusLabel(rawStatus, locale)
+    ? touchlineFixtureStatusLabel(rawStatus, locale, draftLocalesEnabled)
     : fixture.liveMinute !== undefined
-    ? `${fixture.liveMinute}′${fixture.livePeriod ? ` · ${touchlineFixtureStatusLabel(fixture.livePeriod, locale)}` : ""}`
-    : touchlineFixtureStatusLabel(rawStatus, locale);
+    ? `${fixture.liveMinute}′${fixture.livePeriod ? ` · ${touchlineFixtureStatusLabel(fixture.livePeriod, locale, draftLocalesEnabled)}` : ""}`
+    : touchlineFixtureStatusLabel(rawStatus, locale, draftLocalesEnabled);
   return status && rawStatus.toLowerCase() !== "not started" ? `${score} · ${status}` : score;
 }
 /** Club Hub consumes the same durable live DTO as Arena and Live. */
-export default function ClubHubLiveFixtureScore({ fixtureId, initialFixture, locale }: Props) {
+export default function ClubHubLiveFixtureScore({ fixtureId, initialFixture, locale, draftLocalesEnabled = false }: Props) {
   const [fixture, setFixture] = useState(initialFixture);
   const router = useRouter();
 
@@ -59,5 +60,5 @@ export default function ClubHubLiveFixtureScore({ fixtureId, initialFixture, loc
     };
   }, [fixtureId, router]);
 
-  return <b aria-live="polite">{presentation(fixture, locale)}</b>;
+  return <b aria-live="polite">{presentation(fixture, locale, draftLocalesEnabled)}</b>;
 }

@@ -7,9 +7,12 @@ import { parseNotificationQuietHours } from "@/lib/touchlineArena/notification-q
 import { hasTouchlineServerPushConfiguration, resolveTouchlinePushPreference } from "@/lib/touchlineArena/push-preference-contract";
 
 const DEFAULT_NOTIFICATION_SETTINGS = {
+  silentPush: false,
   playerRumours: true,
   availability: true,
   confirmedLineup: true,
+  // New category is opt-in; existing consent must not silently enable it.
+  lineupReminders: false,
   goalsAndEvents: true,
   selectedLiveMatches: false,
   leagueLeadership: true,
@@ -28,6 +31,13 @@ const DEFAULT_NOTIFICATION_SETTINGS = {
 const DEFAULT_CHANNELS = { in_app: true, push: false, email: false };
 const DEFAULT_QUIET_HOURS = { enabled: false, start: "22:00", end: "07:00", timezone: "UTC" };
 const FREQUENCIES = new Set(["realtime", "hourly_digest", "daily_digest", "paused"]);
+// Storage vocabulary is independent of public translation release gates.
+const GAME_LOCALES = new Set(["en-GB", "pt-BR", "es-ES", "it-IT", "fr-FR", "ar-SA", "tr-TR", "de-DE"]);
+
+function isGameLocaleRevision(value: unknown): value is string {
+  return typeof value === "string" && /^(0|[1-9][0-9]{0,18})$/.test(value)
+    && (value.length < 19 || value <= "9223372036854775807");
+}
 
 function cleanStringList(value: unknown) {
   if (!Array.isArray(value)) return [];
@@ -97,28 +107,39 @@ async function userHasRegisteredPushDevice(supabase: NonNullable<Awaited<ReturnT
 }
 
 export async function GET() {
-  const { supabase, user } = await currentUser();
-  if (!supabase || !user) return NextResponse.json({ ok: false, error: "Authentication required." }, { status: 401 });
+  const headers = { "Cache-Control": "private, no-store", "CDN-Cache-Control": "no-store", "Vercel-CDN-Cache-Control": "no-store" };
+  try {
+    const { supabase, user } = await currentUser();
+    if (!supabase || !user) return NextResponse.json({ ok: false, error: "Authentication required." }, { status: 401, headers });
 
   const { data, error } = await supabase
     .from("notification_preferences")
-    .select("settings, channels, frequency, quiet_hours, explicit_consent_at, updated_at")
+    .select("settings, channels, frequency, quiet_hours, explicit_consent_at, updated_at, game_locale, game_locale_revision::text")
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+  if (error || (data !== null && (!data || typeof data !== "object" || Array.isArray(data)
+    || !Object.hasOwn(data, "game_locale_revision") || !isGameLocaleRevision(data.game_locale_revision)))) {
+    return NextResponse.json({ ok: false, error: "Preferences unavailable." }, { status: 503, headers });
+  }
 
   return NextResponse.json({
     ok: true,
     data: {
+      accountId: user.id,
       settings: normalizeSettings(data?.settings),
       channels: normalizeChannels(data?.channels),
       frequency: FREQUENCIES.has(data?.frequency) ? data?.frequency : "realtime",
       quietHours: normalizeQuietHours(data?.quiet_hours),
       explicitConsentAt: data?.explicit_consent_at ?? null,
       updatedAt: data?.updated_at ?? null,
+      gameLocale: typeof data?.game_locale === "string" && GAME_LOCALES.has(data.game_locale) ? data.game_locale : null,
+      gameLocaleRevision: data === null ? "0" : data.game_locale_revision,
     },
-  });
+  }, { headers });
+  } catch {
+    return NextResponse.json({ ok: false, error: "Preferences unavailable." }, { status: 503, headers });
+  }
 }
 
 export async function PUT(request: NextRequest) {
@@ -133,6 +154,76 @@ export async function PUT(request: NextRequest) {
   const payload = await request.json().catch(() => null);
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
     return NextResponse.json({ ok: false, error: "Invalid preferences." }, { status: 400 });
+  }
+  if (payload.action !== undefined) {
+    if (payload.action === "set_game_locale") {
+      const expectedAccount = request.headers.get("X-Touchline-Expected-Account");
+      if (!expectedAccount || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(expectedAccount)) {
+        return NextResponse.json({ ok: false, error: "Invalid account context." }, { status: 400 });
+      }
+      // A condition, never an owner selector: SQL still derives auth.uid().
+      if (expectedAccount !== user.id) {
+        return NextResponse.json({ ok: false, error: "Account changed. Reload before trying again." }, { status: 409 });
+      }
+      const keys = Object.keys(payload);
+      let inheritedField = false;
+      for (const key in payload) if (!Object.hasOwn(payload, key)) inheritedField = true;
+      if (inheritedField || !Object.hasOwn(payload, "action") || !Object.hasOwn(payload, "locale")
+        || !Object.hasOwn(payload, "expectedRevision") || keys.length !== 3
+        || typeof payload.locale !== "string" || !GAME_LOCALES.has(payload.locale)
+        || !isGameLocaleRevision(payload.expectedRevision) || payload.expectedRevision === "9223372036854775807") {
+        return NextResponse.json({ ok: false, error: "Invalid game language." }, { status: 400 });
+      }
+      // The invoker RPC derives auth.uid() and changes only locale and its revision.
+      // It never renews consent, subscribes a device or enables a channel.
+      try {
+        const saved = await supabase.rpc("touchline_set_game_locale", {
+          p_locale: payload.locale, p_expected_revision: payload.expectedRevision,
+        }).select("game_locale,game_locale_revision::text,updated_at").maybeSingle();
+        const data = saved.data as { game_locale?: unknown; game_locale_revision?: unknown; updated_at?: unknown } | null;
+        if (!saved.error && data === null) {
+          return NextResponse.json({ ok: false, error: "Preferences changed. Reload before trying again." }, { status: 409 });
+        }
+        if (saved.error || !data || typeof data !== "object" || Array.isArray(data)
+          || !Object.hasOwn(data, "game_locale") || !Object.hasOwn(data, "updated_at")
+          || !Object.hasOwn(data, "game_locale_revision")
+          || data.game_locale_revision !== (BigInt(payload.expectedRevision) + BigInt(1)).toString()
+          || data.game_locale !== payload.locale || typeof data.updated_at !== "string"
+          || !Number.isFinite(Date.parse(data.updated_at))) {
+          return NextResponse.json({ ok: false, error: "Game language could not be confirmed." }, { status: 503 });
+        }
+        return NextResponse.json({ ok: true, data: {
+          gameLocale: data.game_locale, gameLocaleRevision: data.game_locale_revision, updatedAt: data.updated_at,
+        } });
+      } catch {
+        return NextResponse.json({ ok: false, error: "Game language could not be confirmed." }, { status: 503 });
+      }
+    }
+    if (payload.action !== "set_push_sound" || typeof payload.silentPush !== "boolean"
+      || Object.keys(payload).some(key => key !== "action" && key !== "silentPush")) {
+      return NextResponse.json({ ok: false, error: "Invalid sound preference." }, { status: 400 });
+    }
+    const previous = await supabase.from("notification_preferences")
+      .select("settings,updated_at").eq("user_id", user.id).maybeSingle();
+    if (previous.error) return NextResponse.json({ ok: false, error: "Preferences unavailable." }, { status: 503 });
+    if (!previous.data) return NextResponse.json({ ok: false, error: "Save notification preferences first." }, { status: 409 });
+    if (!previous.data.settings || typeof previous.data.settings !== "object" || Array.isArray(previous.data.settings)
+      || typeof previous.data.updated_at !== "string") {
+      return NextResponse.json({ ok: false, error: "Preferences unavailable." }, { status: 503 });
+    }
+    // Compare-and-set prevents a concurrent consent/category edit being lost.
+    // Sound is presentation only: never renew consent or inspect registration.
+    const saved = await supabase.from("notification_preferences")
+      .update({ settings: { ...previous.data.settings, silentPush: payload.silentPush } })
+      .eq("user_id", user.id).eq("updated_at", previous.data.updated_at)
+      .select("settings,channels,frequency,quiet_hours,explicit_consent_at,updated_at").maybeSingle();
+    if (saved.error) return NextResponse.json({ ok: false, error: "Sound preference could not be confirmed." }, { status: 503 });
+    if (!saved.data) return NextResponse.json({ ok: false, error: "Preferences changed. Reload before trying again." }, { status: 409 });
+    return NextResponse.json({ ok: true, data: {
+      settings: normalizeSettings(saved.data.settings), channels: saved.data.channels,
+      frequency: saved.data.frequency, quietHours: saved.data.quiet_hours,
+      explicitConsentAt: saved.data.explicit_consent_at, updatedAt: saved.data.updated_at,
+    } });
   }
   const settings = normalizeSettings(payload.settings);
   const channels = normalizeChannels(payload.channels);

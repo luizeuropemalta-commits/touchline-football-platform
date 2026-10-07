@@ -11,7 +11,6 @@ import {
   touchlineLiveCoachForTeam,
 } from "../lib/touchlineArena/live-coaches.ts";
 import { TOUCHLINE_ENGLAND_CLUBS } from "../lib/touchlineArena/demo-data.ts";
-import { TOUCHLINE_ARENA_CLUBS } from "../lib/touchlineArena/arena-club-registry-adapter.ts";
 
 const expectedCoaches = [
   ["19", "Mikel Arteta", "307", "Spain", "32", "ESP"],
@@ -133,16 +132,6 @@ test("every selectable TouchLine England club always has its own coach", () => {
     const coach = touchlineLiveCoachForTeam(club.teamId);
     assert.ok(coach, `missing coach for selectable club ${club.name} (${club.teamId})`);
     assert.equal(coach.coach.teamId, club.teamId);
-  }
-});
-
-test("the Arena club selector cannot expose a club without a coach", () => {
-  const arenaTeamIds = TOUCHLINE_ARENA_CLUBS.map((club) => club.teamId);
-
-  assert.equal(arenaTeamIds.length, 20);
-  assert.equal(new Set(arenaTeamIds).size, 20);
-  for (const teamId of arenaTeamIds) {
-    assert.ok(touchlineLiveCoachForTeam(teamId), `Arena team ${teamId} has no coach card`);
   }
 });
 

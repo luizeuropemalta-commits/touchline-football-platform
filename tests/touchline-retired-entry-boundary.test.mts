@@ -4,9 +4,13 @@ import { createRequire } from "node:module";
 import vm from "node:vm";
 import test from "node:test";
 import ts from "typescript";
+import * as catalogueLocale from "../lib/touchlineArena/catalogue-locale.ts";
 import { normalizeTouchLineLocale } from "../lib/touchlineArena/i18n.ts";
 import { parseTouchlineArenaIntroIntent } from "../lib/touchlineArena/arena-intro.ts";
 import { ARENA_ONLINE_ZONES } from "../lib/touchlineArena/arena-online-hub.ts";
+const releasePolicy: { isTouchLineSiteLocalesEnabled?: (path?: string) => boolean } = {};
+vm.runInNewContext(ts.transpileModule(readFileSync(new URL("../lib/touchlineArena/site-locales-release.ts", import.meta.url), "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, { exports: releasePolicy, process: { env: {} } });
+
 
 const require = createRequire(import.meta.url);
 test("active player and orientation copy no longer advertises the retired Arena", () => {
@@ -21,13 +25,15 @@ test("active player and orientation copy no longer advertises the retired Arena"
 test("legacy zone destinations lead only to retained Market, Live and Rankings pages", () => {
   const destinations = Object.fromEntries(ARENA_ONLINE_ZONES.map(({ key, href }) => [key, href]));
   assert.deepEqual(destinations, {
-    live: "/live", bench: "/market-transfer", market: "/market-transfer",
-    rankings: "/touchline-tables", news: "/live", watch: "/live",
+    live: "/live", bench: "/clubowner", market: "/clubowner",
+    rankings: "/rankings", news: "/live", watch: "/live",
   });
 });
 function route(path: string) {
   const entry = () => null;
   const modules: Record<string, unknown> = {
+    "@/lib/touchlineArena/site-locales-release": releasePolicy,
+    "@/lib/touchlineArena/catalogue-locale": catalogueLocale,
     "react/jsx-runtime": require("react/jsx-runtime"),
     "next/navigation": { redirect: (url: string) => { throw new Error(url); } },
     "@/lib/touchlineArena/i18n": { normalizeTouchLineLocale },

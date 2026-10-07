@@ -1,4 +1,6 @@
 import { touchLinePlayerFixtureScoreV4 } from "../football-data/player-score-engine-v4.ts";
+import { getTouchlineNotificationCopy } from "./notification-i18n.ts";
+import type { TouchLineLocale } from "./i18n.ts";
 import type { TouchlineSocialConfirmedEventDraft } from "./social-confirmed-event-draft-server";
 
 type NotificationDraft = Pick<TouchlineSocialConfirmedEventDraft,
@@ -12,13 +14,15 @@ type VerifiedResult = { ok: true; data: NotificationDraft } | { ok: false; reaso
  */
 export function buildMatchEventNotification(
   result: VerifiedResult,
-  locale: "pt-BR" | "en-GB",
+  locale: TouchLineLocale,
   update = false,
 ) {
-  if (!result.ok) return null;
+  const copy = getTouchlineNotificationCopy(locale);
+  if (!result.ok || !copy) return null;
   const draft = result.data;
-  const pt = locale === "pt-BR";
-  const goal = draft.event.kind === "goal" || draft.event.kind === "penalty";
+  const ownGoal = draft.event.kind === "own-goal";
+  const penalty = draft.event.kind === "penalty";
+  const goal = draft.event.kind === "goal" || penalty || ownGoal;
   const red = draft.event.kind === "red-card" || draft.event.kind === "second-yellow-red";
   if ((!goal && !red) || draft.sourceProvenance !== "PERSISTED_VERIFIED_CONFIRMED_EVENT"
     || !/^[1-9]\d{0,19}$/.test(draft.fixtureId) || !/^[1-9]\d{0,19}$/.test(draft.eventId)
@@ -27,12 +31,17 @@ export function buildMatchEventNotification(
     || (draft.event.extraMinute !== null && (!Number.isSafeInteger(draft.event.extraMinute) || draft.event.extraMinute < 0))
     || !Number.isFinite(draft.touchlinePoints)
     || touchLinePlayerFixtureScoreV4(draft.matchRating).points !== draft.touchlinePoints) return null;
-  const heading = goal ? (pt ? "GOL" : "GOAL") : (pt ? "CARTÃO VERMELHO" : "RED CARD");
+  const heading = copy.eventLabels[ownGoal ? "own-goal" : penalty ? "penalty-converted" : goal ? "goal" : "red-card"];
   const minute = `${draft.event.minute}${draft.event.extraMinute ? `+${draft.event.extraMinute}` : ""}′`;
-  const points = `${draft.touchlinePoints}`;
+  const facts: Record<string, string> = {
+    home: draft.home.name, away: draft.away.name, event: heading, minute,
+    homeScore: String(draft.score.home), awayScore: String(draft.score.away), player: draft.event.playerName,
+  };
+  // One-pass substitution never interprets tokens inside a player's/team's name.
+  const render = (template: string) => template.replace(/\{([A-Za-z]+)\}/g, (token, key: string) => facts[key] ?? token);
   return {
-    title: `${heading} — ${draft.home.name} ${draft.score.home} × ${draft.score.away} ${draft.away.name}`,
-    body: `${draft.event.playerName} · ${minute} · ${pt ? "Nota da partida" : "Match rating"}: ${points}`,
+    title: render(copy.match.titleTemplate),
+    body: render(copy.match.bodyTemplate),
     tag: `fixture:${draft.fixtureId}:event:${draft.eventId}`,
     href: `/live?fixture=${draft.fixtureId}&lang=${locale}`,
     update: update === true,

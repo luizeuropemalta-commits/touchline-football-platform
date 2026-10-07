@@ -1,4 +1,6 @@
 import type { TouchlineCardZoomDetails } from "../../components/touchline/cards/TouchlineCardZoom.tsx";
+import { getTouchlineCardMatchFactLabels } from "./card-match-fact-i18n.ts";
+import { getTouchlinePlayerZoomIdentityCopy } from "./player-zoom-identity-i18n.ts";
 import { localizedPositionLabel } from "./position-labels.ts";
 import {
   touchlineArenaTierForKey,
@@ -18,10 +20,12 @@ import {
   touchlineMatchFactKeysForPosition,
   type TouchlineCardStatId,
   type TouchlineCardStats,
+  type TouchlinePlayerPositionKind,
 } from "./position-aware-card-stats.ts";
 
 export type TouchlineCardZoomExtraField = Readonly<{
   label: string;
+  historyDisplayLabel?: string;
   value: string | null | undefined;
   accent?: boolean;
   kind?: "rating-total" | "rating-last" | "stat" | "history";
@@ -41,42 +45,23 @@ export function buildTouchlineVerifiedMatchFactFields(
     statistics: TouchlineCardStats | null | undefined;
   }>,
   locale: string,
+  draftLocalesEnabled = false,
 ): TouchlineCardZoomExtraField[] {
   const statistics = projectTouchlineCardStatsByPosition(input);
   if (!statistics) return [];
-  const pt = locale === "pt-BR";
-  const labels: Record<TouchlineCardStatId, readonly [string, string]> = {
-    goals: ["Goals", "Gols"],
-    assists: ["Assists", "Assistências"],
-    defense: ["DEF score", "Pontuação DEF"],
-    cleanSheets: ["Clean sheets", "Jogos sem sofrer gols"],
-    cards: ["Cards", "Cartões"],
-    yellowCards: ["Yellow cards", "Cartões amarelos"],
-    redCards: ["Red cards", "Cartões vermelhos"],
-    saves: ["Saves", "Defesas"],
-    goalsConceded: ["Goals conceded", "Gols sofridos"],
-    minutes: ["Minutes", "Minutos"],
-    appearances: ["Appearances", "Aparições"],
-    shotsOnTarget: ["Shots on target", "Chutes no gol"],
-    shotsOffTarget: ["Shots off target", "Chutes para fora"],
-    defensiveActionsTotal: ["Defensive actions (DAT)", "Ações defensivas (DAT)"],
-    penaltySaves: ["Penalty saves", "Pênaltis defendidos"],
-    penaltiesMissed: ["Penalties missed", "Pênaltis perdidos"],
-    ownGoals: ["Own goals", "Gols contra"],
-    rating: ["Rating", "Nota"],
-  };
+  const labels = getTouchlineCardMatchFactLabels(locale, draftLocalesEnabled);
 
   return touchlineMatchFactKeysForPosition(input.position).flatMap((key) => {
     if (!(key in statistics)) return [];
     const value = statistics[key];
-    const [englishLabel, portugueseLabel] = labels[key];
-    const icons: Partial<Record<TouchlineCardStatId, string>> = {
+    const icons: Record<TouchlineCardStatId, string> = {
       goals: "goal", assists: "assist", defense: "defense", cleanSheets: "clean-sheet", cards: "cards",
       yellowCards: "yellow-card", redCards: "red-card", saves: "saves", shotsOnTarget: "shots-on-target",
       shotsOffTarget: "shots-off-target", defensiveActionsTotal: "defense", penaltySaves: "saves",
       penaltiesMissed: "penalty-missed", ownGoals: "own-goal", rating: "rating", minutes: "minutes", appearances: "appearances",
+      goalsConceded: "goals-conceded",
     };
-    return [{ label: pt ? portugueseLabel : englishLabel, value: value == null ? "—" : String(value), icon: icons[key] }];
+    return [{ label: labels[key], value: value == null ? "—" : String(value), icon: icons[key], kind: "stat" }];
   });
 }
 
@@ -138,9 +123,12 @@ type TouchlineActiveContractCardPresentation = Readonly<{
  */
 export function buildTouchlinePlayerCardZoomDetails(input: Readonly<{
   locale: string;
+  draftLocalesEnabled?: boolean;
   name: string;
   clubName?: string | null;
   position?: string | null;
+  /** Explicit canonical role when position is already localized for display. */
+  positionKind?: TouchlinePlayerPositionKind;
   nationality?: string | null;
   editorialCard?: TouchlinePublicEditorialCardPresentation | null;
   cardReview?: TouchlineCardReviewPresentation | null;
@@ -163,8 +151,8 @@ export function buildTouchlinePlayerCardZoomDetails(input: Readonly<{
   eyebrow?: string;
   extraFields?: readonly TouchlineCardZoomExtraField[];
 }>): TouchlineCardZoomDetails {
-  const isPortuguese = input.locale === "pt-BR";
-  const displayPosition = localizedPositionLabel(input.position, input.locale);
+  const copy = getTouchlinePlayerZoomIdentityCopy(input.locale, input.draftLocalesEnabled);
+  const displayPosition = localizedPositionLabel(input.position, input.locale, input.draftLocalesEnabled);
   const field = (
     label: string,
     value: string | number | null | undefined,
@@ -173,9 +161,10 @@ export function buildTouchlinePlayerCardZoomDetails(input: Readonly<{
     icon?: string,
     primary = false,
     kind?: TouchlineCardZoomExtraField["kind"],
+    historyDisplayLabel?: string,
   ) => {
     if (value === null || value === undefined || value === "") return null;
-    return { label, value: String(value), accent, group, icon, primary, kind };
+    return { label, value: String(value), accent, group, icon, primary, kind, historyDisplayLabel };
   };
   const publicCard = input.editorialCard
     ? {
@@ -200,50 +189,50 @@ export function buildTouchlinePlayerCardZoomDetails(input: Readonly<{
   const reviewFields = reviewRequired
     ? [
       field(
-        isPortuguese ? "Status do card" : "Card status",
-        isPortuguese ? "Revisão pendente" : "Review pending",
+        copy.cardStatus,
+        copy.reviewPending,
         true,
         "identity",
-        "status",
+        "player-identity-status",
       ),
       ...(!marketValue
-        ? [field(isPortuguese ? "Valor de mercado" : "Market value", isPortuguese ? "Pendente" : "Pending", true, "identity", "price")]
+        ? [field(copy.marketValue, copy.pending, true, "identity", "player-identity-price")]
         : []),
       ...(input.cardReview?.missingFields ?? []).map((missingField) => field(
-        isPortuguese ? "Campo pendente" : "Missing field",
-        touchlineCardReviewFieldLabel(missingField, input.locale),
+        copy.missingField,
+        touchlineCardReviewFieldLabel(missingField, input.locale, input.draftLocalesEnabled),
         false,
         "identity",
-        "missing-field",
+        "player-identity-missing-field",
       )),
     ]
     : [];
   const editorialFields = publicCard
     ? [
       field(
-        isPortuguese ? "Tier do card" : "Card tier",
-        touchlineCardTierName(publicCard.tierKey, input.locale),
+        copy.cardTier,
+        touchlineCardTierName(publicCard.tierKey, input.locale, input.draftLocalesEnabled),
         true,
         "identity",
-        "tier",
+        "player-identity-tier",
       ),
       field(
         publicCard.marketValueState === "provisional"
-          ? (isPortuguese ? "Valor provisório" : "Provisional value")
-          : (isPortuguese ? "Valor de mercado" : "Market value"),
-        marketValue ?? (isPortuguese ? "Pendente" : "Pending"),
+          ? copy.provisionalValue
+          : copy.marketValue,
+        marketValue ?? copy.pending,
         true,
         "identity",
-        "price",
+        "player-identity-price",
       ),
     ]
     : [];
   const baseFields = [
     ...reviewFields,
     ...editorialFields,
-    field(isPortuguese ? "Clube atual" : "Current club", input.clubName, false, "identity", "club"),
-    field(isPortuguese ? "Posição" : "Position", displayPosition, false, "identity", "position"),
-    field(isPortuguese ? "Nacionalidade" : "Nationality", input.nationality, false, "identity", "nationality"),
+    field(copy.currentClub, input.clubName, false, "identity", "player-identity-club"),
+    field(copy.position, displayPosition, false, "identity", "player-identity-position"),
+    field(copy.nationality, input.nationality, false, "identity", "player-identity-nationality"),
     ...(input.extraFields ?? []).map((extra) => field(
       extra.label,
       extra.value,
@@ -252,23 +241,23 @@ export function buildTouchlinePlayerCardZoomDetails(input: Readonly<{
       extra.icon ?? (extra.label.toLowerCase().includes("total rating") || extra.label.toLowerCase().includes("nota total") ? "rating" : undefined),
       extra.primary ?? (extra.label.toLowerCase().includes("total rating") || extra.label.toLowerCase().includes("nota total")),
       extra.kind,
+      extra.historyDisplayLabel,
     )),
   ].filter((candidate): candidate is NonNullable<typeof candidate> => Boolean(candidate));
 
   return {
-    eyebrow: input.eyebrow ?? (isPortuguese ? "Perfil do card" : "Card profile"),
+    eyebrow: input.eyebrow ?? copy.cardProfile,
     title: input.name,
     subtitle: [input.clubName, displayPosition].filter(Boolean).join(" · "),
-    performanceTitle: isPortuguese ? "Desempenho" : "Performance",
-    performanceSubtitle: isPortuguese
-      ? "Nota total: acumulado da temporada. Estatísticas de jogo: partida selecionada."
-      : "Total rating: season total. Match statistics: selected match.",
+    positionKind: input.positionKind,
+    performanceTitle: copy.performance,
+    performanceSubtitle: copy.performanceScope,
     fields: baseFields,
     profileHref: input.profileHref ?? undefined,
-    profileLabel: isPortuguese ? "Ver perfil completo" : "View full profile",
+    profileLabel: copy.profile,
     historyHref: input.historyHref ?? undefined,
-    historyLabel: isPortuguese ? "Ver histórico TouchLine" : "View TouchLine history",
+    historyLabel: copy.history,
     cardEngineHref: input.cardEngineHref ?? undefined,
-    cardEngineLabel: isPortuguese ? "EDITAR NO CARD ENGINE" : "EDIT IN CARD ENGINE",
+    cardEngineLabel: copy.cardEngine,
   };
 }

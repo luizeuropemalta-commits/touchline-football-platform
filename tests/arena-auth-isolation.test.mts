@@ -12,7 +12,7 @@ const authAccessSource = fs.readFileSync(new URL("../lib/touchlineArena/auth-acc
 const registerPageSource = fs.readFileSync(new URL("../app/(auth)/register/page.tsx", import.meta.url), "utf8");
 const callbackSource = fs.readFileSync(new URL("../app/auth/callback/route.ts", import.meta.url), "utf8");
 const proxySource = fs.readFileSync(new URL("../proxy.ts", import.meta.url), "utf8");
-const marketPageSource = fs.readFileSync(new URL("../app/market-transfer/page.tsx", import.meta.url), "utf8");
+const marketPageSource = fs.readFileSync(new URL("../app/clubowner/page.tsx", import.meta.url), "utf8");
 const protectedArenaApiSources = [
   "../lib/touchlineArena/api-access.ts",
   "../app/api/touchline-arena/market/checkout/route.ts",
@@ -123,13 +123,13 @@ test("Market inventory authenticates before validating a requested team", () => 
 test("all authentication continuations stay inside the Arena", () => {
   assert.doesNotMatch(authFormSource, /next=\/settings/);
   assert.match(authFormSource, /resetPasswordForEmail\([\s\S]*buildTouchLineAuthCallbackUrl\(resetPasswordHref\)/);
-  assert.match(authFormSource, /const arenaHref = touchLinePostAuthHref\(normalizedReturnTo, normalizedLocale\)/);
+  assert.match(authFormSource, /const arenaHref = touchLinePostAuthHref\(normalizedReturnTo, normalizedLocale, "\/clubowner", publicSiteLocalesEnabled\)/);
   assert.match(authFormSource, /normalizeTouchLineAuthReturnTo\(returnTo\)/);
   // SUPERSEDED: registration must show the official intro before the playback-gated handoff.
-  assert.match(authFormSource, /touchlineRegistrationEntryHref\(normalizedReturnTo, normalizedLocale\)/);
-  assert.match(authFormSource, /const resetPasswordHref = touchLineAuthHref\("\/reset-password", normalizedLocale\)/);
+  assert.match(authFormSource, /touchlineRegistrationEntryHref\(normalizedReturnTo, normalizedLocale, publicSiteLocalesEnabled\)/);
+  assert.match(authFormSource, /const resetPasswordHref = touchLineAuthHref\("\/reset-password", normalizedLocale, publicSiteLocalesEnabled\)/);
   assert.doesNotMatch(proxySource, /new URL\("\/dashboard"/);
-  assert.match(proxySource, /touchLinePostAuthHref\(returnTo, lang\)/);
+  assert.match(proxySource, /touchLinePostAuthHref\(returnTo, lang, "\/clubowner", draftLocalesEnabled && publicReturn\)/);
 });
 
 test("authentication presents only the current TouchLine product", () => {
@@ -142,15 +142,15 @@ test("authentication presents only the current TouchLine product", () => {
 });
 
 test("the proxy exposes the Arena entrance and protects account-backed operations without legacy billing gates", () => {
-  assert.match(proxySource, /protectedArenaPaths\s*=\s*\["\/market-transfer", "\/fantasy", "\/admin", "\/notifications", "\/inbox", "\/football-search", "\/visual-qa"\]/);
+  assert.match(proxySource, /protectedArenaPaths\s*=\s*\["\/clubowner", "\/fantasy", "\/admin", "\/notifications", "\/inbox", "\/football-search", "\/visual-qa"\]/);
   assert.doesNotMatch(proxySource, /protectedArenaPaths\s*=\s*\[[^\]]*"\/arena"/);
   assert.match(proxySource, /adminOnlyArenaPaths\s*=\s*\["\/admin", "\/visual-qa"\]/);
-  assert.match(proxySource, /if \(!user && isProtectedArenaRoute\) return loginRedirect\(request, response\)/);
+  assert.match(proxySource, /if \(!user && isProtectedArenaRoute\) return loginRedirect\(request, response, draftLocalesEnabled\)/);
   assert.match(proxySource, /if \(user && isAdminOnlyArenaRoute && !isAdmin\) return introRedirect\(request, response\)/);
   assert.match(proxySource, /loginUrl\.searchParams\.set\("returnTo"/);
   assert.match(proxySource, /adminEntry \? "\/admin\/login" : "\/login"/);
   assert.match(proxySource, /sourceResponse\?\.cookies\.getAll\(\)/);
-  assert.match(proxySource, /if \(isEmergencyOffline && user && !isAdmin && !isAuth\) return offlineResponse\(requestLocale\(request\)\)/);
+  assert.match(proxySource, /if \(isEmergencyOffline && user && !isAdmin && !isAuth\) return offlineResponse\(requestLocale\(request, draftLocalesEnabled\), draftLocalesEnabled\)/);
   assert.doesNotMatch(proxySource, /isPublicArenaPreview/);
   assert.doesNotMatch(proxySource, /@\/lib\/billing\/plans/);
   assert.doesNotMatch(proxySource, /billing_subscriptions/);
@@ -159,7 +159,7 @@ test("the proxy exposes the Arena entrance and protects account-backed operation
 });
 
 test("Market owns the authenticated Gameweek builder without the retired Arena", () => {
-  assert.match(marketPageSource, /if \(!user\) redirect\(touchLineAuthEntryHref\("\/login", locale, destination\)\)/);
+  assert.match(marketPageSource, /if \(!user\) redirect\(touchLineAuthEntryHref\("\/login", locale, destination, draftLocalesEnabled\)\)/);
   assert.match(marketPageSource, /if \(isOwnerEmail\(user\.email\)\) notFound\(\)/);
   assert.match(marketPageSource, /loadTouchlineFantasySnapshot\(user\)/);
   assert.match(marketPageSource, /<FantasyGameweekClient[^>]*embedded marketPage/);

@@ -6,10 +6,8 @@ import { readPublicFantasyFixtureSnapshots } from "@/lib/football-data/public-fa
 import { selectPublicClubFixture } from "@/lib/football-data/public-fixture-selection";
 import type { TouchlineFixture } from "@/lib/football-data/types";
 import { findTouchLineClub } from "@/lib/touchlineArena/demo-data";
-import { readTouchlineClubSocialFeed } from "@/lib/touchlineArena/club-social-feed-server";
 import { TOUCHLINE_STADIUM_CATALOG, toTouchlineLiveFixture } from "@/lib/touchlineArena/stadium-catalog";
 import { createTouchlineQaClubHubMirrorDto } from "@/lib/touchlineMirror/qa-clubhub-mirror";
-import { canonicalFeedToMirrorFeed } from "@/lib/touchlineMirror/qa-clubhub-mirror-server";
 import { inspectTouchlineIsolatedPreviewEnvironment } from "@/lib/touchlinePreview/isolation";
 
 export const runtime = "nodejs";
@@ -42,11 +40,10 @@ export async function GET(
   }
 
   try {
-    const [table, persistedFeeds, scheduledFixtures, socialFeed] = await Promise.all([
+    const [table, persistedFeeds, scheduledFixtures] = await Promise.all([
       loadTouchlineOfficialLeagueTable(),
       readPublicFantasyFixtureSnapshots(),
       readPublicCompetitionFixtures(),
-      readTouchlineClubSocialFeed({ providerTeamId: club.teamId, limit: 6 }),
     ]);
     const fixture = selectPublicClubFixture(
       [...persistedFeeds.map((feed) => feed.fixture), ...scheduledFixtures],
@@ -60,7 +57,7 @@ export async function GET(
       table,
       nextFixture: fixture ? toTouchlineLiveFixture(fixture) : null,
       homeVenue,
-      feed: canonicalFeedToMirrorFeed(club.teamId, socialFeed),
+      feed: { state: "unavailable", items: [] },
     });
     if (!body) throw new Error("Unavailable QA ClubHub read model");
     return NextResponse.json(body, { status: 200, headers: NO_STORE_HEADERS });

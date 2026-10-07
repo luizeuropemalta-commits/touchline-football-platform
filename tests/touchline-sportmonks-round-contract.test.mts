@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { getTouchlineTablesPresentationCopy } from "../lib/touchlineArena/tables-presentation-i18n.ts";
 
 const migration = readFileSync(
   new URL("../supabase/qa/011_touchline_qa_sportmonks_fixture_rounds.sql", import.meta.url),
@@ -11,9 +12,9 @@ const matchCentre = readFileSync(
   new URL("../components/touchline/match-centre/TouchlineMatchCentre.tsx", import.meta.url),
   "utf8",
 );
-const tablesPage = readFileSync(new URL("../app/touchline-tables/page.tsx", import.meta.url), "utf8");
+const tablesPage = readFileSync(new URL("../app/rankings/page.tsx", import.meta.url), "utf8");
 const tablesClient = readFileSync(
-  new URL("../app/touchline-tables/touchline-tables-client.tsx", import.meta.url),
+  new URL("../app/rankings/touchline-tables-client.tsx", import.meta.url),
   "utf8",
 );
 
@@ -55,6 +56,8 @@ test("Live and Tables render the same provider-backed round with a safe pending 
   assert.match(tablesClient, /<h2>\{copy\.seasonSelection\}<\/h2>/);
   assert.doesNotMatch(tablesClient, /providerRoundNamesById\[gameweekBest\.roundId\]/);
   assert.doesNotMatch(tablesClient, /\$\{isPortuguese \? "Rodada" : "Gameweek"\} \$\{gameweekBest\.roundId\}/);
-  assert.match(tablesPage, /Matchweek awaiting provider/);
+  assert.match(tablesPage, /presentationCopy\.matchweekPending/);
+  assert.equal(getTouchlineTablesPresentationCopy("en-GB").matchweekPending, "Matchweek awaiting provider");
+  assert.equal(getTouchlineTablesPresentationCopy("pt-BR").matchweekPending, "Rodada aguardando provider");
   assert.doesNotMatch(`${matchCentre}\n${tablesPage}\n${tablesClient}`, /Matchweek 1|Rodada 1/);
 });

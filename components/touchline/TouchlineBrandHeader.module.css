@@ -1,0 +1,52 @@
+.frame {
+  position: relative;
+  z-index: 40;
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  direction: ltr;
+}
+
+.column {
+  box-sizing: border-box;
+  min-width: 0;
+  padding-top: max(1.25rem, env(safe-area-inset-top));
+  padding-right: max(1.25rem, env(safe-area-inset-right));
+  padding-left: max(1.25rem, env(safe-area-inset-left));
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  direction: ltr;
+}
+
+/* Match auth-entry-content spacing without adding page/content padding twice. */
+@media (min-width: 640px) {
+  .column {
+    padding-right: max(2rem, env(safe-area-inset-right));
+    padding-left: max(2rem, env(safe-area-inset-left));
+  }
+}
+
+@media (min-width: 1024px) {
+  .column {
+    padding-right: max(2.5rem, env(safe-area-inset-right));
+    padding-left: max(2.5rem, env(safe-area-inset-left));
+  }
+}
+
+@media (min-width: 1280px) {
+  .column {
+    padding-right: max(3.5rem, env(safe-area-inset-right));
+    padding-left: max(3.5rem, env(safe-area-inset-left));
+  }
+}
+
+/* The login controls end at its left column, not the full TV viewport edge. */
+@media (min-width: 1536px) {
+  .frame {
+    grid-template-columns: minmax(0, 1.45fr) minmax(320px, .55fr);
+  }
+}

@@ -1,4 +1,4 @@
-import type { FootballDataProviderName } from "@/lib/football-data/types";
+import type { FootballDataErrorCode, FootballDataProviderName } from "@/lib/football-data/types";
 
 export type FootballDataTimeoutProfile = "live" | "interactive" | "background";
 
@@ -27,6 +27,8 @@ export type FootballDataHttpResponse<T> = {
   error?: string;
   headers: Headers;
   fetchedAt: string;
+  /** Internal proof: explicit authority denial before this operation started any fetch. */
+  requestDisposition?: "deferred-before-http";
 };
 
 export type FootballDataRetryPolicy = {
@@ -49,6 +51,24 @@ export type FootballDataCompletedAttempt<T> = Readonly<{
   response: Readonly<FootballDataHttpResponse<T>>;
 }>;
 
+export type FootballDataAttemptContext = Readonly<{
+  attempt: number;
+  signal: AbortSignal;
+  remainingBudgetMs: number;
+}>;
+
+/** Internal awaited authority, distinct from best-effort telemetry. Implementations
+ * must honor signal and fence late persistence using their admission token. A
+ * stopped HTTP caller cannot undo a callback's already committed external write.
+ */
+export type FootballDataAttemptEnforcement<T> = Readonly<{
+  beforeAttempt(context: FootballDataAttemptContext):
+    | { allowed: false } | { allowed: true; token: string }
+    | Promise<{ allowed: false } | { allowed: true; token: string }>;
+  afterAttempt(context: FootballDataAttemptContext & FootballDataCompletedAttempt<T> & { token: string }):
+    { persisted: true } | Promise<{ persisted: true }>;
+}>;
+
 type FootballDataFetchInit<T> = RequestInit & {
   timeoutMs?: number;
   provider: FootballDataProviderName;
@@ -57,7 +77,25 @@ type FootballDataFetchInit<T> = RequestInit & {
    * Invoked before retry selection. Returned promises are observed, never awaited.
    */
   onAttemptCompleted?: (attempt: FootballDataCompletedAttempt<T>) => void | Promise<void>;
+  enforcement?: FootballDataAttemptEnforcement<T>;
 };
+
+type EnforcementState<T> = {
+  port: FootballDataAttemptEnforcement<T>;
+  signal: AbortSignal;
+  remaining(): number;
+  assertCurrent(): void;
+};
+
+function enforcementUnavailable<T>(): FootballDataHttpResponse<T> {
+  return { ok: false, status: 0, error: "Football data request enforcement unavailable.",
+    headers: new Headers(), fetchedAt: new Date().toISOString() };
+}
+
+function detachedAttempt<T>(attempt: number, response: FootballDataHttpResponse<T>): FootballDataCompletedAttempt<T> {
+  return Object.freeze({ attempt, response: Object.freeze({ ...response,
+    data: structuredClone(response.data), headers: new Headers(response.headers) }) });
+}
 
 function retryAfterDelayMs(value: string | null, now: number) {
   if (!value) return 0;
@@ -161,14 +199,77 @@ export async function footballDataFetchJson<T>(
   url: URL,
   init: FootballDataFetchInit<T>,
 ): Promise<FootballDataHttpResponse<T>> {
+  if (init.enforcement === undefined) return fetchJsonCore(url, init);
+  const controller = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let removeAbort = () => {};
+  let removeStopped = () => {};
+  let closed = false;
+  try {
+    const { enforcement, ...provided } = init;
+    if (!enforcement || typeof enforcement.beforeAttempt !== "function"
+      || typeof enforcement.afterAttempt !== "function") return enforcementUnavailable();
+    const snapshot = { ...provided, retry: provided.retry ? { ...provided.retry } : undefined };
+    const total = snapshot.retry?.totalBudgetMs ?? snapshot.timeoutMs ?? footballDataTimeoutMs("background");
+    if (!Number.isFinite(total) || total <= 0 || total > 2_147_483_647) return enforcementUnavailable();
+    const now = snapshot.retry?.now ?? Date.now;
+    const logicalStart = now(), monotonicStart = performance.now();
+    if (!Number.isFinite(logicalStart)) return enforcementUnavailable();
+    const state: EnforcementState<T> = {
+      // Capture methods before awaiting; caller mutation cannot replace authority.
+      port: { beforeAttempt: enforcement.beforeAttempt.bind(enforcement), afterAttempt: enforcement.afterAttempt.bind(enforcement) },
+      signal: controller.signal,
+      remaining() {
+        const logicalNow = now();
+        if (!Number.isFinite(logicalNow)) return 0;
+        return total - Math.max(performance.now() - monotonicStart, logicalNow - logicalStart, 0);
+      },
+      assertCurrent() {
+        if (closed || controller.signal.aborted || this.remaining() <= 0) throw new Error("ENFORCEMENT_STOPPED");
+      },
+    };
+    const external = snapshot.signal;
+    const stop = () => controller.abort();
+    if (external?.aborted) return enforcementUnavailable();
+    external?.addEventListener("abort", stop, { once: true });
+    removeAbort = () => external?.removeEventListener("abort", stop);
+    const stopped = new Promise<never>((_resolve, reject) => {
+      const rejectStopped = () => reject(new Error("ENFORCEMENT_STOPPED"));
+      controller.signal.addEventListener("abort", rejectStopped, { once: true });
+      removeStopped = () => controller.signal.removeEventListener("abort", rejectStopped);
+    });
+    timer = setTimeout(stop, total);
+    const work = fetchJsonCore(url, { ...snapshot, signal: controller.signal }, state);
+    const result = await Promise.race([work, stopped]);
+    state.assertCurrent();
+    return result;
+  } catch {
+    return enforcementUnavailable();
+  } finally {
+    closed = true;
+    if (timer) clearTimeout(timer);
+    removeAbort();
+    removeStopped();
+    controller.abort();
+  }
+}
+
+async function fetchJsonCore<T>(
+  url: URL,
+  init: FootballDataFetchInit<T>,
+  enforcementState?: EnforcementState<T>,
+): Promise<FootballDataHttpResponse<T>> {
   const {
     provider,
     timeoutMs = footballDataTimeoutMs("background"),
     retry,
     onAttemptCompleted,
+    enforcement: _enforcement,
     signal: externalSignal,
     ...requestInit
   } = init;
+  // Never forward this internal port to fetch, including malformed JS callers.
+  void _enforcement;
   const retrySignal = externalSignal ?? undefined;
   const now = retry?.now ?? Date.now;
   const sleep = retry?.sleep ?? defaultRetrySleep;
@@ -182,13 +283,32 @@ export async function footballDataFetchJson<T>(
   };
   const startedAt = now();
   let lastResponse: FootballDataHttpResponse<T> | undefined;
+  let fetchesStarted = 0;
 
   if (retrySignal?.aborted) return abortedResponse(provider, retrySignal);
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    enforcementState?.assertCurrent();
     if (retrySignal?.aborted) return abortedResponse(provider, retrySignal);
-    const remainingBudgetMs = totalBudgetMs - (now() - startedAt);
+    let remainingBudgetMs = totalBudgetMs - (now() - startedAt);
     if (attempt > 1 && remainingBudgetMs <= 0) break;
+
+    let token: string | undefined;
+    if (enforcementState) {
+      const admission = await enforcementState.port.beforeAttempt(Object.freeze({ attempt,
+        signal: enforcementState.signal, remainingBudgetMs: enforcementState.remaining() }));
+      enforcementState.assertCurrent();
+      if (admission?.allowed === false && Object.keys(admission).length === 1 && fetchesStarted === 0) {
+        return { ...enforcementUnavailable<T>(), requestDisposition: "deferred-before-http" };
+      }
+      if (!admission || admission.allowed !== true || typeof admission.token !== "string"
+        || admission.token.length < 1 || admission.token.length > 512
+        || admission.token.trim() !== admission.token || /[\u0000-\u001f\u007f]/.test(admission.token)) {
+        throw new Error("ENFORCEMENT_DENIED");
+      }
+      token = admission.token;
+      remainingBudgetMs = Math.min(totalBudgetMs - (now() - startedAt), enforcementState.remaining());
+    }
 
     const controller = new AbortController();
     let timedOut = false;
@@ -202,6 +322,7 @@ export async function footballDataFetchJson<T>(
     }, attemptTimeoutMs);
 
     try {
+      fetchesStarted += 1;
       const response = await fetch(url, {
         ...requestInit,
         signal: controller.signal,
@@ -242,6 +363,8 @@ export async function footballDataFetchJson<T>(
       retrySignal?.removeEventListener("abort", forwardExternalAbort);
     }
 
+    enforcementState?.assertCurrent();
+
     if (onAttemptCompleted) {
       try {
         const observation = Object.freeze({
@@ -260,6 +383,16 @@ export async function footballDataFetchJson<T>(
       }
     }
 
+    if (enforcementState) {
+      enforcementState.assertCurrent();
+      const completion = await enforcementState.port.afterAttempt(Object.freeze({
+        ...detachedAttempt(attempt, lastResponse), token: token!, signal: enforcementState.signal,
+        remainingBudgetMs: enforcementState.remaining(),
+      }));
+      enforcementState.assertCurrent();
+      if (!completion || completion.persisted !== true) throw new Error("ENFORCEMENT_NOT_PERSISTED");
+    }
+
     if (
       lastResponse.ok
       || !retry
@@ -271,7 +404,7 @@ export async function footballDataFetchJson<T>(
     }
 
     const delayMs = retryDelayMs(attempt, lastResponse, retryPolicy, now(), random);
-    const budgetAfterAttemptMs = totalBudgetMs - (now() - startedAt);
+    const budgetAfterAttemptMs = Math.min(totalBudgetMs - (now() - startedAt), enforcementState?.remaining() ?? Infinity);
     if (delayMs >= budgetAfterAttemptMs) return lastResponse;
     if (retrySignal?.aborted) return abortedResponse(provider, retrySignal);
     try {
@@ -337,7 +470,7 @@ export function resultOk<T>(
 
 export function resultError(
   provider: FootballDataProviderName,
-  code: "not_configured" | "unsupported" | "provider_error" | "not_found" | "invalid_request" | "rate_limited",
+  code: FootballDataErrorCode,
   message: string,
   status?: number,
   details: {

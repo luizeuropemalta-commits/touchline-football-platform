@@ -6,15 +6,19 @@ import { ArrowRight, Eye, EyeOff, Loader2 } from "lucide-react";
 import {
   getTouchLineAuthCopy,
   normalizeTouchLineAuthLocale,
+  normalizeTouchLineLoginLocale,
   touchLineAuthHref,
 } from "@/lib/touchlineArena/auth-i18n";
 import { Button, Input } from "./ui";
 
 type RecoveryStatus = "checking" | "ready" | "invalid" | "complete";
 
-export function ResetPasswordForm({ locale = "en-GB" }: { locale?: string }) {
-  const normalizedLocale = normalizeTouchLineAuthLocale(locale);
-  const copy = getTouchLineAuthCopy(normalizedLocale).form;
+export function ResetPasswordForm({ locale = "en-GB", draftLocaleEnabled = false, siteLocalesEnabled = false }: { locale?: string; draftLocaleEnabled?: boolean; siteLocalesEnabled?: boolean }) {
+  const normalizedLocale = normalizeTouchLineAuthLocale(locale, siteLocalesEnabled);
+  const displayLocale = draftLocaleEnabled ? normalizeTouchLineLoginLocale(locale) : normalizedLocale;
+  const copy = getTouchLineAuthCopy(displayLocale, draftLocaleEnabled || siteLocalesEnabled).form;
+  const retryHref = touchLineAuthHref("/forgot-password", normalizedLocale, siteLocalesEnabled);
+  const successHref = touchLineAuthHref("/intro", normalizedLocale, siteLocalesEnabled);
   const [password, setPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
   const [show, setShow] = useState(false);
@@ -105,7 +109,7 @@ export function ResetPasswordForm({ locale = "en-GB" }: { locale?: string }) {
         <div className="rounded-xl bg-[#fee8e4] px-4 py-3 text-xs text-[#a5463a]" role="alert">
           {message || copy.recoveryInvalid}
         </div>
-        <Link href={touchLineAuthHref("/forgot-password", normalizedLocale)} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl border border-cyan-300/20 bg-cyan-300/[.06] px-4 text-[10px] font-black text-cyan-100 transition hover:border-cyan-200/40 hover:bg-cyan-300/[.12]">
+        <Link href={retryHref} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl border border-cyan-300/20 bg-cyan-300/[.06] px-4 text-[10px] font-black text-cyan-100 transition hover:border-cyan-200/40 hover:bg-cyan-300/[.12]">
           {copy.requestNewReset} <ArrowRight size={15} />
         </Link>
       </div>
@@ -118,7 +122,7 @@ export function ResetPasswordForm({ locale = "en-GB" }: { locale?: string }) {
         <div className="rounded-xl bg-[#e7f4df] px-4 py-3 text-xs text-[#2a633b]" role="status">
           {message || copy.recoveryUpdated}
         </div>
-        <Link href={touchLineAuthHref("/intro", normalizedLocale)} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl border border-[#a3ff12]/45 bg-[#a3ff12] px-4 text-xs font-extrabold text-[#071007] transition hover:bg-[#bcff52]">
+        <Link href={successHref} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl border border-[#a3ff12]/45 bg-[#a3ff12] px-4 text-xs font-extrabold text-[#071007] transition hover:bg-[#bcff52]">
           {copy.enterArena} <ArrowRight size={15} />
         </Link>
       </div>
@@ -142,7 +146,7 @@ export function ResetPasswordForm({ locale = "en-GB" }: { locale?: string }) {
       </div>
       {message ? <div className="rounded-xl bg-[#fee8e4] px-4 py-3 text-xs text-[#a5463a]" role="alert">{message}</div> : null}
       <Button type="submit" disabled={loading} className="w-full">
-        {loading ? <Loader2 size={16} className="animate-spin" /> : <>{copy.updatePassword}<ArrowRight size={15} /></>}
+        {loading ? <><Loader2 size={16} className="animate-spin" aria-hidden="true" />{copy.updatePassword}</> : <>{copy.updatePassword}<ArrowRight size={15} /></>}
       </Button>
     </form>
   );

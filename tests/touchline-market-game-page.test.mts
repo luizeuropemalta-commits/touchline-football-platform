@@ -5,12 +5,21 @@ import test from "node:test";
 const source = (path: string) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 
 test("Market is the authenticated game page, not a redirect to ClubOwner", () => {
-  const page = source("app/market-transfer/page.tsx");
+  const page = source("app/clubowner/page.tsx");
   assert.match(page, /auth\.getUser\(/);
   assert.match(page, /isOwnerEmail\(user\.email\)/);
   assert.match(page, /loadTouchlineFantasySnapshot\(user\)/);
   assert.match(page, /<FantasyGameweekClient[\s\S]*embedded[\s\S]*marketPage/);
   assert.doesNotMatch(page, /ClubOwnerProfileRenderer|redirect\(`\/my-club|ArenaClient/);
+});
+
+test("avatar context captures configuration before auth, retains its error and supplies only confirmed stored media", () => {
+  const page = source("app/clubowner/page.tsx");
+  assert.ok(page.indexOf("const readAvatarContext = createClubOwnerAvatarContextReader()") < page.indexOf("const supabase = await createClient()"));
+  assert.doesNotMatch(page, /getUser\(\)\.then\(\(\{ data \}\) => data\.user\)/);
+  assert.match(page, /readAvatarContext\(authentication, user\.id\)/);
+  assert.match(page, /resolveTouchlineClubOwnerPageIdentity\(user, undefined, avatarContext\?\.avatarUrl\)/);
+  assert.doesNotMatch(page, /canUpload:\s*true|\.from\(["']users|ensureTouchlineArenaAccess/);
 });
 
 test("Market presentation preserves one XI editor and places the coach outside the pitch", () => {

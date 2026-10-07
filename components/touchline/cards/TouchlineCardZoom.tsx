@@ -30,15 +30,72 @@ import { TouchlineCoinMark } from "@/components/touchline/market/TouchlineMarket
 import styles from "./TouchlineCardZoom.module.css";
 import TouchlinePlayerSocialActions from "@/components/touchline/social/TouchlinePlayerSocialActions";
 import { resolvePlayerSocialSubject } from "@/lib/touchlineArena/player-social-client";
+import { resolveTouchlineCatalogueLocale } from "@/lib/touchlineArena/catalogue-locale";
+import { getTouchlineCardZoomCopy } from "@/lib/touchlineArena/card-zoom-i18n";
+import type { TouchlinePlayerPositionKind } from "@/lib/touchlineArena/position-aware-card-stats";
+
+// Canonical match-fact tokens are presentation authority, regardless of label.
+// Other/omitted tokens keep the existing legacy icon inference below.
+const MATCH_FACT_ICONS = {
+  goal: Goal,
+  assist: Footprints,
+  defense: Shield,
+  "clean-sheet": ShieldCheck,
+  cards: Award,
+  "yellow-card": Award,
+  "red-card": Award,
+  saves: Hand,
+  "goals-conceded": Goal,
+  "shots-on-target": Target,
+  "shots-off-target": Target,
+  "penalty-missed": Activity,
+  "own-goal": Goal,
+  rating: Star,
+  minutes: Clock3,
+  appearances: Trophy,
+} as const;
+
+// Coach-owned tokens keep translated copy out of icon selection. Distinct
+// rank tokens deliberately preserve the existing PT/EN presentation; legacy
+// rank/home/away/verified/history tokens retain their fallback below.
+const COACH_DETAIL_ICONS = {
+  "coach-club": Building2,
+  "coach-nationality": Flag,
+  "coach-role": UserRound,
+  "coach-birth": History,
+  "coach-tier": Medal,
+  "coach-rank-position": UserRound,
+  "coach-rank": Activity,
+  "coach-home": Activity,
+  "coach-away": Activity,
+  "coach-verified": Activity,
+  "coach-evidence": History,
+} as const;
+
+// Preserve the existing player identity artwork independently of translation.
+// Generic legacy tokens intentionally remain governed by the old fallback.
+const PLAYER_IDENTITY_ICONS = {
+  "player-identity-status": Award,
+  "player-identity-missing-field": UserRound,
+  "player-identity-price": BadgeDollarSign,
+  "player-identity-tier": Medal,
+  "player-identity-club": Building2,
+  "player-identity-position": UserRound,
+  "player-identity-nationality": Flag,
+} as const;
 
 export type TouchlineCardZoomDetails = {
   eyebrow?: string;
   title: string;
   subtitle?: string;
+  /** Canonical role; omission retains legacy subtitle inference. */
+  positionKind?: TouchlinePlayerPositionKind;
   performanceTitle?: string;
   performanceSubtitle?: string;
   fields: ReadonlyArray<{
     label: string;
+    /** Literal history heading, independent of the translated field label. */
+    historyDisplayLabel?: string;
     value: string;
     accent?: boolean;
     group?: "identity" | "performance";
@@ -58,10 +115,14 @@ export type TouchlineCardZoomDetails = {
 
 type TouchlineCardZoomProps = {
   ariaLabel: string;
+  /** Explicit page context wins; omission preserves the legacy fallbacks. */
+  locale?: string;
+  draftLocalesEnabled?: boolean;
   children: ReactNode;
   expandedContent?: ReactNode;
   contractHref?: string;
   contractLabel?: string;
+  /** Legacy caller compatibility; card prices are not part of public presentation. */
   contractValue?: string;
   contractTermLabel?: string;
   tierAccent?: string;
@@ -71,16 +132,18 @@ type TouchlineCardZoomProps = {
   socialProviderId?: string;
 };
 
-export function TouchlineCardZoomDetailsPanel({ details }: { details: TouchlineCardZoomDetails }) {
+export function TouchlineCardZoomDetailsPanel({ details, locale, draftLocalesEnabled = false }: { details: TouchlineCardZoomDetails; locale?: string; draftLocalesEnabled?: boolean }) {
   const identityFields = details.fields.filter((field) => field.group !== "performance");
   const performanceFields = details.fields.filter((field) => field.group === "performance");
   const [isFullPerformanceOpen, setIsFullPerformanceOpen] = useState(false);
   const fullPerformanceId = useId();
-  const isGoalkeeper = /goalkeeper|goleiro|guarda-redes|keeper/i.test(details.subtitle ?? "");
-  const isPortuguese = details.performanceTitle === "Desempenho";
-  const copy = isPortuguese
-    ? { hide: "Ocultar desempenho completo", view: "Ver desempenho completo", history: "Histórico de partidas", recent: "Últimas partidas", full: "Desempenho completo" }
-    : { hide: "Hide full performance", view: "View full performance", history: "Match history", recent: "Recent matches", full: "Full performance" };
+  const isGoalkeeper = details.positionKind === undefined
+    ? /goalkeeper|goleiro|guarda-redes|keeper/i.test(details.subtitle ?? "")
+    : details.positionKind === "goalkeeper";
+  const presentationLocale = locale === undefined
+    ? (details.performanceTitle === "Desempenho" ? "pt-BR" : "en-GB")
+    : resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled);
+  const copy = getTouchlineCardZoomCopy(presentationLocale, draftLocalesEnabled);
   const fieldKind = (field: TouchlineCardZoomDetails["fields"][number]) => {
     if (field.kind) return field.kind;
     const label = field.label.toLowerCase();
@@ -105,7 +168,14 @@ export function TouchlineCardZoomDetailsPanel({ details }: { details: TouchlineC
   const advancedStatistics = statistics.filter((field) => !coreStatistics.includes(field));
   const iconForField = (field: TouchlineCardZoomDetails["fields"][number], context: "identity" | "performance") => {
     const token = `${field.icon ?? ""} ${field.label}`.toLowerCase();
-    const Icon = token.includes("price") || token.includes("preço") ? BadgeDollarSign
+    const explicitIcon = field.icon && Object.hasOwn(MATCH_FACT_ICONS, field.icon)
+      ? MATCH_FACT_ICONS[field.icon as keyof typeof MATCH_FACT_ICONS]
+      : field.icon && Object.hasOwn(COACH_DETAIL_ICONS, field.icon)
+        ? COACH_DETAIL_ICONS[field.icon as keyof typeof COACH_DETAIL_ICONS]
+        : field.icon && Object.hasOwn(PLAYER_IDENTITY_ICONS, field.icon)
+          ? PLAYER_IDENTITY_ICONS[field.icon as keyof typeof PLAYER_IDENTITY_ICONS]
+          : undefined;
+    const Icon = explicitIcon ?? (token.includes("price") || token.includes("preço") ? BadgeDollarSign
       : token.includes("tier") ? Medal
       : token.includes("club") || token.includes("clube") ? Building2
       : token.includes("national") || token.includes("nacional") ? Flag
@@ -122,7 +192,7 @@ export function TouchlineCardZoomDetailsPanel({ details }: { details: TouchlineC
       : token.includes("appearance") || token.includes("apariç") ? Trophy
       : token.includes("history") || token.includes("histórico") ? History
       : token.includes("shot") || token.includes("chute") ? Target
-      : context === "identity" ? UserRound : Activity;
+      : context === "identity" ? UserRound : Activity);
     return <Icon aria-hidden="true" strokeWidth={1.8} />;
   };
   const renderIdentityFields = (fields: typeof identityFields) => (
@@ -160,28 +230,28 @@ export function TouchlineCardZoomDetailsPanel({ details }: { details: TouchlineC
               data-coach-profile-action={details.profileActionKind === "coach" ? "true" : undefined}
               href={details.profileHref}
             >
-              {details.profileLabel ?? "View profile"}
+              {details.profileLabel ?? copy.profile}
             </a>
           ) : null}
           {details.historyHref ? (
             <a className={styles.historyAction} href={details.historyHref}>
-              {details.historyLabel ?? "View TouchLine history"}
+              {details.historyLabel ?? copy.historyLink}
             </a>
           ) : null}
           {details.cardEngineHref ? (
             <a className={styles.cardEngineAction} href={details.cardEngineHref}>
-              {details.cardEngineLabel ?? "Edit in Card Engine"}
+              {details.cardEngineLabel ?? copy.cardEngine}
             </a>
           ) : null}
         </nav>
       ) : null}
     </aside>
     {performanceFields.length ? (
-      <aside className={`${styles.details} ${styles.performanceDetails}`} aria-label={details.performanceTitle ?? "Performance"}>
+      <aside className={`${styles.details} ${styles.performanceDetails}`} aria-label={details.performanceTitle ?? copy.performance}>
         <header className={styles.detailsHeader}>
           <span>TouchLine Verified</span>
-          <h2>{details.performanceTitle ?? "Performance"}</h2>
-          <p>{details.performanceSubtitle ?? "Official match ratings and statistics"}</p>
+          <h2>{details.performanceTitle ?? copy.performance}</h2>
+          <p>{details.performanceSubtitle ?? copy.performanceSubtitle}</p>
         </header>
         {totalRating ? (
           <section className={styles.ratingHero} aria-label={totalRating.label}>
@@ -215,7 +285,7 @@ export function TouchlineCardZoomDetailsPanel({ details }: { details: TouchlineC
                 {history.length ? (
                   <div className={styles.matchHistory}>
                     <h3><History aria-hidden="true" strokeWidth={1.8} />{copy.history}</h3>
-                    {history.map((field) => <p key={`${field.label}-${field.value}`}><span>{field.label.replace(/^(Match history|Histórico da partida)\s*·\s*/i, "")}</span>{field.value}</p>)}
+                    {history.map((field) => <p key={`${field.label}-${field.value}`}><span>{field.historyDisplayLabel ?? field.label.replace(/^(Match history|Histórico da partida)\s*·\s*/i, "")}</span>{field.value}</p>)}
                   </div>
                 ) : null}
               </section>
@@ -225,7 +295,7 @@ export function TouchlineCardZoomDetailsPanel({ details }: { details: TouchlineC
         {history.length && !isFullPerformanceOpen ? (
           <div className={styles.historyPreview} aria-label={copy.recent}>
             <h3><History aria-hidden="true" strokeWidth={1.8} />{copy.recent}</h3>
-            {history.slice(0, 3).map((field) => <p key={`${field.label}-${field.value}`}><span>{field.label.replace(/^(Match history|Histórico da partida)\s*·\s*/i, "")}</span>{field.value}</p>)}
+            {history.slice(0, 3).map((field) => <p key={`${field.label}-${field.value}`}><span>{field.historyDisplayLabel ?? field.label.replace(/^(Match history|Histórico da partida)\s*·\s*/i, "")}</span>{field.value}</p>)}
           </div>
         ) : null}
       </aside>
@@ -236,11 +306,12 @@ export function TouchlineCardZoomDetailsPanel({ details }: { details: TouchlineC
 
 export default function TouchlineCardZoom({
   ariaLabel,
+  locale,
+  draftLocalesEnabled = false,
   children,
   expandedContent,
   contractHref,
   contractLabel = "Contratar",
-  contractValue,
   contractTermLabel,
   tierAccent,
   tierLabel,
@@ -248,6 +319,7 @@ export default function TouchlineCardZoom({
   detailsContent,
   socialProviderId,
 }: TouchlineCardZoomProps) {
+  const explicitLocale = locale === undefined ? undefined : resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled);
   const socialPlayerId = details?.profileActionKind === "coach" ? null : resolvePlayerSocialSubject(socialProviderId, details?.profileHref);
   const [isOpen, setIsOpen] = useState(false);
   const triggerRef = useRef<HTMLDivElement>(null);
@@ -262,11 +334,12 @@ export default function TouchlineCardZoom({
     initialFocusRef: closeRef,
     returnFocusRef: triggerRef,
   });
-  // CardZoom is client-only when expanded, so this reads the currently
-  // resolved document language without creating a server/client text mismatch.
-  const closeLabel = typeof document !== "undefined" && document.documentElement.lang === "pt-BR"
-    ? "Fechar card"
-    : "Close card";
+  // Only legacy callers consult the document. Explicit page context is stable
+  // on server/client and never inferred from a translated heading.
+  const closeLocale = explicitLocale ?? (
+    typeof document !== "undefined" && document.documentElement.lang === "pt-BR" ? "pt-BR" : "en-GB"
+  );
+  const closeLabel = getTouchlineCardZoomCopy(closeLocale, draftLocalesEnabled).close;
 
   useLayoutEffect(() => {
     if (!isOpen) return;
@@ -348,7 +421,7 @@ export default function TouchlineCardZoom({
       </div>
 
       {isOpen ? createPortal(
-        <div {...dialogProps} className={styles.backdrop} onClick={() => setIsOpen(false)}>
+        <div {...dialogProps} dir={draftLocalesEnabled ? "ltr" : undefined} lang={explicitLocale} className={styles.backdrop} onClick={() => setIsOpen(false)}>
           <div
             className={`${styles.panel} ${details || detailsContent ? styles.panelWithDetails : ""}`}
             style={{ "--touchline-card-zoom-accent": tierAccent } as CSSProperties}
@@ -364,9 +437,10 @@ export default function TouchlineCardZoom({
             <div className={styles.cardColumn}>
               <div ref={expandedRef} className={styles.expandedCard} data-card-zoom="expanded">{expandedContent ?? children}</div>
               {socialPlayerId && details ? <TouchlinePlayerSocialActions
+                draftLocalesEnabled={draftLocalesEnabled}
                 providerId={socialPlayerId}
                 playerName={details.title}
-                locale={details.performanceTitle === "Desempenho" ? "pt-BR" : "en-GB"}
+                locale={explicitLocale ?? (details.performanceTitle === "Desempenho" ? "pt-BR" : "en-GB")}
                 accent={tierAccent}
               /> : null}
               {(contractTermLabel || (!details && tierLabel)) ? (
@@ -379,11 +453,10 @@ export default function TouchlineCardZoom({
                 <a className={styles.contractAction} href={contractHref}>
                   <TouchlineCoinMark size={18} />
                   <span>{contractLabel}</span>
-                  {contractValue ? <strong>{contractValue}</strong> : null}
                 </a>
               ) : null}
             </div>
-            {detailsContent ? <aside className={styles.details}>{detailsContent}</aside> : details ? <TouchlineCardZoomDetailsPanel details={details} /> : null}
+            {detailsContent ? <aside className={styles.details}>{detailsContent}</aside> : details ? <TouchlineCardZoomDetailsPanel details={details} locale={explicitLocale} draftLocalesEnabled={draftLocalesEnabled} /> : null}
           </div>
         </div>,
         document.body,

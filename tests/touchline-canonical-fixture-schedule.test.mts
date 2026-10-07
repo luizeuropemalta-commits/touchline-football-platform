@@ -1,6 +1,29 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import vm from "node:vm";
+import ts from "typescript";
+
+test("actual season lookup loop is serial and retains source order and failed results", async () => {
+  const source=await readFile(new URL("../lib/football-data/fixture-schedule-sync.ts",import.meta.url),"utf8");
+  const file=ts.createSourceFile("sync.ts",source,ts.ScriptTarget.Latest,true);
+  let loop:ts.ForOfStatement|undefined;
+  function visit(node:ts.Node) {
+    if(ts.isForOfStatement(node)&&node.expression.getText(file)==="seasonIds") loop=node;
+    ts.forEachChild(node,visit);
+  }
+  visit(file); assert.ok(loop,"season lookups require an awaited serial loop");
+  const js=ts.transpileModule(loop.getText(file),{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText;
+  let inFlight=0; const calls:string[]=[], seasonResults:unknown[]=[];
+  const provider={async getSeasonById(id:string) {
+    assert.equal(inFlight++,0,"a second season must not compete for the account lease");
+    calls.push(id); await Promise.resolve(); inFlight--;
+    return id==="2"?{ok:false,error:{message:"synthetic failure"}}:{ok:true,data:{id}};
+  }};
+  await vm.runInNewContext(`(async()=>{${js}})()`,{provider,seasonIds:["3","2","1"],seasonResults});
+  assert.deepEqual(calls,["3","2","1"]);
+  assert.deepEqual(seasonResults,[{ok:true,data:{id:"3"}},{ok:false,error:{message:"synthetic failure"}},{ok:true,data:{id:"1"}}]);
+});
 
 test("public Live route consumes persisted fixtures without provider or persistence fallback", async () => {
   const liveRoute = await readFile(new URL("../app/api/football-data/fantasy/livescores/route.ts", import.meta.url), "utf8");

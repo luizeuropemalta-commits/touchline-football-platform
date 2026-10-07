@@ -3,6 +3,8 @@ import { readFileSync } from "node:fs";
 import { stripTypeScriptTypes } from "node:module";
 import test from "node:test";
 import { runInNewContext } from "node:vm";
+import { getTouchlineMatchCentreCopy } from "../lib/touchlineArena/match-centre-i18n.ts";
+import { touchlineDocumentDirection } from "../lib/touchlineArena/root-locale.ts";
 
 import {
   hasTouchlineMatchCentreFixture,
@@ -123,7 +125,7 @@ test("Match Centre always prioritizes live, then upcoming, then finished", () =>
   assert.equal(touchlineFixtureState(live, Date.parse("2026-08-19T15:00:00Z")), "upcoming");
 });
 
-test("Match Centre renders provider events chronologically and ratings from highest to lowest", () => {
+test("Match Centre renders newest provider events first and ratings from highest to lowest", () => {
   const events: TouchlinePublicFantasyEvent[] = [
     { id: "third", minute: 74, type: "Goal" },
     { id: "first", minute: 25, type: "Substitution" },
@@ -138,8 +140,33 @@ test("Match Centre renders provider events chronologically and ratings from high
     { playerId: "missing", playerName: "Missing", appearanceStatus: "started", minutes: 90, rating: null, touchlinePoints: null, settlementStatus: "final", contributions: [], statistics: {} },
   ];
 
-  assert.deepEqual(orderTouchlineMatchEvents(events).map((event) => event.id), ["first", "second", "third", "final", "added-time"]);
+  assert.deepEqual(orderTouchlineMatchEvents(events).map((event) => event.id), ["added-time", "final", "third", "second", "first"]);
   assert.deepEqual(orderTouchlineMatchRatings(statistics).map((row) => row.playerId), ["high", "middle", "low"]);
+});
+
+test("Match Centre latest-first order preserves tied facts and leaves unknown minutes last", () => {
+  const events: readonly TouchlinePublicFantasyEvent[] = Object.freeze([
+    Object.freeze({ id: "unknown-z", extraMinute: 9, type: "Goal" }),
+    Object.freeze({ id: "tie-z", minute: 60, type: "Substitution", playerName: "Incoming", relatedPlayerName: "Outgoing" }),
+    Object.freeze({ id: "half", minute: 45, type: "Yellowcard" }),
+    Object.freeze({ id: "tie-a", minute: 60, type: "Goal" }),
+    Object.freeze({ id: "unknown-a", minute: Number.NaN, type: "Goal" }),
+    Object.freeze({ id: "half-added", minute: 45, extraMinute: 1, type: "Goal" }),
+    Object.freeze({ id: "unknown-b", minute: Number.POSITIVE_INFINITY, type: "Goal" }),
+    Object.freeze({ id: "second-half", minute: 57, extraMinute: Number.NaN, type: "Goal" }),
+  ]);
+  const original = [...events];
+  const ordered = orderTouchlineMatchEvents(events);
+  assert.deepEqual(ordered.map(event => event.id), ["tie-z", "tie-a", "second-half", "half-added", "half", "unknown-z", "unknown-a", "unknown-b"]);
+  assert.deepEqual(events, original);
+  assert.notEqual(ordered, events);
+  assert.equal(ordered[0], events[1], "sorting must preserve original substitution facts");
+  assert.equal(ordered[0]?.playerName, "Incoming");
+  assert.equal(ordered[0]?.relatedPlayerName, "Outgoing");
+  const newLiveEvent = Object.freeze({ id: "new-live", minute: 61, type: "Goal" });
+  assert.deepEqual(orderTouchlineMatchEvents([...events, newLiveEvent]).map(event => event.id), ["new-live", ...ordered.map(event => event.id)]);
+  assert.deepEqual(orderTouchlineMatchEvents(ordered), ordered, "unchanged/finished snapshots keep the same ordering");
+  assert.deepEqual(orderTouchlineMatchEvents([]), []);
 });
 
 test("Match Centre preserves an explicit fixture deep link", () => {
@@ -178,7 +205,7 @@ test("Club Hub presents full time instead of a stale live minute or period", () 
     new URL("../components/touchline/ClubHubLiveFixtureScore.tsx", import.meta.url),
     "utf8",
   );
-  assert.match(source, /touchlineFixtureState\(fixture\) === "finished"[\s\S]*?touchlineFixtureStatusLabel\(rawStatus, locale\)[\s\S]*?: fixture\.liveMinute !== undefined/);
+  assert.match(source, /touchlineFixtureState\(fixture\) === "finished"[\s\S]*?touchlineFixtureStatusLabel\(rawStatus, locale, draftLocalesEnabled\)[\s\S]*?: fixture\.liveMinute !== undefined/);
 });
 
 test("Match Centre overlays a live snapshot by provider fixture ID without duplicating the matchweek", () => {
@@ -279,10 +306,19 @@ test("every canonical home hero exposes the same honest verified-lineup call to 
   assert.match(source, /const showHomeLineupCallout = Boolean\([\s\S]*?homeLineupHref[\s\S]*?selectedCanonicalState === "live" \|\| selectedCanonicalState === "finished"/);
   assert.match(source, /verifiedDetail\?\.lineupAvailableAt[\s\S]*?verifiedDetail\.lineups\.some\(\(member\) => member\.teamId === selected\?\.homeTeam\?\.providerId\)/);
   assert.match(source, /selectedCanonicalState === "live" \|\| selectedCanonicalState === "finished"/);
-  assert.match(source, /viewLineup: "VER ESCALAÇÃO"/);
-  assert.match(source, /viewLineup: "VIEW LINE-UP"/);
-  assert.match(source, /lineupPending: "Escalação oficial ainda não disponível"/);
-  assert.match(source, /lineupPendingCopy: "A TouchLine avisará assim que os dados oficiais chegarem\./);
+  assert.equal(getTouchlineMatchCentreCopy("pt-BR").viewLineup, "VER ESCALAÇÃO");
+  assert.equal(getTouchlineMatchCentreCopy("en-GB").viewLineup, "VIEW LINE-UP");
+  assert.equal(getTouchlineMatchCentreCopy("pt-BR").lineupPending, "Escalação oficial ainda não disponível");
+  assert.equal(getTouchlineMatchCentreCopy("pt-BR").lineupPendingCopy, "A escalação será exibida aqui quando estiver disponível e verificada.");
+  assert.equal(getTouchlineMatchCentreCopy("en-GB").lineupPendingCopy, "The line-up will appear here when it is available and verified.");
+  assert.match(source, /const dictionary = getTouchlineMatchCentreCopy\(language, draftLocalesEnabled\)/);
+  assert.match(source, /\{dictionary\.viewLineup\}/);
+  assert.match(source, /\{dictionary\.lineupPendingCopy\}/);
+  const pendingCopy = ["en-GB", "pt-BR"].map((locale) => getTouchlineMatchCentreCopy(locale).lineupPendingCopy);
+  assert.equal(pendingCopy.length, 2, "both supported locales retain pending-lineup copy");
+  for (const copy of pendingCopy) {
+    assert.doesNotMatch(copy, /notif|avis|alert/i, "pending lineups must not promise notification delivery");
+  }
   assert.match(source, /const homeLineupHref = selectedHomeClub\s*\? "#touchline-match-lineups"/);
   assert.match(source, /const verifiedDetail = matchDetail\?\.fixture\.id === selected\?\.providerId \? matchDetail : null/);
   assert.match(source, /<section id="touchline-match-lineups" className=\{styles\.lineupGrid\} aria-label=\{dictionary\.form\} tabIndex=\{-1\}>/);
@@ -463,8 +499,8 @@ test("Match Centre keeps the first server and browser render in one validated ti
   assert.match(pageSource, /initialTimeZone=\{initialTimeZone\}/);
   assert.match(componentSource, /useState\(initialNow\)/);
   assert.doesNotMatch(componentSource, /useState\(\(\) => Date\.now\(\)\)/);
-  assert.match(componentSource, /new Intl\.DateTimeFormat\(locale, \{ \.\.\.options, timeZone \}\)/);
-  assert.match(componentSource, /touchlineFixtureStatusLabel\(selected\.status, language\) \|\| dictionary\.provider/);
+  assert.match(componentSource, /new Intl\.DateTimeFormat\(resolveTouchlineCatalogueLocale\(locale, draftLocalesEnabled\), \{ \.\.\.options, calendar: "gregory", timeZone \}\)/);
+  assert.match(componentSource, /touchlineFixtureStatusLabel\(selected\.status, language, draftLocalesEnabled\) \|\| dictionary\.provider/);
 });
 
 test("fixture rail labels expose today or a compact localized day and date", () => {
@@ -513,7 +549,8 @@ test("Match Centre fixture rail presents each confrontation as a vertical score 
     "utf8",
   );
 
-  assert.match(component, /league: "TouchLine England League"/);
+  assert.equal(getTouchlineMatchCentreCopy("en-GB").league, "TouchLine England League");
+  assert.match(component, /\{dictionary\.league\}/);
   assert.match(component, /className=\{styles\.englandFlag\}/);
   assert.match(component, /className=\{styles\.fixtureStack\}/);
   assert.match(component, /className=\{styles\.fixtureTeam\}>\s*<TeamMark fixture=\{fixture\} side="home"/);
@@ -521,11 +558,12 @@ test("Match Centre fixture rail presents each confrontation as a vertical score 
   assert.match(component, /className=\{styles\.fixtureCentre\}/);
   assert.match(component, /const railFixtures = section\.fixtures;/);
   assert.match(component, /fixtureSections\.map\(\(section\) =>/);
-  assert.match(component, /currentFixtures: "Confrontos desta semana"/);
-  assert.match(component, /recentResults: "Últimos resultados"/);
+  assert.equal(getTouchlineMatchCentreCopy("pt-BR").currentFixtures, "Confrontos desta semana");
+  assert.equal(getTouchlineMatchCentreCopy("pt-BR").recentResults, "Últimos resultados");
   assert.match(component, /data-section=\{section\.id\}/);
   assert.match(component, /className=\{styles\.fixtureList\}/);
-  assert.match(component, /\{schedule\.currentFixtures\.length\} \+ \{schedule\.recentResults\.length\}/);
+  assert.match(component, /<dt>\{dictionary\.currentFixtures\}<\/dt><dd>\{schedule\.currentFixtures\.length\}<\/dd>/);
+  assert.match(component, /<dt>\{dictionary\.recentResults\}<\/dt><dd>\{schedule\.recentResults\.length\}<\/dd>/);
   assert.match(component, /railFixtures\.map\(\(fixture\) =>/);
   assert.match(component, /function fixtureRailStatus\(/);
   assert.match(component, /function fixtureScorePair\(fixture: TouchlinePublicFixture\) \{\s*if \(Number\.isFinite\(fixture\.homeScore\) && Number\.isFinite\(fixture\.awayScore\)\)/);
@@ -534,18 +572,22 @@ test("Match Centre fixture rail presents each confrontation as a vertical score 
   assert.match(component, /setFixtures\(\(current\) => mergeTouchlineLiveFixtures\(current, liveSnapshot\)\)/);
   assert.doesNotMatch(component, /return copy\[language\]\.next;/);
   assert.doesNotMatch(component, /homeScore \?\? 0|awayScore \?\? 0/);
-  assert.match(component, /touchlineFixtureRailDateLabel\(fixture, language, initialTimeZone, now\)/);
+  assert.match(component, /touchlineFixtureRailDateLabel\(fixture, language, initialTimeZone, now, draftLocalesEnabled\)/);
   assert.match(component, /className=\{styles\.fixtureDay\}/);
   assert.match(component, /className=\{styles\.fixtureKickoff\}/);
   assert.match(component, /className=\{styles\.fixtureScore\}/);
-  assert.match(component, /<TouchlineFixtureAlerts fixtureId=\{fixture\.id\} label=\{fixtureLabel\(fixture\)\} locale=\{language\}/);
+  assert.match(component, /<TouchlineFixtureAlerts fixtureId=\{fixture\.id\} label=\{fixtureLabel\(fixture, language, draftLocalesEnabled\)\} locale=\{language\} draftLocalesEnabled=\{draftLocalesEnabled\}/);
   const alerts = readFileSync(new URL("../components/touchline/match-centre/TouchlineFixtureAlerts.tsx", import.meta.url), "utf8");
   assert.match(alerts, /<Bell size=\{18\}/);
   assert.doesNotMatch(alerts, /<BellRing/);
   assert.match(alerts, /<button type="button" aria-expanded=\{open\} aria-controls=\{panelId\}/);
   assert.match(styles, /\.fixture, \.selectedFixture \{[^}]*min-height: 104px/);
   assert.match(styles, /\.fixtureStack \{[^}]*grid-template-columns: 86px minmax\(0,1fr\)[^}]*gap: 6px/);
-  assert.match(styles, /\.fixtureScore \{[^}]*top: 50%[^}]*right: 47px[^}]*translateY\(-50%\)/);
+  // The current public EN/PT document is LTR: inline-end is physical right.
+  // Keep the exact offset/vertical geometry rather than accepting any inset.
+  assert.equal(touchlineDocumentDirection("pt-BR"), "ltr");
+  assert.equal(touchlineDocumentDirection("en-GB"), "ltr");
+  assert.match(styles, /\.fixtureScore \{[^}]*top: 50%[^}]*inset-inline-end: 47px[^}]*translateY\(-50%\)/);
   assert.match(styles, /\.teamMark \{[^}]*width: 34px[^}]*height: 34px[^}]*background: transparent[^}]*box-shadow: none/);
   assert.match(styles, /\.teamMark \{[^}]*background: transparent[^}]*box-shadow: none/);
   assert.match(styles, /\.englandFlag \{[^}]*#cf2540/);
@@ -564,21 +606,23 @@ test("Live highlights use only verified match ratings and a final winning coach"
   assert.doesNotMatch(topRatedFunction, /touchlinePoints/);
   assert.match(component, /touchlineFixtureState\(selected, now\) !== "finished"/);
   assert.match(component, /touchlineLiveCoachForTeam\(winningTeamId\(selected\)\)/);
-  assert.match(component, /highlights: "Destaques da partida"/);
-  assert.match(component, /highlights: "Match Highlights"/);
-  assert.match(component, /bestCoach: "Treinador vencedor"/);
-  assert.match(component, /bestCoach: "Winning Coach"/);
-  assert.match(component, /bestCards: "Melhores cards da partida"/);
-  assert.match(component, /bestCards: "Top Match Cards"/);
-  assert.doesNotMatch(component, /bestCoach: "Best Coach"/);
+  assert.equal(getTouchlineMatchCentreCopy("pt-BR").highlights, "Destaques da partida");
+  assert.equal(getTouchlineMatchCentreCopy("en-GB").highlights, "Match Highlights");
+  assert.equal(getTouchlineMatchCentreCopy("pt-BR").bestCoach, "Treinador vencedor");
+  assert.equal(getTouchlineMatchCentreCopy("en-GB").bestCoach, "Winning Coach");
+  assert.equal(getTouchlineMatchCentreCopy("pt-BR").bestCards, "Melhores cards da partida");
+  assert.equal(getTouchlineMatchCentreCopy("en-GB").bestCards, "Top Match Cards");
+  assert.notEqual(getTouchlineMatchCentreCopy("en-GB").bestCoach, "Best Coach");
+  for (const key of ["highlights", "bestCoach", "bestCards"]) assert.ok(component.includes(`{dictionary.${key}}`));
 });
 
-test("Match Centre keeps the live pitch at a real football-field proportion", () => {
+test("Match Centre keeps the preferred football-field proportion only when the panel is wide enough", () => {
   const styles = readFileSync(
     new URL("../components/touchline/match-centre/touchline-match-centre.module.css", import.meta.url),
     "utf8",
   );
 
-  assert.match(styles, /\.hero \{[^}]*box-sizing: border-box[^}]*aspect-ratio: 105 \/ 68/);
+  assert.match(styles, /\.hero \{[^}]*box-sizing: border-box/);
+  assert.match(styles, /@media \(min-width: 1440px\) \{ \.hero \{ aspect-ratio: 105 \/ 68; \} \}/);
   assert.match(styles, /\.hero \{[^}]*align-content: center/);
 });

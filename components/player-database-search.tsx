@@ -1,6 +1,7 @@
 "use client";
 
 import { ShieldCheck } from "lucide-react";
+import { getTouchlineFootballSearchCopy } from "@/lib/touchlineArena/football-search-i18n";
 
 /**
  * Public-facing notice for the temporary editorial card programme.
@@ -12,20 +13,14 @@ import { ShieldCheck } from "lucide-react";
 export function PlayerDatabaseSearch({
   mode = "full",
   locale = "en-GB",
+  draftLocalesEnabled = false,
 }: {
   mode?: "full" | "compact";
-  locale?: "en-GB" | "pt-BR";
+  locale?: string;
+  draftLocalesEnabled?: boolean;
 }) {
   const compact = mode === "compact";
-  const copy = locale === "pt-BR"
-    ? {
-      title: "Cards geridos pela equipa editorial",
-      description: "Cada card é publicado manualmente, jogador por jogador, depois de revisão editorial.",
-    }
-    : {
-      title: "Cards are managed by the editorial team",
-      description: "Each card is published manually, one player at a time, after editorial review.",
-    };
+  const copy = getTouchlineFootballSearchCopy(locale, draftLocalesEnabled);
 
   return (
     <section
@@ -38,8 +33,8 @@ export function PlayerDatabaseSearch({
       <div className="flex items-start gap-2.5">
         <ShieldCheck aria-hidden="true" size={compact ? 15 : 18} className="mt-0.5 shrink-0 text-[#caff72]" />
         <div>
-          <strong className={compact ? "text-[10px] font-black" : "text-xs font-black"}>{copy.title}</strong>
-          {!compact ? <p className="mt-1 text-[11px] font-semibold leading-5 text-slate-300">{copy.description}</p> : null}
+          <strong className={compact ? "text-[10px] font-black" : "text-xs font-black"}>{copy.editorialTitle}</strong>
+          {!compact ? <p className="mt-1 text-[11px] font-semibold leading-5 text-slate-300">{copy.editorialDescription}</p> : null}
         </div>
       </div>
     </section>

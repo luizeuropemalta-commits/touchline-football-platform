@@ -37,7 +37,7 @@ const surfaces = [
   "../app/touchline-player-card-rankings/page.tsx",
   "../app/touchline-players/[player]/page.tsx",
   "../app/touchline-coaches/[coach]/page.tsx",
-  "../app/touchline-tables/page.tsx",
+  "../app/rankings/page.tsx",
 ].map((path) => readFileSync(new URL(path, import.meta.url), "utf8"));
 
 const now = Date.parse("2026-08-30T14:00:00.000Z");

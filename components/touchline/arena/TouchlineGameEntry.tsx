@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { getTouchlineIntroCopy } from "@/lib/touchlineArena/intro-i18n";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import TouchlineArenaIntro from "./TouchlineArenaIntro";
 import { TOUCHLINE_ARENA_ENTRY_VIDEO, TOUCHLINE_ARENA_INTRO_STORAGE_KEY, resolveTouchlineArenaIntroLaunchMode, type TouchlineArenaIntroIntent, type TouchlineArenaIntroLaunchMode } from "@/lib/touchlineArena/arena-intro";
@@ -10,10 +11,12 @@ import styles from "./TouchlineGameEntry.module.css";
 import introStyles from "./touchline-arena-intro.module.css";
 
 const serverUnavailable = () => false;
-export default function TouchlineGameEntry({ locale, initialIntroIntent = null }: {
+export default function TouchlineGameEntry({ locale, initialIntroIntent = null, draftLocalesEnabled = false }: {
   locale: string; initialIntroIntent?: TouchlineArenaIntroIntent;
+  draftLocalesEnabled?: boolean;
 }) {
   const router = useRouter();
+  const copy = getTouchlineIntroCopy(locale, draftLocalesEnabled);
   const [mode, setMode] = useState<"pending" | "hidden" | TouchlineArenaIntroLaunchMode>("pending");
   const [revealed, setRevealed] = useState(false);
   const [completed, setCompleted] = useState(false);
@@ -28,7 +31,7 @@ export default function TouchlineGameEntry({ locale, initialIntroIntent = null }
     setCompleted(true);
     mediaSession.stop();
     writeBrowserStorage("localStorage", TOUCHLINE_ARENA_INTRO_STORAGE_KEY, "1");
-    router.replace(`/market-transfer?lang=${encodeURIComponent(locale)}`);
+    router.replace(`/clubowner?lang=${encodeURIComponent(locale)}`);
   }, [locale, mediaSession, router]);
 
   useEffect(() => {
@@ -56,14 +59,14 @@ export default function TouchlineGameEntry({ locale, initialIntroIntent = null }
 
   return <main className={styles.root} data-touchline-game-entry="true">
     {revealed && !completed ? <video ref={video} className={styles.video} src={TOUCHLINE_ARENA_ENTRY_VIDEO} playsInline muted={muted} preload="auto" onEnded={finish} onError={finish} /> : null}
-    <TouchlineArenaIntro locale={locale} mode={available ? mode : "pending"}
+    <TouchlineArenaIntro locale={locale} draftLocalesEnabled={draftLocalesEnabled} mode={available ? mode : "pending"}
       onSequenceStart={() => {}}
       onReveal={(reduce) => { if (reduce) finish(); else setRevealed(true); }}
       onComplete={() => setMode("hidden")} onSkip={finish}
       onToggleAudio={() => setMuted((value) => !value)} audioMuted={muted} />
     {mode === "hidden" ? <div className={styles.controls}>
-      <button className={introStyles.sequenceSkip} type="button" onClick={() => setMuted((value) => !value)}>{muted ? (locale === "pt-BR" ? "Ativar som" : "Enable sound") : (locale === "pt-BR" ? "Silenciar" : "Mute")}</button>
-      <button className={introStyles.sequenceSkip} type="button" onClick={finish}>{locale === "pt-BR" ? "Ir ao Mercado" : "Go to Market"}</button>
+      <button className={introStyles.sequenceSkip} type="button" onClick={() => setMuted((value) => !value)}>{muted ? copy.entryEnableSound : copy.entryMute}</button>
+      <button className={introStyles.sequenceSkip} type="button" onClick={finish}>{copy.goToMarket}</button>
     </div> : null}
   </main>;
 }

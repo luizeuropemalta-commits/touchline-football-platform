@@ -330,6 +330,32 @@ test("actual producer -> canonical parser -> real GoldenBoot SQL authority", { s
       assert.equal((await readAuthority()).status, "unavailable");
     });
 
+    await scenario("persisted provider cooldown blocks the actual producer before provider construction", async () => {
+      const io = transport(), token = crypto.randomUUID();
+      const claimed = await io.admin.rpc("try_begin_touchline_golden_boot_worker", {
+        p_comp: comp, p_season: season, p_token: token,
+      });
+      assert.equal(claimed.error, null);
+      assert.equal(claimed.data.acquired, true);
+      const cooldown = new Date(Date.now() + 180_000).toISOString();
+      const completed = await io.admin.rpc("complete_touchline_golden_boot_worker", {
+        p_token: token, p_generation: claimed.data.generation, p_status: "unconfirmed",
+        p_quota_known: false, p_cooldown_until: cooldown,
+      });
+      assert.equal(completed.error, null);
+      assert.equal(completed.data.notBeforeMs, Date.parse(cooldown));
+      const before = (await db.query("select to_jsonb(w) payload from public.touchline_golden_boot_worker w")).rows;
+      io.requests.length = 0;
+      let factories = 0;
+      const result = await produce({ admin: io.admin, createProvider: () => { factories++; return provider(); } });
+      assert.equal(result.status, "skipped");
+      assert.equal(result.reason, "WORK_NOT_DUE");
+      assert.equal(factories, 0, "no provider construction or HTTP while durable cooldown is active");
+      assert.deepEqual(io.requests.map(row => row.name), ["try_begin_touchline_golden_boot_worker"]);
+      assert.deepEqual((await db.query("select to_jsonb(w) payload from public.touchline_golden_boot_worker w")).rows, before);
+      assert.equal(await snapshots(), 0);
+    });
+
     await scenario("provider failure revokes the preceding ready state through actual begin/failure RPCs", async () => {
       const io = transport();
       assert.equal((await produce({ admin: io.admin, createProvider: () => provider() })).status, "stored");

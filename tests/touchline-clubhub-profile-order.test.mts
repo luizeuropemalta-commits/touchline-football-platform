@@ -27,17 +27,17 @@ test("section highlighting discovers streamed sections and cleans up listeners",
   const effectEnd = sectionNavigation.indexOf("\n  }, []);", effectStart);
   assert.ok(effectStart > 0 && effectEnd > effectStart);
   const effect = sectionNavigation.slice(effectStart + "  useEffect(() => {".length, effectEnd);
-  for (const initiallyHasFeed of [false, true]) {
+  for (const initiallyHasTable of [false, true]) {
     const sections = new Map<string, { id: string; getBoundingClientRect: () => { top: number } }>();
     const add = (id: string, top: number) => sections.set(id, { id, getBoundingClientRect: () => ({ top }) });
-    if (initiallyHasFeed) add("club-feed", 0);
+    if (initiallyHasTable) add("club-table", 0);
     let active: string | null = null;
     let pending: (() => void) | null = null;
     let observerCallback: (() => void) | null = null;
     let disconnected = false;
     const listeners = new Map<string, () => void>();
     const cleanup = runInNewContext(stripTypeScriptTypes(`(() => {${effect}})()`), {
-      SECTION_TARGETS: ["club-feed", "touchline-club-lineup", "club-squad"],
+      SECTION_TARGETS: ["club-table", "touchline-club-lineup", "club-squad"],
       setActiveTarget: (value: string | null) => { active = value; },
       document: { getElementById: (id: string) => sections.get(id), querySelector: () => ({}), documentElement: { scrollHeight: 1200 } },
       MutationObserver: class {
@@ -52,7 +52,7 @@ test("section highlighting discovers streamed sections and cleans up listeners",
         removeEventListener: (event: string) => listeners.delete(event),
       },
     }) as (() => void) | undefined;
-    add("club-feed", -800);
+    add("club-table", -800);
     add("touchline-club-lineup", -300);
     add("club-squad", 0);
     assert.ok(listeners.has("scroll"), "install listeners before Suspense resolves");
@@ -100,12 +100,12 @@ test("ClubHub places identity and honours before the official league area and ma
   assert.ok(lineupStart < technicalStart);
   assert.doesNotMatch(hero, /Official club value|Valor oficial do clube|marketValuePending|formatCompactEuro/);
   assert.doesNotMatch(hero, /touchlineCards|touchlinePoints|squadSource|club-hub-metrics/);
-  assert.doesNotMatch(hero, /market-transfer/);
+  assert.doesNotMatch(hero, /clubowner/);
 });
 
 test("ClubHub hero keeps the next fixture and trophy cabinet while stadium identity stays outside it", () => {
   const heroStart = indexOfRequired(page, '<header className="club-hub-hero">');
-  const heroEnd = indexOfRequired(page, '<ClubHubSectionNavigation locale={locale}');
+  const heroEnd = indexOfRequired(page, '<ClubHubSectionNavigation');
   const hero = page.slice(heroStart, heroEnd);
 
   assert.match(hero, /<ClubHubHeroNextMatch/);
@@ -113,7 +113,7 @@ test("ClubHub hero keeps the next fixture and trophy cabinet while stadium ident
   assert.doesNotMatch(hero, /ClubHubHomeStadiumPanel/);
   assert.doesNotMatch(hero, /ClubHubHomeStadiumIdentity/);
   assert.match(page, /function ClubHubHomeStadiumIdentity/);
-  assert.match(page, /<ClubHubHomeStadiumIdentity locale=\{locale\} stadium=\{homeStadium\}/);
+  assert.match(page, /<ClubHubHomeStadiumIdentity draftLocalesEnabled=\{draftLocalesEnabled\} locale=\{locale\} stadium=\{homeStadium\}/);
   assert.match(page, /club-hub-home-stadium-identity/);
   assert.doesNotMatch(page, /profile\.capacity|profile\.openedYear|primarySource/);
 });
@@ -132,10 +132,11 @@ test("ClubHub gives the reusable club hero premium motion without sacrificing na
   assert.doesNotMatch(page, /\.club-hub-honour:hover/);
   assert.doesNotMatch(page, /\.club-hub-honour::after/);
   assert.doesNotMatch(trophyCarousel, /<small title=\{honour\.label\}>/);
-  assert.match(page, /<ClubHubSectionNavigation locale=\{locale\}/);
+  assert.match(page, /<ClubHubSectionNavigation draftLocalesEnabled=\{draftLocalesEnabled\} locale=\{locale\}/);
   assert.match(sectionNavigation, /TouchlineGlobalNavigation\.module\.css/);
-  assert.match(sectionNavigation, /icon: Newspaper[\s\S]*?icon: CalendarDays[\s\S]*?icon: UsersRound/);
-  assert.doesNotMatch(sectionNavigation, /target: "club-table"/);
+  assert.match(sectionNavigation, /icon: TableProperties[\s\S]*?icon: CalendarDays[\s\S]*?icon: UsersRound/);
+  assert.match(sectionNavigation, /target: "club-table"/);
+  assert.doesNotMatch(sectionNavigation, /target: "club-feed"/);
   assert.match(sectionNavigation, /IntersectionObserver/);
   assert.match(sectionNavigation, /activeTarget/);
   assert.match(sectionNavigation, /aria-current=\{activeTarget === target \? "location" : undefined\}/);
@@ -192,21 +193,21 @@ test("the official league table remains server-owned and separate from TouchLine
   assert.doesNotMatch(page, /ClubHubCardsSection/);
 });
 
-test("the official league area is the first chapter below navigation with a 70/30 feed and contained 20-club rail", () => {
+test("the official league area is the first chapter below navigation with a compact fixture and contained 20-club table", () => {
   const navigationStart = indexOfRequired(page, "<ClubHubSectionNavigation");
   const officialLeagueStart = page.indexOf("<ClubHubOfficialLeagueSection", navigationStart);
   const lineupStart = page.indexOf("<ClubHubLineupSection", navigationStart);
 
   assert.ok(navigationStart < officialLeagueStart && officialLeagueStart < lineupStart);
   assert.match(page, /data-clubhub-official-league="true"/);
-  assert.match(page, /className=\{officialLeagueStyles\.feed\} id="club-feed"/);
-  assert.match(page, /className=\{officialLeagueStyles\.rail\}[\s\S]*?<ClubHubNextFixtureCard[\s\S]*?<TouchlineOfficialLeagueTable/);
+  assert.doesNotMatch(page, /TouchlineClubSocialFeed|readTouchlineClubSocialFeed/);
+  assert.match(page, /className=\{officialLeagueStyles\.panel\}[\s\S]*?<ClubHubNextFixtureCard[\s\S]*?<TouchlineOfficialLeagueTable/);
   assert.match(page, /venueName=\{fixture\.venue\?\.name \?\? \(TOUCHLINE_STADIUM_CATALOG\.find\(\(stadium\) => stadium\.homeTeamProviderId === fixture\.homeTeam\?\.providerId\)\?\.name \?\? null\)\}/);
   assert.match(page, /venueImageUrl=\{fixture\.venue\?\.interiorImageUrl \?\? fixture\.venue\?\.imageUrl \?\? TOUCHLINE_STADIUM_CATALOG\.find\(\(stadium\) => stadium\.homeTeamProviderId === fixture\.homeTeam\?\.providerId\)\?\.interiorImageUrl \?\? null\}/);
   assert.match(page, /toTouchlineLiveFixture\(previewFixture\)/);
   assert.match(page, /id="club-table"[\s\S]*?variant="clubHubRail"/);
   assert.doesNotMatch(page.slice(navigationStart, lineupStart), /League pulse|Pulso da liga|Official 20-club standings|Classificação oficial dos 20 clubes/);
-  assert.match(officialLeagueStyles, /grid-template-columns: minmax\(0, 7fr\) minmax\(340px, 3fr\)/);
+  assert.match(officialLeagueStyles, /grid-template-columns: minmax\(0, 45fr\) minmax\(0, 55fr\)/);
   assert.match(officialLeagueStyles, /@media \(max-width: 1120px\)[\s\S]*?grid-template-columns: 1fr/);
   assert.match(leagueTable, /variant: "directory" \| "profile" \| "clubHubRail"/);
   assert.match(leagueTableStyles, /\.clubHubRail \.tableWrap\s*\{[\s\S]*?overflow-y: auto/);
@@ -223,7 +224,7 @@ test("the functional ClubHub places canonical positional leaders beside the matc
   assert.match(page, /<ClubHubNextFixtureCard/);
   assert.match(page, /previewHref=\{null\}/);
   assert.match(page, /<ClubHubCanonicalCoachPanel[\s\S]*?presentation="technical"/);
-  assert.match(page, /<TouchlineGameweekCard card=\{leader\.card\}/);
+  assert.match(page, /<TouchlineGameweekCard\b[^>]*\bcard=\{leader\.card\}/);
   assert.match(page, /leaderCards=\{\(/);
   assert.match(page, /displayWidth=\{112\}/);
   assert.match(page, /const clubPositionLeaders = CLUB_POSITION_LEADER_GROUPS\.map/);
@@ -235,8 +236,8 @@ test("the functional ClubHub places canonical positional leaders beside the matc
 
 test("ClubHub closes with a single professional localized rights footer", () => {
   assert.match(page, /<footer className="club-hub-footer">/);
-  assert.match(page, /Todos os direitos reservados\./);
-  assert.match(page, /All rights reserved\./);
+  assert.deepEqual([...readFileSync(new URL("../lib/touchlineArena/club-hub-profile-i18n.ts", import.meta.url), "utf8").matchAll(/rights: "([^"]+)"/g)].slice(0, 2).map(match => match[1]), ["All rights reserved.", "Todos os direitos reservados."]);
+  assert.match(page, /<span>\{copy\.rights\}<\/span>/);
   assert.match(page, /© \{copyrightYear\} TouchLine/);
   assert.match(page, /\.club-hub-footer \{/);
 });

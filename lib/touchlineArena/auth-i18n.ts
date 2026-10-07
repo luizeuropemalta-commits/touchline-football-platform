@@ -1,4 +1,6 @@
 import { TOUCHLINE_CLUB_OWNER_ROUTE_BASE } from "./club-owner-routes.ts";
+import { touchlineAuthDrafts } from "./locale-catalogues/auth-drafts.ts";
+import { TOUCHLINE_DRAFT_LOCALES, type TouchlineDraftLocale } from "./locale-catalogues/core-drafts.ts";
 
 export type TouchLineAuthLocale = "en-GB" | "pt-BR";
 
@@ -7,7 +9,7 @@ const TOUCHLINE_AUTH_RETURN_PATHS = [
   "/arena",
   "/my-club",
   TOUCHLINE_CLUB_OWNER_ROUTE_BASE,
-  "/market-transfer",
+  "/clubowner",
   "/admin",
   "/notifications",
   "/inbox",
@@ -262,22 +264,44 @@ const ptBR: typeof en = {
 };
 
 export type TouchLineAuthCopy = typeof en;
+export type TouchLineLoginLocale = TouchLineAuthLocale | TouchlineDraftLocale;
 
-export function normalizeTouchLineAuthLocale(locale?: string | null): TouchLineAuthLocale {
+export function normalizeTouchLineAuthLocale(locale?: string | null): TouchLineAuthLocale;
+export function normalizeTouchLineAuthLocale(locale: string | null | undefined, draftLocalesEnabled: false): TouchLineAuthLocale;
+export function normalizeTouchLineAuthLocale(locale: string | null | undefined, draftLocalesEnabled: boolean): TouchLineLoginLocale;
+export function normalizeTouchLineAuthLocale(locale?: string | null, draftLocalesEnabled = false): TouchLineLoginLocale {
+  if (draftLocalesEnabled && isTouchLineLoginDraftLocale(locale)) return locale;
   return locale === "pt-BR" ? "pt-BR" : "en-GB";
 }
 
-export function getTouchLineAuthCopy(locale?: string | null): TouchLineAuthCopy {
+export function getTouchLineAuthCopy(locale?: string | null, draftLocalesEnabled = false): TouchLineAuthCopy {
+  if (draftLocalesEnabled && isTouchLineLoginDraftLocale(locale)) return touchlineAuthDrafts[locale];
   return normalizeTouchLineAuthLocale(locale) === "pt-BR" ? ptBR : en;
 }
 
-export function touchLineAuthHref(path: string, locale?: string | null) {
-  const normalizedLocale = normalizeTouchLineAuthLocale(locale);
+/** Login-only draft resolution. This deliberately does not widen auth routing or the site locale gate. */
+export function normalizeTouchLineLoginLocale(locale?: string | null): TouchLineLoginLocale {
+  if (locale === "en-GB" || locale === "pt-BR") return locale;
+  return TOUCHLINE_DRAFT_LOCALES.find((supported) => supported === locale) ?? "en-GB";
+}
+
+export function isTouchLineLoginDraftLocale(locale?: string | null): locale is TouchlineDraftLocale {
+  return TOUCHLINE_DRAFT_LOCALES.some((supported) => supported === locale);
+}
+
+export function getTouchLineLoginCopy(locale?: string | null): TouchLineAuthCopy {
+  const normalized = normalizeTouchLineLoginLocale(locale);
+  if (normalized === "en-GB" || normalized === "pt-BR") return getTouchLineAuthCopy(normalized);
+  return touchlineAuthDrafts[normalized];
+}
+
+export function touchLineAuthHref(path: string, locale?: string | null, draftLocalesEnabled = false) {
+  const normalizedLocale = normalizeTouchLineAuthLocale(locale, draftLocalesEnabled);
   const separator = path.includes("?") ? "&" : "?";
   return `${path}${separator}lang=${encodeURIComponent(normalizedLocale)}`;
 }
 
-export function normalizeTouchLineAuthReturnTo(returnTo?: string | null) {
+export function normalizeTouchLineAuthReturnTo(returnTo?: string | null, draftLocalesEnabled = false) {
   if (!returnTo?.startsWith("/") || returnTo.includes("\\") || returnTo.startsWith("//")) return null;
   if ([...returnTo].some((character) => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127)) return null;
 
@@ -296,10 +320,10 @@ export function normalizeTouchLineAuthReturnTo(returnTo?: string | null) {
       // Retired UI context cannot select another owner's identity or a private
       // destination. Only the language survives the move to the customer game.
       const locale = candidate.searchParams.get("lang");
-      candidate.pathname = "/market-transfer";
+      candidate.pathname = "/clubowner";
       candidate.search = "";
       candidate.hash = "";
-      if (locale) candidate.searchParams.set("lang", normalizeTouchLineAuthLocale(locale));
+      if (locale) candidate.searchParams.set("lang", normalizeTouchLineAuthLocale(locale, draftLocalesEnabled));
     }
     return `${candidate.pathname}${candidate.search}${candidate.hash}`;
   } catch {
@@ -321,13 +345,14 @@ export function normalizeTouchLineAdminReturnTo(returnTo?: string | null) {
 export function touchLinePostAuthHref(
   returnTo: string | null | undefined,
   locale?: string | null,
-  fallbackPath = "/market-transfer",
+  fallbackPath = "/clubowner",
+  draftLocalesEnabled = false,
 ) {
   const destination = new URL(
-    normalizeTouchLineAuthReturnTo(returnTo) ?? fallbackPath,
+    normalizeTouchLineAuthReturnTo(returnTo, draftLocalesEnabled) ?? fallbackPath,
     TOUCHLINE_AUTH_URL_BASE,
   );
-  destination.searchParams.set("lang", normalizeTouchLineAuthLocale(locale));
+  destination.searchParams.set("lang", normalizeTouchLineAuthLocale(locale, draftLocalesEnabled));
   return `${destination.pathname}${destination.search}${destination.hash}`;
 }
 
@@ -335,9 +360,10 @@ export function touchLineAuthEntryHref(
   path: string,
   locale?: string | null,
   returnTo?: string | null,
+  draftLocalesEnabled = false,
 ) {
-  const destination = new URL(touchLineAuthHref(path, locale), TOUCHLINE_AUTH_URL_BASE);
-  const normalizedReturnTo = normalizeTouchLineAuthReturnTo(returnTo);
+  const destination = new URL(touchLineAuthHref(path, locale, draftLocalesEnabled), TOUCHLINE_AUTH_URL_BASE);
+  const normalizedReturnTo = normalizeTouchLineAuthReturnTo(returnTo, draftLocalesEnabled);
   if (normalizedReturnTo) destination.searchParams.set("returnTo", normalizedReturnTo);
   return `${destination.pathname}${destination.search}${destination.hash}`;
 }

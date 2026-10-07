@@ -14,7 +14,7 @@ import {
 
 const canonicalEvidence = {
   projectRef: TOUCHLINE_QA_PROJECT_REF,
-  qaAlias: TOUCHLINE_QA_CANONICAL_ALIAS + "/market-transfer?lang=en-GB",
+  qaAlias: TOUCHLINE_QA_CANONICAL_ALIAS + "/clubowner?lang=en-GB",
   userId: TOUCHLINE_QA_CANONICAL_USER_ID,
   email: TOUCHLINE_QA_CANONICAL_EMAIL,
   emailConfirmed: true,

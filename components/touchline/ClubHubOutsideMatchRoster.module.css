@@ -148,7 +148,7 @@
   color: rgba(220, 255, 198, .62);
   font-size: 10px;
   font-weight: 850;
-  text-align: right;
+  text-align: end;
 }
 
 .empty {

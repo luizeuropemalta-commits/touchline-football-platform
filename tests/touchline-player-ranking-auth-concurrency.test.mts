@@ -5,6 +5,12 @@ import { runInNewContext } from "node:vm";
 import { setImmediate } from "node:timers/promises";
 import ts from "typescript";
 
+const siteLocaleEnv: Record<string, string | undefined> = {};
+const siteLocalePolicy: Record<string, unknown> = {};
+runInNewContext(ts.transpileModule(readFileSync(new URL("../lib/touchlineArena/site-locales-release.ts", import.meta.url), "utf8"), {
+  compilerOptions: { module: ts.ModuleKind.CommonJS },
+}).outputText, { exports: siteLocalePolicy, process: { env: siteLocaleEnv } });
+
 function deferred<T>() {
   let resolve!: (value: T) => void;
   let reject!: (error: Error) => void;
@@ -22,11 +28,13 @@ function harness(input: {
   const reachedPresentation = new Error("presentation reached");
   let presentationCalls = 0;
   const dependencies: Record<string, Record<string, unknown>> = {
+    "@/lib/touchlineArena/site-locales-release": siteLocalePolicy,
     "@/lib/supabase/server": { createClient: input.client },
     "@/lib/touchlineArena/card-ranking-server": { loadTouchLineActiveRanking: input.ranking },
     "@/lib/touchlineArena/ranked-card-catalog-server": { loadTouchLineRankedCardCatalog: input.catalogue },
     "@/lib/touchlineArena/ranked-card-catalog": { compareTouchLineRankedCards: () => 0 },
     "@/lib/touchlineArena/i18n": { normalizeTouchLineLocale: () => { presentationCalls++; throw reachedPresentation; } },
+    "@/lib/touchlineArena/catalogue-locale": { resolveTouchlineCatalogueLocale: () => { presentationCalls++; throw reachedPresentation; } },
   };
   const exports: Record<string, unknown> = {};
   const source = readFileSync(new URL("../app/touchline-player-card-rankings/page.tsx", import.meta.url), "utf8");

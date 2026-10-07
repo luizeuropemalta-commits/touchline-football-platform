@@ -9,8 +9,6 @@ import {
   touchLinePostAuthHref,
 } from "../lib/touchlineArena/auth-i18n.ts";
 import {
-  observeTouchlineArenaOnboardingPlayback,
-  touchlineArenaOnboardingHref,
   touchlineRegistrationEntryHref,
 } from "../lib/touchlineArena/arena-onboarding.ts";
 
@@ -22,6 +20,7 @@ function registrationEntry(returnTo?: string, locale = "en-GB") {
   return new URL(runInNewContext(`${statement}\nfirstEntryHref`, {
     normalizedReturnTo: normalizeTouchLineAuthReturnTo(returnTo),
     normalizedLocale: locale,
+    publicSiteLocalesEnabled: false,
     touchLineAuthHref,
     touchLinePostAuthHref,
     touchlineRegistrationEntryHref,
@@ -38,7 +37,7 @@ test("new registration starts the complete official intro with an explicit onboa
 });
 
 test("an ordinary registration return does not bypass the complete onboarding", () => {
-  for (const returnTo of ["/my-club#squad", "/market-transfer?team=123", "/arena?skipIntro=1", "/inbox"]) {
+  for (const returnTo of ["/my-club#squad", "/clubowner?team=123", "/arena?skipIntro=1", "/inbox"]) {
     const url = registrationEntry(returnTo);
     assert.equal(url.pathname, "/intro", returnTo);
     assert.equal(url.searchParams.get("intro"), "first", returnTo);
@@ -55,220 +54,17 @@ test("reserved administrative and QA returns retain their existing destinations"
   }
 });
 
-test("only an exact onboarding marker yields a local Market destination without a hash", () => {
-  for (const search of ["", "?intro=first", "?skipIntro=1", "?onboarding=", "?onboarding=MARKET", "?onboarding=other", "?returnTo=/my-club"]) {
-    assert.equal(touchlineArenaOnboardingHref(search, "pt-BR"), null, search);
-  }
-  assert.equal(touchlineArenaOnboardingHref("?intro=first&onboarding=market", "pt-BR"), "/market-transfer?lang=pt-BR");
-  assert.equal(touchlineArenaOnboardingHref("?skipIntro=1&onboarding=market&next=https://example.com#squad", "en-GB"), "/market-transfer?lang=en-GB");
-});
-
 test("registration normalization cannot introduce an external redirect or an administrative prefix lookalike", () => {
   for (const returnTo of ["https://example.com", "//example.com/admin", "/admin-other", "/visual-qa-other"]) {
     assert.equal(touchlineRegistrationEntryHref(returnTo, "en-GB"), "/intro?intro=first&onboarding=market&lang=en-GB");
   }
 });
 
-class FakeVideo extends EventTarget {
-  currentTime = 0;
-  paused = false;
-  ended = false;
-  seeking = false;
-  readyState = 4;
-  playbackRate = 1;
-  listeners = new Map<string, Set<EventListenerOrEventListenerObject>>();
-
-  override addEventListener(type: string, listener: EventListenerOrEventListenerObject | null, options?: AddEventListenerOptions | boolean) {
-    if (listener) {
-      const listeners = this.listeners.get(type) ?? new Set();
-      listeners.add(listener);
-      this.listeners.set(type, listeners);
-    }
-    super.addEventListener(type, listener, options);
-  }
-
-  override removeEventListener(type: string, listener: EventListenerOrEventListenerObject | null, options?: EventListenerOptions | boolean) {
-    if (listener) this.listeners.get(type)?.delete(listener);
-    super.removeEventListener(type, listener, options);
-  }
-}
-
-function playbackHarness() {
-  const video = new FakeVideo();
-  const frames = new Map<number, FrameRequestCallback>();
-  const availabilityListeners = new Set<() => void>();
-  let nextRequest = 0;
-  let wallTime = 0;
-  let allowed = true;
-  let completions = 0;
-  const options = {
-    video,
-    isAllowed: () => allowed,
-    subscribeAvailability: (notify: () => void) => {
-      availabilityListeners.add(notify);
-      return () => { availabilityListeners.delete(notify); };
-    },
-    requestFrame: (callback: FrameRequestCallback) => {
-      frames.set(++nextRequest, callback);
-      return nextRequest;
-    },
-    cancelFrame: (request: number) => { frames.delete(request); },
-    onComplete: () => { completions += 1; },
-  };
-  return {
-    video, frames, options, availabilityListeners,
-    completions: () => completions,
-    allow(value: boolean) {
-      allowed = value;
-      for (const notify of availabilityListeners) notify();
-    },
-    sample(milliseconds: number, mediaSeconds = milliseconds / 1_000 * video.playbackRate) {
-      wallTime += milliseconds;
-      video.currentTime += mediaSeconds;
-      const pending = frames.entries().next().value;
-      if (!pending) return;
-      const [request, callback] = pending;
-      frames.delete(request);
-      callback(wallTime);
-    },
-  };
-}
-
-function assertObserverReleased(harness: ReturnType<typeof playbackHarness>) {
-  assert.equal(harness.frames.size, 0);
-  assert.equal(harness.availabilityListeners.size, 0);
-  assert.ok([...harness.video.listeners.values()].every((listeners) => listeners.size === 0));
-}
-
-test("handoff requires three seconds of actual loop progress and completes exactly once", () => {
-  const harness = playbackHarness();
-  const cleanup = observeTouchlineArenaOnboardingPlayback(harness.options);
-  harness.sample(0);
-  harness.sample(2_750);
-  assert.equal(harness.completions(), 0);
-  const lateFrame = [...harness.frames.values()][0];
-  harness.sample(250);
-  assert.equal(harness.completions(), 1);
-  assertObserverReleased(harness);
-  lateFrame(15_000);
-  cleanup();
-  assert.equal(harness.completions(), 1);
-  assertObserverReleased(harness);
-});
-
-test("wall time while stalled cannot satisfy playback", () => {
-  const harness = playbackHarness();
-  observeTouchlineArenaOnboardingPlayback(harness.options);
-  harness.sample(0);
-  harness.sample(60_000, 0);
-  assert.equal(harness.completions(), 0);
-  harness.sample(2_750);
-  assert.equal(harness.completions(), 0);
-  harness.sample(250);
-  assert.equal(harness.completions(), 1);
-});
-
-for (const state of ["paused", "seeking", "ended", "buffering"] as const) {
-  test(`${state} media cannot advance the onboarding clock`, () => {
-    const harness = playbackHarness();
-    const cleanup = observeTouchlineArenaOnboardingPlayback(harness.options);
-    harness.sample(0);
-    if (state === "buffering") harness.video.readyState = 1;
-    else harness.video[state] = true;
-    harness.sample(12_000);
-    assert.equal(harness.completions(), 0);
-    cleanup();
-    assertObserverReleased(harness);
-  });
-}
-
-for (const interruption of ["hidden document", "portrait gate", "unowned media", "unmounted media"]) {
-  test(`${interruption} excludes its entire interval and preserves earlier valid playback`, () => {
-    const harness = playbackHarness();
-    observeTouchlineArenaOnboardingPlayback(harness.options);
-    harness.sample(0);
-    harness.sample(2_000);
-    harness.allow(false);
-    // Includes a suspended animation-frame interval with no intermediate sample.
-    harness.allow(true);
-    harness.sample(60_000, 60);
-    assert.equal(harness.completions(), 0);
-    harness.sample(750);
-    assert.equal(harness.completions(), 0);
-    harness.sample(250);
-    assert.equal(harness.completions(), 1);
-  });
-}
-
-test("pausing and resuming retains only the already-played portion", () => {
-  const harness = playbackHarness();
-  observeTouchlineArenaOnboardingPlayback(harness.options);
-  harness.sample(0);
-  harness.sample(2_000);
-  harness.video.paused = true;
-  harness.video.dispatchEvent(new Event("pause"));
-  harness.sample(60_000, 0);
-  harness.video.paused = false;
-  harness.video.dispatchEvent(new Event("playing"));
-  harness.sample(0);
-  harness.sample(750);
-  assert.equal(harness.completions(), 0);
-  harness.sample(250);
-  assert.equal(harness.completions(), 1);
-});
-
-test("seeks and loop wrap do not count as playback", () => {
-  const harness = playbackHarness();
-  observeTouchlineArenaOnboardingPlayback(harness.options);
-  harness.sample(0);
-  harness.sample(1_000);
-  harness.video.dispatchEvent(new Event("seeking"));
-  harness.video.currentTime = 200;
-  harness.video.dispatchEvent(new Event("seeked"));
-  harness.sample(10_000, 0);
-  assert.equal(harness.completions(), 0);
-  harness.sample(1_000);
-  harness.video.currentTime = 0;
-  harness.sample(0);
-  harness.sample(750);
-  assert.equal(harness.completions(), 0);
-  harness.sample(250);
-  assert.equal(harness.completions(), 1);
-});
-
-test("accelerated playback still requires three real seconds", () => {
-  const harness = playbackHarness();
-  harness.video.playbackRate = 2;
-  observeTouchlineArenaOnboardingPlayback(harness.options);
-  harness.sample(0);
-  harness.sample(1_500);
-  assert.equal(harness.video.currentTime, 3);
-  assert.equal(harness.completions(), 0);
-  harness.sample(1_500);
-  assert.equal(harness.completions(), 1);
-});
-
-test("cleanup cancels pending animation, media listeners and availability subscriptions", () => {
-  const harness = playbackHarness();
-  const cleanup = observeTouchlineArenaOnboardingPlayback(harness.options);
-  harness.sample(0);
-  harness.sample(2_750);
-  const lateFrame = [...harness.frames.values()][0];
-  cleanup();
-  harness.video.currentTime = 99;
-  lateFrame(99_000);
-  harness.allow(false);
-  cleanup();
-  assert.equal(harness.completions(), 0);
-  assertObserverReleased(harness);
-});
-
-
 test("login, signup confirmation/OAuth and recovery keep their distinct existing continuations", () => {
-  assert.match(authFormSource, /const arenaHref = touchLinePostAuthHref\(normalizedReturnTo, normalizedLocale\)/);
+  assert.match(authFormSource, /const arenaHref = touchLinePostAuthHref\(normalizedReturnTo, normalizedLocale, "\/clubowner", publicSiteLocalesEnabled\)/);
   assert.match(authFormSource, /name="return_to" value=\{arenaHref\}/);
   assert.match(authFormSource, /emailRedirectTo: buildTouchLineAuthCallbackUrl\(firstEntryHref\)/);
   assert.match(authFormSource, /mode === "register" \? firstEntryHref : arenaHref/);
-  assert.match(authFormSource, /const resetPasswordHref = touchLineAuthHref\("\/reset-password", normalizedLocale\)/);
+  assert.match(authFormSource, /const resetPasswordHref = touchLineAuthHref\("\/reset-password", normalizedLocale, publicSiteLocalesEnabled\)/);
   assert.match(authFormSource, /resetPasswordForEmail\([\s\S]*buildTouchLineAuthCallbackUrl\(resetPasswordHref\)/);
 });

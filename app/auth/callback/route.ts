@@ -11,6 +11,7 @@ import {
   verifyTouchLinePasswordRecoveryIntent,
 } from "@/lib/server/password-recovery";
 import { normalizeTouchLineAuthReturnTo } from "@/lib/touchlineArena/auth-i18n";
+import { isTouchLineSiteLocalesEnabled } from "@/lib/touchlineArena/site-locales-release";
 
 function clearPasswordRecoveryState(response: NextResponse, requestUrl: string) {
   response.cookies.set(TOUCHLINE_PASSWORD_RECOVERY_COOKIE, "", {
@@ -47,7 +48,7 @@ export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
   const requestedNext = searchParams.get("next");
-  const nextUrl = resolveTouchLineAuthCallbackDestination(requestedNext, origin);
+  const nextUrl = resolveTouchLineAuthCallbackDestination(requestedNext, origin, isTouchLineSiteLocalesEnabled());
   const requestsPasswordRecovery = nextUrl.pathname === "/reset-password";
   if (code) {
     const supabase = await createClient();
@@ -63,7 +64,7 @@ export async function GET(request: NextRequest) {
       const failureUrl = requestsPasswordRecovery ? nextUrl : new URL("/login", origin);
       const locale = nextUrl.searchParams.get("lang");
       if (locale) failureUrl.searchParams.set("lang", locale);
-      const returnTo = normalizeTouchLineAuthReturnTo(`${nextUrl.pathname}${nextUrl.search}`);
+      const returnTo = normalizeTouchLineAuthReturnTo(`${nextUrl.pathname}${nextUrl.search}`, isTouchLineSiteLocalesEnabled(nextUrl.pathname));
       if (!requestsPasswordRecovery && returnTo) failureUrl.searchParams.set("returnTo", returnTo);
       failureUrl.searchParams.set("error", "auth_callback");
       return clearPasswordRecoveryState(NextResponse.redirect(failureUrl), request.url);

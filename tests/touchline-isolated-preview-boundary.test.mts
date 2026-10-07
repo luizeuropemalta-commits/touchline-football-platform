@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { createRankingLoadDiagnostics } from "../lib/touchlineArena/ranking-load-diagnostics.ts";
+import { inspectTouchlineQaVercelEnvironment } from "../lib/touchlinePreview/qa-environment-verifier-core.ts";
+import { TOUCHLINE_QA_HOSTNAME, TOUCHLINE_QA_ORIGIN } from "../lib/touchlineArena/public-origin.ts";
 
 import {
   inspectTouchlineIsolatedPreviewEnvironment,
@@ -44,9 +46,145 @@ function qaEnvironment(overrides: Record<string, string | undefined> = {}) {
   };
 }
 
+test("Fixture account scope admits only its exact private name in the complete QA envelope", () => {
+  const key = "TOUCHLINE_SPORTMONKS_FIXTURE_ACCOUNT_SCOPE";
+  const environment: Readonly<Record<string, string | undefined>> = Object.freeze(qaEnvironment({
+    VERCEL_GIT_COMMIT_REF: "qa", VERCEL_BRANCH_URL: TOUCHLINE_QA_HOSTNAME,
+    NEXT_PUBLIC_TOUCHLINE_AUTH_ORIGIN: TOUCHLINE_QA_ORIGIN,
+    NEXT_PUBLIC_SUPABASE_URL: "https://xgxbwqxjssxxuihuwmgy.supabase.co",
+    SUPABASE_URL: "https://xgxbwqxjssxxuihuwmgy.supabase.co",
+    TOUCHLINE_QA_SUPABASE_PROJECT_REF: "xgxbwqxjssxxuihuwmgy",
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: "synthetic-qa-anon-not-a-real-credential",
+    SUPABASE_SERVICE_ROLE_KEY: "synthetic-qa-service-not-a-real-credential",
+    TOUCHLINE_CLUB_OWNER_AVATAR_READ_ENABLED: "false",
+    [key]: "synthetic-fixture-scope",
+  }));
+  const before = { ...environment };
+  const verify = (snapshot: Readonly<Record<string, string | undefined>>, requestHostname = TOUCHLINE_QA_HOSTNAME) =>
+    inspectTouchlineQaVercelEnvironment({ environment: snapshot, requestHostname });
+  assert.deepEqual(inspectTouchlineIsolatedPreviewEnvironment(environment), { status: "qa", reasons: [] });
+  assert.deepEqual(verify(environment), { status: "PASS", reason: "QA_ENVIRONMENT_CONFIGURATION_COHERENT" });
+  assert.deepEqual(resolveTouchlineIsolatedPreviewRoutePolicy("/api/football-data/live-sync", environment), { status: "inactive" });
+  // Name admission is not value validation, a provider allowance or activation.
+  assert.equal(inspectTouchlineIsolatedPreviewEnvironment({ ...environment, [key]: "" }).status, "qa");
+  assert.equal(inspectTouchlineIsolatedPreviewEnvironment(isolatedEnvironment({ [key]: environment[key] })).status, "invalid");
+  for (const patch of [
+    { VERCEL_ENV: "production" }, { VERCEL_GIT_COMMIT_REF: "main" }, { VERCEL_BRANCH_URL: "other.vercel.app" },
+    { SUPABASE_URL: "https://other.supabase.co" }, { NEXT_PUBLIC_SUPABASE_URL: "https://other.supabase.co" },
+    { TOUCHLINE_QA_SUPABASE_PROJECT_REF: "other" }, { NEXT_PUBLIC_TOUCHLINE_AUTH_ORIGIN: "https://other.example.test" },
+    { VERCEL_URL: undefined }, { VERCEL_URL: "invalid" }, { SUPABASE_SERVICE_ROLE_KEY: undefined },
+    { TOUCHLINE_DEPLOYMENT_MODE: TOUCHLINE_ISOLATED_PREVIEW_MODE },
+  ]) assert.equal(verify({ ...environment, ...patch }).status, "FAIL", JSON.stringify(Object.keys(patch)));
+  assert.equal(verify(environment, "other.example.test").status, "FAIL");
+  for (const forbidden of [`NEXT_PUBLIC_${key}`, `${key}_OTHER`, "TOUCHLINE_OTHER_SPORTMONKS_FIXTURE_ACCOUNT_SCOPE",
+    "TOUCHLINE_SPORTMONKS_FIXTURE_ACCOUNT", "STRIPE_SECRET_KEY", "AWS_ACCESS_KEY_ID"]) {
+    // Pass the whole snapshot, including the forbidden key; never filter it.
+    const snapshot = Object.freeze({ ...environment, [forbidden]: "synthetic-forbidden-value" });
+    const result = inspectTouchlineIsolatedPreviewEnvironment(snapshot);
+    assert.equal(result.status, "invalid", forbidden);
+    if (result.status !== "invalid") assert.fail("Forbidden configuration must stay visible");
+    assert.ok(result.reasons.includes(`forbidden-qa-environment-key:${forbidden}`));
+    assert.ok(result.reasons.every(reason => !reason.includes("synthetic-forbidden-value")));
+    assert.equal(verify(snapshot).status, "FAIL");
+    assert.equal(resolveTouchlineIsolatedPreviewRoutePolicy("/api/football-data/live-sync", snapshot).status, "blocked");
+  }
+  assert.deepEqual(environment, before);
+});
+
+test("QA admits only exact push configuration names and never public private-key variants", () => {
+  const settings = {
+    NEXT_PUBLIC_TOUCHLINE_WEB_PUSH_PUBLIC_KEY: "synthetic-public-key",
+    TOUCHLINE_WEB_PUSH_PRIVATE_KEY: "synthetic-private-key",
+    TOUCHLINE_WEB_PUSH_SUBJECT: "mailto:qa@example.test",
+  };
+  assert.equal(inspectTouchlineIsolatedPreviewEnvironment(qaEnvironment(settings)).status, "qa");
+  for (const key of Object.keys(settings)) {
+    assert.equal(inspectTouchlineIsolatedPreviewEnvironment(isolatedEnvironment({ [key]: "sentinel" })).status, "invalid");
+    assert.equal(inspectTouchlineIsolatedPreviewEnvironment(qaEnvironment({ [`${key}_OTHER`]: "sentinel" })).status, "invalid");
+  }
+  for (const key of ["NEXT_PUBLIC_TOUCHLINE_WEB_PUSH_PRIVATE_KEY", "NEXT_PUBLIC_TOUCHLINE_WEB_PUSH_SUBJECT"]) {
+    const environment = qaEnvironment({ ...settings, [key]: "sentinel" });
+    assert.equal(inspectTouchlineIsolatedPreviewEnvironment(environment).status, "invalid");
+    assert.equal(resolveTouchlineIsolatedPreviewRoutePolicy("/clubowner", environment).status, "blocked");
+  }
+  for (const patch of [{ VERCEL_ENV: "production" }, { SUPABASE_URL: "https://other.supabase.co" }]) {
+    assert.equal(inspectTouchlineIsolatedPreviewEnvironment(qaEnvironment({ ...settings, ...patch })).status, "invalid");
+  }
+});
+
+test("phone rehearsal configuration names are private QA-only allowances, not send authority", () => {
+  const settings = {
+    TOUCHLINE_PUSH_REHEARSAL_ENABLED: "false",
+    TOUCHLINE_PUSH_REHEARSAL_ACCOUNT_ID: "11111111-1111-4111-8111-111111111111",
+    TOUCHLINE_PUSH_REHEARSAL_INSTALLATION_ID: "22222222-2222-4222-8222-222222222222",
+    TOUCHLINE_PUSH_REHEARSAL_ORIGIN: "https://qa.example.test",
+  };
+  assert.equal(inspectTouchlineIsolatedPreviewEnvironment(qaEnvironment(settings)).status, "qa");
+  for (const key of Object.keys(settings)) {
+    assert.equal(inspectTouchlineIsolatedPreviewEnvironment(isolatedEnvironment({ [key]: "sentinel" })).status, "invalid");
+    for (const forbidden of [`NEXT_PUBLIC_${key}`, `${key}_OTHER`]) {
+      assert.equal(inspectTouchlineIsolatedPreviewEnvironment(qaEnvironment({ [forbidden]: "sentinel" })).status, "invalid");
+    }
+  }
+  for (const patch of [{ VERCEL_ENV: "production" }, { SUPABASE_URL: "https://other.supabase.co" }]) {
+    assert.equal(inspectTouchlineIsolatedPreviewEnvironment(qaEnvironment({ ...settings, ...patch })).status, "invalid");
+  }
+});
+
+test("avatar read flag name is QA-only, never public, isolated or environment activation", () => {
+  const key = "TOUCHLINE_CLUB_OWNER_AVATAR_READ_ENABLED";
+  for (const value of ["false", "true"]) {
+    assert.equal(inspectTouchlineIsolatedPreviewEnvironment(qaEnvironment({ [key]: value })).status, "qa");
+    assert.equal(inspectTouchlineIsolatedPreviewEnvironment(isolatedEnvironment({ [key]: value })).status, "invalid");
+    for (const patch of [{ VERCEL_ENV: "production" }, { SUPABASE_URL: "https://other.supabase.co" },
+      { VERCEL_URL: undefined }, { VERCEL_URL: "invalid" }, { STRIPE_SECRET_KEY: "synthetic-forbidden" }]) {
+      assert.equal(inspectTouchlineIsolatedPreviewEnvironment(qaEnvironment({ [key]: value, ...patch })).status, "invalid");
+    }
+  }
+  for (const forbidden of [`NEXT_PUBLIC_${key}`, `${key}_OTHER`]) {
+    assert.equal(inspectTouchlineIsolatedPreviewEnvironment(qaEnvironment({ [forbidden]: "true" })).status, "invalid");
+  }
+});
+
+test("avatar upload configuration names admit only private QA preparation, never activation or notification authority", () => {
+  const keys = ["TOUCHLINE_CLUB_OWNER_AVATAR_UPLOAD_ENABLED", "TOUCHLINE_CLUB_OWNER_AVATAR_UPLOAD_ACCOUNT_ID"];
+  const settings = { [keys[0]]: "false", [keys[1]]: "11111111-1111-4111-8111-111111111111" };
+  const before = { ...settings };
+  assert.equal(inspectTouchlineIsolatedPreviewEnvironment(qaEnvironment(settings)).status, "qa");
+  for (const key of keys) {
+    assert.equal(inspectTouchlineIsolatedPreviewEnvironment(isolatedEnvironment({ [key]: settings[key] })).status, "invalid");
+    for (const forbidden of [`NEXT_PUBLIC_${key}`, `${key}_OTHER`]) {
+      assert.equal(inspectTouchlineIsolatedPreviewEnvironment(qaEnvironment({ ...settings, [forbidden]: "sentinel" })).status, "invalid");
+    }
+  }
+  for (const patch of [{ VERCEL_ENV: "production" }, { SUPABASE_URL: "https://other.supabase.co" },
+    { STRIPE_SECRET_KEY: "sentinel" }, { AWS_ACCESS_KEY_ID: "sentinel" }]) {
+    assert.equal(inspectTouchlineIsolatedPreviewEnvironment(qaEnvironment({ ...settings, ...patch })).status, "invalid");
+  }
+  assert.deepEqual(settings, before);
+});
+
+test("match push worker settings remain server-only and constrained to functional QA", () => {
+  const keys = ["TOUCHLINE_MATCH_PUSH_WORKER_ENABLED", "TOUCHLINE_MATCH_PUSH_WORKER_SECRET", "TOUCHLINE_MATCH_PUSH_SOURCE_AGE_POLICY"];
+  for (const enabled of ["false", "true"]) {
+    const settings = { [keys[0]]: enabled, [keys[1]]: "synthetic-secret-0000000000000000000000", [keys[2]]: "{}" };
+    assert.equal(inspectTouchlineIsolatedPreviewEnvironment(qaEnvironment(settings)).status, "qa");
+    assert.deepEqual(resolveTouchlineIsolatedPreviewRoutePolicy("/api/notifications/match-push/dispatch", qaEnvironment(settings)), { status: "inactive" });
+    for (const patch of [{ VERCEL_ENV: "production" }, { SUPABASE_URL: "https://other.supabase.co" }]) {
+      assert.equal(inspectTouchlineIsolatedPreviewEnvironment(qaEnvironment({ ...settings, ...patch })).status, "invalid");
+    }
+  }
+  for (const key of keys) {
+    assert.equal(inspectTouchlineIsolatedPreviewEnvironment(isolatedEnvironment({ [key]: "sentinel" })).status, "invalid");
+    for (const forbidden of [`NEXT_PUBLIC_${key}`, `${key}_OTHER`]) {
+      assert.equal(inspectTouchlineIsolatedPreviewEnvironment(qaEnvironment({ [forbidden]: "sentinel" })).status, "invalid");
+    }
+  }
+});
+
 test("exact private Golden Boot settings admit QA without weakening isolated or public boundaries", () => {
   const keys = ["TOUCHLINE_GOLDEN_BOOT_ENABLED", "TOUCHLINE_GOLDEN_BOOT_REFRESH_ENABLED", "TOUCHLINE_GOLDEN_BOOT_REFRESH_SECRET"];
-  const paths = ["/market-transfer", "/touchline-tables", "/touchline-clubs", "/api/touchline-awards/golden-boot", "/api/touchline-awards/golden-boot/refresh"];
+  const paths = ["/clubowner", "/rankings", "/touchline-clubs", "/api/touchline-awards/golden-boot", "/api/touchline-awards/golden-boot/refresh"];
   for (const enabled of ["false", "true"]) {
     const environment = qaEnvironment({ [keys[0]]: enabled, [keys[1]]: enabled, [keys[2]]: "synthetic-secret-not-real-000000000000" });
     assert.equal(inspectTouchlineIsolatedPreviewEnvironment(environment).status, "qa");
@@ -109,13 +247,13 @@ test("only an exact Vercel-bound isolated contract enables the inert preview rou
     "/auth/callback",
     "/login",
     "/arena",
-    "/market-transfer",
+    "/clubowner",
     "/admin",
     "/club-owner/me",
     "/live",
     "/touchline-clubs",
     "/touchline-players/example",
-    "/touchline-tables",
+    "/rankings",
     "/touchline-player-card-rankings",
     "/_next/image",
     "/robots.txt",
@@ -178,7 +316,7 @@ test("a dedicated QA Supabase contract enables functional Preview routes without
     status: "qa",
     reasons: [],
   });
-  assert.deepEqual(resolveTouchlineIsolatedPreviewRoutePolicy("/market-transfer", qaEnvironment()), {
+  assert.deepEqual(resolveTouchlineIsolatedPreviewRoutePolicy("/clubowner", qaEnvironment()), {
     status: "inactive",
   });
 
@@ -270,7 +408,10 @@ test("proxy and Preview shell enforce the boundary before product work", () => {
   const page = readFileSync(new URL("../app/preview/page.tsx", import.meta.url), "utf8");
   const config = readFileSync(new URL("../next.config.ts", import.meta.url), "utf8");
 
-  assert.ok(proxy.indexOf("resolveTouchlineIsolatedPreviewRoutePolicy(pathname)") < proxy.indexOf("canonicalPresentationLocaleRedirect(request)"));
+  const isolationPolicy = proxy.indexOf("resolveTouchlineIsolatedPreviewRoutePolicy(pathname)");
+  const localeRedirect = proxy.indexOf("canonicalPresentationLocaleRedirect(request, draftLocalesEnabled)");
+  assert.ok(isolationPolicy >= 0 && localeRedirect >= 0);
+  assert.ok(isolationPolicy < localeRedirect);
   assert.ok(proxy.indexOf("resolveTouchlineIsolatedPreviewRoutePolicy(pathname)") < proxy.indexOf("NEXT_PUBLIC_SUPABASE_URL"));
   assert.match(proxy, /x-touchline-preview/);
   assert.match(proxy, /request blocked by Preview contract/);

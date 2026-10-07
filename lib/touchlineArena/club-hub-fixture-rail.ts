@@ -1,5 +1,6 @@
 import type { TouchLineLocale } from "./i18n.ts";
 import { touchlineFixtureState } from "./match-centre.ts";
+import { getTouchlineClubHubFixtureCopy } from "./club-hub-fixture-i18n.ts";
 
 type ClubHubFixtureRailSource = Readonly<{
   startsAt?: string;
@@ -68,9 +69,10 @@ export function resolveClubHubFixtureRail(
   fixture: ClubHubFixtureRailSource,
   locale: TouchLineLocale,
   now = Date.now(),
+  draftLocalesEnabled = false,
 ): ClubHubFixtureRailPresentation {
   const state = touchlineFixtureState(fixture, now);
-  const portuguese = locale === "pt-BR";
+  const copy = getTouchlineClubHubFixtureCopy(locale, draftLocalesEnabled);
   const score = validScore(fixture.homeScore) && validScore(fixture.awayScore)
     ? `${fixture.homeScore}–${fixture.awayScore}`
     : null;
@@ -79,15 +81,15 @@ export function resolveClubHubFixtureRail(
     : null;
 
   if (state === "live") {
-    return { state, heading: portuguese ? "AO VIVO" : "LIVE", score, liveMinute };
+    return { state, heading: copy.live, score, liveMinute };
   }
   if (state === "finished") {
-    return { state, heading: portuguese ? "ENCERRADO" : "FULL TIME", score, liveMinute: null };
+    return { state, heading: copy.finished, score, liveMinute: null };
   }
   if (state === "upcoming") {
-    return { state, heading: portuguese ? "PRÓXIMO JOGO" : "NEXT MATCH", score: null, liveMinute: null };
+    return { state, heading: copy.nextMatch, score: null, liveMinute: null };
   }
-  return { state, heading: portuguese ? "ATUALIZAÇÃO DA PARTIDA" : "MATCH UPDATE", score: null, liveMinute: null };
+  return { state, heading: copy.matchUpdate, score: null, liveMinute: null };
 }
 
 /**

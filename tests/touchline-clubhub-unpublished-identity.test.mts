@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import vm from "node:vm";
 import test from "node:test";
 import ts from "typescript";
+import { getTouchlineExactCardCopy } from "../lib/touchlineArena/exact-card-i18n.ts";
 
 // Execute the real component's publication/render guard. This is not a
 // browser or full-component rendering claim; no second guard is implemented.
@@ -61,8 +62,10 @@ test("default commercial surfaces remain closed, with existing publication and c
 
 test("only explicit ClubHub card and zoom consumers request the non-commercial display", () => {
   assert.match(source, /showUnpublishedIdentity = false/);
-  assert.match(source, /Card publication pending/);
-  assert.match(source, /Publicação do card pendente/);
+  assert.equal(getTouchlineExactCardCopy("en-GB").publicationPending, "Card publication pending");
+  assert.equal(getTouchlineExactCardCopy("pt-BR").publicationPending, "Publicação do card pendente");
+  assert.match(source, /const exactCopy = getTouchlineExactCardCopy\(runtimeLocale, draftLocalesEnabled\)/);
+  assert.match(source, /publicationPending\s*\? exactCopy\.publicationPending\s*: exactCopy\.reviewRequired/);
   for (const name of ["ClubHubOfficialLineup", "ClubHubSquadGrid", "ClubHubMatchdayTechnicalArea"]) {
     const caller = readFileSync(new URL(`../components/touchline/${name}.tsx`, import.meta.url), "utf8");
     assert.equal((caller.match(/showUnpublishedIdentity/g) ?? []).length, 2, `${name}: pitch/bench/roster plus zoom`);

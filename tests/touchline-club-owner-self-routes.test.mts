@@ -4,19 +4,19 @@ import test from "node:test";
 
 const proxySource = readFileSync(new URL("../proxy.ts", import.meta.url), "utf8");
 const legacyMarketSource = readFileSync(
-  new URL("../app/market-transfer/page.tsx", import.meta.url),
+  new URL("../app/clubowner/page.tsx", import.meta.url),
   "utf8",
 );
 
 test("Market discards unused contract context and keeps the authenticated customer destination", () => {
-  assert.match(legacyMarketSource, /const destination = `\/market-transfer\?lang=/);
-  assert.match(legacyMarketSource, /if \(!user\) redirect\(touchLineAuthEntryHref\("\/login", locale, destination\)\)/);
+  assert.match(legacyMarketSource, /const destination = `\/clubowner\?lang=/);
+  assert.match(legacyMarketSource, /if \(!user\) redirect\(touchLineAuthEntryHref\("\/login", locale, destination, draftLocalesEnabled\)\)/);
   assert.doesNotMatch(legacyMarketSource, /contractPlayer|contractName|contractClub/);
 });
 
 test("proxy retains My Club's real safe 404 without resolving retired owner identities", () => {
   assert.doesNotMatch(proxySource, /resolveTouchlineClubOwnerRouteAccess|touchlineClubOwnerSlugForUser/);
-  assert.match(proxySource, /if \(isRetiredClubOwnerRoute\) return retiredClubOwnerRedirect\(request\)/);
+  assert.match(proxySource, /if \(isRetiredClubOwnerRoute\) return retiredClubOwnerRedirect\(request, draftLocalesEnabled\)/);
   assert.match(proxySource, /if \(isMyClubRoute && isAdmin\) return clubOwnerNotFoundResponse\(request, response\)/);
   assert.match(proxySource, /clubOwnerNotFoundResponse\(request, response\)/);
   assert.match(proxySource, /status:\s*404/);

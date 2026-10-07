@@ -1,4 +1,5 @@
 import { normalizeTouchlineMatchCentreTimeZone } from "./match-centre.ts";
+import { resolveTouchlineCatalogueLocale } from "./catalogue-locale.ts";
 
 export type TouchlineLocalKickoff = Readonly<{
   date: string;
@@ -13,7 +14,16 @@ const SHORT_MONTHS = {
 } as const;
 
 function stableShortDate(kickoff: Date, timeZone: string, locale: string) {
+  if (locale !== "en-GB" && locale !== "pt-BR") {
+    return new Intl.DateTimeFormat(locale, {
+      calendar: "gregory",
+      day: "numeric",
+      month: "short",
+      timeZone,
+    }).format(kickoff);
+  }
   const parts = new Intl.DateTimeFormat("en-CA", {
+    calendar: "gregory",
     day: "numeric",
     month: "numeric",
     timeZone,
@@ -30,21 +40,25 @@ export function formatTouchlineLocalKickoff(
   startsAt: string,
   requestedTimeZone: string,
   locale = "en-GB",
+  draftLocalesEnabled = false,
 ): TouchlineLocalKickoff | null {
   const timestamp = Date.parse(startsAt);
   if (!Number.isFinite(timestamp)) return null;
 
   const kickoff = new Date(timestamp);
   const timeZone = normalizeTouchlineMatchCentreTimeZone(requestedTimeZone);
-  const date = stableShortDate(kickoff, timeZone, locale);
+  const resolvedLocale = resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled);
+  const date = stableShortDate(kickoff, timeZone, resolvedLocale);
   if (!date) return null;
-  const time = new Intl.DateTimeFormat(locale, {
+  const time = new Intl.DateTimeFormat(resolvedLocale, {
+    calendar: "gregory",
     hour: "2-digit",
     hour12: false,
     minute: "2-digit",
     timeZone,
   }).format(kickoff);
-  const zoneName = new Intl.DateTimeFormat(locale, {
+  const zoneName = new Intl.DateTimeFormat(resolvedLocale, {
+    calendar: "gregory",
     hour: "2-digit",
     timeZone,
     timeZoneName: "short",

@@ -1,9 +1,13 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { getTouchlineExactCardCopy } from "../lib/touchlineArena/exact-card-i18n.ts";
+import { getTouchlinePlayerZoomIdentityCopy } from "../lib/touchlineArena/player-zoom-identity-i18n.ts";
+import { buildTouchlinePlayerCardZoomDetails } from "../lib/touchlineArena/card-zoom-details.ts";
 
 import {
   resolveTouchlinePublicEditorialCardPresentation,
+  formatTouchlineMarketValueEur,
 } from "../lib/touchlineArena/editorial-card-profile.ts";
 
 const card = readFileSync(
@@ -77,8 +81,10 @@ test("the shared exact card preserves the editorial tier and exposes verified Ma
 
   assert.doesNotMatch(card, /resolveTouchlineVerifiedPlayerEconomy/);
   assert.doesNotMatch(card, /resolveTouchlinePublicCardPresentation/);
-  assert.match(card, /marketValue: "Market value"/);
-  assert.match(card, /marketValue: "Valor de mercado"/);
+  assert.equal(getTouchlineExactCardCopy("en-GB").marketValue, "Market value");
+  assert.equal(getTouchlineExactCardCopy("pt-BR").marketValue, "Valor de mercado");
+  assert.match(card, /const exactCopy = getTouchlineExactCardCopy\(runtimeLocale, draftLocalesEnabled\)/);
+  assert.match(card, /cardLabels\.marketValue \?\? exactCopy\.marketValue/);
 });
 
 test("an unpublished football player cannot become a commercial card through artwork or a legacy price", () => {
@@ -132,8 +138,29 @@ test("ClubHub grid, official lineup and zoom use the shared editorial presentati
   assert.match(zoomDetails, /editorialCard\?: TouchlinePublicEditorialCardPresentation \| null/);
   assert.match(zoomDetails, /formatTouchlineMarketValueEur\(input\.editorialCard\.marketValueEur, input\.locale\)/);
   assert.doesNotMatch(zoomDetails, /resolveTouchlinePublicCardPresentation/);
-  assert.match(zoomDetails, /["']Market value["']/);
-  assert.match(zoomDetails, /["']Valor de mercado["']/);
+  for (const locale of ["en-GB", "pt-BR"]) {
+    const copy = getTouchlinePlayerZoomIdentityCopy(locale);
+    assert.equal(copy.marketValue, locale === "pt-BR" ? "Valor de mercado" : "Market value");
+    assert.equal(copy.provisionalValue, locale === "pt-BR" ? "Valor provisório" : "Provisional value");
+    const published = resolveTouchlinePublicEditorialCardPresentation(editorialRecord);
+    assert.ok(published);
+    const scenarios = [
+      { editorialCard: { ...published, marketValueEur: 2_000_000, marketValueState: "verified" as const }, label: copy.marketValue, value: formatTouchlineMarketValueEur(2_000_000, locale) },
+      { editorialCard: { ...published, marketValueEur: 1_000_000, marketValueState: "provisional" as const }, label: copy.provisionalValue, value: "€1M" },
+      { editorialCard: { ...published, marketValueEur: 0, marketValueState: "verified" as const }, label: copy.marketValue, value: formatTouchlineMarketValueEur(0, locale) },
+      { editorialCard: published, marketValue: "VERIFIED_SOURCE", marketValueState: "verified", label: copy.marketValue, value: "VERIFIED_SOURCE" },
+      { editorialCard: published, marketValue: "UNVERIFIED_SOURCE", marketValueState: "unavailable", label: copy.marketValue, value: copy.pending },
+    ];
+    for (const { label, value, ...input } of scenarios) {
+      const details = buildTouchlinePlayerCardZoomDetails({ locale, name: "Canonical Player", ...input });
+      const valueField = details.fields.find((field) => field.icon === "player-identity-price");
+      assert.ok(valueField);
+      assert.equal(valueField.label, label);
+      assert.equal(valueField.value, value);
+      assert.equal(details.fields.some((field) => /Card price|Preço do card/.test(field.label)), false);
+      assert.equal(details.fields.some((field) => /1500|£15|GBP|UNVERIFIED_SOURCE/.test(field.value)), false);
+    }
+  }
 });
 
 test("ClubHub game-card surfaces never use contract or unverified valuation fallback", () => {

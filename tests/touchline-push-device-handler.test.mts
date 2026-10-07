@@ -32,10 +32,34 @@ test("device registration uses verified identity and only acknowledges completed
   const { deps, writes } = harness();
   const response = await handlePushDeviceRegistration(request(), deps);
   assert.equal(response.status, 200);
-  assert.deepEqual(await response.json(), { ok: true, delivery: "not-sent" });
+  assert.deepEqual(await response.json(), { ok: true, delivery: "not-sent", accountId: "verified-account", installationId: registration.installationId });
   assert.equal(response.headers.get("cache-control"), "private, no-store");
   assert.equal(response.headers.get("vary"), "Cookie");
   assert.deepEqual(writes, [{ userId: "verified-account", registration, userAgent: null }]);
+});
+
+test("optional expected-account condition rejects malformed or changed identity before storage", async () => {
+  const accountId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+  for (const [expected, status] of [["", 400], ["verified-account", 400], [registration.installationId, 409], [accountId, 200], [accountId.toUpperCase(), 200]] as const) {
+    const { deps, writes } = harness(); deps.actor = async () => ({ id: accountId, allowed: true });
+    const input = request(); input.headers.set("x-touchline-expected-account", expected);
+    const response = await handlePushDeviceRegistration(input, deps);
+    assert.equal(response.status, status); assert.equal(writes.length, status === 200 ? 1 : 0);
+    if (status === 200) assert.deepEqual(await response.json(), { ok: true, delivery: "not-sent", accountId, installationId: registration.installationId });
+  }
+});
+
+test("request cancellation before save fences storage but does not promise rollback after save began", async () => {
+  const controller = new AbortController();
+  const { deps, writes } = harness();
+  deps.actor = async () => { controller.abort(); return { id: "verified-account", allowed: true }; };
+  assert.equal((await handlePushDeviceRegistration(new Request(request(), { signal: controller.signal }), deps)).status, 503);
+  assert.deepEqual(writes, []);
+  const ongoing = new AbortController();
+  const started = harness();
+  started.deps.save = async value => { started.writes.push(value); ongoing.abort(); };
+  const response = await handlePushDeviceRegistration(new Request(request(), { signal: ongoing.signal }), started.deps);
+  assert.equal(response.status, 503); assert.equal(started.writes.length, 1);
 });
 test("anonymous and disallowed accounts never register devices", async () => {
   for (const actor of [null, { id: "restricted", allowed: false }]) {

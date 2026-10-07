@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { getTouchlineCardZoomCopy } from "../lib/touchlineArena/card-zoom-i18n.ts";
 
 const root = new URL("../", import.meta.url);
 
@@ -28,7 +29,9 @@ test("pitch cards open upright without a second floating player-name box", async
   assert.match(market, /<TouchlineCardZoom/);
   assert.doesNotMatch(market, /styles\.playerName/);
   assert.doesNotMatch(lineup, /styles\.playerName/);
-  assert.match(lineup, /ariaLabel=\{`\$\{isPortuguese \? "Ampliar card de"/);
+  assert.match(lineup, /const zoomCopy = getTouchlineCardZoomCopy\(locale, draftLocalesEnabled\)/);
+  assert.match(lineup, /ariaLabel=\{zoomCopy\.expandCard\.replace\("\{playerName\}", \(\) => card\.name\)\}/);
+  assert.equal(getTouchlineCardZoomCopy("pt-BR").expandCard, "Ampliar card de {playerName}");
   assert.match(market, /expandedContent=\{<TouchlineEliteExactCard/);
   assert.match(lineup, /expandedContent=\{\([\s\S]*?<TouchlineEliteExactCard/);
 });

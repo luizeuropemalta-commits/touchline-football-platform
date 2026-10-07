@@ -5,6 +5,10 @@ import TouchlineClubPerimeterTrace from "@/components/touchline/TouchlineClubPer
 import styles from "./ClubHubSquadGrid.module.css";
 
 import TouchlineCardZoom from "@/components/touchline/cards/TouchlineCardZoom";
+import { getTouchlineCardZoomCopy } from "@/lib/touchlineArena/card-zoom-i18n";
+import { getTouchlineExactCardCopy } from "@/lib/touchlineArena/exact-card-i18n";
+import { getTouchlineClubHubRosterCopy, getTouchlineClubHubContractLabel } from "@/lib/touchlineArena/club-hub-roster-i18n";
+import { touchlinePlayerPositionKind } from "@/lib/touchlineArena/position-aware-card-stats";
 import TouchlineEliteExactCard from "@/components/touchline/cards/TouchlineEliteExactCard";
 import {
   TOUCHLINE_CARD_STUDIO_LAYOUT_KEY,
@@ -33,6 +37,7 @@ const CARD_BATCH_SIZE = 8;
 type ClubHubSquadGridProps = {
   cards: ClubOwnerSquadCard[];
   locale: TouchLineLocale;
+  draftLocalesEnabled?: boolean;
   labels: {
     nationality: string;
     points: string;
@@ -44,6 +49,7 @@ type ClubHubSquadGridProps = {
   canEditCardEngine?: boolean;
   initialCardCount?: number;
   cardRenderScale?: number;
+  hideMarketValuePanel?: boolean;
   className?: string;
 };
 
@@ -53,19 +59,22 @@ type ClubHubSquadGridProps = {
  * them. This preserves the canonical card component without hydrating 25–30
  * heavy products during the first mobile render.
  */
-export default function ClubHubSquadGrid({ cards, locale, labels, openProfileLabel, canEditCardEngine = false, initialCardCount = INITIAL_CARD_COUNT, cardRenderScale = 180 / 430, className }: ClubHubSquadGridProps) {
+export default function ClubHubSquadGrid({ cards, locale, labels, openProfileLabel, canEditCardEngine = false, initialCardCount = INITIAL_CARD_COUNT, cardRenderScale = 180 / 430, hideMarketValuePanel = false, className, draftLocalesEnabled = false }: ClubHubSquadGridProps) {
   const [visibleCount, setVisibleCount] = useState(initialCardCount);
   // The footballer remains present on every Club Hub surface. Published
   // profiles render in colour; incomplete editorial inputs use the same
   // premium grayscale card instead of silently removing the real player.
   const visibleCards = useMemo(() => cards.slice(0, visibleCount), [cards, visibleCount]);
   const hasMore = visibleCards.length < cards.length;
-  const pt = locale === "pt-BR";
+  const zoomCopy = getTouchlineCardZoomCopy(locale, draftLocalesEnabled);
+  const exactCopy = getTouchlineExactCardCopy(locale, draftLocalesEnabled);
+  const rosterCopy = getTouchlineClubHubRosterCopy(locale, draftLocalesEnabled);
 
   return (
     <>
       <div className={["club-hub-card-grid", styles.grid, className].filter(Boolean).join(" ")} aria-live="polite">
         {visibleCards.map((card, index) => {
+          const positionKind = touchlinePlayerPositionKind(card.position);
           const cardReview = card.cardReview ?? evaluateTouchlineCardCompleteness({
             displayName: card.name,
             shirtNumber: card.shirtNumber,
@@ -79,7 +88,7 @@ export default function ClubHubSquadGrid({ cards, locale, labels, openProfileLab
           const tierAccent = tierKey
             ? touchlineCardTierPalette(tierKey).accent
             : TOUCHLINE_NEUTRAL_CARD_ACCENT;
-          const tierLabel = tierKey ? touchlineCardTierName(tierKey, locale) : undefined;
+          const tierLabel = tierKey ? touchlineCardTierName(tierKey, locale, draftLocalesEnabled) : undefined;
           const profileHref = touchlinePlayerProfileHref({
             sportmonksPlayerId: card.id,
             name: card.name,
@@ -98,39 +107,46 @@ export default function ClubHubSquadGrid({ cards, locale, labels, openProfileLab
             >
               <TouchlineClubPerimeterTrace accent={tierKey ? tierAccent : undefined} />
               <span className={`club-hub-rank ${styles.rank}`}>#{index + 1}</span>
-              <TouchlineCardZoom
-                ariaLabel={`${pt ? "Ampliar card de" : "Expand card for"} ${card.name}`}
+              <TouchlineCardZoom draftLocalesEnabled={draftLocalesEnabled}
+                locale={locale}
+                ariaLabel={zoomCopy.expandCard.replace("{playerName}", () => card.name)}
                 contractHref={undefined}
-                contractLabel={pt ? "Contratar" : "Contract player"}
+                contractLabel={getTouchlineClubHubContractLabel(locale, draftLocalesEnabled)}
                 contractValue={undefined}
                 contractTermLabel={undefined}
                 tierAccent={tierAccent}
                 tierLabel={tierLabel}
                 details={buildTouchlinePlayerCardZoomDetails({
                   locale,
+                  draftLocalesEnabled,
                   name: card.name,
                   clubName: card.clubName,
                   position: card.position,
+                  positionKind: positionKind === "unknown" ? undefined : positionKind,
                   nationality: card.countryCode3,
                   editorialCard: card.editorialCard,
                   cardReview,
                   activeContractCard: null,
                   extraFields: [
                     {
-                      label: pt ? "Nota total" : "Total rating",
+                      label: exactCopy.totalRating,
                       value: card.seasonTotalRating == null ? "—" : String(card.seasonTotalRating),
                       accent: true,
+                      kind: "rating-total",
+                      icon: "rating",
+                      primary: true,
                     },
                     {
-                      label: pt ? "Nota da última partida" : "Last match rating",
+                      label: zoomCopy.lastMatchRating,
                       value: card.matchRating == null ? "—" : String(card.matchRating),
                       accent: true,
                       kind: "rating-last",
+                      icon: "rating",
                     },
                     ...buildTouchlineVerifiedMatchFactFields({
                       statistics: card.matchStats,
                       position: card.position || card.role,
-                    }, locale),
+                    }, locale, draftLocalesEnabled),
                   ],
                   profileHref,
                   cardEngineHref: canEditCardEngine
@@ -138,7 +154,7 @@ export default function ClubHubSquadGrid({ cards, locale, labels, openProfileLab
                     : null,
                 })}
                 expandedContent={(
-                  <TouchlineEliteExactCard
+                  <TouchlineEliteExactCard draftLocalesEnabled={draftLocalesEnabled} runtimeLocaleOverride={locale}
                     player={exactPlayer}
                     showUnpublishedIdentity
                     labels={labels}
@@ -147,10 +163,11 @@ export default function ClubHubSquadGrid({ cards, locale, labels, openProfileLab
                     playerProfileHref={profileHref}
                     staticRenderScale={390 / 430}
                     forceNeonActive
+                    hideMarketValuePanel={hideMarketValuePanel}
                   />
                 )}
               >
-                <TouchlineEliteExactCard
+                <TouchlineEliteExactCard draftLocalesEnabled={draftLocalesEnabled} runtimeLocaleOverride={locale}
                   className={`club-hub-rendered-card ${styles.artwork}`}
                   player={exactPlayer}
                   showUnpublishedIdentity
@@ -159,14 +176,15 @@ export default function ClubHubSquadGrid({ cards, locale, labels, openProfileLab
                   initialRenderScale={cardRenderScale}
                   layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY}
                   playerProfileHref={profileHref}
-                  showProfileAction={false}
+                    showProfileAction={false}
+                    hideMarketValuePanel={hideMarketValuePanel}
                     showSocialMetrics={false}
                     showMatchRating
                 />
               </TouchlineCardZoom>
               <div className={`club-hub-card-meta ${styles.meta}`}>
                 <a href={profileHref} aria-label={`${openProfileLabel}: ${card.name}`}>{openProfileLabel}</a>
-                <small>{localizedPositionLabel(card.position, locale)}</small>
+                <small>{localizedPositionLabel(card.position, locale, draftLocalesEnabled)}</small>
               </div>
             </article>
           );
@@ -174,10 +192,10 @@ export default function ClubHubSquadGrid({ cards, locale, labels, openProfileLab
       </div>
 
       <div className={`club-hub-progressive-controls ${styles.controls}`}>
-        <span>{pt ? `${visibleCards.length} de ${cards.length} jogadores exibidos` : `${visibleCards.length} of ${cards.length} players shown`}</span>
+        <span>{rosterCopy.shown.replace("{shown}", () => String(visibleCards.length)).replace("{total}", () => String(cards.length))}</span>
         {hasMore ? (
           <button type="button" onClick={() => setVisibleCount((current) => Math.min(cards.length, current + CARD_BATCH_SIZE))}>
-            {pt ? `Ver mais ${Math.min(CARD_BATCH_SIZE, cards.length - visibleCards.length)}` : `View ${Math.min(CARD_BATCH_SIZE, cards.length - visibleCards.length)} more`}
+            {rosterCopy.loadMore.replace("{count}", () => String(Math.min(CARD_BATCH_SIZE, cards.length - visibleCards.length)))}
           </button>
         ) : null}
       </div>

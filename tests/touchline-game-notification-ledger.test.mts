@@ -1,0 +1,84 @@
+import assert from "node:assert/strict";
+import {readFile} from "node:fs/promises";
+import test from "node:test";
+const modulePath=process.env.TOUCHLINE_FANTASY_PGLITE_MODULE;
+const root=new URL("../",import.meta.url);
+const id=(n:number)=>`00000000-0000-4000-8000-${String(n).padStart(12,"0")}`;
+test("game reminder bookkeeping baselines, admits once, revokes ABA and preserves tombstone",{skip:!modulePath},async()=>{
+ const {PGlite}=await import(modulePath!);const db=new PGlite();
+ try {
+  // Standalone reduced schema: do not parse executable source from another test.
+  await db.exec(`create role anon;create role authenticated;create role service_role bypassrls;
+   create schema auth;create table auth.users(id uuid primary key);create table public.users(id uuid primary key references auth.users(id) on delete cascade);
+   create table football_rounds(id uuid primary key,competition_id uuid,season_id uuid,name text);
+   create table football_fixtures(id uuid primary key,round_id uuid,starts_at timestamptz,status text,finalized_at timestamptz,competition_id uuid,season_id uuid);
+   create table touchline_fantasy_configs(competition_id uuid,season_id uuid,status text);
+   create table touchline_fantasy_gameweeks(id uuid primary key default gen_random_uuid(),competition_id uuid,season_id uuid,round_id uuid unique,gameweek_number integer,state text,market_opens_at timestamptz,locks_at timestamptz,first_fixture_at timestamptz,last_fixture_at timestamptz);
+   create table touchline_fantasy_user_gameweeks(id uuid primary key,user_id uuid,gameweek_id uuid,state text,formation_code text,selected_coach_id text);
+   create table touchline_fantasy_user_gameweek_selections(user_gameweek_id uuid,player_id uuid,slot_id text,slot_index integer);
+   create table touchline_formation_geometry_versions(id uuid primary key,formation_code text,status text,geometry jsonb,validation_report jsonb);
+   create function touchline_fantasy_fixture_is_live(text) returns boolean language sql immutable as $$select $1='LIVE'$$;
+   create function touchline_fantasy_fixture_is_final(text) returns boolean language sql immutable as $$select $1='FT'$$;
+   grant usage on schema public to anon,authenticated,service_role;`);
+  await db.exec(`create table notification_preferences(user_id uuid primary key,channels jsonb,settings jsonb,frequency text,explicit_consent_at timestamptz,quiet_hours jsonb);
+   create table notification_devices(id uuid primary key,user_id uuid,installation_id uuid,permission text,push_subscription jsonb);`);
+  const reg=await readFile(new URL("supabase/qa/028_touchline_qa_formation_geometry_registry.sql",root),"utf8");
+  const a=reg.indexOf("create or replace function public.touchline_formation_geometry_payload_is_valid(");const b=reg.indexOf("$$;",a);assert.ok(a>=0&&b>a);await db.exec(reg.slice(a,b+3));
+  for(const f of ["20261002031429_touchline_fantasy_shared_market_window_projection.sql","20261002032250_touchline_fantasy_lineup_reminder_read.sql","20261002033308_touchline_game_notification_ledger.sql"])await db.exec(await readFile(new URL(`supabase/migrations/${f}`,root),"utf8"));
+  await db.exec(`insert into auth.users values('${id(1)}'),('${id(2)}');insert into public.users select id from auth.users;
+   insert into touchline_fantasy_configs values('${id(10)}','${id(11)}','active');
+   insert into football_rounds values('${id(12)}','${id(10)}','${id(11)}','Round 1');
+   insert into football_fixtures values('${id(13)}','${id(12)}',clock_timestamp()+interval '1 day','NS',null,'${id(10)}','${id(11)}');
+   insert into touchline_fantasy_gameweeks values('${id(14)}','${id(10)}','${id(11)}','${id(12)}',1,'MARKET_OPEN',clock_timestamp()-interval '6 days',clock_timestamp()+interval '1 day',clock_timestamp()+interval '1 day',clock_timestamp()+interval '1 day');
+   insert into notification_preferences select id,'{"push":true}','{"lineupReminders":true}','realtime',clock_timestamp()-interval '1 hour','{"enabled":false}' from auth.users;
+   insert into notification_devices values('${id(30)}','${id(1)}','${id(31)}','granted','{"endpoint":"https://push.invalid/a","keys":{"auth":"AAAAAAAAAAAAAAAAAAAAAA","p256dh":"BAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"}}');
+   insert into notification_devices select '${id(40)}','${id(2)}','${id(41)}',permission,push_subscription from notification_devices where id='${id(30)}';
+   insert into touchline_fantasy_user_gameweeks values('${id(20)}','${id(2)}','${id(14)}','DRAFT','4-3-3','307');`);
+  const geometry={schemaVersion:1,formationCode:"4-3-3",slots:Array.from({length:11},(_,i)=>({id:`S${i}`,x:50,y:50,role:i===0?"goalkeeper":i<5?"defender":i<8?"midfielder":"forward",priority:i+1,allowedPositions:["ST"]}))};
+  await db.query("insert into touchline_formation_geometry_versions values($1,'4-3-3','published',$2,$3)",[id(15),JSON.stringify(geometry),JSON.stringify({publishable:true,formationCode:"4-3-3",slotCount:11})]);
+  const call=async(lead=4,user=id(1))=>(await db.query("select touchline_game_notification_admit($1,$2,$3) r",[user,id(14),lead])).rows[0].r;
+  for(const coach of ["0","000307","1234567890123456"]){
+   await db.exec("begin");
+   await db.query("update touchline_fantasy_user_gameweeks set selected_coach_id=$1",[coach]);
+   assert.equal((await call(4,id(2))).status,"baselined-or-suppressed","accept persisted numeric coach contract");
+   await db.exec("rollback");
+  }
+  assert.equal((await call(0)).status,"unavailable");
+  await db.exec("update touchline_formation_geometry_versions set status='superseded'");assert.equal((await call()).status,"unavailable");
+  assert.equal((await db.query("select count(*) n from touchline_game_notification_enrollments")).rows[0].n,0);
+  for(let i=0;i<10;i++)await db.query("insert into touchline_fantasy_user_gameweek_selections values($1,$2,$3,$4)",[id(20),id(100+i),`S${i}`,i+1]);
+  await db.exec("update touchline_formation_geometry_versions set status='published';update football_fixtures set starts_at=clock_timestamp()+interval '5 seconds'");
+  assert.equal((await call()).status,"baselined-or-suppressed");
+  assert.equal((await call(4,id(2))).status,"baselined-or-suppressed");
+  await db.query("insert into touchline_fantasy_user_gameweek_selections values($1,$2,'S10',11)",[id(20),id(110)]);
+  await db.exec("select pg_sleep(1.1)");
+  const first=await call();assert.equal(first.status,"stored");assert.equal(first.deliveries,1);
+  const second=await call(4,id(2));assert.equal(second.status,"stored");
+  assert.equal((await db.query("select kind from touchline_game_notification_identities where id=$1",[second.id])).rows[0].kind,"complete_unconfirmed");
+  await db.exec("begin;delete from touchline_fantasy_user_gameweek_selections where slot_id='S10'");
+  assert.equal((await call(4,id(2))).status,"stored");
+  assert.equal((await db.query("select state from touchline_game_notification_deliveries where identity_id=$1",[second.id])).rows[0].state,"cancelled","obsolete kind cancelled on re-admission");
+  await db.exec("rollback");
+  await db.exec("update touchline_fantasy_user_gameweeks set state='CONFIRMED'");assert.equal((await call(4,id(2))).status,"closed");
+  assert.equal((await call()).status,"existing");
+  await db.exec(`insert into notification_devices select '${id(32)}','${id(1)}','${id(33)}',permission,push_subscription from notification_devices where id='${id(30)}'`);
+  assert.equal((await call()).status,"existing");
+  assert.equal((await db.query("select count(*) n from touchline_game_notification_deliveries where identity_id=$1",[first.id])).rows[0].n,1,"late device not appended");
+  await db.exec(`update notification_preferences set settings='{"lineupReminders":false}' where user_id='${id(1)}';update notification_preferences set settings='{"lineupReminders":true}' where user_id='${id(1)}'`);
+  assert.equal((await db.query("select state from touchline_game_notification_deliveries where identity_id=$1",[first.id])).rows[0].state,"cancelled");
+  assert.equal((await call()).status,"baselined-or-suppressed");
+  await db.exec("update touchline_game_notification_deliveries set payload=null");
+  assert.equal((await db.query("select count(*) n from touchline_game_notification_identities")).rows[0].n,2);
+  await db.exec("update football_fixtures set starts_at=clock_timestamp()+interval '1 day'");
+  assert.equal((await call()).status,"baselined-or-suppressed","rescheduling never revives suppressed round");
+  assert.equal((await db.query("select suppressed from touchline_game_notification_enrollments where device_id=$1",[id(32)])).rows[0].suppressed,true);
+  await db.exec("update football_fixtures set starts_at=clock_timestamp()-interval '1 second'");assert.equal((await call()).status,"closed");
+  await assert.rejects(db.exec("update touchline_game_notification_deliveries set expires_at=created_at"),/check constraint/);
+  for(const role of ["anon","authenticated"]){await db.exec(`set role ${role}`);await assert.rejects(call(),/permission denied/);await db.exec("reset role");}
+  await db.exec("set role service_role");await assert.rejects(db.exec("delete from touchline_game_notification_identities"),/permission denied/);await db.exec("reset role");
+  await db.exec(`delete from auth.users where id='${id(1)}'`);
+  assert.equal((await db.query("select count(*) n from touchline_game_notification_identities where user_id=$1",[id(1)])).rows[0].n,0);
+  assert.equal((await db.query("select count(*) n from public.users where id=$1",[id(1)])).rows[0].n,0);
+  assert.equal((await call()).status,"unavailable","deleted account cannot re-enroll");
+ } finally {await db.close();}
+});

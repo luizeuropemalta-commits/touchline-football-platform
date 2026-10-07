@@ -8,7 +8,7 @@ function source(path: string) {
 
 test("coach cards open the canonical zoom before the full profile on category, tables, and Market surfaces", () => {
   const category = source("components/touchline/TouchlineCoachCategoryShowcase.tsx");
-  const tables = source("app/touchline-tables/touchline-tables-client.tsx");
+  const tables = source("app/rankings/touchline-tables-client.tsx");
   const snapshot = source("app/fantasy/FantasyGameweekClient.tsx");
 
   for (const surface of [category, tables, snapshot]) {

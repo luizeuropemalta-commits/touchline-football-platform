@@ -2,9 +2,10 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { touchlineCoachRankingClubLogo } from '../lib/touchlineArena/coach-ranking-club.ts';
+import { getTouchlineTablesPresentationCopy } from '../lib/touchlineArena/tables-presentation-i18n.ts';
 
-const source = readFileSync(new URL('../app/touchline-tables/touchline-tables-client.tsx', import.meta.url), 'utf8');
-const css = readFileSync(new URL('../app/touchline-tables/touchline-tables.module.css', import.meta.url), 'utf8');
+const source = readFileSync(new URL('../app/rankings/touchline-tables-client.tsx', import.meta.url), 'utf8');
+const css = readFileSync(new URL('../app/rankings/touchline-tables.module.css', import.meta.url), 'utf8');
 const rows = source.slice(source.indexOf('{topSevenCoaches.map((coach)'), source.indexOf('</ol> : <RankingPending', source.indexOf('{topSevenCoaches.map((coach)')));
 
 test('Top 7 resolves the club by coach identity and suppresses a crest contradicting the snapshot', () => {
@@ -41,8 +42,13 @@ test('Top 7 retains separate localized result labels and a panel-width fallback'
     ['Empates', 'Draws', 'draws', 'E', 'D'],
     ['Derrotas', 'Losses', 'losses', 'D', 'L'],
   ]) {
-    assert.ok(rows.includes(`aria-label={isPortuguese ? "${pt}" : "${en}"}`));
-    assert.ok(rows.includes(`{isPortuguese ? "${shortPt}" : "${shortEn}"}</abbr></dt><dd>{coach.${field}}</dd>`));
+    assert.ok(rows.includes(`aria-label={presentationCopy.${field}}`));
+    assert.ok(rows.includes(`{presentationCopy.${field}Short}</abbr></dt><dd>{coach.${field}}</dd>`));
+    for (const [locale, full, short] of [["pt-BR", pt, shortPt], ["en-GB", en, shortEn]]) {
+      const copy = getTouchlineTablesPresentationCopy(locale) as Record<string, string>;
+      assert.equal(copy[field], full);
+      assert.equal(copy[`${field}Short`], short);
+    }
   }
   assert.match(css, /container: coach-ranking \/ inline-size/);
   assert.match(css, /@container coach-ranking \(max-width: 440px\)/);

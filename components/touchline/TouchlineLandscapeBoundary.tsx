@@ -3,6 +3,7 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { RotateCw, Smartphone } from "lucide-react";
 import Image from "next/image";
+import { getTouchlineSiteAccessibilityCopy } from "@/lib/touchlineArena/site-accessibility-i18n";
 import {
   installTouchlineOrientationGate,
   TOUCHLINE_PORTRAIT_QUERY,
@@ -17,10 +18,12 @@ export default function TouchlineLandscapeBoundary({
   children,
   skipLabel,
   locale = "en-GB",
+  draftLocalesEnabled = false,
 }: Readonly<{
   children: ReactNode;
   skipLabel: string;
   locale?: string;
+  draftLocalesEnabled?: boolean;
 }>) {
   const contentRef = useRef<HTMLDivElement>(null);
   const gateRef = useRef<HTMLDivElement>(null);
@@ -35,7 +38,7 @@ export default function TouchlineLandscapeBoundary({
       documentTarget: document,
     });
   }, []);
-  const portuguese = locale === "pt-BR";
+  const copy = getTouchlineSiteAccessibilityCopy(locale, draftLocalesEnabled);
   return <><div data-touchline-orientation-root>
     <a
       ref={skipRef}
@@ -67,22 +70,20 @@ export default function TouchlineLandscapeBoundary({
       <div className={styles.message}>
         <Image className={styles.shield} src="/touchlineArena/brand/tl-shield-lime.svg" width={52} height={60} alt="" aria-hidden="true" unoptimized />
         <p className={styles.brand}>TOUCHLINE</p>
-        <p className={styles.eyebrow}>{portuguese ? "O jogo merece a tela inteira" : "Give the game the whole screen"}</p>
+        <p className={styles.eyebrow}>{copy.orientationEyebrow}</p>
         <div className={styles.device} aria-hidden="true">
           <Smartphone className={styles.phone} size={98} strokeWidth={1} />
           <RotateCw className={styles.rotate} size={28} strokeWidth={1.5} />
           <span className={styles.pitch}><i /><b /></span>
         </div>
         <h1 id="touchline-rotate-title">
-          {portuguese ? "Gire para o modo horizontal" : "Rotate to landscape"}
+          {copy.orientationTitle}
         </h1>
         <p id="touchline-rotate-description">
-          {portuguese
-            ? "No celular, a TouchLine é jogada deitada. Gire o aparelho para continuar de onde parou."
-            : "TouchLine is played in landscape on mobile. Turn your device to continue where you left off."}
+          {copy.orientationDescription}
         </p>
         <span className={styles.hint}>
-          {portuguese ? "Sua página e seu time estão preservados" : "Your page and squad stay exactly as they are"}
+          {copy.orientationHint}
         </span>
       </div>
     </div>

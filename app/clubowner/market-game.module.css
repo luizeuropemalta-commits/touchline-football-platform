@@ -1,0 +1,2 @@
+.page { min-height: 100dvh; color: #f3f8f1; background: linear-gradient(135deg, #07100e, #101c1b 55%, #070e0d); }
+.content { width: 100%; margin-inline: auto; padding: clamp(8px, 1.4vw, 24px); }

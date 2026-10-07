@@ -12,15 +12,15 @@ export const TOUCHLINE_ARENA_PANEL_KEYS = [
 
 export type TouchlineArenaPanelKey = (typeof TOUCHLINE_ARENA_PANEL_KEYS)[number];
 
-export function touchlineArenaHref(locale: string) {
-  return `/market-transfer?lang=${encodeURIComponent(resolveTouchLinePresentationLocale(locale))}`;
+export function touchlineArenaHref(locale: string, draftLocalesEnabled = false) {
+  return `/clubowner?lang=${encodeURIComponent(resolveTouchLinePresentationLocale(locale, draftLocalesEnabled))}`;
 }
 
-export function touchlineArenaDemoHref(locale: string) {
+export function touchlineArenaDemoHref(locale: string, draftLocalesEnabled = false) {
   const params = new URLSearchParams({
-    lang: resolveTouchLinePresentationLocale(locale),
+    lang: resolveTouchLinePresentationLocale(locale, draftLocalesEnabled),
   });
-  return `/market-transfer?${params.toString()}`;
+  return `/clubowner?${params.toString()}`;
 }
 
 /**
@@ -28,8 +28,8 @@ export function touchlineArenaDemoHref(locale: string) {
  * context. A generic navigation affordance must never quietly choose a club
  * for the visitor.
  */
-export function touchlineClubHubHref(locale: string, clubSlug?: string | null) {
-  const lang = encodeURIComponent(resolveTouchLinePresentationLocale(locale));
+export function touchlineClubHubHref(locale: string, clubSlug?: string | null, draftLocalesEnabled = false) {
+  const lang = encodeURIComponent(resolveTouchLinePresentationLocale(locale, draftLocalesEnabled));
   const contextualSlug = clubSlug?.trim();
 
   return contextualSlug
@@ -44,17 +44,17 @@ export function parseTouchlineArenaPanel(value?: string | string[] | null): Touc
     : null;
 }
 
-export function touchlineArenaPanelHref(panel: TouchlineArenaPanelKey, locale: string) {
-  const effectiveLocale = resolveTouchLinePresentationLocale(locale);
+export function touchlineArenaPanelHref(panel: TouchlineArenaPanelKey, locale: string, draftLocalesEnabled = false) {
+  const effectiveLocale = resolveTouchLinePresentationLocale(locale, draftLocalesEnabled);
   const lang = `lang=${encodeURIComponent(effectiveLocale)}`;
-  if (panel === "market") return `/market-transfer?${lang}`;
+  if (panel === "market") return `/clubowner?${lang}`;
   // A ClubOwner owns exactly one playable XI. The former quick-substitution
   // bench required a hidden second squad and could expose an impossible
   // 10/11 setup. Keep old links safe, but land them in the one position-led
   // workspace where a card is replaced in its own eligible slot.
-  if (panel === "bench" || panel === "formation") return `/market-transfer?${lang}#my-club-xi-pitch`;
+  if (panel === "bench" || panel === "formation") return `/clubowner?${lang}#my-club-xi-pitch`;
   if (panel === "live" || panel === "watch") return `/live?${lang}`;
-  if (panel === "rankings") return `/touchline-tables?${lang}`;
+  if (panel === "rankings") return `/rankings?${lang}`;
   return `/live?${lang}`;
 }
 
@@ -63,8 +63,8 @@ export function touchlineArenaContractHref(input: {
   playerId: string | number;
   playerName: string;
   clubId?: string | number | null;
-}) {
-  return `/market-transfer?lang=${encodeURIComponent(resolveTouchLinePresentationLocale(input.locale))}`;
+}, draftLocalesEnabled = false) {
+  return `/clubowner?lang=${encodeURIComponent(resolveTouchLinePresentationLocale(input.locale, draftLocalesEnabled))}`;
 }
 
 export function touchlineArenaPanelUrl(currentUrl: string, panel: TouchlineArenaPanelKey | null) {

@@ -1,10 +1,30 @@
 import type { FootballDataHttpResponse } from "./http.ts";
 
 export type SportmonksQuotaOperation = "stages" | "topscorers";
+/** Keep the GoldenBoot operation set stable; Fixture is a separate entity scope. */
+export type SportmonksObservedQuotaOperation = SportmonksQuotaOperation | "fixture" | "league" | "season" | "squad" | "squadExtended";
+/** Closed worker-only prequery contract. New raw literals still require isolated
+ * provider evidence before activation; mismatches must block unknown. */
+export const SPORTMONKS_PREQUERY_ENDPOINTS = {
+  fixture: { operation: "fixture", entity: "Fixture" },
+  date: { operation: "fixture", entity: "Fixture" },
+  between: { operation: "fixture", entity: "Fixture" },
+  inplay: { operation: "fixture", entity: "Fixture" },
+  latest: { operation: "fixture", entity: "Fixture" },
+  league: { operation: "league", entity: "League" },
+  season: { operation: "season", entity: "Season" },
+  stages: { operation: "stages", entity: "Stage" },
+  topscorers: { operation: "topscorers", entity: "Topscorer" },
+  // Official Sportmonks Postman examples distinguish these two quota entities.
+  // SQL admission remains fail-closed until a separately verified migration.
+  squad: { operation: "squad", entity: "PlayerTeam" },
+  squadExtended: { operation: "squadExtended", entity: "Player" },
+} as const;
+export type SportmonksPrequeryEndpoint = keyof typeof SPORTMONKS_PREQUERY_ENDPOINTS;
 export type SportmonksQuotaObservation = Readonly<{
   requestId: string;
   attempt: number;
-  operation: SportmonksQuotaOperation;
+  operation: SportmonksObservedQuotaOperation;
   observedAt: string | null;
   status: number;
   requestedEntity: string | null;
@@ -59,7 +79,7 @@ function latest(first: string | null, second: string | null): string | null {
 
 /** Only allowlisted operational primitives leave this boundary. No URL/body/error. */
 export function observeSportmonksQuota(
-  requestId: string, operation: SportmonksQuotaOperation, attempt: number,
+  requestId: string, operation: SportmonksObservedQuotaOperation, attempt: number,
   response: Readonly<FootballDataHttpResponse<unknown>>,
 ): SportmonksQuotaObservation {
   const rate = record(record(response.data)?.rate_limit);

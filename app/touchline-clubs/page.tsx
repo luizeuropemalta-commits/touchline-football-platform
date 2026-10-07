@@ -1,6 +1,7 @@
-import Link from "next/link";
 import { Suspense, type CSSProperties } from "react";
-import { Check, ChevronDown, Languages } from "lucide-react";
+import { isTouchLineSiteLocalesEnabled } from "@/lib/touchlineArena/site-locales-release";
+import TouchlineBrandHeader from "@/components/touchline/TouchlineBrandHeader";
+import { loadAccountLocaleContext } from "@/lib/touchlineArena/account-locale-context-server";
 
 import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
 import TouchlineCoachCategoryShowcase from "@/components/touchline/TouchlineCoachCategoryShowcase";
@@ -11,7 +12,10 @@ import TouchlineClubPerimeterTrace from "@/components/touchline/TouchlineClubPer
 import ClubHubCardLink from "@/components/touchline/ClubHubCardLink";
 import { loadTouchlinePublishedCardShowcaseCatalog } from "@/lib/touchlineArena/ranked-card-catalog-server";
 import { TOUCHLINE_ENGLAND_CLUBS_BY_RANK } from "@/lib/touchlineArena/demo-data";
-import { normalizeTouchLineLocale, type TouchLineLocale } from "@/lib/touchlineArena/i18n";
+import type { TouchLineLocale } from "@/lib/touchlineArena/i18n";
+import { resolveTouchlineCatalogueLocale } from "@/lib/touchlineArena/catalogue-locale";
+import { getTouchlineClubHubDirectoryCopy } from "@/lib/touchlineArena/club-hub-directory-i18n";
+import { getTouchlineFantasyMarketWorkflowCopy } from "@/lib/touchlineFantasy/market-workflow-i18n";
 
 import styles from "./touchline-clubs.module.css";
 
@@ -23,84 +27,51 @@ type ClubsPageProps = {
   }>;
 };
 
-const copy = {
-  "pt-BR": {
-    eyebrow: "TouchLine England",
-    title: "Escolha um clube",
-    intro: "Entre no ClubHub oficial de cada equipe, veja informações reais do clube e acompanhe os cards TouchLine sem cair direto em uma página específica.",
-    open: "Abrir ClubHub",
-    clubs: "20 clubes",
-    verified: "TouchLine Verified",
-    hint: "Seleção premium de clubes",
-    language: "Idioma",
-    openingClub: "Abrindo ClubHub",
-  },
-  "en-GB": {
-    eyebrow: "TouchLine England",
-    title: "Choose a club",
-    intro: "Open each team’s official ClubHub, review real club information and follow TouchLine cards without landing inside one specific club by default.",
-    open: "Open ClubHub",
-    clubs: "20 clubs",
-    verified: "TouchLine Verified",
-    hint: "Premium club selection",
-    language: "Language",
-    openingClub: "Opening ClubHub",
-  },
-} as const;
-
 function languageQuery(locale: TouchLineLocale) {
   return `lang=${encodeURIComponent(locale)}`;
 }
 
-async function ClubShowcase({ locale }: { locale: TouchLineLocale }) {
+async function ClubShowcase({ locale, draftLocalesEnabled = false }: { locale: TouchLineLocale; draftLocalesEnabled?: boolean }) {
   const [publishedPlayerCards, coachRanking] = await Promise.all([
     loadTouchlinePublishedCardShowcaseCatalog(), loadTouchLineCoachRanking(),
   ]);
   return (
     <>
       <TouchlineLivePresentationRefresh initialCoachRankingSnapshotId={coachRanking.snapshotId} />
-      <TouchlineCoachCategoryShowcase locale={locale} playerCards={publishedPlayerCards} coachRanking={coachRanking} />
+      <TouchlineCoachCategoryShowcase draftLocalesEnabled={draftLocalesEnabled} locale={locale} playerCards={publishedPlayerCards} coachRanking={coachRanking} />
     </>
   );
 }
 
-export default async function TouchlineClubsPage({ searchParams }: ClubsPageProps) {
-  const params = await searchParams;
-  const locale = normalizeTouchLineLocale(params.lang);
-  const dictionary = locale === "pt-BR" ? copy["pt-BR"] : copy["en-GB"];
+export default async function TouchlineClubsPage(props: ClubsPageProps) {
+  return renderTouchlineClubsPage(props, isTouchLineSiteLocalesEnabled("/touchline-clubs"));
+}
+
+async function renderTouchlineClubsPage({ searchParams }: ClubsPageProps, draftLocalesEnabled = false) {
+  const [params, accountLocaleContext] = await Promise.all([searchParams, loadAccountLocaleContext()]);
+  const locale = resolveTouchlineCatalogueLocale(params.lang, draftLocalesEnabled);
+  const dictionary = getTouchlineClubHubDirectoryCopy(locale, draftLocalesEnabled);
+  const workflowCopy = getTouchlineFantasyMarketWorkflowCopy(locale, draftLocalesEnabled);
   const localeQuery = languageQuery(locale);
 
   return (
-    <main className={styles.shell}>
+    <main dir="ltr" className={styles.shell}>
+      <TouchlineBrandHeader draftLocalesEnabled={draftLocalesEnabled} href={`/touchline-clubs?${localeQuery}`} locale={locale} accountLocaleContext={accountLocaleContext} />
+      <div className={styles.content}>
       <div className={styles.topbar}>
-        <TouchlineGlobalNavigation
+        <TouchlineGlobalNavigation draftLocalesEnabled={draftLocalesEnabled}
           locale={locale}
           currentRoute="clubHub"
           surface="public"
           className={styles.globalNavigation}
+          showAudioControl={false}
         />
-        <details className={styles.languageMenu}>
-          <summary aria-label={dictionary.language}>
-            <Languages aria-hidden="true" />
-            <span>{dictionary.language}</span>
-            <b>{locale === "pt-BR" ? "PT" : "EN"}</b>
-            <ChevronDown aria-hidden="true" />
-          </summary>
-          <div className={styles.languagePanel}>
-            <Link href="/touchline-clubs?lang=en-GB" aria-current={locale === "en-GB" ? "page" : undefined}>
-              <span>🇬🇧 English</span>{locale === "en-GB" ? <Check aria-hidden="true" /> : null}
-            </Link>
-            <Link href="/touchline-clubs?lang=pt-BR" aria-current={locale === "pt-BR" ? "page" : undefined}>
-              <span>🇧🇷 Português</span>{locale === "pt-BR" ? <Check aria-hidden="true" /> : null}
-            </Link>
-          </div>
-        </details>
       </div>
 
       <section className={styles.hero}>
         <div>
-          <span className={styles.eyebrow}>{dictionary.eyebrow}</span>
-          <h1>{dictionary.title}</h1>
+          <span className={styles.eyebrow}>TouchLine England</span>
+          <h1>{workflowCopy.chooseClub}</h1>
           <p>{dictionary.intro}</p>
         </div>
       </section>
@@ -129,21 +100,22 @@ export default async function TouchlineClubsPage({ searchParams }: ClubsPageProp
             ) : <span className={styles.logoWrap} aria-hidden="true">{club.shortCode}</span>}
             <span className={styles.clubInfo}>
               <strong>{club.name}</strong>
-              <small>{club.shortCode} · {dictionary.verified}</small>
+              <small>{club.shortCode} · TouchLine Verified</small>
             </span>
             <span className={styles.open}>{dictionary.open}</span>
           </ClubHubCardLink>
         ))}
       </section>
 
-      <Suspense fallback={<p role="status">{locale === "pt-BR" ? "Carregando cards…" : "Loading cards…"}</p>}>
-        <ClubShowcase locale={locale} />
+      <Suspense fallback={<p role="status">{dictionary.loadingCards}</p>}>
+        <ClubShowcase draftLocalesEnabled={draftLocalesEnabled} locale={locale} />
       </Suspense>
 
       <footer className={styles.footer}>
         <span>{dictionary.clubs}</span>
         <span>{dictionary.hint}</span>
       </footer>
+      </div>
     </main>
   );
 }

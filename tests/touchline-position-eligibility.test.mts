@@ -98,5 +98,14 @@ test("Market mobile styles retain unscaled pitch controls and minimum touch targ
   const marketMobile = squadBuilderStyles.slice(squadBuilderStyles.indexOf("/* The Market picker must remain reachable"));
   assert.match(marketMobile, /@media \(max-width: 900px\)/);
   assert.match(marketMobile, /\.myClubTacticalPitch\s*\{\s*width: 100%;\s*transform: none;/);
-  assert.match(marketMobile, /\.myClubTacticalSlot > button\s*\{\s*display: grid;[\s\S]*?min-height: 44px;/);
+  // The owner replaced the generic swap button with a red X and an empty-slot +.
+  // Both current controls must retain the original minimum touch target.
+  const removeRule = marketMobile.match(/\.myClubPitchViewport \.myClubTacticalSlot > \.pitchRemove\s*\{([^}]*)\}/)?.[1] ?? "";
+  const emptyRule = marketMobile.match(/\.emptyPosition\s*\{([^}]*)\}/)?.[1] ?? "";
+  for (const rule of [removeRule, emptyRule]) {
+    assert.match(rule, /display: grid;/);
+    assert.match(rule, /(?:^|;)\s*width: 44px;/);
+    assert.match(rule, /(?:^|;)\s*height: 44px;/);
+  }
+  assert.match(removeRule, /min-height: 44px;/);
 });

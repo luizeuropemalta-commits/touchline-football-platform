@@ -55,7 +55,7 @@ test("preseason does not fetch a separately active selection", async () => {
 });
 
 test("page passes the same ranking to the selection and card catalogue", () => {
-  const page = readFileSync(new URL("../app/touchline-tables/page.tsx", import.meta.url), "utf8");
+  const page = readFileSync(new URL("../app/rankings/page.tsx", import.meta.url), "utf8");
   assert.match(page, /loadTouchLinePublishedTopEleven\(activeRanking\)/);
   assert.match(page, /loadTouchLineRankedCardCatalog\(activeRanking\)/);
   assert.match(page, /TouchlineCardLeadershipProvider value=\{buildTouchlineCardLeadershipValue\(activeRanking, coachRanking\)\}/);

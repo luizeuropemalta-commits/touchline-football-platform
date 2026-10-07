@@ -3,24 +3,42 @@ import { matchPushDeliveryDecision, type MatchPushDeliveryContext } from "./matc
 type Completion = "provider_accepted" | "cancelled" | "uncertain" | "failed";
 type Claim = { id: string; leaseToken: string; leaseUntil: string; expiresAt: string };
 type AttemptReference = { kind: "unreserved" } | { kind: "reserved"; attemptId: string };
-type Dependencies = {
+export type GamePushPolicyDecision = "ready" | "cancelled";
+export type GamePushPolicyClock = { now: Date; leaseUntil: string; expiresAt: string };
+export type GamePushDispatchDependencies<Policy> = {
   enabled: boolean;
   now: () => Date;
   attemptId: string;
   reserve: (claim: Claim, attemptId: string, signal: AbortSignal) => Promise<boolean>;
   // Server adapter must bind fresh facts/payload to this claim and validate endpoint.
   loadFresh: (claim: Claim, signal: AbortSignal) => Promise<{
-    policy: Omit<MatchPushDeliveryContext, "now" | "leaseUntil" | "expiresAt">;
+    policy: Policy;
     deliver: (signal: AbortSignal) => Promise<"provider_accepted" | "rejected">;
   }>;
+  // Trusted synchronous policy over the freshly loaded facts, never a queued
+  // ready flag. The dispatcher independently enforces its lease and expiry.
+  decide: (policy: Policy, clock: GamePushPolicyClock) => GamePushPolicyDecision;
   finish: (claim: Claim, state: Completion, attempt: AttemptReference) => Promise<boolean>;
 };
+
+type MatchPolicy = Omit<MatchPushDeliveryContext, "now" | "leaseUntil" | "expiresAt">;
+type Dependencies = Omit<GamePushDispatchDependencies<MatchPolicy>, "decide">;
+
+/** Existing match API retains its complete match-specific policy. Other game
+ * notifications must supply their own policy, not manufacture match consent.
+ */
+export async function dispatchMatchPush(claim: Claim, deps: Dependencies) {
+  return dispatchGamePush(claim, {
+    ...deps,
+    decide: (policy, clock) => matchPushDeliveryDecision({ ...policy, ...clock }) === "ready" ? "ready" : "cancelled",
+  });
+}
 
 /** One claimed item, no retry. A transport exception/timeout is uncertain, not
  * failure: the provider might already have accepted it. No deployment adapter
  * is installed by this module; the default caller must remain disabled.
  */
-export async function dispatchMatchPush(claim: Claim, deps: Dependencies) {
+export async function dispatchGamePush<Policy>(claim: Claim, deps: GamePushDispatchDependencies<Policy>) {
   if (deps.enabled !== true) return "disabled" as const;
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(deps.attemptId)) return "reservation-unconfirmed" as const;
   const remaining = Math.min(Date.parse(claim.leaseUntil), Date.parse(claim.expiresAt)) - deps.now().getTime();
@@ -35,9 +53,15 @@ export async function dispatchMatchPush(claim: Claim, deps: Dependencies) {
     timer = setTimeout(() => { reject(new Error("push-deadline")); controller.abort(); }, Math.min(15_000, remaining));
   });
   let completion: Completion;
+  const decide = (policy: Policy): GamePushPolicyDecision => {
+    const clock = { now: deps.now(), leaseUntil: claim.leaseUntil, expiresAt: claim.expiresAt };
+    const nowMs = clock.now.getTime(), leaseMs = Date.parse(clock.leaseUntil), expiryMs = Date.parse(clock.expiresAt);
+    if (![nowMs, leaseMs, expiryMs].every(Number.isFinite) || leaseMs <= nowMs || expiryMs <= nowMs) return "cancelled";
+    return deps.decide(policy, clock);
+  };
   try {
     const fresh = await Promise.race([deps.loadFresh(claim, controller.signal), deadline]);
-    const decision = matchPushDeliveryDecision({ ...fresh.policy, now: deps.now(), leaseUntil: claim.leaseUntil, expiresAt: claim.expiresAt });
+    const decision = decide(fresh.policy);
     if (decision !== "ready" || controller.signal.aborted) {
       completion = "cancelled";
     } else {
@@ -51,7 +75,7 @@ export async function dispatchMatchPush(claim: Claim, deps: Dependencies) {
       // A lock wait may have outlived consent or source freshness. Never reuse
       // the pre-reservation closure; reread under the same entry deadline.
       const current = await Promise.race([deps.loadFresh(claim, controller.signal), deadline]);
-      const currentDecision = matchPushDeliveryDecision({ ...current.policy, now: deps.now(), leaseUntil: claim.leaseUntil, expiresAt: claim.expiresAt });
+      const currentDecision = decide(current.policy);
       if (currentDecision !== "ready" || controller.signal.aborted) {
         completion = "cancelled";
       } else {

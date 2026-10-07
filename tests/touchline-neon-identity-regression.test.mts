@@ -2,6 +2,12 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
+import { getTouchlineExactCardCopy } from "../lib/touchlineArena/exact-card-i18n.ts";
+import { getTouchLineRankingsCopy } from "../lib/touchlineArena/rankings-i18n.ts";
+import { getTouchlineClubHubLineupCopy } from "../lib/touchlineArena/club-hub-lineup-i18n.ts";
+import { getTouchlineCoachCardCopy } from "../lib/touchlineArena/coach-card-i18n.ts";
+import { getTouchlineCardZoomCopy } from "../lib/touchlineArena/card-zoom-i18n.ts";
+import { getTouchlinePlayerProfileFeedCopy } from "../lib/touchlineArena/player-profile-feed-i18n.ts";
 
 function source(relativePath: string) {
   return readFileSync(path.join(process.cwd(), relativePath), "utf8");
@@ -18,7 +24,9 @@ test("every TouchLine card keeps the permanent tier neon contract", () => {
   );
 
   assert.match(exactCard, /data-card-neon="permanent-tier-art"/);
-  assert.match(exactCard, /TouchLine England League Stats/);
+  assert.equal(getTouchlineExactCardCopy("en-GB").leagueStats, "TouchLine England League Stats");
+  assert.match(exactCard, /const exactCopy = getTouchlineExactCardCopy\(runtimeLocale, draftLocalesEnabled\)/);
+  assert.match(exactCard, /\{exactCopy\.leagueStats\}/);
   assert.doesNotMatch(exactCard, /TouchLine Arena Points/);
   assert.match(exactCard, /formatTouchlineMarketValueEur/);
   assert.doesNotMatch(exactCard, /formatTouchlineContractedCommercialCardPrice/);
@@ -162,7 +170,7 @@ test("card controls stay inside the master safe zone and contracting stays outsi
   assert.doesNotMatch(zoomUsages, /Sign player/);
   assert.match(zoomUsages, /contractLabel=\{locale === "pt-BR" \? "Contratar"/);
   assert.match(zoomUsages, /Contrato · 1 temporada/);
-  assert.match(zoomUsages, /const tierDisplayName = tier[\s\S]*?touchlineCardTierName\(tier\.key, locale\)/);
+  assert.match(zoomUsages, /const tierDisplayName = tier[\s\S]*?touchlineCardTierName\(tier\.key, locale, draftLocalesEnabled\)/);
   assert.match(zoomUsages, /tierLabel=\{tierDisplayName \?\? undefined\}/);
 });
 
@@ -214,7 +222,7 @@ test("ClubHub line-up preserves the pitch and responsive card sizing contract", 
   assert.match(squadGrid, /className=\{`club-hub-card-meta \$\{styles.meta\}`\}/);
   assert.doesNotMatch(clubHubPage, /t\("topClubAssets"\)/);
   assert.doesNotMatch(clubHubPage, /\.club-hub-card div \{/);
-  assert.doesNotMatch(clubHubPage, /\/market-transfer\?\$\{localeQuery\}/);
+  assert.doesNotMatch(clubHubPage, /\/clubowner\?\$\{localeQuery\}/);
   assert.match(clubHubPage, /@media \(orientation: landscape\) and \(max-width: 1100px\) and \(max-height: 520px\)[\s\S]*?\.club-hub-board \{[\s\S]*?repeat\(2/);
   assert.match(cardZoom, /createPortal\(/);
   assert.match(cardZoom, /document\.body/);
@@ -240,7 +248,7 @@ test("profile surfaces use the shared compact global navigation", () => {
 });
 
 test("ranked cards preserve their supplied winning tier", () => {
-  const tablesClient = source("app/touchline-tables/touchline-tables-client.tsx");
+  const tablesClient = source("app/rankings/touchline-tables-client.tsx");
 
   assert.match(tablesClient, /squadCardToExactPlayer\(card, \{ useSuppliedTier: true \}\)/);
   assert.doesNotMatch(tablesClient, /TOUCHLINE_CARD_STARTING_TIER_KEY/);
@@ -257,14 +265,14 @@ test("shared social promotion stage keeps readable sizing and a reversible card 
 });
 
 test("the positional Best XI uses player cards and one reversible zoom on every device", () => {
-  const tablesClient = source("app/touchline-tables/touchline-tables-client.tsx");
-  const tablesCss = source("app/touchline-tables/touchline-tables.module.css");
+  const tablesClient = source("app/rankings/touchline-tables-client.tsx");
+  const tablesCss = source("app/rankings/touchline-tables.module.css");
   const bestElevenStart = tablesClient.indexOf("data-best-eleven-player");
   const bestElevenSource = tablesClient.slice(bestElevenStart, bestElevenStart + 1100);
 
   assert.ok(bestElevenStart >= 0);
   assert.match(bestElevenSource, /cardButton/);
-  assert.match(bestElevenSource, /<TablePlayerCardZoom card=\{card\}/);
+  assert.match(bestElevenSource, /<TablePlayerCardZoom draftLocalesEnabled=\{draftLocalesEnabled\} card=\{card\}/);
   assert.doesNotMatch(bestElevenSource, /<ClubLogo/);
   assert.match(tablesClient, /import TouchlineCardZoom/);
   assert.match(tablesClient, /function TablePlayerCardZoom[\s\S]*?<TouchlineCardZoom/);
@@ -282,8 +290,9 @@ test("dedicated player-card ranking reuses the shared zoom and keeps compact car
   assert.match(rankingsSource, /<TouchlineCardZoom[\s\S]*?forceNeonActive/);
   assert.match(rankingsSource, /showProfileAction=\{false\}[\s\S]*?showSocialMetrics=\{false\}/);
   assert.match(rankingsSource, /imageLoading="eager"[\s\S]*?showCardActions[\s\S]*?showProfileAction/);
-  assert.match(rankingsSource, /published TouchLine cards only/);
-  assert.match(rankingsSource, /Tier and card price come from the card-publication process/);
+  assert.match(rankingsSource, /copy\.publishedRankingDescription/);
+  assert.match(getTouchLineRankingsCopy("en-GB").publishedRankingDescription, /published TouchLine cards only/);
+  assert.match(getTouchLineRankingsCopy("en-GB").publishedRankingDescription, /The tier comes from the card-publication process/);
   assert.doesNotMatch(rankingsSource, /resolveTouchlineVerifiedPlayerEconomy|Market value|market value pending/);
 });
 
@@ -308,7 +317,7 @@ test("athlete feed publishes the canonical card instead of a detached frame imag
   assert.match(socialCardSection, /showSocialMetrics=\{false\}/);
   assert.match(playerSource, /visual: socialCardVisual\(/);
   assert.doesNotMatch(playerSource, /visualImageUrl: tier\.frameUrl/);
-  assert.match(playerSource, /const tierDisplayName = tier[\s\S]*?touchlineCardTierName\(tier\.key, locale\)/);
+  assert.match(playerSource, /const tierDisplayName = tier[\s\S]*?touchlineCardTierName\(tier\.key, locale, draftLocalesEnabled\)/);
   assert.match(playerSource, /loadTouchlinePublishedCardPresentations/);
   assert.match(playerSource, /resolveTouchlineCanonicalPublicPlayerProfile/);
   assert.match(playerSource, /const editorialCard = canonicalResolution\?\.editorialCard\s*\?\? \(canonicalPlayerId && publishedCards \? publishedCards\.get\(canonicalPlayerId\) \?\? null : null\)/);
@@ -316,7 +325,9 @@ test("athlete feed publishes the canonical card instead of a detached frame imag
   assert.doesNotMatch(playerSource, /value: tier\.label/);
   assert.match(playerSource, /Sapphire Blue|tierDisplayName/);
   assert.doesNotMatch(playerSource, /Card available to contract on TouchLine/);
-  assert.match(playerSource, /Official player data updated/);
+  assert.match(playerSource, /getTouchlinePlayerProfileFeedCopy\(locale, draftLocalesEnabled\)/);
+  assert.match(playerSource, /\? feedCopy\.officialUpdated\s*: feedCopy\.officialUnavailable/);
+  assert.equal(getTouchlinePlayerProfileFeedCopy("en-GB").officialUpdated, "Official player data updated");
 });
 
 test("official player profiles reject URL preview tiers while explicit local demos remain isolated", () => {
@@ -346,11 +357,13 @@ test("ClubHub owns one fixture-scoped line-up surface without cross-product dist
 
   assert.match(clubHubPage, /buildTouchLineClubMatchdayPresentation/);
   assert.match(clubHubPage, /ClubHubOfficialLineup/);
-  assert.match(lineupComponent, /Matchday line-up/);
+  assert.match(lineupComponent, /lineupCopy\.matchdayEyebrow/);
+  assert.equal(getTouchlineClubHubLineupCopy("en-GB").matchdayEyebrow, "Matchday line-up");
   assert.doesNotMatch(lineupComponent, /TouchLine Arena/);
   assert.doesNotMatch(lineupComponent, /ClubOwners/);
   assert.doesNotMatch(lineupComponent, /Player Feeds/);
-  assert.match(lineupComponent, /Prévia do elenco/);
+  assert.match(lineupComponent, /lineupCopy\.previewTitle/);
+  assert.equal(getTouchlineClubHubLineupCopy("pt-BR").previewTitle, "Prévia do elenco");
 });
 
 test("coach uses official coach art with player-card nationality and club identity", () => {
@@ -369,7 +382,8 @@ test("coach uses official coach art with player-card nationality and club identi
   assert.match(coachCard, /touchlineCoachCardArtForTier/);
   assert.doesNotMatch(coachCard, /<CoachKitIdentity/);
   assert.match(coachCard, /Nacionalidade/);
-  assert.match(coachCard, /Clube atual/);
+  assert.match(coachCard, /copy\.currentClub/);
+  assert.equal(getTouchlineCoachCardCopy("pt-BR").currentClub, "Clube atual");
   assert.match(coachCard, /coachDisplayName/);
   assert.match(coachCard, /data-coach-name-fit/);
   assert.match(coachCard, /<span>\{clubName\}<\/span>/);
@@ -423,11 +437,11 @@ test("operational card selectors never nest social or profile controls inside bu
   assert.match(exactCard, /clubHubHref && !isEditable && showProfileAction/);
 });
 
-test("Arena compact cards keep one click target, one selected neon and a compact match badge", () => {
+test("Arena compact cards keep one click target and selected neon without the retired match badge", () => {
   const exactCard = source("components/touchline/cards/TouchlineEliteExactCard.tsx");
   assert.match(exactCard, /forceNeonActive \|\| isNeonActive/);
-  assert.match(exactCard, /data-arena-match-rating="true"[\s\S]*?top: -16,[\s\S]*?minWidth: 24,[\s\S]*?height: 16,[\s\S]*?padding: "1px 5px"/);
-  assert.match(exactCard, /data-arena-match-rating="true"[\s\S]*?<strong[\s\S]*?fontSize: 9,[\s\S]*?fontVariantNumeric: "tabular-nums"/);
+  assert.doesNotMatch(exactCard, /data-arena-match-rating="true"/);
+  assert.match(exactCard, /touchline-card-neon-select/);
   assert.match(exactCard, /const compactPrimaryLabel = cardLabels\.totalRating/);
   assert.match(exactCard, /const compactPrimaryValue = totalRatingText/);
 });
@@ -467,11 +481,12 @@ test("ClubHub honours use complete discrete pages rather than a continuous parti
 });
 
 test("TouchLine tables enlarged cards reuse the premium identity-and-performance zoom", () => {
-  const tablesClient = source("app/touchline-tables/touchline-tables-client.tsx");
+  const tablesClient = source("app/rankings/touchline-tables-client.tsx");
   assert.match(tablesClient, /touchlineCardTierName/);
   assert.match(tablesClient, /buildTouchlinePlayerCardZoomDetails/);
   assert.match(tablesClient, /buildTouchlineVerifiedMatchFactFields/);
   assert.match(tablesClient, /Nota total/);
-  assert.match(tablesClient, /Nota da última partida/);
+  assert.match(tablesClient, /zoomCopy\.lastMatchRating/);
+  assert.equal(getTouchlineCardZoomCopy("pt-BR").lastMatchRating, "Nota da última partida");
   assert.doesNotMatch(tablesClient, /zoomBackdrop|zoomContent|useTouchlineDialog/);
 });

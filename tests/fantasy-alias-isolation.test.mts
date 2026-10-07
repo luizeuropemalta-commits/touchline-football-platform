@@ -7,7 +7,7 @@ const legacyAliasUrl = new URL("../app/(app)/fantasy/page.tsx", import.meta.url)
 
 test("the legacy Fantasy URL aliases the canonical Market builder", async () => {
   const source = await readFile(rootAliasUrl, "utf8");
-  assert.match(source, /redirect\(`\/market-transfer\?lang=/);
+  assert.match(source, /redirect\(`\/clubowner\?lang=/);
   assert.doesNotMatch(source, /FantasyGameweekClient|loadTouchlineFantasySnapshot/);
   await assert.rejects(access(legacyAliasUrl));
 });

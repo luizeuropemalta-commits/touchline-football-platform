@@ -10,6 +10,7 @@ import { formatTouchlineLocalKickoff } from "@/lib/touchlineArena/local-kickoff"
 import { normalizeTouchlineMatchCentreTimeZone } from "@/lib/touchlineArena/match-centre";
 import { clubHubFixtureRailRefreshMs, resolveClubHubFixtureRail } from "@/lib/touchlineArena/club-hub-fixture-rail";
 import type { TouchLineLocale } from "@/lib/touchlineArena/i18n";
+import { getTouchlineClubHubFixtureCopy } from "@/lib/touchlineArena/club-hub-fixture-i18n";
 
 import styles from "./ClubHubPremiumPrototype.module.css";
 
@@ -33,6 +34,7 @@ type Props = Readonly<{
   awayScore?: number;
   liveMinute?: number;
   locale?: TouchLineLocale;
+  draftLocalesEnabled?: boolean;
   previewHref?: string | null;
   className?: string;
   venueName?: string | null;
@@ -56,6 +58,7 @@ export default function ClubHubNextFixtureCard({
   homePosition,
   initialTimeZone,
   locale = "en-GB",
+  draftLocalesEnabled = false,
   previewHref = "/visual-qa/clubhub-next-fixture-post",
   className = "",
   roundName,
@@ -71,7 +74,7 @@ export default function ClubHubNextFixtureCard({
   // League positions belong in the table immediately below it.
   showPositions = false,
 }: Props) {
-  const portuguese = locale === "pt-BR";
+  const copy = getTouchlineClubHubFixtureCopy(locale, draftLocalesEnabled);
   const router = useRouter();
   const timeZone = useSyncExternalStore(
     subscribeToBrowserTimeZone,
@@ -80,12 +83,12 @@ export default function ClubHubNextFixtureCard({
   );
 
   const localKickoff = useMemo(
-    () => formatTouchlineLocalKickoff(startsAt, timeZone, locale),
-    [locale, startsAt, timeZone],
+    () => formatTouchlineLocalKickoff(startsAt, timeZone, locale, draftLocalesEnabled),
+    [locale, startsAt, timeZone, draftLocalesEnabled],
   );
   const rail = useMemo(
-    () => resolveClubHubFixtureRail({ startsAt, status, homeScore, awayScore, liveMinute }, locale),
-    [awayScore, homeScore, liveMinute, locale, startsAt, status],
+    () => resolveClubHubFixtureRail({ startsAt, status, homeScore, awayScore, liveMinute }, locale, undefined, draftLocalesEnabled),
+    [awayScore, homeScore, liveMinute, locale, startsAt, status, draftLocalesEnabled],
   );
   const refreshMs = clubHubFixtureRailRefreshMs(rail, startsAt);
 
@@ -105,13 +108,13 @@ export default function ClubHubNextFixtureCard({
       </div>
       <div className={styles.nextFixtureTeams}>
         <span className={styles.nextFixtureClub}>
-          <Image alt={`${homeTeam.name} crest`} height={64} src={homeTeam.logoUrl} width={64} />
+          <Image alt={copy.crestAlt.replace("{name}", () => homeTeam.name)} height={64} src={homeTeam.logoUrl} width={64} />
           <b>{homeTeam.name}</b>
           {showPositions ? <small>{homePosition}</small> : null}
         </span>
         <em data-score={rail.score ? "verified" : undefined}>{rail.score ?? "VS"}</em>
         <span className={styles.nextFixtureClub}>
-          <Image alt={`${awayTeam.name} crest`} height={64} src={awayTeam.logoUrl} width={64} />
+          <Image alt={copy.crestAlt.replace("{name}", () => awayTeam.name)} height={64} src={awayTeam.logoUrl} width={64} />
           <b>{awayTeam.name}</b>
           {showPositions ? <small>{awayPosition}</small> : null}
         </span>
@@ -120,8 +123,8 @@ export default function ClubHubNextFixtureCard({
         <div className={styles.nextFixtureKickoff}>
           <time dateTime={startsAt}>{rail.liveMinute ?? `${localKickoff.date} · ${localKickoff.time}`}</time>
           <small>{rail.state === "upcoming"
-            ? `${portuguese ? "Seu horário local" : "Your local time"} · ${localKickoff.zoneName}`
-            : (portuguese ? "Placar verificado" : "Verified score")}</small>
+            ? `${copy.localTime} · ${localKickoff.zoneName}`
+            : copy.verifiedScore}</small>
         </div>
       ) : null}
       <div className={styles.nextFixtureVenue} data-state={venueName ? "verified" : "pending"}>
@@ -138,13 +141,13 @@ export default function ClubHubNextFixtureCard({
         ) : null}
         <span className={styles.nextFixtureVenueCopy}>
           <MapPin aria-hidden="true" />
-          {variant === "hero" ? <small>{portuguese ? "ESTÁDIO" : "STADIUM"}</small> : null}
-          <span>{venueName ?? (portuguese ? "Estádio em verificação" : "Venue under verification")}</span>
+          {variant === "hero" ? <small>{copy.stadium}</small> : null}
+          <span>{venueName ?? copy.venuePending}</span>
         </span>
       </div>
       {previewHref ? (
         <Link className={styles.nextFixturePreviewLink} href={previewHref}>
-          {portuguese ? "Ver prévia da arte da partida" : "View next-match post preview"}
+          {copy.previewLink}
         </Link>
       ) : null}
     </article>

@@ -104,6 +104,21 @@ async function resolveCurrentScope(admin: AdminClient): Promise<ScopeResult> {
   return { status: "ready", competitionId, season: currentSeasons[0] };
 }
 
+/** Public display context only: reuse the canonical season scope, without loading standings. */
+export async function readTouchlineCurrentSeasonName(
+  request: TouchlineOfficialLeagueTableRequest = {},
+): Promise<string | null> {
+  const admin = "providedAdmin" in request ? request.providedAdmin : createAdminClient();
+  if (!admin) return null;
+  try {
+    const scope = await resolveCurrentScope(admin);
+    return scope.status === "ready" ? scope.season.name : null;
+  } catch {
+    // An unavailable label must not take the persisted match schedule offline.
+    return null;
+  }
+}
+
 function toTableTeam(row: DatabaseRow): TouchlineOfficialLeagueTableTeam | null {
   const clubId = asTrimmedString(row.id);
   const providerTeamId = asTrimmedString(row.provider_team_id);

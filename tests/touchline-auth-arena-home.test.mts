@@ -5,13 +5,13 @@ import { getTouchLineAuthCopy, touchLineAuthHref } from "../lib/touchlineArena/a
 
 test("entry logo and home return to the intro, preserving the selected language", () => {
   const source = readFileSync(new URL("../components/auth-layout.tsx", import.meta.url), "utf8");
-  assert.match(source, /const publicArenaHref = touchLineAuthHref\("\/intro", normalizedLocale\)/);
-  assert.match(source, /<Logo href=\{publicArenaHref\}/);
+  assert.match(source, /const publicArenaHref = touchLineAuthHref\("\/intro", normalizedLocale, siteLocalesEnabled\)/);
+  assert.match(source, /<Logo href=\{brandHref \?\? publicArenaHref\}/);
   assert.match(source, /<Link href=\{publicArenaHref\}/);
-  for (const locale of ["pt-BR", "en-GB"] as const) {
-    const url = new URL(touchLineAuthHref("/intro", locale), "https://touchline.test");
+  for (const enabled of [false, true]) for (const locale of ["pt-BR", "en-GB", "es-ES", "it-IT", "fr-FR", "ar-SA", "tr-TR", "de-DE"] as const) {
+    const url = new URL(touchLineAuthHref("/intro", locale, enabled), "https://touchline.test");
     assert.equal(url.pathname, "/intro");
-    assert.equal(url.searchParams.get("lang"), locale);
+    assert.equal(url.searchParams.get("lang"), enabled || locale === "pt-BR" ? locale : "en-GB");
   }
 });
 
@@ -20,7 +20,7 @@ test("global metadata names TouchLine while entry branding and team copy remain 
   const login = readFileSync(new URL("../app/(auth)/login/page.tsx", import.meta.url), "utf8");
   const layout = readFileSync(new URL("../app/layout.tsx", import.meta.url), "utf8");
   assert.match(layout, /title: "TouchLine"/);
-  assert.match(logo, />TouchLine</);
+  assert.match(logo, />Touch<\/span>\s*<span[^>]*>Line<\/span>/);
   assert.doesNotMatch(logo, /Arena \/ TouchLine England/);
   assert.equal(getTouchLineAuthCopy("pt-BR").login.description, "Entre para montar seu time e acessar a TouchLine.");
   assert.match(login, /text-sm font-medium leading-6 text-slate-200/);

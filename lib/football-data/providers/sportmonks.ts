@@ -1,7 +1,9 @@
 import { randomUUID } from "node:crypto";
 import {
   createSportmonksQuotaRead, observeSportmonksQuota,
-  type SportmonksQuotaOperation, type SportmonksQuotaObservation, type SportmonksRequestQuota,
+  SPORTMONKS_PREQUERY_ENDPOINTS, type SportmonksPrequeryEndpoint,
+  type SportmonksObservedQuotaOperation, type SportmonksQuotaObservation, type SportmonksRequestQuota,
+  type SportmonksQuotaObserver,
 } from "@/lib/football-data/sportmonks-quota-observation";
 import { withFootballDataCache } from "@/lib/football-data/cache";
 import { normalizeSportmonksSeasonTopScorers, strictSportmonksId } from "@/lib/football-data/sportmonks-season-topscorers";
@@ -18,6 +20,8 @@ import {
   resultOk,
   type FootballDataHttpResponse,
   type FootballDataTimeoutProfile,
+  type FootballDataAttemptContext,
+  type FootballDataAttemptEnforcement,
 } from "@/lib/football-data/http";
 import { parseSportmonksStatisticValue } from "@/lib/football-data/sportmonks-statistics";
 import { mapSportmonksFixtureBallCoordinates } from "@/lib/football-data/sportmonks-ball-coordinates";
@@ -53,6 +57,7 @@ import type {
   TouchlineFantasyLineupMember,
   TouchlineFantasySidelinedPlayer,
   TouchlineFixture,
+  TouchlineFixturePeriod,
   TouchlinePlayer,
   TouchlineProviderCapabilities,
   TouchlineProviderCapability,
@@ -102,6 +107,53 @@ const SPORTMONKS_MAX_PAGE_SIZE = 50;
 const SPORTMONKS_ABSOLUTE_MAX_PAGES = 10;
 const SPORTMONKS_ABSOLUTE_MAX_ITEMS = 500;
 
+type FixtureEndpoint = SportmonksPrequeryEndpoint;
+export type SportmonksFixtureRequestContext = Readonly<{
+  accountScope: string;
+  entity: (typeof SPORTMONKS_PREQUERY_ENDPOINTS)[FixtureEndpoint]["entity"];
+  requestId: string;
+  endpoint: FixtureEndpoint;
+}>;
+export type SportmonksFixtureGuard = Readonly<{
+  /** Trusted non-secret account identity, never a token or URL. No normalization. */
+  accountScope: string;
+  /** Synchronous construction only. All authority I/O belongs in bounded callbacks. */
+  createPort(context: SportmonksFixtureRequestContext): Readonly<{
+    beforeAttempt: FootballDataAttemptEnforcement<unknown>["beforeAttempt"];
+    afterAttempt(context: FootballDataAttemptContext & Readonly<{
+      token: string; observation: SportmonksQuotaObservation;
+    }>): { persisted: true } | Promise<{ persisted: true }>;
+  }>;
+  /** Best-effort cache/attempt provenance, not admission or consumption accounting. */
+  quotaObserver?: SportmonksQuotaObserver;
+}>;
+
+function fixtureEndpoint(path: string): FixtureEndpoint | null {
+  if (/^\/squads\/teams\/[1-9][0-9]{0,19}$/.test(path)) return "squad";
+  if (/^\/squads\/teams\/[1-9][0-9]{0,19}\/extended$/.test(path)) return "squadExtended";
+  if (/^\/leagues\/[1-9][0-9]{0,19}$/.test(path)) return "league";
+  if (/^\/seasons\/[1-9][0-9]{0,19}$/.test(path)) return "season";
+  if (/^\/stages\/seasons\/[1-9][0-9]{0,19}$/.test(path)) return "stages";
+  if (/^\/topscorers\/seasons\/[1-9][0-9]{0,19}$/.test(path)) return "topscorers";
+  if (/^\/fixtures\/[1-9][0-9]{0,19}$/.test(path)) return "fixture";
+  if (path === SPORTMONKS_INPLAY_LIVESCORES_PATH) return "inplay";
+  if (path === SPORTMONKS_LATEST_LIVESCORES_PATH) return "latest";
+  const date = /^\/fixtures\/date\/(\d{4}-\d{2}-\d{2})$/.exec(path);
+  const between = /^\/fixtures\/between\/(\d{4}-\d{2}-\d{2})\/(\d{4}-\d{2}-\d{2})$/.exec(path);
+  const validDay = (day: string) => {
+    const time = Date.parse(`${day}T00:00:00.000Z`);
+    return Number.isFinite(time) && new Date(time).toISOString().slice(0, 10) === day;
+  };
+  if (date && validDay(date[1])) return "date";
+  if (between && validDay(between[1]) && validDay(between[2]) && between[1] <= between[2]) return "between";
+  return null;
+}
+
+function fixtureEnforcementUnavailable<T>(): FootballDataHttpResponse<SportmonksEnvelope<T>> {
+  return { ok: false, status: 0, error: "Sportmonks Fixture request enforcement unavailable.",
+    headers: new Headers(), fetchedAt: new Date().toISOString() };
+}
+
 function relationItems(value: unknown): SportmonksEntity[] {
   if (Array.isArray(value)) return value.filter((item): item is SportmonksEntity => Boolean(item) && typeof item === "object");
   if (!value || typeof value !== "object") return [];
@@ -143,6 +195,24 @@ function sportmonksFixtureStartAt(raw: SportmonksEntity) {
 
 export class SportmonksFootballProvider implements FootballDataProvider {
   readonly name = "sportmonks" as const;
+  private readonly fixtureGuard: SportmonksFixtureGuard | null | undefined;
+
+  constructor(options?: Readonly<{ fixtureGuard?: SportmonksFixtureGuard }>) {
+    // undefined is legacy; null records an explicitly invalid binding permanently.
+    if (options === undefined || options && !Object.hasOwn(options, "fixtureGuard")) {
+      this.fixtureGuard = undefined;
+      return;
+    }
+    try {
+      const binding = options?.fixtureGuard;
+      const accountScope = binding?.accountScope, createPort = binding?.createPort, quotaObserver = binding?.quotaObserver;
+      this.fixtureGuard = binding && typeof accountScope === "string"
+        && /^[a-z][a-z0-9_-]{0,63}$/.test(accountScope)
+        && typeof createPort === "function"
+        && (quotaObserver === undefined || typeof quotaObserver === "function")
+        ? Object.freeze({ accountScope, createPort: createPort.bind(binding), quotaObserver: quotaObserver?.bind(binding) }) : null;
+    } catch { this.fixtureGuard = null; }
+  }
 
   private token() {
     return process.env.SPORTMONKS_API_TOKEN;
@@ -205,17 +275,50 @@ export class SportmonksFootballProvider implements FootballDataProvider {
     cachePolicy?: "fixture-diagnostic-v1",
     quotaRead?: ReturnType<typeof createSportmonksQuotaRead>,
   ): Promise<SportmonksRequestResult<T>> {
+    if (this.fixtureGuard === null) return { configured: true, cached: false, value: fixtureEnforcementUnavailable() };
+    const endpoint = this.fixtureGuard ? fixtureEndpoint(path) : null;
+    // An explicitly guarded caller must never fall through to an unadmitted
+    // endpoint. New families remain unavailable until their tuple is proven.
+    if (this.fixtureGuard && !endpoint) {
+      return { configured: true, cached: false, value: fixtureEnforcementUnavailable() };
+    }
+    const fixtureQuota = endpoint ? createSportmonksQuotaRead(this.fixtureGuard?.quotaObserver) : undefined;
+    const collectors = [fixtureQuota, quotaRead].filter((value): value is NonNullable<typeof value> => Boolean(value));
+    const combinedQuota = collectors.length ? {
+      begin() { for (const collector of collectors) collector.begin(); },
+      observe(value: SportmonksQuotaObservation) { for (const collector of collectors) collector.observe(value); },
+      finish(value: SportmonksRequestQuota | undefined, cached: boolean) { for (const collector of collectors) collector.finish(value, cached); },
+      close() { /* Each collector is closed by its owning request/read. */ },
+    } : undefined;
+    try {
+      return await this.requestCached<T>(path, params, bucket, timeoutProfile, remainingBudgetMs,
+        maxAttempts, cachePolicy, combinedQuota, endpoint);
+    } finally { fixtureQuota?.close(); }
+  }
+
+  private async requestCached<T>(
+    path: string,
+    params: Record<string, string | number | undefined>,
+    bucket: "static" | "daily" | "live" | "historical",
+    timeoutProfile: FootballDataTimeoutProfile,
+    remainingBudgetMs: number | undefined,
+    maxAttempts: number,
+    cachePolicy: "fixture-diagnostic-v1" | undefined,
+    quotaRead: ReturnType<typeof createSportmonksQuotaRead> | undefined,
+    endpoint: FixtureEndpoint | null,
+  ): Promise<SportmonksRequestResult<T>> {
     quotaRead?.begin();
     const token = this.token();
     if (!token) return { configured: false as const };
     // Instrument all owners of these shared keys, even without a subscriber.
-    const quotaOperation: SportmonksQuotaOperation | null =
-      /^\/stages\/seasons\/[1-9]\d*$/.test(path) ? "stages"
+    const quotaOperation: SportmonksObservedQuotaOperation | null = endpoint ? SPORTMONKS_PREQUERY_ENDPOINTS[endpoint].operation
+      : /^\/stages\/seasons\/[1-9]\d*$/.test(path) ? "stages"
         : /^\/topscorers\/seasons\/[1-9]\d*$/.test(path) ? "topscorers" : null;
 
     const cachedResponse = await withFootballDataCache(
       bucket,
-      ["sportmonks", path, JSON.stringify(params), ...(cachePolicy ? [cachePolicy] : [])],
+      ["sportmonks", path, JSON.stringify(params), ...(cachePolicy ? [cachePolicy] : []),
+        ...(endpoint ? ["sportmonks-prequery-enforcement-v2", this.fixtureGuard!.accountScope] : [])],
       async (): Promise<FootballDataHttpResponse<SportmonksEnvelope<T>> & { quota?: SportmonksRequestQuota }> => {
         const baseUrl = path.startsWith("/my/") ? this.rootBaseUrl() : this.baseUrl();
         const url = new URL(path.replace(/^\//, ""), `${baseUrl.replace(/\/$/, "")}/`);
@@ -227,9 +330,27 @@ export class SportmonksFootballProvider implements FootballDataProvider {
         const timeoutMs = Math.min(footballDataTimeoutMs(timeoutProfile), remainingBudgetMs ?? Infinity);
         const requestId = quotaOperation ? randomUUID() : "";
         const observations: SportmonksQuotaObservation[] = [];
+        let enforcement: FootballDataAttemptEnforcement<SportmonksEnvelope<T>> | undefined;
+        if (endpoint) {
+          try {
+            const port = this.fixtureGuard!.createPort(Object.freeze({ accountScope: this.fixtureGuard!.accountScope,
+              entity: SPORTMONKS_PREQUERY_ENDPOINTS[endpoint].entity, requestId, endpoint }));
+            if (!port || typeof port.beforeAttempt !== "function" || typeof port.afterAttempt !== "function") {
+              return fixtureEnforcementUnavailable();
+            }
+            const before = port.beforeAttempt.bind(port), after = port.afterAttempt.bind(port);
+            enforcement = Object.freeze({ beforeAttempt: before,
+              afterAttempt: ({ attempt, token: admissionToken, signal, remainingBudgetMs: remaining, response: completed }:
+                Parameters<FootballDataAttemptEnforcement<SportmonksEnvelope<T>>["afterAttempt"]>[0]) =>
+                after(Object.freeze({ attempt, token: admissionToken, signal, remainingBudgetMs: remaining,
+                  observation: observeSportmonksQuota(requestId, SPORTMONKS_PREQUERY_ENDPOINTS[endpoint].operation, attempt, completed) })),
+            });
+          } catch { return fixtureEnforcementUnavailable(); }
+        }
         const response = await footballDataFetchJson<SportmonksEnvelope<T>>(url, {
           provider: this.name,
           timeoutMs,
+          enforcement,
           onAttemptCompleted: quotaOperation ? ({ attempt, response: completed }) => {
             const observation = observeSportmonksQuota(requestId, quotaOperation, attempt, completed);
             observations.push(observation);
@@ -474,6 +595,9 @@ export class SportmonksFootballProvider implements FootballDataProvider {
   }
 
   async getCompetitionById(id: string): Promise<FootballDataResult<TouchlineCompetition | null>> {
+    if (this.fixtureGuard && !/^[1-9][0-9]{0,19}$/.test(id)) {
+      return this.providerFailure<TouchlineCompetition | null>(fixtureEnforcementUnavailable(), "Sportmonks competition lookup failed.");
+    }
     // This endpoint is available to the active Sportmonks subscription without
     // optional relationship includes. The canonical store already owns the
     // enriched competition fields when they are available elsewhere.
@@ -485,6 +609,9 @@ export class SportmonksFootballProvider implements FootballDataProvider {
   }
 
   async getSeasonById(id: string): Promise<FootballDataResult<TouchlineSeason | null>> {
+    if (this.fixtureGuard && !/^[1-9][0-9]{0,19}$/.test(id)) {
+      return this.providerFailure<TouchlineSeason | null>(fixtureEnforcementUnavailable(), "Sportmonks season lookup failed.");
+    }
     const request = await this.request<SportmonksEntity>(`/seasons/${id}`, {}, "static");
     if (!request.configured) return this.notConfigured<TouchlineSeason | null>();
     const { value, cached } = request;
@@ -628,14 +755,20 @@ export class SportmonksFootballProvider implements FootballDataProvider {
   }
 
   async getSquad(teamId: string): Promise<FootballDataResult<TouchlineSquadMember[]>> {
-    const [request, extendedRequest] = await Promise.all([
-      this.request<SportmonksEntity[]>(`/squads/teams/${teamId}`, {
+    const basic = () => this.request<SportmonksEntity[]>(`/squads/teams/${teamId}`, {
         include: "player;player.position;player.detailedPosition;position;detailedPosition",
-      }, "daily", "interactive"),
-      this.request<SportmonksEntity[]>(`/squads/teams/${teamId}/extended`, {
+      }, "daily", "interactive");
+    const extended = () => this.request<SportmonksEntity[]>(`/squads/teams/${teamId}/extended`, {
         include: "country;nationality;position;detailedPosition",
-      }, "daily", "interactive"),
-    ]);
+      }, "daily", "interactive");
+    // A guarded account has a single persistent admission token. Complete the
+    // first attempt before admitting enrichment; never enrich a denied base.
+    const [request, extendedRequest] = this.fixtureGuard !== undefined
+      ? await (async () => {
+        const first = await basic();
+        return [first, first.configured && first.value.ok ? await extended() : first] as const;
+      })()
+      : await Promise.all([basic(), extended()]);
     if (!request.configured) return this.notConfigured<TouchlineSquadMember[]>();
     const { value, cached } = request;
     if (!value.ok) return this.providerFailure<TouchlineSquadMember[]>(value, "Sportmonks squad failed.");
@@ -798,6 +931,11 @@ export class SportmonksFootballProvider implements FootballDataProvider {
     if (!request) return resultError(this.name, "provider_error", "Fixture diagnostic budget exhausted.");
     if (!request.configured) return this.notConfigured<TouchlineFantasyFixtureFeed | null>();
     const { value, cached } = request;
+    // Only this single-request operation can propagate zero-HTTP proof.
+    // Never promote a later pagination denial into whole-operation deferral.
+    if (!value.ok && value.requestDisposition === "deferred-before-http") {
+      return resultError(this.name, "deferred", "Fixture request deferred before HTTP by its authority.");
+    }
     if (!value.ok) return this.providerFailure<TouchlineFantasyFixtureFeed | null>(value, "Sportmonks fantasy fixture feed failed.");
 
     const raw = value.data?.data;
@@ -1008,6 +1146,35 @@ export class SportmonksFootballProvider implements FootballDataProvider {
     };
   }
 
+  private mapPeriods(raw?: SportmonksEntity): TouchlineFixturePeriod[] | undefined {
+    const fixtureId = strictSportmonksId(raw?.id);
+    const rows = this.relationArray(raw, "periods");
+    if (!fixtureId || !rows.length) return undefined;
+    if (rows.some((row) => !row || typeof row !== "object" || Array.isArray(row))) return undefined;
+    const ids = rows.map((row) => strictSportmonksId(row.id));
+    // Ambiguous collections are not partially represented as unique evidence.
+    if (ids.some((id) => !id) || new Set(ids).size !== rows.length) return undefined;
+    const integer = (value: unknown, minimum = 0, maximum = Number.MAX_SAFE_INTEGER) => (
+      typeof value === "number" && Number.isSafeInteger(value) && value >= minimum && value <= maximum
+        ? value : undefined
+    );
+    const result: TouchlineFixturePeriod[] = [];
+    for (const row of rows) {
+      const providerId = strictSportmonksId(row.id);
+      const typeId = strictSportmonksId(row.type_id);
+      if (!providerId || !typeId || strictSportmonksId(row.fixture_id) !== fixtureId) return undefined;
+      result.push({
+        providerId, fixtureId, typeId,
+        started: integer(row.started), ended: integer(row.ended),
+        countsFrom: integer(row.counts_from), sortOrder: integer(row.sort_order, 1),
+        minutes: integer(row.minutes), seconds: integer(row.seconds, 0, 59),
+        ticking: typeof row.ticking === "boolean" ? row.ticking : undefined,
+        hasTimer: typeof row.has_timer === "boolean" ? row.has_timer : undefined,
+      });
+    }
+    return result;
+  }
+
   private mapFixture(raw?: SportmonksEntity): TouchlineFixture | null {
     if (!raw?.id) return null;
     const id = String(raw.id);
@@ -1016,7 +1183,9 @@ export class SportmonksFootballProvider implements FootballDataProvider {
     const away = participants.find((team) => asString(team.meta && (team.meta as SportmonksEntity).location) === "away") ?? participants[1];
     const scores = Array.isArray(raw.scores) ? raw.scores as SportmonksEntity[] : [];
     const round = this.relationEntity(raw, "round");
-    const periods = this.relationArray(raw, "periods");
+    const periods = this.relationArray(raw, "periods").filter((period) => (
+      period && typeof period === "object" && !Array.isArray(period)
+    ));
     const currentPeriod = periods.find((period) => period.ticking === true)
       ?? [...periods].reverse().find((period) => asNumber(period.minutes) !== undefined || asString(period.description));
     const events = this.relationArray(raw, "events");
@@ -1040,6 +1209,7 @@ export class SportmonksFootballProvider implements FootballDataProvider {
       liveMinute: asNumber(currentPeriod?.minutes),
       liveSecond: asNumber(currentPeriod?.seconds),
       livePeriod: asString(currentPeriod?.description) ?? asString(currentPeriod?.type_id),
+      periods: this.mapPeriods(raw),
       eventsCount: events.length || undefined,
       providerUpdatedAt: providerUpdatedAt && Number.isFinite(Date.parse(providerUpdatedAt)) ? providerUpdatedAt : undefined,
       source: { provider: this.name, providerId: id, raw },
@@ -1219,16 +1389,23 @@ export class SportmonksFootballProvider implements FootballDataProvider {
 
   private mapEvents(raw: SportmonksEntity | undefined, fixtureId?: string): TouchlineFantasyEvent[] {
     const resolvedFixtureId = fixtureId ?? asString(raw?.id);
+    const periods = this.mapPeriods(raw);
     return this.relationArray(raw, "events").map((item, index) => {
       const id = asString(item.id) ?? `${resolvedFixtureId ?? "live"}-event-${index}`;
       const player = this.relationEntity(item, "player") ?? (item.player as SportmonksEntity | undefined);
       const relatedPlayer = this.relationEntity(item, "relatedPlayer") ?? this.relationEntity(item, "related_player");
       const type = asString((item.type as SportmonksEntity | undefined)?.name) ?? asString(item.type_name) ?? asString(item.event_type) ?? asString(item.type);
+      const candidatePeriodId = strictSportmonksId(item.period_id);
+      const periodId = strictSportmonksId(item.id) && resolvedFixtureId === strictSportmonksId(raw?.id)
+        && (item.fixture_id === undefined || strictSportmonksId(item.fixture_id) === resolvedFixtureId)
+        && periods?.some((period) => period.providerId === candidatePeriodId)
+        ? candidatePeriodId ?? undefined : undefined;
       return {
         id: providerId(this.name, id),
         providerId: id,
         provider: this.name,
         fixtureId: resolvedFixtureId,
+        periodId,
         teamId: asString(item.team_id) ?? asString(item.participant_id),
         playerId: asString(item.player_id) ?? asString(player?.id),
         playerName: asString(player?.display_name) ?? asString(player?.name) ?? asString(item.player_name),

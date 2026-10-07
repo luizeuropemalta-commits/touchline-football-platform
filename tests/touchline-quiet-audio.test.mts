@@ -28,9 +28,10 @@ test("one root-owned entry player survives auth route changes without competing 
   assert.match(source, /getAttribute\("src"\) === source && !audio.current.paused/);
   assert.match(source, /if \(element.getAttribute\("src"\) !== policy.current.source\)/);
   const navigation = readFileSync(new URL("../components/touchline/TouchlineGlobalNavigation.tsx", import.meta.url), "utf8");
-  assert.match(navigation, /<AuthAmbientAudio locale=\{effectiveLocale\}/);
+  assert.match(navigation, /showAudioControl \? <AuthAmbientAudio locale=\{copyLocale\} allowDraftLocale=\{draftLocalesEnabled\}/);
+  assert.match(navigation, /const copyLocale = resolveTouchlineCatalogueLocale\(locale, draftLocalesEnabled\)/);
   assert.doesNotMatch(source, /position: "fixed"|MutationObserver/);
-  assert.match(navigation, /const effectiveLocale = resolveTouchLinePresentationLocale\(locale\)/);
+  assert.match(navigation, /const effectiveLocale = resolveTouchLinePresentationLocale\(locale, draftLocalesEnabled\)/);
   assert.match(source, /if \(audio.current\?\.paused && state === "on"\) \{ wanted.current = false; setState\("off"\)/);
   assert.match(source, /onError=\{\(\) => \{ wanted.current = false; stop\(\); setState\("error"\)/);
 });

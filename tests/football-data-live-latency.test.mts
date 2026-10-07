@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { registerHooks } from "node:module";
 import test from "node:test";
+import { clearFootballDataCache } from "../lib/football-data/cache.ts";
 
 import {
   footballDataFetchJson,
@@ -106,10 +108,58 @@ test("live scores and public squads never fall through to Sportmonks", () => {
   assert.doesNotMatch(premierSquadReaderSource, /createFootballDataProvider|persistSquadSnapshot|readSnapshotForLiveRefresh|backgroundRefresh|after\(|\.getSquad\(/);
 });
 
-test("Sportmonks bounds and parallelizes the two squad requests", () => {
+test("unguarded Sportmonks bounds and parallelizes the two squad requests", async () => {
   assert.match(sportmonksProviderSource, /footballDataTimeoutMs\(timeoutProfile\)/);
+  // Retain the interactive timeout contract for both endpoint closures.
   assert.match(
     sportmonksProviderSource,
-    /const \[request, extendedRequest\] = await Promise\.all\(\[[\s\S]*?"interactive"[\s\S]*?"interactive"[\s\S]*?\]\)/,
+    /const basic = \(\) => this\.request[\s\S]*?"daily", "interactive"\);/,
   );
+  assert.match(
+    sportmonksProviderSource,
+    /const extended = \(\) => this\.request[\s\S]*?"daily", "interactive"\);/,
+  );
+  const root = new URL("../", import.meta.url);
+  const hooks = registerHooks({ resolve(specifier, context, next) {
+    return next(specifier.startsWith("@/") ? new URL(`${specifier.slice(2)}.ts`, root).href : specifier, context);
+  } });
+  const originalFetch = globalThis.fetch;
+  const token = process.env.SPORTMONKS_API_TOKEN;
+  const base = process.env.SPORTMONKS_BASE_URL;
+  const paths: string[] = [];
+  let release!: () => void;
+  const firstResponse = new Promise<void>(resolve => { release = resolve; });
+  let pending: Promise<{ ok: boolean }> | undefined;
+  clearFootballDataCache();
+  process.env.SPORTMONKS_API_TOKEN = "synthetic-token";
+  process.env.SPORTMONKS_BASE_URL = "https://sportmonks.invalid/v3/football";
+  globalThis.fetch = async input => {
+    const path = new URL(String(input)).pathname;
+    paths.push(path);
+    if (path === "/v3/football/squads/teams/19") await firstResponse;
+    return new Response(JSON.stringify({ data: [] }), { status: 200 });
+  };
+  try {
+    const { SportmonksFootballProvider } = await import("../lib/football-data/providers/sportmonks.ts");
+    pending = new SportmonksFootballProvider().getSquad("19");
+    await new Promise<void>(resolve => setImmediate(resolve));
+    assert.deepEqual(paths, [
+      "/v3/football/squads/teams/19",
+      "/v3/football/squads/teams/19/extended",
+    ], "extended HTTP must start while the unguarded base response is still pending");
+    release();
+    const result = await pending;
+    assert.equal(result.ok, true);
+  } finally {
+    release();
+    try { await pending; } finally {
+      globalThis.fetch = originalFetch;
+      if (token === undefined) delete process.env.SPORTMONKS_API_TOKEN;
+      else process.env.SPORTMONKS_API_TOKEN = token;
+      if (base === undefined) delete process.env.SPORTMONKS_BASE_URL;
+      else process.env.SPORTMONKS_BASE_URL = base;
+      clearFootballDataCache();
+      hooks.deregister();
+    }
+  }
 });

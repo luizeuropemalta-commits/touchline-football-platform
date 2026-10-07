@@ -18,8 +18,8 @@ for (const route of ["forgot-password", "reset-password", "register"] as const) 
     assert.match(backLink, /\{copy\.back\}/);
     assert.doesNotMatch(backLink, /text-slate-[456]00|text-\[9px\]|opacity-|onClick=/);
     assert.ok(backLink.includes(route === "reset-password"
-      ? 'href={touchLineAuthHref("/login", locale)}'
-      : 'href={touchLineAuthEntryHref("/login", locale, returnTo)}'));
+      ? 'href={touchLineAuthHref("/login", locale, publicRelease)}'
+      : 'href={touchLineAuthEntryHref("/login", locale, returnTo, siteLocalesEnabled)}'));
     assert.ok(backLink.includes(route === "register" ? "mb-4" : "mb-8"));
     if (route === "register") {
       assert.match(backLink, /rounded-full border border-white\/10 bg-black\/20 px-3 py-2/);
@@ -34,9 +34,11 @@ for (const route of ["forgot-password", "reset-password", "register"] as const) 
     assert.ok(description, "localized description must remain present");
     assert.match(description, /(?:^| )text-slate-300(?: |$)/);
     assert.doesNotMatch(description, /text-slate-[456]00|opacity-|text-slate-300\//);
-    assert.match(page, /normalizeTouchLineAuthLocale\(lang\)/);
-    if (route === "reset-password") assert.match(page, /<ResetPasswordForm locale=\{locale\} \/>/);
-    else assert.ok(page.includes(`<AuthForm mode="${route === "register" ? "register" : "forgot"}" locale={locale} returnTo={returnTo} />`));
-    assert.ok(page.includes(route === "register" ? "<AuthLayout cinematic locale={locale}>" : "<AuthLayout locale={locale}>"));
+    assert.match(page, /normalizeTouchLineAuthLocale\(lang, (?:siteLocalesEnabled|publicRelease)\)/);
+    assert.match(page, /draftLocalesEnabled = false/);
+    if (route === "reset-password") assert.match(page, /<ResetPasswordForm locale=\{locale\} draftLocaleEnabled=\{draftLocalesEnabled\} siteLocalesEnabled=\{publicRelease\} \/>/);
+    else assert.ok(page.includes(`<AuthForm mode="${route === "register" ? "register" : "forgot"}" locale={locale} returnTo={returnTo} draftLocaleEnabled={draftLocalesEnabled} siteLocalesEnabled={siteLocalesEnabled} />`));
+    assert.ok(page.includes(route === "register" ? "<AuthLayout cinematic locale={locale} accountLocaleContext={accountLocaleContext}" : "<AuthLayout locale={locale} accountLocaleContext={accountLocaleContext}"));
+    assert.match(page, /showArenaHomeLink=\{false\} draftLocalesEnabled=\{draftLocalesEnabled\} siteLocalesEnabled=\{(?:siteLocalesEnabled|publicRelease)\} keepLoginLayoutStable/);
   });
 }

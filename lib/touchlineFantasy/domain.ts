@@ -3,6 +3,7 @@ import type {
   TouchlineFormationGeometrySlot,
 } from "../touchlineArena/formation-geometry.ts";
 import type { TouchlineMarketPositionBucket } from "../touchlineArena/position-eligibility.ts";
+import { resolveTouchlineCatalogueLocale } from "../touchlineArena/catalogue-locale.ts";
 
 export const TOUCHLINE_FANTASY_ENTITLEMENT_KEY = "fantasy_access" as const;
 export const TOUCHLINE_FANTASY_SUBSCRIPTION_PRICE_MINOR = 2_990 as const;
@@ -362,15 +363,17 @@ export function resolveTouchlineFantasyBuilderStep(input: Readonly<{
   return "review";
 }
 
-export function formatTouchlineFantasyDeadline(value: string, locale: string) {
+export function formatTouchlineFantasyDeadline(value: string, locale: string, draftLocalesEnabled = false) {
   const deadline = new Date(value);
   if (Number.isNaN(deadline.getTime())) return "—";
-  const resolvedLocale = locale === "pt-BR" ? "pt-BR" : "en-GB";
+  const resolvedLocale = resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled);
   const date = new Intl.DateTimeFormat(resolvedLocale, {
+    calendar: "gregory",
     dateStyle: "medium",
     timeZone: TOUCHLINE_FANTASY_DEADLINE_TIME_ZONE,
   }).format(deadline);
   const time = new Intl.DateTimeFormat(resolvedLocale, {
+    calendar: "gregory",
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
@@ -379,9 +382,9 @@ export function formatTouchlineFantasyDeadline(value: string, locale: string) {
   return `${date}, ${time}`;
 }
 
-export function formatTouchlineFantasyMarketValue(valueEur: number, locale: string) {
+export function formatTouchlineFantasyMarketValue(valueEur: number, locale: string, draftLocalesEnabled = false) {
   const millions = valueEur / 1_000_000;
-  return new Intl.NumberFormat(locale === "pt-BR" ? "pt-BR" : "en-GB", {
+  return new Intl.NumberFormat(resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled), {
     style: "currency",
     currency: "EUR",
     notation: "compact",

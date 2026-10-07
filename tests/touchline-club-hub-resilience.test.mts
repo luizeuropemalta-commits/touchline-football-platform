@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { getTouchlinePublicErrorCopy } from "../lib/touchlineArena/public-error-i18n.ts";
+import { getTouchlineClubHubRosterCopy } from "../lib/touchlineArena/club-hub-roster-i18n.ts";
 import { resolveTouchlineInternalAppOrigin, touchlineInternalUrl } from "../lib/server/internal-app-origin.ts";
 import { fetchTouchlineInternalJson } from "../lib/server/safe-internal-fetch.ts";
 
@@ -22,8 +24,12 @@ test("ClubHub bounds squad loading and distinguishes unavailable data from a nor
   assert.match(source, /state: "ready" as const/);
   assert.match(source, /state: "unavailable" as const/);
   assert.match(source, /squadUnavailable=\{presentation\.squadLoad\.state === "unavailable"\}/);
-  assert.match(outsideMatchRosterSource, /Não foi possível carregar o elenco agora\./);
-  assert.match(outsideMatchRosterSource, /Tentar novamente/);
+  assert.equal(getTouchlineClubHubRosterCopy("pt-BR").squadUnavailableTitle, "Não foi possível carregar o elenco agora.");
+  assert.match(outsideMatchRosterSource, /const copy = getTouchlineClubHubRosterCopy\(locale, draftLocalesEnabled\)/);
+  assert.match(outsideMatchRosterSource, /const emptyTitle = squadUnavailable\s*\? copy\.squadUnavailableTitle/);
+  assert.equal(getTouchlinePublicErrorCopy("pt-BR").error.retry, "Tentar novamente");
+  assert.match(outsideMatchRosterSource, /const retryLabel = getTouchlinePublicErrorCopy\(locale, draftLocalesEnabled\)\.error\.retry/);
+  assert.match(outsideMatchRosterSource, /squadUnavailable && retryHref \? <Link href=\{retryHref\}>\{retryLabel\}/);
   assert.match(outsideMatchRosterSource, /role="status"/);
 });
 
@@ -80,9 +86,16 @@ test("host and forwarded headers cannot grant local editor access", () => {
 });
 
 test("unexpected rendering failures use a safe recovery boundary without exposing internal errors", () => {
-  assert.match(errorBoundarySource, /function TouchlineErrorBoundary\(\{ error: _error, reset \}/);
+  assert.match(errorBoundarySource, /function TouchlineErrorBoundary\(props: TouchlineErrorBoundaryProps\)/);
+  assert.match(errorBoundarySource, /function ErrorBoundaryContent\(\{ error: _error, reset, draftLocalesEnabled = false \}/);
   assert.match(errorBoundarySource, /onClick=\{\(\) => reset\(\)\}/);
-  assert.match(errorBoundarySource, /Nenhum dado do seu clube foi alterado/);
+  // Source binding only; real boundary SSR/privacy/reset have dedicated tests.
+  assert.match(errorBoundarySource, /const copy = getTouchlinePublicErrorCopy\(locale, draftLocalesEnabled\)\.error/);
+  assert.match(errorBoundarySource, /\{copy\.body\}/);
+  assert.equal(getTouchlinePublicErrorCopy("pt-BR").error.body,
+    "Nenhum dado do seu clube foi alterado. Você pode tentar novamente ou voltar para o ClubOwner.");
+  assert.equal(getTouchlinePublicErrorCopy("en-GB").error.body,
+    "No club data has been changed. Try again or return to ClubOwner.");
   assert.doesNotMatch(errorBoundarySource, /error\.message|error\.stack/);
 });
 

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { getTouchlinePublicErrorCopy } from "../lib/touchlineArena/public-error-i18n.ts";
 
 const proxySource = readFileSync(new URL("../proxy.ts", import.meta.url), "utf8");
 const homeSource = readFileSync(new URL("../app/page.tsx", import.meta.url), "utf8");
@@ -23,10 +24,10 @@ test("no middleware flag, branch or query can rewrite public product routes to p
 test("anonymous visitors may enter the Arena while account-backed product operations stay protected", () => {
   assert.match(
     proxySource,
-    /protectedArenaPaths\s*=\s*\["\/market-transfer", "\/fantasy", "\/admin", "\/notifications", "\/inbox", "\/football-search", "\/visual-qa"\]/,
+    /protectedArenaPaths\s*=\s*\["\/clubowner", "\/fantasy", "\/admin", "\/notifications", "\/inbox", "\/football-search", "\/visual-qa"\]/,
   );
   assert.doesNotMatch(proxySource, /protectedArenaPaths\s*=\s*\[[^\]]*"\/arena"/);
-  assert.match(proxySource, /if \(!user && isProtectedArenaRoute\) return loginRedirect\(request, response\)/);
+  assert.match(proxySource, /if \(!user && isProtectedArenaRoute\) return loginRedirect\(request, response, draftLocalesEnabled\)/);
   assert.match(proxySource, /if \(user && hasArenaAccess && isAuthEntry\)/);
   assert.match(arenaSource, /redirect\(`\/intro\?/);
   assert.doesNotMatch(arenaSource, /ArenaClient|createClient|loadTouchlineFantasy|qaEditor|qaReadOnly/);
@@ -38,8 +39,9 @@ test("the live public entry files contain no pre-launch admission copy", () => {
     publicEntrySource,
     /A ARENA ESTÁ QUASE PRONTA|THE ARENA IS ALMOST READY|LANÇAMENTO EM BREVE|LAUNCHING SOON|early registration|site is in testing|TouchLine Beta/i,
   );
-  assert.match(proxySource, /Temporariamente indisponível/);
-  assert.match(proxySource, /Temporarily unavailable/);
+  assert.match(proxySource, /getTouchlinePublicErrorCopy\(locale, draftLocalesEnabled\)\.offline/);
+  assert.equal(getTouchlinePublicErrorCopy("pt-BR").offline.title, "TouchLine — Temporariamente indisponível");
+  assert.equal(getTouchlinePublicErrorCopy("en-GB").offline.title, "TouchLine — Temporarily unavailable");
 });
 
 test("Admin and OWNER-only boundaries remain fail-closed", () => {

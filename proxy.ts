@@ -1,4 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { resolveTouchlineCatalogueLocale } from "@/lib/touchlineArena/catalogue-locale";
+import { getTouchlinePublicErrorCopy } from "@/lib/touchlineArena/public-error-i18n";
+import { isTouchLineSiteLocalesEnabled } from "@/lib/touchlineArena/site-locales-release";
 
 import {
   isTouchLinePublicWwwHost,
@@ -7,13 +10,19 @@ import {
 } from "@/lib/server/touchline-host-routing";
 import { TOUCHLINE_PUBLIC_ORIGIN } from "@/lib/touchlineArena/public-origin";
 import {
+  isTouchLineLoginDraftLocale,
   normalizeTouchLineAuthReturnTo,
+  normalizeTouchLineAuthLocale,
+  normalizeTouchLineLoginLocale,
   touchLinePostAuthHref,
 } from "@/lib/touchlineArena/auth-i18n";
 import { hasTouchLineArenaAccess } from "@/lib/touchlineArena/auth-access";
 import {
   resolveTouchLinePresentationLocale,
+  resolveTouchLineSavedPresentationLocale,
   touchlineLocaleRequestNeedsCanonicalRedirect,
+  TOUCHLINE_LOGIN_PRESENTATION_LOCALE_HEADER,
+  TOUCHLINE_LOCALE_STORAGE_KEY,
   TOUCHLINE_PRESENTATION_LOCALE_HEADER,
 } from "@/lib/touchlineArena/root-locale";
 import {
@@ -37,7 +46,7 @@ const authPaths = ["/login", "/admin/login", "/register", "/forgot-password", "/
 const authEntryPaths = ["/login", "/register", "/forgot-password"] as const;
 // The Arena itself is the public product entrance. Account-backed operations
 // remain protected and their APIs independently enforce the same capability.
-const protectedArenaPaths = ["/market-transfer", "/fantasy", "/admin", "/notifications", "/inbox", "/football-search", "/visual-qa"] as const;
+const protectedArenaPaths = ["/clubowner", "/fantasy", "/admin", "/notifications", "/inbox", "/football-search", "/visual-qa"] as const;
 const adminOnlyArenaPaths = ["/admin", "/visual-qa"] as const;
 
 function matchesRoute(pathname: string, route: string) {
@@ -74,13 +83,15 @@ async function hasQaSocialRenderBearer(request: NextRequest, hostname: string) {
   return difference === 0;
 }
 
-function offlineResponse(locale: "en-GB" | "pt-BR") {
-  const isPortuguese = locale === "pt-BR";
-  const title = isPortuguese ? "TouchLine — Temporariamente indisponível" : "TouchLine — Temporarily unavailable";
-  const description = isPortuguese
-    ? "A Arena está temporariamente indisponível. Tente novamente em instantes."
-    : "The Arena is temporarily unavailable. Please try again shortly.";
-  const statusLabel = isPortuguese ? "Tente novamente em instantes" : "Please try again shortly";
+function offlineResponse(requestedLocale: string, draftLocalesEnabled = false) {
+  const locale = resolveTouchlineCatalogueLocale(requestedLocale, draftLocalesEnabled);
+  const copy = getTouchlinePublicErrorCopy(locale, draftLocalesEnabled).offline;
+  const escapeHtml = (value: string) => value.replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  })[character]!);
+  const title = escapeHtml(copy.title);
+  const description = escapeHtml(copy.description);
+  const statusLabel = escapeHtml(copy.statusLabel);
 
   return new NextResponse(
     `<!doctype html>
@@ -237,26 +248,63 @@ function redirectWithSupabaseCookies(url: URL, sourceResponse?: NextResponse) {
   return redirectResponse;
 }
 
-function loginRedirect(request: NextRequest, sourceResponse?: NextResponse) {
+function loginRedirect(request: NextRequest, sourceResponse?: NextResponse, draftLocalesEnabled = false) {
   const adminEntry = matchesRoute(request.nextUrl.pathname, "/admin")
     || matchesRoute(request.nextUrl.pathname, "/visual-qa");
   const loginUrl = new URL(adminEntry ? "/admin/login" : "/login", request.url);
   const lang = request.nextUrl.searchParams.get("lang");
-  if (lang) loginUrl.searchParams.set("lang", lang);
+  if (lang) loginUrl.searchParams.set("lang", normalizeTouchLineAuthLocale(lang, draftLocalesEnabled && !adminEntry));
   loginUrl.searchParams.set("returnTo", `${request.nextUrl.pathname}${request.nextUrl.search}`);
   return redirectWithSupabaseCookies(loginUrl, sourceResponse);
 }
 
-function requestLocale(request: NextRequest) {
-  return resolveTouchLinePresentationLocale(request.nextUrl.searchParams.get("lang"));
+function hasProtectedAuthReturn(request: NextRequest) {
+  if (!["/login", "/register", "/forgot-password"].includes(request.nextUrl.pathname)) return false;
+  const path = normalizeTouchLineAuthReturnTo(request.nextUrl.searchParams.get("returnTo"))?.split(/[?#]/)[0] ?? "";
+  return ["/admin", "/visual-qa"].some(route => matchesRoute(path, route));
 }
 
-function canonicalPresentationLocaleRedirect(request: NextRequest) {
+function requestLocale(request: NextRequest, draftLocalesEnabled = false) {
+  if (hasProtectedAuthReturn(request)) return normalizeTouchLineAuthLocale(request.nextUrl.searchParams.get("lang"));
+  if (request.nextUrl.pathname === "/login") {
+    return normalizeTouchLineLoginLocale(request.nextUrl.searchParams.get("lang"));
+  }
+  return resolveTouchLinePresentationLocale(request.nextUrl.searchParams.get("lang"), draftLocalesEnabled);
+}
+
+function canonicalPresentationLocaleRedirect(request: NextRequest, draftLocalesEnabled = false) {
+  const protectedReturn = hasProtectedAuthReturn(request);
+  draftLocalesEnabled = draftLocalesEnabled && !protectedReturn;
   const requestedLocale = request.nextUrl.searchParams.get("lang");
-  if (!touchlineLocaleRequestNeedsCanonicalRedirect(requestedLocale)) return null;
+  // Pages consume searchParams directly, so restore the preference in the URL
+  // before SSR instead of changing only the document's language header.
+  const pathname = request.nextUrl.pathname;
+  const canRestorePreference = (request.method === "GET" || request.method === "HEAD")
+    && !matchesRoute(pathname, "/api")
+    && !matchesRoute(pathname, "/_next")
+    && !matchesRoute(pathname, "/auth/callback")
+    && !/\.[^/]+$/.test(pathname);
+  // Locale canonicalization is presentation-only, including its fallback.
+  // Never redirect a mutation, callback, API call or resource for its lang query.
+  if (!canRestorePreference) return null;
+  const loginDraftLocale = pathname === "/login" && !protectedReturn && isTouchLineLoginDraftLocale(requestedLocale);
+  // A trusted draft caller keeps explicit query presentation ahead of stale
+  // cookies. Legacy public precedence remains unchanged until coordinated QA.
+  const savedLocale = !loginDraftLocale && (!draftLocalesEnabled || requestedLocale === null)
+    ? resolveTouchLineSavedPresentationLocale(request.cookies.get(TOUCHLINE_LOCALE_STORAGE_KEY)?.value, draftLocalesEnabled)
+    : null;
+  if (savedLocale && requestedLocale !== savedLocale) {
+    const canonicalUrl = request.nextUrl.clone();
+    canonicalUrl.searchParams.set("lang", savedLocale);
+    const response = NextResponse.redirect(canonicalUrl, 307);
+    // The target depends on a browser cookie and must not enter a shared cache.
+    response.headers.set("cache-control", "private, no-store");
+    return response;
+  }
+  if (loginDraftLocale || !touchlineLocaleRequestNeedsCanonicalRedirect(requestedLocale, draftLocalesEnabled)) return null;
 
   const canonicalUrl = request.nextUrl.clone();
-  canonicalUrl.searchParams.set("lang", requestLocale(request));
+  canonicalUrl.searchParams.set("lang", requestLocale(request, draftLocalesEnabled));
   return NextResponse.redirect(canonicalUrl, 307);
 }
 
@@ -265,9 +313,14 @@ function canonicalPresentationLocaleRedirect(request: NextRequest) {
  * public presentation locale through the request so `<html lang>` and the
  * first server render match `?lang=` before client hydration runs.
  */
-function nextResponseWithPresentationLocale(request: NextRequest) {
+function nextResponseWithPresentationLocale(request: NextRequest, draftLocalesEnabled = false) {
   const requestHeaders = new Headers(request.headers);
-  requestHeaders.set(TOUCHLINE_PRESENTATION_LOCALE_HEADER, requestLocale(request));
+  const locale = requestLocale(request, draftLocalesEnabled);
+  requestHeaders.set(TOUCHLINE_PRESENTATION_LOCALE_HEADER, locale);
+  requestHeaders.delete(TOUCHLINE_LOGIN_PRESENTATION_LOCALE_HEADER);
+  if (request.nextUrl.pathname === "/login" && !hasProtectedAuthReturn(request) && isTouchLineLoginDraftLocale(request.nextUrl.searchParams.get("lang"))) {
+    requestHeaders.set(TOUCHLINE_LOGIN_PRESENTATION_LOCALE_HEADER, locale);
+  }
   return NextResponse.next({ request: { headers: requestHeaders } });
 }
 
@@ -299,6 +352,7 @@ function isolatedPreviewBlockedResponse(
 
 function isolatedPreviewResponse(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
+  requestHeaders.delete(TOUCHLINE_LOGIN_PRESENTATION_LOCALE_HEADER);
   requestHeaders.set(TOUCHLINE_PRESENTATION_LOCALE_HEADER, requestLocale(request));
   requestHeaders.set(TOUCHLINE_ISOLATED_PREVIEW_HEADER, "true");
   return applyIsolatedPreviewHeaders(NextResponse.next({ request: { headers: requestHeaders } }));
@@ -309,9 +363,9 @@ function isolatedPreviewResponse(request: NextRequest) {
  * context and let Market enforce its own customer boundary on the next request.
  * No session lookup or cookie mutation is needed for this compatibility hop.
  */
-function retiredClubOwnerRedirect(request: NextRequest) {
-  const destination = new URL("/market-transfer", request.url);
-  destination.searchParams.set("lang", requestLocale(request));
+function retiredClubOwnerRedirect(request: NextRequest, draftLocalesEnabled = false) {
+  const destination = new URL("/clubowner", request.url);
+  destination.searchParams.set("lang", requestLocale(request, draftLocalesEnabled));
   const response = NextResponse.redirect(destination, 307);
   response.headers.set("cache-control", "no-store");
   return response;
@@ -392,8 +446,9 @@ function clearInvalidSupabaseSession(request: NextRequest, response: NextRespons
   return response;
 }
 
-async function handleTouchLineRequest(request: NextRequest) {
+async function handleTouchLineRequest(request: NextRequest, draftLocalesEnabled = false) {
   const pathname = request.nextUrl.pathname;
+  draftLocalesEnabled = draftLocalesEnabled && !adminOnlyArenaPaths.some((route) => matchesRoute(pathname, route));
   // This exact diagnostic evaluates its own fail-closed QA configuration.
   // Let it return only safe PASS/FAIL before locale, session or provider work.
   if (pathname === "/api/qa/environment-precheck") return NextResponse.next();
@@ -417,7 +472,7 @@ async function handleTouchLineRequest(request: NextRequest) {
     request.headers.get("host"),
     request.nextUrl.hostname,
   );
-  const localeRedirect = canonicalPresentationLocaleRedirect(request);
+  const localeRedirect = canonicalPresentationLocaleRedirect(request, draftLocalesEnabled);
   if (localeRedirect) return localeRedirect;
   const isLocalDev = localDevHosts.has(hostname);
   const isMyClubRoute = pathname === "/my-club";
@@ -425,10 +480,10 @@ async function handleTouchLineRequest(request: NextRequest) {
   // My Club is account-backed even on localhost. Let it pass through the same
   // customer-only identity gate used by QA so an absent or Admin session can
   // never render the public fallback in place of the authenticated cover.
-  if (isLocalDev && isRetiredClubOwnerRoute) return retiredClubOwnerRedirect(request);
-  if (isLocalDev && !isMyClubRoute) return nextResponseWithPresentationLocale(request);
+  if (isLocalDev && isRetiredClubOwnerRoute) return retiredClubOwnerRedirect(request, draftLocalesEnabled);
+  if (isLocalDev && !isMyClubRoute) return nextResponseWithPresentationLocale(request, draftLocalesEnabled);
   if (await hasQaSocialRenderBearer(request, hostname)) {
-    const response = nextResponseWithPresentationLocale(request);
+    const response = nextResponseWithPresentationLocale(request, draftLocalesEnabled);
     response.headers.set("cache-control", "private, no-store");
     response.headers.set("x-robots-tag", "noindex, nofollow, noarchive");
     response.headers.set("x-touchline-social-render", "qa-internal");
@@ -446,7 +501,7 @@ async function handleTouchLineRequest(request: NextRequest) {
     if (!isAuditPath || !validToken || isTouchlineAuditExpired()) {
       return auditNotFound();
     }
-    const response = nextResponseWithPresentationLocale(request);
+    const response = nextResponseWithPresentationLocale(request, draftLocalesEnabled);
     response.headers.set("cache-control", "no-store, no-cache, must-revalidate");
     response.headers.set("x-robots-tag", "noindex, nofollow, noarchive, nosnippet");
     return response;
@@ -482,17 +537,17 @@ async function handleTouchLineRequest(request: NextRequest) {
   const isEmergencyOffline = siteOffline && !isVercelHost;
 
   if (isEmergencyOffline && !isProtectedArenaRoute && !isAuth) {
-    return offlineResponse(requestLocale(request));
+    return offlineResponse(requestLocale(request, draftLocalesEnabled), draftLocalesEnabled);
   }
-  if (isRetiredClubOwnerRoute) return retiredClubOwnerRedirect(request);
+  if (isRetiredClubOwnerRoute) return retiredClubOwnerRedirect(request, draftLocalesEnabled);
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) {
-    return (isProtectedArenaRoute || isMyClubRoute) ? loginRedirect(request) : nextResponseWithPresentationLocale(request);
+    return (isProtectedArenaRoute || isMyClubRoute) ? loginRedirect(request, undefined, draftLocalesEnabled) : nextResponseWithPresentationLocale(request, draftLocalesEnabled);
   }
 
-  let response = nextResponseWithPresentationLocale(request);
+  let response = nextResponseWithPresentationLocale(request, draftLocalesEnabled);
   if (!requiresIdentityLookup) return response;
 
   let user: {
@@ -515,28 +570,31 @@ async function handleTouchLineRequest(request: NextRequest) {
         getAll: () => request.cookies.getAll(),
         setAll: (cookies) => {
           cookies.forEach(({ name, value }) => request.cookies.set(name, value));
-          response = nextResponseWithPresentationLocale(request);
+          response = nextResponseWithPresentationLocale(request, draftLocalesEnabled);
           cookies.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
         },
       },
     });
-    ({ data: { user } } = await supabase.auth.getUser());
+    const authentication = await supabase.auth.getUser();
+    user = authentication?.error === null ? authentication.data?.user ?? null : null;
   } catch {
     response = clearInvalidSupabaseSession(request, response);
   }
 
   const isAdmin = isOwnerEmail(user?.email);
-  if (isMyClubRoute && !user) return loginRedirect(request, response);
+  if (isMyClubRoute && !user) return loginRedirect(request, response, draftLocalesEnabled);
   if (isMyClubRoute && isAdmin) return clubOwnerNotFoundResponse(request, response);
-  if (!user && isProtectedArenaRoute) return loginRedirect(request, response);
+  if (!user && isProtectedArenaRoute) return loginRedirect(request, response, draftLocalesEnabled);
   const hasArenaAccess = hasTouchLineArenaAccess(user);
-  if (user && isProtectedArenaRoute && !hasArenaAccess) return loginRedirect(request, response);
+  if (user && isProtectedArenaRoute && !hasArenaAccess) return loginRedirect(request, response, draftLocalesEnabled);
   if (user && isAdminOnlyArenaRoute && !isAdmin) return introRedirect(request, response);
-  if (isEmergencyOffline && user && !isAdmin && !isAuth) return offlineResponse(requestLocale(request));
+  if (isEmergencyOffline && user && !isAdmin && !isAuth) return offlineResponse(requestLocale(request, draftLocalesEnabled), draftLocalesEnabled);
   if (user && hasArenaAccess && isAuthEntry) {
     const lang = request.nextUrl.searchParams.get("lang");
-    const returnTo = normalizeTouchLineAuthReturnTo(request.nextUrl.searchParams.get("returnTo"));
-    const destination = touchLinePostAuthHref(returnTo, lang);
+    const returnTo = normalizeTouchLineAuthReturnTo(request.nextUrl.searchParams.get("returnTo"), draftLocalesEnabled);
+    const returnPath = returnTo?.split(/[?#]/, 1)[0] ?? "";
+    const publicReturn = !adminOnlyArenaPaths.some((route) => matchesRoute(returnPath, route));
+    const destination = touchLinePostAuthHref(returnTo, lang, "/clubowner", draftLocalesEnabled && publicReturn);
     return redirectWithSupabaseCookies(new URL(destination, request.url), response);
   }
   if (isQaAuthenticatedVisualReviewRoute) {
@@ -554,8 +612,9 @@ async function handleTouchLineRequest(request: NextRequest) {
  * public pages available instead of returning Vercel's opaque 500 screen.
  */
 export async function proxy(request: NextRequest) {
+  const siteLocalesEnabled = isTouchLineSiteLocalesEnabled(request.nextUrl.pathname);
   try {
-    return await handleTouchLineRequest(request);
+    return await handleTouchLineRequest(request, siteLocalesEnabled);
   } catch {
     // Never turn an unknown environment-policy failure into a compatibility
     // redirect. Current private routes, including My Club, still fail closed.
@@ -564,7 +623,7 @@ export async function proxy(request: NextRequest) {
     const isProtectedArenaRoute = !isAuth
       && protectedArenaPaths.some((path) => matchesRoute(request.nextUrl.pathname, path));
     return (isProtectedArenaRoute || request.nextUrl.pathname === "/my-club")
-      ? loginRedirect(request) : nextResponseWithPresentationLocale(request);
+      ? loginRedirect(request, undefined, siteLocalesEnabled) : nextResponseWithPresentationLocale(request, siteLocalesEnabled);
   }
 }
 

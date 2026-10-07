@@ -49,8 +49,8 @@ test("origins and dynamic identities fail closed against credentials, arbitrary 
 test("current explicit route lists include My Club/social, preserve aliases and separate Admin from customers", () => {
   const customer = buildSmokeRoutes(parseSmokeConfig(customerArgs));
   assert.ok(customer.some((route) => route.path === "/my-club?lang=pt-BR"));
-  assert.ok(customer.some((route) => route.path === "/market-transfer?lang=pt-BR"
-    && route.expected === "/my-club?lang=pt-BR&tab=market#my-club-squad"));
+  assert.ok(customer.some((route) => route.path === "/clubowner?lang=pt-BR"
+    && route.expected === "/clubowner?lang=pt-BR"));
   assert.ok(customer.some((route) => route.path === "/fantasy?lang=pt-BR"));
   assert.ok(customer.some((route) => route.path === "/club-owner/me?lang=pt-BR"));
   assert.equal(customer.some((route) => route.path.startsWith("/admin")), false);
@@ -62,6 +62,29 @@ test("current explicit route lists include My Club/social, preserve aliases and 
   assert.ok(publicRoutes.some((route) => route.path === "/touchline-clubs?lang=pt-BR"));
   assert.equal(publicRoutes.some((route) => route.path.startsWith("/my-club")), false);
   assert.equal(new Set(customer.map((route) => route.id)).size, customer.length);
+});
+
+test("entry aliases target only the current intro and never silently advance to ClubOwner", () => {
+  const config = parseSmokeConfig(publicArgs);
+  const aliases = buildSmokeRoutes(config).filter(route => ["root-alias", "coming-soon-alias", "arena"].includes(route.id));
+  assert.equal(aliases.length, 3);
+  for (const alias of aliases) {
+    assert.equal(alias.expected, "/intro?lang=pt-BR");
+    assert.equal(alias.selector, "[data-touchline-game-entry]");
+    assert.equal(isExpectedSmokeDocument(config, alias, config.baseUrl + alias.path), true);
+    assert.equal(isExpectedSmokeDocument(config, alias, `${config.baseUrl}/intro?lang=pt-BR`), true);
+    assert.equal(classifySmokeRequest(config, { method: "GET", url: `${config.baseUrl}/intro?lang=pt-BR`, resourceType: "document" }), null);
+    const evidence = { status: 200, mainReady: true, bodyError: false, issues: [] };
+    assert.equal(assessVisit(config, alias, { ...evidence, finalUrl: `${config.baseUrl}/intro?lang=pt-BR` }).ok, true);
+    for (const finalPath of ["/arena?lang=pt-BR", "/clubowner?lang=pt-BR", "/intro?lang=en-GB", "/intro?lang=pt-BR#unexpected"]) {
+      assert.equal(assessVisit(config, alias, { ...evidence, finalUrl: config.baseUrl + finalPath }).ok, false, finalPath);
+    }
+    for (const path of ["/intro?lang=en-GB", "/intro?lang=pt-BR&skipIntro=1", "/intro?lang=pt-BR&intro=first", "/intro?lang=pt-BR&lang=pt-BR", "/intro?lang=pt-BR&unexpected=1", "/clubowner?lang=pt-BR"]) {
+      assert.equal(isExpectedSmokeDocument(config, alias, config.baseUrl + path), false, path);
+      assert.notEqual(classifySmokeRequest(config, { method: "GET", url: config.baseUrl + path, resourceType: "document" }), null, path);
+    }
+  }
+  assert.equal(classifySmokeRequest(config, { method: "GET", url: `${config.baseUrl}/clubowner?lang=pt-BR`, resourceType: "document" }), "SERVER_SIDE_EFFECT_AUTHORIZATION_REQUIRED");
 });
 
 test("write methods, action GETs, remote origins, callback credentials and unknown APIs are blocked", () => {
@@ -92,13 +115,15 @@ test("all same-origin resource types deny arbitrary GET destinations, not only A
 
 test("RSC and prefetch requests only read exact declared routes and query values", () => {
   const config = parseSmokeConfig(publicArgs);
-  for (const path of ["/arena?lang=pt-BR&_rsc=hash123", "/touchline-clubs/manchester-city?lang=pt-BR&_rsc=hash123",
+  for (const path of ["/intro?lang=pt-BR&_rsc=hash123", "/arena?lang=pt-BR&_rsc=hash123", "/touchline-clubs/manchester-city?lang=pt-BR&_rsc=hash123",
     "/touchline-players/test-player?playerId=123&lang=pt-BR&_rsc=hash123"]) {
     assert.equal(classifySmokeRequest(config, { method: "GET", url: config.baseUrl + path, resourceType: "fetch" }), null, path);
   }
   for (const path of ["/touchline-clubs/unlisted?lang=pt-BR&_rsc=hash123", "/admin?lang=pt-BR&_rsc=hash123",
     "/touchline-players/test-player?playerId=999&lang=pt-BR&_rsc=hash123", "/arena?lang=en-GB&_rsc=hash123",
-    "/arena?lang=pt-BR&_rsc=a&_rsc=b", "/arena?lang=pt-BR&action=reset", "/arena?lang=pt-BR&unexpected=1"]) {
+    "/arena?lang=pt-BR&_rsc=a&_rsc=b", "/arena?lang=pt-BR&action=reset", "/arena?lang=pt-BR&unexpected=1",
+    "/intro?lang=en-GB&_rsc=hash123", "/intro?lang=pt-BR&_rsc=a&_rsc=b", "/intro?lang=pt-BR&skipIntro=1&_rsc=hash123",
+    "/intro?lang=pt-BR&lang=pt-BR&_rsc=hash123", "/intro?lang=pt-BR&unexpected=1&_rsc=hash123"]) {
     assert.notEqual(classifySmokeRequest(config, { method: "GET", url: config.baseUrl + path, resourceType: "fetch" }), null, path);
   }
   assert.notEqual(classifySmokeRequest(config, { method: "GET", url: `${config.baseUrl}/arena?lang=pt-BR&_rsc=hash123`, resourceType: "document" }), null);
@@ -137,15 +162,15 @@ test("read APIs accept only inventoried query keys and never action or duplicate
 
 test("HTTP 200/login or altered locale/hash/query never counts as a successful authenticated visit", () => {
   const config = parseSmokeConfig(customerArgs);
-  const route = buildSmokeRoutes(config).find((entry) => entry.id === "market-alias")!;
+  const route = buildSmokeRoutes(config).find((entry) => entry.id === "clubowner")!;
   const healthy = { status: 200, finalUrl: `${config.baseUrl}${route.expected}`, mainReady: true, bodyError: false, issues: [] };
   assert.equal(assessVisit(config, route, healthy).ok, true);
   for (const change of [
     { finalUrl: `${config.baseUrl}/login?lang=pt-BR` },
     { finalUrl: `${config.baseUrl}/admin?lang=pt-BR` },
-    { finalUrl: `${config.baseUrl}/my-club?lang=en-GB&tab=market#my-club-squad` },
-    { finalUrl: `${config.baseUrl}/my-club?lang=pt-BR&tab=market` },
-    { finalUrl: `${config.baseUrl}${route.expected.replace("#", "&unexpected=1#")}` },
+    { finalUrl: `${config.baseUrl}/clubowner?lang=en-GB` },
+    { finalUrl: `${config.baseUrl}/clubowner?lang=pt-BR#unexpected` },
+    { finalUrl: `${config.baseUrl}${route.expected}&unexpected=1` },
     { status: 404 }, { status: 503 }, { mainReady: false }, { bodyError: true }, { issues: ["MUTATION_BLOCKED"] },
   ]) assert.equal(assessVisit(config, route, { ...healthy, ...change }).ok, false, JSON.stringify(change));
 });
@@ -171,7 +196,7 @@ function browserHarness(options: {
           const adminProbe = new URL(url).pathname === "/admin";
           return {
             status: () => adminProbe ? (options.admin ? 200 : 307) : (options.stateStatus ?? 200),
-            headers: () => adminProbe && !options.admin ? { location: "/arena?lang=pt-BR" } : {},
+            headers: () => adminProbe && !options.admin ? { location: "/intro?lang=pt-BR" } : {},
             json: async () => ({ ok: true, userId: options.userId ?? customerId, state: { private: "NEVER_REPORT" } }),
           };
         } },
@@ -196,9 +221,8 @@ function browserHarness(options: {
                   url: () => `${parsed.origin}/api/touchline-arena/state` });
               }
               if (options.loginRoute === parsed.pathname) current = `${parsed.origin}/login?lang=pt-BR&token=DO_NOT_PRINT`;
-              else if (parsed.pathname === "/" || parsed.pathname === "/coming-soon") current = `${parsed.origin}/arena?lang=pt-BR`;
-              else if (["/market-transfer", "/fantasy"].includes(parsed.pathname)) current = `${parsed.origin}/my-club?lang=pt-BR&tab=market#my-club-squad`;
-              else if (parsed.pathname === "/club-owner/me") current = `${parsed.origin}/my-club?lang=pt-BR`;
+              else if (["/", "/coming-soon", "/arena"].includes(parsed.pathname)) current = `${parsed.origin}/intro?lang=pt-BR`;
+              else if (["/my-club", "/fantasy", "/club-owner/me"].includes(parsed.pathname)) current = `${parsed.origin}/clubowner?lang=pt-BR`;
               if (options.documentRequests) {
                 assert.ok(routeGuard);
                 const networkUrl = new URL(current);
@@ -334,10 +358,13 @@ test("even a transient unexpected redirect is blocked and fails when the final U
 
 test("alias network requests omit fragments but the final browser destination must retain the required squad hash", async () => {
   const config = parseSmokeConfig(customerArgs);
-  const alias = buildSmokeRoutes(config).find((route) => route.id === "market-alias")!;
+  const canonical = buildSmokeRoutes(config).find((route) => route.id === "clubowner")!;
+  // A scoped hash fixture exercises fragment comparison without claiming the
+  // canonical route itself redirects or requires a hash.
+  const alias = { ...canonical, expected: `${canonical.expected}#my-club-xi-pitch` };
   // Customer execution is now blocked. Preserve this URL invariant through
   // the real pure comparator, without bypassing the server-effect boundary.
-  assert.equal(isExpectedSmokeDocument(config, alias, `${config.baseUrl}/my-club?lang=pt-BR&tab=market`), true);
+  assert.equal(isExpectedSmokeDocument(config, alias, `${config.baseUrl}/clubowner?lang=pt-BR`), true);
   assert.equal(isExpectedSmokeDocument(config, alias, `${config.baseUrl}/login?lang=pt-BR`), false);
   const harness = browserHarness({ documentRequests: true });
   const result = await runRouteSmoke(parseSmokeConfig(publicArgs), { launch: harness.launch });
@@ -345,7 +372,7 @@ test("alias network requests omit fragments but the final browser destination mu
   assert.equal(harness.calls.includes("ABORTED_DOCUMENT"), false);
   assert.ok(harness.calls.includes("SENT_DOCUMENT"));
   assert.equal(assessVisit(config, alias, {
-    status: 200, finalUrl: `${config.baseUrl}/my-club?lang=pt-BR&tab=market`,
+    status: 200, finalUrl: `${config.baseUrl}/clubowner?lang=pt-BR`,
     mainReady: true, bodyError: false, issues: [],
   }).ok, false);
 });
@@ -414,7 +441,7 @@ test("known mutating GET/SSR paths and their aliases are blocked independently o
     const config = parseSmokeConfig(args);
     for (const resourceType of ["document", "fetch", "image", "other"]) {
       for (const path of ["/api/touchline-fantasy/state", "/my-club?lang=pt-BR", "/my-club?lang=pt-BR&_rsc=123",
-        "/market-transfer?lang=pt-BR", "/fantasy?lang=pt-BR", "/club-owner/me?lang=pt-BR"]) {
+        "/clubowner?lang=pt-BR", "/fantasy?lang=pt-BR", "/club-owner/me?lang=pt-BR"]) {
         assert.equal(classifySmokeRequest(config, { method: "GET", url: config.baseUrl + path, resourceType }), "SERVER_SIDE_EFFECT_AUTHORIZATION_REQUIRED", `${config.persona} ${resourceType} ${path}`);
       }
     }

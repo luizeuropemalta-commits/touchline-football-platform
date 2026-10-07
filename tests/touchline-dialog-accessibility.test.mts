@@ -25,7 +25,7 @@ test("shared TouchLine dialog primitive keeps focus, Escape and background isola
 
 test("card and tables use the shared accessible dialog behaviour", () => {
   const cardZoom = source("components/touchline/cards/TouchlineCardZoom.tsx");
-  const tables = source("app/touchline-tables/touchline-tables-client.tsx");
+  const tables = source("app/rankings/touchline-tables-client.tsx");
 
   assert.match(cardZoom, /useTouchlineDialog<HTMLDivElement>/);
   assert.match(cardZoom, /initialFocusRef: closeRef/);

@@ -1,3 +1,5 @@
+import { getTouchlinePlayerZoomIdentityCopy } from "./player-zoom-identity-i18n.ts";
+
 /**
  * Public, non-commercial card completeness policy.
  *
@@ -62,15 +64,6 @@ export function evaluateTouchlineCardCompleteness(
   });
 }
 
-export function touchlineCardReviewFieldLabel(field: TouchlineCardReviewField, locale = "en-GB") {
-  const portuguese = locale === "pt-BR";
-  const labels: Record<TouchlineCardReviewField, string> = {
-    display_name: portuguese ? "Nome de exibição" : "Display name",
-    shirt_number: portuguese ? "Número da camisa" : "Shirt number",
-    nationality: portuguese ? "Nacionalidade" : "Nationality",
-    position: portuguese ? "Posição" : "Position",
-    market_value: portuguese ? "Valor de mercado" : "Market Value",
-    club_asset: portuguese ? "Asset do clube" : "Club asset",
-  };
-  return labels[field];
+export function touchlineCardReviewFieldLabel(field: TouchlineCardReviewField, locale = "en-GB", draftLocalesEnabled = false) {
+  return getTouchlinePlayerZoomIdentityCopy(locale, draftLocalesEnabled).missingFields[field];
 }

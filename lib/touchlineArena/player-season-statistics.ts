@@ -1,3 +1,5 @@
+import { getTouchlinePlayerPerformanceCopy } from "./player-performance-i18n.ts";
+
 export type TouchLineSeasonStatisticsCoverageStatus = "complete" | "complete_for_scoring" | "partial" | "unavailable";
 
 export type TouchLinePlayerSeasonSummary = {
@@ -219,12 +221,13 @@ export function normalizeTouchLinePlayerSeasonStatistics(input: {
   };
 }
 
-export function touchLinePlayerSeasonCoverageMessage(statistics: TouchLinePlayerSeasonStatistics) {
+export function touchLinePlayerSeasonCoverageMessage(statistics: TouchLinePlayerSeasonStatistics, locale: string = "en-GB", draftLocalesEnabled = false) {
+  const copy = getTouchlinePlayerPerformanceCopy(locale, draftLocalesEnabled);
   if (statistics.coverageStatus === "complete_for_scoring") {
-    return "Complete for scoring — unavailable provider details remain unavailable";
+    return copy.completeForScoring;
   }
   if (statistics.coverageStatus === "partial") {
-    return `Partial data — ${statistics.synchronizedFixtureCount} of ${statistics.expectedFixtureCount ?? "?"} eligible fixtures synchronised`;
+    return copy.partialCoverage(statistics.synchronizedFixtureCount, statistics.expectedFixtureCount ?? "?");
   }
   return null;
 }

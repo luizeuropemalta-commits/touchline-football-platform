@@ -21,6 +21,11 @@ import {
   type TouchlineTrustedNavigationContext,
 } from "@/lib/touchlineArena/global-navigation";
 import { resolveTouchLinePresentationLocale } from "@/lib/touchlineArena/root-locale";
+import { resolveTouchlineCatalogueLocale } from "@/lib/touchlineArena/catalogue-locale";
+import {
+  getTouchlineNavigationCopy,
+  type TouchlineNavigationCopy,
+} from "@/lib/touchlineArena/navigation-i18n";
 
 import styles from "./TouchlineGlobalNavigation.module.css";
 
@@ -34,50 +39,9 @@ type Props = Readonly<{
    */
   trustedContext?: TouchlineTrustedNavigationContext;
   className?: string;
+  draftLocalesEnabled?: boolean;
+  showAudioControl?: boolean;
 }>;
-
-type NavigationCopy = Readonly<{
-  ariaLabel: string;
-  backToArena: string;
-  clubHub: string;
-  allClubs: string;
-  live: string;
-  rankings: string;
-  fantasy: string;
-  myClub: string;
-  more: string;
-  currentClub: string;
-  opening: string;
-}>;
-
-const copy: Record<"en-GB" | "pt-BR", NavigationCopy> = {
-  "en-GB": {
-    ariaLabel: "TouchLine navigation",
-    backToArena: "Market",
-    clubHub: "ClubHub",
-    allClubs: "All clubs",
-    live: "Live",
-    rankings: "Rankings",
-    fantasy: "Fantasy",
-    myClub: "My Club",
-    more: "More",
-    currentClub: "Current club",
-    opening: "Opening",
-  },
-  "pt-BR": {
-    ariaLabel: "Navegação TouchLine",
-    backToArena: "Mercado",
-    clubHub: "ClubHub",
-    allClubs: "Todos os clubes",
-    live: "Ao vivo",
-    rankings: "Rankings",
-    fantasy: "Fantasy",
-    myClub: "Meu Clube",
-    more: "Mais",
-    currentClub: "Clube atual",
-    opening: "Abrindo",
-  },
-};
 
 const navigationIcons: Record<TouchlineGlobalNavigationItemKey, LucideIcon> = {
   clubHub: Shield,
@@ -88,7 +52,7 @@ const navigationIcons: Record<TouchlineGlobalNavigationItemKey, LucideIcon> = {
 
 function labelFor(
   key: TouchlineGlobalNavigationItemKey,
-  dictionary: NavigationCopy,
+  dictionary: TouchlineNavigationCopy,
   hasTrustedClubContext: boolean,
 ) {
   if (key === "clubHub") return hasTrustedClubContext ? dictionary.allClubs : dictionary.clubHub;
@@ -103,7 +67,7 @@ function NavigationLink({
   className,
 }: {
   item: ReturnType<typeof resolveTouchlineGlobalNavigationItems>[number];
-  dictionary: NavigationCopy;
+  dictionary: TouchlineNavigationCopy;
   currentRoute: TouchlineGlobalNavigationRoute;
   hasTrustedClubContext: boolean;
   className?: string;
@@ -137,10 +101,15 @@ export default function TouchlineGlobalNavigation({
   surface,
   trustedContext,
   className,
+  draftLocalesEnabled = false,
+  showAudioControl = true,
 }: Props) {
-  const effectiveLocale = resolveTouchLinePresentationLocale(locale);
-  const dictionary = copy[effectiveLocale];
-  const items = resolveTouchlineGlobalNavigationItems(effectiveLocale, surface);
+  // Only an explicit coordinated opt-in carries draft locales into links.
+  // Destination pages continue to own their independent public release gates.
+  const effectiveLocale = resolveTouchLinePresentationLocale(locale, draftLocalesEnabled);
+  const copyLocale = resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled);
+  const dictionary = getTouchlineNavigationCopy(copyLocale, draftLocalesEnabled);
+  const items = resolveTouchlineGlobalNavigationItems(effectiveLocale, surface, draftLocalesEnabled);
   const hasTrustedClubContext = Boolean(trustedContext?.club);
   const overflowItems = items.slice(2);
 
@@ -151,7 +120,7 @@ export default function TouchlineGlobalNavigation({
       data-touchline-navigation-surface={surface}
       data-touchline-navigation-context={hasTrustedClubContext ? "club" : "none"}
     >
-      <Link className={styles.arena} href={touchlineGlobalNavigationArenaHref(effectiveLocale)}>
+      <Link className={styles.arena} href={touchlineGlobalNavigationArenaHref(effectiveLocale, draftLocalesEnabled)}>
         <Goal aria-hidden="true" />
         <TouchlineNavigationLabel label={dictionary.backToArena} pendingLabel={`${dictionary.opening}…`} />
       </Link>
@@ -193,7 +162,7 @@ export default function TouchlineGlobalNavigation({
           ))}
         </div>
       </details>
-      <AuthAmbientAudio locale={effectiveLocale} className={styles.audioControl} buttonClassName={styles.link} />
+      {showAudioControl ? <AuthAmbientAudio locale={copyLocale} allowDraftLocale={draftLocalesEnabled} className={styles.audioControl} buttonClassName={styles.link} /> : null}
     </nav>
   );
 }

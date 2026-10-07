@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { getTouchlineExactCardCopy } from "../lib/touchlineArena/exact-card-i18n.ts";
 
 const clubHubPage = readFileSync(new URL("../app/touchline-clubs/[club]/page.tsx", import.meta.url), "utf8");
 const clubHubSquadGrid = readFileSync(new URL("../components/touchline/ClubHubSquadGrid.tsx", import.meta.url), "utf8");
@@ -22,5 +23,7 @@ test("ClubHub compact cards reserve enough width for a readable official shirt n
 });
 
 test("ClubHub supplies every locale-sensitive player-card label during server rendering", () => {
-  assert.match(clubHubPage, /currentClub: locale === "pt-BR" \? "Clube atual" : "Current Club"/);
+  assert.match(clubHubPage, /currentClub: getTouchlineExactCardCopy\(locale, draftLocalesEnabled\)\.currentClub/);
+  assert.equal(getTouchlineExactCardCopy("pt-BR").currentClub, "Clube atual");
+  assert.equal(getTouchlineExactCardCopy("en-GB").currentClub, "Current Club");
 });

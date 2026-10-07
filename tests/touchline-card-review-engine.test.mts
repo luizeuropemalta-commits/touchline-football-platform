@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { getTouchlineExactCardCopy } from "../lib/touchlineArena/exact-card-i18n.ts";
 
 import { evaluateTouchlineCardCompleteness } from "../lib/touchlineArena/card-review-state.ts";
 
@@ -128,7 +129,10 @@ test("Club Hub uses the shared premium review card rather than a generic pending
   assert.match(card, /data-card-editorial-state=\{reviewRequired \? "review_required"/);
   assert.match(card, /const neutralIdentity = reviewRequired \|\| publicationPending/);
   assert.match(card, /filter: neutralIdentity \? "grayscale\(1\)/);
-  assert.match(card, /Card review required/);
+  assert.equal(getTouchlineExactCardCopy("en-GB").reviewRequired, "Card review required");
+  assert.equal(getTouchlineExactCardCopy("pt-BR").reviewRequired, "Card requer revisão");
+  assert.match(card, /const exactCopy = getTouchlineExactCardCopy\(runtimeLocale, draftLocalesEnabled\)/);
+  assert.match(card, /publicationPending\s*\? exactCopy\.publicationPending\s*: exactCopy\.reviewRequired/);
 });
 
 test("provider position conflicts are routed to Card Engine while TouchLine remains authoritative", () => {

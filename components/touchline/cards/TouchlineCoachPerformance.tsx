@@ -1,4 +1,5 @@
 import { BadgeCheck, CalendarClock, History, House, PlaneTakeoff, ShieldCheck, Trophy } from "lucide-react";
+import { getTouchlineCoachPerformanceCopy, type TouchlineCoachPerformanceCopy } from "@/lib/touchlineArena/coach-performance-i18n";
 
 import type {
   TouchlineCoachCompetitionSnapshot,
@@ -13,6 +14,7 @@ type TouchlineCoachPerformanceProps = {
   contractHistory?: readonly TouchlineCoachContractSnapshot[];
   competition?: TouchlineCoachCompetitionSnapshot | null;
   locale?: string;
+  draftLocalesEnabled?: boolean;
   showHistory?: boolean;
   /**
    * Discipline is deliberately optional: the public coach ranking snapshot does
@@ -40,25 +42,25 @@ function formatDate(value: string | null, locale: string) {
 function RecordPanel({
   context,
   record,
-  portuguese,
+  copy,
 }: {
   context: "home" | "away";
   record: TouchlineCoachRecord | null;
-  portuguese: boolean;
+  copy: TouchlineCoachPerformanceCopy;
 }) {
   const home = context === "home";
-  const label = home ? (portuguese ? "Casa" : "Home") : (portuguese ? "Fora" : "Away");
+  const label = home ? copy.home : copy.away;
   const Icon = home ? House : PlaneTakeoff;
   return (
     <article className={styles.record} data-context={context} aria-label={label}>
       <header className={styles.contextHeading}>
         <span className={styles.contextIcon}><Icon aria-hidden="true" size={20} /></span>
-        <div><span>{portuguese ? "Desempenho" : "Performance"}</span><strong>{label}</strong></div>
+        <div><span>{copy.performance}</span><strong>{label}</strong></div>
       </header>
       <dl className={styles.recordStats}>
-        <div><dt aria-label={portuguese ? "Vitórias" : "Wins"}>W</dt><dd>{record?.wins ?? "—"}</dd></div>
-        <div><dt aria-label={portuguese ? "Empates" : "Draws"}>D</dt><dd>{record?.draws ?? "—"}</dd></div>
-        <div><dt aria-label={portuguese ? "Derrotas" : "Losses"}>L</dt><dd>{record?.losses ?? "—"}</dd></div>
+        <div><dt aria-label={copy.wins}>W</dt><dd>{record?.wins ?? "—"}</dd></div>
+        <div><dt aria-label={copy.draws}>D</dt><dd>{record?.draws ?? "—"}</dd></div>
+        <div><dt aria-label={copy.losses}>L</dt><dd>{record?.losses ?? "—"}</dd></div>
         <div className={styles.points}><dt aria-label="TouchLine Points">TP</dt><dd>{record?.touchlinePoints ?? "—"}</dd></div>
       </dl>
     </article>
@@ -70,10 +72,12 @@ export default function TouchlineCoachPerformance({
   contractHistory = [],
   competition = null,
   locale = "en-GB",
+  draftLocalesEnabled = false,
   showHistory = false,
   discipline = null,
 }: TouchlineCoachPerformanceProps) {
   const portuguese = locale === "pt-BR";
+  const copy = getTouchlineCoachPerformanceCopy(locale, draftLocalesEnabled);
   const home: TouchlineCoachRecord | null = competition?.home ?? contract?.home ?? null;
   const away: TouchlineCoachRecord | null = competition?.away ?? contract?.away ?? null;
   const total = competition?.totalTouchlinePoints ?? contract?.totalTouchlinePoints ?? null;
@@ -81,56 +85,57 @@ export default function TouchlineCoachPerformance({
     ? [...contractHistory].sort((left, right) => Date.parse(right.startedAt) - Date.parse(left.startedAt))
     : contract ? [contract] : [];
   const status = competition
-    ? (portuguese ? `Ranking #${competition.rank}` : `Rank #${competition.rank}`)
+    ? copy.rank.replace("{rank}", () => String(competition.rank))
     : contract
     ? (contract.status === "active" ? (portuguese ? "Contrato ativo" : "Active contract") : (portuguese ? "Contrato encerrado" : "Ended contract"))
-    : (portuguese ? "Sem contrato TouchLine" : "No TouchLine contract");
+    : copy.noContract;
   const yellowCards = officialCardCount(discipline?.yellowCards);
   const redCards = officialCardCount(discipline?.redCards);
 
   return (
     <section
       className={styles.panel}
-      aria-label={portuguese ? "Desempenho TouchLine do treinador" : "Coach TouchLine performance"}
+      dir={draftLocalesEnabled ? "ltr" : undefined}
+      aria-label={copy.panelAria}
       data-coach-performance-source={competition ? "competition-ranking" : contract ? "club-owner-contract" : "unavailable"}
     >
       <header className={styles.header}>
         <div className={styles.title}>
           <span className={styles.titleIcon}><ShieldCheck aria-hidden="true" size={22} /></span>
-          <div><span>{competition ? (portuguese ? "TEMPORADA TOUCHLINE" : "TOUCHLINE SEASON") : "TOUCHLINE GAME"}</span><strong>{competition ? (portuguese ? "Desempenho oficial" : "Official performance") : "TouchLine Points"}</strong></div>
+          <div><span>{competition ? copy.seasonEyebrow : "TOUCHLINE GAME"}</span><strong>{competition ? copy.officialPerformance : "TouchLine Points"}</strong></div>
         </div>
         <span className={styles.status} data-contract-status={competition ? "competition" : contract?.status ?? "none"}>{status}</span>
       </header>
 
       <div className={styles.records}>
-        <RecordPanel context="home" record={home} portuguese={portuguese} />
-        <RecordPanel context="away" record={away} portuguese={portuguese} />
+        <RecordPanel context="home" record={home} copy={copy} />
+        <RecordPanel context="away" record={away} copy={copy} />
       </div>
 
       <div className={styles.total}>
         <span className={styles.totalIcon}><Trophy aria-hidden="true" size={21} /></span>
         <div className={styles.totalCopy}>
-          <span>{portuguese ? "Pontuação total" : "Total score"}</span>
+          <span>{copy.totalScore}</span>
           <strong>Total TouchLine Points</strong>
         </div>
         <b className={styles.totalValue}>{total ?? "—"}<small>TL PTS</small></b>
       </div>
 
-      <div className={styles.discipline} aria-label={portuguese ? "Disciplina do treinador" : "Coach discipline"}>
+      <div className={styles.discipline} aria-label={copy.disciplineAria}>
         <div className={styles.disciplineTitle}>
           <span className={styles.cardMarks} aria-hidden="true"><i /><i /></span>
           <div>
-            <span>{portuguese ? "DISCIPLINA" : "DISCIPLINE"}</span>
-            <strong>{portuguese ? "Cartões oficiais" : "Official cards"}</strong>
+            <span>{copy.disciplineEyebrow}</span>
+            <strong>{copy.officialCards}</strong>
           </div>
         </div>
         <dl className={styles.disciplineCounts}>
           <div data-coach-discipline="yellow">
-            <dt><i aria-hidden="true" />{portuguese ? "Amarelo" : "Yellow"}</dt>
+            <dt><i aria-hidden="true" />{copy.yellow}</dt>
             <dd>{yellowCards ?? "—"}</dd>
           </div>
           <div data-coach-discipline="red">
-            <dt><i aria-hidden="true" />{portuguese ? "Vermelho" : "Red"}</dt>
+            <dt><i aria-hidden="true" />{copy.red}</dt>
             <dd>{redCards ?? "—"}</dd>
           </div>
         </dl>
@@ -138,8 +143,8 @@ export default function TouchlineCoachPerformance({
 
       {competition ? (
         <dl className={styles.contractMeta} data-coach-competition-snapshot={competition.snapshotId}>
-          <div><dt>{portuguese ? "Temporada" : "Season"}</dt><dd>{competition.seasonLabel}</dd></div>
-          <div><dt>{portuguese ? "Partidas" : "Matches"}</dt><dd>{competition.home.wins + competition.home.draws + competition.home.losses + competition.away.wins + competition.away.draws + competition.away.losses}</dd></div>
+          <div><dt>{copy.season}</dt><dd>{competition.seasonLabel}</dd></div>
+          <div><dt>{copy.matches}</dt><dd>{competition.home.wins + competition.home.draws + competition.home.losses + competition.away.wins + competition.away.draws + competition.away.losses}</dd></div>
         </dl>
       ) : contract ? (
         <dl className={styles.contractMeta}>
@@ -147,7 +152,7 @@ export default function TouchlineCoachPerformance({
           <div><dt>{portuguese ? "Fim do contrato" : "Contract end"}</dt><dd>{contract.endedAt ? formatDate(contract.endedAt, locale) : (portuguese ? "Em vigor" : "Active")}</dd></div>
         </dl>
       ) : (
-        <p className={styles.empty}>{portuguese ? "Este treinador não possui contrato TouchLine com a conta autenticada. Nenhum ponto foi inventado." : "This coach has no TouchLine contract with the authenticated account. No points have been invented."}</p>
+        <p className={styles.empty}>{copy.empty}</p>
       )}
 
       {showHistory && contract ? (

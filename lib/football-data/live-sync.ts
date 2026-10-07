@@ -5,10 +5,12 @@ import { syncSportmonksFixtureSchedule } from "@/lib/football-data/fixture-sched
 import { readPublicCompetitionFixtures } from "@/lib/football-data/fixture-schedule-store";
 import { persistLiveFixtureStates, mergeCanonicalLiveFixture } from "@/lib/football-data/live-fixture-store";
 import { persistLiveScoreSnapshot } from "@/lib/football-data/live-score-persistence";
+import { observePersistedConfirmedEvents, type ConfirmedEventObservationResult } from "@/lib/football-data/confirmed-event-observer";
+import { runMatchPushProducer } from "@/lib/football-data/match-push-producer";
 import { syncTouchLinePlayerSeasonStatistics } from "@/lib/football-data/player-season-statistics-store";
 import { decideLiveSyncCadence } from "@/lib/football-data/live-sync-cadence";
 import { acquireTouchlineLiveSyncRun } from "@/lib/football-data/live-sync-lease";
-import { createFootballDataProvider } from "@/lib/football-data/provider-factory";
+import { createGuardedFixtureProvider } from "@/lib/football-data/fixture-provider-server";
 import type { FootballDataProvider, TouchlineFixture } from "@/lib/football-data/types";
 import { inspectTouchlineIsolatedPreviewEnvironment } from "@/lib/touchlinePreview/isolation";
 import { inspectTouchlineProductionSyncRuntime } from "@/lib/football-data/production-sync-runtime";
@@ -16,7 +18,7 @@ import { touchlineCompetitionCoachAssignments } from "@/lib/touchlineArena/live-
 import { recordTouchlineLineupAvailableObservation } from "@/lib/football-data/official-team-sheet-readiness";
 import { reconcilePendingTouchlineFantasyGameweeks } from "@/lib/touchlineFantasy/gameweek-lifecycle";
 import { resolveTouchlineRecoveryScope, recoveryFixtureMatches, recoveryFeedComplete, claimTouchlineFixtureRecovery,
-  finishTouchlineFixtureRecovery, persistTouchlineRecoveryFeed, BACKLOG_MAX_PER_RUN, BACKLOG_DEADLINE_MS } from "@/lib/football-data/fixture-backlog-recovery";
+  finishTouchlineFixtureRecovery, deferTouchlineFixtureRecovery, persistTouchlineRecoveryFeed, BACKLOG_MAX_PER_RUN, BACKLOG_DEADLINE_MS } from "@/lib/football-data/fixture-backlog-recovery";
 
 const COMPETITION_ID = "8";
 const QA_PROJECT_REF = "xgxbwqxjssxxuihuwmgy";
@@ -34,7 +36,10 @@ type Dependencies = {
   resolveRecoveryScope?: typeof resolveTouchlineRecoveryScope;
   claimRecovery?: typeof claimTouchlineFixtureRecovery;
   finishRecovery?: typeof finishTouchlineFixtureRecovery;
+  deferRecovery?: typeof deferTouchlineFixtureRecovery;
   persistRecoveryFeed?: typeof persistTouchlineRecoveryFeed;
+  observeConfirmedEvents?: typeof observePersistedConfirmedEvents;
+  produceMatchPush?: typeof runMatchPushProducer;
 };
 
 export type LiveSyncResult = {
@@ -55,7 +60,27 @@ export type LiveSyncResult = {
   errors: string[];
   syncRunId?: string;
   skippedReason?: string;
+  confirmedEventObservation?: ConfirmedEventObservationResult | { status: "unconfirmed"; attempted: null; observed: null };
+  matchPushProduction?: Awaited<ReturnType<typeof runMatchPushProducer>> | { status: "unconfirmed"; attempted: null };
 };
+
+// An explicit nested opt-in in the existing private policy is required; merely
+// enabling the dispatch worker must never start producing historical alerts.
+function pushEnrollmentPolicy(raw: string | undefined) {
+  if (!raw || raw.length > 1024) return null;
+  try {
+    const policy = JSON.parse(raw);
+    const enrollment = policy?.enrollment;
+    if (enrollment?.enabled !== true || !Number.isSafeInteger(enrollment.maximumEventLagSeconds)
+      || enrollment.maximumEventLagSeconds <= 0 || !Number.isSafeInteger(enrollment.maximumSourceAgeSeconds)
+      || enrollment.maximumSourceAgeSeconds <= 0) return null;
+    for (const key of ["eventSyncedAt", "settlementSyncedAt", "fixtureUpdatedAt", "lastObservedAt"]) {
+      if (!Number.isSafeInteger(policy[key]) || policy[key] <= 0) return null;
+    }
+    return { maximumEventLagSeconds: enrollment.maximumEventLagSeconds,
+      maximumSourceAgeSeconds: enrollment.maximumSourceAgeSeconds, sourceAgeMs: policy };
+  } catch { return null; }
+}
 
 async function latestSuccessfulRunStartedAt(admin: SupabaseClient) {
   const { data } = await admin
@@ -84,11 +109,11 @@ async function latestFixtureScheduleRun(admin: SupabaseClient) {
   return typeof data?.completed_at === "string" ? data.completed_at : null;
 }
 
-async function refreshFixtureScheduleWhenStale(admin: SupabaseClient, now: number) {
+async function refreshFixtureScheduleWhenStale(admin: SupabaseClient, now: number, provider: FootballDataProvider) {
   try {
     const latest = Date.parse(await latestFixtureScheduleRun(admin) ?? "");
     if (Number.isFinite(latest) && now - latest < FIXTURE_SCHEDULE_REFRESH_MS) return [] as string[];
-    const refreshed = await syncSportmonksFixtureSchedule(admin, { competitionId: COMPETITION_ID });
+    const refreshed = await syncSportmonksFixtureSchedule(admin, { competitionId: COMPETITION_ID }, { provider });
     return refreshed.ok ? [] : refreshed.errors.map((error) => `fixture-schedule:${error}`);
   } catch {
     // Schedule refresh is additive. A temporary provider or persistence error
@@ -126,11 +151,15 @@ async function completeRun(admin: SupabaseClient, result: LiveSyncResult) {
       playerScoringFixtureIds: result.playerScoringFixtureIds,
       playerFailedFixtureIds: result.playerFailedFixtureIds,
       playerMissingSettlementFixtureIds: result.playerMissingSettlementFixtureIds,
+      confirmedEventObservation: result.confirmedEventObservation ?? null,
+      matchPushProduction: result.matchPushProduction ?? null,
       cadenceExecuted: result.status !== "skipped" && result.skippedReason !== "cadence_not_due",
       skippedReason: result.skippedReason ?? null,
     },
   }).eq("id", result.syncRunId);
-  console[result.status === "success" ? "info" : "warn"](JSON.stringify({
+  const observationFailed = result.confirmedEventObservation && result.confirmedEventObservation.status !== "completed";
+  const productionFailed = result.matchPushProduction && result.matchPushProduction.status !== "completed";
+  console[result.status === "success" && !observationFailed && !productionFailed ? "info" : "warn"](JSON.stringify({
     event: "touchline.live_sync.completed",
     syncRunId: result.syncRunId,
     status: result.status,
@@ -143,6 +172,8 @@ async function completeRun(admin: SupabaseClient, result: LiveSyncResult) {
     lineupObservationsExisting: result.lineupObservationsExisting,
     playerFixtureRowsWritten: result.playerFixtureRowsWritten,
     coachPointsReconciled: result.coachPointsReconciled,
+    confirmedEventObservation: result.confirmedEventObservation ?? null,
+    matchPushProduction: result.matchPushProduction ?? null,
     errorCount: result.errors.length + (error ? 1 : 0),
     errorCategories: [...errorCategories(result.errors), ...(error ? ["run_write"] : [])],
   }));
@@ -200,10 +231,11 @@ export async function syncSportmonksLiveState(
   }
   result.syncRunId = lease.runId;
   try {
+    const provider = dependencies.provider ?? createGuardedFixtureProvider(admin);
     const readFixtures = dependencies.readFixtures ?? readPublicCompetitionFixtures;
     const fixtureScheduleErrors = dependencies.readFixtures
       ? []
-      : await refreshFixtureScheduleWhenStale(admin, now);
+      : await refreshFixtureScheduleWhenStale(admin, now, provider);
     result.errors.push(...fixtureScheduleErrors);
     const scope = await (dependencies.resolveRecoveryScope ?? resolveTouchlineRecoveryScope)(admin);
     const schedule = await readFixtures({ providedAdmin: admin, seasonId: scope.seasonId,
@@ -230,7 +262,6 @@ export async function syncSportmonksLiveState(
       result.errors.push("SPORTMONKS_API_TOKEN is not configured.");
       return result;
     }
-    const provider = dependencies.provider ?? createFootballDataProvider("sportmonks");
     const liveResponse = await provider.getLiveScores({ competitionId: COMPETITION_ID });
     const incoming: TouchlineFixture[] = [];
     if (liveResponse.ok) incoming.push(...liveResponse.data.filter((fixture) => recoveryFixtureMatches(fixture, scope)));
@@ -241,6 +272,7 @@ export async function syncSportmonksLiveState(
       ...incoming.map((fixture) => fixture.providerId),
     ]);
     let providerRateLimited = !liveResponse.ok && liveResponse.error.code === "rate_limited";
+    const persistedCurrentFeedIds = new Set<string>();
     for (const fixtureId of candidateIds) {
       if (providerRateLimited) break;
       const feedResponse = await provider.getFixtureFantasyFeed(fixtureId);
@@ -257,6 +289,7 @@ export async function syncSportmonksLiveState(
       incoming.push(feedResponse.data.fixture);
       const persisted = await (dependencies.persistFantasyFeed ?? persistFantasyFixtureFeed)(feedResponse.data);
       if (persisted.persisted) {
+        persistedCurrentFeedIds.add(fixtureId);
         result.fantasyFeedsStored += 1;
         const observed = await (
           dependencies.recordLineupObservation ?? recordTouchlineLineupAvailableObservation
@@ -287,6 +320,16 @@ export async function syncSportmonksLiveState(
       }
       const response = await provider.getFixtureFantasyFeed(claim.providerFixtureId);
       if (!response.ok) {
+        if (response.error.code === "deferred") {
+          try {
+            await (dependencies.deferRecovery ?? deferTouchlineFixtureRecovery)(admin, claim, lease.runId);
+            result.errors.push(`${claim.providerFixtureId}:recovery-deferred`);
+          } catch {
+            result.errors.push(`${claim.providerFixtureId}:recovery-deferral-unconfirmed`);
+          }
+          // Neither a second claim nor normal finish may consume an uncertain refund.
+          break;
+        }
         await finishRecovery(admin, claim, lease.runId, now, "pending", response.error.code, response.error.retryAfterSeconds);
         result.errors.push(`${claim.providerFixtureId}:recovery-${response.error.code}`);
         if (response.error.code === "rate_limited") break;
@@ -400,6 +443,40 @@ export async function syncSportmonksLiveState(
     const snapshotResult = await (dependencies.persistSnapshot ?? persistLiveScoreSnapshot)(snapshot, fetchedAt);
     if (!snapshotResult.persisted) result.errors.push(`snapshot:${snapshotResult.reason ?? "failed"}`);
     else result.snapshotFixtures = snapshot.length;
+
+    // Observe only freshly persisted current feeds after canonical events and
+    // ratings have reconciled. Historical recovery never generates this input.
+    // This records stability, not novelty, admission, enqueue or delivery.
+    if (process.env.TOUCHLINE_MATCH_PUSH_WORKER_ENABLED === "true"
+      && snapshotResult.persisted && persistence.errors.length === 0
+      && playerReconciliation.errors.length === 0
+      && playerReconciliation.failedFixtureIds.length === 0
+      && playerReconciliation.missingSettlementFixtureIds.length === 0
+      && persistedCurrentFeedIds.size > 0) {
+      try {
+        result.confirmedEventObservation = await (dependencies.observeConfirmedEvents ?? observePersistedConfirmedEvents)({
+          admin, fixtureProviderIds: [...persistedCurrentFeedIds], enabled: true,
+          signal: new AbortController().signal,
+        });
+      } catch {
+        result.confirmedEventObservation = { status: "unconfirmed", attempted: null, observed: null };
+      }
+      const policy = pushEnrollmentPolicy(process.env.TOUCHLINE_MATCH_PUSH_SOURCE_AGE_POLICY);
+      if (result.confirmedEventObservation.status === "completed" && policy) {
+        try {
+          result.matchPushProduction = await (dependencies.produceMatchPush ?? runMatchPushProducer)({
+            admin, fixtureProviderIds: [...persistedCurrentFeedIds], enabled: true,
+            signal: new AbortController().signal, policy, locale: "en-GB",
+            now: () => new Date((dependencies.now ?? Date.now)()),
+          });
+        } catch {
+          result.matchPushProduction = { status: "unconfirmed", attempted: null };
+        }
+      }
+    }
+
+    // Notification readiness is recorded separately above. It cannot invalidate
+    // a completed football ingestion and cause premature provider refetches.
 
     result.ok = snapshotResult.persisted
       && result.errors.length === 0

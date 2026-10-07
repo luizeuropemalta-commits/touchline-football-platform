@@ -24,8 +24,8 @@ test("login request provenance fails closed for missing and cross-site browser m
 test("login returns only a local path and preserves a safe hash", () => {
   const request = loginRequest({ origin: "https://qa.touchline.example", "sec-fetch-site": "same-origin" });
   assert.equal(safeReturnTo(request, "/my-club?lang=pt-BR#squad"), "/my-club?lang=pt-BR#squad");
-  assert.equal(safeReturnTo(request, "https://evil.example/#token"), "/market-transfer");
-  assert.equal(safeReturnTo(request, "//evil.example/#token"), "/market-transfer");
+  assert.equal(safeReturnTo(request, "https://evil.example/#token"), "/clubowner");
+  assert.equal(safeReturnTo(request, "//evil.example/#token"), "/clubowner");
 });
 
 test("the login handler rejects provenance before any identity-provider call", () => {

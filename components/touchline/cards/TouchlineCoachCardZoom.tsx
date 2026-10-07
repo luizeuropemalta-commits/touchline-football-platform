@@ -8,6 +8,7 @@ import type {
 } from "@/lib/touchlineArena/coach-scoring";
 import { touchlineCardTierName, touchlineCardTierPalette } from "@/lib/touchlineArena/card-rules";
 import { localizedCountryLabel } from "@/lib/touchlineArena/country-labels";
+import { resolveTouchlineCoachZoomPresentation } from "@/lib/touchlineArena/coach-zoom-i18n";
 
 import TouchlineCardZoom, { type TouchlineCardZoomDetails } from "./TouchlineCardZoom";
 import TouchlineCoachCard from "./TouchlineCoachCard";
@@ -20,6 +21,7 @@ type TouchlineCoachCardZoomProps = {
   clubAccent?: string;
   countryCode3?: string;
   locale?: string;
+  draftLocalesEnabled?: boolean;
   contract: TouchlineCoachContractSnapshot | null;
   competition?: TouchlineCoachCompetitionSnapshot | null;
   profileHref: string;
@@ -47,6 +49,7 @@ function formatVerifiedDateOfBirth(value: string | undefined, locale: string) {
     day: "numeric",
     month: "long",
     year: "numeric",
+    calendar: "gregory",
     timeZone: "UTC",
   }).format(parsed);
 }
@@ -59,6 +62,7 @@ export default function TouchlineCoachCardZoom({
   clubAccent,
   countryCode3,
   locale = "en-GB",
+  draftLocalesEnabled = false,
   contract,
   competition = null,
   profileHref,
@@ -71,66 +75,71 @@ export default function TouchlineCoachCardZoom({
   frameDecoding,
   frameFetchPriority,
 }: TouchlineCoachCardZoomProps) {
-  const portuguese = locale === "pt-BR";
+  const { locale: presentationLocale, copy } = resolveTouchlineCoachZoomPresentation(locale, draftLocalesEnabled);
+  const portuguese = presentationLocale === "pt-BR";
   const palette = touchlineCardTierPalette(slot.cardTier);
   const verifiedRecord = competition ?? contract;
-  const formattedDateOfBirth = formatVerifiedDateOfBirth(coach.dateOfBirth, locale);
+  const formattedDateOfBirth = formatVerifiedDateOfBirth(coach.dateOfBirth, presentationLocale);
   const identityFields: TouchlineCardZoomDetails["fields"] = [
-    { label: portuguese ? "Clube atual" : "Current club", value: clubName, icon: "club", group: "identity" },
+    { label: copy.currentClub, value: clubName, icon: "coach-club", group: "identity" },
     ...(coach.nationality
-      ? [{ label: portuguese ? "Nacionalidade" : "Nationality", value: localizedCountryLabel(coach.nationality, locale) ?? coach.nationality, icon: "nationality", group: "identity" as const }]
+      ? [{ label: copy.nationality, value: localizedCountryLabel(coach.nationality, presentationLocale, draftLocalesEnabled) ?? coach.nationality, icon: "coach-nationality", group: "identity" as const }]
       : []),
-    { label: portuguese ? "Função" : "Role", value: portuguese ? "Treinador principal" : "First-team coach", icon: "position", group: "identity" },
+    { label: copy.role, value: copy.firstTeamCoach, icon: "coach-role", group: "identity" },
     ...(formattedDateOfBirth
-      ? [{ label: portuguese ? "Data de nascimento" : "Date of birth", value: formattedDateOfBirth, icon: "history", group: "identity" as const }]
+      ? [{ label: copy.dateOfBirth, value: formattedDateOfBirth, icon: "coach-birth", group: "identity" as const }]
       : []),
-    { label: portuguese ? "Nível do card" : "Card tier", value: touchlineCardTierName(slot.cardTier, locale), icon: "tier", group: "identity", accent: true },
+    { label: copy.cardTier, value: touchlineCardTierName(slot.cardTier, presentationLocale, draftLocalesEnabled), icon: "coach-tier", group: "identity", accent: true },
   ];
   const performanceFields: TouchlineCardZoomDetails["fields"] = verifiedRecord
     ? [
         ...(competition
-          ? [{ label: portuguese ? "Posição na competição" : "Competition rank", value: `#${competition.rank}`, icon: "rank", group: "performance" as const }]
+          ? [{ label: copy.competitionRank, value: `#${competition.rank}`, icon: portuguese ? "coach-rank-position" : "coach-rank", group: "performance" as const, kind: "stat" as const }]
           : []),
-        { label: "TouchLine Points", value: String(verifiedRecord.totalTouchlinePoints), icon: "rating", group: "performance", primary: true },
+        { label: "TouchLine Points", value: String(verifiedRecord.totalTouchlinePoints), icon: "rating", group: "performance", primary: true, kind: "rating-total" },
         {
-          label: portuguese ? "Casa · V-E-D" : "Home · W-D-L",
+          label: copy.homeRecord,
           value: `${verifiedRecord.home.wins}-${verifiedRecord.home.draws}-${verifiedRecord.home.losses}`,
-          icon: "home",
+          icon: "coach-home",
           group: "performance",
+          kind: "stat",
         },
-        { label: portuguese ? "Pontos em casa" : "Home points", value: String(verifiedRecord.home.touchlinePoints), icon: "home", group: "performance" },
+        { label: copy.homePoints, value: String(verifiedRecord.home.touchlinePoints), icon: "coach-home", group: "performance", kind: "stat" },
         {
-          label: portuguese ? "Fora · V-E-D" : "Away · W-D-L",
+          label: copy.awayRecord,
           value: `${verifiedRecord.away.wins}-${verifiedRecord.away.draws}-${verifiedRecord.away.losses}`,
-          icon: "away",
+          icon: "coach-away",
           group: "performance",
+          kind: "stat",
         },
-        { label: portuguese ? "Pontos fora" : "Away points", value: String(verifiedRecord.away.touchlinePoints), icon: "away", group: "performance" },
+        { label: copy.awayPoints, value: String(verifiedRecord.away.touchlinePoints), icon: "coach-away", group: "performance", kind: "stat" },
       ]
     : [
         {
-          label: portuguese ? "Estado TouchLine" : "TouchLine status",
-          value: portuguese ? "Identidade verificada" : "Verified identity",
-          icon: "verified",
+          label: copy.status,
+          value: copy.verifiedIdentity,
+          icon: "coach-verified",
           group: "performance",
+          kind: "stat",
         },
         {
-          label: portuguese ? "Evidência de partidas" : "Match evidence",
-          value: portuguese ? "Aguardando dados verificados" : "Awaiting verified data",
-          icon: "history",
+          label: copy.matchEvidence,
+          value: copy.awaitingVerifiedData,
+          icon: "coach-evidence",
           group: "performance",
+          kind: "stat",
         },
       ];
   const details: TouchlineCardZoomDetails = {
-    eyebrow: portuguese ? "Treinador TouchLine" : "TouchLine coach",
+    eyebrow: copy.coachEyebrow,
     title: coach.displayName,
-    subtitle: `${clubName} · ${portuguese ? "Treinador principal" : "First-team coach"}`,
-    performanceTitle: portuguese ? "Registo TouchLine" : "TouchLine record",
+    subtitle: `${clubName} · ${copy.firstTeamCoach}`,
+    performanceTitle: copy.record,
     performanceSubtitle: competition?.seasonLabel
-      || (portuguese ? "Apenas evidência verificada" : "Verified evidence only"),
+      || copy.verifiedOnly,
     fields: [...identityFields, ...performanceFields],
     profileHref,
-    profileLabel: portuguese ? "Ver perfil completo" : "View full profile",
+    profileLabel: copy.profile,
     profileActionKind: "coach",
   };
   const card = (
@@ -143,6 +152,7 @@ export default function TouchlineCoachCardZoom({
       clubAccent={clubAccent}
       countryCode3={countryCode3}
       locale={locale}
+      draftLocalesEnabled={draftLocalesEnabled}
       displayMode={compact ? "compact" : "default"}
       optimizeForLiveCompact={compact}
       enableInteractiveNeon={false}
@@ -158,7 +168,9 @@ export default function TouchlineCoachCardZoom({
 
   return (
     <TouchlineCardZoom
-      ariaLabel={portuguese ? `Ampliar card de ${coach.displayName}` : `Open ${coach.displayName} coach card`}
+      locale={locale}
+      draftLocalesEnabled={draftLocalesEnabled}
+      ariaLabel={copy.openCard.replace("{coachName}", () => coach.displayName)}
       tierAccent={palette.accent}
       expandedContent={
         <TouchlineCoachCard
@@ -170,6 +182,7 @@ export default function TouchlineCoachCardZoom({
           clubAccent={clubAccent}
           countryCode3={countryCode3}
           locale={locale}
+          draftLocalesEnabled={draftLocalesEnabled}
           forceNeonActive
           enableInteractiveNeon={false}
           assetLoading="eager"

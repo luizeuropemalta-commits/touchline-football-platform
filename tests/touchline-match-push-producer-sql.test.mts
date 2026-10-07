@@ -28,7 +28,7 @@ test('real producer and SQL preserve unknown-history refusal, revision identity 
       create table football_fixtures(id uuid primary key);
       insert into notification_devices values('${device}'); insert into football_fixtures values('${fixture}');
       grant usage on schema public to service_role; grant select,update on notification_devices to service_role;`);
-    for (const name of ['20260924222644_touchline_match_push_outbox.sql', '20260927005940_touchline_match_push_subscription_binding.sql', '20260927023959_touchline_match_push_delivery_kind.sql']) {
+    for (const name of ['20260924222644_touchline_match_push_outbox.sql', '20260927005940_touchline_match_push_subscription_binding.sql', '20260927023959_touchline_match_push_delivery_kind.sql', '20261002003838_touchline_match_push_identity_ledger.sql']) {
       await db.exec(`begin;${readFileSync(new URL('../supabase/migrations/' + name, import.meta.url), 'utf8')}commit;`);
     }
     await db.exec('set role service_role;');
@@ -67,6 +67,13 @@ test('real producer and SQL preserve unknown-history refusal, revision identity 
     vm.runInNewContext(js, { exports, Buffer, AbortController, setTimeout, clearTimeout, require: (name: string) => { assert.ok(name in deps); return deps[name]; } });
     const producer = exports as Pick<typeof import('../lib/touchlineArena/match-push-enqueue-server'), 'enqueueVerifiedMatchPush'>;
     const invoke = () => producer.enqueueVerifiedMatchPush({ deviceId: device, fixtureProviderId: '8', eventProviderId: '9' }, { enabled: true, historyComplete: false, locale: 'en-GB', maximumAgeMs: Object.fromEntries(freshness.MATCH_PUSH_SOURCE_TIMES.map(key => [key, 60000])), expiresAt: new Date(instant.getTime() + 300000).toISOString(), now: () => instant, signal: new AbortController().signal });
+    // The legacy synthetic 5-point bonus must be rejected before consent reads
+    // or SQL admission. Players contribute the Sportmonks match rating only.
+    assert.equal((await invoke()).status, 'not-enqueued');
+    assert.equal(calls, 0);
+    assert.deepEqual(readQueries, []);
+    assert.equal((await db.query('select count(*)::int as n from touchline_match_push_outbox')).rows[0].n, 0);
+    source.data.touchlinePoints = 8.2;
     assert.equal((await invoke()).status, 'unknown');
     assert.match(sqlErrors[0], /PUSH_HISTORY_UNVERIFIED/);
     assert.equal((await db.query('select count(*)::int as n from touchline_match_push_outbox')).rows[0].n, 0);

@@ -1,8 +1,9 @@
-import { normalizeTouchLineLocale } from "@/lib/touchlineArena/i18n";
+import { resolveTouchlineCatalogueLocale } from "./catalogue-locale.ts";
+import { touchlineRankingsDrafts } from "./locale-catalogues/rankings-drafts.ts";
 
 const en = {
   backToArena: "Back to Arena",
-  tablesTitle: "TouchLine Tables",
+  tablesTitle: "TouchLine Rankings",
   tablesDescription: "The competitive home of the positional Best XI, coach leaders and the ClubOwner Table. Every order comes from the canonical TouchLine competition sources.",
   englandTable: "TouchLine England Table",
   touchLineXi: "TouchLine XI",
@@ -32,17 +33,25 @@ const en = {
   mode: "Mode",
   liveOrder: "TouchLine Total Rating order",
   demoOrder: "Preseason neutral order",
-  marketTransfer: "Market Transfer",
-  clubHub: "Club Hub",
+  marketTransfer: "ClubOwner",
+  clubHub: "ClubHub",
   completeRanking: "Complete ranking",
   allOwnedCards: "All owned player cards",
-  connectedDescription: "Connected to TouchLine Market Transfer, Club Hub and ClubOwner profile.",
+  connectedDescription: "Connected to ClubOwner, ClubHub and the ClubOwner profile.",
   club: "Club",
+  publishedRatingOrder: "TouchLine rating order",
+  publishedRankingDescription: "The ranking includes published TouchLine cards only and is ordered by the sum of verified TouchLine ratings. The tier comes from the card-publication process.",
+  playerRankingSummary: "TouchLine Player Cards Ranking summary",
+  ratingSum: "Rating sum",
+  topPlayerCards: "Top ranked TouchLine player cards",
+  fullPlayerRanking: "Full TouchLine player card ranking",
+  officialTopTwenty: "Top 20 · official cards",
+  playerRank: "Rank",
 } as const;
 
 const ptBR: Record<keyof typeof en, string> = {
   backToArena: "Voltar à Arena",
-  tablesTitle: "Tabelas TouchLine",
+  tablesTitle: "Rankings TouchLine",
   tablesDescription: "A central competitiva do Best XI por posição, dos líderes entre treinadores e da ClubOwner Table. Toda ordem vem das fontes canônicas da competição TouchLine.",
   englandTable: "Tabela TouchLine England",
   touchLineXi: "Seleção TouchLine",
@@ -72,14 +81,27 @@ const ptBR: Record<keyof typeof en, string> = {
   mode: "Modo",
   liveOrder: "Ordem por Nota Total TouchLine",
   demoOrder: "Ordem neutra de pré-temporada",
-  marketTransfer: "Market Transfer",
-  clubHub: "Central do clube",
+  marketTransfer: "ClubOwner",
+  clubHub: "ClubHub",
   completeRanking: "Ranking completo",
   allOwnedCards: "Todos os cards contratados",
-  connectedDescription: "Conectado ao TouchLine Market Transfer, à Central do Clube e ao perfil do ClubOwner.",
+  connectedDescription: "Conectado ao ClubOwner, ao ClubHub e ao perfil do ClubOwner.",
   club: "Clube",
+  publishedRatingOrder: "Ordem por Nota TouchLine",
+  publishedRankingDescription: "O ranking reúne apenas cards TouchLine publicados e é ordenado pela soma das notas TouchLine verificadas. O tier é definido pelo processo de publicação do card.",
+  playerRankingSummary: "Resumo do ranking de cards de jogadores TouchLine",
+  ratingSum: "Soma das notas",
+  topPlayerCards: "Cards de jogadores TouchLine mais bem classificados",
+  fullPlayerRanking: "Ranking completo de cards de jogadores TouchLine",
+  officialTopTwenty: "Top 20 · cards oficiais",
+  playerRank: "Posição",
 };
 
-export function getTouchLineRankingsCopy(locale?: string | null) {
-  return normalizeTouchLineLocale(locale) === "pt-BR" ? ptBR : en;
+export type TouchlineRankingsCopy = Readonly<Record<keyof typeof en, string>>;
+
+export function getTouchLineRankingsCopy(locale?: string | null, draftLocalesEnabled = false): TouchlineRankingsCopy {
+  const selected = resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled);
+  if (selected === "en-GB") return en;
+  if (selected === "pt-BR") return ptBR;
+  return touchlineRankingsDrafts[selected];
 }

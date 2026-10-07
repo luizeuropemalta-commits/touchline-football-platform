@@ -51,7 +51,7 @@ test("the authenticated device route and RLS migration fail closed without a rea
   assert.match(migration, /jsonb_typeof\(push_subscription->'keys'->'auth'\) = 'string'/i);
   assert.match(migration, /\^\[A-Za-z0-9_-\]\{16,512\}\$/);
   assert.doesNotMatch(migration, /push_subscription is null\s+or/i);
-  assert.match(client, /if \(!publicKey\) return "subscription-unconfigured"/);
+  assert.match(client, /if \(!publicKey\) return \{ status: "subscription-unconfigured" \}/);
   assert.match(client, /subscription: subscription\.toJSON\(\)/);
   assert.doesNotMatch(client, /subscription:\s*null/);
 });

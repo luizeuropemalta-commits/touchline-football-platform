@@ -1,4 +1,7 @@
+import type { TouchLineLocale } from "@/lib/touchlineArena/i18n";
 import type { ClubOwnerSquadCard } from "@/lib/touchlineArena/demo-data";
+import { getTouchlineClubHubRosterCopy } from "@/lib/touchlineArena/club-hub-roster-i18n";
+import { getTouchlinePublicErrorCopy } from "@/lib/touchlineArena/public-error-i18n";
 import Link from "next/link";
 import ClubHubSquadGrid from "@/components/touchline/ClubHubSquadGrid";
 import TouchlineClubPerimeterTrace from "@/components/touchline/TouchlineClubPerimeterTrace";
@@ -9,10 +12,13 @@ type ClubHubOutsideMatchRosterProps = {
   clubName: string;
   cards: readonly ClubOwnerSquadCard[];
   locale: string;
+  draftLocalesEnabled?: boolean;
   labels: { nationality: string; points: string; totalPoints: string; cardPrice: string; currentClub: string };
   squadUnavailable?: boolean;
   retryHref?: string;
   selectionState?: "unconfirmed" | "not_listed";
+  /** Public ClubHub pages suppress values without changing ClubOwner or QA defaults. */
+  hideMarketValuePanel?: boolean;
 };
 
 /**
@@ -24,51 +30,53 @@ export default function ClubHubOutsideMatchRoster({
   clubName,
   cards,
   locale,
+  draftLocalesEnabled = false,
   labels,
   squadUnavailable = false,
   retryHref,
   selectionState = "unconfirmed",
+  hideMarketValuePanel = false,
 }: ClubHubOutsideMatchRosterProps) {
-  const portuguese = locale === "pt-BR";
+  const copy = getTouchlineClubHubRosterCopy(locale, draftLocalesEnabled);
+  const retryLabel = getTouchlinePublicErrorCopy(locale, draftLocalesEnabled).error.retry;
   const confirmed = selectionState === "not_listed";
   const title = confirmed
-    ? (portuguese ? "Não relacionados na escalação disponível" : "Not listed in the available team sheet")
-    : (portuguese ? "Demais jogadores do elenco" : "Other squad players");
+    ? copy.outsideNotListedTitle
+    : copy.outsideOtherTitle;
   const description = confirmed
-    ? (portuguese ? "Jogadores que não constam no time titular nem no banco da partida indicada acima. Não indica o motivo da ausência."
-      : "Players not listed in the starting XI or bench for the match shown above. No reason for absence is inferred.")
-    : (portuguese ? "A escalação e o banco oficiais da partida indicada acima ainda não estão completos. Estar fora da prévia não significa estar fora do jogo."
-      : "The official starting XI and bench for the match shown above are not yet complete. Being outside the preview does not mean missing the match.");
+    ? copy.outsideNotListedDescription
+    : copy.outsidePreviewDescription;
   const emptyTitle = squadUnavailable
-    ? (portuguese ? "Não foi possível carregar o elenco agora." : "The squad could not be loaded right now.")
-    : (portuguese ? "Nenhum outro jogador a exibir" : "No other squad players to display");
+    ? copy.squadUnavailableTitle
+    : copy.outsideEmptyTitle;
   const emptyDescription = squadUnavailable
-    ? (portuguese ? "Tente novamente para carregar os dados oficiais do elenco." : "Try again to load the official squad data.")
-    : (portuguese ? "Todos os jogadores disponíveis estão exibidos acima." : "All available squad members are shown above.");
+    ? copy.squadUnavailableDescription
+    : copy.outsideEmptyDescription;
 
   return (
     <section id="club-squad" className={styles.shell} data-selection-state={selectionState} aria-label={`${clubName} ${title}`}>
       <TouchlineClubPerimeterTrace accent="#a3ff12" className={styles.perimeterTrace} />
       <header className={styles.header}>
         <div>
-          <span className={styles.eyebrow}>{portuguese ? "ELENCO DO CLUBE" : "CLUB SQUAD"}</span>
+          <span className={styles.eyebrow}>{copy.squadEyebrow}</span>
           <h2>{title}</h2>
           <p>{description}</p>
         </div>
-        <span className={styles.count} aria-label={portuguese ? `${cards.length} jogadores` : `${cards.length} players`}>
+        <span className={styles.count} aria-label={copy.squadCount.replace("{count}", () => String(cards.length))}>
           {cards.length}
         </span>
       </header>
 
       {cards.length ? (
         <div className={styles.cards}>
-          <ClubHubSquadGrid
+          <ClubHubSquadGrid draftLocalesEnabled={draftLocalesEnabled}
             cards={[...cards]}
-            locale={locale as "en-GB" | "pt-BR"}
+            locale={locale as TouchLineLocale}
             labels={labels}
-            openProfileLabel={portuguese ? "Abrir card do jogador" : "Open player card"}
+            openProfileLabel={copy.openPlayerCard}
             initialCardCount={12}
             cardRenderScale={124 / 430}
+            hideMarketValuePanel={hideMarketValuePanel}
             className={styles.cardGrid}
           />
         </div>
@@ -76,7 +84,7 @@ export default function ClubHubOutsideMatchRoster({
         <div className={styles.empty} role="status">
           <strong>{emptyTitle}</strong>
           <p>{emptyDescription}</p>
-          {squadUnavailable && retryHref ? <Link href={retryHref}>{portuguese ? "Tentar novamente" : "Try again"}</Link> : null}
+          {squadUnavailable && retryHref ? <Link href={retryHref}>{retryLabel}</Link> : null}
         </div>
       )}
     </section>

@@ -18,8 +18,9 @@ import {
   squadCardToExactPlayer,
   type ClubOwnerSquadCard,
 } from "@/lib/touchlineArena/demo-data";
-import { formatTouchlineMarketValueEur } from "@/lib/touchlineArena/editorial-card-profile";
 import { touchlinePlayerProfileHref } from "@/lib/touchlineArena/player-links";
+import { resolveTouchlineCatalogueLocale } from "@/lib/touchlineArena/catalogue-locale";
+import { getTouchlineClubHubShowcaseCopy } from "@/lib/touchlineArena/club-hub-showcase-i18n";
 import {
   touchlineCardTierName,
   touchlineCardTierPalette,
@@ -30,52 +31,10 @@ import styles from "./TouchlineCoachCategoryShowcase.module.css";
 
 type Props = Readonly<{
   locale: string;
+  draftLocalesEnabled?: boolean;
   playerCards: readonly ClubOwnerSquadCard[];
   coachRanking: TouchLineCoachRankingState;
 }>;
-
-const copy = {
-  "en-GB": {
-    playerEyebrow: "TouchLine player borders",
-    playerTitle: "Seven official player-card borders",
-    playerDescription: `Ordered from the highest-value border to the entry border. Each card is a real published representative with the highest verified market value in its tier; Erling Haaland leads ${touchlineCardTierName("diamond-gold", "en-GB")}.`,
-    coachEyebrow: "TouchLine coach borders",
-    coachTitle: "Seven official coach-card borders",
-    coachDescription: "Each representative keeps the same border as their official profile. Within each tier, approved previous-season results determine the representative. Borders without an eligible coach remain pending.",
-    verifiedValue: "Verified market value",
-    previousFinish: "Previous-season finish",
-    promotedChampion: "Promoted champion",
-    promotedPlayoff: "Promoted through play-offs",
-    approvedFallback: "Approved promotion fallback",
-    representativePending: "Representative pending",
-    representativePendingDescription: "No current coach has approved evidence for this border. TouchLine will not borrow another coach’s position.",
-    playerPending: "Published representative pending",
-    playerPendingDescription: "No published card currently owns this border.",
-    openPlayer: "Open player profile",
-    openCoach: "Open coach profile",
-    sourceNote: "Only published player cards and immutable coach classifications appear here. Missing evidence remains explicit.",
-  },
-  "pt-BR": {
-    playerEyebrow: "Bordas de jogadores TouchLine",
-    playerTitle: "As sete bordas oficiais dos cards de jogadores",
-    playerDescription: "Ordem da borda de maior valor até a borda de entrada. Cada card é um representante real publicado com o maior valor de mercado verificado do seu tier; Erling Haaland lidera o Diamante Dourado.",
-    coachEyebrow: "Bordas de treinadores TouchLine",
-    coachTitle: "As sete bordas oficiais dos cards de treinadores",
-    coachDescription: "Cada representante mantém a mesma borda do seu perfil oficial. Dentro de cada tier, os resultados aprovados da temporada anterior definem o representante. Bordas sem treinador elegível permanecem pendentes.",
-    verifiedValue: "Valor de mercado verificado",
-    previousFinish: "Posição na temporada anterior",
-    promotedChampion: "Campeão promovido",
-    promotedPlayoff: "Promovido pelos play-offs",
-    approvedFallback: "Fallback de promoção aprovado",
-    representativePending: "Representante pendente",
-    representativePendingDescription: "Nenhum treinador atual possui evidência aprovada para esta borda. A TouchLine não empresta a posição de outro treinador.",
-    playerPending: "Representante publicado pendente",
-    playerPendingDescription: "Nenhum card publicado ocupa esta borda no momento.",
-    openPlayer: "Abrir perfil do jogador",
-    openCoach: "Abrir perfil do treinador",
-    sourceNote: "Somente cards de jogadores publicados e classificações imutáveis de treinadores aparecem aqui. Evidência ausente permanece explícita.",
-  },
-} as const;
 
 function tierStyle(tierKey: TouchlineCardTierKey) {
   const palette = touchlineCardTierPalette(tierKey);
@@ -85,7 +44,7 @@ function tierStyle(tierKey: TouchlineCardTierKey) {
   } as CSSProperties;
 }
 
-type ShowcaseDictionary = (typeof copy)[keyof typeof copy];
+type ShowcaseDictionary = ReturnType<typeof getTouchlineClubHubShowcaseCopy>;
 type CoachRepresentative = ReturnType<typeof selectTouchlineCoachTierRepresentatives>[number];
 
 function coachEvidenceLabel(
@@ -98,9 +57,9 @@ function coachEvidenceLabel(
   return dictionary.approvedFallback;
 }
 
-export default function TouchlineCoachCategoryShowcase({ locale, playerCards, coachRanking }: Props) {
-  const effectiveLocale = locale === "pt-BR" ? "pt-BR" : "en-GB";
-  const dictionary = copy[effectiveLocale];
+export default function TouchlineCoachCategoryShowcase({ locale, playerCards, coachRanking, draftLocalesEnabled = false }: Props) {
+  const effectiveLocale = resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled);
+  const dictionary = getTouchlineClubHubShowcaseCopy(effectiveLocale, draftLocalesEnabled);
   const playerRepresentatives = selectTouchlinePlayerTierRepresentatives(playerCards);
   const coachRepresentatives = selectTouchlineCoachTierRepresentatives();
   const galleryByTier = new Map(TOUCHLINE_COACH_TIER_GALLERY.map((item) => [item.tierKey, item]));
@@ -117,7 +76,7 @@ export default function TouchlineCoachCategoryShowcase({ locale, playerCards, co
         <ul className={styles.grid} data-touchline-tier-order="highest-to-entry">
           {playerRepresentatives.map(({ tierKey, card }) => {
             const exactPlayer = card ? squadCardToExactPlayer(card) : null;
-            const tierLabel = touchlineCardTierName(tierKey, effectiveLocale);
+            const tierLabel = touchlineCardTierName(tierKey, effectiveLocale, draftLocalesEnabled);
             const profileHref = exactPlayer ? touchlinePlayerProfileHref(exactPlayer, effectiveLocale) : null;
             return (
               <li key={tierKey} className={styles.card} style={tierStyle(tierKey)} data-tier={tierKey}>
@@ -125,7 +84,7 @@ export default function TouchlineCoachCategoryShowcase({ locale, playerCards, co
                 {exactPlayer && profileHref ? (
                   <Link className={styles.cardLink} href={profileHref} aria-label={`${dictionary.openPlayer}: ${card?.name}`}>
                     <span className={styles.playerCardVisual}>
-                      <TouchlineEliteExactCard
+                      <TouchlineEliteExactCard draftLocalesEnabled={draftLocalesEnabled}
                         player={exactPlayer}
                         imageLoading="lazy"
                         initialRenderScale={0.34}
@@ -136,6 +95,7 @@ export default function TouchlineCoachCategoryShowcase({ locale, playerCards, co
                         showCardActions={false}
                         showProfileAction={false}
                         showSocialMetrics={false}
+                        hideMarketValuePanel
                         rankingMode="live"
                       />
                     </span>
@@ -143,7 +103,6 @@ export default function TouchlineCoachCategoryShowcase({ locale, playerCards, co
                       <small>{tierLabel}</small>
                       <strong>{card?.name}</strong>
                       <span>{card?.clubName}</span>
-                      <em>{dictionary.verifiedValue}: {formatTouchlineMarketValueEur(card?.editorialCard?.marketValueEur ?? 0, effectiveLocale)}</em>
                     </span>
                   </Link>
                 ) : (
@@ -171,7 +130,7 @@ export default function TouchlineCoachCategoryShowcase({ locale, playerCards, co
 
         <ul className={styles.grid} data-touchline-tier-order="highest-to-entry">
           {coachRepresentatives.map(({ tierKey, snapshot, classification }) => {
-            const tierLabel = touchlineCardTierName(tierKey, effectiveLocale);
+            const tierLabel = touchlineCardTierName(tierKey, effectiveLocale, draftLocalesEnabled);
             const club = snapshot
               ? TOUCHLINE_ENGLAND_CLUBS.find((candidate) => candidate.teamId === snapshot.coach.teamId)
               : null;
@@ -190,7 +149,7 @@ export default function TouchlineCoachCategoryShowcase({ locale, playerCards, co
                 {snapshot && classification && coachHref && cardSlot ? (
                   <div className={styles.cardLink}>
                     <span className={styles.coachCardVisual}>
-                      <TouchlineCoachCardZoom
+                      <TouchlineCoachCardZoom draftLocalesEnabled={draftLocalesEnabled}
                         coach={snapshot.coach}
                         slot={cardSlot}
                         clubName={club?.name ?? classification.sourceClub ?? "TouchLine England"}

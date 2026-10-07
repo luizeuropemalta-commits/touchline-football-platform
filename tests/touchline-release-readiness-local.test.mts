@@ -24,7 +24,6 @@ function currentRepositoryInput() {
     cardNeonFixtureSource: source("../app/visual-qa/card-neon-trace/page.tsx"),
     ownerPortraitFixtureSource: source("../app/visual-qa/club-owner-portrait-neon/page.tsx"),
     officialTableFixtureSource: source("../app/visual-qa/official-league-table-initial/page.tsx"),
-    arenaMainFieldFixtureSource: source("../app/visual-qa/arena-main-field/page.tsx"),
     twentyClubGalleryFixtureSource: source("../app/visual-qa/twenty-club-card-gallery/page.tsx"),
   };
 }
@@ -47,7 +46,7 @@ test("the local release checklist maps the public route, name-only environment c
   assert.ok(result.fixtureMatrix.includes("/visual-qa/card-neon-trace?lang=pt-BR"));
   assert.ok(result.fixtureMatrix.includes("/visual-qa/club-owner-portrait-neon?lang=pt-BR"));
   assert.ok(result.fixtureMatrix.includes("/visual-qa/official-league-table-initial?lang=pt-BR"));
-  assert.ok(result.fixtureMatrix.includes("/visual-qa/arena-main-field?lang=pt-BR"));
+  assert.equal(result.fixtureMatrix.some((path) => path.startsWith("/visual-qa/arena-main-field")), false);
   assert.ok(result.fixtureMatrix.includes("/visual-qa/twenty-club-card-gallery?lang=en-GB"));
   assert.ok(result.fixtureMatrix.includes("/visual-qa/twenty-club-card-gallery?lang=pt-BR"));
   assert.ok(result.manualGates.some((gate) => gate.includes("Safari/WebKit")));
@@ -76,6 +75,20 @@ test("the checklist fails closed when a script, name-only contract or static rou
   });
   assert.equal(missingOrigin.status, "LOCAL_CONTRACT_INVALID");
   assert.ok(missingOrigin.staticContractFailures.some((failure) => failure.startsWith("public-origin:")));
+
+  // Retiring one historical fixture must not make remaining fixtures optional.
+  for (const [key, prefix] of [
+    ["clubHubFixtureSource", "clubhub-fixture:"],
+    ["cardFixtureSource", "card-fixture:"],
+    ["cardNeonFixtureSource", "card-neon-fixture:"],
+    ["ownerPortraitFixtureSource", "owner-portrait-fixture:"],
+    ["officialTableFixtureSource", "official-table-fixture:"],
+    ["twentyClubGalleryFixtureSource", "twenty-club-gallery-fixture:"],
+  ] as const) {
+    const missingFixture = evaluateTouchlineReleaseReadiness({ ...input, [key]: "" });
+    assert.equal(missingFixture.status, "LOCAL_CONTRACT_INVALID", key);
+    assert.ok(missingFixture.staticContractFailures.some((failure) => failure.startsWith(prefix)), key);
+  }
 });
 
 test("the executable checklist cannot inspect credentials or contact product infrastructure", () => {

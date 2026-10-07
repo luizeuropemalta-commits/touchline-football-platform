@@ -14,7 +14,7 @@ test("entry has only official nonlooping media and market completion", () => {
   assert.doesNotMatch(source, /ArenaClient|LOOP_VIDEO|\bloop[ =]/);
   assert.equal((source.match(/<video /g) ?? []).length, 1);
   assert.match(source, /src=\{TOUCHLINE_ARENA_ENTRY_VIDEO\}/);
-  assert.match(source, /router.replace\(`\/market-transfer\?lang=/);
+  assert.match(source, /router.replace\(`\/clubowner\?lang=/);
   assert.match(source, /onEnded=\{finish\} onError=\{finish\}/);
   assert.match(source, /if \(reduce\) finish\(\)/);
   assert.match(source, /if \(finished.current\) return/);

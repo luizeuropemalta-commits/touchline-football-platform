@@ -1,0 +1,51 @@
+*** Begin Patch
+*** Delete File: app/visual-qa/arena-main-field/page.tsx
+*** Delete File: app/visual-qa/arena-main-field/arena-main-field.module.css
+*** Delete File: tests/touchline-arena-main-field-visual-fixture.test.mts
+*** Update File: scripts/check-touchline-release-readiness.mjs
+@@
+-  arenaMainFieldFixtureSource,
+@@
+-    ...missingTokens(arenaMainFieldFixtureSource, [
+-      "resolveTouchlineVisualQaLocale",
+-      "data-visual-qa-locale={locale}",
+-      'data-static-arena-score="live"',
+-      'data-static-arena-score="final"',
+-      'data-static-arena-score="next"',
+-      'next: "PRÓXIMO"',
+-      'next: "NEXT"',
+-    ]).map((token) => `arena-main-field-fixture:${token}`),
+@@
+-      "/visual-qa/arena-main-field?lang=en-GB",
+-      "/visual-qa/arena-main-field?lang=pt-BR",
+@@
+-  const [packageText, envTemplate, publicOriginSource, proxySource, nextConfigSource, clubHubFixtureSource, cardFixtureSource, cardNeonFixtureSource, ownerPortraitFixtureSource, officialTableFixtureSource, arenaMainFieldFixtureSource, twentyClubGalleryFixtureSource] = await Promise.all([
++  const [packageText, envTemplate, publicOriginSource, proxySource, nextConfigSource, clubHubFixtureSource, cardFixtureSource, cardNeonFixtureSource, ownerPortraitFixtureSource, officialTableFixtureSource, twentyClubGalleryFixtureSource] = await Promise.all([
+@@
+-    read("app/visual-qa/arena-main-field/page.tsx"),
+@@
+-    arenaMainFieldFixtureSource,
+*** Update File: tests/touchline-release-readiness-local.test.mts
+@@
+-    arenaMainFieldFixtureSource: source("../app/visual-qa/arena-main-field/page.tsx"),
+@@
+-  assert.ok(result.fixtureMatrix.includes("/visual-qa/arena-main-field?lang=pt-BR"));
++  assert.equal(result.fixtureMatrix.some((path) => path.startsWith("/visual-qa/arena-main-field")), false);
+@@
+   assert.ok(missingOrigin.staticContractFailures.some((failure) => failure.startsWith("public-origin:")));
++
++  // Retiring one historical fixture must not make remaining fixtures optional.
++  for (const [key, prefix] of [
++    ["clubHubFixtureSource", "clubhub-fixture:"],
++    ["cardFixtureSource", "card-fixture:"],
++    ["cardNeonFixtureSource", "card-neon-fixture:"],
++    ["ownerPortraitFixtureSource", "owner-portrait-fixture:"],
++    ["officialTableFixtureSource", "official-table-fixture:"],
++    ["twentyClubGalleryFixtureSource", "twenty-club-gallery-fixture:"],
++  ] as const) {
++    const missingFixture = evaluateTouchlineReleaseReadiness({ ...input, [key]: "" });
++    assert.equal(missingFixture.status, "LOCAL_CONTRACT_INVALID", key);
++    assert.ok(missingFixture.staticContractFailures.some((failure) => failure.startsWith(prefix)), key);
++  }
+ });
+*** End Patch

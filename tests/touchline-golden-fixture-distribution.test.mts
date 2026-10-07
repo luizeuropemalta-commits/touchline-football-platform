@@ -58,7 +58,7 @@ test("the 14 golden-fixture events yield only the verified scoring contributions
   assert.equal(score("537721", "Midfielder", {}, 6.77, 3, 28), 0);
 });
 
-test("Match Centre orders persisted provider events by minute and stoppage time", () => {
+test("Match Centre orders persisted provider events by descending minute and stoppage time", () => {
   const unsortedEvents = [
     GOLDEN_EVENTS[10]!,
     GOLDEN_EVENTS[0]!,
@@ -82,12 +82,12 @@ test("Match Centre orders persisted provider events by minute and stoppage time"
   assert.deepEqual(
     orderTouchlineMatchEvents(unsortedEvents).map((item) => [item.minute, item.extraMinute ?? 0, item.id]),
     [
-      [15, 0, "sportmonks:157577582"],
-      [34, 0, "sportmonks:157578115"],
-      [70, 0, "sportmonks:157579284"],
-      [76, 0, "sportmonks:157579383"],
-      [90, 0, "sportmonks:full-time"],
       [90, 4, "sportmonks:added-time"],
+      [90, 0, "sportmonks:full-time"],
+      [76, 0, "sportmonks:157579383"],
+      [70, 0, "sportmonks:157579284"],
+      [34, 0, "sportmonks:157578115"],
+      [15, 0, "sportmonks:157577582"],
     ],
   );
 });
@@ -213,7 +213,11 @@ test("Live consumes the persisted allowlisted match detail instead of a static p
   ]);
   assert.match(page, /readPublicFantasyFixtureMatchDetail/);
   assert.match(page, /supabase\.auth\.getUser\(\)/);
-  assert.match(page, /const canReadMatchDetail = hasTouchLineArenaAccess\(user\)/);
+  assert.match(page, /const verifiedViewer = viewerError === null/);
+  assert.match(page, /const canReadMatchDetail = Boolean\(verifiedViewer && user\s*&& typeof user\.id === "string"/);
+  assert.match(page, /\$\/i\.test\(user\.id\)\s*&& hasTouchLineArenaAccess\(user\)\)/);
+  assert.match(page, /const initialMatchDetail = canReadMatchDetail && initiallySelected\s*\? await readPublicFantasyFixtureMatchDetail\(initiallySelected\.providerId\)\s*: null/);
+  assert.match(page, /canReadMatchDetail=\{canReadMatchDetail\}/);
   assert.match(component, /if \(!canReadMatchDetail\) return/);
   assert.match(component, /touchline-verified-match-data/);
   assert.match(component, /orderTouchlineMatchEvents\(verifiedDetail\.events\)\.map/);

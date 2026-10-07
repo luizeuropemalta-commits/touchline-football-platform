@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { getTouchlineFantasyMarketAccessCopy } from "../lib/touchlineFantasy/market-access-i18n.ts";
+import { getTouchlineFantasyMarketWorkflowCopy } from "../lib/touchlineFantasy/market-workflow-i18n.ts";
 
 const client = readFileSync(new URL("../app/fantasy/FantasyGameweekClient.tsx", import.meta.url), "utf8");
 const styles = readFileSync(new URL("../app/fantasy/fantasy.module.css", import.meta.url), "utf8");
@@ -8,20 +10,22 @@ const socialStyles = readFileSync(new URL("../components/touchline/social/Touchl
 const gameweekCard = readFileSync(new URL("../components/touchline/fantasy/TouchlineGameweekCard.tsx", import.meta.url), "utf8");
 
 test("Market preserves its ClubOwner photo, name, remaining budget and points", () => {
-  const market = readFileSync(new URL("../app/market-transfer/page.tsx", import.meta.url), "utf8");
-  const start = client.indexOf('data-market-club-owner-area="true"');
-  const end = client.indexOf('<aside className={styles.technicalArea}', start);
-  assert.ok(start >= 0 && end > start, "The Market ClubOwner area remains beside the technical area");
+  const market = readFileSync(new URL("../app/clubowner/page.tsx", import.meta.url), "utf8");
+  const header = readFileSync(new URL("../components/touchline/ClubOwnerMarketHeader.tsx", import.meta.url), "utf8");
+  const start = client.indexOf('data-market-owner-metrics="true"');
+  const end = client.indexOf('</dl>', start);
+  assert.ok(start >= 0 && end > start, "Live account metrics remain above the XI");
   const area = client.slice(start, end);
 
-  assert.match(market, /resolveTouchlineClubOwnerPageIdentity\(user\)/);
-  assert.match(market, /clubOwner=\{clubOwner \? \{ name: clubOwner\.name, avatarUrl: clubOwner\.avatarUrl \} : undefined\}/);
-  assert.match(area, /<Image src=\{clubOwner\?\.avatarUrl \?\? "\/icons\/touchline-512\.png"\}/);
-  assert.match(area, /<strong>\{clubOwner\?\.name \?\? "ClubOwner"\}<\/strong>/);
-  assert.match(area, /formatTouchlineFantasyMarketValue\(validation\?\.budgetRemainingEur \?\? snapshot\.config\.budgetEur, locale\)/);
+  assert.match(market, /resolveTouchlineClubOwnerPageIdentity\(user, undefined, avatarContext\?\.avatarUrl\)/);
+  assert.match(market, /<ClubOwnerMarketHeader owner=\{clubOwner\?\.isAuthenticatedClubOwner \? clubOwner : null\}/);
+  assert.match(header, /<Image src=\{owner\?\.avatarUrl \|\| "\/icons\/touchline-512\.png"\}/);
+  assert.match(header, /owner\?\.name/);
+  assert.doesNotMatch(client, /data-market-club-owner-area/);
+  assert.match(area, /formatTouchlineFantasyMarketValue\(validation\?\.budgetRemainingEur \?\? snapshot\.config\.budgetEur, locale, draftLocalesEnabled\)/);
   assert.match(area, /\(live\?\.gameweekScore \?\? snapshot\.gameweekScore\)\.toFixed\(2\)/);
   assert.match(area, /\(live\?\.seasonScore \?\? snapshot\.seasonScore\)\.toFixed\(2\)/);
-  assert.equal((area.match(/href=\{`\/touchline-tables\?lang=/g) ?? []).length, 2);
+  assert.equal((area.match(/href=\{`\/rankings\?lang=/g) ?? []).length, 2);
 });
 
 test("My Club grid cards fit their real container without changing pitch or zoom scale", () => {
@@ -39,10 +43,12 @@ test("My Club renders a pitch-first command centre instead of the Gameweek wizar
   assert.match(client, /if \(embedded\) \{/);
   assert.match(client, /className=\{styles\.myClubCommand\}/);
   assert.match(client, /className=\{styles\.myClubCardRows\}/);
-  assert.match(client, /<TouchlineGameweekCard card=\{card\} locale=\{locale\} displayWidth=\{116\}/);
+  assert.match(client, /<TouchlineGameweekCard card=\{card\} locale=\{locale\} draftLocalesEnabled=\{draftLocalesEnabled\} displayWidth=\{116\}/);
   assert.match(client, /className=\{styles\.myClubMarket\}/);
-  assert.match(client, /TRANSFER MARKET/);
-  assert.match(client, /<MarketWindowClock gameweeks=\{gameweeks\} locale=\{locale\} \/>/);
+  assert.equal(getTouchlineFantasyMarketAccessCopy("en-GB").lineupWindow, "LINEUP WINDOW");
+  assert.match(client, /const marketAccessCopy = getTouchlineFantasyMarketAccessCopy\(locale, draftLocalesEnabled\)/);
+  assert.match(client, /<span>\{marketAccessCopy\.lineupWindow\}<\/span>/);
+  assert.match(client, /<MarketWindowClock gameweeks=\{gameweeks\} locale=\{locale\} draftLocalesEnabled=\{draftLocalesEnabled\} \/>/);
   assert.match(client, /removePlayer\(selection!\.playerId\)/);
   assert.match(client, /replaceTouchlineFantasyPlayerAtSlot/);
   assert.ok(client.indexOf("if (embedded) {") < client.indexOf('className={styles.shell}'));
@@ -50,8 +56,10 @@ test("My Club renders a pitch-first command centre instead of the Gameweek wizar
 
 test("My Club opens the tactical field by default and keeps eligibility contextual", () => {
   assert.match(client, /useState<"squad" \| "tactical">\("tactical"\)/);
-  assert.match(client, /View tactical layout/);
-  assert.match(client, /Interactive tactical field/);
+  assert.deepEqual([getTouchlineFantasyMarketWorkflowCopy("en-GB").viewTactical, getTouchlineFantasyMarketWorkflowCopy("pt-BR").viewTactical], ["View tactical layout", "Ver visão tática"]);
+  assert.match(client, /squadView === "squad" \? \(workflowCopy\.viewTactical\) : \(workflowCopy\.viewCards\)/);
+  assert.deepEqual([getTouchlineFantasyMarketWorkflowCopy("en-GB").pitchAria, getTouchlineFantasyMarketWorkflowCopy("pt-BR").pitchAria], ["Interactive tactical field", "Campo tático interativo"]);
+  assert.match(client, /<TouchlinePitchSurface className=\{styles\.myClubTacticalPitch\} ariaLabel=\{workflowCopy\.pitchAria\}/);
   assert.match(client, /const openTacticalSelector = \(slotId: string\)/);
   assert.match(client, /setSquadView\("tactical"\)/);
   assert.match(client, /onClick=\{\(\) => openTacticalSelector\(slot\.id\)\}/);
@@ -59,24 +67,28 @@ test("My Club opens the tactical field by default and keeps eligibility contextu
   const embedded = client.slice(client.indexOf("if (embedded) {"), client.indexOf('className={styles.shell}'));
   assert.match(embedded, /<CompactClubSelector selectedTeamId=\{selectedPlayerClub\?\.teamId/);
   assert.match(embedded, /id="my-club-player-selection"/);
-  assert.match(embedded, /scrollIntoView\(\{ behavior: "smooth", block: "start" \}\)/);
+  assert.match(embedded, /scrollToLineupSection\("my-club-player-selection"\)/);
+  assert.match(embedded, /scrollToLineupSection\("my-club-xi-pitch"\)/);
   // The requested non-overlap rule now sizes the artwork from actual pitch
   // dimensions. Geometry/label envelopes are exercised in market-browser tests.
   assert.match(embedded, /width: Math\.max\(44, pitchCardWidth\)/);
   assert.match(embedded, /"--touchline-card-static-scale": pitchCardWidth \/ 430/);
   assert.match(embedded, /className=\{styles\.myClubTacticalSlot\}/);
   assert.match(embedded, /data-pitch-edge=\{slot\.x >= 75 \? "end" : undefined\}/);
-  assert.match(embedded, /<TouchlineGameweekCard card=\{card\} locale=\{locale\} compact displayWidth=\{pitchCardWidth\} \/>/);
-  assert.match(embedded, /data-slot-action=\{card \? "replace" : "add"\}/);
-  assert.match(embedded, /<button[^\n]*type="button" data-slot-action=.*?onClick=\{\(\) => openTacticalSelector\(slot\.id\)\}/);
+  assert.match(embedded, /<TouchlineGameweekCard card=\{card\} locale=\{locale\} draftLocalesEnabled=\{draftLocalesEnabled\} compact displayWidth=\{pitchCardWidth\} \/>/);
+  assert.doesNotMatch(embedded, /data-slot-action/);
+  assert.match(embedded, /className=\{styles\.pitchRemove\}/);
+  assert.match(embedded, /className=\{styles\.emptyPosition\}[^\n]*onClick=\{\(\) => openTacticalSelector\(slot\.id\)\}/);
   assert.match(embedded, /selectMyClubPlayer\(card\)/);
   assert.doesNotMatch(embedded, /browseCards\.slice\(0, 10\)/);
   assert.match(embedded, /data-my-club-setup="coach"/);
   assert.match(embedded, /data-my-club-setup="formation"/);
-  assert.match(embedded, /Choose your coach|Escolha seu treinador/);
-  assert.match(embedded, /Choose formation|Escolha a formação/);
+  assert.deepEqual([getTouchlineFantasyMarketWorkflowCopy("en-GB").chooseYourCoach, getTouchlineFantasyMarketWorkflowCopy("pt-BR").chooseYourCoach], ["Choose your coach", "Escolha seu treinador"]);
+  assert.match(embedded, /<h2>\{workflowCopy\.chooseYourCoach\}<\/h2>/);
+  assert.deepEqual([getTouchlineFantasyMarketWorkflowCopy("en-GB").chooseFormation, getTouchlineFantasyMarketWorkflowCopy("pt-BR").chooseFormation], ["Choose formation", "Escolha a formação"]);
+  assert.match(embedded, /<h2>\{workflowCopy\.chooseFormation\}<\/h2>/);
   assert.match(embedded, /browseCards\.map\(\(card\)/);
-  assert.match(embedded, /<small>\{card\.position\}<\/small><em>\{card\.clubName\}<\/em>/);
+  assert.match(embedded, /<small>\{localizedPositionLabel\(card\.position, locale, draftLocalesEnabled\)\}<\/small><em>\{card\.clubName\}<\/em>/);
   assert.match(styles, /\.myClubCardRows\{display:grid/);
   assert.match(styles, /\.myClubCard\{display:block/);
   assert.match(styles, /\.myClubMarket\{display:grid/);

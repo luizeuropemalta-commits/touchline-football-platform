@@ -9,6 +9,8 @@ import * as publicOrigin from "../lib/touchlineArena/public-origin.ts";
 import * as auth from "../lib/touchlineArena/auth-i18n.ts";
 import * as access from "../lib/touchlineArena/auth-access.ts";
 import * as locale from "../lib/touchlineArena/root-locale.ts";
+import * as catalogueLocale from "../lib/touchlineArena/catalogue-locale.ts";
+import * as publicErrors from "../lib/touchlineArena/public-error-i18n.ts";
 
 const compiled = ts.transpileModule(readFileSync(new URL("../proxy.ts", import.meta.url), "utf8"), {
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
@@ -27,7 +29,14 @@ function harness(options: {
 } = {}) {
   let authImports = 0;
   let identityReads = 0;
+  const siteLocales = {};
+  runInNewContext(ts.transpileModule(readFileSync(new URL("../lib/touchlineArena/site-locales-release.ts", import.meta.url), "utf8"), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS },
+  }).outputText, { exports: siteLocales, process: { env: {} } });
   const modules: Record<string, unknown> = {
+    "@/lib/touchlineArena/site-locales-release": siteLocales,
+    "@/lib/touchlineArena/catalogue-locale": catalogueLocale,
+    "@/lib/touchlineArena/public-error-i18n": publicErrors,
     "next/server": { NextResponse },
     "@/lib/server/touchline-host-routing": hostRouting,
     "@/lib/touchlineArena/public-origin": publicOrigin,
@@ -49,7 +58,7 @@ function harness(options: {
         identityReads++;
         if (options.authThrows) throw new Error("synthetic auth failure");
         config.cookies.setAll([{ name: "sb-refresh", value: "synthetic-refreshed", options: { path: "/", httpOnly: true } }]);
-        return { data: { user: options.user ?? null } };
+        return { data: { user: options.user ?? null }, error: null };
       } },
     }) },
   };
@@ -82,7 +91,7 @@ test("all retired ClubOwner paths redirect directly to Market without importing 
         const input = request(`${path}?lang=pt-BR&owner=foreign&returnTo=/admin`, origin);
         const result = await h.run(input);
         assert.equal(result.status, 307, path);
-        assert.equal(result.headers.get("location"), `${origin}/market-transfer?lang=pt-BR`, path);
+        assert.equal(result.headers.get("location"), `${origin}/clubowner?lang=pt-BR`, path);
         assert.equal(result.headers.get("set-cookie"), null);
         assert.equal(input.cookies.get("sb-existing")?.value, "synthetic-existing");
         assert.equal(input.cookies.get("preference")?.value, "keep");
@@ -108,7 +117,7 @@ test("locale canonicalization remains ahead of the retired redirect", async () =
   const first = await h.run(request("/club-owner/me?lang=es-ES"));
   assert.equal(first.headers.get("location"), "https://qa.example.test/club-owner/me?lang=en-GB");
   const second = await h.run(new NextRequest(first.headers.get("location")!));
-  assert.equal(second.headers.get("location"), "https://qa.example.test/market-transfer?lang=en-GB");
+  assert.equal(second.headers.get("location"), "https://qa.example.test/clubowner?lang=en-GB");
   assert.equal(h.imports(), 0);
 });
 
@@ -130,15 +139,15 @@ test("offline public policy still wins while technical QA and local development 
   assert.equal(publicResult.status, 503);
   assert.equal(publicResult.headers.get("location"), null);
   for (const origin of ["https://synthetic.vercel.app", "http://localhost:3000"]) {
-    assert.equal((await h.run(request("/club-owner/me", origin))).headers.get("location"), `${origin}/market-transfer?lang=en-GB`);
+    assert.equal((await h.run(request("/club-owner/me", origin))).headers.get("location"), `${origin}/clubowner?lang=en-GB`);
   }
   assert.equal(h.imports(), 0);
 });
 
 test("retired redirects work without auth configuration but Market remains protected", async () => {
   const h = harness({ missingAuth: true });
-  assert.equal((await h.run(request("/club-owner/me"))).headers.get("location"), "https://qa.example.test/market-transfer?lang=en-GB");
-  const market = await h.run(request("/market-transfer?lang=pt-BR"));
+  assert.equal((await h.run(request("/club-owner/me"))).headers.get("location"), "https://qa.example.test/clubowner?lang=en-GB");
+  const market = await h.run(request("/clubowner?lang=pt-BR"));
   assert.equal(new URL(market.headers.get("location")!).pathname, "/login");
   assert.equal(h.imports(), 0);
 });
@@ -159,7 +168,7 @@ test("My Club keeps its anonymous and Admin gates and refreshed cookies for cust
 
 test("Admin, Market capability and failed-session boundaries remain enforced", async () => {
   const withoutCapability = harness({ user: { ...customer, app_metadata: { touchline_arena_access_v1: false } } });
-  assert.equal(new URL((await withoutCapability.run(request("/market-transfer"))).headers.get("location")!).pathname, "/login");
+  assert.equal(new URL((await withoutCapability.run(request("/clubowner"))).headers.get("location")!).pathname, "/login");
   for (const lang of ["pt-BR", "en-GB"]) {
     const owner = harness({ user: customer });
     const forbidden = await owner.run(request(`/admin/finance?lang=${lang}`));

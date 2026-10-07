@@ -21,7 +21,7 @@ const recoveryRouteSource = fs.readFileSync(new URL("../app/api/auth/recovery/ro
 const recoveryIntentRouteSource = fs.readFileSync(new URL("../app/api/auth/recovery/intent/route.ts", import.meta.url), "utf8");
 
 test("forgot-password email returns through the callback to the dedicated reset page", () => {
-  assert.match(formSource, /const resetPasswordHref = touchLineAuthHref\("\/reset-password", normalizedLocale\)/);
+  assert.match(formSource, /const resetPasswordHref = touchLineAuthHref\("\/reset-password", normalizedLocale, publicSiteLocalesEnabled\)/);
   assert.match(
     formSource,
     /resetPasswordForEmail\([\s\S]*buildTouchLineAuthCallbackUrl\(resetPasswordHref\)/,
@@ -138,10 +138,10 @@ test("password recovery intents are signed, email-bound, normalized and expire",
 });
 
 test("reset UI is localized and preserves language after completion or an expired link", () => {
-  assert.match(resetPageSource, /normalizeTouchLineAuthLocale\(lang\)/);
+  assert.match(resetPageSource, /normalizeTouchLineAuthLocale\(lang, publicRelease\)/);
   assert.match(resetPageSource, /<ResetPasswordForm locale=\{locale\}/);
-  assert.match(resetFormSource, /touchLineAuthHref\("\/forgot-password", normalizedLocale\)/);
-  assert.match(resetFormSource, /touchLineAuthHref\("\/intro", normalizedLocale\)/);
+  assert.match(resetFormSource, /touchLineAuthHref\("\/forgot-password", normalizedLocale, siteLocalesEnabled\)/);
+  assert.match(resetFormSource, /touchLineAuthHref\("\/intro", normalizedLocale, siteLocalesEnabled\)/);
 });
 
 test("proxy permits the recovery page while keeping ordinary authenticated entry redirects", () => {

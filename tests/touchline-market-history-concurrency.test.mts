@@ -19,6 +19,8 @@ function deferred() {
 type Options = {
   blocked?: string[]; empty?: boolean; draftOnly?: boolean; noRound?: boolean;
   noUserRound?: boolean; projection?: "full" | "arena"; writerError?: "sync" | "lifecycle" | "prepare";
+  responseError?: "userRound" | "draft" | "locked";
+  malformedSelection?: { key: "draft" | "locked"; value: unknown };
 };
 function scenario(options: Options = {}) {
   const gates = Object.fromEntries((options.blocked ?? []).map((key) => [key, deferred()]));
@@ -59,7 +61,7 @@ function scenario(options: Options = {}) {
             scores: { gameweek_score: 7 }, season: [{ gameweek_score: 9, settlement_status: "FINAL" }, { gameweek_score: 3, settlement_status: "PROVISIONAL" }],
             alerts: [], history: [{ fixture_id: "fixture", player_id: options.draftOnly ? "draft-player" : "locked-player", rating: 7, goals: 1, hat_trick_multiplier: 1, fantasy_contribution: 7, reason_code: "RATED_APPEARANCE", settlement_status: "FINAL" }],
           };
-          return wait(key).then(() => ({ data: data[key], error: null })).then(resolve, reject);
+          return wait(key).then(() => ({ data: options.responseError === key ? null : options.malformedSelection?.key === key ? options.malformedSelection.value : data[key], error: options.responseError === key ? { message: "private database detail" } : null })).then(resolve, reject);
         },
       };
       return query;
@@ -80,6 +82,31 @@ function scenario(options: Options = {}) {
 const plain = (value: unknown) => JSON.parse(JSON.stringify(value));
 const writers = (events: string[]) => events.filter((event) => event.startsWith("touchline_fantasy_") || event === "lifecycle");
 const expectedWriters = ["touchline_fantasy_sync_gameweeks", "lifecycle", "touchline_fantasy_prepare_user_gameweek", "touchline_fantasy_reconcile_lineup_alerts"];
+
+test("non-array successful selection responses cannot become empty XI or fallback", async () => {
+  for (const projection of ["full", "arena"] as const) {
+    for (const key of ["draft", "locked"] as const) {
+      for (const value of [null, {}, "", 0]) {
+        const h = scenario({ projection, malformedSelection: { key, value } });
+        await assert.rejects(h.run(), { message: "TOUCHLINE_LINEUP_READ_UNAVAILABLE" });
+        assert.equal(h.events.includes("history"), false);
+      }
+    }
+  }
+});
+
+test("failed lineup responses never masquerade as missing team or draft fallback", async () => {
+  for (const projection of ["full", "arena"] as const) {
+    const userFailure = scenario({ projection, responseError: "userRound" });
+    assert.equal(await userFailure.run(), null);
+    assert.equal(userFailure.events.includes("touchline_fantasy_reconcile_lineup_alerts"), false);
+    for (const responseError of ["draft", "locked"] as const) {
+      const h = scenario({ projection, responseError });
+      await assert.rejects(h.run(), { message: "TOUCHLINE_LINEUP_READ_UNAVAILABLE" });
+      assert.equal(h.events.includes("history"), false);
+    }
+  }
+});
 
 test("history follows selections while scores and alerts remain pending, with identical output and writes", async () => {
   const baseline = await scenario().run();

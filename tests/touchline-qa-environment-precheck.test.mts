@@ -4,6 +4,9 @@ import path from "node:path";
 import test from "node:test";
 import vm from "node:vm";
 import ts from "typescript";
+const releasePolicy: { isTouchLineSiteLocalesEnabled?: (path?: string) => boolean } = {};
+vm.runInNewContext(ts.transpileModule(readFileSync(new URL("../lib/touchlineArena/site-locales-release.ts", import.meta.url), "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, { exports: releasePolicy, process: { env: {} } });
+
 
 const root = path.resolve(import.meta.dirname, "..");
 const route = "app/api/qa/environment-precheck/route.ts";
@@ -119,7 +122,7 @@ test("proxy sends only the exact precheck path directly to its handler before ot
     exports, Headers, process: { env: {} },
     require: (specifier: string) => specifier === "next/server"
       ? { NextResponse: { next: () => sentinel } }
-      : new Proxy({}, { get: forbidden }),
+      : specifier === "@/lib/touchlineArena/site-locales-release" ? releasePolicy : new Proxy({}, { get: forbidden }),
   });
   const proxy = exports.proxy as (request: unknown) => Promise<Response>;
   const request = (pathname: string) => new Proxy({ nextUrl: { pathname } }, {

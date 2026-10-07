@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { getTouchlineSiteAccessibilityCopy } from "../lib/touchlineArena/site-accessibility-i18n.ts";
 
 async function source(path: string) {
   return readFile(new URL(`../${path}`, import.meta.url), "utf8");
@@ -20,7 +21,9 @@ test("the shared boundary blocks mobile portrait while preserving the mounted co
   assert.match(boundary, /installTouchlineOrientationGate/);
   assert.match(boundary, /role="dialog"/);
   assert.match(boundary, /aria-modal="true"/);
-  assert.match(boundary, /Gire para o modo horizontal/);
+  assert.equal(getTouchlineSiteAccessibilityCopy("pt-BR").orientationTitle, "Gire para o modo horizontal");
+  assert.match(boundary, /const copy = getTouchlineSiteAccessibilityCopy\(locale, draftLocalesEnabled\)/);
+  assert.match(boundary, /\{copy\.orientationTitle\}/);
   assert.match(boundary, /\{children\}/);
   assert.doesNotMatch(boundary, /orientation\.lock|router\.(push|replace)|location\.(assign|reload)/);
   assert.match(manifest, /orientation:\s*"landscape"/);

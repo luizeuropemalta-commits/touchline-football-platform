@@ -2,31 +2,46 @@ import Link from "next/link";
 import { ArrowLeft, FlaskConical } from "lucide-react";
 import { AuthForm } from "@/components/auth-form";
 import { AuthLayout } from "@/components/auth-layout";
+import { loadAccountLocaleContext } from "@/lib/touchlineArena/account-locale-context-server";
+import { isTouchLineSiteLocalesEnabled } from "@/lib/touchlineArena/site-locales-release";
 import {
   getTouchLineAuthCopy,
   normalizeTouchLineAuthLocale,
+  normalizeTouchLineLoginLocale,
+  normalizeTouchLineAuthReturnTo,
   touchLineAuthEntryHref,
 } from "@/lib/touchlineArena/auth-i18n";
 
-export default async function Register({
+type RegisterProps = { searchParams: Promise<{ lang?: string; returnTo?: string }> };
+
+export default async function Register(props: RegisterProps) {
+  return renderRegister(props, false, isTouchLineSiteLocalesEnabled("/register"));
+}
+
+async function renderRegister({
   searchParams,
 }: {
   searchParams: Promise<{ lang?: string; returnTo?: string }>;
-}) {
+}, draftLocalesEnabled = false, publicRelease = false) {
   const { lang, returnTo } = await searchParams;
-  const locale = normalizeTouchLineAuthLocale(lang);
-  const copy = getTouchLineAuthCopy(locale).register;
+  const returnPath = normalizeTouchLineAuthReturnTo(returnTo)?.split(/[?#]/)[0] ?? "";
+  const siteLocalesEnabled = publicRelease && !["/admin", "/visual-qa"].some(path => returnPath === path || returnPath.startsWith(`${path}/`));
+  const accountLocaleContext = await loadAccountLocaleContext();
+  const locale = draftLocalesEnabled ? normalizeTouchLineLoginLocale(lang) : normalizeTouchLineAuthLocale(lang, siteLocalesEnabled);
+  const copy = getTouchLineAuthCopy(locale, draftLocalesEnabled || siteLocalesEnabled).register;
 
   return (
-    <AuthLayout cinematic locale={locale}>
-      <Link href={touchLineAuthEntryHref("/login", locale, returnTo)} className="mb-4 inline-flex min-h-11 items-center gap-2 rounded-full border border-white/10 bg-black/20 px-3 py-2 text-sm font-black text-slate-300 transition hover:border-[#a3ff12]/30 hover:text-[#c5ff6d]">
+    <AuthLayout cinematic locale={locale} accountLocaleContext={accountLocaleContext} showArenaHomeLink={false} draftLocalesEnabled={draftLocalesEnabled} siteLocalesEnabled={siteLocalesEnabled} keepLoginLayoutStable
+      brandSubtitle="TouchLine Futebol Cards" minimalBrandMark
+      brandWordmarkClassName="text-[clamp(26px,3.2vw,34px)]">
+      <Link href={touchLineAuthEntryHref("/login", locale, returnTo, siteLocalesEnabled)} className="mb-4 inline-flex min-h-11 items-center gap-2 rounded-full border border-white/10 bg-black/20 px-3 py-2 text-sm font-black text-slate-300 transition hover:border-[#a3ff12]/30 hover:text-[#c5ff6d]">
         <ArrowLeft size={12} />
         {copy.back}
       </Link>
       <p className="text-[9px] font-black text-cyan-300">{copy.eyebrow}</p>
       <h1 className="font-display mt-2 text-4xl italic">{copy.title}</h1>
       <p className="mt-2 text-xs leading-5 text-slate-300">{copy.description}</p>
-      <div className="mt-4 flex items-start gap-3 rounded-2xl border border-[#a3ff12]/25 bg-[#a3ff12]/[.07] p-3 text-left shadow-[inset_0_0_22px_rgba(163,255,18,.035)]">
+      <div className="mt-4 flex items-start gap-3 rounded-2xl border border-[#a3ff12]/25 bg-[#a3ff12]/[.07] p-3 text-start shadow-[inset_0_0_22px_rgba(163,255,18,.035)]">
         <span className="grid size-8 shrink-0 place-items-center rounded-xl border border-[#a3ff12]/25 bg-black/30 text-[#a3ff12]">
           <FlaskConical size={17} aria-hidden="true" />
         </span>
@@ -37,7 +52,7 @@ export default async function Register({
           </span>
         </span>
       </div>
-      <AuthForm mode="register" locale={locale} returnTo={returnTo} />
+      <AuthForm mode="register" locale={locale} returnTo={returnTo} draftLocaleEnabled={draftLocalesEnabled} siteLocalesEnabled={siteLocalesEnabled} />
     </AuthLayout>
   );
 }

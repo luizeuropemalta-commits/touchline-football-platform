@@ -20,7 +20,7 @@ const vapid = { subject: 'mailto:test@example.test', privateKey: Buffer.alloc(32
 type TransportInput = Parameters<typeof import('../lib/touchlineArena/match-push-transport.ts').sendMatchWebPush>[0];
 
 test('single-claim composition uses second source, bounded expiry and fenced receipt without retries', async () => {
-  for (const mode of ['success', 'disabled', 'endpoint', 'missing', 'lost', 'refused', 'opt-out', 'transport-lost', 'receipt-lost', 'lease', 'queue', ...MATCH_PUSH_SOURCE_TIMES]) {
+  for (const mode of ['second-locale-pt', 'second-locale-ar', 'second-locale-no-consent', 'legacy-locale-missing', 'legacy-locale-unknown', 'success', 'disabled', 'endpoint', 'missing', 'lost', 'refused', 'opt-out', 'transport-lost', 'receipt-lost', 'lease', 'queue', ...MATCH_PUSH_SOURCE_TIMES]) {
     const started = Date.now();
     const iso = (offset: number) => new Date(started + offset).toISOString();
     const claim = { id: '11111111-1111-4111-8111-111111111111', leaseToken: '22222222-2222-4222-8222-222222222222',
@@ -45,11 +45,18 @@ test('single-claim composition uses second source, bounded expiry and fenced rec
       if (name === './match-push-dispatch') return { dispatchMatchPush };
       if (name === './match-push-source-freshness') return { matchPushSourceDeadline };
       if (name === './match-push-delivery-policy') return { matchPushDeliveryDecision };
-      if (name === './match-push-claimed-source-server') return { readClaimedMatchPushSource: async (current: unknown, options: { signal: AbortSignal }) => {
+      if (name === './match-push-claimed-source-server') return { readClaimedMatchPushSource: async (current: unknown, options: { signal: AbortSignal; locale?: unknown }) => {
         reads++; readClaims.push(current); readSignals.push(options.signal);
+        assert.equal(options.locale, undefined, 'legacy caller locale must not be forwarded as presentation authority');
         if (mode === 'missing') return null;
+        const refreshedLocale = reads === 1 ? 'en-GB' : mode === 'second-locale-pt' ? 'pt-BR' : 'ar-SA';
+        const event = refreshedLocale === 'en-GB' ? 'Goal' : refreshedLocale === 'pt-BR' ? 'Gol' : 'هدف';
         return { source: { evidence }, registration: { subscription: { endpoint: mode === 'endpoint' ? 'https://arbitrary.example/test' : 'https://fcm.googleapis.com/test', keys: {} } },
-          policy: { ...policy, fixtureOptedIn: mode !== 'opt-out' || reads === 1 }, payload: { read: reads } };
+          policy: { ...policy, fixtureOptedIn: mode !== 'opt-out' || reads === 1,
+            explicitConsentAt: mode === 'second-locale-no-consent' && reads === 2 ? null : policy.explicitConsentAt },
+          payload: mode.startsWith('second-locale-')
+            ? { title: 'Arsenal - Chelsea', body: `${event} · 23′ · 1 - 0 · Saka`, href: `/live?fixture=8&lang=${refreshedLocale}` }
+            : { read: reads } };
       } };
       if (name === './match-push-attempt-server') return {
         reserveMatchPushAttempt: async () => { reserves++; if (mode === 'lost') throw new Error('lost'); return mode !== 'refused'; },
@@ -62,20 +69,26 @@ test('single-claim composition uses second source, bounded expiry and fenced rec
       } };
       throw new Error('Unexpected import ' + name);
     } });
-    const result = await exports.dispatchClaimedMatchPush(claim, { enabled: mode !== 'disabled', locale: 'en-GB', maximumAgeMs: ages,
+    const result = await exports.dispatchClaimedMatchPush(claim, { enabled: mode !== 'disabled',
+      ...(mode === 'legacy-locale-missing' ? {} : { locale: mode === 'legacy-locale-unknown' ? 'unknown' : 'en-GB' }), maximumAgeMs: ages,
       vapid });
     const early = ['disabled', 'endpoint', 'missing'].includes(mode);
     const lost = ['lost', 'refused'].includes(mode);
     assert.equal(nonces, mode === 'disabled' ? 0 : 1, mode);
     assert.equal(reserves, early ? 0 : 1, mode);
-    assert.equal(sends.length, early || lost || mode === 'opt-out' ? 0 : 1, mode);
+    assert.equal(sends.length, early || lost || mode === 'opt-out' || mode === 'second-locale-no-consent' ? 0 : 1, mode);
     assert.equal(finishes.length, mode === 'disabled' || lost ? 0 : 1, mode);
     const expected = mode === 'disabled' ? 'disabled' : mode === 'lost' ? 'reservation-unconfirmed' : mode === 'refused' ? 'reservation-not-granted'
-      : ['endpoint', 'missing', 'opt-out'].includes(mode) ? 'cancelled' : mode === 'transport-lost' ? 'uncertain' : mode === 'receipt-lost' ? 'receipt-unconfirmed' : 'provider_accepted';
+      : ['endpoint', 'missing', 'opt-out', 'second-locale-no-consent'].includes(mode) ? 'cancelled' : mode === 'transport-lost' ? 'uncertain' : mode === 'receipt-lost' ? 'receipt-unconfirmed' : 'provider_accepted';
     assert.equal(result, expected, mode);
     for (const current of readClaims) assert.equal(current, claim);
     if (sends.length) {
-      assert.equal(sends[0].payload, JSON.stringify({ read: 2 }));
+      if (mode === 'second-locale-pt' || mode === 'second-locale-ar') {
+        const locale = mode === 'second-locale-pt' ? 'pt-BR' : 'ar-SA';
+        const event = mode === 'second-locale-pt' ? 'Gol' : 'هدف';
+        assert.deepEqual(JSON.parse(sends[0].payload), { title: 'Arsenal - Chelsea', body: `${event} · 23′ · 1 - 0 · Saka`, href: `/live?fixture=8&lang=${locale}` });
+        assert.equal(reads, 2, 'send must use the post-reservation locale snapshot');
+      } else assert.equal(sends[0].payload, JSON.stringify({ read: 2 }));
       assert.equal(sends[0].expiresAt.getTime(), Math.min(Date.parse(claim.leaseUntil), Date.parse(claim.expiresAt), ...MATCH_PUSH_SOURCE_TIMES.map(key => Date.parse(evidence[key]) + ages[key])));
       assert.equal(sends[0].signal, readSignals[1]);
     }

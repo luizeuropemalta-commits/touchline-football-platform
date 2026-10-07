@@ -125,15 +125,15 @@ test("048 extends the internal ClubHub feed to approved Match Preview without ou
   assert.match(rollback, /v_draft\.content_type in \('FULL_TIME'/);
 });
 
-test("ClubHub UI exposes the bounded server reader with local like and native share actions", () => {
+test("ClubHub retires public feed while preserving its bounded reader, admin and sharing mechanism", () => {
   const page = readFileSync(new URL("../app/touchline-clubs/[club]/page.tsx", import.meta.url), "utf8");
   const adminPage = readFileSync(new URL("../app/(app)/admin/social-publications/page.tsx", import.meta.url), "utf8");
   const component = readFileSync(new URL("../components/touchline/club-social/TouchlineClubSocialFeed.tsx", import.meta.url), "utf8");
   const styles = readFileSync(new URL("../components/touchline/club-social/TouchlineClubSocialFeed.module.css", import.meta.url), "utf8");
   const reader = readFileSync(new URL("../lib/touchlineArena/club-social-feed-server.ts", import.meta.url), "utf8");
   const shareRoute = readFileSync(new URL("../app/api/touchline-social/share-art/[postId]/route.ts", import.meta.url), "utf8");
-  assert.match(page, /readTouchlineClubSocialFeed/);
-  assert.match(page, /TouchlineClubSocialFeed/);
+  assert.doesNotMatch(page, /readTouchlineClubSocialFeed/);
+  assert.doesNotMatch(page, /TouchlineClubSocialFeed/);
   assert.match(reader, /touchline_social_045_read_feed/);
   assert.match(adminPage, /touchline_social_045_admin_status/);
   assert.doesNotMatch(adminPage, /\.from\("touchline_club_social_(?:executor_cycles|fanout_jobs|posts|tombstones)"\)/);
@@ -164,14 +164,9 @@ test("ClubHub UI exposes the bounded server reader with local like and native sh
   assert.match(styles, /\.shell\s*\{[\s\S]*?display:\s*flex[\s\S]*?height:\s*100%[\s\S]*?overflow:\s*hidden/);
   assert.match(styles, /\.grid\s*\{[\s\S]*?align-content:\s*start[\s\S]*?grid-auto-rows:\s*max-content[\s\S]*?overflow-y:\s*auto[\s\S]*?overscroll-behavior:\s*contain[\s\S]*?scrollbar-gutter:\s*stable[\s\S]*?touch-action:\s*pan-y/);
   const leagueLayoutStyles = readFileSync(new URL("../components/touchline/club-hub/ClubHubOfficialLeague.module.css", import.meta.url), "utf8");
-  assert.match(leagueLayoutStyles, /\.layout\s*\{[\s\S]*?height:\s*clamp\([\s\S]*?align-items:\s*stretch/);
-  assert.match(leagueLayoutStyles, /\.feed\s*\{[\s\S]*?height:\s*100%/);
-  assert.match(leagueLayoutStyles, /\.rail\s*\{[\s\S]*?height:\s*100%[\s\S]*?overflow:\s*hidden/);
-  assert.match(leagueLayoutStyles, /\.rail\s*\{[\s\S]*?display:\s*flex[\s\S]*?flex-direction:\s*column/);
-  assert.match(leagueLayoutStyles, /\.fixture\s*\{[\s\S]*?flex:\s*0 0 auto/);
-  assert.match(leagueLayoutStyles, /\.table\s*\{[\s\S]*?min-height:\s*0[\s\S]*?flex:\s*1 1 auto/);
-  assert.match(leagueLayoutStyles, /\.feed > section\s*\{[\s\S]*?height:\s*100%[\s\S]*?max-height:\s*100%/);
-  assert.match(leagueLayoutStyles, /\.feed > section\[data-scrollable="true"\]\s*\{[\s\S]*?height:\s*clamp\(/);
+  assert.match(leagueLayoutStyles, /width:\s*min\(920px, 100%\)/);
+  assert.match(leagueLayoutStyles, /align-items:\s*start/);
+  assert.doesNotMatch(leagueLayoutStyles, /\.feed\b|height:\s*clamp/);
   const tableStyles = readFileSync(new URL("../components/touchline/TouchlineOfficialLeagueTable.module.css", import.meta.url), "utf8");
   const tableComponent = readFileSync(new URL("../components/touchline/TouchlineOfficialLeagueTable.tsx", import.meta.url), "utf8");
   assert.match(tableStyles, /\.clubHubRail\s*\{[\s\S]*?display:\s*flex[\s\S]*?overflow:\s*hidden/);

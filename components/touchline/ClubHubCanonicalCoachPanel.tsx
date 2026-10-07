@@ -1,4 +1,5 @@
 import TouchlineCoachCardZoom from "@/components/touchline/cards/TouchlineCoachCardZoom";
+import { getTouchlineClubHubCoachPanelCopy } from "@/lib/touchlineArena/club-hub-profile-i18n";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createTouchlineArenaCoachSlot } from "@/lib/touchlineArena/coach-card";
 import { readTouchlineCoachContracts } from "@/lib/touchlineArena/coach-contracts-server";
@@ -16,6 +17,7 @@ type ClubHubCanonicalCoachPanelProps = {
   clubLogoUrl?: string | null;
   clubAccent?: string;
   locale: string;
+  draftLocalesEnabled?: boolean;
   userId: string | null;
   presentation?: "showcase" | "technical";
 };
@@ -26,10 +28,11 @@ export default async function ClubHubCanonicalCoachPanel({
   clubLogoUrl,
   clubAccent,
   locale,
+  draftLocalesEnabled = false,
   userId,
   presentation = "showcase",
 }: ClubHubCanonicalCoachPanelProps) {
-  const portuguese = locale === "pt-BR";
+  const copy = getTouchlineClubHubCoachPanelCopy(locale, draftLocalesEnabled);
   const canonicalCoach = touchlineLiveCoachForTeam(teamId);
   if (!canonicalCoach) return null;
 
@@ -84,7 +87,7 @@ export default async function ClubHubCanonicalCoachPanel({
   const profileHref = `/touchline-coaches/${encodeURIComponent(canonicalCoach.coach.providerId)}?lang=${encodeURIComponent(locale)}`;
 
   const card = (
-    <TouchlineCoachCardZoom
+    <TouchlineCoachCardZoom draftLocalesEnabled={draftLocalesEnabled}
       coach={canonicalCoach.coach}
       slot={slot}
       clubName={clubName}
@@ -107,14 +110,12 @@ export default async function ClubHubCanonicalCoachPanel({
   }
 
   return (
-    <section className={styles.shell} aria-label={`${clubName} ${portuguese ? "treinador principal" : "first-team coach"}`}>
+    <section className={styles.shell} aria-label={`${clubName} ${copy.ariaTitle}`}>
       <div className={styles.copy}>
-        <span>{portuguese ? "EQUIPE TÉCNICA" : "TECHNICAL STAFF"}</span>
-        <h2>{portuguese ? "Treinador principal" : "First-team coach"}</h2>
+        <span>{copy.staff}</span>
+        <h2>{copy.title}</h2>
         <strong>{canonicalCoach.coach.displayName}</strong>
-        <p>{portuguese
-          ? "Abra o card para ver Casa, Fora, W-D-L e todos os TouchLine Points antes de visitar o perfil completo."
-          : "Open the card to review Home, Away, W-D-L and all TouchLine Points before visiting the full profile."}</p>
+        <p>{copy.description}</p>
       </div>
       <div className={styles.card}>{card}</div>
     </section>

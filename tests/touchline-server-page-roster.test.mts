@@ -95,7 +95,7 @@ test("public pages retain the isolated demo cookie and demo fallback", () => {
 });
 
 test("the public rankings page never reads a private contract roster", () => {
-  const source = readFileSync(new URL("../app/touchline-tables/page.tsx", import.meta.url), "utf8");
+  const source = readFileSync(new URL("../app/rankings/page.tsx", import.meta.url), "utf8");
   assert.match(source, /loadTouchLineRankedCardCatalog\(activeRanking\)/);
   assert.doesNotMatch(source, /readAuthoritativeTouchlineRoster|resolveTouchlineServerPageRoster|publicRosterCookieValue/);
 });

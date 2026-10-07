@@ -1,6 +1,12 @@
 import type { ReactNode } from "react";
 
 import TouchlineCardZoom from "@/components/touchline/cards/TouchlineCardZoom";
+import { getTouchlineCardZoomCopy } from "@/lib/touchlineArena/card-zoom-i18n";
+import { getTouchlineExactCardCopy } from "@/lib/touchlineArena/exact-card-i18n";
+import { getTouchlineClubHubRosterCopy } from "@/lib/touchlineArena/club-hub-roster-i18n";
+import { resolveTouchlineCoachZoomPresentation } from "@/lib/touchlineArena/coach-zoom-i18n";
+import { getTouchlineFantasyMarketWorkflowCopy } from "@/lib/touchlineFantasy/market-workflow-i18n";
+import { touchlinePlayerPositionKind } from "@/lib/touchlineArena/position-aware-card-stats";
 import TouchlineEliteExactCard from "@/components/touchline/cards/TouchlineEliteExactCard";
 import TouchlineClubPerimeterTrace from "@/components/touchline/TouchlineClubPerimeterTrace";
 import type { TouchLineClubMatchdayPresentation } from "@/lib/touchlineArena/club-lineup";
@@ -21,8 +27,11 @@ type ClubHubMatchdayTechnicalAreaProps = {
   clubName: string;
   technical: TouchLineClubMatchdayPresentation["technical"];
   locale: string;
+  draftLocalesEnabled?: boolean;
   coachCard: ReactNode;
   canEditCardEngine?: boolean;
+  /** Public ClubHub pages suppress values without changing ClubOwner or QA defaults. */
+  hideMarketValuePanel?: boolean;
   labels: {
     nationality: string;
     points: string;
@@ -40,30 +49,36 @@ export default function ClubHubMatchdayTechnicalArea({
   clubName,
   technical,
   locale,
+  draftLocalesEnabled = false,
   coachCard,
   canEditCardEngine = false,
+  hideMarketValuePanel = false,
   labels,
 }: ClubHubMatchdayTechnicalAreaProps) {
-  const portuguese = locale === "pt-BR";
+  const rosterCopy = getTouchlineClubHubRosterCopy(locale, draftLocalesEnabled);
+  const coachCopy = resolveTouchlineCoachZoomPresentation(locale, draftLocalesEnabled).copy;
+  const workflowCopy = getTouchlineFantasyMarketWorkflowCopy(locale, draftLocalesEnabled);
+  const zoomCopy = getTouchlineCardZoomCopy(locale, draftLocalesEnabled);
+  const exactCopy = getTouchlineExactCardCopy(locale, draftLocalesEnabled);
   const confirmed = technical.state === "confirmed";
   const bench = (confirmed ? technical.bench : technical.previewBench).slice(0, 9);
-  const coachLabel = portuguese ? "Treinador principal" : "First-team coach";
-  const benchLabel = portuguese ? "Banco" : "Bench";
+  const coachLabel = coachCopy.firstTeamCoach;
+  const benchLabel = rosterCopy.bench;
   const status = confirmed
-    ? (portuguese ? "Súmula confirmada" : "Team sheet confirmed")
-    : (portuguese ? "Prévia do banco · atualiza com a escalação oficial TouchLine" : "Bench preview · updates with the official TouchLine line-up");
+    ? rosterCopy.confirmed
+    : rosterCopy.preview;
 
   return (
     <section
       className={styles.shell}
       data-matchday-sheet={confirmed ? "confirmed" : "preview"}
-      aria-label={`${clubName} ${portuguese ? "área técnica da partida" : "matchday technical area"}`}
+      aria-label={rosterCopy.technicalAria.replace("{clubName}", () => clubName)}
     >
       <TouchlineClubPerimeterTrace accent="#a3ff12" className={styles.perimeterTrace} />
       <header className={styles.header}>
         <div>
-          <span className={styles.eyebrow}>{portuguese ? "EQUIPE TÉCNICA" : "TECHNICAL STAFF"}</span>
-          <h2>{portuguese ? "Área técnica" : "Technical area"}</h2>
+          <span className={styles.eyebrow}>{rosterCopy.staff}</span>
+          <h2>{workflowCopy.technicalArea}</h2>
         </div>
         <span className={`${styles.status} ${confirmed ? styles.confirmed : ""}`} aria-live="polite">{status}</span>
       </header>
@@ -71,7 +86,7 @@ export default function ClubHubMatchdayTechnicalArea({
       <div className={styles.content}>
         <section className={styles.coach} aria-label={coachLabel}>
           <span className={styles.label}>{coachLabel}</span>
-          {coachCard ?? <p>{portuguese ? "Card do treinador indisponível" : "Coach card unavailable"}</p>}
+          {coachCard ?? <p>{rosterCopy.coachUnavailable}</p>}
         </section>
 
         <section className={styles.bench} aria-label={`${benchLabel} (${bench.length})`}>
@@ -85,6 +100,7 @@ export default function ClubHubMatchdayTechnicalArea({
           {bench.length ? (
             <ol className={styles.cards}>
               {bench.map((card, index) => {
+                const positionKind = touchlinePlayerPositionKind(card.position);
                 const cardReview = card.cardReview ?? evaluateTouchlineCardCompleteness({
                   displayName: card.name,
                   shirtNumber: card.shirtNumber,
@@ -98,7 +114,7 @@ export default function ClubHubMatchdayTechnicalArea({
                 const tierAccent = tierKey
                   ? touchlineCardTierPalette(tierKey).accent
                   : TOUCHLINE_NEUTRAL_CARD_ACCENT;
-                const tierLabel = tierKey ? touchlineCardTierName(tierKey, locale) : undefined;
+                const tierLabel = tierKey ? touchlineCardTierName(tierKey, locale, draftLocalesEnabled) : undefined;
                 const profileHref = touchlinePlayerProfileHref({
                   sportmonksPlayerId: card.id,
                   name: card.name,
@@ -110,35 +126,42 @@ export default function ClubHubMatchdayTechnicalArea({
                 return (
                   <li key={card.id}>
                     <span className={styles.cardNumber}>{index + 1}</span>
-                    <TouchlineCardZoom
-                      ariaLabel={`${portuguese ? "Ampliar card de" : "Expand card for"} ${card.name}`}
+                    <TouchlineCardZoom draftLocalesEnabled={draftLocalesEnabled}
+                      locale={locale}
+                      ariaLabel={zoomCopy.expandCard.replace("{playerName}", () => card.name)}
                       tierAccent={tierAccent}
                       tierLabel={tierLabel}
                       details={buildTouchlinePlayerCardZoomDetails({
                         locale,
+                  draftLocalesEnabled,
                         name: card.name,
                         clubName: card.clubName,
                         position: card.position,
+                        positionKind: positionKind === "unknown" ? undefined : positionKind,
                         nationality: card.countryCode3,
                         editorialCard: card.editorialCard,
                         cardReview,
                         activeContractCard: null,
                         extraFields: [
                           {
-                            label: portuguese ? "Nota total" : "Total rating",
+                            label: exactCopy.totalRating,
                             value: card.seasonTotalRating == null ? "—" : String(card.seasonTotalRating),
                             accent: true,
+                            kind: "rating-total",
+                            icon: "rating",
+                            primary: true,
                           },
                           {
-                            label: portuguese ? "Nota da última partida" : "Last match rating",
+                            label: zoomCopy.lastMatchRating,
                             value: card.matchRating == null ? "—" : String(card.matchRating),
                             accent: true,
                             kind: "rating-last",
+                            icon: "rating",
                           },
                           ...buildTouchlineVerifiedMatchFactFields({
                             statistics: card.matchStats,
                             position: card.position || card.role,
-                          }, locale),
+                          }, locale, draftLocalesEnabled),
                         ],
                         profileHref,
                         cardEngineHref: canEditCardEngine
@@ -146,7 +169,7 @@ export default function ClubHubMatchdayTechnicalArea({
                           : null,
                       })}
                       expandedContent={(
-                        <TouchlineEliteExactCard
+                        <TouchlineEliteExactCard draftLocalesEnabled={draftLocalesEnabled} runtimeLocaleOverride={locale}
                           player={exactPlayer}
                           showUnpublishedIdentity
                           labels={labels}
@@ -157,10 +180,11 @@ export default function ClubHubMatchdayTechnicalArea({
                           enableInteractiveNeon={false}
                           rankingMode="live"
                           forceNeonActive
+                          hideMarketValuePanel={hideMarketValuePanel}
                         />
                       )}
                     >
-                      <TouchlineEliteExactCard
+                      <TouchlineEliteExactCard draftLocalesEnabled={draftLocalesEnabled} runtimeLocaleOverride={locale}
                         className={styles.card}
                         player={exactPlayer}
                         showUnpublishedIdentity
@@ -171,6 +195,7 @@ export default function ClubHubMatchdayTechnicalArea({
                         subscribeToRanking={false}
                         enableInteractiveNeon={false}
                         rankingMode="preview"
+                        hideMarketValuePanel={hideMarketValuePanel}
                         showProfileAction={false}
                         showSocialMetrics={false}
                         showMatchRating
@@ -180,7 +205,7 @@ export default function ClubHubMatchdayTechnicalArea({
                 );
               })}
             </ol>
-          ) : <p className={styles.empty}>{portuguese ? "Aguardando os reservas da súmula oficial." : "Awaiting substitutes from the official team sheet."}</p>}
+          ) : <p className={styles.empty}>{rosterCopy.awaiting}</p>}
         </section>
       </div>
     </section>

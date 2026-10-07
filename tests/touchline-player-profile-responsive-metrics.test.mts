@@ -30,10 +30,10 @@ test("phone and tablet metrics use content-sized tracks after landscape rules",(
   assert.match(css.slice(adaptive),/\.metrics strong\s*\{\s*overflow-wrap: normal/);
 });
 
-test("scores and currency stay intact without forcing all metadata onto one line",()=>{
+test("scores stay intact and retired card prices are absent without forcing metadata onto one line",()=>{
   assert.match(css,/\.metrics \.numericMetric\s*\{\s*white-space: nowrap/);
   assert.match(page,/className=\{styles.numericMetric\}>\{cumulativeRatingText\}/);
-  assert.match(page,/className=\{styles.numericMetric\}>\{displayedPriceText\}/);
+  assert.doesNotMatch(page,/displayedPriceText/);
   assert.match(css,/\.fixtureRating\s*\{\s*grid-column: 1 \/ -1;\s*white-space: nowrap/);
   assert.match(page,/className=\{styles.fixtureRating\}/);
 });

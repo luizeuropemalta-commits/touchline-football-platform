@@ -13,11 +13,11 @@ import {
 
 describe("TouchLine Arena navigation", () => {
   it("routes official and former demo entry to the real Market without demo state", () => {
-    assert.equal(touchlineArenaHref("pt-BR"), "/market-transfer?lang=pt-BR");
-    assert.equal(touchlineArenaHref("en-GB"), "/market-transfer?lang=en-GB");
+    assert.equal(touchlineArenaHref("pt-BR"), "/clubowner?lang=pt-BR");
+    assert.equal(touchlineArenaHref("en-GB"), "/clubowner?lang=en-GB");
     assert.equal(
       touchlineArenaDemoHref("pt-BR"),
-      "/market-transfer?lang=pt-BR",
+      "/clubowner?lang=pt-BR",
     );
     assert.doesNotMatch(touchlineArenaHref("pt-BR"), /demoLineup|skipIntro/);
   });
@@ -43,21 +43,21 @@ describe("TouchLine Arena navigation", () => {
   it("routes former bench and formation panels to the one position-led My Club workspace", () => {
     assert.equal(
       touchlineArenaPanelHref("formation", "pt-BR"),
-      "/market-transfer?lang=pt-BR#my-club-xi-pitch",
+      "/clubowner?lang=pt-BR#my-club-xi-pitch",
     );
-    assert.equal(touchlineArenaPanelHref("bench", "pt-BR"), "/market-transfer?lang=pt-BR#my-club-xi-pitch");
+    assert.equal(touchlineArenaPanelHref("bench", "pt-BR"), "/clubowner?lang=pt-BR#my-club-xi-pitch");
     assert.equal(touchlineArenaPanelHref("live", "pt-BR"), "/live?lang=pt-BR");
     assert.equal(touchlineArenaPanelHref("watch", "pt-BR"), "/live?lang=pt-BR");
-    assert.equal(touchlineArenaPanelHref("rankings", "pt-BR"), "/touchline-tables?lang=pt-BR");
+    assert.equal(touchlineArenaPanelHref("rankings", "pt-BR"), "/rankings?lang=pt-BR");
     assert.equal(touchlineArenaPanelHref("news", "pt-BR"), "/live?lang=pt-BR");
   });
 
   it("opens My Club as the localized squad-building destination", () => {
     assert.equal(
       touchlineArenaPanelHref("market", "pt-BR"),
-      "/market-transfer?lang=pt-BR",
+      "/clubowner?lang=pt-BR",
     );
-    assert.equal(touchlineArenaPanelHref("market", "en-GB"), "/market-transfer?lang=en-GB");
+    assert.equal(touchlineArenaPanelHref("market", "en-GB"), "/clubowner?lang=en-GB");
   });
 
   it("updates only the active panel in an existing Arena URL", () => {
@@ -80,7 +80,7 @@ describe("TouchLine Arena navigation", () => {
   it("opens a player contract in the localized My Club workspace", () => {
     assert.equal(
       touchlineArenaContractHref({ locale: "pt-BR", playerId: "adams", playerName: "Tyler Adams", clubId: 52 }),
-      "/market-transfer?lang=pt-BR",
+      "/clubowner?lang=pt-BR",
     );
   });
 });

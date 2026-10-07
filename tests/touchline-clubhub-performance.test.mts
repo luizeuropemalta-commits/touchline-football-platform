@@ -14,7 +14,10 @@ const clubPage = readFileSync(new URL("../app/touchline-clubs/[club]/page.tsx", 
 test("official league section does not wait for squad presentation", () => {
   const section = clubPage.slice(clubPage.indexOf("async function ClubHubOfficialLeagueSection"), clubPage.indexOf("async function ClubHubHeroNextMatch"));
   assert.doesNotMatch(section, /presentationPromise/);
-  assert.match(section, /const \[matchSnapshot, table, feedPage\] = await Promise\.all\(\[\s*matchSnapshotPromise,/);
+  // OWNER SCOPE UPDATE / PREVIEWNOFEED9 (CURRENT_STATE, 2026-10-03
+  // 09:05/09:18 UTC): remove the public feed dependency, not admin/art assets.
+  assert.match(section, /const \[matchSnapshot, table\] = await Promise\.all\(\[\s*matchSnapshotPromise,\s*tablePromise,\s*\]\)/);
+  assert.doesNotMatch(section, /feedPage|loadTouchlineClubFeed|ClubHubFeed/);
   assert.match(section, /const fixture = matchSnapshot\.railFixture/);
   assert.match(clubPage, /<ClubHubOfficialLeagueSection[\s\S]*?matchSnapshotPromise=\{matchSnapshotPromise\}/);
 });
@@ -22,8 +25,8 @@ test("next-match hero waits only for the shared match snapshot, never squad or s
   const hero = clubPage.slice(clubPage.indexOf("async function ClubHubHeroNextMatch"), clubPage.indexOf("function normalizedPlayerIdentity"));
   assert.match(hero, /const matchSnapshot = await matchSnapshotPromise/);
   assert.doesNotMatch(hero, /presentationPromise/);
-  assert.equal((clubPage.match(/\(\) => loadClubMatchSnapshot\(club, locale, dataSource, mirrorResultPromise\)/g) ?? []).length, 1);
-  assert.match(clubPage, /loadClubHubPresentation\(club, locale, dataSource, matchSnapshotPromise\)/);
+  assert.equal((clubPage.match(/\(\) => loadClubMatchSnapshot\(club, locale, dataSource, mirrorResultPromise, draftLocalesEnabled\)/g) ?? []).length, 1);
+  assert.match(clubPage, /loadClubHubPresentation\(club, locale, dataSource, matchSnapshotPromise, draftLocalesEnabled\)/);
 });
 const route = readFileSync(new URL("../app/api/football-data/premier-squad/route.ts", import.meta.url), "utf8");
 const reader = readFileSync(new URL("../lib/football-data/public-premier-squad-server.ts", import.meta.url), "utf8");

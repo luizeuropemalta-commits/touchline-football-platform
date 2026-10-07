@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-const client = readFileSync(new URL("../app/touchline-tables/touchline-tables-client.tsx", import.meta.url), "utf8");
+const client = readFileSync(new URL("../app/rankings/touchline-tables-client.tsx", import.meta.url), "utf8");
 const copy = readFileSync(new URL("../lib/touchlineArena/rankings-i18n.ts", import.meta.url), "utf8");
 
 test("season selection uses bilingual cumulative provisional leader copy, never frozen weekly winners", () => {

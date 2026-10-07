@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 test('rank gems shrink exactly 15 percent without changing source art or row slots', () => {
-  const css = readFileSync(new URL('../app/touchline-tables/touchline-tables.module.css', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../app/rankings/touchline-tables.module.css', import.meta.url), 'utf8');
   assert.match(css, /\.coachRankGem img\s*\{[^}]*transform: scale\(\.85\)/);
   assert.match(css, /\.coachList \.pointsValue\s*\{\s*margin-inline-end: 10px/);
 });

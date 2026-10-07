@@ -10,7 +10,7 @@ import type { TouchlinePublishedTopEleven } from "../lib/touchlineArena/publishe
 import { TOUCHLINE_SELECTION_SLOTS } from "../lib/touchlineArena/touchline-selection.ts";
 
 const tablesClient = readFileSync(
-  new URL("../app/touchline-tables/touchline-tables-client.tsx", import.meta.url),
+  new URL("../app/rankings/touchline-tables-client.tsx", import.meta.url),
   "utf8",
 );
 

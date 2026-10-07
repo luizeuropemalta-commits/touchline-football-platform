@@ -1,7 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createFootballDataProvider } from "@/lib/football-data/provider-factory";
+import { createGuardedFixtureProvider } from "@/lib/football-data/fixture-provider-server";
 import { produceGoldenBootSnapshot } from "@/lib/touchlineArena/golden-boot-producer";
 
 export const runtime = "nodejs";
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
   try {
     const admin = createAdminClient();
     if (!admin) return response("not_configured", 503);
-    const result = await produceGoldenBootSnapshot({ admin, createProvider: createFootballDataProvider });
+    const result = await produceGoldenBootSnapshot({ admin, createProvider: () => createGuardedFixtureProvider(admin) });
     if (result.status !== "stored" && result.status !== "skipped") logFailure(result);
     // Operational provider traces and SQL errors remain private. The public
     // GET is the only award read authority; this is merely an invocation ack.

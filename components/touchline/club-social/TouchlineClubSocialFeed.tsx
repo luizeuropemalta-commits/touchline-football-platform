@@ -107,7 +107,7 @@ export default function TouchlineClubSocialFeed({
                   }).format(new Date(item.publishedAt))}
                 </time>
                 <div className={styles.actions} aria-label={pt ? "Ações da publicação" : "Post actions"}>
-                  <ClubHubLikeButton />
+                  <ClubHubLikeButton locale={locale} />
                   <ClubHubShareButton
                     title={`${clubName} · ${contentLabel(item.contentType, locale)}`}
                     text={item.copy}

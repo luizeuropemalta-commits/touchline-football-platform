@@ -4,40 +4,40 @@ import { useEffect } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 
 import {
-  TOUCHLINE_LOCALE_STORAGE_KEY,
-} from "@/lib/touchlineArena/i18n";
-import {
   resolveTouchLinePresentationLocale,
   touchlineDocumentDirection,
-  type TouchLinePresentationLocale,
 } from "@/lib/touchlineArena/root-locale";
-import { writeBrowserStorage } from "@/lib/touchlineArena/browser-storage";
+import { normalizeTouchLineLoginLocale, normalizeTouchLineAuthReturnTo } from "@/lib/touchlineArena/auth-i18n";
 
 type DocumentLocaleSyncProps = {
-  initialLocale: TouchLinePresentationLocale;
+  initialLocale: string;
+  draftLocalesEnabled?: boolean;
 };
 
-export default function DocumentLocaleSync({ initialLocale }: DocumentLocaleSyncProps) {
+export default function DocumentLocaleSync({ initialLocale, draftLocalesEnabled = false }: DocumentLocaleSyncProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
   useEffect(() => {
     const requestedLocale = searchParams.get("lang");
-    // A query parameter is an explicit navigation choice, even when invalid.
-    // Without one, retain the locale which the server already used for the
-    // document. A stale browser preference must never flip SSR English into
-    // Portuguese (or vice versa) after hydration.
-    const locale = resolveTouchLinePresentationLocale(
-      requestedLocale === null ? initialLocale : requestedLocale,
-    );
+    // Login may render its six route-local drafts; every other route still
+    // resolves through the complete-catalogue gate. Without a query, retain
+    // the server locale so hydration cannot change the initial document.
+    const returnPath = normalizeTouchLineAuthReturnTo(searchParams.get("returnTo"))?.split(/[?#]/)[0] ?? "";
+    const protectedReturn = ["/login", "/register", "/forgot-password"].includes(pathname ?? "")
+      && ["/admin", "/visual-qa"].some(path => returnPath === path || returnPath.startsWith(`${path}/`));
+    const loginRoute = pathname === "/login" && !protectedReturn;
+    const publicLocalesEnabled = draftLocalesEnabled && !protectedReturn && !["/admin", "/visual-qa"].some(path => pathname === path || pathname?.startsWith(`${path}/`));
+    const locale = loginRoute
+      ? normalizeTouchLineLoginLocale(requestedLocale === null ? initialLocale : requestedLocale)
+      : resolveTouchLinePresentationLocale(requestedLocale === null ? initialLocale : requestedLocale, publicLocalesEnabled);
 
     document.documentElement.lang = locale;
-    document.documentElement.dir = touchlineDocumentDirection(locale);
+    document.documentElement.dir = publicLocalesEnabled ? "ltr" : touchlineDocumentDirection(locale);
 
-    if (requestedLocale !== null) {
-      writeBrowserStorage("localStorage", TOUCHLINE_LOCALE_STORAGE_KEY, locale);
-    }
-  }, [initialLocale, searchParams]);
+    // A URL may come from an old link, not a deliberate language selection.
+    // Only explicit selectors persist the browser preference.
+  }, [initialLocale, pathname, searchParams, draftLocalesEnabled]);
 
   useEffect(() => {
     const fallback = document.querySelector<HTMLElement>("[data-touchline-main-content-fallback]");

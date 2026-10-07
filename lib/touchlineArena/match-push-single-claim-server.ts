@@ -11,7 +11,8 @@ import { parseMatchPushVapidConfig } from "./match-push-vapid-config";
 type Claim = Parameters<typeof dispatchMatchPush>[0];
 type Options = {
   enabled: boolean;
-  locale: "pt-BR" | "en-GB";
+  /** Legacy caller metadata; never used as a language authority. */
+  locale?: unknown;
   maximumAgeMs: unknown;
   vapid: Parameters<typeof sendMatchWebPush>[0]["vapid"];
 };
@@ -30,7 +31,7 @@ export async function dispatchClaimedMatchPush(claim: Claim, options: Options) {
     reserve: (current, attemptId, signal) => reserveMatchPushAttempt(current, attemptId, { enabled: true, signal }),
     loadFresh: async (current, signal) => {
       const fresh = await readClaimedMatchPushSource(current, {
-        maximumAgeMs: options.maximumAgeMs, locale: options.locale, now, signal,
+        maximumAgeMs: options.maximumAgeMs, now, signal,
       });
       const subscription = fresh?.registration.subscription;
       if (signal.aborted || !fresh || !subscription || !isSupportedMatchPushEndpoint(subscription.endpoint)) {

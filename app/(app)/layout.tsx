@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { AuthSessionMissingError } from "@supabase/supabase-js";
 
 import { ArenaAdminShell } from "@/components/arena-admin-shell";
 import { isOwnerEmail } from "@/lib/admin/owner";
@@ -10,9 +11,11 @@ export default async function ProtectedLayout({ children }: { children: React.Re
   const supabase = await createClient();
   if (!supabase) redirect("/login");
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const viewer = await supabase.auth.getUser().catch(() => null);
+  if (!viewer) redirect("/login?error=auth_unavailable");
+  if (viewer.data.user === null && viewer.error instanceof AuthSessionMissingError) redirect("/login");
+  if (viewer.error !== null) redirect("/login?error=auth_unavailable");
+  const user = viewer.data.user;
   if (!user) redirect("/login");
 
   const metadata = user.user_metadata && typeof user.user_metadata === "object"

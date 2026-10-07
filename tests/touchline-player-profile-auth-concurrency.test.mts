@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import ts from "typescript";
+import { AuthSessionMissingError } from "@supabase/supabase-js";
+import { hasTouchLineArenaAccess } from "../lib/touchlineArena/auth-access.ts";
 
 const source = readFileSync(new URL("../app/touchline-players/[player]/page.tsx", import.meta.url), "utf8");
 const start = source.indexOf("  const supabase = await createClient();");
@@ -20,6 +22,7 @@ function deferred<T>() {
 function fixture(auth: Promise<unknown>, statistics?: Promise<unknown>) {
   const statsStarted = deferred<boolean>();
   const dependencies = {
+    AuthSessionMissingError, hasTouchLineArenaAccess,
     createClient: async () => ({ auth: { getUser: () => auth } }),
     canonicalLink: { status: "absent" }, canonicalResolution: null,
     playerKey: "1", query: {},
@@ -47,7 +50,7 @@ test("public statistics start while auth is pending; verified owner navigation i
   void statsStarted.promise.then(() => { started = true; });
   await Promise.resolve();
   const startedBeforeAuth = started;
-  auth.resolve({ data: { user: { email: "owner@example.test" } } });
+  auth.resolve({ data: { user: { id: "11111111-1111-4111-8111-111111111111", email: "owner@example.test", app_metadata: { touchline_arena_access_v1: true } } }, error: null });
   const value = await result;
   assert.equal(startedBeforeAuth, true, "statistics must not await auth");
   assert.deepEqual(value.navigationSurface, { isAuthenticated: true, isAdmin: true });
@@ -65,7 +68,7 @@ test("auth rejection remains the same error rather than anonymous fallback", asy
 });
 
 test("anonymous session keeps public navigation without owner access", async () => {
-  const { run } = fixture(Promise.resolve({ data: { user: null } }));
+  const { run } = fixture(Promise.resolve({ data: { user: null }, error: null }));
   assert.deepEqual((await run()).navigationSurface, { isAuthenticated: false, isAdmin: false });
 });
 

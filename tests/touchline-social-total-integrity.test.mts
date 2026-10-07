@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { getTouchlineSocialFeedCopy } from "../lib/touchlineArena/social-feed-i18n.ts";
+import { getTouchlinePlayerProfileFeedCopy } from "../lib/touchlineArena/player-profile-feed-i18n.ts";
 
 test("player profiles never manufacture follower totals from a player identity", () => {
   const source = readFileSync(new URL("../app/touchline-players/[player]/page.tsx", import.meta.url), "utf8");
@@ -8,7 +10,8 @@ test("player profiles never manufacture follower totals from a player identity",
   assert.match(source, /<TouchlinePlayerSocialActions/);
   assert.doesNotMatch(source, /<TouchlineSocialProfileActions/);
   assert.doesNotMatch(source, /Sincronização oficial em andamento|Official sync in progress/);
-  assert.match(source, /Dados oficiais adicionais indisponíveis/);
+  assert.match(source, /feedCopy\.officialUnavailable/);
+  assert.equal(getTouchlinePlayerProfileFeedCopy("pt-BR").officialUnavailable, "Dados oficiais adicionais indisponíveis");
 });
 
 test("an unknown social total stays unknown rather than becoming a local synthetic count", () => {
@@ -21,6 +24,7 @@ test("an unknown social total stays unknown rather than becoming a local synthet
 test("public feed reactions cannot fabricate acknowledgement or a total from browser storage", () => {
   const source = readFileSync(new URL("../components/touchline/social/TouchlineSocial.tsx", import.meta.url), "utf8");
   assert.doesNotMatch(source, /likedPosts|toggleLike|touchline:social:likes:|\+ \(liked \? 1 : 0\)/);
-  assert.match(source, /Curtidas indisponíveis/);
-  assert.match(source, /<button type="button" disabled title=\{isPortuguese \? "Curtidas indisponíveis/);
+  assert.equal(getTouchlineSocialFeedCopy("pt-BR").likesUnavailable, "Curtidas indisponíveis");
+  assert.match(source, /<button type="button" disabled title=\{copy\.likesUnavailableReason\}/);
+  assert.match(source, /copy\.likesUnavailable/);
 });

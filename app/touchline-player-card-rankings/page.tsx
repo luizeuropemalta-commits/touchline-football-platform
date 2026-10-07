@@ -1,11 +1,19 @@
 /* eslint-disable @next/next/no-img-element */
+import { isTouchLineSiteLocalesEnabled } from "@/lib/touchlineArena/site-locales-release";
 import type { CSSProperties } from "react";
 import { localizedPositionLabel } from "@/lib/touchlineArena/position-labels";
 import TouchlineClubPerimeterTrace from "@/components/touchline/TouchlineClubPerimeterTrace";
 
 import TouchlineEliteExactCard from "@/components/touchline/cards/TouchlineEliteExactCard";
 import TouchlineCardZoom from "@/components/touchline/cards/TouchlineCardZoom";
+import { getTouchlineCardZoomCopy } from "@/lib/touchlineArena/card-zoom-i18n";
+import { getTouchlineExactCardCopy } from "@/lib/touchlineArena/exact-card-i18n";
+import { touchlinePlayerPositionKind } from "@/lib/touchlineArena/position-aware-card-stats";
 import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
+import TouchlineBrandHeader from "@/components/touchline/TouchlineBrandHeader";
+import { AuthSessionMissingError } from "@supabase/supabase-js";
+import type { AccountLocaleContext } from "@/lib/touchlineArena/account-locale-context-server";
+import { hasTouchLineArenaAccess } from "@/lib/touchlineArena/auth-access";
 import TouchlineLivePresentationRefresh from "@/components/touchline/TouchlineLivePresentationRefresh";
 import { TouchlineCardLeadershipProvider } from "@/components/touchline/cards/TouchlineCardLeadershipProvider";
 import { buildTouchlineCardLeadershipValue } from "@/lib/touchlineArena/card-leadership-authority";
@@ -19,13 +27,13 @@ import { loadTouchLineActiveRanking } from "@/lib/touchlineArena/card-ranking-se
 import { loadTouchLineRankedCardCatalog } from "@/lib/touchlineArena/ranked-card-catalog-server";
 import { compareTouchLineRankedCards } from "@/lib/touchlineArena/ranked-card-catalog";
 import { normalizeTouchLineLocale, touchLineT } from "@/lib/touchlineArena/i18n";
+import { resolveTouchlineCatalogueLocale } from "@/lib/touchlineArena/catalogue-locale";
 import { getTouchLineRankingsCopy } from "@/lib/touchlineArena/rankings-i18n";
 import { touchlineArenaContractHref, touchlineArenaPanelHref } from "@/lib/touchlineArena/arena-navigation";
 import {
   touchlineCardTierName,
   touchlineCardTierPalette,
 } from "@/lib/touchlineArena/card-rules";
-import { formatTouchlineEditorialCardPrice } from "@/lib/touchlineArena/editorial-card-profile";
 import {
   buildTouchlinePlayerCardZoomDetails,
   buildTouchlineVerifiedMatchFactFields,
@@ -45,11 +53,17 @@ export const metadata = {
 // hidden behind a build-time preseason render.
 export const dynamic = "force-dynamic";
 
-export default async function TouchLinePlayerCardRankingsPage({
+type PlayerCardRankingsProps = { searchParams: Promise<{ lang?: string }> };
+
+export default async function TouchLinePlayerCardRankingsPage(props: PlayerCardRankingsProps) {
+  return renderPlayerCardRankings(props, isTouchLineSiteLocalesEnabled("/touchline-player-card-rankings"));
+}
+
+async function renderPlayerCardRankings({
   searchParams,
 }: {
   searchParams: Promise<{ lang?: string }>;
-}) {
+}, draftLocalesEnabled = false) {
   const authentication = (async () => {
     const supabase = await createClient();
     return supabase ? await supabase.auth.getUser() : { data: { user: null } };
@@ -66,84 +80,94 @@ export default async function TouchLinePlayerCardRankingsPage({
     value => ({ ok: true as const, value }),
     error => ({ ok: false as const, error }),
   );
-  const { data: { user } } = await authentication;
+  const viewer = await authentication;
+  const candidate = viewer.data.user;
+  const verifiedViewer = "error" in viewer && viewer.error === null;
+  const verifiedGuest = candidate === null && "error" in viewer
+    && (viewer.error === null || viewer.error instanceof AuthSessionMissingError);
+  const user = verifiedViewer && candidate && hasTouchLineArenaAccess(candidate)
+    && typeof candidate.id === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(candidate.id)
+    ? candidate : null;
+  const accountLocaleContext: AccountLocaleContext = user
+    ? { mode: "account", accountId: user.id }
+    : verifiedGuest ? { mode: "guest" } : { mode: "unavailable" };
   const result = await publication;
   if (!result.ok) throw result.error;
   const { activeRanking, rosterCards } = result.value;
   const rankedCards = rosterCards.sort(compareTouchLineRankedCards);
   const topCards = rankedCards.slice(0, 3);
   const topTwentyCards = rankedCards.slice(0, 20);
-  const locale = normalizeTouchLineLocale((await searchParams).lang);
+  const locale = resolveTouchlineCatalogueLocale((await searchParams).lang, draftLocalesEnabled);
+  const zoomCopy = getTouchlineCardZoomCopy(locale, draftLocalesEnabled);
+  const exactCopy = getTouchlineExactCardCopy(locale, draftLocalesEnabled);
   const canEditCardEngine = Boolean(user && isOwnerEmail(user.email));
   const totalRatings = rankedCards.reduce((sum, card) => sum + (card.seasonTotalRating ?? 0), 0);
-  const copy = getTouchLineRankingsCopy(locale);
+  const copy = getTouchLineRankingsCopy(locale, draftLocalesEnabled);
   const localeQuery = `lang=${encodeURIComponent(locale)}`;
   const marketTransferHref = (clubSlug?: string) => {
-    const marketHref = touchlineArenaPanelHref("market", locale);
+    const marketHref = touchlineArenaPanelHref("market", locale, draftLocalesEnabled);
     return clubSlug ? `${marketHref}&club=${encodeURIComponent(clubSlug)}` : marketHref;
   };
   const rankingModeLabel = activeRanking.phase === "ranked"
-    ? (locale === "pt-BR" ? "Ordem por Nota TouchLine" : "TouchLine rating order")
+    ? copy.publishedRatingOrder
     : copy.demoOrder;
-  const editorialCopy = locale === "pt-BR"
-    ? {
-      rankingDescription: "O ranking reúne apenas cards TouchLine publicados e é ordenado pela soma das notas TouchLine verificadas. Tier e preço são definidos pelo processo de publicação do card.",
-    }
-    : {
-      rankingDescription: "The ranking includes published TouchLine cards only and is ordered by the sum of verified TouchLine ratings. Tier and card price come from the card-publication process.",
-    };
+  const editorialCopy = {
+    rankingDescription: copy.publishedRankingDescription,
+  };
   const cardLabels = {
-    nationality: touchLineT(locale, "nationalityShort"),
-    totalRating: locale === "pt-BR" ? "Nota total" : "Total rating",
-    cardPrice: locale === "pt-BR" ? "Preço do card" : "Card price",
+    nationality: draftLocalesEnabled ? exactCopy.nationality : touchLineT(normalizeTouchLineLocale(locale), "nationalityShort"),
+    totalRating: exactCopy.totalRating,
   };
   const editorialPresentation = (card: (typeof rankedCards)[number]) => {
     const tierKey = card.editorialCard?.tierKey ?? null;
-    const displayPrice = card.editorialCard
-      ? formatTouchlineEditorialCardPrice(card.editorialCard.cardPrice, locale)
-      : null;
 
     return {
       tierKey,
-      displayPrice,
       activeContractCard: null,
     };
   };
   const zoomPresentation = (card: (typeof rankedCards)[number]) => {
+    const positionKind = touchlinePlayerPositionKind(card.position);
     const presentation = editorialPresentation(card);
     const profileHref = touchlinePlayerProfileHref(squadCardToExactPlayer(card), locale);
     return {
       tierAccent: presentation.tierKey
         ? touchlineCardTierPalette(presentation.tierKey).accent
         : TOUCHLINE_NEUTRAL_CARD_ACCENT,
-      tierLabel: presentation.tierKey ? touchlineCardTierName(presentation.tierKey, locale) : undefined,
+      tierLabel: presentation.tierKey ? touchlineCardTierName(presentation.tierKey, locale, draftLocalesEnabled) : undefined,
       details: buildTouchlinePlayerCardZoomDetails({
         locale,
+        draftLocalesEnabled,
         name: card.name,
         clubName: card.clubName,
         position: card.position,
+        positionKind: positionKind === "unknown" ? undefined : positionKind,
         nationality: card.countryCode3,
         editorialCard: card.editorialCard,
         cardReview: card.cardReview,
         activeContractCard: null,
         extraFields: [
           {
-            label: locale === "pt-BR" ? "Nota total" : "Total rating",
+            label: exactCopy.totalRating,
             value: card.seasonTotalRating === null || card.seasonTotalRating === undefined
               ? "—"
               : String(card.seasonTotalRating),
             accent: true,
+            kind: "rating-total",
+            icon: "rating",
+            primary: true,
           },
           {
-            label: locale === "pt-BR" ? "Nota da última partida" : "Last match rating",
+            label: zoomCopy.lastMatchRating,
             value: card.matchRating == null ? "—" : String(card.matchRating),
             accent: true,
             kind: "rating-last",
+            icon: "rating",
           },
           ...buildTouchlineVerifiedMatchFactFields({
             statistics: card.matchStats,
             position: card.position || card.role,
-          }, locale),
+          }, locale, draftLocalesEnabled),
         ],
         profileHref,
         cardEngineHref: canEditCardEngine
@@ -151,18 +175,21 @@ export default async function TouchLinePlayerCardRankingsPage({
           : null,
       }),
       activeContractPrice: undefined,
-      displayPrice: presentation.displayPrice,
     };
   };
 
   return (
     <TouchlineCardLeadershipProvider value={buildTouchlineCardLeadershipValue(activeRanking, null)}>
-    <main className="tl-card-rankings">
+    <main className="tl-card-rankings" dir="ltr">
+      <TouchlineBrandHeader href={`/touchline-player-card-rankings?lang=${encodeURIComponent(locale)}`} locale={locale} accountLocaleContext={accountLocaleContext} draftLocalesEnabled={draftLocalesEnabled} />
+      <div className="tl-card-rankings-content">
       <TouchlineLivePresentationRefresh
         initialPlayerRankingSnapshotId={activeRanking.snapshotId}
       />
       <TouchlineGlobalNavigation
+        showAudioControl={false}
         locale={locale}
+        draftLocalesEnabled={draftLocalesEnabled}
         currentRoute="rankings"
         surface={resolveTouchlineGlobalNavigationSurface({
           isAuthenticated: Boolean(user),
@@ -178,13 +205,13 @@ export default async function TouchLinePlayerCardRankingsPage({
             <h1>{copy.rankingTitle}</h1>
             <p>{editorialCopy.rankingDescription}</p>
           </div>
-          <div className="tl-card-rankings-metrics" aria-label="TouchLine Player Cards Ranking summary">
+          <div className="tl-card-rankings-metrics" aria-label={copy.playerRankingSummary}>
             <article>
               <span>{copy.cards}</span>
               <strong>{rankedCards.length}</strong>
             </article>
             <article>
-              <span>{locale === "pt-BR" ? "Soma das notas" : "Rating sum"}</span>
+              <span>{copy.ratingSum}</span>
               <strong>{totalRatings.toFixed(2)}</strong>
             </article>
             <article className="is-mode">
@@ -194,14 +221,13 @@ export default async function TouchLinePlayerCardRankingsPage({
           </div>
         </header>
 
-        <section className="tl-card-rankings-featured" aria-label="Top ranked TouchLine player cards">
+        <section className="tl-card-rankings-featured" aria-label={copy.topPlayerCards}>
           {topCards.map((card, index) => {
             const club = findTouchLineClub(card.clubName);
             const exactPlayer = squadCardToExactPlayer(card);
             const zoom = zoomPresentation(card);
             const featuredSummary = [
-              localizedPositionLabel(card.position, locale),
-              zoom.displayPrice,
+              localizedPositionLabel(card.position, locale, draftLocalesEnabled),
             ].filter(Boolean).join(" / ");
             return (
               <article key={card.id} id={card.id} data-ranking-tier-frame={card.editorialCard?.tierKey ?? "unresolved"} style={{ "--tier-accent": zoom.tierAccent } as CSSProperties}>
@@ -209,14 +235,16 @@ export default async function TouchLinePlayerCardRankingsPage({
                 <span className="tl-card-rankings-rank">#{index + 1}</span>
                 <div className="tl-card-rankings-card">
                   <TouchlineCardZoom
-                    ariaLabel={`${locale === "pt-BR" ? "Ampliar card de" : "Open card for"} ${card.name}`}
+                    locale={locale}
+                    draftLocalesEnabled={draftLocalesEnabled}
+                    ariaLabel={zoomCopy.openCard.replace("{playerName}", () => card.name)}
                     contractHref={zoom.activeContractPrice
                       ? touchlineArenaContractHref({
                         locale,
                         playerId: card.id,
                         playerName: card.name,
                         clubId: club?.teamId,
-                      })
+                      }, draftLocalesEnabled)
                       : undefined}
                     contractLabel={locale === "pt-BR" ? "Contratar" : "Contract player"}
                     contractValue={zoom.activeContractPrice}
@@ -227,6 +255,9 @@ export default async function TouchLinePlayerCardRankingsPage({
                     expandedContent={(
                       <TouchlineEliteExactCard
                         player={exactPlayer}
+                        runtimeLocaleOverride={locale}
+                        draftLocalesEnabled={draftLocalesEnabled}
+                        hideMarketValuePanel
                         labels={cardLabels}
                         layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY}
                         imageLoading="eager"
@@ -238,6 +269,9 @@ export default async function TouchLinePlayerCardRankingsPage({
                   >
                     <TouchlineEliteExactCard
                       player={exactPlayer}
+                      runtimeLocaleOverride={locale}
+                      draftLocalesEnabled={draftLocalesEnabled}
+                      hideMarketValuePanel
                       labels={cardLabels}
                       layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY}
                       imageLoading="lazy"
@@ -260,11 +294,11 @@ export default async function TouchLinePlayerCardRankingsPage({
           })}
         </section>
 
-        <section className="tl-card-rankings-board" aria-label="Full TouchLine player card ranking">
+        <section className="tl-card-rankings-board" aria-label={copy.fullPlayerRanking}>
           <div className="tl-card-rankings-board-head">
             <div>
               <span>{copy.completeRanking}</span>
-              <strong>{locale === "pt-BR" ? "Top 20 · cards oficiais" : "Top 20 · official cards"}</strong>
+              <strong>{copy.officialTopTwenty}</strong>
             </div>
             <small>{copy.connectedDescription}</small>
           </div>
@@ -277,17 +311,19 @@ export default async function TouchLinePlayerCardRankingsPage({
               return (
                 <article key={card.id} id={`row-${card.id}`} className="tl-card-rankings-row" data-ranking-tier-frame={card.editorialCard?.tierKey ?? "unresolved"} style={{ "--tier-accent": zoom.tierAccent } as CSSProperties}>
                   <TouchlineClubPerimeterTrace accent={card.editorialCard?.tierKey ? zoom.tierAccent : undefined} />
-                  <span className="tl-card-rankings-row-rank" aria-label={`${locale === "pt-BR" ? "Posição" : "Rank"} ${index + 1}`}>#{index + 1}</span>
+                  <span className="tl-card-rankings-row-rank" aria-label={`${copy.playerRank} ${index + 1}`}>#{index + 1}</span>
                   <div className="tl-card-rankings-row-card">
                     <TouchlineCardZoom
-                      ariaLabel={`${locale === "pt-BR" ? "Ampliar card de" : "Open card for"} ${card.name}`}
+                      locale={locale}
+                      draftLocalesEnabled={draftLocalesEnabled}
+                      ariaLabel={zoomCopy.openCard.replace("{playerName}", () => card.name)}
                       contractHref={zoom.activeContractPrice
                         ? touchlineArenaContractHref({
                           locale,
                           playerId: card.id,
                           playerName: card.name,
                           clubId: club?.teamId,
-                        })
+                        }, draftLocalesEnabled)
                         : undefined}
                       contractLabel={locale === "pt-BR" ? "Contratar" : "Contract player"}
                       contractValue={zoom.activeContractPrice}
@@ -298,6 +334,9 @@ export default async function TouchLinePlayerCardRankingsPage({
                       expandedContent={(
                         <TouchlineEliteExactCard
                           player={exactPlayer}
+                          runtimeLocaleOverride={locale}
+                          draftLocalesEnabled={draftLocalesEnabled}
+                          hideMarketValuePanel
                           labels={cardLabels}
                           layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY}
                           imageLoading="eager"
@@ -309,6 +348,9 @@ export default async function TouchLinePlayerCardRankingsPage({
                     >
                       <TouchlineEliteExactCard
                         player={exactPlayer}
+                        runtimeLocaleOverride={locale}
+                        draftLocalesEnabled={draftLocalesEnabled}
+                        hideMarketValuePanel
                         labels={cardLabels}
                         layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY}
                         imageLoading="lazy"
@@ -319,13 +361,12 @@ export default async function TouchLinePlayerCardRankingsPage({
                   </div>
                   <div className="tl-card-rankings-row-main">
                     <strong>{card.name}</strong>
-                    <small>{localizedPositionLabel(card.position, locale)} / #{card.shirtNumber} / {card.countryCode3}</small>
+                    <small>{localizedPositionLabel(card.position, locale, draftLocalesEnabled)} / #{card.shirtNumber} / {card.countryCode3}</small>
                   </div>
                   <div className="tl-card-rankings-club">
                     {club?.logoUrl ? <img src={club.logoUrl} alt="" draggable={false} /> : null}
                     <span>{club?.shortCode ?? card.clubName}</span>
                   </div>
-                  {zoom.displayPrice ? <em>{zoom.displayPrice}</em> : null}
                   <div className="tl-card-rankings-actions">
                     <a href={marketTransferHref(club?.slug)}>{copy.marketTransfer}</a>
                     {club ? <a href={`/touchline-clubs/${club.slug}?${localeQuery}`}>{copy.club}</a> : null}
@@ -336,7 +377,7 @@ export default async function TouchLinePlayerCardRankingsPage({
           </div>
         </section>
       </section>
-
+      </div>
       <style>{`
         .tl-card-rankings {
           min-height: 100dvh;
@@ -345,11 +386,15 @@ export default async function TouchLinePlayerCardRankingsPage({
             radial-gradient(circle at 18% 14%, rgba(122,231,255,.16), transparent 28%),
             radial-gradient(circle at 82% 10%, rgba(181,255,75,.14), transparent 24%),
             linear-gradient(135deg, #020707 0%, #06120d 48%, #020403 100%);
+          padding: 0;
+        }
+
+        .tl-card-rankings-content {
           padding: 42px 5vw 68px;
         }
 
         .tl-card-rankings-back,
-        .tl-card-rankings a {
+        .tl-card-rankings-content a {
           text-decoration: none;
         }
 
@@ -411,20 +456,20 @@ export default async function TouchLinePlayerCardRankingsPage({
           z-index: 1;
         }
 
-        .tl-card-rankings span,
+        .tl-card-rankings-content span,
         .tl-card-rankings-board-head small {
           color: #b6ff4d;
                     font-size: 11px;
           font-weight: 950;        }
 
-        .tl-card-rankings h1 {
+        .tl-card-rankings-content h1 {
           max-width: 880px;
           margin: 14px 0;
           font-size: 62px;
           line-height: 1;
         }
 
-        .tl-card-rankings p {
+        .tl-card-rankings-content p {
           max-width: 720px;
           margin: 0;
           color: rgba(255,255,255,.68);
@@ -572,7 +617,7 @@ export default async function TouchLinePlayerCardRankingsPage({
 
         .tl-card-rankings-row {
           display: grid;
-          grid-template-columns: 64px 86px minmax(0, 1fr) 126px auto auto auto;
+          grid-template-columns: 64px 86px minmax(0, 1fr) 126px auto;
           gap: 14px;
           align-items: center;
           min-height: 120px;
@@ -652,13 +697,13 @@ export default async function TouchLinePlayerCardRankingsPage({
         }
 
         @media (max-width: 1100px) {
-          .tl-card-rankings h1 {
+          .tl-card-rankings-content h1 {
             font-size: 52px;
           }
         }
 
         @media (max-width: 980px) {
-          .tl-card-rankings {
+          .tl-card-rankings-content {
             padding: 26px 16px 42px;
           }
 
@@ -687,13 +732,13 @@ export default async function TouchLinePlayerCardRankingsPage({
         }
 
         @media (max-width: 760px) {
-          .tl-card-rankings h1 {
+          .tl-card-rankings-content h1 {
             font-size: 44px;
           }
         }
 
         @media (max-height: 500px) and (orientation: landscape) {
-          .tl-card-rankings h1 {
+          .tl-card-rankings-content h1 {
             font-size: 40px;
           }
         }

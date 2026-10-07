@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { getTouchlineFootballSearchCopy } from "../lib/touchlineArena/football-search-i18n.ts";
 
 const [layoutSource, shellSource, notificationsSource, footballSearchSource] = await Promise.all([
   readFile(new URL("../app/(app)/layout.tsx", import.meta.url), "utf8"),
@@ -71,11 +72,27 @@ test("Arena admin shell keeps the fixed rail off tablets and narrow laptops", ()
   assert.doesNotMatch(shellSource, /hidden lg:block|lg:ml-\[272px\]/);
 });
 
+test("customer presentation opt-in is closed by default and cannot widen administrative or session scope", () => {
+  assert.match(shellSource, /draftLocalesEnabled = false/);
+  assert.match(shellSource, /draftLocalesEnabled && pathname !== "\/admin" && !pathname\.startsWith\("\/admin\/"\)/);
+  assert.doesNotMatch(layoutSource, /draftLocalesEnabled/);
+  assert.match(shellSource, /const locale = normalizeTouchLineAuthLocale\(searchParams\.get\("lang"\)\)/);
+  assert.match(shellSource, /\{isOwner \? \(/);
+  assert.match(shellSource, /const ownerLinks = pt \?/);
+  assert.match(shellSource, /getTouchlineArenaShellCopy\(searchParams\.get\("lang"\), customerDraftsEnabled\)/);
+  assert.match(shellSource, /touchLineAuthEntryHref\(isOwner \? "\/admin\/login" : "\/login", locale, currentAdminDestination\)/);
+  assert.match(shellSource, /supabase\.auth\.signOut\(\{ scope: "local" \}\)/);
+});
+
 test("football search returns every authenticated user to Market", () => {
   assert.match(footballSearchSource, /searchParams: Promise<\{ lang\?: string \}>/);
-  assert.match(footballSearchSource, /const locale = normalizeTouchLineAuthLocale\(lang\)/);
-  assert.match(footballSearchSource, /href=\{touchLineAuthHref\("\/market-transfer", locale\)\}/);
-  assert.match(footballSearchSource, /Back to TouchLine Arena/);
+  assert.match(footballSearchSource, /return renderFootballSearchPage\(props, isTouchLineSiteLocalesEnabled\("\/football-search"\)\)/);
+  assert.match(footballSearchSource, /async function renderFootballSearchPage\([^\n]*draftLocalesEnabled = false/);
+  assert.match(footballSearchSource, /const locale = resolveTouchlineCatalogueLocale\(lang, draftLocalesEnabled\)/);
+  assert.match(footballSearchSource, /href=\{touchLineAuthHref\("\/clubowner", locale, draftLocalesEnabled\)\}/);
+  assert.match(footballSearchSource, /getTouchlineFootballSearchCopy\(locale, draftLocalesEnabled\)/);
+  assert.equal(getTouchlineFootballSearchCopy("en-GB").back, "Back to ClubOwner");
+  assert.equal(getTouchlineFootballSearchCopy("pt-BR").back, "Voltar ao ClubOwner");
   assert.doesNotMatch(footballSearchSource, /href="\/admin"/);
 });
 

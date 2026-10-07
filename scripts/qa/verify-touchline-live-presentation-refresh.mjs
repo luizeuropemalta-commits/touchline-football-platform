@@ -14,7 +14,7 @@ const routes = [
   { name: "rankings", path: "/touchline-player-card-rankings?lang=pt-BR", player: true, coach: false },
   { name: "player-profile", path: "/touchline-players/cole-palmer?lang=pt-BR&name=Cole%20Palmer", player: true, coach: false },
   { name: "coach-profile", path: "/touchline-coaches/mikel-arteta?lang=pt-BR", player: false, coach: true },
-  { name: "tables", path: "/touchline-tables?lang=pt-BR", player: true, coach: true },
+  { name: "tables", path: "/rankings?lang=pt-BR", player: true, coach: true },
 ];
 
 async function waitUntil(predicate, timeoutMs = 8_000) {

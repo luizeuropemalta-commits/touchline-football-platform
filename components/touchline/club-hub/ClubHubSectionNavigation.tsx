@@ -1,26 +1,28 @@
 "use client";
 
-import { ArrowUp, CalendarDays, Newspaper, UsersRound } from "lucide-react";
+import { ArrowUp, CalendarDays, TableProperties, UsersRound } from "lucide-react";
 import { useEffect, useState } from "react";
+import { getTouchlineClubHubSectionNavigationCopy } from "@/lib/touchlineArena/club-hub-section-navigation-i18n";
 
 import globalNavigationStyles from "../TouchlineGlobalNavigation.module.css";
 import styles from "./ClubHubSectionNavigation.module.css";
 
 type Props = Readonly<{
   locale: string;
+  draftLocalesEnabled?: boolean;
 }>;
 
-const SECTION_TARGETS = ["club-feed", "touchline-club-lineup", "club-squad"] as const;
+const SECTION_TARGETS = ["club-table", "touchline-club-lineup", "club-squad"] as const;
 
-export default function ClubHubSectionNavigation({ locale }: Props) {
-  const portuguese = locale === "pt-BR";
+export default function ClubHubSectionNavigation({ locale, draftLocalesEnabled = false }: Props) {
+  const copy = getTouchlineClubHubSectionNavigationCopy(locale, draftLocalesEnabled);
   const [showBackToTop, setShowBackToTop] = useState(false);
   const [activeTarget, setActiveTarget] = useState<string | null>(null);
 
   const items = [
-    { target: "club-feed", label: "Feed", icon: Newspaper },
-    { target: "touchline-club-lineup", label: portuguese ? "Dia de jogo" : "Matchday", icon: CalendarDays },
-    { target: "club-squad", label: portuguese ? "Elenco" : "Squad", icon: UsersRound },
+    { target: "club-table", label: copy.table, icon: TableProperties },
+    { target: "touchline-club-lineup", label: copy.matchday, icon: CalendarDays },
+    { target: "club-squad", label: copy.squad, icon: UsersRound },
   ] as const;
 
   useEffect(() => {
@@ -77,7 +79,7 @@ export default function ClubHubSectionNavigation({ locale }: Props) {
   const sharedLinkClassName = globalNavigationStyles.link;
 
   return (
-    <nav className={styles.navigation} aria-label={portuguese ? "Seções do ClubHub" : "ClubHub sections"}>
+    <nav className={styles.navigation} aria-label={copy.sectionsAria}>
       {items.map(({ target, label, icon: Icon }) => (
         <a
           aria-current={activeTarget === target ? "location" : undefined}
@@ -91,7 +93,7 @@ export default function ClubHubSectionNavigation({ locale }: Props) {
       ))}
       <a
         aria-hidden={!showBackToTop}
-        aria-label={portuguese ? "Voltar ao topo" : "Back to top"}
+        aria-label={copy.backToTop}
         className={`${globalNavigationStyles.link} ${styles.backToTop}`}
         data-visible={showBackToTop}
         href="#club-hub-top"
@@ -103,7 +105,7 @@ export default function ClubHubSectionNavigation({ locale }: Props) {
         }}
       >
         <ArrowUp aria-hidden="true" />
-        <span className={styles.backLabel}>{portuguese ? "Topo" : "Top"}</span>
+        <span className={styles.backLabel}>{copy.top}</span>
       </a>
     </nav>
   );

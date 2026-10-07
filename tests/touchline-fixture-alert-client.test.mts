@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import vm from "node:vm";
 import ts from "typescript";
+import { getTouchlineFixtureAlertCopy } from "../lib/touchlineArena/fixture-alert-i18n.ts";
 
 function harness(body: unknown, delayed = false) {
   const state: unknown[] = [true, 0, null, "loading"];
@@ -29,6 +30,7 @@ function harness(body: unknown, delayed = false) {
         useRef: () => refs[refCursor++], useEffect: (action: () => unknown) => { effect = action; },
       };
       if (name === "lucide-react") return { Bell: "Bell", BellRing: "BellRing" };
+      if (name === "@/lib/touchlineArena/fixture-alert-i18n") return { getTouchlineFixtureAlertCopy };
       if (name.endsWith(".css")) return { default: {} };
       throw new Error(`Unexpected import: ${name}`);
     },

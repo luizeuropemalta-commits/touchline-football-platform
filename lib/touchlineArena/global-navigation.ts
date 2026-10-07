@@ -63,14 +63,15 @@ export function resolveTouchlineGlobalNavigationSurface(input: Readonly<{
 export function resolveTouchlineGlobalNavigationItems(
   locale: string,
   surface: TouchlineGlobalNavigationSurface,
+  draftLocalesEnabled = false,
 ): readonly TouchlineGlobalNavigationItem[] {
-  const effectiveLocale = resolveTouchLinePresentationLocale(locale);
+  const effectiveLocale = resolveTouchLinePresentationLocale(locale, draftLocalesEnabled);
   const lang = encodeURIComponent(effectiveLocale);
 
   const generalItems: TouchlineGlobalNavigationItem[] = [
-    { key: "clubHub", href: touchlineClubHubHref(effectiveLocale) },
+    { key: "clubHub", href: touchlineClubHubHref(effectiveLocale, null, draftLocalesEnabled) },
     { key: "live", href: `/live?lang=${lang}` },
-    { key: "rankings", href: `/touchline-tables?lang=${lang}` },
+    { key: "rankings", href: `/rankings?lang=${lang}` },
   ];
 
   // The primary Market link owns the game; no duplicate ClubOwner entry.
@@ -78,8 +79,8 @@ export function resolveTouchlineGlobalNavigationItems(
   return generalItems;
 }
 
-export function touchlineGlobalNavigationArenaHref(locale: string) {
-  return `/market-transfer?lang=${encodeURIComponent(resolveTouchLinePresentationLocale(locale))}`;
+export function touchlineGlobalNavigationArenaHref(locale: string, draftLocalesEnabled = false) {
+  return `/clubowner?lang=${encodeURIComponent(resolveTouchLinePresentationLocale(locale, draftLocalesEnabled))}`;
 }
 
 export function isTouchlineGlobalNavigationCurrent(

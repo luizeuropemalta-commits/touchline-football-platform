@@ -34,7 +34,7 @@ import { usePathname } from "next/navigation";
 import { allowsInheritedCardLeadership } from "@/lib/touchlineArena/card-leadership-authority";
 import { useTouchlineGoldenBootPlayers } from "@/lib/touchlineArena/golden-boot-client";
 import { TouchlineGoldenBootHead } from "./TouchlineGoldenBootPresentation";
-import { touchlinePlayerCrownEligibility } from "@/lib/touchlineArena/card-ranking-live";
+import { parseTouchlineActiveRankingState, touchlinePlayerCrownEligibility } from "@/lib/touchlineArena/card-ranking-live";
 import {
   resolveTouchlineCardTierComponentCalibration,
   touchlineCardTierComponentScale,
@@ -49,6 +49,10 @@ import {
   TOUCHLINE_PLAYER_LEADER_CROWN_ASSET,
   touchlinePlayerLeaderCrownStyle,
 } from "@/lib/touchlineArena/player-leader-crown-presentation";
+import publicPresentationStyles from "./TouchlinePublicCardPresentation.module.css";
+import { getTouchlineExactCardCopy } from "@/lib/touchlineArena/exact-card-i18n";
+import { resolveTouchlineCatalogueLocale } from "@/lib/touchlineArena/catalogue-locale";
+import { TOUCHLINE_PLAYER_SOCIAL_CATALOGUES } from "@/lib/touchlineArena/player-social-i18n";
 
 const CARD_W = 430;
 const CARD_H = 691;
@@ -280,38 +284,6 @@ export type TouchlineEliteExactCardLabels = {
   profileAction: string;
 };
 
-const DEFAULT_CARD_LABELS: TouchlineEliteExactCardLabels = {
-  nationality: "Nat",
-  totalRating: "Total rating",
-  marketValue: "Market value",
-  currentClub: "Current Club",
-  yellowRedCards: "Yellow and red cards",
-  yellowCard: "Yellow card",
-  redCard: "Red card",
-  yellowCards: "Yellow cards",
-  redCards: "Red cards",
-  profileAction: "Profile",
-};
-
-function localizedCardLabels(locale: string | null): TouchlineEliteExactCardLabels {
-  if (locale === "pt-BR") {
-    return {
-      nationality: "País",
-      totalRating: "Nota total",
-      marketValue: "Valor de mercado",
-      currentClub: "Clube atual",
-      yellowRedCards: "Cartões amarelo e vermelho",
-      yellowCard: "Cartão amarelo",
-      redCard: "Cartão vermelho",
-      yellowCards: "Cartões amarelos",
-      redCards: "Cartões vermelhos",
-      profileAction: "Perfil",
-    };
-  }
-
-  return DEFAULT_CARD_LABELS;
-}
-
 function localeFromPlayerProfileHref(href?: string) {
   const queryStart = href?.indexOf("?") ?? -1;
   if (queryStart < 0) return null;
@@ -348,18 +320,23 @@ type Props = {
   ensureStaticNameFit?: boolean;
   optimizeForLiveCompact?: boolean;
   runtimeLocaleOverride?: string | null;
+  draftLocalesEnabled?: boolean;
   subscribeToRanking?: boolean;
+  /** Explicit published input for the exact crown QA fixture, never inherited authority. */
+  explicitQaPlayerRanking?: unknown;
   enableInteractiveNeon?: boolean;
   showCardActions?: boolean;
   showProfileAction?: boolean;
-  /** Shows only the current Sportmonks rating above an Arena card. */
+  /** Legacy Arena selection behavior; the above-head rating badge is retired. */
   showMatchRating?: boolean;
-  /** Legacy caller compatibility; renders only the Sportmonks rating. */
+  /** Legacy caller compatibility; preserves Arena selection behavior only. */
   showMatchPoints?: boolean;
   rankingMode?: "live" | "preview";
   playerProfileHref?: string;
   showSocialMetrics?: boolean;
   forceNeonActive?: boolean;
+  /** Public callers can suppress the visual market-value panel without changing card data. */
+  hideMarketValuePanel?: boolean;
   /**
    * Market inventory has already authenticated this physical card and its
    * tier.  It may show the artwork as a selection preview before the separate
@@ -375,6 +352,11 @@ type Props = {
   /** Visual-QA mode only; tokens do not select or modify card artwork. */
   tierCalibrationPresentation?: TouchlineCardCalibrationPresentation;
 };
+
+export function resolveExplicitQaPlayerRanking(pathname: string | null, value: unknown, editable: boolean) {
+  if (editable || pathname !== "/visual-qa/player-leader-crown") return null;
+  return parseTouchlineActiveRankingState(value);
+}
 
 function compactSocialCount(value: number, locale: string | null) {
   return new Intl.NumberFormat(locale === "pt-BR" ? "pt-BR" : "en", {
@@ -737,7 +719,9 @@ export function TouchlineEliteExactCard({
   ensureStaticNameFit = false,
   optimizeForLiveCompact = false,
   runtimeLocaleOverride = null,
+  draftLocalesEnabled = false,
   subscribeToRanking = true,
+  explicitQaPlayerRanking,
   enableInteractiveNeon = true,
   showCardActions = false,
   showProfileAction = true,
@@ -747,6 +731,7 @@ export function TouchlineEliteExactCard({
   playerProfileHref,
   showSocialMetrics = true,
   forceNeonActive = false,
+  hideMarketValuePanel = false,
   allowVisualInventoryPreview = false,
   showUnpublishedIdentity = false,
   followerCount,
@@ -783,7 +768,10 @@ export function TouchlineEliteExactCard({
   const [isNeonActive, setIsNeonActive] = useState(false);
   const leadershipAuthority = useTouchlineCardLeadershipAuthority();
   const fallbackRanking = useTouchlineActiveRanking(!leadershipAuthority && subscribeToRanking);
-  const activeRanking = isEditable ? null : leadershipAuthority ? leadershipAuthority.playerRanking : fallbackRanking;
+  const inheritedRanking = leadershipAuthority ? leadershipAuthority.playerRanking : fallbackRanking;
+  const awardPath = usePathname();
+  const qaRanking = resolveExplicitQaPlayerRanking(awardPath, explicitQaPlayerRanking, isEditable);
+  const activeRanking = isEditable ? null : qaRanking ?? inheritedRanking;
   const neonInstanceId = useId();
   const didSkipInitialLayoutWriteRef = useRef(false);
   const baseFollowerCount = canonicalSocialCount(followerCount);
@@ -937,13 +925,14 @@ export function TouchlineEliteExactCard({
   const totalRatingText = player.totalRating === null || player.totalRating === undefined || player.totalRating === ""
     ? "—"
     : touchlineCardMetricText(player.totalRating);
-  const cardLabels = { ...localizedCardLabels(runtimeLocale), ...labels };
+  const exactCopy = getTouchlineExactCardCopy(runtimeLocale, draftLocalesEnabled);
+  const socialCopy = TOUCHLINE_PLAYER_SOCIAL_CATALOGUES[resolveTouchlineCatalogueLocale(runtimeLocale, draftLocalesEnabled)];
+  const cardLabels = { ...exactCopy, ...labels };
   // A game card exists only after the server-owned publication policy has
   // attached a published presentation. The authenticated Market can opt into
   // a visual-only inventory preview below; it never turns that preview into a
   // public publication or commercial authority.
   const editorialCard = player.editorialCard ?? null;
-  const awardPath = usePathname();
   const goldenBootPlayers = useTouchlineGoldenBootPlayers(!isEditable && Boolean(editorialCard)
     && allowsInheritedCardLeadership(awardPath) && Boolean(player.canonicalPlayerId));
   const hasGoldenBoot = !isEditable && Boolean(editorialCard) && Boolean(player.canonicalPlayerId
@@ -978,6 +967,7 @@ export function TouchlineEliteExactCard({
   // initial scale. The sibling crown must consume that same live CSS scale.
   const basePlayerLeaderCrownStyle = touchlinePlayerLeaderCrownStyle(1);
   const crownRenderScale = `var(--touchline-card-static-scale, ${scale})`;
+  const headAwardScale = "var(--touchline-head-award-scale, 1)";
   // The crown intentionally lives above the official card art. Its host must
   // reserve that exact visual envelope in normal surfaces, otherwise a grid,
   // carousel or small-screen viewport can cut the crown at its own boundary.
@@ -1000,13 +990,13 @@ export function TouchlineEliteExactCard({
   const compactPrimaryValue = totalRatingText;
   const compactSecondaryLabel = hasPublishedCardProfile || reviewRequired
     ? editorialCard?.marketValueState === "provisional"
-      ? (runtimeLocale === "pt-BR" ? "Valor provisório" : "Provisional value")
-      : (cardLabels.marketValue ?? (runtimeLocale === "pt-BR" ? "Valor de mercado" : "Market value"))
-    : (runtimeLocale === "pt-BR" ? "POSIÇÃO" : "POSITION");
+      ? exactCopy.provisionalValue
+      : (cardLabels.marketValue ?? exactCopy.marketValue)
+    : exactCopy.position;
   const compactSecondaryValue = hasPublishedCardProfile
-    ? marketValueText ?? (runtimeLocale === "pt-BR" ? "PENDENTE" : "PENDING")
+    ? marketValueText ?? exactCopy.pending
     : reviewRequired
-      ? (runtimeLocale === "pt-BR" ? "PENDENTE" : "PENDING")
+      ? exactCopy.pending
       : player.position;
   const preseasonMissingValue = "—";
   const cardStatPresentation = buildTouchlineCardStatPresentation({
@@ -1020,9 +1010,6 @@ export function TouchlineEliteExactCard({
     key: CARD_STAT_LAYOUT_KEYS[stat.id],
     valueText: stat.valueState === "available" ? touchlineCardMetricText(stat.value) : preseasonMissingValue,
   }));
-  const matchRatingText = player.matchRating === null || player.matchRating === undefined || player.matchRating === ""
-    ? preseasonMissingValue
-    : touchlineCardMetricText(player.matchRating);
   const totalRatingSize = valueDisplaySize(compactPrimaryValue);
   const marketValueSize = valueDisplaySize(compactSecondaryValue);
   const cardTemplateUrl = neutralIdentity
@@ -1402,7 +1389,8 @@ export function TouchlineEliteExactCard({
   return (
     <div
       ref={shellRef}
-      className={["touchline-card-surface", className].filter(Boolean).join(" ")}
+      className={["touchline-card-surface", publicPresentationStyles.surface, className].filter(Boolean).join(" ")}
+      data-card-small={!isEditable && scale > 0 && scale <= 0.5 ? "true" : "false"}
       data-card-tier={marketTier?.key ?? "neutral"}
       data-card-tier-calibration={tierComponentCalibration?.tierKey ?? "neutral"}
       data-card-calibration-presentation={calibrationPresentation}
@@ -1431,8 +1419,8 @@ export function TouchlineEliteExactCard({
         position: "relative",
         margin: hasHeadAward
           ? hasStaticRenderScale
-            ? `calc(${-basePlayerLeaderCrownStyle.top}px * ${crownRenderScale}) auto 0`
-            : `${leadershipCrownEnvelope}px auto 0`
+            ? `calc(${-basePlayerLeaderCrownStyle.top}px * ${crownRenderScale} * ${headAwardScale}) auto 0`
+            : `calc(${leadershipCrownEnvelope}px * ${headAwardScale}) auto 0`
           : "0 auto",
         maxWidth: "100%",
         overflow: "visible",
@@ -1454,11 +1442,11 @@ export function TouchlineEliteExactCard({
             position: "absolute",
             left: "50%",
             top: hasStaticRenderScale
-              ? `calc(${basePlayerLeaderCrownStyle.top}px * ${crownRenderScale})`
-              : playerLeaderCrownStyle.top,
+              ? `calc(${basePlayerLeaderCrownStyle.top}px * ${crownRenderScale} * ${headAwardScale})`
+              : `calc(${playerLeaderCrownStyle.top}px * ${headAwardScale})`,
             width: hasStaticRenderScale
-              ? `calc(${basePlayerLeaderCrownStyle.width}px * ${crownRenderScale})`
-              : playerLeaderCrownStyle.width,
+              ? `calc(${basePlayerLeaderCrownStyle.width}px * ${crownRenderScale} * ${headAwardScale})`
+              : `calc(${playerLeaderCrownStyle.width}px * ${headAwardScale})`,
             height: "auto",
             zIndex: 90,
             transform: hasGoldenBoot ? "translateX(-104%)" : "translateX(-50%)",
@@ -1469,17 +1457,17 @@ export function TouchlineEliteExactCard({
         />
       ) : null}
       {hasGoldenBoot ? <TouchlineGoldenBootHead
-        label={runtimeLocale === "pt-BR" ? "Bota de Ouro — artilheiro da liga" : "Golden Boot — league top scorer"}
+        label={exactCopy.goldenBootLabel}
         style={{ position: "absolute", left: "50%",
           top: hasStaticRenderScale
-            ? `calc(${basePlayerLeaderCrownStyle.top}px * ${crownRenderScale})`
-            : playerLeaderCrownStyle.top,
+            ? `calc(${basePlayerLeaderCrownStyle.top}px * ${crownRenderScale} * ${headAwardScale})`
+            : `calc(${playerLeaderCrownStyle.top}px * ${headAwardScale})`,
           width: hasStaticRenderScale
-            ? `calc(${basePlayerLeaderCrownStyle.width}px * ${crownRenderScale})`
-            : playerLeaderCrownStyle.width,
+            ? `calc(${basePlayerLeaderCrownStyle.width}px * ${crownRenderScale} * ${headAwardScale})`
+            : `calc(${playerLeaderCrownStyle.width}px * ${headAwardScale})`,
           height: hasStaticRenderScale
-            ? `calc(${-basePlayerLeaderCrownStyle.top - 8}px * ${crownRenderScale})`
-            : Math.max(0, -playerLeaderCrownStyle.top - 8 * scale),
+            ? `calc(${-basePlayerLeaderCrownStyle.top - 8}px * ${crownRenderScale} * ${headAwardScale})`
+            : `calc(${Math.max(0, -playerLeaderCrownStyle.top - 8 * scale)}px * ${headAwardScale})`,
           transform: isCanonicalPlayerLeader ? "translateX(4%)" : "translateX(-50%)",
           transformOrigin: "bottom center" }}
       /> : null}
@@ -1487,8 +1475,8 @@ export function TouchlineEliteExactCard({
       {neutralIdentity ? (
         <div
           aria-label={publicationPending
-            ? (runtimeLocale === "pt-BR" ? "Publicação do card pendente" : "Card publication pending")
-            : (runtimeLocale === "pt-BR" ? "Card requer revisão" : "Card review required")}
+            ? exactCopy.publicationPending
+            : exactCopy.reviewRequired}
           style={{
             position: "absolute", left: "50%", top: -13, zIndex: 92,
             transform: "translateX(-50%)", whiteSpace: "nowrap", borderRadius: 999,
@@ -1499,53 +1487,8 @@ export function TouchlineEliteExactCard({
           }}
         >
           {publicationPending
-            ? (runtimeLocale === "pt-BR" ? "Publicação do card pendente" : "Card publication pending")
-            : (runtimeLocale === "pt-BR" ? "Card requer revisão" : "Card review required")}
-        </div>
-      ) : null}
-      {effectiveShowMatchRating ? (
-        <div
-          aria-label={`${runtimeLocale === "pt-BR" ? "Nota da partida" : "Match rating"}: ${matchRatingText}`}
-          data-arena-match-rating="true"
-          style={{
-            position: "absolute",
-            left: "50%",
-            top: -16,
-            width: "max-content",
-            minWidth: 24,
-            height: 16,
-            zIndex: 70,
-            transform: "translateX(-50%)",
-            pointerEvents: "none",
-            overflow: "visible",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 0,
-            padding: "1px 5px",
-            border: "1px solid rgba(255,255,255,.18)",
-            borderRadius: 5,
-            background: "linear-gradient(180deg, rgba(18,22,24,.78), rgba(2,5,7,.86))",
-            boxShadow: "0 6px 14px rgba(0,0,0,.38), inset 0 1px 0 rgba(255,255,255,.12)",
-            backdropFilter: "blur(7px)",
-            color: "#fff",
-            fontWeight: 950,
-            whiteSpace: "nowrap",
-          }}
-        >
-          <strong
-            style={{
-              minWidth: 0,
-              color: "rgba(255,255,255,.92)",
-              fontSize: 9,
-              lineHeight: 1,
-              textAlign: "center",
-              textShadow: "0 1px 2px rgba(0,0,0,.8)",
-              fontVariantNumeric: "tabular-nums",
-            }}
-          >
-            {matchRatingText}
-          </strong>
+            ? exactCopy.publicationPending
+            : exactCopy.reviewRequired}
         </div>
       ) : null}
       <div
@@ -1588,7 +1531,7 @@ export function TouchlineEliteExactCard({
           fontFamily: 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
           textTransform: "uppercase",
         }}
-        aria-label={`${player.name} TouchLine card${player.totalRating === null || player.totalRating === undefined ? "" : `, total rating ${touchlineCardMetricText(player.totalRating)}`}`}
+        aria-label={`${exactCopy.cardAria.replace("{playerName}", () => player.name)}${player.totalRating === null || player.totalRating === undefined ? "" : exactCopy.ratingAria.replace("{rating}", () => touchlineCardMetricText(player.totalRating))}`}
         data-total-rating={player.totalRating === null || player.totalRating === undefined ? undefined : touchlineCardMetricText(player.totalRating)}
       >
         {cardFrameImage()}
@@ -1701,7 +1644,7 @@ export function TouchlineEliteExactCard({
             {clubHubHref && !isEditable && showProfileAction ? (
               <a
                 href={resolvedClubHubHref() || clubHubHref}
-                aria-label={`Open ${player.clubName} Club Hub`}
+                aria-label={exactCopy.clubAria.replace("{clubName}", () => player.clubName)}
                 style={{
                   width: "100%",
                   height: "100%",
@@ -1745,7 +1688,7 @@ export function TouchlineEliteExactCard({
           <div data-card-total-rating="true" style={{ marginTop: 4, maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#fff", fontSize: totalRatingSize * fieldScale("marketValue"), lineHeight: `${(totalRatingSize + 2) * fieldScale("marketValue")}px`, fontWeight: 950, letterSpacing: 0, textShadow: "0 2px 10px rgba(0,0,0,.72)" }}>{compactPrimaryValue}</div>
         </div>
 
-        <div
+        {!hideMarketValuePanel ? <div
           {...dragAttrs("cardPrice")}
           data-live-card-compact-detail="true"
           data-card-market-value-panel="true"
@@ -1767,7 +1710,7 @@ export function TouchlineEliteExactCard({
             <span>{compactSecondaryLabel}</span>
           </div>
           <div style={{ marginTop: 4, maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#fff", fontSize: marketValueSize * fieldScale("cardPrice"), lineHeight: `${(marketValueSize + 2) * fieldScale("cardPrice")}px`, fontWeight: 950, letterSpacing: 0, textShadow: "0 2px 10px rgba(0,0,0,.72)" }}>{compactSecondaryValue}</div>
-        </div>
+        </div> : null}
 
         <div
           {...dragAttrs("touchlineLogo")}
@@ -1799,7 +1742,7 @@ export function TouchlineEliteExactCard({
             textShadow: "0 0 12px rgba(184,255,70,.36), 0 2px 12px rgba(0,0,0,.86)",
           }}
         >
-          {runtimeLocale === "pt-BR" ? "Estatísticas da TouchLine England League" : "TouchLine England League Stats"}
+          {exactCopy.leagueStats}
         </div>
 
         {shouldShowCardActions ? (
@@ -1863,7 +1806,7 @@ export function TouchlineEliteExactCard({
               <button
                 type="button"
                 aria-pressed={isFollowing}
-                aria-label={`${isFollowing ? (runtimeLocale === "pt-BR" ? "Seguindo" : "Following") : (runtimeLocale === "pt-BR" ? "Seguir" : "Follow")} ${player.name}`}
+                aria-label={`${isFollowing ? socialCopy.following : socialCopy.follow} ${player.name}`}
                 onClick={(event) => {
                   event.stopPropagation();
                   if (isEditable) return;
@@ -1888,7 +1831,7 @@ export function TouchlineEliteExactCard({
               <button
                 type="button"
                 aria-pressed={isLiked}
-                aria-label={isLiked ? (runtimeLocale === "pt-BR" ? "Remover curtida" : "Unlike card") : (runtimeLocale === "pt-BR" ? "Curtir card" : "Like card")}
+                aria-label={draftLocalesEnabled ? socialCopy.like : isLiked ? (runtimeLocale === "pt-BR" ? "Remover curtida" : "Unlike card") : (runtimeLocale === "pt-BR" ? "Curtir card" : "Like card")}
                 onClick={(event) => {
                   event.stopPropagation();
                   if (isEditable) return;

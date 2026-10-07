@@ -7,6 +7,7 @@ import * as contract from '../lib/touchlineArena/social-confirmed-event-contract
 import * as caption from '../lib/touchlineArena/social-confirmed-event-caption.ts';
 import * as checksum from '../lib/touchlineArena/social-confirmed-event-render-source.ts';
 import { MATCH_PUSH_SOURCE_TIMES, matchPushSourceFreshness } from '../lib/touchlineArena/match-push-source-freshness.ts';
+import { buildMatchEventNotification } from '../lib/touchlineArena/match-event-notification.ts';
 
 const uuid = '11111111-1111-4111-8111-111111111111';
 const at = '2026-09-27T00:00:00Z';
@@ -146,6 +147,33 @@ test('current penalty, own goal and red card remain admitted; feed read errors f
   assert.equal(failed.ok,false);
   if (!failed.ok) assert.equal(failed.reason,'current-event-feed-unavailable');
 });
+test('verified own-goal and penalty reader output reaches notification copy with unchanged rating', async () => {
+  for (const eventKind of ['own-goal', 'penalty'] as const) {
+    const result = await harness({ eventKind }).readTouchlineConfirmedEventPushSource('8', '9');
+    assert.equal(result.ok, true);
+    if (!result.ok) return;
+    assert.equal(result.data.contentType, 'GOAL_CONFIRMED');
+    assert.equal(result.data.event.kind, eventKind);
+    assert.equal(result.data.event.playerTeamId, '1');
+    assert.equal(result.data.event.scoringTeamId, eventKind === 'own-goal' ? '2' : '1');
+    assert.equal(result.data.touchlinePoints, 8.09);
+    for (const locale of ['pt-BR', 'en-GB'] as const) {
+      const payload = buildMatchEventNotification(result, locale);
+      assert.ok(payload, `${eventKind}:${locale}`);
+      const heading = eventKind === 'own-goal'
+        ? (locale === 'pt-BR' ? 'Gol contra' : 'Own goal')
+        : (locale === 'pt-BR' ? 'Gol de pênalti' : 'Penalty scored');
+      assert.equal(payload.title, 'Home - Away');
+      assert.equal(payload.body, `${heading} · 12′ · ${eventKind === 'own-goal' ? '0 - 1' : '1 - 0'} · Test Player`);
+      assert.equal(payload.tag, 'fixture:8:event:9');
+    }
+    for (const feedCase of ['rescinded', 'drift', 'missing'] as const) {
+      const rejected = await harness({ eventKind, feedCase }).readTouchlineConfirmedEventPushSource('8', '9');
+      assert.equal(buildMatchEventNotification(rejected, 'en-GB'), null);
+    }
+  }
+});
+
 test('feed-only score with unknown relative order rejects, but known later event does not', async () => {
   for (const name of ['readTouchlineConfirmedEventPushSource','readTouchlineSocialConfirmedEventDraft'] as const) {
     for (const extraFeedOrder of ['unknown','only-sort'] as const) {

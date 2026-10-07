@@ -29,7 +29,7 @@ test("explicit weekly awards and opt-outs are preserved; frozen points alone nev
 
 test("editor, audit, isolated and social-studio paths do not inherit public awards", () => {
   for (const route of [null, "/admin", "/admin/social-publications/studio", "/visual-qa/social-rankings-live", "/audit/arena", "/audit-index", "/preview"]) assert.equal(allowsInheritedCardLeadership(route), false);
-  for (const route of ["/arena", "/market-transfer", "/fantasy", "/touchline-tables", "/touchline-players/haaland", "/touchline-clubs/arsenal"]) assert.equal(allowsInheritedCardLeadership(route), true);
+  for (const route of ["/arena", "/clubowner", "/fantasy", "/rankings", "/touchline-players/haaland", "/touchline-clubs/arsenal"]) assert.equal(allowsInheritedCardLeadership(route), true);
 });
 
 test("source contract guards loaders, seeds provider and reuses only the existing singleton feed", () => {
@@ -37,7 +37,7 @@ test("source contract guards loaders, seeds provider and reuses only the existin
   assert.ok(boundary.indexOf("if (!enabled)") < boundary.indexOf("loadTouchLineActiveRanking()."));
   assert.doesNotMatch(source("app/layout.tsx"), /TouchlineCardLeadershipBoundary/);
   assert.match(source("components/touchline/cards/TouchlineCardLeadershipLayout.tsx"), /enabled=\{!isIsolatedPreview && dataSource === "direct"\}/);
-  for (const family of ["arena", "my-club", "market-transfer", "touchline-clubs", "touchline-coaches"]) {
+  for (const family of ["arena", "my-club", "clubowner", "touchline-clubs", "touchline-coaches"]) {
     assert.match(source(`app/${family}/layout.tsx`), /TouchlineCardLeadershipLayout/);
   }
   const provider = source("components/touchline/cards/TouchlineCardLeadershipProvider.tsx");

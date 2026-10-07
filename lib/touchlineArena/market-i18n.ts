@@ -122,7 +122,7 @@ const ptBR: TouchLineMarketCopy = {
   clubsRepresented: "Clubes representados",
   myClub: "Meu clube",
   squadProgress: (count: number, limit: number) => `${count}/${limit} jogadores`,
-  playersRemaining: (count: number) => `${count} faltam para completar o elenco`,
+  playersRemaining: (count: number) => `${count === 1 ? "Falta" : "Faltam"} ${count} ${count === 1 ? "jogador" : "jogadores"} para completar o elenco`,
   showOnlyNeededPositions: "Mostrar posições necessárias",
   showAllPositions: "Mostrar todas as posições",
   currentBalance: "Saldo atual",

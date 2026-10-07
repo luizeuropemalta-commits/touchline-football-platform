@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import ts from "typescript";
+import { AuthSessionMissingError } from "@supabase/supabase-js";
+import { hasTouchLineArenaAccess } from "../lib/touchlineArena/auth-access.ts";
 
 const source = readFileSync(new URL("../app/touchline-players/[player]/page.tsx", import.meta.url), "utf8");
 const begin = source.indexOf("  const currentUserPromise = (async () => {");
@@ -39,7 +41,8 @@ function fixture(options: {
   const calls: string[] = [];
   const profile = () => ({ card: { id: "canonical-1", name: "Fixture" }, exactPlayer: {}, club: null, isLocalCard: false });
   const dependencies = {
-    createClient: async () => ({ auth: { getUser: () => options.auth ?? Promise.resolve({ data: { user: null } }) } }),
+    AuthSessionMissingError, hasTouchLineArenaAccess,
+    createClient: async () => ({ auth: { getUser: () => options.auth ?? Promise.resolve({ data: { user: null }, error: null }) } }),
     canonicalLink: { status: "absent" }, canonicalResolution: null, playerKey: "101", query: {},
     resolveTouchLinePlayerProfile: profile,
     resolveTouchLineUnavailableOfficialProfile: profile,
@@ -108,7 +111,7 @@ test("public failure wins without waiting for ranking and its later rejection re
 });
 
 test("immediate and delayed ranking produce the same profile inputs and verified owner navigation", async () => {
-  const auth = Promise.resolve({ data: { user: { email: "owner@example.test" } } });
+  const auth = Promise.resolve({ data: { user: { id: "11111111-1111-4111-8111-111111111111", email: "owner@example.test", app_metadata: { touchline_arena_access_v1: true } } }, error: null });
   const immediate = await fixture({ ranking: Promise.resolve(rankingValue), auth }).run();
   const ranking = deferred<unknown>();
   const delayed = fixture({ ranking: ranking.promise, auth }).run();

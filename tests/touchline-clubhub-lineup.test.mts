@@ -249,14 +249,14 @@ test("ClubHub retains all eleven football slots even when a card publication is 
 test("ClubHub uses Squad Preview from T−24 until confirmation or a terminal fixture, never as an expected line-up", () => {
   const source = readFileSync(new URL("../components/touchline/ClubHubOfficialLineup.tsx", import.meta.url), "utf8");
 
-  assert.match(source, /Squad Preview/);
+  assert.match(source, /const lineupCopy = getTouchlineClubHubLineupCopy\(locale, draftLocalesEnabled\)/);
   assert.match(source, /isClubHubSquadPreviewWindow/);
   assert.match(source, /startsAtIso/);
   assert.match(source, /fixtureStatus: matchup\?\.initialFixture\?\.status/);
   assert.match(source, /const showPreviewContext = !confirmed && squadPreviewWindow/);
-  assert.match(source, /Line-up confirmed/);
-  assert.match(source, /showPreviewContext\n\s*\? \(isPortuguese \? "Prévia do elenco" : "Squad Preview"\)\n\s*:\s*\(isPortuguese \? "Escalação ainda não confirmada" : "Line-up not yet confirmed"\)/);
-  assert.match(source, /isPortuguese \? "Formação" : "Formation"/);
+  assert.match(source, /confirmed\n\s*\? lineupCopy\.confirmedTitle/);
+  assert.match(source, /showPreviewContext\n\s*\? lineupCopy\.previewTitle\n\s*:\s*lineupCopy\.unconfirmedTitle/);
+  assert.match(source, /const workflowCopy = getTouchlineFantasyMarketWorkflowCopy\(locale, draftLocalesEnabled\)/);
   assert.match(source, /showPreviewContext \? \(/);
   assert.doesNotMatch(source, /Predicted line-up/);
 });
@@ -335,6 +335,23 @@ test("shared player cards require publication and show only a verified market va
   assert.match(source, /allowVisualInventoryPreview = false/);
   assert.match(source, /player\.cardPriceAuthority === "active-contract"/);
   assert.doesNotMatch(source, /resolveTouchlineVerifiedPlayerEconomy|formatTouchlineContractedCommercialCardPrice/);
+});
+
+test("only the public ClubHub route opts line-up cards into value hiding", () => {
+  const source = readFileSync(new URL("../components/touchline/ClubHubOfficialLineup.tsx", import.meta.url), "utf8");
+  const publicPage = readFileSync(new URL("../app/touchline-clubs/[club]/page.tsx", import.meta.url), "utf8");
+  const audit = readFileSync(new URL("../components/touchline/audit/TouchlineAuditStudio.tsx", import.meta.url), "utf8");
+  const visualQa = readFileSync(new URL("../app/visual-qa/clubhub-profile-contract/page.tsx", import.meta.url), "utf8");
+  const cards = source.match(/<TouchlineEliteExactCard\b[\s\S]*?\/>/g) ?? [];
+
+  assert.equal(cards.length, 2);
+  assert.match(source, /hideMarketValuePanel = false/);
+  cards.forEach(card => assert.match(card, /hideMarketValuePanel=\{hideMarketValuePanel\}/));
+  assert.match(cards[0], /forceNeonActive/);
+  assert.match(cards[1], /showProfileAction=\{false\}/);
+  assert.match(publicPage, /<ClubHubOfficialLineup[\s\S]*?hideMarketValuePanel/);
+  assert.doesNotMatch(audit, /hideMarketValuePanel/);
+  assert.doesNotMatch(visualQa, /hideMarketValuePanel/);
 });
 
 test("incomplete ClubHub players remain in the shared premium card grid", () => {

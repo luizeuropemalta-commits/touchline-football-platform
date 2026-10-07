@@ -11,6 +11,7 @@ import { loadCoachCardLayout } from "@/lib/touchlineArena/coach-card-layout-load
 import { touchlineCoachCardArtForTier, type TouchlineArenaCoachSlot } from "@/lib/touchlineArena/coach-card";
 import { touchlineArenaTierForKey, touchlineCardTierPalette } from "@/lib/touchlineArena/card-rules";
 import { touchlineCountryFlagUrl } from "@/lib/touchlineArena/country-flags";
+import { getTouchlineCoachCardCopy } from "@/lib/touchlineArena/coach-card-i18n";
 import type { TouchlineCoachFixtureContext } from "@/lib/touchlineArena/coach-scoring";
 import {
   TOUCHLINE_COACH_CARD_DEFAULT_LAYOUT,
@@ -58,6 +59,7 @@ type TouchlineCoachCardProps = {
   countryCode3?: string;
   formation?: string;
   locale?: string;
+  draftLocalesEnabled?: boolean;
   editable?: boolean;
   forceNeonActive?: boolean;
   layoutOverride?: TouchlineCoachCardLayout;
@@ -112,6 +114,7 @@ export default function TouchlineCoachCard({
   clubAccent = "#6cabdd",
   countryCode3 = "ITA",
   locale = "pt-BR",
+  draftLocalesEnabled = false,
   editable = false,
   forceNeonActive = false,
   layoutOverride,
@@ -150,7 +153,7 @@ export default function TouchlineCoachCard({
     renderedHeightPercent: number;
   } | null>(null);
   const layout = layoutOverride ?? storedLayout;
-  const isPortuguese = locale === "pt-BR";
+  const copy = getTouchlineCoachCardCopy(locale, draftLocalesEnabled);
   const tier = touchlineArenaTierForKey(slot.cardTier) ?? touchlineArenaTierForKey("ruby-red")!;
   const tierPalette = touchlineCardTierPalette(tier.key);
   const compactCardTemplateUrl = touchlineLiveCompactCoachFrameUrl(slot.cardTier);
@@ -168,7 +171,7 @@ export default function TouchlineCoachCard({
   const disciplineValue = yellowCards === null && redCards === null
     ? "—"
     : `${yellowCards ?? "—"} / ${redCards ?? "—"}`;
-  const coachDisplayName = coach?.displayName ?? (isPortuguese ? "Aguardando treinador" : "Awaiting coach");
+  const coachDisplayName = coach?.displayName ?? copy.awaitingCoach;
   const coachNameLength = coachDisplayName.replace(/\s+/g, "").length;
   const coachNameFit = coachNameLength > 22 ? "long" : coachNameLength > 15 ? "medium" : "short";
 
@@ -418,7 +421,7 @@ export default function TouchlineCoachCard({
       data-coach-card-display={displayMode}
       data-coach-ranking-leader={showLeadershipCrown ? "true" : "false"}
       data-coach-frame-ready={isFrameReady ? "true" : "false"}
-      aria-label={`${coach?.displayName ?? (isPortuguese ? "Treinador pendente" : "Coach pending")} TouchLine coach card`}
+      aria-label={copy.coachCardAria.replace("{coachName}", () => coach?.displayName ?? copy.coachPending)}
       onClick={() => {
         if (!enableInteractiveNeon || editable) return;
         const nextNeonState = !isNeonActive;
@@ -443,14 +446,14 @@ export default function TouchlineCoachCard({
       <TouchlineCardPerimeterTrace tier={slot.cardTier} variant="coach" />
       <div className={styles.inner} data-coach-card-inner="true">
         <div className={styles.identity} {...editableLayerProps("nationality", "Nacionalidade")}>
-          <span>{isPortuguese ? "Nacionalidade" : "Nationality"}</span>
+          <span>{copy.nationality}</span>
           {flagUrl ? <img ref={flagRef} src={flagUrl} alt={countryCode3} draggable={false} loading={assetLoading ?? "eager"} /> : null}
           <b>{countryCode3}</b>
         </div>
 
         {runtimeClubLogoUrl ? (
           <div className={styles.clubBadge} {...editableLayerProps("clubCrest", "Escudo do clube")}>
-            <span>{isPortuguese ? "Clube atual" : "Current club"}</span>
+            <span>{copy.currentClub}</span>
             <div data-touchline-card-crest-host="true">
               <img ref={crestRef} src={runtimeClubLogoUrl} alt={clubName} draggable={false} loading={assetLoading ?? "eager"} data-touchline-card-crest="true" />
             </div>
@@ -458,7 +461,7 @@ export default function TouchlineCoachCard({
         ) : null}
 
         <div className={styles.nameplate} data-coach-name-fit={coachNameFit} {...editableLayerProps("nameplate", "Nome do treinador")}>
-          <small>{isPortuguese ? "Treinador principal" : "First-team manager"}</small>
+          <small>{copy.firstTeamManager}</small>
           <strong>{coachDisplayName}</strong>
           <span>{clubName}</span>
         </div>
@@ -466,16 +469,16 @@ export default function TouchlineCoachCard({
         <div className={styles.stats} {...editableLayerProps("stats", "Informações técnicas")}>
           <span className={styles.stat}>
             {fixtureContext === "home" ? (
-              <span className={styles.matchContext} aria-label="Home fixture"><CoachStatIcon type="home" /> {isPortuguese ? "Casa" : "Home"}</span>
+              <span className={styles.matchContext} aria-label={copy.homeFixtureAria}><CoachStatIcon type="home" /> {copy.home}</span>
             ) : null}
             {fixtureContext === "away" ? (
-              <span className={styles.matchContext} aria-label="Away fixture"><CoachStatIcon type="travel" /> {isPortuguese ? "Fora" : "Away"}</span>
+              <span className={styles.matchContext} aria-label={copy.awayFixtureAria}><CoachStatIcon type="travel" /> {copy.away}</span>
             ) : null}
             <CoachStatIcon type="result" />
-            <small>{isPortuguese ? "Resultado" : "Result"}</small>
+            <small>{copy.result}</small>
             <strong>—</strong>
           </span>
-          <span className={styles.stat} data-coach-discipline-source={yellowCards === null && redCards === null ? "unavailable" : "canonical"}><CoachStatIcon type="discipline" /><small>{isPortuguese ? "Cartões" : "Cards"}</small><strong>{disciplineValue}</strong></span>
+          <span className={styles.stat} data-coach-discipline-source={yellowCards === null && redCards === null ? "unavailable" : "canonical"}><CoachStatIcon type="discipline" /><small>{copy.cards}</small><strong>{disciplineValue}</strong></span>
           <span className={`${styles.stat} ${styles.pointsStat}`}><CoachStatIcon type="points" /><small>TL PTS</small><strong>{points}</strong></span>
         </div>
 

@@ -1,7 +1,8 @@
-import TouchlineEliteExactCard, {
+import {
   type TouchlineEliteExactPlayer,
 } from "@/components/touchline/cards/TouchlineEliteExactCard";
 import { resolveTouchlineVisualQaLocale } from "@/lib/touchlineArena/visual-qa-locale";
+import PlayerLeaderCrownFixture from "./PlayerLeaderCrownFixture";
 
 export const metadata = {
   title: "TouchLine · Player leader crown visual QA",
@@ -88,23 +89,7 @@ export default async function PlayerLeaderCrownVisualQaPage({ searchParams }: Vi
       </header>
 
       <section style={{ width: "min(520px, 100%)", margin: "clamp(150px, 22vw, 220px) auto 0", display: "grid", justifyItems: "center" }}>
-        <TouchlineEliteExactCard
-          player={player}
-          isEditable={false}
-          persistLayoutToMaster={false}
-          ignoreStoredLayout={true}
-          startUnlocked={false}
-          isRemovalMarkerEnabled={false}
-          staticRenderScale={0.78}
-          runtimeLocaleOverride={locale}
-          subscribeToRanking
-          enableInteractiveNeon={false}
-          showCardActions={false}
-          showProfileAction={false}
-          showMatchPoints={false}
-          rankingMode="preview"
-          showSocialMetrics={false}
-        />
+        <PlayerLeaderCrownFixture player={player} locale={locale} />
       </section>
     </main>
   );

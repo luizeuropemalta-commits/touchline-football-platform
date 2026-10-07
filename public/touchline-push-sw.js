@@ -27,7 +27,7 @@ self.addEventListener("push", (event) => {
     // A server revision (author/settled points) reuses the event tag. Never
     // request another sound/vibration, even if the first notice was dismissed.
     renotify: false,
-    ...(payload.update === true ? { silent: true } : {}),
+    ...(payload.update === true || payload.silent === true ? { silent: true } : {}),
   };
   event.waitUntil(self.registration.showNotification(title, options));
 });

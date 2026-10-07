@@ -29,6 +29,7 @@ import {
   touchLineAuthHref,
 } from "@/lib/touchlineArena/auth-i18n";
 import { TOUCHLINE_LOCALE_STORAGE_KEY } from "@/lib/touchlineArena/i18n";
+import { getTouchlineArenaShellCopy } from "@/lib/touchlineArena/arena-shell-i18n";
 
 type ShellLink = {
   href: string;
@@ -40,8 +41,8 @@ type ShellLink = {
 const PRIMARY_LINKS: ShellLink[] = [
   {
     href: "/intro",
-    label: "TouchLine Arena",
-    description: "Return to matchday",
+    label: "TouchLine",
+    description: "Return to introduction",
     icon: Trophy,
   },
   {
@@ -67,14 +68,14 @@ const PRIMARY_LINKS: ShellLink[] = [
 const OWNER_LINKS: ShellLink[] = [
   {
     href: "/admin",
-    label: "Arena Admin",
+    label: "TouchLine Admin",
     description: "Official owner controls",
     icon: ShieldCheck,
   },
   {
     href: "/admin/analytics",
     label: "Activity",
-    description: "First-party Arena telemetry",
+    description: "First-party TouchLine telemetry",
     icon: Activity,
   },
   {
@@ -86,7 +87,7 @@ const OWNER_LINKS: ShellLink[] = [
   {
     href: "/admin/promotions",
     label: "Promotions",
-    description: "Arena campaign controls",
+    description: "TouchLine campaign controls",
     icon: Sparkles,
   },
   {
@@ -160,41 +161,54 @@ export function ArenaAdminShell({
   profileName,
   profileEmail,
   isOwner,
+  draftLocalesEnabled = false,
 }: {
   children: ReactNode;
   profileName: string;
   profileEmail: string;
   isOwner: boolean;
+  draftLocalesEnabled?: boolean;
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const locale = normalizeTouchLineAuthLocale(searchParams.get("lang"));
   const currentAdminDestination = `${pathname}${searchParams.size ? `?${searchParams.toString()}` : ""}`;
   const pt = locale === "pt-BR";
-  const shellCopy = pt ? {
-    arenaOperations: "Operações da Arena", touchline: "TouchLine", owner: "Administração",
+  // Presentation opt-in never changes auth URLs or enables draft administration.
+  const customerDraftsEnabled = draftLocalesEnabled && pathname !== "/admin" && !pathname.startsWith("/admin/");
+  const customerCopy = getTouchlineArenaShellCopy(searchParams.get("lang"), customerDraftsEnabled);
+  const operationalCopy = pt ? {
+    arenaOperations: "Operações TouchLine", touchline: "TouchLine", owner: "Administração",
     ownerIdentity: "Administrador TouchLine", clubOwnerIdentity: "Conta ClubOwner",
-    officialAdmin: "Administração oficial da Arena", account: "Conta ClubOwner",
+    officialAdmin: "Administração oficial TouchLine", account: "Conta ClubOwner",
     openSearch: "Abrir pesquisa de futebol", openNotifications: "Abrir preferências de notificações",
     openMenu: "Abrir menu", closeMenu: "Fechar menu", closeNavigation: "Fechar navegação",
     signingOut: "Saindo…", signOut: "Sair", switchAccount: "Trocar conta", authUnavailable: "O serviço de autenticação está indisponível.",
   } : {
-    arenaOperations: "Arena operations", touchline: "TouchLine", owner: "Owner",
+    arenaOperations: "TouchLine operations", touchline: "TouchLine", owner: "Owner",
     ownerIdentity: "TouchLine Owner", clubOwnerIdentity: "Authenticated ClubOwner",
-    officialAdmin: "Official Arena administration", account: "ClubOwner account",
+    officialAdmin: "Official TouchLine administration", account: "ClubOwner account",
     openSearch: "Open football search", openNotifications: "Open notification preferences",
     openMenu: "Open menu", closeMenu: "Close menu", closeNavigation: "Close navigation",
     signingOut: "Signing out…", signOut: "Sign out", switchAccount: "Switch account", authUnavailable: "Authentication service is unavailable.",
   };
-  const primaryLinks = pt ? [
-    { href: "/intro", label: "TouchLine Arena", description: "Voltar ao dia de jogo", icon: Trophy },
+  const shellCopy = { ...operationalCopy, ...customerCopy };
+  const operationalPrimaryLinks = pt ? [
+    { href: "/intro", label: "TouchLine", description: "Voltar à introdução", icon: Trophy },
     { href: "/notifications", label: "Notificações", description: "Suas preferências de entrega", icon: Bell },
     { href: "/inbox", label: "Caixa de entrada", description: "Avisos oficiais da Central", icon: Inbox },
     { href: "/football-search", label: "Pesquisa de Futebol", description: "Dados oficiais de futebol", icon: Search },
   ] : PRIMARY_LINKS;
+  const primaryLabels = [
+    { label: "TouchLine", description: customerCopy.introDescription },
+    { label: customerCopy.notificationsLabel, description: customerCopy.notificationsDescription },
+    { label: customerCopy.inboxLabel, description: customerCopy.inboxDescription },
+    { label: customerCopy.searchLabel, description: customerCopy.searchDescription },
+  ];
+  const primaryLinks = operationalPrimaryLinks.map((item, index) => ({ ...item, ...primaryLabels[index] }));
   const ownerLinks = pt ? [
-    { href: "/admin", label: "Admin da Arena", description: "Controles oficiais", icon: ShieldCheck },
-    { href: "/admin/analytics", label: "Atividade", description: "Telemetria própria da Arena", icon: Activity },
+    { href: "/admin", label: "Admin TouchLine", description: "Controles oficiais", icon: ShieldCheck },
+    { href: "/admin/analytics", label: "Atividade", description: "Telemetria própria TouchLine", icon: Activity },
     { href: "/admin/cards", label: "Inventário de Cards", description: "Operações oficiais de cards", icon: WalletCards },
     { href: "/admin/promotions", label: "Promoções", description: "Controles de campanhas", icon: Sparkles },
     { href: "/admin/finance", label: "Controle Financeiro", description: "Visão financeira protegida", icon: CircleDollarSign },
@@ -240,7 +254,7 @@ export function ArenaAdminShell({
         </p>
       </div>
 
-      <nav aria-label="TouchLine Arena" className="mt-7 space-y-1">
+      <nav aria-label="TouchLine" className="mt-7 space-y-1">
         <p className="mb-2 px-3 text-[8px] font-black uppercase tracking-[.18em] text-slate-700">
           {shellCopy.touchline}
         </p>
@@ -256,7 +270,7 @@ export function ArenaAdminShell({
       </nav>
 
       {isOwner ? (
-        <nav aria-label="Arena administration" className="mt-6 space-y-1 border-t border-white/[.07] pt-5">
+        <nav aria-label={shellCopy.officialAdmin} className="mt-6 space-y-1 border-t border-white/[.07] pt-5">
           <p className="mb-2 px-3 text-[8px] font-black uppercase tracking-[.18em] text-slate-700">
             {shellCopy.owner}
           </p>
@@ -299,7 +313,7 @@ export function ArenaAdminShell({
   );
 
   return (
-    <div className="relative min-h-[100dvh] overflow-x-clip bg-[#02080a] text-white">
+    <div dir="ltr" className="relative min-h-[100dvh] overflow-x-clip bg-[#02080a] text-white">
       <div
         aria-hidden="true"
         className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_72%_0%,rgba(30,167,111,.15),transparent_34%),radial-gradient(circle_at_18%_78%,rgba(19,141,179,.09),transparent_32%),linear-gradient(180deg,#061014_0%,#020709_100%)]"
@@ -350,7 +364,7 @@ export function ArenaAdminShell({
             </div>
             <div className="ml-auto flex items-center gap-2">
               <Link
-                href={touchLineAuthEntryHref("/admin/login", locale, currentAdminDestination)}
+                href={touchLineAuthEntryHref(isOwner ? "/admin/login" : "/login", locale, currentAdminDestination)}
                 className="hidden h-10 items-center gap-2 rounded-xl border border-white/10 bg-white/[.035] px-3 text-[9px] font-black text-slate-300 transition hover:border-cyan-300/30 hover:text-cyan-100 sm:flex"
               >
                 {shellCopy.switchAccount}
@@ -383,7 +397,7 @@ export function ArenaAdminShell({
                 className="hidden h-10 items-center gap-2 rounded-xl border border-[#a3ff12]/25 bg-[#a3ff12]/[.08] px-3 text-[9px] font-black text-[#caff72] transition hover:bg-[#a3ff12]/[.13] sm:flex"
               >
                 <Trophy size={14} />
-                Arena
+                TouchLine
               </Link>
             </div>
           </div>

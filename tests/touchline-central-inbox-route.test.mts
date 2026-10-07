@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { stripTypeScriptTypes } from "node:module";
 import { runInNewContext } from "node:vm";
 import test from "node:test";
+import ts from "typescript";
 
 const source = readFileSync(new URL("../app/(app)/inbox/page.tsx", import.meta.url), "utf8");
 const receiptRoute = readFileSync(new URL("../app/api/touchline-central/inbox/read/route.ts", import.meta.url), "utf8");
@@ -38,7 +39,14 @@ test("opening a Central notice waits for its durable receipt before navigation",
 });
 
 test("opening a notice preserves its anchor and replaces the locale before the hash", async () => {
-  const handlerSource = inboxList.slice(inboxList.indexOf("  async function openDestination("), inboxList.indexOf("\n  return <ol>"));
+  const ast = ts.createSourceFile("TouchlineInboxList.tsx", inboxList, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  let handlerSource: string | undefined;
+  function visit(node: ts.Node) {
+    if (ts.isFunctionDeclaration(node) && node.name?.text === "openDestination") handlerSource = node.getText(ast);
+    ts.forEachChild(node, visit);
+  }
+  visit(ast);
+  assert.ok(handlerSource, "real openDestination function must exist");
   for (const [deepLink, expected] of [
     ["/arena#touchline-main-content", "/arena?lang=pt-BR#touchline-main-content"],
     ["/my-club?lang=en-GB&lang=en-GB#my-club-squad", "/my-club?lang=pt-BR#my-club-squad"],

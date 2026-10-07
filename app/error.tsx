@@ -1,42 +1,31 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { normalizeTouchLineLocale, type TouchLineLocale } from "@/lib/touchlineArena/i18n";
+import type { TouchLineLocale } from "@/lib/touchlineArena/i18n";
+import { resolveTouchlineCatalogueLocale } from "@/lib/touchlineArena/catalogue-locale";
+import { getTouchlinePublicErrorCopy } from "@/lib/touchlineArena/public-error-i18n";
 
 type TouchlineErrorBoundaryProps = {
   error: Error & { digest?: string };
   reset: () => void;
 };
 
-const COPY: Partial<Record<TouchLineLocale, { eyebrow: string; title: string; body: string; retry: string; arena: string }>> = {
-  "pt-BR": {
-    eyebrow: "TouchLine · estado seguro",
-    title: "Não foi possível abrir esta área agora.",
-    body: "Nenhum dado do seu clube foi alterado. Você pode tentar novamente ou voltar para o Mercado.",
-    retry: "Tentar novamente",
-    arena: "Voltar ao Mercado",
-  },
-  "en-GB": {
-    eyebrow: "TouchLine · safe state",
-    title: "This area could not be opened right now.",
-    body: "No club data has been changed. Try again or return to the Market.",
-    retry: "Try again",
-    arena: "Return to Market",
-  },
-};
+export default function TouchlineErrorBoundary(props: TouchlineErrorBoundaryProps) {
+  return <ErrorBoundaryContent error={props.error} reset={props.reset} />;
+}
 
-export default function TouchlineErrorBoundary({ error: _error, reset }: TouchlineErrorBoundaryProps) {
+function ErrorBoundaryContent({ error: _error, reset, draftLocalesEnabled = false }: TouchlineErrorBoundaryProps & { draftLocalesEnabled?: boolean }) {
   const locale = useSyncExternalStore(
     () => () => {},
-    () => normalizeTouchLineLocale(new URLSearchParams(window.location.search).get("lang")),
+    () => resolveTouchlineCatalogueLocale(new URLSearchParams(window.location.search).get("lang"), draftLocalesEnabled),
     () => "en-GB" as TouchLineLocale,
   );
 
-  const copy = COPY[locale] ?? COPY["en-GB"]!;
-  const arenaHref = `/market-transfer?lang=${locale}`;
+  const copy = getTouchlinePublicErrorCopy(locale, draftLocalesEnabled).error;
+  const arenaHref = `/clubowner?lang=${locale}`;
 
   return (
-    <main className="min-h-[100dvh] bg-[#040706] px-5 py-[max(32px,env(safe-area-inset-top))] text-white">
+    <main dir="ltr" className="min-h-[100dvh] bg-[#040706] px-5 py-[max(32px,env(safe-area-inset-top))] text-white">
       <section className="mx-auto grid min-h-[calc(100dvh-64px)] max-w-xl place-items-center text-center">
         <div className="w-full rounded-[28px] border border-cyan-300/25 bg-[#07110b] p-7 shadow-[0_24px_80px_rgba(0,0,0,.45)] sm:p-10">
           <p className="text-[10px] font-black uppercase tracking-[.24em] text-cyan-200">{copy.eyebrow}</p>

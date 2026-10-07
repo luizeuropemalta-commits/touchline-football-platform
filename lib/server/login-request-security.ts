@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { normalizeTouchLineAuthReturnTo } from "../touchlineArena/auth-i18n.ts";
+import { normalizeTouchLineAuthLocale, normalizeTouchLineAuthReturnTo } from "../touchlineArena/auth-i18n.ts";
 
 /**
  * A password POST can establish a browser session. Require browser provenance
@@ -24,8 +24,8 @@ export function isAllowedLoginPost(request: NextRequest) {
 }
 
 /** Preserve only a same-origin, path-relative return target, including hash. */
-export function safeReturnTo(request: NextRequest, value: unknown) {
-  const fallback = "/market-transfer";
+export function safeReturnTo(request: NextRequest, value: unknown, draftLocalesEnabled = false) {
+  const fallback = "/clubowner";
   if (typeof value !== "string" || !value.startsWith("/") || value.startsWith("//") || value.includes("\\")) return fallback;
   if ([...value].some((character) => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127)) return fallback;
   try {
@@ -33,10 +33,15 @@ export function safeReturnTo(request: NextRequest, value: unknown) {
     if (target.origin !== request.nextUrl.origin) return fallback;
     if (["/admin", "/visual-qa"].some((path) => target.pathname.startsWith(path)
       && target.pathname !== path && !target.pathname.startsWith(`${path}/`))) return fallback;
+    const publicLocalesEnabled = draftLocalesEnabled && !["/admin", "/visual-qa"].some(
+      (path) => target.pathname === path || target.pathname.startsWith(`${path}/`),
+    );
+    const locale = target.searchParams.get("lang");
+    if (locale) target.searchParams.set("lang", normalizeTouchLineAuthLocale(locale, publicLocalesEnabled));
     const relative = `${target.pathname}${target.search}${target.hash}`;
     // Native login already supported public pages outside the callback allowlist.
     // Keep those returns; reuse normalization only for approved/retired routes.
-    return normalizeTouchLineAuthReturnTo(relative) ?? relative;
+    return normalizeTouchLineAuthReturnTo(relative, publicLocalesEnabled) ?? relative;
   } catch {
     return fallback;
   }

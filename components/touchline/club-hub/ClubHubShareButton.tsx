@@ -4,6 +4,7 @@ import { Check, Share2 } from "lucide-react";
 import { useState } from "react";
 
 import type { TouchLineLocale } from "@/lib/touchlineArena/i18n";
+import { getTouchlineClubHubShareCopy } from "@/lib/touchlineArena/club-hub-share-i18n";
 import { shareTouchlinePost } from "@/lib/touchlineArena/social-native-share";
 import styles from "./ClubHubPremiumPrototype.module.css";
 
@@ -15,7 +16,7 @@ export default function ClubHubShareButton({
   locale = "en-GB",
 }: Readonly<{ title: string; text: string; postId?: string; imageUrl?: string; locale?: TouchLineLocale }>) {
   const [state, setState] = useState<"idle" | "shared" | "copied" | "unavailable">("idle");
-  const pt = locale === "pt-BR";
+  const copy = getTouchlineClubHubShareCopy(locale);
 
   async function share() {
     const result = await shareTouchlinePost({ title, text, postId, imageUrl, pageUrl: window.location.href });
@@ -28,12 +29,12 @@ export default function ClubHubShareButton({
     <button className={styles.shareButton} type="button" onClick={share} aria-live="polite">
       {state === "copied" || state === "shared" ? <Check aria-hidden="true" /> : <Share2 aria-hidden="true" />}
       {state === "shared"
-        ? (pt ? "Compartilhado" : "Shared")
+        ? copy.shared
         : state === "copied"
-          ? (pt ? "Link copiado" : "Post copied")
+          ? copy.copied
           : state === "unavailable"
-            ? (pt ? "Compartilhamento indisponível" : "Sharing unavailable")
-            : (pt ? "Compartilhar" : "Share post")}
+            ? copy.unavailable
+            : copy.idle}
     </button>
   );
 }

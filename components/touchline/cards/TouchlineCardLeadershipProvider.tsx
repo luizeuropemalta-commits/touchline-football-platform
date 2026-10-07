@@ -34,7 +34,7 @@ export function TouchlineCardLeadershipProvider({ value, children, livePlayerUpd
   const resolved = !allowed ? EMPTY_CARD_LEADERSHIP_AUTHORITY : livePlayerUpdates ? { ...value, playerRanking: displayed.current } : value;
   // These root consumers have no page-owned presentation refresh. Its pointer
   // hint requests new canonical server seeds; it never supplies crown authority.
-  const refreshRootSeed = livePlayerUpdates && allowed && (pathname === "/arena" || pathname === "/my-club" || pathname === "/market-transfer");
+  const refreshRootSeed = livePlayerUpdates && allowed && (pathname === "/arena" || pathname === "/my-club" || pathname === "/clubowner");
   return <AuthorityContext.Provider value={resolved}>
     {refreshRootSeed ? <TouchlineLivePresentationRefresh
       initialPlayerRankingSnapshotId={value.playerRanking?.snapshotId ?? null}

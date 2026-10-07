@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 test("ranking coach panel follows content without duplicating the canonical crown clearance", () => {
-  const css = readFileSync(new URL("../app/touchline-tables/touchline-tables.module.css", import.meta.url), "utf8");
+  const css = readFileSync(new URL("../app/rankings/touchline-tables.module.css", import.meta.url), "utf8");
   const card = readFileSync(new URL("../components/touchline/cards/TouchlineCoachCard.tsx", import.meta.url), "utf8");
   const panelRules = Array.from(css.matchAll(/\.topCoachPanel\s*\{([^}]*)\}/g), match => match[1]);
   assert.ok(panelRules.some(rule => /align-self:\s*start;/.test(rule)
@@ -15,10 +15,12 @@ test("ranking coach panel follows content without duplicating the canonical crow
 });
 
 test("short landscape coach panel uses its spare width for identity without shrinking the card envelope", () => {
-  const css = readFileSync(new URL("../app/touchline-tables/touchline-tables.module.css", import.meta.url), "utf8");
+  const css = readFileSync(new URL("../app/rankings/touchline-tables.module.css", import.meta.url), "utf8");
   const landscape = css.slice(css.indexOf("@media (max-width: 1000px) and (max-height: 520px)"));
   assert.match(landscape, /grid-template-columns: minmax\(0, 160px\) minmax\(0, 240px\)/);
   assert.match(landscape, /\.topCoachCardLink\s*\{\s*width: 100%/);
-  assert.match(landscape, /\.topCoachIdentity\s*\{[^}]*text-align: left/);
+  assert.match(landscape, /\.topCoachIdentity\s*\{[^}]*justify-items: start;[^}]*text-align: start/);
+  const page = readFileSync(new URL("../app/rankings/page.tsx", import.meta.url), "utf8");
+  assert.match(page, /<main className=\{styles\.page\} dir="ltr"/);
   assert.doesNotMatch(landscape, /max-height:.*?;/);
 });

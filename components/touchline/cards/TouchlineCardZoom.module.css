@@ -98,13 +98,13 @@
    Share the first grid row without adding a track or horizontal overflow. */
 .panelWithDetails .close {
   position: sticky;
-  top: 4px;
-  right: 0;
+  inset-block-start: 4px;
+  inset-inline-end: 0;
   grid-column: 1 / -1;
   grid-row: 1;
   justify-self: end;
   align-self: start;
-  margin-bottom: -44px;
+  margin-block-end: -44px;
 }
 
 .cardColumn {
@@ -149,8 +149,8 @@
 .close {
   position: absolute;
   z-index: 8;
-  top: -12px;
-  right: -12px;
+  inset-block-start: -12px;
+  inset-inline-end: -12px;
   display: grid;
   width: 44px;
   height: 44px;
@@ -211,12 +211,12 @@
 }
 
 .expandedMeta span {
-  text-align: right;
+  text-align: end;
 }
 
 .contractAction span {
   min-width: 0;
-  text-align: left;
+  text-align: start;
 }
 
 .contractAction strong {
@@ -245,17 +245,17 @@
   cursor: default;
 }
 
-.identityDetails { grid-area: identity; text-align: right; }
+.identityDetails { grid-area: identity; text-align: end; }
 
 .performanceDetails {
   grid-area: performance;
-  text-align: left;
+  text-align: start;
 }
 
 .identityDetails::after {
   width: 72px;
   height: 1px;
-  margin-left: auto;
+  margin-inline-start: auto;
   background: linear-gradient(90deg, transparent, rgba(158, 255, 45, .9));
   content: "";
 }
@@ -322,7 +322,7 @@
   display: inline-grid;
   width: 17px;
   height: 17px;
-  margin-right: 7px;
+  margin-inline-end: 7px;
   place-items: center;
   color: #d8ff9b;
   vertical-align: -4px;
@@ -423,7 +423,7 @@
   font: inherit;
   font-size: 12px;
   font-weight: 900;
-  text-align: left;
+  text-align: start;
   cursor: pointer;
 }
 
@@ -502,9 +502,9 @@
     grid-template-areas: "card identity" "card performance";
     align-items: start;
   }
-  .panelWithDetails .identityDetails { text-align: left; }
-  .panelWithDetails .identityDetails::after { margin-left: 0; }
-  .panelWithDetails .identityDetails .detailsHeader { padding-right: 52px; }
+  .panelWithDetails .identityDetails { text-align: start; }
+  .panelWithDetails .identityDetails::after { margin-inline-start: 0; }
+  .panelWithDetails .identityDetails .detailsHeader { padding-inline-end: 52px; }
   .panelWithDetails .identityGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 16px; }
 }
 
@@ -529,8 +529,8 @@
     margin-inline: auto;
   }
   .details { border-top: 1px solid rgba(158, 255, 45, .28); padding: 16px 0 0; }
-  .identityDetails { text-align: left; }
-  .identityDetails::after { margin-left: 0; }
+  .identityDetails { text-align: start; }
+  .identityDetails::after { margin-inline-start: 0; }
   .identityGrid { grid-template-columns: 1fr 1fr; column-gap: 16px; }
   .statGrid,
   .fullStats { grid-template-columns: 1fr 1fr; }
@@ -576,9 +576,9 @@
        artwork behind the modal from competing with short-screen text. */
     background: rgb(2, 8, 9);
   }
-  .panelWithDetails .identityDetails { text-align: left; }
-  .panelWithDetails .identityDetails::after { margin-left: 0; }
-  .panelWithDetails .identityDetails .detailsHeader { padding-right: 52px; }
+  .panelWithDetails .identityDetails { text-align: start; }
+  .panelWithDetails .identityDetails::after { margin-inline-start: 0; }
+  .panelWithDetails .identityDetails .detailsHeader { padding-inline-end: 52px; }
   .panelWithDetails .detailsHeader h2 { font-size: clamp(22px, 3vw, 32px); line-height: 1.05; }
   .panelWithDetails .identityGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 16px; }
 }

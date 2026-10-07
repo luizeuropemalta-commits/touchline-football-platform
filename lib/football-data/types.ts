@@ -49,6 +49,7 @@ export type FootballDataErrorCode =
   | "provider_error"
   | "not_found"
   | "invalid_request"
+  | "deferred"
   | "rate_limited";
 
 export type FootballDataError = {
@@ -169,6 +170,21 @@ export type TouchlineSeason = {
   source: FootballDataSourceRef;
 };
 
+/** Allowlisted provider evidence only; not temporal novelty/delivery authority. */
+export type TouchlineFixturePeriod = {
+  providerId: string;
+  fixtureId: string;
+  typeId: string;
+  started?: number;
+  ended?: number;
+  countsFrom?: number;
+  ticking?: boolean;
+  sortOrder?: number;
+  minutes?: number;
+  seconds?: number;
+  hasTimer?: boolean;
+};
+
 export type TouchlineFixture = {
   id: string;
   providerId: string;
@@ -188,6 +204,7 @@ export type TouchlineFixture = {
   liveMinute?: number;
   liveSecond?: number;
   livePeriod?: string;
+  periods?: TouchlineFixturePeriod[];
   eventsCount?: number;
   providerUpdatedAt?: string;
   source: FootballDataSourceRef;
@@ -305,6 +322,7 @@ export type TouchlineFantasyEvent = {
   providerId: string;
   provider: FootballDataProviderName;
   fixtureId?: string;
+  periodId?: string;
   teamId?: string;
   playerId?: string;
   playerName?: string;

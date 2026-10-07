@@ -1,0 +1,15 @@
+.surface {
+  --touchline-head-award-scale: 1;
+}
+
+/* Only small cards on phone/tablet landscape get a modest readability lift.
+   The card reserves the same extra height as its enlarged head award. */
+@media (max-width: 950px) {
+  .surface[data-card-small="true"] {
+    --touchline-head-award-scale: 1.1;
+  }
+
+  :global([data-card-zoom="expanded"]) .surface {
+    --touchline-head-award-scale: 1;
+  }
+}

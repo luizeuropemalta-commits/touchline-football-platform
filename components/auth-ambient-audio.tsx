@@ -3,8 +3,9 @@
 import { Volume2, VolumeX } from "lucide-react";
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
-import { TOUCHLINE_ARENA_ENTRY_VIDEO, TOUCHLINE_ARENA_LOOP_VIDEO } from "@/lib/touchlineArena/arena-intro";
+import { TOUCHLINE_ARENA_ENTRY_VIDEO } from "@/lib/touchlineArena/arena-intro";
 import { touchlineAmbientAudioRoute } from "@/lib/touchlineArena/ambient-audio-policy";
+import { getTouchlineAmbientAudioCopy } from "@/lib/touchlineArena/ambient-audio-i18n";
 import { createQuietAudio } from "@/lib/touchlineArena/quiet-audio";
 import { readTouchlineArenaMediaAvailability, subscribeTouchlineArenaMediaAvailability } from "@/lib/touchlineArena/arena-media-playback";
 import shared from "./touchline/social/TouchlineSocial.module.css";
@@ -23,7 +24,7 @@ export function TouchlineAmbientAudioProvider({ children, enabled }: { children:
   const pathname = usePathname();
   const route = touchlineAmbientAudioRoute(pathname);
   const allowed = enabled && route !== "silent";
-  const source = route === "entry" ? TOUCHLINE_ARENA_ENTRY_VIDEO : TOUCHLINE_ARENA_LOOP_VIDEO;
+  const source = TOUCHLINE_ARENA_ENTRY_VIDEO;
   const audio = useRef<HTMLAudioElement>(null);
   const controller = useRef<ReturnType<typeof createQuietAudio> | null>(null);
   const mounted = useRef(false);
@@ -117,17 +118,17 @@ export function TouchlineAmbientAudioProvider({ children, enabled }: { children:
   </AmbientAudioContext.Provider>;
 }
 
-export function AuthAmbientAudio({ locale, className, buttonClassName }: { locale: string; className?: string; buttonClassName?: string }) {
-  const pt = locale === "pt-BR";
+export function AuthAmbientAudio({ locale, className, buttonClassName, allowDraftLocale = false }: { locale: string; className?: string; buttonClassName?: string; allowDraftLocale?: boolean }) {
+  const copy = getTouchlineAmbientAudioCopy(locale, allowDraftLocale);
   const ambient = useContext(AmbientAudioContext);
   if (!ambient?.available) return null;
   const { state, toggle } = ambient;
   return <div className={className ?? shared.profileActions} style={{ "--social-accent": "#b7ff46" } as CSSProperties}>
     <button className={buttonClassName} type="button" aria-pressed={state === "on"} onClick={() => void toggle()}
-      aria-label={state === "on" || state === "starting" ? (pt ? "Silenciar som ambiente" : "Mute ambient sound") : (pt ? "Ativar som ambiente suave" : "Enable quiet ambient sound")}>
+      aria-label={state === "on" || state === "starting" ? copy.mute : copy.enable}>
       {state === "on" ? <Volume2 size={16} aria-hidden="true" /> : <VolumeX size={16} aria-hidden="true" />}
-      {pt ? "Som" : "Sound"}
+      {copy.sound}
     </button>
-    {state === "error" ? <span role="status" className="text-xs text-slate-300">{pt ? "Som indisponível. Tente novamente." : "Sound unavailable. Try again."}</span> : null}
+    {state === "error" ? <span role="status" className="text-xs text-slate-300">{copy.unavailable}</span> : null}
   </div>;
 }

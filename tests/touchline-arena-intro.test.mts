@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
+import { getTouchlineIntroCopy } from "../lib/touchlineArena/intro-i18n.ts";
 
 import {
   TOUCHLINE_ARENA_ENTRY_VIDEO,
@@ -11,7 +12,6 @@ import {
   TOUCHLINE_ARENA_INTRO_STORAGE_KEY,
   TOUCHLINE_ARENA_INTRO_TIMELINE,
   TOUCHLINE_ARENA_INTRO_VERSION,
-  TOUCHLINE_ARENA_LOOP_VIDEO,
   TOUCHLINE_ARENA_OFFICIAL_LOGO,
   TOUCHLINE_ARENA_SKIP_INTRO_QUERY_PARAM,
   TOUCHLINE_ARENA_VIDEO_POSTER,
@@ -45,17 +45,12 @@ test("official Arena intro keeps the current TouchLine identity and existing med
 
   assert.equal(TOUCHLINE_ARENA_OFFICIAL_LOGO, "/touchlineArena/brand/tl-shield-lime.svg");
   assert.equal(TOUCHLINE_ARENA_ENTRY_VIDEO, "/touchlineArena/arena/touchline-arena-entry-20260716.mp4");
-  assert.equal(
-    TOUCHLINE_ARENA_LOOP_VIDEO,
-    "/touchlineArena/arena/touchline-arena-loop-20260716.mp4?v=202607170155",
-  );
   assert.equal(TOUCHLINE_ARENA_VIDEO_POSTER, "/touchlineArena/arena/touchline-arena-poster-20260722.jpg");
   assert.equal(TOUCHLINE_ARENA_INTRO_SLOGAN, "THIS IS NOT A FANTASY.\nTHIS IS REALITY.");
 
   for (const asset of [
     TOUCHLINE_ARENA_OFFICIAL_LOGO,
     TOUCHLINE_ARENA_ENTRY_VIDEO,
-    TOUCHLINE_ARENA_LOOP_VIDEO,
     TOUCHLINE_ARENA_VIDEO_POSTER,
   ]) {
     assert.equal(publicAssetExists(asset), true, asset);
@@ -63,6 +58,8 @@ test("official Arena intro keeps the current TouchLine identity and existing med
 
   assert.match(introComponent, /import \{[\s\S]*?TOUCHLINE_ARENA_OFFICIAL_LOGO/);
   assert.match(introComponent, /<Image[\s\S]*?src=\{TOUCHLINE_ARENA_OFFICIAL_LOGO\}/);
+  assert.doesNotMatch(source("lib/touchlineArena/arena-intro.ts"), /TOUCHLINE_ARENA_LOOP_VIDEO|touchline-arena-loop-/);
+  assert.equal(publicAssetExists("/touchlineArena/arena/touchline-arena-loop-20260716.mp4"), false);
 });
 
 test("intro intent gives first registration priority and accepts only the explicit skip contract", () => {
@@ -142,8 +139,8 @@ test("the shared intro component implements an explicit first-entry sequence, sk
   assert.match(component, /revealRef\.current\(reducedMotion\)/);
   assert.match(component, /return \(\) => timers\.forEach\(\(timer\) => window\.clearTimeout\(timer\)\)/);
   assert.match(component, /mode === "hidden" \|\| mode === "skip"/);
-  assert.match(component, /Pular intro/);
-  assert.match(component, /Skip intro/);
+  assert.equal(getTouchlineIntroCopy("pt-BR").skipIntro, "Pular intro"); assert.match(component, /\{copy\.skipIntro\}/);
+  assert.equal(getTouchlineIntroCopy("en-GB").skipIntro, "Skip intro"); assert.match(component, /const copy = getTouchlineIntroCopy\(locale, draftLocalesEnabled\)/);
   assert.match(component, /onClick=\{\(\) => skipRef\.current\(\)\}/);
   assert.match(component, /import Image from "next\/image"/);
   assert.match(component, /<Image[\s\S]*?src=\{TOUCHLINE_ARENA_OFFICIAL_LOGO\}/);
@@ -218,7 +215,7 @@ test("registration background uses one uninterrupted official intro and preserve
   assert.match(entryVideo, /loop/);
   assert.match(entryVideo, /playsInline/);
   assert.match(entryVideo, /preload="auto"/);
-  assert.match(layout, /<Logo[\s\S]*?officialArena\s*\/>/);
+  assert.match(layout, /<Logo\s+href=\{brandHref \?\? publicArenaHref\} officialArena subtitle=\{brandSubtitle\} wordmarkClassName=\{brandWordmarkClassName\} showMark=\{showBrandMark\} minimalMark=\{minimalBrandMark\}\s*\/>/);
   assert.match(layout, /<header className="auth-brand-header/);
   const brandHeader = globalStyles.match(/\.auth-brand-header\s*\{([^}]+)\}/)?.[1] ?? "";
   assert.match(brandHeader, /position: relative;/);
@@ -236,6 +233,6 @@ test("dedicated intro always offers skip and hands off to Market without a backg
   assert.match(entry, /onSkip=\{finish\}/);
   assert.match(entry, /mode === "hidden"/);
   assert.match(entry, /onClick=\{finish\}/);
-  assert.match(entry, /router.replace\(`\/market-transfer\?lang=/);
+  assert.match(entry, /router.replace\(`\/clubowner\?lang=/);
   assert.doesNotMatch(entry, /LOOP_VIDEO|ArenaClient/);
 });

@@ -5,7 +5,7 @@ import { createRankingLoadDiagnostics } from "../lib/touchlineArena/ranking-load
 const env = { TOUCHLINE_QA_RANKING_TIMINGS: "true", VERCEL_ENV: "preview", VERCEL_GIT_COMMIT_REF: "qa", NEXT_PUBLIC_SUPABASE_URL: "https://xgxbwqxjssxxuihuwmgy.supabase.co" };
 const labels = ["activeRanking", "topXI", "catalog", "coach", "count", "fixtures", "auth"] as const;
 test("page instruments seven independent branches and seals collection", () => {
-  const page = readFileSync(new URL("../app/touchline-tables/page.tsx", import.meta.url), "utf8");
+  const page = readFileSync(new URL("../app/rankings/page.tsx", import.meta.url), "utf8");
   for (const label of labels) assert.ok(page.includes(`measure("${label}"`), label);
   assert.match(page, /diagnostics\.seal\(\)/);
 });

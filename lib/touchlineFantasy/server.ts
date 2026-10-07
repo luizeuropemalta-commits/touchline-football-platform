@@ -423,6 +423,8 @@ async function loadFantasySnapshotCore(user: User, projection: "full" | "arena",
       : Promise.resolve({ data: null, error: null }),
     projection === "full" && activeGameweek ? loadRankings(admin, activeGameweek.id, seasonId, user.id) : Promise.resolve({ gameweek: [], season: [] }),
   ]);
+  // A failed read is not evidence that the customer has no team.
+  if (userGameweekResponse.error) return null;
   const userGameweekRow = userGameweekResponse.data as Row | null;
   const userGameweekId = text(userGameweekRow?.id);
   if (activeGameweek && userGameweekId) {
@@ -437,6 +439,11 @@ async function loadFantasySnapshotCore(user: User, projection: "full" | "arena",
           admin.from("touchline_fantasy_user_gameweek_selections").select("player_id,slot_id").eq("user_gameweek_id", userGameweekId),
           admin.from("touchline_fantasy_locked_selections").select("player_id,slot_id").eq("user_gameweek_id", userGameweekId),
         ]);
+        // Never fall back to a draft when the locked XI could not be read.
+        if (draftResponse.error || lockedResponse.error
+          || !Array.isArray(draftResponse.data) || !Array.isArray(lockedResponse.data)) {
+          throw new Error("TOUCHLINE_LINEUP_READ_UNAVAILABLE");
+        }
         const selectionRows = rows(lockedResponse.data).length ? rows(lockedResponse.data) : rows(draftResponse.data);
         const selections = selectionRows.flatMap((row): TouchlineFantasySelectionView[] => {
           const playerId = text(row.player_id);

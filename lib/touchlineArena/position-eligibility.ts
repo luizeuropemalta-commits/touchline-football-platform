@@ -1,4 +1,5 @@
 import { normalizeTouchLineLocale, type TouchLineLocale } from "./i18n.ts";
+import { getTouchlineMarketPositionCopy } from "./market-position-i18n.ts";
 
 export type TouchlineRosterRole = "goalkeeper" | "defender" | "midfielder" | "forward";
 
@@ -99,29 +100,10 @@ export function touchlineMarketPositionBucket(position?: string | null, role?: T
 export function touchlineMarketPositionBucketLabel(
   bucket: TouchlineMarketPositionBucket,
   locale?: TouchLineLocale | string | null,
+  draftLocalesEnabled = false,
 ) {
-  const normalizedLocale = normalizeTouchLineLocale(locale);
-  if (normalizedLocale === "pt-BR") {
-    if (bucket === "goalkeeper") return "Goleiro / GK";
-    if (bucket === "centre-back") return "Zagueiro / CB";
-    if (bucket === "right-back") return "Lateral direito / RB";
-    if (bucket === "left-back") return "Lateral esquerdo / LB";
-    if (bucket === "defensive-midfield") return "Volante / CDM";
-    if (bucket === "midfield") return "Meia / MID";
-    if (bucket === "attacker") return "Atacante / ATT";
-    if (bucket === "centre-forward") return "Centroavante / ST";
-    return "Posição em classificação";
-  }
-
-  if (bucket === "goalkeeper") return "Goalkeeper / GK";
-  if (bucket === "centre-back") return "Centre-back / CB";
-  if (bucket === "right-back") return "Right-back / RB";
-  if (bucket === "left-back") return "Left-back / LB";
-  if (bucket === "defensive-midfield") return "Defensive midfielder / CDM";
-  if (bucket === "midfield") return "Midfielder / MID";
-  if (bucket === "attacker") return "Attacker / ATT";
-  if (bucket === "centre-forward") return "Centre-forward / ST";
-  return "Position pending classification";
+  const copy = getTouchlineMarketPositionCopy(locale, draftLocalesEnabled);
+  return Object.hasOwn(copy, bucket) ? copy[bucket] : copy.outfield;
 }
 
 export function touchlineMarketPositionBucketCount(players: TouchlineMarketPositionInput[]) {

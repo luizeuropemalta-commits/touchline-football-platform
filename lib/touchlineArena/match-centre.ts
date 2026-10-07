@@ -5,7 +5,9 @@ import type {
 } from "@/lib/football-data/public-fantasy-fixture";
 import type { TouchlineFixture } from "@/lib/football-data/types";
 import { selectArenaFixtureRound } from "./arena-fixture-round.ts";
-import type { TouchLineLocale } from "@/lib/touchlineArena/i18n";
+import { type TouchLineLocale } from "./i18n.ts";
+import { resolveTouchlineCatalogueLocale } from "./catalogue-locale.ts";
+import { getTouchlineMatchCentreCopy } from "./match-centre-i18n.ts";
 
 export type TouchlineMatchState = "live" | "upcoming" | "finished" | "unknown";
 export type TouchlineMatchCentreDisplayState = TouchlineMatchState | "stale";
@@ -27,25 +29,25 @@ export const TOUCHLINE_MATCH_CENTRE_TIME_ZONE_FALLBACK = "UTC";
 
 /**
  * The database preserves provider facts but does not guarantee their result
- * order. The Match Centre must always read as a football timeline: earliest
- * event first, stoppage-time second, and a stable identifier only as the
- * final tie-breaker.
+ * order. The Match Centre shows the latest known minute first, then the latest
+ * stoppage-time minute. Equal moments preserve their received order. Events
+ * without a finite minute stay at the bottom without guessing their time.
  */
 export function orderTouchlineMatchEvents(
   events: readonly TouchlinePublicFantasyEvent[],
 ) {
   const eventTime = (event: TouchlinePublicFantasyEvent) => {
-    const minute = Number.isFinite(event.minute) ? event.minute! : Number.POSITIVE_INFINITY;
-    const extraMinute = Number.isFinite(event.extraMinute) ? event.extraMinute! : 0;
+    const minute = Number.isFinite(event.minute) ? event.minute! : Number.NEGATIVE_INFINITY;
+    const extraMinute = Number.isFinite(event.minute) && Number.isFinite(event.extraMinute) ? event.extraMinute! : 0;
     return [minute, extraMinute] as const;
   };
 
   return events.slice().sort((left, right) => {
     const [leftMinute, leftExtraMinute] = eventTime(left);
     const [rightMinute, rightExtraMinute] = eventTime(right);
-    return leftMinute - rightMinute
-      || leftExtraMinute - rightExtraMinute
-      || left.id.localeCompare(right.id);
+    return rightMinute - leftMinute
+      || rightExtraMinute - leftExtraMinute
+      || 0;
   });
 }
 
@@ -79,6 +81,7 @@ export function normalizeTouchlineMatchCentreTimeZone(value?: string | null) {
 
 function touchlineDateKey(date: Date, timeZone: string) {
   const parts = new Intl.DateTimeFormat("en-CA", {
+    calendar: "gregory",
     day: "2-digit",
     month: "2-digit",
     timeZone,
@@ -97,17 +100,20 @@ export function touchlineFixtureRailDateLabel(
   locale: TouchLineLocale,
   timeZone: string,
   now = Date.now(),
+  draftLocalesEnabled = false,
 ) {
   const startsAt = fixture.startsAt ? Date.parse(fixture.startsAt) : Number.NaN;
   if (!Number.isFinite(startsAt) || !Number.isFinite(now)) return "—";
 
+  const language = resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled);
   const normalizedTimeZone = normalizeTouchlineMatchCentreTimeZone(timeZone);
   const fixtureDate = new Date(startsAt);
   if (touchlineDateKey(fixtureDate, normalizedTimeZone) === touchlineDateKey(new Date(now), normalizedTimeZone)) {
-    return locale === "pt-BR" ? "HOJE" : "TODAY";
+    return getTouchlineMatchCentreCopy(language, draftLocalesEnabled).today;
   }
 
-  const parts = new Intl.DateTimeFormat(locale, {
+  const parts = new Intl.DateTimeFormat(language, {
+    calendar: "gregory",
     day: "2-digit",
     month: "short",
     timeZone: normalizedTimeZone,
@@ -119,7 +125,7 @@ export function touchlineFixtureRailDateLabel(
   return [compact("weekday"), compact("day"), compact("month")]
     .filter(Boolean)
     .join(" ")
-    .toLocaleUpperCase(locale);
+    .toLocaleUpperCase(language);
 }
 
 type TouchlineFixtureStateSource = Pick<TouchlineFixture, "startsAt" | "status">;
@@ -128,17 +134,39 @@ type TouchlineFixtureSelectionSource = TouchlineFixtureStateSource & Pick<Touchl
 const LIVE_STATUS = /(?:live|in[ -]?play|in progress|1st|2nd|half[ -]?time|extra time|penalt)/i;
 const FINISHED_STATUS = /(?:^ft(?:_|$)|full[ -]?time|finished|after extra time|aet|after penalties|cancelled|canceled|abandoned|awarded|walkover)/i;
 
-const FIXTURE_STATUS_LABELS: Partial<Record<TouchLineLocale, Record<string, string>>> = {
-  "en-GB": { "1st half": "1st Half", "first half": "1st Half", "2nd half": "2nd Half", "second half": "2nd Half", "half time": "Half-time", halftime: "Half-time", "full time": "Full Time", finished: "Full Time", ft: "Full Time", live: "LIVE", "in play": "LIVE", inplay: "LIVE", next: "Next", "not started": "Not started" },
-  "pt-BR": { "1st half": "1º tempo", "first half": "1º tempo", "2nd half": "2º tempo", "second half": "2º tempo", "half time": "Intervalo", halftime: "Intervalo", "full time": "Encerrado", finished: "Encerrado", ft: "Encerrado", live: "AO VIVO", "in play": "AO VIVO", inplay: "AO VIVO", next: "Próximo", "not started": "Não iniciado" },
-};
+const enGBFixtureStatus = {
+  firstHalf: "1st Half", secondHalf: "2nd Half", halfTime: "Half-time", fullTime: "Full Time",
+  live: "LIVE", next: "Next", notStarted: "Not started",
+} as const;
+type FixtureStatusCopy = Readonly<Record<keyof typeof enGBFixtureStatus, string>>;
+// These are presentation drafts, not changes to provider states or permission
+// to publish a language. The shared complete-locale normalizer remains EN/PT.
+export const TOUCHLINE_FIXTURE_STATUS_DRAFT_LOCALES = ["es-ES", "it-IT", "fr-FR", "ar-SA", "tr-TR", "de-DE"] as const;
+export const TOUCHLINE_FIXTURE_STATUS_DRAFT_STATUS = "draft" as const;
+export const TOUCHLINE_FIXTURE_STATUS_CATALOGUES = {
+  "en-GB": enGBFixtureStatus,
+  "pt-BR": { firstHalf: "1º tempo", secondHalf: "2º tempo", halfTime: "Intervalo", fullTime: "Encerrado", live: "AO VIVO", next: "Próximo", notStarted: "Não iniciado" },
+  "es-ES": { firstHalf: "Primera parte", secondHalf: "Segunda parte", halfTime: "Descanso", fullTime: "Finalizado", live: "EN DIRECTO", next: "Próximo", notStarted: "No iniciado" },
+  "it-IT": { firstHalf: "Primo tempo", secondHalf: "Secondo tempo", halfTime: "Intervallo", fullTime: "Fine partita", live: "IN DIRETTA", next: "Prossima", notStarted: "Non iniziata" },
+  "fr-FR": { firstHalf: "1re mi-temps", secondHalf: "2e mi-temps", halfTime: "Mi-temps", fullTime: "Terminé", live: "EN DIRECT", next: "À venir", notStarted: "Pas commencé" },
+  "ar-SA": { firstHalf: "الشوط الأول", secondHalf: "الشوط الثاني", halfTime: "استراحة بين الشوطين", fullTime: "انتهت المباراة", live: "مباشر", next: "القادم", notStarted: "لم تبدأ" },
+  "tr-TR": { firstHalf: "1. yarı", secondHalf: "2. yarı", halfTime: "Devre arası", fullTime: "Maç sona erdi", live: "CANLI", next: "Sıradaki", notStarted: "Başlamadı" },
+  "de-DE": { firstHalf: "1. Halbzeit", secondHalf: "2. Halbzeit", halfTime: "Halbzeitpause", fullTime: "Abpfiff", live: "LIVE", next: "Nächstes Spiel", notStarted: "Nicht begonnen" },
+} as const satisfies Readonly<Record<TouchLineLocale, FixtureStatusCopy>>;
+const FIXTURE_STATUS_ALIASES = {
+  "1st half": "firstHalf", "first half": "firstHalf", "2nd half": "secondHalf", "second half": "secondHalf",
+  "half time": "halfTime", halftime: "halfTime", "full time": "fullTime", finished: "fullTime", ft: "fullTime",
+  live: "live", "in play": "live", inplay: "live", next: "next", "not started": "notStarted",
+} as const satisfies Readonly<Record<string, keyof FixtureStatusCopy>>;
 
 /** Provider status values are facts; render the known shared vocabulary in the selected locale. */
-export function touchlineFixtureStatusLabel(value: string | null | undefined, locale: TouchLineLocale) {
+export function touchlineFixtureStatusLabel(value: string | null | undefined, locale: TouchLineLocale, draftLocalesEnabled = false) {
   const status = value?.trim() ?? "";
   if (!status) return "";
   const key = status.toLowerCase().replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
-  return FIXTURE_STATUS_LABELS[locale]?.[key] ?? status;
+  if (!Object.hasOwn(FIXTURE_STATUS_ALIASES, key)) return status;
+  const meaning = FIXTURE_STATUS_ALIASES[key as keyof typeof FIXTURE_STATUS_ALIASES];
+  return TOUCHLINE_FIXTURE_STATUS_CATALOGUES[resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled)][meaning];
 }
 
 export function touchlineFixtureState(fixture: TouchlineFixtureStateSource, now = Date.now()): TouchlineMatchState {

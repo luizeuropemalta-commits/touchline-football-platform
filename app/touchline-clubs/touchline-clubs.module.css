@@ -1,12 +1,15 @@
 .shell {
   min-height: 100vh;
-  padding: clamp(18px, 4vw, 58px);
   background:
     radial-gradient(circle at 18% -10%, rgba(183,255,75,.22), transparent 30%),
     radial-gradient(circle at 85% 6%, rgba(89,181,255,.18), transparent 32%),
     linear-gradient(135deg, #07110f 0%, #020505 62%, #050909 100%);
   color: #f7fbf7;
   font-family: Arial, sans-serif;
+}
+
+.content {
+  padding: clamp(18px, 4vw, 58px);
 }
 
 .topbar {
@@ -319,7 +322,7 @@
 }
 
 @media (max-width: 560px) {
-  .shell {
+  .content {
     padding: 12px;
   }
 

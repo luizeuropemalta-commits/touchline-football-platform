@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { getTouchlineCoachProfileCopy } from "../lib/touchlineArena/coach-profile-i18n.ts";
+import { getTouchlineCoachCardCopy } from "../lib/touchlineArena/coach-card-i18n.ts";
 
 import {
   touchlineCoachClassificationForProviderId,
@@ -24,16 +26,23 @@ test("Coach Profile resolves the canonical live-coach registry and shared compet
 
 test("Coach Profile keeps unverified historical evidence explicit instead of inventing it", () => {
   assert.match(source, /historyAvailable/);
-  assert.match(source, /has not yet been confirmed by the official source/);
-  assert.match(source, /keeps the classification pending instead of inventing data/);
+  assert.match(source, /className="coach-profile-pending">\{copy\.historyPending\}/);
+  assert.equal(getTouchlineCoachProfileCopy("en-GB").historyPending, "Club and league history has not yet been confirmed by the official source. TouchLine keeps the classification pending instead of inventing data.");
+  assert.equal(getTouchlineCoachProfileCopy("pt-BR").historyPending, "O histórico de clubes e ligas ainda não foi confirmado pela fonte oficial. A TouchLine mantém a classificação pendente em vez de inventar dados.");
 });
 
 test("Coach Profile uses a balanced official-facts rail without repeating TouchLine points", () => {
   assert.match(source, /coach-profile-facts/);
   assert.match(source, /coach-profile-campaign/);
-  assert.match(source, /Current club/);
-  assert.match(source, /Home campaign/);
-  assert.match(source, /Away campaign/);
+  assert.match(source, /\{cardCopy\.currentClub\}/);
+  assert.equal(getTouchlineCoachCardCopy("en-GB").currentClub, "Current club");
+  assert.equal(getTouchlineCoachCardCopy("pt-BR").currentClub, "Clube atual");
+  assert.match(source, /label: copy\.homeCampaign/);
+  assert.match(source, /label: copy\.awayCampaign/);
+  assert.equal(getTouchlineCoachProfileCopy("en-GB").homeCampaign, "Home campaign");
+  assert.equal(getTouchlineCoachProfileCopy("pt-BR").homeCampaign, "Campanha em casa");
+  assert.equal(getTouchlineCoachProfileCopy("en-GB").awayCampaign, "Away campaign");
+  assert.equal(getTouchlineCoachProfileCopy("pt-BR").awayCampaign, "Campanha fora");
   assert.doesNotMatch(source, /record\.touchlinePoints}L?\s*PTS/);
 });
 

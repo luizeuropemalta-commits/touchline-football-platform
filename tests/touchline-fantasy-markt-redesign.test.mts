@@ -3,6 +3,8 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { buildTouchlineFantasyArenaLineup } from "../lib/touchlineFantasy/arena-lineup.ts";
 import { resolveTouchlineFantasyMarketClock } from "../lib/touchlineFantasy/domain.ts";
+import { getTouchlineFantasyMarketWorkflowCopy } from "../lib/touchlineFantasy/market-workflow-i18n.ts";
+import { touchlineFantasyLineupErrorCopy } from "../lib/touchlineFantasy/market-state-i18n.ts";
 
 async function source(path: string) {
   return readFile(new URL(`../${path}`, import.meta.url), "utf8");
@@ -10,16 +12,16 @@ async function source(path: string) {
 
 test("Market reuses the Gameweek transaction boundary and legacy Fantasy forwards safely", async () => {
   const [market, alias, client, route] = await Promise.all([
-    source("app/market-transfer/page.tsx"),
+    source("app/clubowner/page.tsx"),
     source("app/fantasy/page.tsx"),
     source("app/fantasy/FantasyGameweekClient.tsx"),
     source("app/api/touchline-fantasy/lineup/route.ts"),
   ]);
-  assert.match(market, /<FantasyGameweekClient[^>]*initialSnapshot=\{snapshot\} locale=\{locale\} embedded marketPage/);
+  assert.match(market, /<FantasyGameweekClient[^>]*initialSnapshot=\{snapshot\} locale=\{locale\} draftLocalesEnabled=\{draftLocalesEnabled\} embedded marketPage/);
   assert.match(client, /initialPlayerClubTeamId\?: string \| null/);
   assert.match(client, /TOUCHLINE_ENGLAND_CLUBS_BY_RANK\.some\(\(club\) => club\.teamId === initialPlayerClubTeamId\)/);
   assert.doesNotMatch(market, /standaloneMarket|<ArenaClient/);
-  assert.match(alias, /redirect\(`\/market-transfer\?lang=\$\{encodeURIComponent\(locale\)\}`\)/);
+  assert.match(alias, /redirect\(`\/clubowner\?lang=\$\{encodeURIComponent\(locale\)\}`\)/);
   assert.match(client, /selectedCoachId/);
   assert.match(route, /p_selected_coach_id: input\.selectedCoachId/);
   assert.match(route, /MAX_LINEUP_REQUEST_BYTES = 8_192/);
@@ -106,7 +108,7 @@ test("the My Club presentation keeps the guided coach-first Gameweek flow", asyn
   assert.match(client, /function canonicalRosterRole[\s\S]*?role === "goalkeeper"[\s\S]*?role === "defender"[\s\S]*?role === "midfielder"[\s\S]*?role === "forward"/);
   assert.match(client, /touchlineMarketPositionBucket\(card\.position, canonicalRosterRole\(card\.role\)\)/);
   assert.doesNotMatch(client, /card\.role === "goalkeeper" \? "goalkeeper" : null/);
-  assert.match(client, /TouchlineGameweekCard card=\{card\} locale=\{locale\} displayWidth=\{132\}/);
+  assert.match(client, /TouchlineGameweekCard card=\{card\} locale=\{locale\} draftLocalesEnabled=\{draftLocalesEnabled\} displayWidth=\{132\}/);
   assert.doesNotMatch(client, /className=\{styles\.pagination\}/);
   assert.match(client, /className=\{styles\.selectedCoachSummary\}[\s\S]*?selectedCoach\.competition\.rank[\s\S]*?selectedCoach\.competition\?\.home\.touchlinePoints[\s\S]*?selectedCoach\.competition\?\.away\.touchlinePoints/);
   assert.match(client, /function FantasyCoachZoom[\s\S]*?TouchlineCoachCardZoom[\s\S]*?profileHref=/);
@@ -116,14 +118,27 @@ test("the My Club presentation keeps the guided coach-first Gameweek flow", asyn
   assert.match(styles, /\.shell\{[\s\S]*?width:min\(1880px,calc\(100% - 24px\)\)/);
   assert.match(styles, /\.hero h1\{[\s\S]*?font-size:clamp\(28px,3vw,46px\)/);
   assert.doesNotMatch(client, /Gire para o modo retrato|Rotate to portrait|touchlineFantasyLandscapeIsBlocked/);
-  assert.match(client, /formatTouchlineFantasyDeadline\(activeGameweek\.locksAt, locale\)/);
-  assert.match(client, /<MarketWindowClock gameweeks=\{gameweeks\} locale=\{locale\} \/>/);
+  assert.match(client, /formatTouchlineFantasyDeadline\(activeGameweek\.locksAt, locale, draftLocalesEnabled\)/);
+  assert.match(client, /<MarketWindowClock gameweeks=\{gameweeks\} locale=\{locale\} draftLocalesEnabled=\{draftLocalesEnabled\} \/>/);
   assert.match(client, /resolveTouchlineFantasyMarketClock/);
-  assert.match(client, /Mercado fecha em|Market closes in/);
-  assert.match(client, /Mercado reabre em|Market reopens in/);
+  const { getTouchlineFantasyMarketClockCopy } = await import("../lib/touchlineFantasy/market-clock-i18n.ts");
+  assert.deepEqual([getTouchlineFantasyMarketClockCopy("pt-BR").closesIn, getTouchlineFantasyMarketClockCopy("en-GB").closesIn], ["Mercado fecha em", "Market closes in"]);
+  assert.match(client, /import \{[^}]*getTouchlineFantasyMarketClockCopy[^}]*\} from "@\/lib\/touchlineFantasy\/market-clock-i18n"/);
+  assert.match(client, /const copy = getTouchlineFantasyMarketClockCopy\(locale, draftLocalesEnabled\)/);
+  assert.match(client, /timed \? copy\.closesIn : copy\.open/);
+  assert.deepEqual([getTouchlineFantasyMarketClockCopy("pt-BR").reopensIn, getTouchlineFantasyMarketClockCopy("en-GB").reopensIn], ["Mercado reabre em", "Market reopens in"]);
+  assert.match(client, /timed \? copy\.reopensIn : copy\.closed/);
   assert.match(client, /const countdownWindowMs = 24 \* 60 \* 60 \* 1_000/);
-  assert.match(client, /O cronômetro inicia 24h antes|The countdown starts 24 hours before/);
-  assert.match(client, /Market Closed/);
+  for (const key of ["closesAt", "reopensAt"] as const) {
+    assert.match(getTouchlineFantasyMarketClockCopy("pt-BR")[key], /O cronômetro inicia 24h antes/);
+    assert.match(getTouchlineFantasyMarketClockCopy("en-GB")[key], /The countdown starts 24 hours before/);
+  }
+  assert.match(client, /copy\.closesAt\.replace\("\{deadline\}", formatTouchlineFantasyDeadline\(clock\.targetAt, locale, draftLocalesEnabled\)\)/);
+  assert.match(client, /copy\.reopensAt\.replace\("\{deadline\}", formatTouchlineFantasyDeadline\(clock\.targetAt, locale, draftLocalesEnabled\)\)/);
+  const { getTouchlineFantasyMarketAccessCopy } = await import("../lib/touchlineFantasy/market-access-i18n.ts");
+  assert.equal(getTouchlineFantasyMarketAccessCopy("en-GB").closed, "Market Closed");
+  assert.match(client, /const marketAccessCopy = getTouchlineFantasyMarketAccessCopy\(locale, draftLocalesEnabled\)/);
+  assert.match(client, /const marketStatusLabel = !activeGameweek\?\.state \? marketAccessCopy\.unavailable : marketOpen \? marketAccessCopy\.open : marketAccessCopy\.closed;/);
   assert.doesNotMatch(client, /AGUARDANDO RESULTADOS|AWAITING RESULTS/);
   assert.doesNotMatch(client, /GAMEWEEK RATING/);
   assert.match(styles, /\.marketClock\{[\s\S]*?min-width:250px[\s\S]*?overflow:hidden/);
@@ -131,7 +146,7 @@ test("the My Club presentation keeps the guided coach-first Gameweek flow", asyn
   assert.match(styles, /@media\(max-width:760px\)\{[\s\S]*?\.marketClock\{width:100%/);
   assert.match(styles, /@media \(orientation:landscape\) and \(max-width:1100px\) and \(max-height:520px\)/);
   assert.match(styles, /\.pitchCard\{width:46px\}/);
-  assert.match(client, /\/market-transfer\?lang=/);
+  assert.match(client, /\/clubowner\?lang=/);
 });
 
 test("the Markt clock follows canonical close and reopen timestamps without inventing a live-round deadline", () => {
@@ -204,7 +219,7 @@ test("shared Gameweek presentation preserves exact XI identity and position elig
   assert.match(market, /data-market-starting-xi="true"/);
   assert.match(market, /\{selectedCount\}\/11/);
   assert.doesNotMatch(market, /No Fantasy bench|Nenhum banco Fantasy/);
-  assert.match(market, /formatTouchlineFantasyDeadline\(activeGameweek\.locksAt, locale\)/);
+  assert.match(market, /formatTouchlineFantasyDeadline\(activeGameweek\.locksAt, locale, draftLocalesEnabled\)/);
   assert.match(arenaAdapter, /userGameweek\.state === "DRAFT"/);
   assert.match(arenaAdapter, /snapshot\.selections\.length !== 11/);
   assert.match(arenaAdapter, /seen\.size !== 11/);
@@ -369,7 +384,9 @@ test("the customer owns club choice and every successful save is reloaded from t
   assert.doesNotMatch(client, /nextValidation\.issues\.includes\("CLUB_LIMIT"\)/);
   assert.match(client, /loadPersistedLineup/);
   assert.match(client, /authoritativeFingerprint !== expectedFingerprint/);
-  assert.match(client, /Rascunho gravado e verificado no TouchLine/);
+  assert.deepEqual([getTouchlineFantasyMarketWorkflowCopy("pt-BR").draftVerified, getTouchlineFantasyMarketWorkflowCopy("en-GB").draftVerified], ["Rascunho gravado e verificado no TouchLine.", "Draft persisted and verified in TouchLine."]);
+  assert.match(client, /const workflowCopy = getTouchlineFantasyMarketWorkflowCopy\(locale, draftLocalesEnabled\)/);
+  assert.match(client, /setFeedback\(action === "confirm" \? \(workflowCopy\.confirmVerified\) : \(workflowCopy\.draftVerified\)\)/);
   assert.match(client, /Alterações não salvas/);
   assert.match(client, /Trocar treinador/);
   assert.match(client, /Editar jogadores/);
@@ -391,7 +408,9 @@ test("the existing Gameweek transaction owns the canonical €900M budget", asyn
   assert.match(domain, /TOUCHLINE_FANTASY_INITIAL_BUDGET_EUR = 900_000_000/);
   assert.match(server, /budgetEur: number\(config\.budget_eur\) \?\? TOUCHLINE_FANTASY_INITIAL_BUDGET_EUR/);
   assert.doesNotMatch(server, /budgetEur:[^\n]*350_000_000/);
-  assert.match(client, /orçamento de €900M/);
+  assert.deepEqual([touchlineFantasyLineupErrorCopy("TL_FANTASY_BUDGET_EXCEEDED", "pt-BR"), touchlineFantasyLineupErrorCopy("TL_FANTASY_BUDGET_EXCEEDED", "en-GB")], ["Este time ultrapassa o orçamento de €900M.", "This team exceeds the €900M budget."]);
+  assert.match(client, /return touchlineFantasyLineupErrorCopy\(code, locale, draftLocalesEnabled\)/);
+  assert.match(client, /if \(!response\.ok\) return setFeedback\(lineupErrorCopy\(String\(payload\?\.error \?\? ""\), locale, draftLocalesEnabled\)\)/);
   assert.match(client, /orçamento permanece em €900M/);
   assert.doesNotMatch(client, /€350M/);
   assert.match(migration, /touchline_assert_qa_fixture_target\('xgxbwqxjssxxuihuwmgy'\)/);

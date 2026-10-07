@@ -5,6 +5,17 @@ import { getTouchLineAuthCopy, touchLineAuthHref } from "../lib/touchlineArena/a
 
 const source = (path: string) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 
+test("account navigation no longer advertises the retired Arena while preserving active destinations", () => {
+  const shell = source("components/arena-admin-shell.tsx");
+  assert.doesNotMatch(shell, /"[^"\n]*\bArena\b[^"\n]*"|>\s*Arena\s*</);
+  for (const path of ["/intro", "/notifications", "/inbox", "/football-search", "/admin"]) {
+    assert.ok(shell.includes(`href: "${path}"`), path);
+  }
+  assert.ok(shell.includes('touchLineAuthHref("/intro", locale)'));
+  assert.match(shell, /Conta ClubOwner/);
+  assert.match(shell, /ClubOwner account/);
+});
+
 test("public authentication copy names TouchLine in both locales, including cinematic and recovery states", () => {
   function assertPublicValues(value: unknown, path: string) {
     if (typeof value === "string") assert.doesNotMatch(value, /\barena\b/i, path);
@@ -43,13 +54,14 @@ test("cinematic, standard and conditional auth consumers retain their existing c
   }
   assert.match(layout, /cinematic \? copy\.onboardingTitle : copy\.accessPanelTitle/);
   assert.match(layout, /copy\.arenaHome/);
-  assert.match(layout, /<Logo href=\{publicArenaHref\} officialArena/);
+  assert.match(layout, /<Logo href=\{brandHref \?\? publicArenaHref\} officialArena/);
   const form = source("components/auth-form.tsx");
   for (const key of ["registrationCompleteHint", "emailNotConfirmed", "profileSetupFailed", "welcomeUnavailable"]) assert.ok(form.includes(`copy.${key}`), key);
   assert.match(source("components/reset-password-form.tsx"), /copy\.enterArena/);
   const logo = source("components/logo.tsx");
   assert.doesNotMatch(logo, /Arena Touchline|TouchLine Arena/);
-  assert.match(logo, /text-cyan-100">TouchLine<\/span>/);
+  assert.match(logo, /subtitle = "TouchLine"/);
+  assert.match(logo, /text-cyan-100"\}>\{subtitle\}<\/span>/);
   assert.match(logo, /href = "\/intro"/);
   assert.match(logo, /officialArena \? \(/);
   assert.match(logo, /src=\{TOUCHLINE_ARENA_OFFICIAL_LOGO\}/);
@@ -57,10 +69,10 @@ test("cinematic, standard and conditional auth consumers retain their existing c
 
 test("Inbox labels identify the actual localized Market destination without renaming ClubOwner", () => {
   const inbox = source("app/(app)/inbox/page.tsx");
-  assert.match(inbox, /back: "Voltar ao Mercado"/);
-  assert.match(inbox, /back: "Back to Market"/);
+  assert.match(inbox, /back: "Voltar ao ClubOwner"/);
+  assert.match(inbox, /back: "Back to ClubOwner"/);
   assert.doesNotMatch(inbox, /Voltar à Arena|Back to Arena/);
-  assert.ok(inbox.includes('href={`/market-transfer?lang=${encodeURIComponent(locale)}`}'));
+  assert.ok(inbox.includes('href={`/clubowner?lang=${encodeURIComponent(locale)}`}'));
   assert.match(inbox, /title: "Inbox do ClubOwner"/);
   assert.match(inbox, /title: "ClubOwner Inbox"/);
 });
@@ -69,7 +81,7 @@ test("authentication aside uses TouchLine branding while retaining the canonical
   const layout = source("components/auth-layout.tsx");
   assert.match(layout, /<p className="text-\[11px\] font-black text-cyan-200\/80">TouchLine<\/p>/);
   assert.doesNotMatch(layout, />TouchLine Arena<\/p>/);
-  assert.ok(layout.includes('touchLineAuthHref("/intro", normalizedLocale)'));
+  assert.ok(layout.includes('touchLineAuthHref("/intro", normalizedLocale, siteLocalesEnabled)'));
 });
 
 test("only the orphan ComingSoon component is retired; intro implementation and compatibility remain", () => {

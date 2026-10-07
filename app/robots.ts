@@ -7,7 +7,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: ["/", "/touchline-clubs/"],
-      disallow: ["/admin/", "/arena/", "/market-transfer/", "/notifications/", "/visual-qa/", "/audit/", "/audit-index", "/api/"],
+      disallow: ["/admin/", "/arena/", "/clubowner/", "/notifications/", "/visual-qa/", "/audit/", "/audit-index", "/api/"],
     },
     sitemap: `${TOUCHLINE_PUBLIC_ORIGIN}/sitemap.xml`,
     host: TOUCHLINE_PUBLIC_ORIGIN,

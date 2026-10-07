@@ -37,34 +37,60 @@ export function Logo({
   light = false,
   href = "/intro",
   officialArena = false,
+  subtitle = "TouchLine",
+  wordmarkClassName,
+  showMark = true,
+  minimalMark = false,
 }: {
   light?: boolean;
   href?: string;
   officialArena?: boolean;
+  subtitle?: string;
+  wordmarkClassName?: string;
+  showMark?: boolean;
+  minimalMark?: boolean;
 }) {
   return (
-    <Link href={href} className={`group flex items-center gap-3 ${light ? "text-white" : "text-white"}`}>
-      <span className="premium-ring relative grid size-14 place-items-center overflow-hidden rounded-[1.55rem] border border-cyan-200/40 bg-gradient-to-br from-cyan-300/[.18] via-blue-700/[.10] to-[#a3ff12]/[.08] shadow-[0_0_42px_rgba(34,211,238,.24)] transition duration-500 group-hover:scale-105 group-hover:border-[#a3ff12]/45">
-        <span className="absolute inset-1 rounded-[1.15rem] border border-white/[.07] bg-black/10"/>
-        <span className="absolute h-24 w-24 rounded-full border border-cyan-200/10"/>
-        <span className="absolute -right-8 -top-8 h-16 w-16 rounded-full bg-cyan-300/20 blur-2xl"/>
-        {officialArena ? (
-          <Image
-            src={TOUCHLINE_ARENA_OFFICIAL_LOGO}
-            alt=""
-            width={38}
-            height={38}
-            priority
-            unoptimized
-            className="relative size-[38px] object-contain drop-shadow-[0_0_15px_rgba(163,255,18,.65)]"
-          />
-        ) : (
-          <span className="font-display relative text-[23px] font-black italic text-white drop-shadow-[0_0_18px_rgba(34,211,238,.75)]">TL</span>
-        )}
-      </span>
-      <span className="min-w-0">
-        <TouchLineWordmark className="block text-[clamp(23px,3vw,30px)] leading-tight" />
-        <span className="block text-[11px] font-semibold leading-5 text-cyan-100">TouchLine</span>
+    <Link href={href} className={`group flex items-center ${minimalMark ? "gap-0.5" : "gap-3"} ${light ? "text-white" : "text-white"}`}>
+      {showMark ? (
+        <span className={minimalMark ? "relative grid size-[4.5rem] shrink-0 place-items-center" : "premium-ring relative grid size-14 place-items-center overflow-hidden rounded-[1.55rem] border border-cyan-200/40 bg-gradient-to-br from-cyan-300/[.18] via-blue-700/[.10] to-[#a3ff12]/[.08] shadow-[0_0_42px_rgba(34,211,238,.24)] transition duration-500 group-hover:scale-105 group-hover:border-[#a3ff12]/45"}>
+          {!minimalMark ? <>
+            <span className="absolute inset-1 rounded-[1.15rem] border border-white/[.07] bg-black/10"/>
+            <span className="absolute h-24 w-24 rounded-full border border-cyan-200/10"/>
+            <span className="absolute -right-8 -top-8 h-16 w-16 rounded-full bg-cyan-300/20 blur-2xl"/>
+          </> : null}
+          {officialArena ? (
+            minimalMark ? (
+              <span className="relative grid size-[61px] place-items-center">
+                <Image
+                  src={TOUCHLINE_ARENA_OFFICIAL_LOGO}
+                  alt=""
+                  width={61}
+                  height={61}
+                  priority
+                  unoptimized
+                  className="relative size-[61px] object-contain"
+                />
+              </span>
+            ) : (
+              <Image
+                src={TOUCHLINE_ARENA_OFFICIAL_LOGO}
+                alt=""
+                width={38}
+                height={38}
+                priority
+                unoptimized
+                className="relative size-[38px] object-contain drop-shadow-[0_0_15px_rgba(163,255,18,.65)]"
+              />
+            )
+          ) : (
+            <span className="font-display relative text-[23px] font-black italic text-white drop-shadow-[0_0_18px_rgba(34,211,238,.75)]">TL</span>
+          )}
+        </span>
+      ) : null}
+      <span className={minimalMark ? "min-w-0 w-fit" : "min-w-0"}>
+        <TouchLineWordmark className={`block ${wordmarkClassName ?? "text-[clamp(23px,3vw,30px)]"} leading-tight`} />
+        <span className={minimalMark ? "block w-full text-[14px] font-semibold leading-5 text-cyan-100" : "block text-[11px] font-semibold leading-5 text-cyan-100"}>{subtitle}</span>
       </span>
     </Link>
   );

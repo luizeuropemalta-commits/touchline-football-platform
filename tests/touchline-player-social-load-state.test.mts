@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import vm from "node:vm";
 import ts from "typescript";
+import * as socialCopy from "../lib/touchlineArena/player-social-i18n.ts";
 
 async function loadState(failure?: string) {
   const states: unknown[] = [];
@@ -15,6 +16,7 @@ async function loadState(failure?: string) {
     exports, Error, AbortController, Intl, setTimeout, clearTimeout,
     window: { addEventListener() {}, removeEventListener() {} },
     require(name: string) {
+      if (name === "@/lib/touchlineArena/player-social-i18n") return socialCopy;
       if (name === "react/jsx-runtime") return { jsx: (type: unknown, props: unknown) => ({ type, props }), jsxs: (type: unknown, props: unknown) => ({ type, props }) };
       if (name === "react") return {
         useState(initial: unknown) { const index = cursor++; states[index] = initial; return [initial, (next: unknown) => { states[index] = next; }]; },

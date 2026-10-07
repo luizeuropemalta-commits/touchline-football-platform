@@ -1,4 +1,14 @@
+import { resolveTouchlineCatalogueLocale } from "@/lib/touchlineArena/catalogue-locale";
+import { isTouchLineSiteLocalesEnabled } from "@/lib/touchlineArena/site-locales-release";
+import type { TouchLineTranslationKey } from "@/lib/touchlineArena/i18n";
 import { notFound } from "next/navigation";
+import { AuthSessionMissingError } from "@supabase/supabase-js";
+import TouchlineBrandHeader from "@/components/touchline/TouchlineBrandHeader";
+import type { AccountLocaleContext } from "@/lib/touchlineArena/account-locale-context-server";
+import { hasTouchLineArenaAccess } from "@/lib/touchlineArena/auth-access";
+import { getTouchlineClubHubProfileCopy, touchlineClubHubText } from "@/lib/touchlineArena/club-hub-profile-i18n";
+import { getTouchlineExactCardCopy } from "@/lib/touchlineArena/exact-card-i18n";
+import { getTouchlineClubHubSectionNavigationCopy } from "@/lib/touchlineArena/club-hub-section-navigation-i18n";
 import { Suspense, type CSSProperties } from "react";
 import Image from "next/image";
 import ClubTrophyCarousel from "@/components/touchline/ClubTrophyCarousel";
@@ -7,7 +17,6 @@ import ClubHubCanonicalCoachPanel from "@/components/touchline/ClubHubCanonicalC
 import ClubHubOfficialLineup from "@/components/touchline/ClubHubOfficialLineup";
 import ClubHubOutsideMatchRoster from "@/components/touchline/ClubHubOutsideMatchRoster";
 import ClubHubCrestTrace from "@/components/touchline/ClubHubCrestTrace";
-import TouchlineClubSocialFeed from "@/components/touchline/club-social/TouchlineClubSocialFeed";
 import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
 import TouchlineOfficialLeagueTable from "@/components/touchline/TouchlineOfficialLeagueTable";
 import TouchlineClubPerimeterTrace from "@/components/touchline/TouchlineClubPerimeterTrace";
@@ -44,8 +53,6 @@ import {
   type TouchlineClubMatchPreviewTeam,
 } from "@/lib/touchlineArena/club-match-preview";
 import {
-  normalizeTouchLineLocale,
-  touchLineT,
   type TouchLineLocale,
 } from "@/lib/touchlineArena/i18n";
 import { touchlineCountryCode3FromName } from "@/lib/touchlineArena/country-flags";
@@ -58,11 +65,10 @@ import { createClient } from "@/lib/supabase/server";
 import { isOwnerEmail } from "@/lib/admin/owner";
 import { TOUCHLINE_DEFAULT_FORMATION_GEOMETRY_REGISTRY } from "@/lib/touchlineArena/formation-geometry";
 import { readTouchlineFormationGeometryRegistry } from "@/lib/touchlineArena/formation-geometry-server";
-import { readTouchlineClubSocialFeed } from "@/lib/touchlineArena/club-social-feed-server";
 import { TOUCHLINE_PRESEASON_RANKING_STATE } from "@/lib/touchlineArena/card-ranking-live";
 import { loadTouchLineActiveRanking } from "@/lib/touchlineArena/card-ranking-server";
 import { compareTouchlineRankingPlayers } from "@/lib/touchlineArena/card-ranking";
-import { normalizeTouchlineMatchCentreTimeZone } from "@/lib/touchlineArena/match-centre";
+import { normalizeTouchlineMatchCentreTimeZone, touchlineFixtureStatusLabel } from "@/lib/touchlineArena/match-centre";
 import {
   TOUCHLINE_STADIUM_CATALOG,
   resolveTouchlineClubHomeStadium,
@@ -76,7 +82,6 @@ import {
 import {
   loadTouchlineQaClubHubMirror,
   loadTouchlineQaMirroredLeagueTable,
-  loadTouchlineQaMirroredSocialFeed,
   mirrorDtoToPublicFixture,
 } from "@/lib/touchlineMirror/qa-clubhub-mirror-server";
 
@@ -88,7 +93,6 @@ type ClubHubPageProps = {
   }>;
   searchParams: Promise<{
     lang?: string;
-    feedCursor?: string;
   }>;
 };
 
@@ -147,7 +151,7 @@ function persistedSquadPlayerToCard(player: PersistedSquadPlayer, clubName: stri
 
 async function loadPersistedClubSquadCards(
   club: NonNullable<ReturnType<typeof findTouchLineClub>>,
-  locale: TouchLineLocale,
+  locale: TouchLineLocale, draftLocalesEnabled = false,
 ) {
   try {
     const snapshot = await readPersistedSquadSnapshot(club.teamId);
@@ -157,7 +161,7 @@ async function loadPersistedClubSquadCards(
     return {
       cards,
       status: `${cards.length} TouchLine cards`,
-      source: touchLineT(locale, "dataCache"),
+      source: touchlineClubHubText(locale, "dataCache", draftLocalesEnabled),
       state: "ready" as const,
     };
   } catch {
@@ -165,7 +169,8 @@ async function loadPersistedClubSquadCards(
   }
 }
 
-async function loadClubSquadCards(club: NonNullable<ReturnType<typeof findTouchLineClub>>, locale: TouchLineLocale) {
+async function loadClubSquadCards(club: NonNullable<ReturnType<typeof findTouchLineClub>>, locale: TouchLineLocale, draftLocalesEnabled = false) {
+  const copy = getTouchlineClubHubProfileCopy(locale, draftLocalesEnabled);
   try {
     const result = await readPublicPremierSquad(club.teamId);
     if (result.status !== 200 || result.body.ok === false) throw new Error("Squad unavailable");
@@ -174,17 +179,17 @@ async function loadClubSquadCards(club: NonNullable<ReturnType<typeof findTouchL
     return {
       cards: (payload.rosterPlayers ?? payload.players).map((player) => publicPremierSquadPlayerToCard(player, club.name)),
       status: payload.status ?? `${payload.players.length} TouchLine cards`,
-      source: payload.cached ? touchLineT(locale, "dataCache") : touchLineT(locale, "liveData"),
+      source: payload.cached ? touchlineClubHubText(locale, "dataCache", draftLocalesEnabled) : touchlineClubHubText(locale, "liveData", draftLocalesEnabled),
       state: "ready" as const,
     };
   } catch {
-    const persistedFallback = await loadPersistedClubSquadCards(club, locale);
+    const persistedFallback = await loadPersistedClubSquadCards(club, locale, draftLocalesEnabled);
     if (persistedFallback) return persistedFallback;
 
     return {
       cards: [] as ClubOwnerSquadCard[],
-      status: locale === "pt-BR" ? "Elenco temporariamente indisponível" : "Squad temporarily unavailable",
-      source: locale === "pt-BR" ? "Fonte indisponível" : "Source unavailable",
+      status: copy.squadUnavailable,
+      source: copy.sourceUnavailable,
       state: "unavailable" as const,
     };
   }
@@ -202,7 +207,7 @@ function previewTeamFromClub(club: NonNullable<ReturnType<typeof findTouchLineCl
 function previewTeamFromPublicTeam(
   team: TouchlinePublicTeam | undefined,
   currentClub: NonNullable<ReturnType<typeof findTouchLineClub>>,
-  locale: TouchLineLocale,
+  locale: TouchLineLocale, draftLocalesEnabled = false,
 ): TouchlineClubMatchPreviewTeam {
   const canonical = findTouchLineClub(team?.providerId)
     ?? findTouchLineClub(team?.name)
@@ -215,7 +220,7 @@ function previewTeamFromPublicTeam(
       logoUrl: canonical.logoUrl,
     };
   }
-  const pending = touchLineT(locale, "opponentToBeConfirmed");
+  const pending = touchlineClubHubText(locale, "opponentToBeConfirmed", draftLocalesEnabled);
   if (team?.providerId === currentClub.teamId) return previewTeamFromClub(currentClub);
   return {
     name: team?.name ?? pending,
@@ -233,16 +238,16 @@ function fixtureHasClub(fixture: TouchlineFixture, club: NonNullable<ReturnType<
     });
 }
 
-function fallbackClubMatch(club: NonNullable<ReturnType<typeof findTouchLineClub>>, locale: TouchLineLocale): ClubMatchPreview {
+function fallbackClubMatch(club: NonNullable<ReturnType<typeof findTouchLineClub>>, locale: TouchLineLocale, draftLocalesEnabled = false): ClubMatchPreview {
   return {
     home: previewTeamFromClub(club),
     away: {
-      name: touchLineT(locale, "opponentToBeConfirmed"),
-      shortCode: touchLineT(locale, "opponentToBeConfirmed"),
+      name: touchlineClubHubText(locale, "opponentToBeConfirmed", draftLocalesEnabled),
+      shortCode: touchlineClubHubText(locale, "opponentToBeConfirmed", draftLocalesEnabled),
       logoUrl: undefined,
     },
-    status: touchLineT(locale, "opponentToBeConfirmed"),
-    startsAt: touchLineT(locale, "kickoffPending"),
+    status: touchlineClubHubText(locale, "opponentToBeConfirmed", draftLocalesEnabled),
+    startsAt: touchlineClubHubText(locale, "kickoffPending", draftLocalesEnabled),
   };
 }
 
@@ -251,15 +256,20 @@ function feedTeamBelongsToClub(teamId: string | undefined, teamName: string | un
   return findTouchLineClub(teamName)?.teamId === club.teamId;
 }
 
-function localizedFixtureStatus(value: string, locale: TouchLineLocale) {
-  if (locale !== "pt-BR") return value;
+function localizedFixtureStatus(value: string, locale: TouchLineLocale, draftLocalesEnabled = false) {
+  const effectiveLocale = resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled);
+  if (effectiveLocale === "en-GB") return value;
+  const copy = getTouchlineClubHubProfileCopy(effectiveLocale, draftLocalesEnabled);
   const normalized = value.trim().toLowerCase().replace(/[_-]+/g, " ");
-  if (["not started", "scheduled", "upcoming", "ns"].includes(normalized)) return "Agendada";
-  if (["live", "inplay", "in play"].includes(normalized)) return "Ao vivo";
-  if (["finished", "ft", "full time"].includes(normalized)) return "Encerrada";
-  if (normalized === "postponed") return "Adiada";
-  if (["cancelled", "canceled"].includes(normalized)) return "Cancelada";
-  return value;
+  if (["not started", "scheduled", "upcoming", "ns"].includes(normalized)) return copy.scheduled;
+  if (["live", "inplay", "in play"].includes(normalized)) return copy.live;
+  if (["finished", "ft", "full time"].includes(normalized)) return copy.finished;
+  if (normalized === "postponed") return copy.postponed;
+  if (["cancelled", "canceled"].includes(normalized)) return copy.cancelled;
+  const translated = touchlineFixtureStatusLabel(value, effectiveLocale, draftLocalesEnabled);
+  // Unknown provider values retain their original bytes; only known shared
+  // vocabulary (including halves and half-time) changes presentation.
+  return translated === value.trim() ? value : translated;
 }
 
 /**
@@ -288,10 +298,10 @@ async function loadClubMatchSnapshot(
   club: NonNullable<ReturnType<typeof findTouchLineClub>>,
   locale: TouchLineLocale,
   dataSource: ReturnType<typeof resolveTouchlineClubHubDataSource>,
-  mirrorResultPromise: Promise<TouchlineQaClubHubMirrorReadResult> | null,
+  mirrorResultPromise: Promise<TouchlineQaClubHubMirrorReadResult> | null, draftLocalesEnabled = false,
 ): Promise<ClubMatchSnapshot> {
   const empty = {
-    preview: fallbackClubMatch(club, locale),
+    preview: fallbackClubMatch(club, locale, draftLocalesEnabled),
     previewFixtureId: null as string | null,
     fixtureId: null as string | null,
     lineups: [] as TouchlineFantasyLineupMember[],
@@ -310,11 +320,11 @@ async function loadClubMatchSnapshot(
     if (!fixture || !startsAt) return empty;
     return {
       preview: {
-        home: previewTeamFromPublicTeam(fixture.homeTeam, club, locale),
-        away: previewTeamFromPublicTeam(fixture.awayTeam, club, locale),
+        home: previewTeamFromPublicTeam(fixture.homeTeam, club, locale, draftLocalesEnabled),
+        away: previewTeamFromPublicTeam(fixture.awayTeam, club, locale, draftLocalesEnabled),
         status: fixture.status ?? "TouchLine England",
-        startsAt: new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(new Date(startsAt)),
-        source: touchLineT(locale, "dataCache"),
+        startsAt: new Intl.DateTimeFormat(locale, { calendar: "gregory", dateStyle: "medium", timeStyle: "short" }).format(new Date(startsAt)),
+        source: touchlineClubHubText(locale, "dataCache", draftLocalesEnabled),
       },
       previewFixtureId: null,
       fixtureId: null,
@@ -352,13 +362,13 @@ async function loadClubMatchSnapshot(
     const formation = matchdayFeed?.formations.find((item) => feedTeamBelongsToClub(item.teamId, item.teamName, club))?.formation ?? null;
     return {
       preview: {
-        home: resolveTouchlineClubMatchPreviewTeam(previewFixture.homeTeam, club, locale),
-        away: resolveTouchlineClubMatchPreviewTeam(previewFixture.awayTeam, club, locale),
+        home: resolveTouchlineClubMatchPreviewTeam(previewFixture.homeTeam, club, locale, draftLocalesEnabled),
+        away: resolveTouchlineClubMatchPreviewTeam(previewFixture.awayTeam, club, locale, draftLocalesEnabled),
         status: previewFixture.status ?? "TouchLine England",
         startsAt: previewFixture.startsAt
-          ? new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(new Date(previewFixture.startsAt))
-          : touchLineT(locale, "kickoffPending"),
-        source: touchLineT(locale, "dataCache"),
+          ? new Intl.DateTimeFormat(locale, { calendar: "gregory", dateStyle: "medium", timeStyle: "short" }).format(new Date(previewFixture.startsAt))
+          : touchlineClubHubText(locale, "kickoffPending", draftLocalesEnabled),
+        source: touchlineClubHubText(locale, "dataCache", draftLocalesEnabled),
       },
       previewFixtureId: previewFixture.providerId,
       fixtureId: matchdayFeed?.fixture.providerId ?? null,
@@ -388,7 +398,7 @@ type ClubHubCardLabels = Readonly<{
 type ClubHubPresentation = Awaited<ReturnType<typeof loadClubHubPresentation>>;
 type ClubHubViewerAccess = Awaited<ReturnType<typeof loadClubHubViewerAccess>>;
 const CLUB_HUB_VIEWER_ACCESS_TIMEOUT_MS = 1_800;
-const CLUB_HUB_PUBLIC_VIEWER_ACCESS = { userId: null, canEditCardEngine: false } as const;
+const CLUB_HUB_PUBLIC_VIEWER_ACCESS = { userId: null, canEditCardEngine: false, accountLocaleContext: { mode: "unavailable" } as AccountLocaleContext } as const;
 
 async function traceClubHubLoader<T>(
   clubSlug: string,
@@ -417,10 +427,19 @@ async function loadClubHubViewerAccess(
   if (dataSource !== "direct") return CLUB_HUB_PUBLIC_VIEWER_ACCESS;
   const viewerAccess = traceClubHubLoader(clubSlug, "viewer-access", async () => {
     const supabase = await createClient();
-    const { data: { user } } = supabase ? await supabase.auth.getUser() : { data: { user: null } };
+    const result = supabase ? await supabase.auth.getUser() : null;
+    const user = result?.data?.user ?? null;
+    const accountLocaleContext: AccountLocaleContext = result?.data && Object.hasOwn(result.data, "user") && result.data.user === null
+      && (result.error === null || result.error instanceof AuthSessionMissingError)
+      ? { mode: "guest" }
+      : result?.error === null && user && hasTouchLineArenaAccess(user)
+        && typeof user.id === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user.id)
+        ? { mode: "account", accountId: user.id }
+        : { mode: "unavailable" };
     return {
       userId: user?.id ?? null,
       canEditCardEngine: Boolean(user && isOwnerEmail(user.email)),
+      accountLocaleContext,
     };
   });
   // Authentication is optional on this public profile. Never allow an Auth
@@ -433,18 +452,29 @@ async function loadClubHubViewerAccess(
   ]);
 }
 
+async function ClubHubBrandHeader({ locale, href, viewerAccessPromise, draftLocalesEnabled = false }: {
+  locale: TouchLineLocale;
+  href: string;
+  viewerAccessPromise: Promise<ClubHubViewerAccess>;
+  draftLocalesEnabled?: boolean;
+}) {
+  const viewer = await viewerAccessPromise;
+  return <TouchlineBrandHeader draftLocalesEnabled={draftLocalesEnabled} href={href} locale={locale} accountLocaleContext={viewer.accountLocaleContext} />;
+}
+
 async function loadClubHubPresentation(
   club: NonNullable<ReturnType<typeof findTouchLineClub>>,
   locale: TouchLineLocale,
   dataSource: ReturnType<typeof resolveTouchlineClubHubDataSource>,
-  matchSnapshotPromise: Promise<ClubMatchSnapshot>,
+  matchSnapshotPromise: Promise<ClubMatchSnapshot>, draftLocalesEnabled = false,
 ) {
+  const copy = getTouchlineClubHubProfileCopy(locale, draftLocalesEnabled);
   if (dataSource !== "direct") {
     const matchSnapshot = await matchSnapshotPromise;
     const squadLoad = {
       cards: [] as ClubOwnerSquadCard[],
-      status: locale === "pt-BR" ? "Elenco temporariamente indisponível" : "Squad temporarily unavailable",
-      source: locale === "pt-BR" ? "Fonte indisponível" : "Source unavailable",
+      status: copy.squadUnavailable,
+      source: copy.sourceUnavailable,
       state: "unavailable" as const,
     };
     const matchdayPresentation = buildTouchLineClubMatchdayPresentation({
@@ -465,7 +495,7 @@ async function loadClubHubPresentation(
     };
   }
 
-  const squadLoadPromise = traceClubHubLoader(club.slug, "squad", () => loadClubSquadCards(club, locale));
+  const squadLoadPromise = traceClubHubLoader(club.slug, "squad", () => loadClubSquadCards(club, locale, draftLocalesEnabled));
   const formationGeometryPromise = traceClubHubLoader(club.slug, "formation-geometry", () => readTouchlineFormationGeometryRegistry());
   const seasonPointsPromise = squadLoadPromise.then((squadLoad) => traceClubHubLoader(
     club.slug,
@@ -547,7 +577,7 @@ async function ClubHubLineupSection({
   cardLabels,
   presentationPromise,
   viewerAccessPromise,
-  dataSource,
+  dataSource, draftLocalesEnabled = false,
 }: {
   club: NonNullable<ReturnType<typeof findTouchLineClub>>;
   locale: TouchLineLocale;
@@ -555,6 +585,7 @@ async function ClubHubLineupSection({
   presentationPromise: Promise<ClubHubPresentation>;
   viewerAccessPromise: Promise<ClubHubViewerAccess>;
   dataSource: ReturnType<typeof resolveTouchlineClubHubDataSource>;
+  draftLocalesEnabled?: boolean;
 }) {
   const [presentation, viewerAccess, activeRanking] = await Promise.all([
     presentationPromise,
@@ -563,7 +594,7 @@ async function ClubHubLineupSection({
   ]);
   const { matchSnapshot, matchdayPresentation } = presentation;
   const matchPreview = matchSnapshot.preview;
-  const portuguese = locale === "pt-BR";
+  const copy = getTouchlineClubHubProfileCopy(locale, draftLocalesEnabled);
   const overallRanking = activeRanking.phase === "ranked"
     ? [...activeRanking.players]
       .filter((player) => player.totalRating !== null)
@@ -592,15 +623,16 @@ async function ClubHubLineupSection({
     leader: rankedClubCards.find((candidate) => (group.positionGroups as readonly string[]).includes(candidate.positionGroup)),
   }));
   return (
-    <ClubHubOfficialLineup
+    <ClubHubOfficialLineup draftLocalesEnabled={draftLocalesEnabled}
       clubName={club.name}
       lineup={matchdayPresentation.lineup}
       locale={locale}
       labels={cardLabels}
       canEditCardEngine={viewerAccess.canEditCardEngine}
+      hideMarketValuePanel
       leaderCards={(
         <>
-          {clubPositionLeaders.map(({ key, en, pt, leader }) => {
+          {clubPositionLeaders.map(({ key, copyKey, leader }) => {
             const tierKey = leader?.card.editorialCard?.tierKey ?? null;
             const tierAccent = tierKey ? touchlineCardTierPalette(tierKey).accent : "#9eaaa5";
             return (
@@ -609,17 +641,17 @@ async function ClubHubLineupSection({
               style={{ "--tier-accent": tierAccent } as CSSProperties}>
               <TouchlineClubPerimeterTrace accent={tierKey ? tierAccent : undefined} className={premiumStyles.lineupLeaderTrace} />
               <header>
-                <span>{portuguese ? pt : en}</span>
-                <strong>{leader?.card.name ?? (portuguese ? "Aguardando ranking verificado" : "Awaiting verified ranking")}</strong>
+                <span>{copy[copyKey]}</span>
+                <strong>{leader?.card.name ?? (copy.awaitingRanking)}</strong>
               </header>
               {leader ? (
                 <div className={premiumStyles.lineupLeaderVisual}>
-                  <TouchlineGameweekCard card={leader.card} locale={locale} displayWidth={112} />
+                  <TouchlineGameweekCard draftLocalesEnabled={draftLocalesEnabled} card={leader.card} locale={locale} displayWidth={112} />
                 </div>
               ) : (
                 <div className={premiumStyles.lineupLeaderAwaiting} role="status">—</div>
               )}
-              <small>{leader ? `#${leader.positionRank}` : (portuguese ? "Ranking em verificação" : "Ranking under verification")}</small>
+              <small>{leader ? `#${leader.positionRank}` : (copy.rankingChecking)}</small>
             </article>
             );
           })}
@@ -630,7 +662,7 @@ async function ClubHubLineupSection({
         initialFixture: matchSnapshot.publicFixture,
         home: matchPreview.home,
         away: matchPreview.away,
-        status: localizedFixtureStatus(matchPreview.status, locale),
+        status: localizedFixtureStatus(matchPreview.status, locale, draftLocalesEnabled),
         startsAt: matchPreview.startsAt,
         startsAtIso: matchSnapshot.publicFixture?.startsAt ?? null,
       }}
@@ -644,7 +676,7 @@ async function ClubHubTechnicalSections({
   cardLabels,
   presentationPromise,
   viewerAccessPromise,
-  dataSource,
+  dataSource, draftLocalesEnabled = false,
 }: {
   club: NonNullable<ReturnType<typeof findTouchLineClub>>;
   locale: TouchLineLocale;
@@ -652,19 +684,21 @@ async function ClubHubTechnicalSections({
   presentationPromise: Promise<ClubHubPresentation>;
   viewerAccessPromise: Promise<ClubHubViewerAccess>;
   dataSource: ReturnType<typeof resolveTouchlineClubHubDataSource>;
+  draftLocalesEnabled?: boolean;
 }) {
   const [presentation, viewerAccess] = await Promise.all([presentationPromise, viewerAccessPromise]);
   const outsideMatchdayCards = presentation.outsideMatchdayCards;
   return (
     <>
-      <ClubHubMatchdayTechnicalArea
+      <ClubHubMatchdayTechnicalArea draftLocalesEnabled={draftLocalesEnabled}
         clubName={club.name}
         technical={presentation.matchdayPresentation.technical}
         locale={locale}
         labels={cardLabels}
         canEditCardEngine={viewerAccess.canEditCardEngine}
+        hideMarketValuePanel
         coachCard={dataSource === "direct" ? (
-          <ClubHubCanonicalCoachPanel
+          <ClubHubCanonicalCoachPanel draftLocalesEnabled={draftLocalesEnabled}
             teamId={club.teamId}
             clubName={club.name}
             clubLogoUrl={club.logoUrl}
@@ -675,13 +709,14 @@ async function ClubHubTechnicalSections({
           />
         ) : null}
       />
-      <ClubHubOutsideMatchRoster
+      <ClubHubOutsideMatchRoster draftLocalesEnabled={draftLocalesEnabled}
         clubName={club.name}
         cards={outsideMatchdayCards}
         selectionState={presentation.matchdayPresentation.remainingSquad.state}
         locale={locale}
         labels={cardLabels}
         squadUnavailable={presentation.squadLoad.state === "unavailable"}
+        hideMarketValuePanel
         retryHref={`/touchline-clubs/${club.slug}?lang=${encodeURIComponent(locale)}`}
       />
     </>
@@ -691,31 +726,18 @@ async function ClubHubTechnicalSections({
 async function ClubHubOfficialLeagueSection({
   club,
   locale,
-  cursor,
   matchSnapshotPromise,
-  tablePromise,
-  dataSource,
-  mirrorResultPromise,
+  tablePromise, draftLocalesEnabled = false,
 }: {
   club: NonNullable<ReturnType<typeof findTouchLineClub>>;
   locale: TouchLineLocale;
-  cursor: string | null;
   matchSnapshotPromise: Promise<ClubMatchSnapshot>;
   tablePromise: ReturnType<typeof loadClubHubLeagueTable>;
-  dataSource: ReturnType<typeof resolveTouchlineClubHubDataSource>;
-  mirrorResultPromise: Promise<TouchlineQaClubHubMirrorReadResult> | null;
+  draftLocalesEnabled?: boolean;
 }) {
-  const feedPromise = dataSource === "direct"
-    ? readTouchlineClubSocialFeed({
-      providerTeamId: club.teamId,
-      limit: 6,
-      cursor,
-    })
-    : loadTouchlineQaMirroredSocialFeed(club.teamId, mirrorResultPromise ?? undefined);
-  const [matchSnapshot, table, feedPage] = await Promise.all([
+  const [matchSnapshot, table] = await Promise.all([
     matchSnapshotPromise,
     tablePromise,
-    feedPromise,
   ]);
   const fixture = matchSnapshot.railFixture;
   const homeClub = findTouchLineClub(fixture?.homeTeam?.providerId)
@@ -728,7 +750,7 @@ async function ClubHubOfficialLeagueSection({
   const awayPosition = awayClub
     ? table.rows.find((row) => row.team.providerTeamId === awayClub.teamId)?.displayPosition ?? null
     : null;
-  const portuguese = locale === "pt-BR";
+  const copy = getTouchlineClubHubProfileCopy(locale, draftLocalesEnabled);
   const hasVerifiedFixture = Boolean(
     fixture?.startsAt
     && homeClub?.logoUrl
@@ -738,25 +760,13 @@ async function ClubHubOfficialLeagueSection({
   return (
     <section
       className={officialLeagueStyles.layout}
-      aria-label={portuguese ? "Liga oficial e canal do clube" : "Official league and club channel"}
+      aria-label={copy.nextAndTable}
       data-clubhub-official-league="true"
     >
-      <div className={officialLeagueStyles.feed} id="club-feed">
-        <TouchlineClubPerimeterTrace accent="#a3ff12" className={officialLeagueStyles.surfaceTrace} />
-        <TouchlineClubSocialFeed
-          clubName={club.name}
-          clubLogoUrl={club.logoUrl}
-          clubSlug={club.slug}
-          clubTeamId={club.teamId}
-          locale={locale}
-          page={feedPage}
-        />
-      </div>
-
-      <aside className={officialLeagueStyles.rail} aria-label={portuguese ? "Próximo jogo e tabela oficial" : "Next match and official table"}>
+      <div className={officialLeagueStyles.panel}>
         <TouchlineClubPerimeterTrace accent="#a3ff12" className={officialLeagueStyles.surfaceTrace} />
         {hasVerifiedFixture && fixture?.startsAt && homeClub?.logoUrl && awayClub?.logoUrl ? (
-          <ClubHubNextFixtureCard
+          <ClubHubNextFixtureCard draftLocalesEnabled={draftLocalesEnabled}
             awayTeam={{ teamId: awayClub.teamId, name: fixture.awayTeam?.name ?? awayClub.name, shortCode: awayClub.shortCode, logoUrl: awayClub.logoUrl }}
             awayPosition={awayPosition}
             className={officialLeagueStyles.fixture}
@@ -765,7 +775,7 @@ async function ClubHubOfficialLeagueSection({
             initialTimeZone={normalizeTouchlineMatchCentreTimeZone("Europe/Malta")}
             locale={locale}
             previewHref={null}
-            roundName={fixture.roundName ?? (portuguese ? "Rodada pendente" : "Round pending")}
+            roundName={fixture.roundName ?? (copy.roundPending)}
             startsAt={fixture.startsAt}
             status={fixture.status}
             homeScore={fixture.homeScore}
@@ -777,7 +787,7 @@ async function ClubHubOfficialLeagueSection({
         ) : (
           <article className={`${premiumStyles.nextFixtureCard} ${officialLeagueStyles.fixture}`} data-state="awaiting" role="status">
             <div className={premiumStyles.nextFixtureHeading}>
-              <span>{portuguese ? "Próximo confronto" : "Next fixture"}</span>
+              <span>{copy.nextFixture}</span>
             </div>
             <div className={premiumStyles.awaitingFixture}>
               <div className={premiumStyles.awaitingFixtureTeams} aria-hidden="true">
@@ -785,13 +795,16 @@ async function ClubHubOfficialLeagueSection({
                 <b>VS</b>
                 <span>?</span>
               </div>
-              <strong>{portuguese ? "Próxima partida em verificação" : "Next match under verification"}</strong>
-              <p>{portuguese ? "O confronto aparecerá quando a fonte oficial estiver confirmada." : "The match-up will appear when the official source is confirmed."}</p>
+              <strong>{copy.nextMatchChecking}</strong>
+              <p>{copy.matchupPending}</p>
             </div>
           </article>
         )}
+      </div>
 
-        <TouchlineOfficialLeagueTable
+      <div className={officialLeagueStyles.panel}>
+        <TouchlineClubPerimeterTrace accent="#a3ff12" className={officialLeagueStyles.surfaceTrace} />
+        <TouchlineOfficialLeagueTable draftLocalesEnabled={draftLocalesEnabled}
           className={officialLeagueStyles.table}
           currentTeamId={club.teamId}
           id="club-table"
@@ -799,17 +812,18 @@ async function ClubHubOfficialLeagueSection({
           table={table}
           variant="clubHubRail"
         />
-      </aside>
+      </div>
     </section>
   );
 }
 
 async function ClubHubHeroNextMatch({
   locale,
-  matchSnapshotPromise,
+  matchSnapshotPromise, draftLocalesEnabled = false,
 }: {
   locale: TouchLineLocale;
   matchSnapshotPromise: Promise<ClubMatchSnapshot>;
+  draftLocalesEnabled?: boolean;
 }) {
   const matchSnapshot = await matchSnapshotPromise;
   // The profile hero deliberately represents the next scheduled fixture. The
@@ -819,19 +833,19 @@ async function ClubHubHeroNextMatch({
     ?? findTouchLineClub(fixture?.homeTeam?.name);
   const awayClub = findTouchLineClub(fixture?.awayTeam?.providerId)
     ?? findTouchLineClub(fixture?.awayTeam?.name);
-  const portuguese = locale === "pt-BR";
+  const copy = getTouchlineClubHubProfileCopy(locale, draftLocalesEnabled);
 
   if (!fixture?.startsAt || !homeClub?.logoUrl || !awayClub?.logoUrl) {
     return (
       <aside className="club-hub-hero-next-match club-hub-hero-next-match-awaiting" role="status">
-        <span>{portuguese ? "Próximo jogo" : "Next match"}</span>
-        <strong>{portuguese ? "Confronto em verificação" : "Fixture under verification"}</strong>
+        <span>{copy.nextMatch}</span>
+        <strong>{copy.fixtureChecking}</strong>
       </aside>
     );
   }
 
   return (
-    <ClubHubNextFixtureCard
+    <ClubHubNextFixtureCard draftLocalesEnabled={draftLocalesEnabled}
       awayTeam={{ teamId: awayClub.teamId, name: fixture.awayTeam?.name ?? awayClub.name, shortCode: awayClub.shortCode, logoUrl: awayClub.logoUrl }}
       awayPosition={null}
       className="club-hub-hero-next-match"
@@ -840,7 +854,7 @@ async function ClubHubHeroNextMatch({
       initialTimeZone={normalizeTouchlineMatchCentreTimeZone("Europe/Malta")}
       locale={locale}
       previewHref={null}
-      roundName={fixture.roundName ?? (portuguese ? "Rodada" : "Matchday")}
+      roundName={fixture.roundName ?? (copy.matchdayRound)}
       showPositions={false}
       startsAt={fixture.startsAt}
       status={fixture.status}
@@ -859,10 +873,10 @@ function normalizedPlayerIdentity(value: string | number | null | undefined) {
 }
 
 const CLUB_POSITION_LEADER_GROUPS = [
-  { key: "centre-back", positionGroups: ["centre-back"], en: "Top centre-back", pt: "Melhor zagueiro" },
-  { key: "full-back", positionGroups: ["full-back"], en: "Top full-back", pt: "Melhor lateral" },
-  { key: "midfielder", positionGroups: ["midfielder"], en: "Top midfielder", pt: "Melhor meio-campista" },
-  { key: "attacker", positionGroups: ["winger", "striker"], en: "Top attacker", pt: "Melhor atacante" },
+  { key: "centre-back", positionGroups: ["centre-back"], copyKey: "topCentreBack" },
+  { key: "full-back", positionGroups: ["full-back"], copyKey: "topFullBack" },
+  { key: "midfielder", positionGroups: ["midfielder"], copyKey: "topMidfielder" },
+  { key: "attacker", positionGroups: ["winger", "striker"], copyKey: "topAttacker" },
 ] as const;
 
 /**
@@ -872,11 +886,13 @@ const CLUB_POSITION_LEADER_GROUPS = [
  */
 function ClubHubHomeStadiumIdentity({
   locale,
-  stadium,
+  stadium, draftLocalesEnabled = false,
 }: {
   locale: TouchLineLocale;
   stadium: TouchlineStadiumCatalogEntry;
+  draftLocalesEnabled?: boolean;
 }) {
+  const copy = getTouchlineClubHubProfileCopy(locale, draftLocalesEnabled);
   const profile = stadium.clubProfile;
   const location = [profile?.address.city, profile?.address.country]
     .filter((part): part is string => Boolean(part))
@@ -885,26 +901,31 @@ function ClubHubHomeStadiumIdentity({
   return (
     <aside
       className="club-hub-home-stadium-identity"
-      aria-label={locale === "pt-BR" ? `Estádio do clube: ${stadium.name}` : `Club stadium: ${stadium.name}`}
+      aria-label={copy.stadiumAria.replace("{name}", () => stadium.name)}
     >
-      <span>{locale === "pt-BR" ? "Estádio do clube" : "Club stadium"}</span>
+      <span>{copy.stadium}</span>
       <strong>{stadium.name}</strong>
       {location ? <small>{location}</small> : null}
     </aside>
   );
 }
 
-export default async function ClubHubPage({ params, searchParams }: ClubHubPageProps) {
-  const [{ club: clubParam }, { lang, feedCursor }] = await Promise.all([params, searchParams]);
-  const locale = normalizeTouchLineLocale(lang);
+export default async function ClubHubPage(props: ClubHubPageProps) {
+  return renderClubHubPage(props, isTouchLineSiteLocalesEnabled("/touchline-clubs/[club]"));
+}
+
+async function renderClubHubPage({ params, searchParams }: ClubHubPageProps, draftLocalesEnabled = false) {
+  const [{ club: clubParam }, { lang }] = await Promise.all([params, searchParams]);
+  const locale = resolveTouchlineCatalogueLocale(lang, draftLocalesEnabled);
+  const copy = getTouchlineClubHubProfileCopy(locale, draftLocalesEnabled);
   const copyrightYear = new Date().getUTCFullYear();
-  const t = (key: Parameters<typeof touchLineT>[1]) => touchLineT(locale, key);
+  const t = (key: TouchLineTranslationKey) => touchlineClubHubText(locale, key, draftLocalesEnabled);
   const cardLabels = {
     nationality: t("nationalityShort"),
     points: t("points"),
     totalPoints: t("touchlinePoints"),
     cardPrice: locale === "pt-BR" ? "Preço do card" : "Card price",
-    currentClub: locale === "pt-BR" ? "Clube atual" : "Current Club",
+    currentClub: getTouchlineExactCardCopy(locale, draftLocalesEnabled).currentClub,
   };
   const club = findTouchLineClub(clubParam);
   if (!club) notFound();
@@ -916,9 +937,9 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
   const matchSnapshotPromise = traceClubHubLoader(
     club.slug,
     "match-snapshot",
-    () => loadClubMatchSnapshot(club, locale, dataSource, mirrorResultPromise),
+    () => loadClubMatchSnapshot(club, locale, dataSource, mirrorResultPromise, draftLocalesEnabled),
   );
-  const presentationPromise = loadClubHubPresentation(club, locale, dataSource, matchSnapshotPromise);
+  const presentationPromise = loadClubHubPresentation(club, locale, dataSource, matchSnapshotPromise, draftLocalesEnabled);
   const viewerAccessPromise = loadClubHubViewerAccess(club.slug, dataSource);
   const tablePromise = traceClubHubLoader(
     club.slug,
@@ -926,12 +947,17 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
     () => loadClubHubLeagueTable(club, dataSource, mirrorResultPromise),
   );
   return (
-    <main className="club-hub" style={{ "--club-accent": club.accent, "--club-secondary": club.secondaryAccent, "--clubhub-accent": club.accent } as CSSProperties}>
+    <main dir="ltr" className="club-hub" style={{ "--club-accent": club.accent, "--club-secondary": club.secondaryAccent, "--clubhub-accent": club.accent } as CSSProperties}>
+      <Suspense fallback={<TouchlineBrandHeader draftLocalesEnabled={draftLocalesEnabled} href={`/touchline-clubs/${club.slug}?lang=${encodeURIComponent(locale)}`} locale={locale} accountLocaleContext={{ mode: "unavailable" }} />}>
+        <ClubHubBrandHeader draftLocalesEnabled={draftLocalesEnabled} href={`/touchline-clubs/${club.slug}?lang=${encodeURIComponent(locale)}`} locale={locale} viewerAccessPromise={viewerAccessPromise} />
+      </Suspense>
+      <div className="club-hub-content">
       <span id="club-hub-top" className="club-hub-top-anchor" aria-hidden="true" />
-      <TouchlineGlobalNavigation
+      <TouchlineGlobalNavigation draftLocalesEnabled={draftLocalesEnabled}
         locale={locale}
         currentRoute="clubProfile"
         surface="public"
+        showAudioControl={false}
         trustedContext={{
           club: {
             teamId: club.teamId,
@@ -957,14 +983,14 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           ) : null}
           <div className="club-hub-hero-shade" aria-hidden="true" />
           <Suspense fallback={<div className="club-hub-hero-next-match club-hub-hero-next-match-awaiting" aria-hidden="true" />}>
-            <ClubHubHeroNextMatch locale={locale} matchSnapshotPromise={matchSnapshotPromise} />
+            <ClubHubHeroNextMatch draftLocalesEnabled={draftLocalesEnabled} locale={locale} matchSnapshotPromise={matchSnapshotPromise} />
           </Suspense>
           <div className="club-hub-identity">
             <div className="club-hub-logo-stack">
               {club.logoUrl ? (
                 <ClubHubCrestTrace
                   accent={club.accent}
-                  ariaLabel={`${club.name} logo`}
+                  ariaLabel={copy.clubLogo.replace("{name}", () => club.name)}
                   className="club-hub-logo"
                   loading="eager"
                   src={club.logoUrl}
@@ -972,42 +998,39 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
               ) : <div className="club-hub-logo"><span>{club.shortCode}</span></div>}
             </div>
             <div className="club-hub-title-block">
-              <span>{locale === "pt-BR" ? "Perfil oficial do clube" : "Official club profile"}</span>
+              <span>{copy.officialProfile}</span>
               <h1>{club.name}</h1>
             </div>
           </div>
           <div className="club-hub-hero-footer">
             {clubHonours.length ? (
-              <div className="club-hub-honours" aria-label={`${club.name} trophy cabinet`}>
+              <div className="club-hub-honours" aria-label={copy.trophyCabinet.replace("{name}", () => club.name)}>
                 <span>{t("clubHonours")}</span>
                 <ClubTrophyCarousel
-                  ariaLabel={`${club.name} trophy carousel`}
+                  ariaLabel={copy.trophyCarousel.replace("{name}", () => club.name)}
                   honours={clubHonours}
                   previousLabel={t("previousTrophy")}
                   nextLabel={t("nextTrophy")}
                 />
               </div>
             ) : (
-              <div className="club-hub-honours" aria-label={`${club.name} trophy cabinet`}>
+              <div className="club-hub-honours" aria-label={copy.trophyCabinet.replace("{name}", () => club.name)}>
                 <span>{t("clubHonours")}</span>
                 <p className="club-hub-honours-empty" role="status">{t("clubHonoursUnavailable")}</p>
               </div>
             )}
           </div>
         </header>
-        <ClubHubSectionNavigation locale={locale} />
-        {homeStadium ? <ClubHubHomeStadiumIdentity locale={locale} stadium={homeStadium} /> : null}
+        <ClubHubSectionNavigation draftLocalesEnabled={draftLocalesEnabled} locale={locale} />
+        {homeStadium ? <ClubHubHomeStadiumIdentity draftLocalesEnabled={draftLocalesEnabled} locale={locale} stadium={homeStadium} /> : null}
 
         <div className="club-hub-chapter club-hub-official-league-chapter">
-          <Suspense fallback={<ClubHubDeferredSection size="table" label={locale === "pt-BR" ? "Atualizando liga oficial" : "Updating official league"} />}>
-            <ClubHubOfficialLeagueSection
+          <Suspense fallback={<ClubHubDeferredSection size="table" label={copy.updatingLeague} />}>
+            <ClubHubOfficialLeagueSection draftLocalesEnabled={draftLocalesEnabled}
               club={club}
               locale={locale}
-              cursor={feedCursor ?? null}
               matchSnapshotPromise={matchSnapshotPromise}
               tablePromise={tablePromise}
-              dataSource={dataSource}
-              mirrorResultPromise={mirrorResultPromise}
             />
           </Suspense>
         </div>
@@ -1015,11 +1038,11 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
         <div className="club-hub-chapter club-hub-matchday-chapter">
           <ClubHubChapterMarker
             index="01"
-            label={locale === "pt-BR" ? "Dia de jogo" : "Matchday"}
-            note={locale === "pt-BR" ? "Escalação, treinador e banco" : "Line-up, coach and bench"}
+            label={getTouchlineClubHubSectionNavigationCopy(locale, draftLocalesEnabled).matchday}
+            note={copy.lineupCoachBench}
           />
-          <Suspense fallback={<ClubHubDeferredSection size="lineup" label={locale === "pt-BR" ? "Preparando escalação oficial" : "Preparing official line-up"} />}>
-            <ClubHubLineupSection
+          <Suspense fallback={<ClubHubDeferredSection size="lineup" label={copy.preparingLineup} />}>
+            <ClubHubLineupSection draftLocalesEnabled={draftLocalesEnabled}
               club={club}
               locale={locale}
               cardLabels={cardLabels}
@@ -1030,8 +1053,8 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           </Suspense>
 
           <div className="club-hub-matchday-support">
-            <Suspense fallback={<ClubHubDeferredSection size="panel" label={locale === "pt-BR" ? "Preparando área técnica" : "Preparing technical area"} />}>
-              <ClubHubTechnicalSections
+            <Suspense fallback={<ClubHubDeferredSection size="panel" label={copy.preparingTechnical} />}>
+              <ClubHubTechnicalSections draftLocalesEnabled={draftLocalesEnabled}
                 club={club}
                 locale={locale}
                 cardLabels={cardLabels}
@@ -1045,10 +1068,12 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
 
         <footer className="club-hub-footer">
           <span>© {copyrightYear} TouchLine</span>
-          <span>{locale === "pt-BR" ? "Todos os direitos reservados." : "All rights reserved."}</span>
+          <span>{copy.rights}</span>
         </footer>
 
       </section>
+
+      </div>
 
       <style>{`
         .club-hub {
@@ -1058,8 +1083,8 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
             radial-gradient(circle at 16% 18%, color-mix(in srgb, var(--club-accent) 28%, transparent), transparent 26%),
             radial-gradient(circle at 84% 14%, color-mix(in srgb, var(--club-secondary) 18%, transparent), transparent 22%),
             linear-gradient(135deg, #020707 0%, #06110d 44%, #030503 100%);
-          padding: 42px 5vw 64px;
         }
+        .club-hub-content { padding: 42px 5vw 64px; }
         .club-hub-deferred {
           position: relative;
           display: grid;
@@ -1270,7 +1295,6 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
             linear-gradient(90deg, rgba(2,8,6,.94) 0%, rgba(2,8,6,.74) 43%, rgba(2,8,6,.24) 78%),
             linear-gradient(0deg, rgba(2,8,6,.96) 0%, transparent 62%);
         }
-        #club-feed,
         #club-table,
         #club-squad,
         #touchline-club-lineup { scroll-margin-top: 84px; }
@@ -1908,7 +1932,7 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           text-decoration: none;
         }
         @media (max-width: 980px) {
-          .club-hub { padding: 22px 14px 42px; }
+          .club-hub-content { padding: 22px 14px 42px; }
           .club-hub-hero {
             grid-template-columns: minmax(0, 1fr);
             grid-template-areas: "identity" "match" "honours";
@@ -1977,7 +2001,7 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           .club-hub-feature-list small { grid-column: 2; }
         }
         @media (max-width: 720px) {
-          .club-hub { padding: 18px 10px 36px; }
+          .club-hub-content { padding: 18px 10px 36px; }
           .club-hub-honour-page {
             grid-template-columns: repeat(var(--club-hub-trophy-page-columns), minmax(0, 1fr));
             gap: 8px;
@@ -2027,7 +2051,7 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           .club-hub-fixture-row .club-hub-fixture-crest img { height: 100%; }
         }
         @media (orientation: landscape) and (max-width: 1100px) and (max-height: 520px) {
-          .club-hub {
+          .club-hub-content {
             padding: 12px 14px 28px;
           }
           .club-hub-back {

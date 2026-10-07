@@ -42,7 +42,7 @@ test("an active Admin session can be ended locally and switched without clearing
   assert.match(accountAccess, /touchLineAuthEntryHref\("\/admin\/login", normalizedLocale, returnTo\)/);
   assert.match(shell, /switchAccount: "Trocar conta"/);
   assert.match(shell, /currentAdminDestination/);
-  assert.match(shell, /touchLineAuthEntryHref\("\/admin\/login", locale, currentAdminDestination\)/);
+  assert.match(shell, /touchLineAuthEntryHref\(isOwner \? "\/admin\/login" : "\/login", locale, currentAdminDestination\)/);
   assert.match(shell, /onClick=\{signOut\}/);
 });
 
