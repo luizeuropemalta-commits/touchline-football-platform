@@ -37,6 +37,7 @@ import {
   touchlineFixtureStatusLabel,
   touchlineMatchCentreDisplayState,
   touchlineFixtureState,
+  normalizeTouchlineMatchCentreTimeZone,
   type TouchlineLiveReadMetadata,
   type TouchlineMatchCentreDisplayState,
 } from "@/lib/touchlineArena/match-centre";
@@ -46,6 +47,8 @@ import sharedControls from "../TouchlineGlobalNavigation.module.css";
 
 type Props = {
   initialFixtures: TouchlinePublicFixture[];
+  /** Reuse the Live rail in Arena without mounting the match detail. */
+  railOnly?: boolean;
   initialFixtureId?: string | null;
   initialMatchDetail?: TouchlinePublicFantasyFixtureMatchDetail | null;
   canReadMatchDetail?: boolean;
@@ -88,6 +91,15 @@ function fixtureDate(
 ) {
   if (!fixture.startsAt || Number.isNaN(Date.parse(fixture.startsAt))) return "—";
   return new Intl.DateTimeFormat(resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled), { ...options, calendar: "gregory", timeZone }).format(new Date(fixture.startsAt));
+}
+
+function browserTimeZone(fallback: string) {
+  try {
+    const candidate = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    return candidate ? normalizeTouchlineMatchCentreTimeZone(candidate) : fallback;
+  } catch {
+    return fallback;
+  }
 }
 
 function score(fixture: TouchlinePublicFixture, displayState: TouchlineMatchCentreDisplayState | null) {
@@ -137,7 +149,7 @@ function status(
 }
 
 function Countdown({ startsAt, language, initialNow, draftLocalesEnabled = false }: { startsAt?: string; language: TouchLineLocale; initialNow: number; draftLocalesEnabled?: boolean }) {
-  const [now, setNow] = useState(initialNow);
+  const [now, setNow] = useState(() => initialNow || Date.now());
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 30_000);
     return () => window.clearInterval(timer);
@@ -280,6 +292,7 @@ function MatchTeamSheet({
 
 export default function TouchlineMatchCentre({
   initialFixtures,
+  railOnly = false,
   initialFixtureId,
   initialMatchDetail = null,
   canReadMatchDetail = false,
@@ -298,6 +311,7 @@ export default function TouchlineMatchCentre({
   const [readMetadata, setReadMetadata] = useState<TouchlineLiveReadMetadata | null>(initialReadMetadata);
   const [matchDetail, setMatchDetail] = useState<TouchlinePublicFantasyFixtureMatchDetail | null>(initialMatchDetail);
   const [now, setNow] = useState(initialNow);
+  const [timeZone, setTimeZone] = useState(initialTimeZone);
   const dictionary = getTouchlineMatchCentreCopy(language, draftLocalesEnabled);
   const seasonLabel = matchCentreSeasonLabel(initialSeasonName, language, draftLocalesEnabled);
   const schedule = useMemo(() => selectTouchlineMatchCentreSchedule(fixtures, now), [fixtures, now]);
@@ -313,8 +327,20 @@ export default function TouchlineMatchCentre({
     return () => window.clearInterval(timer);
   }, []);
 
+  // Vercel supplies a first-render time zone in production. Localhost has no
+  // such request header, so after hydration prefer the visitor's own device.
   useEffect(() => {
-    if (!canReadMatchDetail) return;
+    // Keep the server snapshot through hydration, then read the external
+    // browser setting on the next frame. Cleanup prevents a stale route's
+    // fallback from overwriting a newer one after navigation/unmount.
+    const frame = window.requestAnimationFrame(() => {
+      setTimeZone(browserTimeZone(initialTimeZone));
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [initialTimeZone]);
+
+  useEffect(() => {
+    if (railOnly || !canReadMatchDetail) return;
     const fixtureId = selected?.providerId;
     if (!fixtureId) return;
     const requestedFixtureId = fixtureId;
@@ -362,7 +388,7 @@ export default function TouchlineMatchCentre({
       }
       if (detailRefresh.current === loadDetail) detailRefresh.current = null;
     };
-  }, [canReadMatchDetail, selected?.providerId]);
+  }, [canReadMatchDetail, selected?.providerId, railOnly]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -388,7 +414,10 @@ export default function TouchlineMatchCentre({
     void load();
     // Share the existing cadence: at most 80 periodic persisted-detail reads/hour
     // while visible, plus a selection's initial read; no provider request here.
-    const timer = window.setInterval(() => { void load(); void detailRefresh.current?.(); }, 45_000);
+    const timer = window.setInterval(() => {
+      if (document.hidden) return;
+      void load(); void detailRefresh.current?.();
+    }, 45_000);
     return () => { controller.abort(); window.clearInterval(timer); };
   }, []);
 
@@ -421,10 +450,14 @@ export default function TouchlineMatchCentre({
   }, [now, selected]);
   const fixtureSections: Array<{ id: FixtureSection; label: string; fixtures: TouchlinePublicFixture[] }> = [
     { id: "current", label: dictionary.currentFixtures, fixtures: schedule.currentFixtures },
-    { id: "results", label: dictionary.recentResults, fixtures: schedule.recentResults },
+    ...(!railOnly ? [{ id: "results" as const, label: dictionary.recentResults, fixtures: schedule.recentResults }] : []),
   ];
 
   function selectFixture(fixture: TouchlinePublicFixture) {
+    if (railOnly) {
+      window.location.assign(`/live?lang=${encodeURIComponent(language)}&fixture=${encodeURIComponent(fixture.id)}`);
+      return;
+    }
     setSelectedId(fixture.id);
     const url = new URL(window.location.href);
     url.searchParams.set("fixture", fixture.id);
@@ -439,37 +472,14 @@ export default function TouchlineMatchCentre({
     }
   }
 
-  return (
-    <main className={styles.shell} data-testid="touchline-match-centre" lang={language}>
-      <header className={styles.header} dir="ltr">
-        <Logo href={`/live?lang=${encodeURIComponent(language)}${selected ? `&fixture=${encodeURIComponent(selected.id)}` : ""}`} officialArena minimalMark subtitle="TouchLine Futebol Cards" wordmarkClassName="text-[clamp(26px,3.2vw,34px)]" />
-        <div className={styles.headerTitle}><span>{dictionary.official}</span><h1 className={styles.title}>{dictionary.title}</h1></div>
-      </header>
-      <div className={styles.toolbar} dir="ltr">
-        <TouchlineGlobalNavigation locale={language} currentRoute="live" surface="public" draftLocalesEnabled={draftLocalesEnabled} showAudioControl={false} className={styles.toolbarNavigation} />
-        <TouchlinePageControls locale={language} accountLocaleContext={accountLocaleContext} draftLocalesEnabled={draftLocalesEnabled} />
-      </div>
-      <p className={styles.selectionAnnouncement} role="status" aria-live="polite" aria-atomic="true">
-        {selected ? `${dictionary.selectedFixture}: ${fixtureLabel(selected, language, draftLocalesEnabled)} · ${status(selected, language, initialTimeZone, readMetadata, now, draftLocalesEnabled)}` : dictionary.noFixtures}
-      </p>
-
-      {readMetadata?.degraded ? <aside className={styles.freshnessNotice} role="status" aria-live="polite" aria-atomic="true" data-state={readMetadata.state}>
-        <Clock3 size={17} aria-hidden="true" />
-        <span dir={textDirection}>
-          <strong>{dictionary.liveDataUpdating}</strong>
-          <small>{readMetadata.state === "partial-persisted-schedule" ? dictionary.partialScheduleCopy : dictionary.liveDataUpdatingCopy}</small>
-          {verificationLabel(readMetadata, language, initialTimeZone, draftLocalesEnabled) ? <em>{verificationLabel(readMetadata, language, initialTimeZone, draftLocalesEnabled)}</em> : null}
-        </span>
-      </aside> : null}
-
-      <section className={styles.layout}>
-        <aside className={styles.fixtureRail} aria-label={dictionary.select}>
+  const fixtureRail = (
+        <aside className={`${styles.fixtureRail} ${railOnly ? styles.embeddedRail : ""}`} aria-label={dictionary.select}>
           <div className={styles.railHeading}>
             <span className={styles.englandFlag} aria-label={dictionary.england} role="img" />
             <span className={styles.railLeague} dir={textDirection}><strong>{dictionary.league}</strong>{seasonLabel ? <small>{seasonLabel}</small> : null}</span>
             <dl className={styles.fixtureCount}>
               <div><dt>{dictionary.currentFixtures}</dt><dd>{schedule.currentFixtures.length}</dd></div>
-              <div><dt>{dictionary.recentResults}</dt><dd>{schedule.recentResults.length}</dd></div>
+              {!railOnly ? <div><dt>{dictionary.recentResults}</dt><dd>{schedule.recentResults.length}</dd></div> : null}
             </dl>
           </div>
           <div
@@ -486,15 +496,17 @@ export default function TouchlineMatchCentre({
                 const isSelected = selected?.id === fixture.id;
                 const fixtureScores = fixtureScorePair(fixture);
                 const railStatus = fixtureRailStatus(fixture, language, readMetadata, now, draftLocalesEnabled);
-                return <div key={fixture.id} className={styles.fixtureRow}><button type="button" aria-controls={selected ? "touchline-match-panel" : undefined} aria-pressed={isSelected} onClick={() => selectFixture(fixture)} className={isSelected ? styles.selectedFixture : styles.fixture}>
+                return <div key={fixture.id} className={styles.fixtureRow}><button type="button" aria-controls={!railOnly && selected ? "touchline-match-panel" : undefined} aria-pressed={isSelected} onClick={() => selectFixture(fixture)} className={isSelected ? styles.selectedFixture : styles.fixture}>
                   <span className={styles.fixtureStack}>
                     <span className={styles.fixtureCentre}>
                       <time
                         dateTime={fixture.startsAt}
-                        aria-label={fixtureDate(fixture, language, initialTimeZone, { weekday: "long", day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }, draftLocalesEnabled)}
+                        aria-label={fixtureDate(fixture, language, timeZone, { weekday: "long", day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }, draftLocalesEnabled)}
                       >
-                        <span className={styles.fixtureDay}>{touchlineFixtureRailDateLabel(fixture, language, initialTimeZone, now, draftLocalesEnabled)}</span>
-                        <span className={styles.fixtureKickoff}>{fixtureDate(fixture, language, initialTimeZone, { hour: "2-digit", minute: "2-digit", hour12: false }, draftLocalesEnabled)}</span>
+                        <span className={styles.fixtureDay}>{isResultSection
+                          ? touchlineFixtureRailDateLabel(fixture, language, timeZone, now, draftLocalesEnabled)
+                          : fixtureDate(fixture, language, timeZone, { weekday: "short" }, draftLocalesEnabled)}</span>
+                        <span className={styles.fixtureKickoff}>{fixtureDate(fixture, language, timeZone, { hour: "2-digit", minute: "2-digit", hour12: false }, draftLocalesEnabled)}</span>
                       </time>
                       {railStatus ? <small dir={textDirection} className={touchlineMatchCentreDisplayState(fixture, readMetadata, now) === "live" ? styles.liveStatus : ""}>{railStatus}</small> : null}
                     </span>
@@ -519,6 +531,36 @@ export default function TouchlineMatchCentre({
             {!visibleFixtures.length ? <div className={styles.emptyRail}><CalendarDays size={22} /><strong>{dictionary.noFixtures}</strong></div> : null}
           </div>
         </aside>
+  );
+  if (railOnly) return fixtureRail;
+
+  return (
+    <main className={styles.shell} data-testid="touchline-match-centre" lang={language}>
+      <header className={styles.header} dir="ltr">
+        <Logo href={`/live?lang=${encodeURIComponent(language)}${selected ? `&fixture=${encodeURIComponent(selected.id)}` : ""}`} officialArena minimalMark subtitle="TouchLine Futebol Cards" wordmarkClassName="text-[clamp(26px,3.2vw,34px)]" />
+        <div className={styles.headerTitle}><span>{dictionary.official}</span><h1 className={styles.title}>{dictionary.title}</h1></div>
+        <div className={styles.headerControls}>
+          <TouchlinePageControls locale={language} accountLocaleContext={accountLocaleContext} draftLocalesEnabled={draftLocalesEnabled} />
+        </div>
+      </header>
+      <div className={styles.toolbar} dir="ltr">
+        <TouchlineGlobalNavigation locale={language} currentRoute="live" surface="public" draftLocalesEnabled={draftLocalesEnabled} showAudioControl={false} className={styles.toolbarNavigation} />
+      </div>
+      <p className={styles.selectionAnnouncement} role="status" aria-live="polite" aria-atomic="true">
+        {selected ? `${dictionary.selectedFixture}: ${fixtureLabel(selected, language, draftLocalesEnabled)} · ${status(selected, language, timeZone, readMetadata, now, draftLocalesEnabled)}` : dictionary.noFixtures}
+      </p>
+
+      {readMetadata?.degraded ? <aside className={styles.freshnessNotice} role="status" aria-live="polite" aria-atomic="true" data-state={readMetadata.state}>
+        <Clock3 size={17} aria-hidden="true" />
+        <span dir={textDirection}>
+          <strong>{dictionary.liveDataUpdating}</strong>
+          <small>{readMetadata.state === "partial-persisted-schedule" ? dictionary.partialScheduleCopy : dictionary.liveDataUpdatingCopy}</small>
+          {verificationLabel(readMetadata, language, timeZone, draftLocalesEnabled) ? <em>{verificationLabel(readMetadata, language, timeZone, draftLocalesEnabled)}</em> : null}
+        </span>
+      </aside> : null}
+
+      <section className={styles.layout}>
+        {fixtureRail}
 
         {selected ? <section id="touchline-match-panel" className={styles.matchPanel} aria-label={fixtureLabel(selected, language, draftLocalesEnabled)}>
           <div className={styles.matchMeta}><span><Trophy size={14} /> {dictionary.competition}</span><span>{selected.roundName ? `${dictionary.matchweek} · ${selected.roundName}` : dictionary.roundPending}</span><span><Clock3 size={14} /> {dictionary.timezone}</span></div>
@@ -543,8 +585,8 @@ export default function TouchlineMatchCentre({
               <div><TeamMark fixture={selected} side="away" /><strong>{selected.awayTeam?.name ?? dictionary.awayFallback}</strong></div>
             </div>
             <time className={styles.heroKickoff} dateTime={selected.startsAt}>
-              <span><CalendarDays size={14} aria-hidden="true" />{fixtureDate(selected, language, initialTimeZone, { weekday: "long", day: "numeric", month: "long", year: "numeric" }, draftLocalesEnabled)}</span>
-              <strong><Clock3 size={15} aria-hidden="true" />{fixtureDate(selected, language, initialTimeZone, { hour: "2-digit", minute: "2-digit", hour12: false }, draftLocalesEnabled)}</strong>
+              <span><CalendarDays size={14} aria-hidden="true" />{fixtureDate(selected, language, timeZone, { weekday: "long", day: "numeric", month: "long", year: "numeric" }, draftLocalesEnabled)}</span>
+              <strong><Clock3 size={15} aria-hidden="true" />{fixtureDate(selected, language, timeZone, { hour: "2-digit", minute: "2-digit", hour12: false }, draftLocalesEnabled)}</strong>
             </time>
             {touchlineFixtureState(selected, now) === "upcoming" ? <Countdown startsAt={selected.startsAt} language={language} initialNow={now} draftLocalesEnabled={draftLocalesEnabled} /> : <strong className={styles.countdown}>{touchlineMatchCentreDisplayState(selected, readMetadata, now) === "stale" ? dictionary.liveDataUpdating : touchlineFixtureStatusLabel(selected.status, language, draftLocalesEnabled) || dictionary.provider}</strong>}
           </div>
@@ -561,13 +603,13 @@ export default function TouchlineMatchCentre({
               </div>
             </article> : <article dir={textDirection}><span>{dictionary.venue}</span><strong>{dictionary.venuePending}</strong><small>{dictionary.official}</small></article>}
             <article dir={textDirection}><span>{dictionary.detail}</span><strong>{touchlineMatchCentreDisplayState(selected, readMetadata, now) === "stale" ? dictionary.lastVerified : touchlineFixtureState(selected, now) === "live" ? dictionary.liveNow : touchlineFixtureState(selected, now) === "finished" ? dictionary.completed : dictionary.watch}</strong><small>{dictionary.dataPending}</small></article>
-            <article dir={textDirection}><span>{dictionary.archive}</span><strong>{fixtureLabel(selected, language, draftLocalesEnabled)}</strong><small>{selected.verifiedAt ? `${dictionary.provider} · ${fixtureDate({ startsAt: selected.verifiedAt }, language, initialTimeZone, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }, draftLocalesEnabled)}` : dictionary.provider}</small></article>
+            <article dir={textDirection}><span>{dictionary.archive}</span><strong>{fixtureLabel(selected, language, draftLocalesEnabled)}</strong><small>{selected.verifiedAt ? `${dictionary.provider} · ${fixtureDate({ startsAt: selected.verifiedAt }, language, timeZone, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }, draftLocalesEnabled)}` : dictionary.provider}</small></article>
           </div>
 
           {verifiedDetail ? <section className={styles.verifiedMatchData} data-testid="touchline-verified-match-data">
             <header className={styles.verifiedHeading}>
               <div><ShieldCheck size={18} /><span>{dictionary.provider}</span><strong>{dictionary.eventCount(verifiedDetail.events.length)} · {dictionary.ratingCount(verifiedDetail.playerStatistics.filter((row) => row.rating !== null).length)}</strong></div>
-              {verifiedDetail.lineupAvailableAt ? <time dateTime={verifiedDetail.lineupAvailableAt}><UsersRound size={15} /> {dictionary.lineupAvailable} · {fixtureDate({ startsAt: verifiedDetail.lineupAvailableAt }, language, initialTimeZone, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }, draftLocalesEnabled)}</time> : null}
+              {verifiedDetail.lineupAvailableAt ? <time dateTime={verifiedDetail.lineupAvailableAt}><UsersRound size={15} /> {dictionary.lineupAvailable} · {fixtureDate({ startsAt: verifiedDetail.lineupAvailableAt }, language, timeZone, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }, draftLocalesEnabled)}</time> : null}
             </header>
             <section className={styles.highlightDeck} aria-label={dictionary.highlights}>
               <header><Sparkles size={16} aria-hidden="true" /><span>{dictionary.highlights}</span></header>

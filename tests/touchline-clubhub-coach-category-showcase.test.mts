@@ -60,6 +60,9 @@ test("ClubHub exposes the seven canonical player and coach borders with real rep
   assert.match(componentStyles, /data-coach-card-inner="true"/);
   assert.match(componentStyles, /data-touchline-card-frame="true"/);
   assert.match(component, /dictionary\.representativePendingDescription/);
+  assert.match(component, /data-coach-representative="pending"/);
+  assert.match(component, /tl-shield-lime\.svg/);
+  assert.doesNotMatch(component, /gallery\.compactArtUrl/);
   assert.doesNotMatch(component, /TOUCHLINE_DEMO_COACH|competition-card-offer|retailPrice|touchCredit|\bfetch\(/);
 });
 
@@ -132,14 +135,17 @@ test("the public ClubHub keeps language selection at the top and player borders 
       "@/lib/touchlineFantasy/market-workflow-i18n": workflow,
       "./touchline-clubs.module.css": { default: new Proxy({}, { get: (_, key) => String(key) }) },
     };
-    for (const name of ["TouchlineGlobalNavigation", "TouchlineCoachCategoryShowcase", "TouchlineLivePresentationRefresh", "ClubHubCrestTrace", "TouchlineClubPerimeterTrace", "ClubHubCardLink"]) modules[`@/components/touchline/${name}`] = { default: forbid };
+    for (const name of ["TouchlineCoachCategoryShowcase", "TouchlineLivePresentationRefresh", "ClubHubCrestTrace", "TouchlineClubPerimeterTrace", "ClubHubCardLink"]) modules[`@/components/touchline/${name}`] = { default: forbid };
+    modules["@/components/touchline/TouchlineGlobalNavigation"] = { default: () => null };
     const compiled = compileMenuBoundary(page, modules);
     const tree = await (compiled.default as (props: { searchParams: Promise<{ lang: string }> }) => Promise<React.ReactElement<Record<string, unknown>>>)({ searchParams: Promise.resolve({ lang }) });
     assert.equal(contextLoads, 1);
-    const rootChildren = childElements(tree), header = rootChildren[0], sections = childElements(rootChildren[1]), topbar = sections[0];
+    const rootChildren = childElements(tree), header = rootChildren[0], sections = childElements(rootChildren[1]);
     assert.equal(tree.type, "main"); assert.equal(header.type, brand.default);
-    assert.equal(topbar.type, "div"); assert.equal(topbar.props.className, "topbar");
-    assert.equal(sections[1].props.className, "hero", "language controls precede hero content");
+    const navigation = header.props.navigation as React.ReactElement<Record<string, unknown>>;
+    assert.equal(navigation.type, (modules["@/components/touchline/TouchlineGlobalNavigation"] as { default: unknown }).default);
+    assert.equal(navigation.props.showAudioControl, false);
+    assert.equal(sections[0].props.className, "hero", "shared header and language controls precede hero content");
     const actual = header, effective = lang === "pt-BR" ? "pt-BR" : "en-GB";
     assert.equal(actual.props.accountLocaleContext, context, "pass the authoritative object without synthesizing a guest");
     assert.equal(actual.props.locale, effective);
@@ -239,9 +245,9 @@ async function directoryView({ lang, future = false, sentinel = false, context =
   const compiled = compileMenuBoundary(`${page}\nexport { renderTouchlineClubsPage as testRender };`, modules);
   const tree = await (compiled.testRender as (props: { searchParams: Promise<{ lang: unknown }> }, enabled: boolean) => Promise<React.ReactElement<Record<string, unknown>>>)({ searchParams: Promise.resolve({ lang }) }, future);
   const shell = childElements(tree), brandHeader = shell[0], content = shell[1];
-  const children = childElements(content), topbar = childElements(children[0]), grid = childElements(children[2]);
-  const suspense = children[3], showcase = childElements(suspense)[0];
-  const html = renderToStaticMarkup(React.cloneElement(tree, {}, brandHeader, React.cloneElement(content, {}, children.map((child, index) => index === 3 ? React.createElement(React.Fragment, { key: index }, child.props.fallback as React.ReactNode) : React.cloneElement(child, { key: index })))));
+  const children = childElements(content), topbar = [brandHeader.props.navigation as React.ReactElement<Record<string, unknown>>], grid = childElements(children[1]);
+  const suspense = children[2], showcase = childElements(suspense)[0];
+  const html = renderToStaticMarkup(React.cloneElement(tree, {}, brandHeader, React.cloneElement(content, {}, children.map((child, index) => index === 2 ? React.createElement(React.Fragment, { key: index }, child.props.fallback as React.ReactNode) : React.cloneElement(child, { key: index })))));
   return { html, tree, brandHeader, topbar, grid, suspense, showcase, contextLoads, context, requests, workflowRequests, loaders, effective, registry };
 }
 

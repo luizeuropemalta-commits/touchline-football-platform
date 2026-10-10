@@ -2,7 +2,8 @@ import type { FootballDataHttpResponse } from "./http.ts";
 
 export type SportmonksQuotaOperation = "stages" | "topscorers";
 /** Keep the GoldenBoot operation set stable; Fixture is a separate entity scope. */
-export type SportmonksObservedQuotaOperation = SportmonksQuotaOperation | "fixture" | "league" | "season" | "squad" | "squadExtended";
+export type SportmonksObservedQuotaOperation = SportmonksQuotaOperation | "fixture" | "league" | "season" | "squad" | "squadExtended"
+  | "player" | "team" | "coach" | "standing" | "transfer" | "resource" | "enrichment";
 /** Closed worker-only prequery contract. New raw literals still require isolated
  * provider evidence before activation; mismatches must block unknown. */
 export const SPORTMONKS_PREQUERY_ENDPOINTS = {
@@ -19,8 +20,64 @@ export const SPORTMONKS_PREQUERY_ENDPOINTS = {
   // SQL admission remains fail-closed until a separately verified migration.
   squad: { operation: "squad", entity: "PlayerTeam" },
   squadExtended: { operation: "squadExtended", entity: "Player" },
+  player: { operation: "player", entity: "Player" },
+  playerSearch: { operation: "player", entity: "Player" },
+  team: { operation: "team", entity: "Team" },
+  coach: { operation: "coach", entity: "Coach" },
+  standings: { operation: "standing", entity: "Standing" },
+  playerTransfers: { operation: "transfer", entity: "Transfer" },
+  teamTransfers: { operation: "transfer", entity: "Transfer" },
+  seasons: { operation: "season", entity: "Season" },
+  leagueSeasons: { operation: "season", entity: "Season" },
+  leagues: { operation: "league", entity: "League" },
+  resources: { operation: "resource", entity: "Resource" },
+  enrichments: { operation: "enrichment", entity: "Enrichment" },
 } as const;
 export type SportmonksPrequeryEndpoint = keyof typeof SPORTMONKS_PREQUERY_ENDPOINTS;
+
+/** Classifies only API-relative paths emitted by this adapter. This is not
+ * admission: the central SQL policy must accept and reserve the same tuple.
+ * Never normalize URLs, traversal, query strings or encoded path separators. */
+export function sportmonksPrequeryEndpoint(path: string): SportmonksPrequeryEndpoint | null {
+  if (typeof path !== "string" || /\s/.test(path) || path.includes("\\")) return null;
+  const exact: Readonly<Record<string, SportmonksPrequeryEndpoint>> = {
+    "/livescores/inplay": "inplay", "/livescores/latest": "latest",
+    "/seasons": "seasons", "/leagues": "leagues",
+    "/my/resources": "resources", "/my/enrichments": "enrichments",
+  };
+  if (Object.hasOwn(exact, path)) return exact[path];
+  const idPaths: readonly [string, SportmonksPrequeryEndpoint][] = [
+    ["squads/teams", "squad"], ["leagues", "league"], ["seasons", "season"],
+    ["stages/seasons", "stages"], ["topscorers/seasons", "topscorers"],
+    ["fixtures", "fixture"], ["players", "player"], ["teams", "team"],
+    ["coaches", "coach"], ["standings/seasons", "standings"],
+    ["transfers/players", "playerTransfers"], ["transfers/teams", "teamTransfers"],
+    ["seasons/leagues", "leagueSeasons"],
+  ];
+  for (const [prefix, endpoint] of idPaths) {
+    if (new RegExp(`^/${prefix}/[1-9][0-9]{0,19}$`).test(path)) return endpoint;
+  }
+  if (/^\/squads\/teams\/[1-9][0-9]{0,19}\/extended$/.test(path)) return "squadExtended";
+  const search = /^\/players\/search\/([^/?#]+)$/.exec(path);
+  if (search) {
+    try {
+      const term = decodeURIComponent(search[1]);
+      const hasControl = [...term].some(character => character.codePointAt(0)! < 32 || character.codePointAt(0) === 127);
+      if (term.trim() && term !== "." && term !== ".." && !hasControl && !/[/\\%?#]/.test(term)
+        && encodeURIComponent(term) === search[1]) return "playerSearch";
+    } catch { /* Invalid escape/UTF-8 is not an endpoint. */ }
+    return null;
+  }
+  const date = /^\/fixtures\/date\/(\d{4}-\d{2}-\d{2})$/.exec(path);
+  const between = /^\/fixtures\/between\/(\d{4}-\d{2}-\d{2})\/(\d{4}-\d{2}-\d{2})$/.exec(path);
+  const validDay = (day: string) => {
+    const time = Date.parse(`${day}T00:00:00.000Z`);
+    return Number.isFinite(time) && new Date(time).toISOString().slice(0, 10) === day;
+  };
+  if (date && validDay(date[1])) return "date";
+  if (between && validDay(between[1]) && validDay(between[2]) && between[1] <= between[2]) return "between";
+  return null;
+}
 export type SportmonksQuotaObservation = Readonly<{
   requestId: string;
   attempt: number;

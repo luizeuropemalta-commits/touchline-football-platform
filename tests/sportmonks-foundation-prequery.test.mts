@@ -53,7 +53,7 @@ test('callers without a guard retain existing team and squad HTTP behavior', asy
   });
 });
 
-test('explicit guard rejects unknown team endpoint before reusing a warm unguarded cache', async () => {
+test('explicit guard denies team admission before reusing a warm unguarded cache', async () => {
   let fetches = 0, ports = 0;
   const guard: Guard = { accountScope: 'qa-foundation', createPort: () => {
     ports++;
@@ -69,9 +69,9 @@ test('explicit guard rejects unknown team endpoint before reusing a warm unguard
     assert.equal(fetches, 1, 'control proves the real cache was populated and reused');
 
     const guarded = await new SportmonksFootballProvider({ fixtureGuard: guard }).getTeamById('19');
-    assert.equal(guarded.ok, false, 'a cached successful team must not bypass the unknown-endpoint guard');
+    assert.equal(guarded.ok, false, 'a cached successful team must not bypass authority admission');
     assert.equal(fetches, 1, 'guarded attempt emits zero additional HTTP');
-    assert.equal(ports, 0, 'unknown endpoint must not invent an authority tuple');
+    assert.equal(ports, 1, 'known Team tuple must reach authority, whose denial still prevents HTTP');
     assert.equal(Object.hasOwn(guarded, 'data'), false, 'no team payload may escape from the warm cache');
 
     assert.equal((await legacy.getTeamById('19')).ok, true);
@@ -132,4 +132,68 @@ test('denied base squad never starts extended admission or HTTP', async () => {
     assert.deepEqual(endpoints, ['squad']);
     assert.equal(fetches, 0);
   }, async () => { fetches++; return new Response('{}'); });
+});
+
+test('new adapter families pass admission and persist observations before returning', async () => {
+  const endpoints: string[] = [], observations: string[] = [], paths: string[] = [];
+  let activeEntity: string | null = null;
+  const guard: Guard = { accountScope: 'shared-fixture', createPort: context => ({
+    beforeAttempt: () => {
+      assert.equal(activeEntity, null, 'previous request must finish its receipt');
+      activeEntity = context.entity; endpoints.push(context.endpoint);
+      return { allowed: true, token: 'synthetic-admission' };
+    },
+    afterAttempt: ({ observation }) => {
+      assert.equal(observation.requestedEntity, context.entity);
+      assert.equal(observation.requestId, context.requestId);
+      assert.equal(observation.remaining, 1900);
+      observations.push(context.endpoint); activeEntity = null;
+      return { persisted: true };
+    },
+  }) };
+  await synthetic(async () => {
+    const provider = new SportmonksFootballProvider({ fixtureGuard: guard });
+    const calls = [
+      () => provider.getPlayerById('1'), () => provider.searchPlayers({ query: 'João Silva', limit: 5 }),
+      () => provider.getTeamById('19'), () => provider.getCoachById('1'),
+      () => provider.getStandings({ seasonId: '1' }),
+      () => provider.getTransfers({ playerId: '1' }), () => provider.getTransfers({ teamId: '19' }),
+      () => provider.getSeasons(), () => provider.getSeasons('8'),
+      () => provider.getCompetitions(), () => provider.getSubscriptionCapabilities(),
+    ];
+    for (const call of calls) assert.equal((await call()).ok, true);
+    assert.deepEqual(endpoints, ['player', 'playerSearch', 'team', 'coach', 'standings', 'playerTransfers',
+      'teamTransfers', 'seasons', 'leagueSeasons', 'leagues', 'resources', 'enrichments']);
+    assert.deepEqual(observations, endpoints);
+    assert.equal(paths.length, endpoints.length);
+    assert.equal(paths.at(-2), '/v3/my/resources');
+    assert.equal(paths.at(-1), '/v3/my/enrichments');
+  }, async input => {
+    assert.ok(activeEntity, 'no HTTP before admission');
+    paths.push(new URL(String(input)).pathname);
+    return new Response(JSON.stringify({ data: [], rate_limit: {
+      requested_entity: activeEntity, remaining: 1900, resets_in_seconds: 3600,
+    } }), { status: 200, headers: { 'content-type': 'application/json' } });
+  });
+});
+
+test('unknown path and refused receipt cannot become a cached success', async () => {
+  let ports = 0, fetches = 0;
+  const guard: Guard = { accountScope: 'shared-fixture', createPort: () => {
+    ports++;
+    return { beforeAttempt: () => ({ allowed: true, token: 'synthetic-admission' }),
+      afterAttempt: () => { throw new Error('Receipt unavailable'); } };
+  } };
+  await synthetic(async () => {
+    const provider = new SportmonksFootballProvider({ fixtureGuard: guard });
+    assert.equal((await provider.getTeamById('19?api_token=bad')).ok, false);
+    assert.equal(ports, 0); assert.equal(fetches, 0);
+    assert.equal((await provider.getTeamById('19')).ok, false);
+    assert.equal((await provider.getTeamById('19')).ok, false);
+    assert.equal(ports, 2); assert.equal(fetches, 2, 'failed receipts are not cached successes');
+  }, async () => {
+    fetches++;
+    return new Response(JSON.stringify({ data: { id: 19, name: 'Synthetic' } }),
+      { status: 200, headers: { 'content-type': 'application/json' } });
+  });
 });

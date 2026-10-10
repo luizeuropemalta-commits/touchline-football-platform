@@ -28,7 +28,7 @@ function GlobalErrorContent({ error, draftLocalesEnabled = false }: GlobalErrorP
 
   return (
     <html lang={locale} dir="ltr">
-      <body>
+      <body data-touchline-global-error>
         <NextError statusCode={0} title={copy.title} />
       </body>
     </html>

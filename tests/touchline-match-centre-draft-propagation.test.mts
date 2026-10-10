@@ -23,7 +23,7 @@ runInNewContext(ts.transpileModule(`${helpers.map(node => node.getText(ast)).joi
 }).outputText, {
   exports, resolveTouchlineCatalogueLocale, getTouchlineMatchCentreCopy, localizedPositionLabel,
   touchlineFixtureStatusLabel, touchlineMatchCentreDisplayState,
-  useState: (initial: unknown) => [initial, () => assert.fail("render must not update state")],
+  useState: (initial: unknown) => [typeof initial === "function" ? initial() : initial, () => assert.fail("render must not update state")],
   useEffect: () => undefined,
   TeamMark: () => null,
   styles: new Proxy({}, { get: (_, key) => String(key) }),

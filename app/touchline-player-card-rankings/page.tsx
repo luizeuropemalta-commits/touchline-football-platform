@@ -181,21 +181,10 @@ async function renderPlayerCardRankings({
   return (
     <TouchlineCardLeadershipProvider value={buildTouchlineCardLeadershipValue(activeRanking, null)}>
     <main className="tl-card-rankings" dir="ltr">
-      <TouchlineBrandHeader href={`/touchline-player-card-rankings?lang=${encodeURIComponent(locale)}`} locale={locale} accountLocaleContext={accountLocaleContext} draftLocalesEnabled={draftLocalesEnabled} />
+      <TouchlineBrandHeader href={`/touchline-player-card-rankings?lang=${encodeURIComponent(locale)}`} locale={locale} accountLocaleContext={accountLocaleContext} draftLocalesEnabled={draftLocalesEnabled} navigation={<TouchlineGlobalNavigation showAudioControl={false} locale={locale} draftLocalesEnabled={draftLocalesEnabled} currentRoute="rankings" surface={resolveTouchlineGlobalNavigationSurface({ isAuthenticated: Boolean(user), isAdmin: Boolean(user && isOwnerEmail(user.email)) })} />} />
       <div className="tl-card-rankings-content">
       <TouchlineLivePresentationRefresh
         initialPlayerRankingSnapshotId={activeRanking.snapshotId}
-      />
-      <TouchlineGlobalNavigation
-        showAudioControl={false}
-        locale={locale}
-        draftLocalesEnabled={draftLocalesEnabled}
-        currentRoute="rankings"
-        surface={resolveTouchlineGlobalNavigationSurface({
-          isAuthenticated: Boolean(user),
-          isAdmin: Boolean(user && isOwnerEmail(user.email)),
-        })}
-        className="tl-card-rankings-global-navigation"
       />
 
       <section className="tl-card-rankings-shell">
@@ -257,7 +246,7 @@ async function renderPlayerCardRankings({
                         player={exactPlayer}
                         runtimeLocaleOverride={locale}
                         draftLocalesEnabled={draftLocalesEnabled}
-                        hideMarketValuePanel
+                        hideMarketValuePanel={false}
                         labels={cardLabels}
                         layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY}
                         imageLoading="eager"
@@ -271,7 +260,7 @@ async function renderPlayerCardRankings({
                       player={exactPlayer}
                       runtimeLocaleOverride={locale}
                       draftLocalesEnabled={draftLocalesEnabled}
-                      hideMarketValuePanel
+                      hideMarketValuePanel={false}
                       labels={cardLabels}
                       layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY}
                       imageLoading="lazy"
@@ -336,7 +325,7 @@ async function renderPlayerCardRankings({
                           player={exactPlayer}
                           runtimeLocaleOverride={locale}
                           draftLocalesEnabled={draftLocalesEnabled}
-                          hideMarketValuePanel
+                          hideMarketValuePanel={false}
                           labels={cardLabels}
                           layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY}
                           imageLoading="eager"
@@ -350,7 +339,7 @@ async function renderPlayerCardRankings({
                         player={exactPlayer}
                         runtimeLocaleOverride={locale}
                         draftLocalesEnabled={draftLocalesEnabled}
-                        hideMarketValuePanel
+                        hideMarketValuePanel={false}
                         labels={cardLabels}
                         layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY}
                         imageLoading="lazy"

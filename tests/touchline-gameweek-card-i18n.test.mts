@@ -5,6 +5,7 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { runInNewContext } from "node:vm";
+import { chromium } from "@playwright/test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import ts from "typescript";
@@ -139,7 +140,7 @@ test("public Gameweek card and review presentation omit individual card prices w
   const cardSource = readFileSync(new URL("../components/touchline/fantasy/TouchlineGameweekCard.tsx", import.meta.url), "utf8");
   const exactCardSource = readFileSync(new URL("../components/touchline/cards/TouchlineEliteExactCard.tsx", import.meta.url), "utf8");
   // The legacy icon name refers to football market value, not a card price.
-  // Preserve that verified fact in the zoom while hiding the card's price panel.
+  // Preserve that verified fact in both the card and the zoom; it is not a sale price.
   assert.match(cardSource, /details=\{details\}/);
   assert.match(cardSource, /marketValue: card\.marketValue/);
   assert.match(cardSource, /marketValueState: card\.marketValueState/);
@@ -147,14 +148,82 @@ test("public Gameweek card and review presentation omit individual card prices w
   assert.equal(element.props.details.fields.find(field => field.icon === "player-identity-price")?.value, "€1M");
   const rendered = view.render(element);
   assert.doesNotMatch(rendered.panel, /£15|GBP|1,500|1500/);
-  assert.equal(element.props.children.props.hideMarketValuePanel, true);
-  assert.equal(element.props.expandedContent.props.hideMarketValuePanel, true);
+  assert.match(rendered.card, /data-card-market-value-panel="true"/);
+  assert.match(rendered.card, /data-market-value="€1M"/);
+  assert.match(rendered.card, />€1M<\/div>/);
+  const pending = view.render(view.produce("en-GB", {
+    marketValue: null,
+    marketValueState: "pending",
+    editorialCard: { ...card.editorialCard!, marketValueEur: undefined },
+  }));
+  assert.match(pending.card, /data-card-market-value-panel="true"/);
+  assert.match(pending.card, /data-market-value="unavailable"/);
+  assert.doesNotMatch(pending.card, />€1M<\/div>/);
+  assert.equal(element.props.children.props.hideMarketValuePanel, false);
+  assert.equal(element.props.expandedContent.props.hideMarketValuePanel, false);
   assert.match(exactCardSource, /!hideMarketValuePanel \? <div[\s\S]*?data-card-market-value-panel/);
   assert.equal(element.props.details.fields.find(field => field.kind === "rating-total")?.value, "0.00");
   const review = fantasyClient.match(/visibleStep === "review" \? <>([\s\S]*?)\{visibleStep === "locked"/)?.[1] ?? "";
   assert.ok(review);
   assert.doesNotMatch(review, /card\?\.marketValue/);
   assert.match(review, /card\?\.name/);
+});
+
+test("market value panel occupies visible card space at phone and desktop widths", async () => {
+  const view = fixture();
+  const approvedMarkup = view.render(view.produce("pt-BR")).card;
+  const pendingMarkup = view.render(view.produce("pt-BR", {
+    marketValue: null,
+    marketValueState: "pending",
+    editorialCard: { ...card.editorialCard!, marketValueEur: undefined },
+  })).card;
+  const fantasyCss = readFileSync(new URL("../app/fantasy/fantasy.module.css", import.meta.url), "utf8");
+  const zoomCss = readFileSync(new URL("../components/touchline/cards/TouchlineCardZoom.module.css", import.meta.url), "utf8");
+  const presentationCss = readFileSync(new URL("../components/touchline/cards/TouchlinePublicCardPresentation.module.css", import.meta.url), "utf8")
+    .replaceAll(':global([data-card-zoom="expanded"])', '[data-card-zoom="expanded"]');
+  const browser = await chromium.launch({ headless: true });
+  try {
+    for (const width of [390, 1280]) {
+      const page = await browser.newPage({ viewport: { width, height: 760 } });
+      let loadedAssets = 0;
+      await page.route("**/*", async (route) => {
+        const requestUrl = new URL(route.request().url());
+        if (requestUrl.hostname !== "touchline.local") return route.abort();
+        if (requestUrl.pathname === "/") return route.fulfill({ status: 200, contentType: "text/html", body: "<html></html>" });
+        const publicRoot = path.join(root, "public");
+        const assetPath = path.resolve(publicRoot, `.${decodeURIComponent(requestUrl.pathname)}`);
+        if (!assetPath.startsWith(`${publicRoot}${path.sep}`) || !existsSync(assetPath)) return route.fulfill({ status: 404, body: "" });
+        loadedAssets += 1;
+        return route.fulfill({ status: 200, path: assetPath });
+      });
+      await page.goto("http://touchline.local/");
+      await page.setContent(`<style>*{box-sizing:border-box}body{margin:0;padding:24px;background:#06130d;color:white}.cases{display:flex;gap:12px;flex-wrap:wrap}${fantasyCss}${zoomCss}${presentationCss}</style><div class="cases"><article class="marketCard" data-market-case="approved">${approvedMarkup}</article><article class="marketCard" data-market-case="pending">${pendingMarkup}</article></div>`);
+      await page.locator(".marketCard img").first().waitFor({ state: "visible" });
+      assert.ok(loadedAssets > 0, `no local artwork loaded at ${width}px`);
+      for (const [state, expectedValue] of [["approved", "€1M"], ["pending", null]] as const) {
+        const cardNode = page.locator(`[data-market-case="${state}"]`);
+        const panel = cardNode.locator('[data-card-market-value-panel="true"]').first();
+        assert.equal(await panel.isVisible(), true);
+        const value = await panel.innerText();
+        if (expectedValue) assert.match(value, /€\s?1M/);
+        else {
+          assert.doesNotMatch(value, /€\s?1M/);
+          assert.equal(await cardNode.locator("[data-market-value]").first().getAttribute("data-market-value"), "unavailable");
+        }
+        const bounds = await panel.boundingBox();
+        const cardBounds = await cardNode.boundingBox();
+        assert.ok(bounds && cardBounds && bounds.width > 0 && bounds.height > 0, `${state} panel has no box at ${width}px`);
+        assert.ok(bounds.x >= cardBounds.x && bounds.x + bounds.width <= cardBounds.x + cardBounds.width, `${state} panel escapes card width at ${width}px`);
+        assert.ok(bounds.y >= cardBounds.y && bounds.y + bounds.height <= cardBounds.y + cardBounds.height, `${state} panel escapes card height at ${width}px`);
+      }
+      if (process.env.TOUCHLINE_MARKET_VISUAL_CAPTURE) {
+        await page.screenshot({ path: `${process.env.TOUCHLINE_MARKET_VISUAL_CAPTURE}-${width}.png` });
+      }
+      await page.close();
+    }
+  } finally {
+    await browser.close();
+  }
 });
 
 test("real conversion, profile URL, identity and all thumbnail/zoom layout props remain unchanged", () => {

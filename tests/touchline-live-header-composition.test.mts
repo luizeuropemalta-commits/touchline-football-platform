@@ -61,6 +61,7 @@ const exports: { render?: (locale: string, draft?: boolean) => React.ReactNode }
 runInNewContext(ts.transpileModule(`export function render(language, draftLocalesEnabled=false) {
  const dictionary=getTouchlineMatchCentreCopy(language,draftLocalesEnabled);
  const selected={id:'fixture $&'};
+ const railOnly=false;
  const accountLocaleContext={mode:'account',accountId:'trusted-id'};
  const schedule={currentFixtures:[1,2,3],recentResults:[1,2]};
  return <>${nodes.header[0].getText(ast)}${nodes.toolbar[0].getText(ast)}${nodes.fixtureCount[0].getText(ast)}</>;

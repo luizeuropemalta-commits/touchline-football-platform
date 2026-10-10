@@ -69,8 +69,8 @@ test("Market keeps card zoom on the Starting XI without rendering a substitute b
   assert.match(card, /expandedContent=\{<TouchlineEliteExactCard/);
   assert.doesNotMatch(builder, /Matchday bench/);
   assert.doesNotMatch(builder, /remainingSquad\.map|className=\{styles\.bench\}/);
-  assert.match(builder, /card && selection && editable \? <button[^>]*className=\{styles\.pitchRemove\}[^>]*disabled=\{saving\}/);
-  assert.match(builder, /onClick=\{\(\) => removeMyClubPlayer\(selection\.playerId, slot\.id\)\}/);
+  assert.doesNotMatch(builder, /className=\{styles\.pitchRemove\}/);
+  assert.match(builder, /replacementAction=\{editable && selection \? \{[^\n]*disabled: saving, onSelect: \(\) => replaceMyClubPlayer\(selection\.playerId, slot\.id\)/);
   assert.match(builder, /className=\{styles\.emptyPosition\}[^>]*onClick=\{\(\) => openTacticalSelector\(slot\.id\)\}/);
   const styles = source("app/fantasy/fantasy.module.css");
   assert.match(styles, /\.myClubPitchViewport \.myClubTacticalSlot > \.pitchRemove \{[^}]*width: 44px; height: 44px; min-height: 44px/);

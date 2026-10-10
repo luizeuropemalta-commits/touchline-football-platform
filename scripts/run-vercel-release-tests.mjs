@@ -1,6 +1,7 @@
 import { readdir } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
+import { releaseSqlEnvironment } from "./release-sql-runtime.mjs";
 
 // Vercel intentionally excludes docs/ from the deployment input. These tests
 // validate immutable local audit artifacts under docs/, so they remain part of
@@ -36,6 +37,7 @@ const testFiles = (await readdir(testsDirectory))
   .sort()
   .map((file) => resolve(testsDirectory, file));
 
+const releaseEnv = await releaseSqlEnvironment();
 const result = spawnSync(process.execPath, [
   "--test",
   // Keep the complete suite, but bound simultaneous workers on the local
@@ -46,6 +48,6 @@ const result = spawnSync(process.execPath, [
   "--test-timeout=30000",
   "--experimental-strip-types",
   ...testFiles,
-], { stdio: "inherit" });
+], { stdio: "inherit", env: releaseEnv });
 
 process.exit(result.status ?? 1);

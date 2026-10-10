@@ -6,7 +6,7 @@ const source = (path: string) => readFileSync(new URL(`../${path}`, import.meta.
 
 test("market selection uses the approved embedded position-bound section and returns to the field", () => {
   const client = source("app/fantasy/FantasyGameweekClient.tsx");
-  assert.match(client, /const openTacticalSelector = \(slotId: string\) => \{\s*setActiveSlotId\(slotId\);[\s\S]*?scrollToLineupSection\("my-club-player-selection"\)/);
+  assert.match(client, /const openTacticalSelector = \(slotId: string\) => \{\s*setArenaOpen\(false\);\s*setActiveSlotId\(slotId\);[\s\S]*?scrollToLineupSection\("my-club-player-selection"\)/);
   assert.match(client, /marketPage \? Boolean\(activeSlot\) && slotAccepts\(activeSlot, card\)/);
   assert.match(client, /if \(!addPlayer\(card\)\) return;\s*setBrowsePosition\(null\);\s*setSquadView\("tactical"\);\s*scrollToLineupSection\("my-club-xi-pitch"\)/);
   assert.match(client, /onClick=\{\(\) => openTacticalSelector\(slot\.id\)\}/);

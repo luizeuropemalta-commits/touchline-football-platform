@@ -26,6 +26,7 @@ function scenario(options: Options = {}) {
   const gates = Object.fromEntries((options.blocked ?? []).map((key) => [key, deferred()]));
   const events: string[] = [];
   const queries: Array<{ key: string; filters: Record<string, unknown> }> = [];
+  const availabilityReads: Array<{ season: string; round: string; players: string[] }> = [];
   const week = { id: "round", gameweek_number: 1, state: "MARKET_OPEN", market_opens_at: "2026-01-01", locks_at: "2030-01-01", first_fixture_at: "2030-01-01", last_fixture_at: "2030-01-02" };
   const wait = (key: string) => gates[key]?.promise ?? Promise.resolve();
   const admin = {
@@ -73,11 +74,17 @@ function scenario(options: Options = {}) {
     reconcileTouchlineFantasyGameweeks: async () => { events.push("lifecycle"); return { error: options.writerError === "lifecycle" ? "failed" : null, reconciled: 0 }; },
     loadCatalogue: async () => { events.push("catalogue"); await wait("catalogue"); return []; },
     loadCoaches: async () => [], loadRankings: async () => ({ gameweek: [], season: [] }),
+    readGameweekPlayerAvailability: async (client: unknown, season: string, round: string, players: string[], catalogue: unknown[]) => {
+      assert.equal(client, admin);
+      assert.deepEqual(Array.from(catalogue), []);
+      availabilityReads.push({ season, round, players: Array.from(players) });
+      return [];
+    },
     TOUCHLINE_FANTASY_INITIAL_BUDGET_EUR: 100,
     fetch: () => assert.fail("network forbidden"),
   };
   const load = runInNewContext(code, context) as (user: object, projection: string) => Promise<Record<string, unknown> | null>;
-  return { gates, events, queries, run: () => load({ id: "user" }, options.projection ?? "full"), release: () => Object.values(gates).forEach((gate) => gate.resolve()) };
+  return { gates, events, queries, availabilityReads, run: () => load({ id: "user" }, options.projection ?? "full"), release: () => Object.values(gates).forEach((gate) => gate.resolve()) };
 }
 const plain = (value: unknown) => JSON.parse(JSON.stringify(value));
 const writers = (events: string[]) => events.filter((event) => event.startsWith("touchline_fantasy_") || event === "lifecycle");
@@ -127,6 +134,8 @@ test("history follows selections while scores and alerts remain pending, with id
   assert.deepEqual(plain(h.queries.find((query) => query.key === "history")?.filters), { gameweek_id: "round", player_id: ["locked-player"] });
   for (const key of ["draft", "locked", "scores", "season", "alerts", "history"]) assert.equal(h.queries.filter((query) => query.key === key).length, 1);
   assert.equal(value?.gameweekScore, 7); assert.equal(value?.seasonScore, 9);
+  assert.deepEqual(h.availabilityReads, [{ season: "season", round: "round", players: ["locked-player"] }]);
+  assert.deepEqual(plain(value?.playerAvailabilityIndicators), []);
   assert.deepEqual(plain(value?.matchHistory), [{ fixtureId: "fixture", playerId: "locked-player", rating: 7, goals: 1, contribution: 7, reason: "RATED_APPEARANCE", settlementStatus: "FINAL" }]);
 });
 
@@ -151,7 +160,11 @@ test("draft fallback, empty selections and non-full projections keep their exact
   for (const options of [{ empty: true }, { noRound: true }, { noUserRound: true }, { projection: "arena" as const }]) {
     const h = scenario(options); const result = await h.run();
     assert.equal(h.events.includes("history"), false);
-    if (options.projection === "arena") assert.deepEqual(Object.keys(result!).sort(), ["activeGameweek", "catalogue", "formationRegistry", "selections", "userGameweek"]);
+    if (options.projection === "arena") {
+      assert.deepEqual(Object.keys(result!).sort(), ["activeGameweek", "catalogue", "formationRegistry", "playerAvailabilityIndicators", "selections", "userGameweek"]);
+      assert.deepEqual(h.availabilityReads, [{ season: "season", round: "round", players: ["locked-player"] }]);
+      assert.deepEqual(plain(result?.playerAvailabilityIndicators), []);
+    }
   }
 });
 

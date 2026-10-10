@@ -49,6 +49,28 @@ function fixture(contextEnabled = false, pathname = "/login") {
   return { audio, language, renderControls: (props: Record<string, unknown>) => renderToStaticMarkup(React.createElement(controls, props)), render: (props: Record<string, unknown>) => renderToStaticMarkup(React.createElement(layout, props)) };
 }
 
+test("customer login gallery replaces the opaque side panel without touching the form or full-screen media", () => {
+  const view = fixture();
+  const html = view.render({ cinematic: true, planGallery: React.createElement("section", { "data-login-plans": true }, "Plans"), children: React.createElement("form", { action: "/login/submit" }) });
+  assert.match(html, /auth-full-video/);
+  assert.match(html, /data-login-plans/);
+  assert.doesNotMatch(html, /<aside|ps-career-home/);
+  assert.match(html, /<form action="\/login\/submit"/);
+  assert.match(view.render({ cinematic: true }), /<aside/);
+  const media = readFileSync(new URL("../components/auth-cinematic-media.tsx", import.meta.url), "utf8");
+  assert.match(media, /TOUCHLINE_ARENA_ENTRY_VIDEO/);
+  assert.match(media, /prefers-reduced-motion/);
+});
+
+test("Arabic public login preserves the approved left introduction and unmirrored plan layout", () => {
+  const html = fixture().render({ locale: "ar-SA", draftLocalesEnabled: true, keepLoginLayoutStable: true, showPanelHeader: false,
+    planGallery: React.createElement("section", { "data-login-plans": true }, "Plans"), children: React.createElement("form") });
+  assert.match(html, /<main lang="ar-SA" dir="ltr"/);
+  assert.match(html, /<div dir="ltr" class="order-2 min-w-0 max-w-3xl xl:order-1 auth-login-story">/);
+  assert.match(html, /<div class="relative z-10" dir="ltr"><form/);
+  assert.match(html, /<div dir="ltr"><section data-login-plans/);
+});
+
 test("real auth layout composes one shared LTR group, preserving header, Arena link and context", () => {
   for (const { code } of TOUCHLINE_APPROVED_LOCALES) {
     for (const draftLocalesEnabled of [false, true]) {

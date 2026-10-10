@@ -11,14 +11,14 @@ test("Arena has a narrow projection without replacing the full API", () => {
   assert.match(source, /export async function loadTouchlineFantasySnapshot/);
 });
 
-function scenario(input = source, options: { pending?: boolean; state?: string; incomplete?: boolean; failure?: string } = {}) {
+function scenario(input = source, options: { pending?: boolean; state?: string; gameweekState?: string; incomplete?: boolean; failure?: string } = {}) {
   const calls: Array<{ name: string; args?: unknown }> = [];
   const queries: string[] = [];
   const ids = Array.from({ length: 11 }, (_, i) => `00000000-0000-4000-8000-${String(i + 1).padStart(12, "0")}`);
   const selections = ids.map((player_id, i) => ({ player_id, slot_id: `s${i}` }));
   const catalogue = ids.map(canonicalPlayerId => ({ canonicalPlayerId, name: canonicalPlayerId }));
   const geometry = { "4-3-3": { slots: ids.map((_, i) => ({ id: `s${i}`, role: "midfielder", x: 50, y: 50 })) } };
-  const weeks = [{ id: "previous", gameweek_number: 1, state: "FINAL" }, { id: "active", gameweek_number: 2, state: "MARKET_OPEN" }];
+  const weeks = [{ id: "previous", gameweek_number: 1, state: "FINAL" }, { id: "active", gameweek_number: 2, state: options.gameweekState ?? "MARKET_OPEN" }];
   let release!: () => void;
   const pending = new Promise<void>(resolve => { release = resolve; });
   const admin = {
@@ -72,6 +72,15 @@ function scenario(input = source, options: { pending?: boolean; state?: string; 
     loadCatalogue: async () => catalogue,
     loadCoaches: async () => { queries.push("coaches"); if (options.pending) await pending; return []; },
     loadRankings: async (_a: unknown, gw: string, season: string, user: string) => { assert.equal(gw, "active"); assert.equal(season, "season"); assert.equal(user, "customer"); queries.push("rankings"); if (options.pending) await pending; return { gameweek: [], season: [] }; },
+    readGameweekMatchCardIndicators: async (_admin: unknown, season: string, gw: string, ids: string[]) => {
+      assert.equal(season, "season"); assert.equal(gw, "active"); assert.deepEqual(ids, selections.map((selection) => selection.player_id));
+      queries.push("match-cards"); return [];
+    },
+    readGameweekPlayerAvailability: async (_admin: unknown, season: string, gw: string, ids: string[]) => {
+      assert.equal(season, "season"); assert.equal(gw, "active");
+      assert.deepEqual([...ids], (options.incomplete ? selections.slice(0, 10) : selections).map(row => row.player_id));
+      queries.push("player-availability"); return [];
+    },
     TOUCHLINE_FANTASY_INITIAL_BUDGET_EUR: 100,
     fetch: () => assert.fail("Network forbidden"),
   });
@@ -84,7 +93,7 @@ function scenario(input = source, options: { pending?: boolean; state?: string; 
     activeGameweek: { id: "active", number: 2, state: "MARKET_OPEN" },
     userGameweek: { id: "ug", formationCode: "4-3-3", state: "LOCKED", totalMarketValueEur: 10, carriedFromPrevious: false, selectedCoachId: "locked-coach" },
     selections: selections.map(r => ({ playerId: r.player_id, slotId: r.slot_id })),
-    catalogue, coaches: [], lineupAlerts: [], formationRegistry: geometry,
+    catalogue, coaches: [], lineupAlerts: [], matchCardIndicators: [], playerAvailabilityIndicators: [], formationRegistry: geometry,
     gameweekScore: 0, seasonScore: 0, matchHistory: [], gameweekRanking: [], seasonRanking: [],
   };
   return { run: (projection: "arena" | "full", registry?: object) => core({ id: "customer" }, projection, registry), calls, queries, release, golden };
@@ -106,10 +115,11 @@ test("Arena reuses the supplied geometry reference; omitted registry and full AP
   assert.deepEqual(plain(arena.calls), plain(fallback.calls));
 });
 
-test("full projection matches immutable baseline; Arena retains exact XI and writer trace", async () => {
+test("full projection retains immutable gameplay baseline plus plan presentation; Arena retains exact XI and writer trace", async () => {
   const full = scenario(); const arena = scenario();
   const fullValue = await full.run("full"); const arenaValue = await arena.run("arena");
-  assert.deepEqual(plain(fullValue), full.golden);
+  assert.deepEqual(plain(fullValue), { ...full.golden, plan: { active: true, expiresAt: null } });
+  assert.ok(!full.queries.includes("match-cards"), "pre-match polling must not query match events");
   const expectedWriters = [
     { name: "touchline_fantasy_sync_gameweeks" },
     { name: "touchline_fantasy_reconcile_gameweek", args: { p_gameweek_id: "previous" } },
@@ -121,8 +131,21 @@ test("full projection matches immutable baseline; Arena retains exact XI and wri
   const xi = buildTouchlineFantasyArenaLineup(arenaValue);
   assert.equal(xi?.players.length, 11); assert.equal(xi?.coachProviderId, "locked-coach");
   assert.deepEqual(plain(xi), plain(buildTouchlineFantasyArenaLineup(fullValue)));
-  assert.deepEqual(Object.keys(arenaValue).sort(), ["activeGameweek", "catalogue", "formationRegistry", "selections", "userGameweek"]);
+  assert.deepEqual(Object.keys(arenaValue).sort(), ["activeGameweek", "catalogue", "formationRegistry", "playerAvailabilityIndicators", "selections", "userGameweek"]);
+  assert.ok(full.queries.includes("player-availability"));
+  assert.ok(arena.queries.includes("player-availability"));
   assert.ok(!arena.queries.some(q => q === "coaches" || q === "rankings" || q.includes("scores") || q.includes("alerts")));
+  assert.ok(!arena.queries.includes("match-cards"));
+});
+
+test("live round alone reads persisted match cards in the full projection", async () => {
+  const full = scenario(source, { gameweekState: "LIVE" });
+  const snapshot = await full.run("full");
+  assert.deepEqual(snapshot.matchCardIndicators, []);
+  assert.ok(full.queries.includes("match-cards"));
+  const arena = scenario(source, { gameweekState: "LIVE" });
+  await arena.run("arena");
+  assert.ok(!arena.queries.includes("match-cards"));
 });
 
 test("unused enrichments can remain pending while Arena completes", async () => {

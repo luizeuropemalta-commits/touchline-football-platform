@@ -1,6 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
 
 import TouchlineCardZoom from "@/components/touchline/cards/TouchlineCardZoom";
+import TouchlinePlayerAvailabilityBadge from "@/components/touchline/cards/TouchlinePlayerAvailabilityBadge";
 import { getTouchlineCardZoomCopy } from "@/lib/touchlineArena/card-zoom-i18n";
 import { getTouchlineExactCardCopy } from "@/lib/touchlineArena/exact-card-i18n";
 import { getTouchlineClubHubLineupCopy } from "@/lib/touchlineArena/club-hub-lineup-i18n";
@@ -13,9 +14,12 @@ import TouchlineGoalFacingPitchCard from "@/components/touchline/cards/Touchline
 import TouchlinePitchSurface from "@/components/touchline/pitch/TouchlinePitchSurface";
 import ClubHubCrestTrace from "@/components/touchline/ClubHubCrestTrace";
 import ClubHubLiveFixtureScore from "@/components/touchline/ClubHubLiveFixtureScore";
+import ClubHubLocalKickoff from "@/components/touchline/ClubHubLocalKickoff";
 import TouchlineClubPerimeterTrace from "@/components/touchline/TouchlineClubPerimeterTrace";
 import type { TouchlinePublicFixture } from "@/lib/football-data/public-fixture";
-import { isClubHubSquadPreviewWindow, type TouchLineClubLineup } from "@/lib/touchlineArena/club-lineup";
+import type { TouchlineFantasySidelinedPlayer } from "@/lib/football-data/types";
+import { availabilityBadgeForPlayer } from "@/lib/touchlineArena/player-availability-badge";
+import { isClubHubSquadPreviewWindow, type TouchLineClubLineup, type TouchLineClubMatchdayPresentation } from "@/lib/touchlineArena/club-lineup";
 import type { TouchlineClubMatchPreviewTeam } from "@/lib/touchlineArena/club-match-preview";
 import { squadCardToExactPlayer } from "@/lib/touchlineArena/demo-data";
 import { touchlinePlayerProfileHref } from "@/lib/touchlineArena/player-links";
@@ -34,6 +38,10 @@ import styles from "./ClubHubOfficialLineup.module.css";
 type ClubHubOfficialLineupProps = {
   clubName: string;
   lineup: TouchLineClubLineup;
+  recordedXiWithoutCards?: TouchLineClubMatchdayPresentation["recordedXiWithoutCards"];
+  lastCompletedXiStartsAt?: string | null;
+  sidelined?: TouchlineFantasySidelinedPlayer[];
+  sidelinedFixtureId?: string | null;
   locale: string;
   draftLocalesEnabled?: boolean;
   /** Isolates the static local visual fixture from card-ranking activity. */
@@ -63,6 +71,10 @@ type ClubHubOfficialLineupProps = {
 export default function ClubHubOfficialLineup({
   clubName,
   lineup,
+  recordedXiWithoutCards = null,
+  lastCompletedXiStartsAt = null,
+  sidelined = [],
+  sidelinedFixtureId = null,
   locale,
   draftLocalesEnabled = false,
   staticVisualQa = false,
@@ -77,6 +89,21 @@ export default function ClubHubOfficialLineup({
   const lineupCopy = getTouchlineClubHubLineupCopy(locale, draftLocalesEnabled);
   const workflowCopy = getTouchlineFantasyMarketWorkflowCopy(locale, draftLocalesEnabled);
   const confirmed = lineup.status === "confirmed";
+  const recordedPitch = !confirmed ? lineup.recordedPitch : undefined;
+  const officialPitch = confirmed ? lineup.officialPitch : undefined;
+  const pitchPlayers = officialPitch?.players ?? recordedPitch?.players ?? lineup.players.map((slot) => ({
+    ...slot, playerId: String(slot.card.id), playerName: slot.card.name,
+  }));
+  const showLastCompletedXi = !confirmed && (lineup.previewBasis === "last-completed-xi" || Boolean(recordedPitch));
+  const formationUnknown = confirmed
+    ? lineup.officialFormation === null
+    : showLastCompletedXi && lineup.recordedFormation === null;
+  const formationLabel = formationUnknown
+    ? lineupCopy.awaitingConfirmation
+    : recordedPitch?.formation ?? lineup.formation;
+  const recordedMatchDate = showLastCompletedXi && lastCompletedXiStartsAt && Number.isFinite(Date.parse(lastCompletedXiStartsAt))
+    ? new Intl.DateTimeFormat(resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled), { dateStyle: "medium", timeZone: "UTC" }).format(new Date(lastCompletedXiStartsAt))
+    : null;
   const squadPreviewWindow = isClubHubSquadPreviewWindow({
     lineupStatus: lineup.status,
     startsAt: matchup?.startsAtIso,
@@ -85,7 +112,9 @@ export default function ClubHubOfficialLineup({
   const showPreviewContext = !confirmed && squadPreviewWindow;
   const title = confirmed
     ? lineupCopy.confirmedTitle
-    : (showPreviewContext
+    : (showLastCompletedXi
+      ? lineupCopy.lastXiTitle
+      : showPreviewContext
       ? lineupCopy.previewTitle
       : lineupCopy.unconfirmedTitle);
   const accessibleTitle = title;
@@ -99,10 +128,17 @@ export default function ClubHubOfficialLineup({
   return (
     <section id="touchline-club-lineup" className={styles.shell} aria-label={`${clubName} ${accessibleTitle}`}>
       <TouchlineClubPerimeterTrace accent="#a3ff12" className={styles.perimeterTrace} />
-      <header className={styles.header}>
+      <header className={`${styles.header} ${showLastCompletedXi ? styles.compactHeader : ""}`}>
         {confirmed ? (
           <div className={styles.confirmedHeading}>
             <h2>{title}</h2>
+          </div>
+        ) : showLastCompletedXi ? (
+          <div>
+            <span className={styles.eyebrow}>{lineupCopy.matchdayEyebrow}</span>
+            <h2>{title}</h2>
+            <p>{lineupCopy.lastXiNotice}</p>
+            {recordedMatchDate ? <p>{lineupCopy.lastXiDateLabel} <time dateTime={lastCompletedXiStartsAt ?? undefined}>{recordedMatchDate}</time></p> : null}
           </div>
         ) : showPreviewContext ? (
           <div>
@@ -132,20 +168,39 @@ export default function ClubHubOfficialLineup({
                   <strong>{matchup.away.shortCode}</strong>
                 </div>
               </div>
-              <small>{[matchup.status, matchup.startsAt].filter(Boolean).join(" · ")}</small>
+              <small>{matchup.status ? `${matchup.status} · ` : null}<ClubHubLocalKickoff startsAt={matchup.startsAtIso} locale={locale} draftLocalesEnabled={draftLocalesEnabled} fallback={matchup.startsAt} /></small>
             </aside>
           ) : null}
           <div className={styles.formationPanel}>
           <span className={`${styles.status} ${confirmed ? styles.confirmed : ""}`}>
             {confirmed
               ? lineupCopy.confirmedTitle
-              : (showPreviewContext ? lineupCopy.previewTitle : lineupCopy.awaitingConfirmation)}
+              : (showLastCompletedXi ? lineupCopy.lastXiTitle
+                : showPreviewContext ? lineupCopy.previewTitle : lineupCopy.awaitingConfirmation)}
           </span>
           <span className={styles.syncLabel}>{workflowCopy.formation}</span>
-          <strong className={styles.formation}>{lineup.formation}</strong>
+          <strong className={styles.formation}>{formationLabel}</strong>
           </div>
         </div>
       </header>
+
+      {!confirmed && !recordedPitch && recordedXiWithoutCards?.length === 11 ? (
+        <aside className={styles.recordedXiArchive} aria-label={lineupCopy.lastXiTitle}>
+          <div>
+            <h3>{lineupCopy.lastXiTitle}</h3>
+            <p>{lineupCopy.lastXiNotice}</p>
+            {lastCompletedXiStartsAt && Number.isFinite(Date.parse(lastCompletedXiStartsAt)) ? (
+              <p>{lineupCopy.lastXiDateLabel} <time dateTime={lastCompletedXiStartsAt}>{new Intl.DateTimeFormat(resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled), { dateStyle: "medium", timeZone: "UTC" }).format(new Date(lastCompletedXiStartsAt))}</time></p>
+            ) : null}
+          </div>
+          <ol>
+            {recordedXiWithoutCards.map((member) => <li key={member.playerId}>
+              {member.jerseyNumber ? <span aria-hidden="true">#{member.jerseyNumber}</span> : null}
+              <span>{member.playerName}</span>
+            </li>)}
+          </ol>
+        </aside>
+      ) : null}
 
       <div className={styles.pitchAndLeaders}>
       <div className={styles.pitchViewport}>
@@ -156,7 +211,14 @@ export default function ClubHubOfficialLineup({
           ariaLabel={`${clubName} ${lineupCopy.pitchAriaSuffix}`}
         >
           <div className={styles.geometryLayer}>
-            {lineup.players.length ? lineup.players.map(({ card, x, y }) => {
+            {pitchPlayers.length ? pitchPlayers.map(({ card, x, y, playerId, playerName }) => {
+            if (!card) return (
+              <article key={playerId} className={styles.player}
+                style={{ "--lineup-x": `${x}%`, "--lineup-y": `${y}%` } as CSSProperties}>
+                <div className={styles.identityPlaceholder} role="img" aria-label={exactCopy.publicationPending} title={exactCopy.publicationPending}>—</div>
+                <span className={styles.playerCaption} dir="auto">{playerName}</span>
+              </article>
+            );
             const positionKind = touchlinePlayerPositionKind(card.position);
             const pitchPosition = horizontalPitchPosition(x, y);
             const cardReview = card.cardReview ?? evaluateTouchlineCardCompleteness({
@@ -181,6 +243,7 @@ export default function ClubHubOfficialLineup({
               ? touchlineCardTierPalette(tierKey).accent
               : TOUCHLINE_NEUTRAL_CARD_ACCENT;
             const tierLabel = tierKey ? touchlineCardTierName(tierKey, locale, draftLocalesEnabled) : undefined;
+            const availabilityBadge = availabilityBadgeForPlayer(sidelined, sidelinedFixtureId, card.id);
             return (
               <article
                 key={card.id}
@@ -267,6 +330,20 @@ export default function ClubHubOfficialLineup({
                     />
                   </TouchlineCardZoom>
                 </TouchlineGoalFacingPitchCard>
+                <span className={styles.playerCaption} dir="auto" aria-label={playerName}>
+                  {positionKind === "goalkeeper" ? <>
+                    <span className={styles.goalkeeperFullName} aria-hidden="true">{playerName}</span>
+                    <span className={styles.goalkeeperMobileName} aria-hidden="true">{playerName.trim().split(/\s+/u)[0]}</span>
+                  </> : playerName}
+                </span>
+                {availabilityBadge ? (
+                  <span className={styles.availabilityBadge}>
+                    <TouchlinePlayerAvailabilityBadge
+                      badge={availabilityBadge}
+                      locale={resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled)}
+                    />
+                  </span>
+                ) : null}
               </article>
             );
             }) : (

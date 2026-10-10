@@ -114,12 +114,12 @@ test("disconnected previous targets are not refocused after rotation", () => {
 test("CSS protects first paint and body portals with the same phone-only query", () => {
   const css = readFileSync(new URL("../components/touchline/TouchlineLandscapeBoundary.module.css", import.meta.url), "utf8");
   const global = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
-  assert.equal(TOUCHLINE_PORTRAIT_QUERY, "(max-width: 767px) and (orientation: portrait)");
+  assert.equal(TOUCHLINE_PORTRAIT_QUERY, "(max-width: 767px) and (orientation: portrait) and (pointer: coarse)");
   assert.ok(css.includes(`@media ${TOUCHLINE_PORTRAIT_QUERY}`));
   assert.ok(global.includes(`@media ${TOUCHLINE_PORTRAIT_QUERY}`));
   assert.match(css, /visibility:\s*hidden !important/);
   assert.match(css, /opacity:\s*0 !important/);
-  assert.match(global, /body > :not\(\[data-touchline-orientation-root\]\):not\(\[data-touchline-orientation-gate\]\) \{ display: none !important;/);
+  assert.match(global, /body:not\(\[data-touchline-global-error\]\) > :not\(\[data-touchline-orientation-root\]\):not\(\[data-touchline-orientation-gate\]\) \{ display: none !important;/);
   assert.doesNotMatch(css, /animation:|transform:\s*scale/);
 });
 

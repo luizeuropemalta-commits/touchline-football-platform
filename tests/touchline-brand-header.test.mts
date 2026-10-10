@@ -100,3 +100,16 @@ test("header placement contract matches login safe-area spacing and wide-screen 
   assert.ok(layout.includes("2xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,.55fr)]"));
   assert.doesNotMatch(css, /padding-bottom|position:\s*(?:fixed|absolute)|row-reverse|column-reverse/);
 });
+
+test("optional intro stays with the brand and does not duplicate the navigation or controls", () => {
+  const view = fixture();
+  const html = view.render({ href: "/clubowner?lang=pt-BR", locale: "pt-BR", accountLocaleContext: { mode: "unavailable" },
+    brandAccessory: React.createElement("a", { href: "/intro?lang=pt-BR&intro=first" }, "Ver intro"),
+    navigation: React.createElement("nav", null, "Menu"),
+  });
+  assert.equal((html.match(/Ver intro/g) ?? []).length, 1);
+  assert.ok(html.indexOf("Ver intro") < html.indexOf("<nav"));
+  assert.equal(view.logoProps.length, 1);
+  assert.equal(view.language.length, 1);
+  assert.equal(view.audio.length, 1);
+});

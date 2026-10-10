@@ -17,7 +17,7 @@ test("Match Centre exposes one page heading, a selected-fixture state and motion
   assert.match(component, /dictionary\.liveDataUpdating/);
   assert.match(component, /dictionary\.lastVerified/);
   assert.match(component, /aria-pressed=\{isSelected\}/);
-  assert.match(component, /aria-controls=\{selected \? "touchline-match-panel" : undefined\}/);
+  assert.match(component, /aria-controls=\{!railOnly && selected \? "touchline-match-panel" : undefined\}/);
   assert.match(component, /window\.matchMedia\("\(prefers-reduced-motion: reduce\)"\)\.matches \? "auto" : "smooth"/);
   assert.match(styles, /\.fixture:focus-visible, \.selectedFixture:focus-visible/);
   assert.match(styles, /\.selectionAnnouncement \{[\s\S]*?clip-path: inset\(50%\)/);

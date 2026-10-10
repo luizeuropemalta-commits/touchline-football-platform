@@ -74,7 +74,11 @@ export async function persistLiveFixtureStates(
       errors.push(`${incoming.providerId}:${error.message}`);
       continue;
     }
-    if (Array.isArray(data) && data.length === 1) merged.push(next);
+    if (Array.isArray(data) && data.length === 1 && data[0]?.provider_fixture_id === incoming.providerId) {
+      merged.push(next);
+    } else {
+      errors.push(`${incoming.providerId}:write-unconfirmed`);
+    }
   }
 
   return { updated: merged.length, errors, merged };

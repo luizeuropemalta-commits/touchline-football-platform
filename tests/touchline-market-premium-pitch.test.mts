@@ -81,7 +81,7 @@ test("the Market pitch shows the coach and Starting XI without a substitute benc
     source("app/fantasy/fantasy.module.css"),
   ]);
 
-  assert.match(stage, /data-market-technical-area="true"/);
+  assert.match(stage, /className=\{styles\.myClubFieldCoach\} aria-label=\{workflowCopy\.technicalArea\}/);
   assert.match(stage, /<FantasyCoachZoom entry=\{selectedCoach\}/);
   assert.doesNotMatch(stage, /touchline-market-dugout-title/);
   assert.doesNotMatch(stage, /Matchday bench|Banco da partida|className=\{styles\.bench\}/);

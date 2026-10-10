@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
 import ts from "typescript";
+import { sportmonksFixtureInstant } from "../lib/football-data/sportmonks-fixture-instant.ts";
 
 test("actual season lookup loop is serial and retains source order and failed results", async () => {
   const source=await readFile(new URL("../lib/football-data/fixture-schedule-sync.ts",import.meta.url),"utf8");
@@ -45,9 +46,15 @@ test("fixture schedule migration is normalized and server-only", async () => {
 test("Sportmonks fixture mapping prefers its UTC timestamp over an ambiguous local date", async () => {
   const provider = await readFile(new URL("../lib/football-data/providers/sportmonks.ts", import.meta.url), "utf8");
 
-  assert.match(provider, /function sportmonksFixtureStartAt/);
-  assert.match(provider, /raw\.starting_at_timestamp/);
-  assert.match(provider, /startsAt: sportmonksFixtureStartAt\(raw\)/);
+  assert.match(provider, /import \{ sportmonksFixtureInstant \} from "\.\.\/sportmonks-fixture-instant\.ts"/);
+  assert.match(provider, /startsAt: sportmonksFixtureInstant\(raw, sourceTimeZone \|\| "UTC"\)/);
+  const epoch = Date.parse("2026-10-10T12:30:00.000Z") / 1000;
+  for (const sourceTimeZone of ["UTC", "Europe/London", "America/Sao_Paulo"]) {
+    assert.equal(sportmonksFixtureInstant({
+      starting_at_timestamp: epoch,
+      starting_at: "2026-10-10 09:00:00",
+    }, sourceTimeZone), "2026-10-10T12:30:00.000Z");
+  }
 });
 
 test("the public Live boundary accepts only numeric Sportmonks fixture identifiers", async () => {

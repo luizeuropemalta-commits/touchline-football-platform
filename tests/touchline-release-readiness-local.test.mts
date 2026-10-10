@@ -7,6 +7,7 @@ import {
   TOUCHLINE_FUNCTIONAL_RELEASE_ENVIRONMENT_NAMES,
   TOUCHLINE_ISOLATED_PREVIEW_ENVIRONMENT_NAMES,
   TOUCHLINE_QA_PREVIEW_ENVIRONMENT_NAMES,
+  TOUCHLINE_CENTRAL_QUOTA_ENVIRONMENT_NAMES,
 } from "../scripts/check-touchline-release-readiness.mjs";
 
 const source = (path: string) => readFileSync(new URL(path, import.meta.url), "utf8");
@@ -40,6 +41,9 @@ test("the local release checklist maps the public route, name-only environment c
   assert.equal(result.environment.functionalPreviewAuth, "REQUIRES_DEDICATED_QA_SUPABASE_CONFIGURATION");
   assert.equal(result.environment.functionalPreviewDiagnostic, "missing-or-mismatched-qa-supabase-contract");
   assert.deepEqual(result.environment.missingTemplateNames, []);
+  assert.deepEqual(result.environment.centralQuota.names, TOUCHLINE_CENTRAL_QUOTA_ENVIRONMENT_NAMES);
+  assert.deepEqual(result.environment.centralQuota.missingTemplateNames, []);
+  assert.equal(result.environment.centralQuota.runtimeStatus, "NOT_INSPECTED_NOT_ACTIVATION_APPROVAL");
   assert.ok(result.localCommands.includes("pnpm build"));
   assert.ok(result.fixtureMatrix.includes("/visual-qa/clubhub-profile-contract?lang=pt-BR"));
   assert.ok(result.fixtureMatrix.includes("/visual-qa/card-value-states?lang=pt-BR"));
@@ -107,4 +111,21 @@ test("the executable checklist cannot inspect credentials or contact product inf
   ]) {
     assert.doesNotMatch(checklistSource, forbidden);
   }
+});
+
+test("central quota template omissions fail the checklist without claiming runtime activation", () => {
+  const input = currentRepositoryInput();
+  assert.equal(TOUCHLINE_CENTRAL_QUOTA_ENVIRONMENT_NAMES.length, 9);
+  for (const name of TOUCHLINE_CENTRAL_QUOTA_ENVIRONMENT_NAMES) {
+    const result = evaluateTouchlineReleaseReadiness({ ...input,
+      envTemplate: input.envTemplate.replace(`${name}=`, `REMOVED_${name}=`),
+    });
+    assert.equal(result.status, "LOCAL_CONTRACT_INVALID", name);
+    assert.deepEqual(result.environment.centralQuota.missingTemplateNames, [name]);
+    assert.equal(result.environment.centralQuota.runtimeStatus, "NOT_INSPECTED_NOT_ACTIVATION_APPROVAL");
+  }
+  const result = evaluateTouchlineReleaseReadiness(input);
+  assert.match(result.environment.centralQuota.activationGate, /does not disable user login/);
+  assert.match(result.environment.centralQuota.separation, /Never place operator recovery credentials/);
+  assert.ok(result.environment.centralQuota.names.every(name => !name.startsWith("NEXT_PUBLIC_")));
 });

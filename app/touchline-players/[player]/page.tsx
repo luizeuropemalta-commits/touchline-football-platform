@@ -703,7 +703,7 @@ function FixtureStatisticsPanel({
               </div>
             ))}
           </div>
-        ) : <p className={styles.unavailableFixture}>{text.unavailable}</p>}
+        ) : <p className={styles.unavailableFixture}>{text.unavailable}. {performanceCopy.performanceCopy}</p>}
       </article>
       <article className={styles.officialGroup}>
         <h3>{performanceCopy.currentFixture}</h3>
@@ -1097,7 +1097,7 @@ async function renderPlayerProfilePage({
       expandedContent={(
         <TouchlineEliteExactCard draftLocalesEnabled={draftLocalesEnabled}
           player={exactPlayer}
-          hideMarketValuePanel
+          hideMarketValuePanel={false}
           layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY}
           playerProfileHref={profileHref}
           runtimeLocaleOverride={locale}
@@ -1111,7 +1111,7 @@ async function renderPlayerProfilePage({
     >
       <TouchlineEliteExactCard draftLocalesEnabled={draftLocalesEnabled}
         player={exactPlayer}
-        hideMarketValuePanel
+        hideMarketValuePanel={false}
         layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY}
         runtimeLocaleOverride={locale}
         rankingMode={previewTier ? "preview" : "live"}
@@ -1242,29 +1242,19 @@ async function renderPlayerProfilePage({
   return (
     <TouchlineCardLeadershipProvider value={buildTouchlineCardLeadershipValue(activeRanking, null)}>
     <main className={styles.page} style={pageStyle} dir="ltr">
-      <TouchlineBrandHeader href={profileHref} locale={locale} accountLocaleContext={accountLocaleContext} draftLocalesEnabled={draftLocalesEnabled} />
+      <TouchlineBrandHeader href={profileHref} locale={locale} accountLocaleContext={accountLocaleContext} draftLocalesEnabled={draftLocalesEnabled} navigation={<TouchlineGlobalNavigation locale={locale} draftLocalesEnabled={draftLocalesEnabled} currentRoute="playerProfile" showAudioControl={false} surface={navigationSurface} />} />
       <TouchlineLivePresentationRefresh
         initialPlayerRankingSnapshotId={activeRanking.snapshotId}
       />
       <div className={styles.backgroundGlow} aria-hidden="true" />
       <div className={styles.shell}>
-        <div className={styles.topbar}>
-          <TouchlineGlobalNavigation
-            locale={locale}
-            draftLocalesEnabled={draftLocalesEnabled}
-            currentRoute="playerProfile"
-            showAudioControl={false}
-            surface={navigationSurface}
-            className={styles.profileQuickNav}
-          />
-        </div>
 
         <section className={styles.identityBand}>
           <div className={styles.cardColumn}>
             <div className={styles.cardFrame}>
             <TouchlineEliteExactCard draftLocalesEnabled={draftLocalesEnabled}
               player={exactPlayer}
-              hideMarketValuePanel
+              hideMarketValuePanel={false}
               layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY}
               playerProfileHref={profileHref}
               runtimeLocaleOverride={locale}

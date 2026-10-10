@@ -83,6 +83,7 @@ test('real slot selection focuses and scrolls in place; adding a player returns 
     const { open: openSlot, select: selectPlayer } = runInNewContext(code, {
       setActiveSlotId: record('slot'), setBrowsePosition: record('browse'), setVisibleStep: record('step'),
       setSquadView: record('view'), setQuery: record('query'), activeSlot: { id: 'GK' }, marketPage: true,
+      setArenaOpen: record('arena'),
       addPlayer: () => addSucceeds,
       // No router, location or navigation mock: a new route dependency fails.
       window: { requestAnimationFrame: (fn: () => void) => fn(), matchMedia: () => ({ matches: reduced }) },
@@ -93,7 +94,7 @@ test('real slot selection focuses and scrolls in place; adding a player returns 
     });
     openSlot('GK');
     assert.deepEqual(events, [
-      ['slot','GK'], ['browse',null], ['step','players'], ['view','tactical'], ['query',''],
+      ['arena',false], ['slot','GK'], ['browse',null], ['step','players'], ['view','tactical'], ['query',''],
       ['focus','my-club-player-selection',true], ['scroll','my-club-player-selection',reduced ? 'instant' : 'smooth','start'],
     ]);
     events.length = 0;

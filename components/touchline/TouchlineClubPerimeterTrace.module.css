@@ -34,6 +34,7 @@
   stroke-dashoffset: 0;
   filter: drop-shadow(0 0 var(--touchline-perimeter-glow, 2px) color-mix(in srgb, var(--touchline-perimeter-accent) 78%, transparent));
   animation: touchlineClubEdgeTravel var(--touchline-perimeter-speed, 7s) linear infinite;
+  animation-play-state: var(--touchline-decoration-motion, paused);
 }
 
 @keyframes touchlineClubEdgeTravel {

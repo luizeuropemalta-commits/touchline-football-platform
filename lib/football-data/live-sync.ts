@@ -230,8 +230,10 @@ export async function syncSportmonksLiveState(
     return { ...result, ok: true, status: "skipped", skippedReason: lease.reason };
   }
   result.syncRunId = lease.runId;
+  let executionStage = "provider-initialization";
   try {
     const provider = dependencies.provider ?? createGuardedFixtureProvider(admin);
+    executionStage = "orchestration";
     const readFixtures = dependencies.readFixtures ?? readPublicCompetitionFixtures;
     const fixtureScheduleErrors = dependencies.readFixtures
       ? []
@@ -435,9 +437,12 @@ export async function syncSportmonksLiveState(
       result.coachPointsReconciled = Number((coachReconciliation as { reconciled?: unknown } | null)?.reconciled ?? 0);
     }
 
-    const incomingById = new Map(canonicalIncoming.map((fixture) => [fixture.providerId, fixture]));
+    // Distribution follows acknowledged canonical writes, not provider input.
+    // Otherwise a failed fixture update could publish a score which cards and
+    // settlements never received. Preserve the previous state for failed rows.
+    const persistedById = new Map(persistence.merged.map((fixture) => [fixture.providerId, fixture]));
     const snapshot = schedule.map((fixture) => {
-      const update = incomingById.get(fixture.providerId);
+      const update = persistedById.get(fixture.providerId);
       return update ? mergeCanonicalLiveFixture(fixture, update, fetchedAt, now) : fixture;
     });
     const snapshotResult = await (dependencies.persistSnapshot ?? persistLiveScoreSnapshot)(snapshot, fetchedAt);
@@ -487,6 +492,14 @@ export async function syncSportmonksLiveState(
         ? "partial"
         : "success";
     return result;
+  } catch (error) {
+    // Never persist arbitrary provider/transport exception text: it may contain
+    // request URLs or credentials. Still identify failures before result.errors
+    // is populated, so a failed acquired run cannot look diagnostically empty.
+    result.ok = false;
+    result.status = "error";
+    result.errors.push(`live-sync:${executionStage}-failed`);
+    throw error;
   } finally {
     await completeRun(admin, result);
   }

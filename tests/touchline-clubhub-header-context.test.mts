@@ -77,7 +77,7 @@ test("directory and profile mount one brand/control surface outside padded conte
   assert.equal((directory.match(/loadAccountLocaleContext\(\)/g) ?? []).length, 1);
   assert.doesNotMatch(directory, /AccountLocaleMenu/);
   assert.match(directory, /<TouchlineBrandHeader[^>]+accountLocaleContext=\{accountLocaleContext\}/);
-  assert.match(directory, /<TouchlineBrandHeader[^>]+\/>\s*<div className=\{styles\.content\}>/);
+  assert.match(directory, /<TouchlineBrandHeader[^\n]+navigation=\{<TouchlineGlobalNavigation[^\n]+\/>\}\s*\/>\s*<div className=\{styles\.content\}>/);
   assert.match(directory, /showAudioControl=\{false\}/);
   assert.match(css, /\.content\s*\{\s*padding: clamp/);
   assert.doesNotMatch(css.match(/\.shell\s*\{[^}]*\}/)?.[0] ?? "", /padding:/);

@@ -2,7 +2,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 
 import TouchlineClubPerimeterTrace from "@/components/touchline/TouchlineClubPerimeterTrace";
@@ -57,6 +57,7 @@ export default function TouchlineOfficialLeagueTable({
   const status = statusCopy(table.state, dictionary);
   const localeQuery = encodeURIComponent(locale);
   const router = useRouter();
+  const surface = useRef<HTMLElement>(null);
   const hasLiveFixture = table.rows.some((row) => Boolean(row.liveFixture));
   const seasonStatus = variant === "clubHubRail"
     ? null
@@ -66,12 +67,18 @@ export default function TouchlineOfficialLeagueTable({
 
   useEffect(() => {
     if (!hasLiveFixture) return;
-    const interval = window.setInterval(() => router.refresh(), 10_000);
-    return () => window.clearInterval(interval);
+    let visible = false;
+    const observer = new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; });
+    if (surface.current) observer.observe(surface.current);
+    const interval = window.setInterval(() => {
+      if (visible && !document.hidden) router.refresh();
+    }, 10_000);
+    return () => { observer.disconnect(); window.clearInterval(interval); };
   }, [hasLiveFixture, router]);
 
   return (
     <section
+      ref={surface}
       id={id}
       className={`${styles.surface} ${styles[variant]} ${className ?? ""}`}
       data-state={table.state}

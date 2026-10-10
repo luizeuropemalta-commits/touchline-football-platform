@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 
 /**
- * One-shot, provider-only roster snapshot.
+ * One-shot roster snapshot, with centrally admitted provider reads.
  *
- * This intentionally never imports a database client, sync helper, or app
- * route. It reads Sportmonks with GET only and archives a sanitized manifest
+ * Run with node --conditions=react-server --experimental-strip-types.
+ * Read-only refers to the football catalogue: the central authority necessarily
+ * persists quota receipts. This never imports a database client or sync job.
+ * It reads Sportmonks with GET only and archives a sanitized manifest
  * with `wx`; it never stores a request URL, token, or raw provider payload.
  */
 
@@ -22,7 +24,6 @@ import {
 const DEFAULT_API_BASE_URL = "https://api.sportmonks.com/v3/football";
 const MAX_PAGES_PER_TEAM = 10;
 const MAX_MEMBERS_PER_TEAM = 200;
-const REQUEST_TIMEOUT_MS = 15_000;
 const STAGING_DIRECTORY = resolve("docs/touchline-arena/market-values/manual-2026-27/owner-approved-transcript-2026-08-09");
 const OWNER_CSV = resolve(STAGING_DIRECTORY, "owner-approved-market-values-2026-08-09.csv");
 const ARCHIVE_DIRECTORY = resolve(STAGING_DIRECTORY, "provider-roster-audits");
@@ -72,6 +73,7 @@ function asBoolean(value) {
   return value === true || text(value).toLowerCase() === "true" || text(value) === "1";
 }
 
+/** @param {Readonly<Record<string, string | undefined>>} environment */
 export function readSportmonksRosterReadConfig(environment = process.env) {
   if (text(environment.TOUCHLINE_SPORTMONKS_ROSTER_READ_MODE) !== "read-only") {
     throw new Error("TL_SPORTMONKS_ROSTER_READ_ONLY_MODE_REQUIRED");
@@ -93,7 +95,18 @@ export function readSportmonksRosterReadConfig(environment = process.env) {
   ) {
     throw new Error("TL_SPORTMONKS_ROSTER_BASE_URL_FORBIDDEN");
   }
-  return { apiBaseUrl: baseUrl.toString().replace(/\/$/, ""), token };
+  if (environment.TOUCHLINE_SPORTMONKS_CENTRAL_ENABLED !== 'true') throw new Error('TL_SPORTMONKS_CENTRAL_REQUIRED');
+  const central = Object.freeze({ enabled: true, url: environment.TOUCHLINE_SPORTMONKS_CENTRAL_URL,
+    workerToken: environment.TOUCHLINE_SPORTMONKS_CENTRAL_WORKER_TOKEN,
+    accountScope: environment.TOUCHLINE_SPORTMONKS_FIXTURE_ACCOUNT_SCOPE });
+  let authorityUrl;
+  try { authorityUrl = new URL(central.url); } catch { throw new Error('TL_SPORTMONKS_CENTRAL_INVALID'); }
+  if (authorityUrl.protocol !== 'https:' || authorityUrl.username || authorityUrl.password || authorityUrl.port
+    || authorityUrl.search || authorityUrl.hash || authorityUrl.pathname !== '/api/internal/football-data/quota'
+    || !/^[A-Za-z0-9_-]{32,256}$/.test(central.workerToken ?? '')
+    || !/^[a-z][a-z0-9_-]{0,63}$/.test(central.accountScope ?? '') || central.workerToken === token
+    || baseUrl.username || baseUrl.password || baseUrl.port || baseUrl.search || baseUrl.hash) throw new Error('TL_SPORTMONKS_CENTRAL_INVALID');
+  return Object.freeze({ apiBaseUrl: baseUrl.toString().replace(/\/$/, ""), token, central });
 }
 
 export function projectSportmonksSquadMember(rawMember, scope) {
@@ -153,35 +166,20 @@ export async function readSportmonksTeamRoster({
   let fetchedAt = null;
 
   while (page <= MAX_PAGES_PER_TEAM && members.length < MAX_MEMBERS_PER_TEAM) {
-    const requestUrl = new URL(`squads/teams/${encodeURIComponent(scope.providerTeamId)}`, `${config.apiBaseUrl}/`);
-    requestUrl.searchParams.set("api_token", config.token);
-    requestUrl.searchParams.set("include", "player;position;detailedPosition");
-    requestUrl.searchParams.set("per_page", "50");
-    requestUrl.searchParams.set("page", String(page));
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-
     let response;
     try {
-      response = await fetchImpl(requestUrl, { method: "GET", redirect: "error", signal: controller.signal });
+      const { readCentralRosterPage } = await import('./central-roster-page.mts');
+      response = await readCentralRosterPage(config, String(scope.providerTeamId), page, fetchImpl);
     } catch {
-      clearTimeout(timeout);
       errors.push(providerError("SPORTMONKS_REQUEST_FAILED"));
       break;
     }
-    clearTimeout(timeout);
     if (!response.ok) {
       errors.push(providerError(`SPORTMONKS_HTTP_${response.status}`));
       break;
     }
 
-    let envelope;
-    try {
-      envelope = await response.json();
-    } catch {
-      errors.push(providerError("SPORTMONKS_RESPONSE_INVALID"));
-      break;
-    }
+    const envelope = response.data;
     const pageRows = Array.isArray(envelope?.data) ? envelope.data : null;
     if (!pageRows) {
       errors.push(providerError("SPORTMONKS_SQUAD_DATA_INVALID"));

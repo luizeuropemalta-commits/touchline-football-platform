@@ -177,6 +177,7 @@ test("actual fixture panel and zoom history preserve zero/null, order, IDs, name
     assert.ok(fields.every(field => field.kind === "history"));
     const empty = renderToStaticMarkup(React.createElement(Panel, { ...props, model: { matchHistory: [], currentOrSelectedFixture: null } }));
     assert.ok(empty.includes(text.unavailable));
+    assert.ok(empty.includes(getTouchlinePlayerPerformanceCopy(locale, review).performanceCopy), `empty history must explain unconfirmed participation in ${locale}`);
   }
   assert.equal(JSON.stringify(fixtures), before);
 });

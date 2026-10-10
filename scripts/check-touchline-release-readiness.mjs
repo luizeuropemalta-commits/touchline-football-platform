@@ -52,6 +52,19 @@ const REQUIRED_SCRIPTS = Object.freeze({
   build: "next build --webpack",
 });
 
+// Template inventory only: these names do not certify a configured authority.
+export const TOUCHLINE_CENTRAL_QUOTA_ENVIRONMENT_NAMES = Object.freeze([
+  "TOUCHLINE_SPORTMONKS_CENTRAL_ENABLED",
+  "TOUCHLINE_SPORTMONKS_CENTRAL_URL",
+  "TOUCHLINE_SPORTMONKS_CENTRAL_WORKER_TOKEN",
+  "TOUCHLINE_SPORTMONKS_FIXTURE_ACCOUNT_SCOPE",
+  "TOUCHLINE_QUOTA_AUTHORITY_ENABLED",
+  "TOUCHLINE_QUOTA_AUTHORITY_PROJECT_REF",
+  "TOUCHLINE_QUOTA_AUTHORITY_SERVICE_KEY",
+  "TOUCHLINE_QUOTA_AUTHORITY_ACCOUNT_SCOPE",
+  "TOUCHLINE_QUOTA_AUTHORITY_WORKERS_JSON",
+]);
+
 function envNamesFromTemplate(source) {
   return new Set(
     [...source.matchAll(/^([A-Za-z_][A-Za-z0-9_]*)=/gm)].map((match) => match[1]),
@@ -82,6 +95,8 @@ export function evaluateTouchlineReleaseReadiness({
   const scripts = packageJson?.scripts ?? {};
   const templateNames = envNamesFromTemplate(envTemplate);
   const missingEnvironmentNames = TOUCHLINE_FUNCTIONAL_RELEASE_ENVIRONMENT_NAMES
+    .filter((name) => !templateNames.has(name));
+  const missingCentralQuotaNames = TOUCHLINE_CENTRAL_QUOTA_ENVIRONMENT_NAMES
     .filter((name) => !templateNames.has(name));
   const missingScripts = Object.entries(REQUIRED_SCRIPTS)
     .filter(([name, command]) => scripts[name] !== command)
@@ -139,7 +154,7 @@ export function evaluateTouchlineReleaseReadiness({
 
   return Object.freeze({
     schemaVersion: "touchline-release-readiness-local-check-v1",
-    status: missingEnvironmentNames.length || missingScripts.length || staticContractFailures.length
+    status: missingEnvironmentNames.length || missingCentralQuotaNames.length || missingScripts.length || staticContractFailures.length
       ? "LOCAL_CONTRACT_INVALID"
       : "LOCAL_CHECKLIST_READY_NOT_RELEASE_APPROVAL",
     publicRoute: Object.freeze({
@@ -158,6 +173,13 @@ export function evaluateTouchlineReleaseReadiness({
       functionalPreviewAuth: "REQUIRES_DEDICATED_QA_SUPABASE_CONFIGURATION",
       functionalPreviewDiagnostic: "missing-or-mismatched-qa-supabase-contract",
       missingTemplateNames: missingEnvironmentNames,
+      centralQuota: Object.freeze({
+        names: TOUCHLINE_CENTRAL_QUOTA_ENVIRONMENT_NAMES,
+        missingTemplateNames: missingCentralQuotaNames,
+        runtimeStatus: "NOT_INSPECTED_NOT_ACTIVATION_APPROVAL",
+        activationGate: "Keep worker and authority OFF until one shared scope, SQL ownership/recovery, all-consumer quota coordination and remote QA are verified. OFF blocks provider reads; it does not disable user login.",
+        separation: "Distinct QA/Production worker tokens; authority service key only on its approved host. Never place operator recovery credentials in site deployments or NEXT_PUBLIC variables.",
+      }),
     }),
     localCommands: Object.freeze([
       "git diff --check",

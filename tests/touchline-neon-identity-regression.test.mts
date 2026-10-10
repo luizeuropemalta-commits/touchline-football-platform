@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
+import ts from "typescript";
 import { getTouchlineExactCardCopy } from "../lib/touchlineArena/exact-card-i18n.ts";
 import { getTouchLineRankingsCopy } from "../lib/touchlineArena/rankings-i18n.ts";
 import { getTouchlineClubHubLineupCopy } from "../lib/touchlineArena/club-hub-lineup-i18n.ts";
@@ -48,9 +49,9 @@ test("every TouchLine card keeps the permanent tier neon contract", () => {
   assert.match(traceCss, /pointer-events: none/);
   assert.match(traceCss, /overflow: visible/);
   assert.match(traceCss, /@keyframes touchline-card-perimeter-trace/);
-  assert.match(traceCss, /animation: touchline-card-perimeter-trace 8s cubic-bezier\(\.22,\.74,\.28,1\) infinite/);
-  assert.match(traceCss, /18\.75%, 89% \{ stroke-dasharray: 100 0; stroke-dashoffset: -100; opacity: \.28; \}/);
-  assert.match(traceCss, /94% \{ stroke-dasharray: 100 0; stroke-dashoffset: -100; opacity: 0; \}/);
+  assert.match(traceCss, /animation: touchline-card-perimeter-trace 3s linear infinite/);
+  assert.match(traceCss, /stroke-dasharray: 16 84/);
+  assert.match(traceCss, /@keyframes touchline-card-perimeter-trace \{\s*from \{ stroke-dashoffset: 0; \}\s*to \{ stroke-dashoffset: -100; \}\s*\}/);
   assert.doesNotMatch(traceCss, /1500ms cubic-bezier\(\.22,\.74,\.28,1\) both/);
   assert.match(traceCss, /stroke-dashoffset/);
   assert.doesNotMatch(traceCss, /mask|clip-path|filter:|background:/);
@@ -157,10 +158,18 @@ test("card controls stay inside the master safe zone and contracting stays outsi
   assert.equal((layout.layout.followAction.x + layout.layout.likeAction.x + 118) / 2, 215);
   assert.match(zoom, /<div ref=\{expandedRef\} className=\{styles\.expandedCard\} data-card-zoom="expanded">/);
   assert.match(zoom, /<a className=\{styles\.contractAction\} href=\{contractHref\}>/);
-  assert.ok(
-    zoom.indexOf("styles.contractAction") > zoom.indexOf("styles.expandedCard"),
-    "contract action must render after and outside the card artwork",
-  );
+  const tree = ts.createSourceFile("zoom.tsx", zoom, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const elements: ts.JsxElement[] = [];
+  function visit(node: ts.Node) {
+    if (ts.isJsxElement(node)) elements.push(node);
+    ts.forEachChild(node, visit);
+  }
+  visit(tree);
+  const withClass = (name: string) => elements.filter(node => node.openingElement.attributes.properties.some(attribute =>
+    ts.isJsxAttribute(attribute) && attribute.name.getText(tree) === "className" && attribute.initializer?.getText(tree) === `{styles.${name}}`));
+  const expanded = withClass("expandedCard"), contract = withClass("contractAction");
+  assert.equal(expanded.length, 1); assert.equal(contract.length, 1);
+  assert.ok(contract[0].pos > expanded[0].end, "contract action must render after and outside the card artwork");
   assert.match(zoomCss, /\.contractAction \{/);
   assert.match(zoomCss, /\.expandedMeta \{/);
   assert.doesNotMatch(zoom, /className=\{styles\.tierLabel\}/);

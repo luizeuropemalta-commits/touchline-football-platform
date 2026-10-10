@@ -1635,7 +1635,6 @@ export function TouchlineEliteExactCard({
                 border: "1px solid rgba(255,255,255,.10)",
                 background: "linear-gradient(180deg, rgba(15,20,23,.58), rgba(2,5,8,.76))",
                 boxShadow: "0 4px 10px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.06)",
-                backdropFilter: "blur(3px)",
                 pointerEvents: "none",
               }}
             >

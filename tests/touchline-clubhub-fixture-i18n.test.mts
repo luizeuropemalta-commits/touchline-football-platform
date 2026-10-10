@@ -62,7 +62,7 @@ function consumer(getCopy: (locale?: string | null, enabled?: boolean) => Copy, 
   let refreshes = 0;
   const icon = () => React.createElement("svg", { "aria-hidden": true });
   const component = evaluate<{ default: (props: Record<string, unknown>) => React.ReactElement | null }>(componentSource, {
-    "react": { ...React, useMemo: (fn: () => unknown) => fn(), useEffect: (fn: () => undefined | (() => void)) => effects.push(fn), useSyncExternalStore: (_subscribe: unknown, readBrowser: () => string, readServer: () => string) => browserZone ? readBrowser() : readServer() },
+    "react": { ...React, useTransition: () => [false, (work: () => void) => work()], useMemo: (fn: () => unknown) => fn(), useEffect: (fn: () => undefined | (() => void)) => effects.push(fn), useSyncExternalStore: (_subscribe: unknown, readBrowser: () => string, readServer: () => string) => browserZone ? readBrowser() : readServer() },
     "next/navigation": { useRouter: () => ({ refresh: () => { refreshes++; } }) },
     "next/image": { default: (props: Record<string, unknown>) => { images.push(props); return React.createElement("img", props); } },
     "next/link": { default: (props: Record<string, unknown>) => React.createElement("a", props, props.children as React.ReactNode) },
@@ -185,7 +185,7 @@ test("public card keeps gates and existing server/browser timezone plus refresh 
   assert.equal(callers.length, 2); for (const [caller] of callers) assert.match(caller, /previewHref=\{null\}/);
 });
 
-test("rail algorithm and component behavior remain byte-identical outside admitted copy bindings", () => {
+test("rail algorithm and component remain byte-identical outside admitted copy and refresh bindings", () => {
   function undoOnce(input: string, added: string, previous: string) {
     assert.equal(input.split(added).length - 1, 1, `exact authorized delta: ${added}`);
     return input.replace(added, () => previous);
@@ -202,6 +202,15 @@ test("rail algorithm and component behavior remain byte-identical outside admitt
     .replace('heading: copy.matchUpdate', 'heading: portuguese ? "ATUALIZAÇÃO DA PARTIDA" : "MATCH UPDATE"');
   assert.equal(createHash("sha256").update(railRestored).digest("hex"), "bfafa9422d353c0ecc219570067440065ee2521529d51f50e96202937f2f8991");
   let componentBaseline = componentSource;
+  // Refresh lifecycle has its own behavioral regression test; invert only its
+  // exact approved delta here, retaining the original historical digest.
+  for (const [added, previous] of [
+    ['useSyncExternalStore, useTransition }', 'useSyncExternalStore }'],
+    ['  const [isRefreshing, startRefresh] = useTransition();\n', ''],
+    ['if (!refreshMs || isRefreshing)', 'if (!refreshMs)'],
+    ['() => startRefresh(() => router.refresh())', '() => router.refresh()'],
+    ['[refreshMs, router, isRefreshing, startRefresh]', '[refreshMs, router]'],
+  ]) componentBaseline = undoOnce(componentBaseline, added, previous);
   for (const [added, previous] of [
     ['  draftLocalesEnabled?: boolean;\n', ''],
     ['  draftLocalesEnabled = false,\n', ''],

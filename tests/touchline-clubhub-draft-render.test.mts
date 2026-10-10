@@ -69,7 +69,7 @@ async function resolveTree(node: React.ReactNode): Promise<React.ReactNode> {
 test("real directory render keeps public gate closed and explicit drafts flow through header/navigation/showcase", async () => {
   const captures: Array<{ child: string; props: CapturedProps }> = [];
   let authReads = 0;
-  const leaf = (child: string) => (props: CapturedProps) => { captures.push({ child, props }); return null; };
+  const leaf = (child: string) => (props: CapturedProps) => { captures.push({ child, props }); return child === "header" ? props.navigation as React.ReactNode : null; };
   const route = load("../app/touchline-clubs/page.tsx", {
     "@/components/touchline/TouchlineBrandHeader": { default: leaf("header") },
     "@/lib/touchlineArena/account-locale-context-server": { loadAccountLocaleContext: async () => { authReads++; return { mode: "guest" }; } },

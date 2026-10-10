@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
+import { normalizeTouchlineMatchCentreTimeZone } from "@/lib/touchlineArena/match-centre";
 import { isTouchLineSiteLocalesEnabled } from "@/lib/touchlineArena/site-locales-release";
 import { notFound, redirect } from "next/navigation";
 import ClubOwnerMarketHeader from "@/components/touchline/ClubOwnerMarketHeader";
+import { clubOwnerRankingPoints, clubOwnerRankingPosition } from "@/lib/touchlineArena/club-owner-profile-metrics";
 import TouchlineBrandHeader from "@/components/touchline/TouchlineBrandHeader";
 import FantasyGameweekClient from "@/app/fantasy/FantasyGameweekClient";
 import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
-import TouchlineMarketNotifications from "@/components/touchline/notifications/TouchlineMarketNotifications";
 import { createClient } from "@/lib/supabase/server";
 import { isOwnerEmail } from "@/lib/admin/owner";
 import { resolveTouchlineClubOwnerPageIdentity } from "@/lib/touchlineArena/club-owner-page-identity";
@@ -23,6 +25,7 @@ export const dynamic = "force-dynamic";
 type MarketTransferSearchParams = Promise<{
   lang?: string | string[];
   club?: string | string[];
+  planPreview?: string | string[];
 }>;
 
 type ClubOwnerPageProps = { searchParams: MarketTransferSearchParams };
@@ -53,8 +56,15 @@ async function renderClubOwnerPage({ searchParams }: ClubOwnerPageProps, draftLo
   const locale = await marketLocale(searchParams, draftLocalesEnabled);
   const params = await searchParams;
   const clubSlug = Array.isArray(params.club) ? params.club[0] : params.club;
+  const planPreviewValue = Array.isArray(params.planPreview) ? params.planPreview[0] : params.planPreview;
+  const planPreview = process.env.NODE_ENV === "development" && (planPreviewValue === "pro" || planPreviewValue === "standard")
+    ? planPreviewValue : null;
   const initialPlayerClubTeamId = TOUCHLINE_ENGLAND_CLUBS.find((club) => club.slug === clubSlug)?.teamId ?? null;
-  const destination = `/clubowner?lang=${encodeURIComponent(locale)}${initialPlayerClubTeamId ? `&club=${encodeURIComponent(clubSlug!)}` : ""}`;
+  const destination = `/clubowner?lang=${encodeURIComponent(locale)}${initialPlayerClubTeamId ? `&club=${encodeURIComponent(clubSlug!)}` : ""}${planPreview ? `&planPreview=${planPreview}` : ""}`;
+  // Operator-verified hosted retention is independent of auth/schema presence.
+  // These private QA capabilities remain OFF unless explicitly configured.
+  const avatarSelectionEnabled = process.env.TOUCHLINE_CLUB_OWNER_AVATAR_SELECTION_ENABLED === "true";
+  const retentionReady = process.env.TOUCHLINE_CLUB_OWNER_AVATAR_RETENTION_READY === "true";
   const readAvatarContext = createClubOwnerAvatarContextReader();
   const supabase = await createClient();
   const authentication = supabase ? await resolveServerReadWithin(
@@ -69,13 +79,12 @@ async function renderClubOwnerPage({ searchParams }: ClubOwnerPageProps, draftLo
     resolveServerReadWithin(loadTouchlineFantasySnapshot(user), null, 8_000),
   ]);
   const clubOwner = resolveTouchlineClubOwnerPageIdentity(user, undefined, avatarContext?.avatarUrl);
+  const liveTimeZone = normalizeTouchlineMatchCentreTimeZone((await headers()).get("x-vercel-ip-timezone"));
   return <main className={styles.page} dir={draftLocalesEnabled ? "ltr" : undefined}>
-    <TouchlineBrandHeader href={destination} locale={locale} accountLocaleContext={{ mode: "account", accountId: user.id }} draftLocalesEnabled={draftLocalesEnabled} />
+    <TouchlineBrandHeader href={destination} locale={locale} accountLocaleContext={{ mode: "account", accountId: user.id }} draftLocalesEnabled={draftLocalesEnabled} navigation={<TouchlineGlobalNavigation locale={locale} draftLocalesEnabled={draftLocalesEnabled} currentRoute="market" surface="authenticated" showAudioControl={false} />} />
     <div className={styles.content}>
-      <TouchlineGlobalNavigation locale={locale} draftLocalesEnabled={draftLocalesEnabled} currentRoute="market" surface="authenticated" showAudioControl={false} />
-      <ClubOwnerMarketHeader owner={clubOwner?.isAuthenticatedClubOwner ? clubOwner : null} locale={locale} draftLocalesEnabled={draftLocalesEnabled} accountId={user.id} avatarContext={avatarContext} />
-      <TouchlineMarketNotifications locale={locale} draftLocalesEnabled={draftLocalesEnabled} />
-      <FantasyGameweekClient initialSnapshot={snapshot} locale={locale} draftLocalesEnabled={draftLocalesEnabled} embedded marketPage initialPlayerClubTeamId={initialPlayerClubTeamId} clubOwner={clubOwner ? { name: clubOwner.name, avatarUrl: clubOwner.avatarUrl } : undefined} />
+      <ClubOwnerMarketHeader owner={clubOwner?.isAuthenticatedClubOwner ? clubOwner : null} locale={locale} rankingPoints={clubOwnerRankingPoints(snapshot?.seasonRanking)} rankingPosition={clubOwnerRankingPosition(snapshot?.seasonRanking)} remainingMarketPower={snapshot ? Math.max(0, snapshot.config.budgetEur - (snapshot.userGameweek?.totalMarketValueEur ?? 0)) : null} plan={snapshot?.plan ?? null} planPreview={planPreview} draftLocalesEnabled={draftLocalesEnabled} accountId={user.id} avatarContext={avatarContext} avatarSelectionEnabled={avatarSelectionEnabled} retentionReady={retentionReady} />
+      <FantasyGameweekClient initialSnapshot={snapshot} locale={locale} liveTimeZone={liveTimeZone} draftLocalesEnabled={draftLocalesEnabled} embedded marketPage initialPlayerClubTeamId={initialPlayerClubTeamId} clubOwner={clubOwner ? { name: clubOwner.name, avatarUrl: clubOwner.avatarUrl } : undefined} />
     </div>
   </main>;
 }

@@ -65,6 +65,7 @@ test('public login preview preserves the auth form and destination without readi
   const layout = () => null;
   const form = () => null;
   const page = compile(source('app/(auth)/login/page.tsx'), {
+    '@/components/touchline/LoginPlanGallery': { default: () => null },
     '@/components/auth-form': { AuthForm: form },
     '@/components/auth-layout': { AuthLayout: layout },
     '@/lib/touchlineArena/auth-i18n': copy,

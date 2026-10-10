@@ -27,3 +27,11 @@ test("unauthenticated request never reads team data", async () => {
   assert.equal(response.options.status, 401);
   assert.equal(response.body.error, "AUTH_REQUIRED");
 });
+test("authenticated state preserves the distinction between no cards and unavailable card data", async () => {
+  for (const value of [[], null]) {
+    const response = await handler({ id: "customer" }, async () => ({ matchCardIndicators: value }))();
+    assert.equal(response.body.ok, true);
+    assert.deepEqual((response.body as { matchCardIndicators: unknown }).matchCardIndicators, value);
+    assert.equal(response.options.headers?.["Cache-Control"], "private, no-store");
+  }
+});

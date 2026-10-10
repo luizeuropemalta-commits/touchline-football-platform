@@ -224,9 +224,8 @@ test("form links and authentication callbacks retain the selected language", () 
   assert.match(accountLocaleMenuSource, /"en-GB"/);
 });
 
-test("public club exploration opens the ClubHub directory in the selected language", () => {
-  assert.match(formSource, /touchLineAuthHref\("\/touchline-clubs", normalizedLocale, publicSiteLocalesEnabled\)/);
-  assert.doesNotMatch(formSource, /touchline-clubs\/(?:manchester-united|crystal-palace)/);
+test("login no longer presents a separate public-club exploration action", () => {
+  assert.doesNotMatch(formSource, /publicClubHref|copy\.watchWithoutLogin/);
 });
 
 test("login and registration clearly link to each other", () => {

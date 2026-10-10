@@ -29,7 +29,7 @@ const cards = (count: number): ClubOwnerSquadCard[] => Array.from({ length: coun
 }));
 const labels = { nationality: "N", points: "P", totalPoints: "TP", cardPrice: "CP", currentClub: "C" };
 
-test("only the public ClubHub route opts technical and outside-roster cards into value hiding", () => {
+test("public ClubHub technical and outside-roster cards preserve football market values", () => {
   const technical = readFileSync(new URL("../components/touchline/ClubHubMatchdayTechnicalArea.tsx", import.meta.url), "utf8");
   const technicalCards = technical.match(/<TouchlineEliteExactCard\b[\s\S]*?\/>/g) ?? [];
   const outside = readFileSync(new URL("../components/touchline/ClubHubOutsideMatchRoster.tsx", import.meta.url), "utf8");
@@ -48,7 +48,7 @@ test("only the public ClubHub route opts technical and outside-roster cards into
   assert.equal(gridCards.length, 2);
   assert.match(grid, /hideMarketValuePanel = false/);
   gridCards.forEach(card => assert.match(card, /hideMarketValuePanel=\{hideMarketValuePanel\}/));
-  assert.equal((publicPage.match(/hideMarketValuePanel/g) ?? []).length, 3);
+  assert.equal((publicPage.match(/hideMarketValuePanel=\{false\}/g) ?? []).length, 3);
   assert.doesNotMatch(visualQa, /hideMarketValuePanel/);
 });
 
@@ -131,7 +131,8 @@ test("real technical SSR translates seven labels and reuses coach/heading withou
       assert.equal(rendered.length, Math.min(count, 9));
       rendered.forEach(({ props }, index) => {
         assert.equal((props.player as { name: string }).name, selected[index].name);
-        assert.equal(props.showUnpublishedIdentity, true); assert.equal(props.staticRenderScale, 104 / 430);
+        assert.equal(props.showUnpublishedIdentity, true); assert.equal(props.initialRenderScale, 104 / 430);
+        assert.equal(props.staticRenderScale, undefined, "bench artwork measures its responsive shell rather than locking scale");
         assert.equal(props.rankingMode, "preview"); assert.equal(props.subscribeToRanking, false); assert.equal(props.hideMarketValuePanel, false);
         assert.ok(String(props.playerProfileHref).includes(`lang=${locale}`));
       });

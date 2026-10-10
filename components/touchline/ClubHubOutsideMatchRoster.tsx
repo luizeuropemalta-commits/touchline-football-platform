@@ -1,5 +1,6 @@
 import type { TouchLineLocale } from "@/lib/touchlineArena/i18n";
 import type { ClubOwnerSquadCard } from "@/lib/touchlineArena/demo-data";
+import type { TouchlineFantasySidelinedPlayer } from "@/lib/football-data/types";
 import { getTouchlineClubHubRosterCopy } from "@/lib/touchlineArena/club-hub-roster-i18n";
 import { getTouchlinePublicErrorCopy } from "@/lib/touchlineArena/public-error-i18n";
 import Link from "next/link";
@@ -11,6 +12,8 @@ import styles from "./ClubHubOutsideMatchRoster.module.css";
 type ClubHubOutsideMatchRosterProps = {
   clubName: string;
   cards: readonly ClubOwnerSquadCard[];
+  sidelined?: readonly TouchlineFantasySidelinedPlayer[];
+  sidelinedFixtureId?: string | null;
   locale: string;
   draftLocalesEnabled?: boolean;
   labels: { nationality: string; points: string; totalPoints: string; cardPrice: string; currentClub: string };
@@ -29,6 +32,8 @@ type ClubHubOutsideMatchRosterProps = {
 export default function ClubHubOutsideMatchRoster({
   clubName,
   cards,
+  sidelined = [],
+  sidelinedFixtureId = null,
   locale,
   draftLocalesEnabled = false,
   labels,
@@ -71,6 +76,8 @@ export default function ClubHubOutsideMatchRoster({
         <div className={styles.cards}>
           <ClubHubSquadGrid draftLocalesEnabled={draftLocalesEnabled}
             cards={[...cards]}
+            sidelined={sidelined}
+            sidelinedFixtureId={sidelinedFixtureId}
             locale={locale as TouchLineLocale}
             labels={labels}
             openProfileLabel={copy.openPlayerCard}

@@ -173,19 +173,16 @@ function renderConsumers(api: typeof domain, locale: string, remaining: number |
   return html;
 }
 
-test("actual clock and budget JSX consume real formatters, preserving timestamp, zero/null fallback, links and public gates", () => {
+test("actual clock and points JSX preserve timestamp, links and public gates without formatting the relocated budget", () => {
   for (const review of [false, true]) for (const locale of locales) for (const remaining of [0, null, -1_250_000]) {
     const actual = fixture(review);
     const html = renderConsumers(actual.api, locale, remaining);
     const expectedLocale = review ? locale : normalizeTouchLineLocale(locale);
     assert.ok(actual.dates.length > 0 && actual.dates.every((call) => call.locale === expectedLocale));
-    assert.equal(actual.numbers.length, 1);
-    assert.equal(actual.numbers[0].locale, expectedLocale);
-    assert.equal(actual.numbers[0].value, remaining ?? 900_000_000);
+    assert.equal(actual.numbers.length, 0, "budget lives in the plan header, not the two point metrics");
     assert.ok(html.includes('dateTime="2026-08-21T19:55:00Z"'));
     assert.ok(html.includes(`href="/rankings?lang=${locale}"`));
     assert.ok(html.includes('>0.00</a>')); assert.ok(html.includes('>12.34</a>'));
     assert.ok(html.includes(actual.api.formatTouchlineFantasyDeadline("2026-08-21T19:55:00Z", locale)));
-    assert.ok(html.includes(actual.api.formatTouchlineFantasyMarketValue(remaining ?? 900_000_000, locale)));
   }
 });

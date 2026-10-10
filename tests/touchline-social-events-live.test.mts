@@ -111,6 +111,11 @@ test("missing membership, incomplete settlement and absent corroboration fail cl
   const mutations: [string, (input: EventsLivePackageInput) => void, string][] = [
     ["membership", input => { input.factualData.cardPublication.membership_status = ""; }, "CARD_OR_METRIC_PROVENANCE_CONFLICT"],
     ["coverage", input => { input.factualData.settlement.scoring_coverage_status = "incomplete"; }, "CARD_OR_METRIC_PROVENANCE_CONFLICT"],
+    ["historical V3", input => { input.factualData.settlement.scoring_version = "player_scoring_v3"; }, "CARD_OR_METRIC_PROVENANCE_CONFLICT"],
+    ["invented goal bonus", input => {
+      input.touchlinePoints += 1;
+      input.factualData.settlement.touchline_points = input.touchlinePoints;
+    }, "CARD_OR_METRIC_PROVENANCE_CONFLICT"],
     ["external sources", input => { input.factualData.externalSources = []; }, "DATED_CAPTION_OR_EXTERNAL_SOURCE_REQUIRED"],
   ];
   for (const original of inputs) for (const [label, mutate, reason] of mutations) {

@@ -572,7 +572,7 @@ test("Match Centre fixture rail presents each confrontation as a vertical score 
   assert.match(component, /setFixtures\(\(current\) => mergeTouchlineLiveFixtures\(current, liveSnapshot\)\)/);
   assert.doesNotMatch(component, /return copy\[language\]\.next;/);
   assert.doesNotMatch(component, /homeScore \?\? 0|awayScore \?\? 0/);
-  assert.match(component, /touchlineFixtureRailDateLabel\(fixture, language, initialTimeZone, now, draftLocalesEnabled\)/);
+  assert.match(component, /touchlineFixtureRailDateLabel\(fixture, language, timeZone, now, draftLocalesEnabled\)/);
   assert.match(component, /className=\{styles\.fixtureDay\}/);
   assert.match(component, /className=\{styles\.fixtureKickoff\}/);
   assert.match(component, /className=\{styles\.fixtureScore\}/);
@@ -582,7 +582,7 @@ test("Match Centre fixture rail presents each confrontation as a vertical score 
   assert.doesNotMatch(alerts, /<BellRing/);
   assert.match(alerts, /<button type="button" aria-expanded=\{open\} aria-controls=\{panelId\}/);
   assert.match(styles, /\.fixture, \.selectedFixture \{[^}]*min-height: 104px/);
-  assert.match(styles, /\.fixtureStack \{[^}]*grid-template-columns: 86px minmax\(0,1fr\)[^}]*gap: 6px/);
+  assert.match(styles, /\.fixtureStack \{[^}]*grid-template-columns: 70px minmax\(0,1fr\)[^}]*gap: 4px/);
   // The current public EN/PT document is LTR: inline-end is physical right.
   // Keep the exact offset/vertical geometry rather than accepting any inset.
   assert.equal(touchlineDocumentDirection("pt-BR"), "ltr");

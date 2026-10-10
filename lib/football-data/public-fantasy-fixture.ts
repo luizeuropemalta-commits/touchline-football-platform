@@ -71,6 +71,10 @@ export type TouchlinePublicFantasySidelinedPlayer = Readonly<{
   playerName?: string;
   reason?: string;
   category?: string;
+  typeName?: string;
+  completed?: boolean;
+  startDate?: string;
+  endDate?: string | null;
 }>;
 
 export type TouchlinePublicFantasyEvent = Readonly<{
@@ -82,6 +86,7 @@ export type TouchlinePublicFantasyEvent = Readonly<{
   relatedPlayerId?: string;
   relatedPlayerName?: string;
   type?: string;
+  status?: "recorded" | "rescinded";
   minute?: number;
   extraMinute?: number;
 }>;
@@ -235,6 +240,10 @@ function publicSidelined(item: TouchlineFantasySidelinedPlayer): TouchlinePublic
     playerName: nonEmptyString(item.playerName),
     reason: nonEmptyString(item.reason),
     category: nonEmptyString(item.category),
+    typeName: nonEmptyString(item.typeName),
+    completed: typeof item.completed === "boolean" ? item.completed : undefined,
+    startDate: nonEmptyString(item.startDate),
+    endDate: nonEmptyString(item.endDate),
   };
 }
 
@@ -250,6 +259,7 @@ function publicEvent(item: TouchlineFantasyEvent): TouchlinePublicFantasyEvent |
     relatedPlayerId: nonEmptyString(item.relatedPlayerId),
     relatedPlayerName: nonEmptyString(item.relatedPlayerName),
     type: nonEmptyString(item.type),
+    status: item.status === "recorded" || item.status === "rescinded" ? item.status : undefined,
     minute: finiteNumber(item.minute),
     extraMinute: finiteNumber(item.extraMinute),
   };

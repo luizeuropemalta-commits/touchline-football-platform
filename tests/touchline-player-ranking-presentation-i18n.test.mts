@@ -90,7 +90,7 @@ const compile = (text: string, modules: Record<string, unknown>) => {
 const getCopy = compile(dictionary, { "./catalogue-locale.ts": catalogueLocale, "./locale-catalogues/rankings-drafts.ts": { touchlineRankingsDrafts } }).getTouchLineRankingsCopy as (locale?: string | null) => Record<string, string>;
 type Element = React.ReactElement<Record<string, unknown>>;
 function nodes(node: React.ReactNode): Element[] {
-  return React.Children.toArray(node).flatMap(child => React.isValidElement<Record<string, unknown>>(child) ? [child, ...nodes(child.props.children as React.ReactNode)] : []);
+  return React.Children.toArray(node).flatMap(child => React.isValidElement<Record<string, unknown>>(child) ? [child, ...nodes(child.props.children as React.ReactNode), ...nodes(child.props.navigation as React.ReactNode)] : []);
 }
 const text = (value: string) => renderToStaticMarkup(React.createElement(React.Fragment, null, value));
 function cards(count: number): demo.ClubOwnerSquadCard[] {
@@ -251,7 +251,7 @@ test("player ranking actual sort, top3/top20, totals, links and inactive commerc
     assert.equal(featured.length, Math.min(count, 3)); assert.equal(rows.length, Math.min(count, 20));
     assert.equal(h.exactCardProps.length, featured.length + rows.length);
     for (const exactCard of h.exactCardProps) {
-      assert.equal(exactCard.hideMarketValuePanel, true);
+      assert.equal(exactCard.hideMarketValuePanel, false);
       assert.ok(
         h.roster.some(card => card.name === (exactCard.player as { name: string }).name),
         "the presentation opt-in must preserve the card player data",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import type { TouchlinePublicFixture } from "@/lib/football-data/public-fixture";
@@ -31,34 +31,42 @@ function presentation(fixture: TouchlinePublicFixture | null, locale: TouchLineL
 export default function ClubHubLiveFixtureScore({ fixtureId, initialFixture, locale, draftLocalesEnabled = false }: Props) {
   const [fixture, setFixture] = useState(initialFixture);
   const router = useRouter();
+  const surface = useRef<HTMLElement>(null);
 
   useEffect(() => {
     if (!fixtureId) return;
     let active = true;
+    let visible = false;
+    let pending = false;
+    const observer = new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; });
+    if (surface.current) observer.observe(surface.current);
     async function refresh() {
+      if (!active || !visible || document.hidden || pending) return;
+      pending = true;
       try {
         const response = await fetch("/api/football-data/fantasy/livescores", { cache: "no-store" });
         if (!response.ok) return;
         const payload = await response.json() as { data?: unknown };
         const fixtures = parseTouchlinePublicFixtures(payload.data);
-        const next = fixtures?.find((item) => item.providerId === fixtureId);
+        if (fixtures === null) return;
+        const next = fixtures.find((item) => item.providerId === fixtureId);
         if (active && next) setFixture(next);
+        // A validated poll (including an empty feed) can also reveal a newly
+        // persisted official XI or bench in the server-owned Club Hub tree.
+        if (active) router.refresh();
       } catch {
         // The server-rendered last-known-good state remains visible.
       } finally {
-        // The same short cadence refreshes the server-owned official team
-        // sheet. A newly persisted XI or bench therefore replaces the preview
-        // without asking the supporter to reload the Club Hub manually.
-        if (active) router.refresh();
+        pending = false;
       }
     }
-    void refresh();
     const timer = window.setInterval(refresh, 45_000);
     return () => {
       active = false;
+      observer.disconnect();
       window.clearInterval(timer);
     };
   }, [fixtureId, router]);
 
-  return <b aria-live="polite">{presentation(fixture, locale, draftLocalesEnabled)}</b>;
+  return <b ref={surface} aria-live="polite">{presentation(fixture, locale, draftLocalesEnabled)}</b>;
 }

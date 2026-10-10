@@ -1,16 +1,12 @@
 import sharp from "sharp";
+import type { ClubOwnerAvatarValidation } from "./club-owner-avatar-validation-types.ts";
+export type { ClubOwnerAvatarError, ClubOwnerAvatarValidation } from "./club-owner-avatar-validation-types.ts";
 import { getClubOwnerAvatarResourceAdmission, type ClubOwnerAvatarResourceScope } from "./club-owner-avatar-resource-admission.ts";
 import { createAvatarEnvironmentGuard } from "./club-owner-avatar-upload-contract.ts";
 
 export const CLUB_OWNER_AVATAR_MAX_BYTES = 5 * 1024 * 1024;
 export const CLUB_OWNER_AVATAR_MAX_PIXELS = 16_000_000;
 export const CLUB_OWNER_AVATAR_MAX_EDGE = 512;
-
-export type ClubOwnerAvatarError = "empty" | "too_large" | "pixel_limit" | "unsupported_format"
-  | "heic_unsupported" | "animated" | "invalid_image" | "resource_unavailable";
-export type ClubOwnerAvatarValidation =
-  | Readonly<{ ok: true; bytes: Buffer; contentType: "image/webp"; width: number; height: number }>
-  | Readonly<{ ok: false; error: ClubOwnerAvatarError }>;
 
 const PNG_SIGNATURE = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
 

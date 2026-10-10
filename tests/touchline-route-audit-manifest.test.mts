@@ -17,11 +17,30 @@ function row(route: string) {
 test("inventories every page, API method, proxy, metadata route, and error boundary", () => {
   assert.equal(rows.filter((item) => item.kind === "PAGE").length, 71);
   assert.equal(rows.some((item) => item.route === "/visual-qa/arena-main-field"), false);
-  assert.equal(rows.filter((item) => item.kind === "API").length, 94);
+  assert.equal(rows.filter((item) => item.kind === "API").length, 95);
   assert.equal(rows.filter((item) => item.kind === "BOUNDARY").length, 7);
   assert.equal(rows.filter((item) => item.kind === "METADATA").length, 3);
   assert.equal(rows.filter((item) => item.kind === "PROXY").length, 1);
   assert.equal(new Set(rows.map((item) => item.route)).size, rows.length);
+});
+
+test("central quota authority is an OFF-default worker boundary, not a public or browser API approval", () => {
+  const authority = row("POST /api/internal/football-data/quota");
+  assert.equal(authority.auth, "DEFAULT_OFF_DEDICATED_WORKER_BEARER");
+  assert.equal(authority.role, "SERVER_OWNED_WORKER_ENVIRONMENT_AND_ACCOUNT_SCOPE");
+  assert.equal(authority.data, "CENTRAL_QUOTA_ADMISSION_AND_COMPLETION_ONLY_NO_FOOTBALL_PAYLOAD");
+  assert.equal(authority.browser, "SERVER_TO_SERVER_HTTP_CONTRACT_NO_BROWSER_SESSION");
+  assert.equal(authority.status, "PENDING_CENTRAL_SCHEMA_HOSTED_AUTH_AND_EXPLICIT_ACTIVATION");
+  assert.equal(rows.filter(item => item.route.endsWith(" /api/internal/football-data/quota")).length, 1);
+});
+
+test("retired automatic card lookup is not inventoried as a live provider consumer", () => {
+  const lookup = row("POST /api/players/search-and-build-card");
+  assert.equal(lookup.auth, "AUTHENTICATED_OR_LOCAL_EDITOR");
+  assert.equal(lookup.role, "ARENA_USER_OR_LOCAL_EDITOR");
+  assert.equal(lookup.data, "RETIRED_MANUAL_EDITORIAL_ONLY_NO_PROVIDER_OR_DATABASE_ACCESS");
+  assert.equal(lookup.browser, "HTTP_410_CONTRACT");
+  assert.equal(lookup.status, "RETIRED_SOURCE_QA_DEPLOY_REQUIRED");
 });
 
 test("avatar GET inventory stays private read-only; POST preparation requires exact binding and pending activation", () => {

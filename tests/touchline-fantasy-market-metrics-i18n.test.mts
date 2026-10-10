@@ -101,25 +101,25 @@ function consumer() {
   };
 }
 
-test("actual metrics JSX uses all six catalogue fields without duplicating bilingual copy", async () => {
+test("actual points summary uses its five catalogue fields without duplicating the budget now in My plan", async () => {
   const actual = consumer();
   const sentinels = Object.fromEntries(Object.keys(baseline["en-GB"]).map(key => [key, `catalogue:${key}`]));
   const locales: string[] = [];
   const html = actual.render({ locale: "pt-BR", pt: true }, (locale) => { locales.push(locale); return sentinels; });
   assert.deepEqual(locales, ["pt-BR"]);
   assert.match(actual.source, /import \{ getTouchlineFantasyMarketMetricsCopy \} from "@\/lib\/touchlineFantasy\/market-metrics-i18n"/);
-  for (const text of Object.values(sentinels)) assert.ok(html.includes(text));
+  for (const [key, text] of Object.entries(sentinels)) assert.equal(html.includes(text), key !== "remainingBudget", key);
   assert.doesNotMatch(html, /Resumo do seu XI|Pontos da rodada|Orçamento restante|Gameweek points|Season points/);
 });
 
-test("actual metrics JSX preserves EN/PT labels, three values, two encoded ranking links and market-only display", async () => {
+test("actual metrics JSX preserves EN/PT labels, two point values, two encoded ranking links and market-only display", async () => {
   const mod = await load(); const actual = consumer();
   for (const locale of ["en-GB", "pt-BR"] as const) {
     const expected = baseline[locale];
     const html = actual.render({ locale, pt: locale === "pt-BR" }, mod.getTouchlineFantasyMarketMetricsCopy);
     assert.ok(html.startsWith(`<dl class="ownerSummary" data-market-owner-metrics="true" aria-label="${expected.summaryAria}">`));
-    assert.equal((html.match(/<div>/g) ?? []).length, 3);
-    assert.ok(html.includes(`<dt>${expected.remainingBudget}</dt><dd>${formatTouchlineFantasyMarketValue(900_000_000, locale)}</dd>`));
+    assert.equal((html.match(/<div>/g) ?? []).length, 2);
+    assert.ok(!html.includes(expected.remainingBudget), "budget is not duplicated below the plan");
     assert.ok(html.includes(`<dt>${expected.roundPoints}</dt>`)); assert.ok(html.includes(`<dt>${expected.seasonPoints}</dt>`));
     assert.ok(html.includes(`<a href="/rankings?lang=${locale}" aria-label="${expected.roundPointsAria}">12.34</a>`));
     assert.ok(html.includes(`<a href="/rankings?lang=${locale}" aria-label="${expected.seasonPointsAria}">98.76</a>`));
@@ -129,7 +129,7 @@ test("actual metrics JSX preserves EN/PT labels, three values, two encoded ranki
   }
 });
 
-test("real metrics preserve live zero, nullish snapshot fallback and remaining-budget zero without mutating data", async () => {
+test("real points metrics preserve live zero, nullish snapshot fallback and ignore budget without mutating data", async () => {
   const mod = await load(); const actual = consumer();
   const scenarios = [
     { live: { gameweekScore: 0, seasonScore: 0 }, validation: { budgetRemainingEur: 0 }, expected: [0, 0, 0] },
@@ -141,13 +141,13 @@ test("real metrics preserve live zero, nullish snapshot fallback and remaining-b
     for (const scenario of scenarios) {
       const input = { locale, pt: locale === "pt-BR", live: scenario.live, validation: scenario.validation };
       const before = JSON.stringify(input); const html = actual.render(input, mod.getTouchlineFantasyMarketMetricsCopy);
-      assert.ok(html.includes(`<dd>${formatTouchlineFantasyMarketValue(scenario.expected[0], locale)}</dd>`));
+      assert.ok(!html.includes(`<dd>${formatTouchlineFantasyMarketValue(scenario.expected[0], locale)}</dd>`), "no duplicate budget metric");
       const scores = [...html.matchAll(/<a [^>]+>([^<]+)<\/a>/g)].map(match => match[1]);
       assert.deepEqual(scores, scenario.expected.slice(1).map(value => value.toFixed(2)));
       assert.equal(JSON.stringify(input), before);
     }
     const zeroSnapshot = actual.render({ locale, pt: locale === "pt-BR", snapshot: { config: { budgetEur: 0 }, gameweekScore: 0, seasonScore: 0 } }, mod.getTouchlineFantasyMarketMetricsCopy);
-    assert.ok(zeroSnapshot.includes(`<dd>${formatTouchlineFantasyMarketValue(0, locale)}</dd>`));
+    assert.ok(!zeroSnapshot.includes(`<dd>${formatTouchlineFantasyMarketValue(0, locale)}</dd>`));
     assert.equal((zeroSnapshot.match(/>0\.00<\/a>/g) ?? []).length, 2);
   }
 });
@@ -156,7 +156,7 @@ test("actual metrics keep six draft locales gated and encode locale handoff with
   const mod = await load(); const actual = consumer();
   for (const locale of [...codes.slice(2), "", 'en-GB&redirect=https://example.invalid/"']) {
     const html = actual.render({ locale, pt: false }, mod.getTouchlineFantasyMarketMetricsCopy);
-    for (const text of Object.values(baseline["en-GB"])) assert.ok(html.includes(text));
+    for (const [key, text] of Object.entries(baseline["en-GB"])) assert.equal(html.includes(text), key !== "remainingBudget", key);
     const links = [...html.matchAll(/href="([^"]+)"/g)].map(match => match[1]);
     assert.deepEqual(links, Array(2).fill(`/rankings?lang=${encodeURIComponent(locale)}`));
     assert.doesNotMatch(html, /href="https?:|redirect="|onclick=/i);

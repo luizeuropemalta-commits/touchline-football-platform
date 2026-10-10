@@ -1,27 +1,54 @@
 import Image from "next/image";
-import Link from "next/link";
-import { Camera, Landmark } from "lucide-react";
+import { CalendarDays, Camera, Crown, Diamond, LockKeyhole, Shield } from "lucide-react";
 import { getTouchlineClubOwnerMarketCopy } from "@/lib/touchlineArena/club-owner-market-i18n";
+import { formatClubOwnerRankingPosition, getClubOwnerProfileMetricsCopy } from "@/lib/touchlineArena/club-owner-profile-metrics";
+import { TouchlineCoinMark } from "./market/TouchlineMarketMarks";
 import ClubOwnerAvatarControl, { type ClubOwnerAvatarUiContext } from "./ClubOwnerAvatarControl";
+import ClubOwnerPlanShowcase from "./ClubOwnerPlanShowcase";
 import controls from "./TouchlineGlobalNavigation.module.css";
 import styles from "./ClubOwnerMarketHeader.module.css";
 
 type Owner = Readonly<{ name: string; avatarUrl: string; city: string; nationality: string; since: string }>;
 
-export default function ClubOwnerMarketHeader({ owner, locale, accountId, avatarContext, draftLocalesEnabled = false }: Readonly<{
+export default function ClubOwnerMarketHeader({ owner, locale, accountId, avatarContext, rankingPoints = null, rankingPosition = null, remainingMarketPower = null, plan = null, planPreview = null, draftLocalesEnabled = false, avatarSelectionEnabled = false, retentionReady = false }: Readonly<{
   owner: Owner | null; locale: string; accountId?: string; avatarContext?: ClubOwnerAvatarUiContext | null;
+  plan?: Readonly<{ active: boolean; expiresAt: string | null }> | null;
+  planPreview?: "standard" | "pro" | null;
   draftLocalesEnabled?: boolean;
+  avatarSelectionEnabled?: boolean; retentionReady?: boolean;
+  rankingPoints?: number | null;
+  rankingPosition?: number | null;
+  remainingMarketPower?: number | null;
 }>) {
   const copy = getTouchlineClubOwnerMarketCopy(locale, draftLocalesEnabled);
+  const metricsCopy = getClubOwnerProfileMetricsCopy(locale, draftLocalesEnabled);
+  const points = owner && typeof rankingPoints === "number" && Number.isFinite(rankingPoints)
+    ? rankingPoints.toLocaleString(metricsCopy.locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : null;
   const name = owner?.name || copy.nameUnavailable;
+  const rank = owner && typeof rankingPosition === "number" && Number.isSafeInteger(rankingPosition) && rankingPosition > 0
+    ? formatClubOwnerRankingPosition(rankingPosition, locale, draftLocalesEnabled) : null;
+  const marketPower = typeof remainingMarketPower === "number" && Number.isFinite(remainingMarketPower)
+    ? new Intl.NumberFormat(locale, { notation: "compact", maximumFractionDigits: 1 }).format(Math.max(0, remainingMarketPower))
+    : null;
+  const tier = planPreview;
+  // The tier samples are development-only product copy. They intentionally
+  // render the acquisition state without changing the viewer's entitlement.
+  const planActive = tier ? false : plan?.active === true;
+  const planDate = planActive && typeof plan?.expiresAt === "string" && Number.isFinite(Date.parse(plan.expiresAt))
+    ? new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeZone: "UTC" }).format(new Date(plan.expiresAt)) : null;
   return <header className={styles.header} data-clubowner-header="true">
-    <section className={styles.profile} aria-labelledby="clubowner-heading">
-      <div className={styles.title}><span>TOUCHLINE</span><h1>ClubOwner</h1></div>
+    <section className={styles.profile} data-cover-preview={tier ? "true" : undefined} aria-labelledby="clubowner-heading">
+      {tier ? <svg className={styles.coverPattern} viewBox="0 0 600 340" aria-hidden="true" focusable="false">
+        <rect x="20" y="20" width="560" height="300" rx="2" />
+        <path d="M300 20v300M20 95h78v150H20M580 95h-78v150h78M20 133h30v74H20M580 133h-30v74h30" />
+        <circle cx="300" cy="170" r="53" /><circle cx="300" cy="170" r="2" />
+      </svg> : null}
+      <div className={styles.title}><h1>ClubOwner</h1></div>
       <div className={styles.identity}>
         <div className={styles.portrait}>
           {owner && accountId && avatarContext?.accountId === accountId && avatarContext.uploadAllowed === true
             && avatarContext.canUpload === false && avatarContext.readyForSelection === false ?
-            <ClubOwnerAvatarControl accountId={accountId} context={avatarContext} locale={locale} draftLocalesEnabled={draftLocalesEnabled}>
+            <ClubOwnerAvatarControl accountId={accountId} context={avatarContext} locale={locale} draftLocalesEnabled={draftLocalesEnabled} avatarSelectionEnabled={avatarSelectionEnabled} retentionReady={retentionReady}>
               <Image src={owner.avatarUrl || "/icons/touchline-512.png"} alt={name} width={112} height={112} unoptimized />
               <span className={styles.camera}><Camera size={16} aria-hidden="true" /></span>
             </ClubOwnerAvatarControl> : <>
@@ -29,27 +56,45 @@ export default function ClubOwnerMarketHeader({ owner, locale, accountId, avatar
             <Image src={owner?.avatarUrl || "/icons/touchline-512.png"} alt={name} width={112} height={112} unoptimized />
             <span className={styles.camera}><Camera size={16} aria-hidden="true" /></span>
           </button>
-          <small id="clubowner-photo-status">{copy.photoUnavailable}</small>
+          <small className={styles.visuallyHidden} id="clubowner-photo-status">{copy.photoUnavailable}</small>
           </>}
         </div>
         <div className={styles.details}>
           <span className={styles.eyebrow}>{copy.yourProfile}</span>
-          <h2 id="clubowner-heading">{name}</h2>
+          <h2 id="clubowner-heading">{name}{tier ? <>
+            <span className={`${styles.proBadge} ${styles.standardBadge}`} data-profile-tier="standard"><Shield size={14} aria-hidden="true" />{copy.planStandard}</span>
+            <span className={styles.proBadge} data-profile-tier="pro"><Crown size={14} aria-hidden="true" />{copy.planPro}</span>
+            <span className={`${styles.proBadge} ${styles.masterBadge}`} data-profile-tier="master"><Diamond size={14} aria-hidden="true" />Master</span>
+            <span className={`${styles.proBadge} ${styles.vipBadge}`} data-profile-tier="vip"><LockKeyhole size={14} aria-hidden="true" />VIP</span>
+          </> : null}</h2>
           <dl className={styles.facts}>
-            <div><dt>{copy.location}</dt><dd>{owner?.city || "—"}</dd></div>
-            <div><dt>{copy.nationality}</dt><dd>{owner?.nationality || "—"}</dd></div>
-            <div><dt>{copy.memberSince}</dt><dd>{owner?.since || "—"}</dd></div>
+            <div><dt>{metricsCopy.points}</dt><dd aria-label={points === null ? metricsCopy.unavailable : undefined}>{points ?? "—"}</dd></div>
+            <div><dt>{metricsCopy.ranking}</dt><dd aria-label={rank === null ? metricsCopy.unavailable : undefined}>{rank ?? "—"}</dd></div>
+            <div><dt>{metricsCopy.followers}</dt><dd aria-label={metricsCopy.unavailable}>—</dd></div>
           </dl>
-          <Link className={controls.link} href={`/intro?lang=${encodeURIComponent(locale)}&intro=first`}>{copy.watchIntro}</Link>
         </div>
       </div>
     </section>
-    <section className={styles.bank} data-bank-state="inactive" aria-labelledby="clubowner-bank-heading">
-      <div className={styles.bankHeading}><Landmark size={25} aria-hidden="true" /><h2 id="clubowner-bank-heading">{copy.bank}</h2><span>{copy.inactive}</span></div>
-      <strong>{copy.credits}</strong>
-      <p id="clubowner-bank-status">{copy.purchasesUnavailable}</p>
-      <button type="button" className={controls.link} disabled aria-describedby="clubowner-bank-status">{copy.buyCredits}</button>
-      <small>{copy.notCreditBalance}</small>
-    </section>
+    {tier ? <ClubOwnerPlanShowcase key={tier} initialPlan={tier} name={name} locale={locale} remainingMarketPower={marketPower} draftLocalesEnabled={draftLocalesEnabled} /> : <section className={styles.bank} data-plan-state={planActive ? "active" : "inactive"} aria-labelledby="clubowner-plan-heading">
+      <div className={styles.bankHeading}><CalendarDays size={25} aria-hidden="true" /><h2 id="clubowner-plan-heading">{copy.plan}</h2>
+        <button type="button" className={`${controls.arena} ${styles.planAction}`} disabled aria-describedby="clubowner-plan-status" title={copy.planActionUnavailable}>
+          {planActive ? copy.renewPlan : copy.activatePlan}
+        </button>
+      </div>
+      <details className={styles.bankDetails} data-bank-details="true">
+        <summary className={styles.bankSummary}>
+          <span className={styles.marketPowerLabel}>{copy.marketPower}</span>
+          <span className={styles.marketPowerValue} aria-label={marketPower === null ? copy.marketPowerUnavailable : `${copy.marketPower} ${marketPower} TouchLine Credits`}>
+            <TouchlineCoinMark size={22} />
+            <strong>{marketPower ?? "—"}</strong>
+            <small>TC</small>
+          </span>
+        </summary>
+        <div className={styles.bankBody}>
+          <p id="clubowner-plan-status">{planActive ? (planDate ? copy.planUntil.replace("{date}", planDate) : copy.planActiveNoEnd) : copy.planInactiveDetail}</p>
+          <small>{copy.virtualBudgetSeparate}</small>
+        </div>
+      </details>
+    </section>}
   </header>;
 }

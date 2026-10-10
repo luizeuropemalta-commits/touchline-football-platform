@@ -69,7 +69,7 @@ function fixture(patch: Record<string, string | undefined> = {}) {
       // Keep the real new brand frame; audio/auth client controls are outside
       // this server identity/context contract, like the existing UI leaves.
       if (name === "./TouchlinePageControls") return { default: () => null, __esModule: true };
-      if (name === "@/lib/touchlineFantasy/server") return { loadTouchlineFantasySnapshot: async () => { calls.push("fantasy"); return { marker: "unchanged-real-account-snapshot-boundary" }; } };
+      if (name === "@/lib/touchlineFantasy/server") return { loadTouchlineFantasySnapshot: async () => { calls.push("fantasy"); return { marker: "unchanged-real-account-snapshot-boundary", config: { budgetEur: 500_000_000 } }; } };
       if (name === "@/lib/touchlineArena/demo-data") return { TOUCHLINE_ENGLAND_CLUBS: [] };
       if (name.endsWith(".css")) return {};
       if (name.startsWith("@/") || name.startsWith(".")) {
@@ -203,9 +203,28 @@ test("real page authenticates once, preserves Fantasy and uses canonical stored 
   assert.equal((h.fantasyProps[0].initialSnapshot as { marker: string }).marker, "unchanged-real-account-snapshot-boundary");
   assert.equal(h.fantasyProps[0].marketPage, true); assert.equal(h.fantasyProps[0].embedded, true);
   assert.equal(h.headerProps[0].accountId, actor);
+  assert.equal(h.headerProps[0].avatarSelectionEnabled, false); assert.equal(h.headerProps[0].retentionReady, false);
   assert.deepEqual(JSON.parse(JSON.stringify(h.headerProps[0].avatarContext)), { accountId: actor, revision: "1", avatarUrl: avatar,
     generation: "0", activeOperationId: null, fencedThroughGeneration: "-1", operationId: null, operationState: null,
     committedRevision: null, uploadAllowed: false, canUpload: false, readyForSelection: false });
+});
+
+test("real page forwards independent exact private selection/readiness flags with one auth and one unchanged recovery read", async () => {
+  for (const [selection, ready] of [[undefined, undefined], ["true", "false"], ["false", "true"], ["true", "true"], ["TRUE", " true "]]) {
+    const h = fixture({ TOUCHLINE_CLUB_OWNER_AVATAR_UPLOAD_ENABLED: "true", TOUCHLINE_CLUB_OWNER_AVATAR_UPLOAD_ACCOUNT_ID: actor,
+      TOUCHLINE_CLUB_OWNER_AVATAR_SELECTION_ENABLED: selection, TOUCHLINE_CLUB_OWNER_AVATAR_RETENTION_READY: ready });
+    await h.page();
+    assert.equal(h.calls.filter(call => call === "getUser").length, 1);
+    assert.equal(h.calls.filter(call => call === "readCurrent").length, 1);
+    assert.equal(h.headerProps[0].avatarSelectionEnabled, selection === "true");
+    assert.equal(h.headerProps[0].retentionReady, ready === "true");
+    const recovery = h.headerProps[0].avatarContext as { uploadAllowed: boolean; canUpload: boolean; readyForSelection: boolean };
+    assert.equal(recovery.uploadAllowed, true); assert.equal(recovery.canUpload, false); assert.equal(recovery.readyForSelection, false);
+  }
+  const wrongActor = fixture({ TOUCHLINE_CLUB_OWNER_AVATAR_UPLOAD_ENABLED: "true", TOUCHLINE_CLUB_OWNER_AVATAR_UPLOAD_ACCOUNT_ID: other,
+    TOUCHLINE_CLUB_OWNER_AVATAR_SELECTION_ENABLED: "true", TOUCHLINE_CLUB_OWNER_AVATAR_RETENTION_READY: "true" });
+  await wrongActor.page();
+  assert.equal((wrongActor.headerProps[0].avatarContext as { uploadAllowed: boolean }).uploadAllowed, false);
 });
 
 test("real page rejects error-bearing identity before avatar admission or account snapshot", async () => {

@@ -108,7 +108,7 @@ export default function AccountLocaleMenu({ context, locale, menuClassName, pane
           </select>
           <ChevronDown className="auth-language-chevron" size={14} aria-hidden="true" />
         </label>
-        {message ? <p role="status" aria-live="polite">{message}</p> : null}
+        {message ? <p className={state === "loading" ? "sr-only" : undefined} role="status" aria-live="polite">{message}</p> : null}
       </div>
     );
   }
@@ -127,7 +127,7 @@ export default function AccountLocaleMenu({ context, locale, menuClassName, pane
             <span>{label}</span>{locale === code ? <Check aria-hidden="true" /> : null}
           </a>
         ))}
-        {message ? <p role="status" aria-live="polite">{message}</p> : null}
+        {message ? <p className={state === "loading" ? "sr-only" : undefined} role="status" aria-live="polite">{message}</p> : null}
       </div>
     </details>
   );

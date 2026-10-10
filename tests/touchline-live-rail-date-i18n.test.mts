@@ -108,8 +108,8 @@ test("actual Live rail JSX binds the shared helper with fixture, locale, zone an
     const expression = matches[0].getText(sf);
     const fixtureModule: { element?: React.ReactElement } = {};
     vm.runInNewContext(ts.transpileModule(`export const element = (${expression});`, { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.React } }).outputText, {
-      exports: fixtureModule, React, styles: { fixtureDay: "fixtureDay" }, fixture,
-      language, initialTimeZone: "Europe/Malta", now: sameDay, draftLocalesEnabled: future,
+      exports: fixtureModule, React, styles: { fixtureDay: "fixtureDay" }, fixture, isResultSection: true,
+      language, timeZone: "Europe/Malta", now: sameDay, draftLocalesEnabled: future,
       touchlineFixtureRailDateLabel: probe.label,
     });
     const html = renderToStaticMarkup(fixtureModule.element!);

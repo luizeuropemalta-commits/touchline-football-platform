@@ -63,7 +63,7 @@ type Copy = Record<keyof typeof baseline["en-GB"], string>;
 type Props = Record<string, unknown>;
 const source = readFileSync(new URL("../app/touchline-clubs/[club]/page.tsx", import.meta.url), "utf8");
 const ast = ts.createSourceFile("page.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
-const names = ["localizedFixtureStatus", "normalizedPlayerIdentity", "ClubHubLineupSection", "ClubHubOfficialLeagueSection", "ClubHubHeroNextMatch", "ClubHubHomeStadiumIdentity", "ClubHubDeferredSection", "ClubHubChapterMarker", "ClubHubPage", "renderClubHubPage"];
+const names = ["localizedFixtureStatus", "normalizedPlayerIdentity", "ClubHubLineupSection", "ClubHubOfficialLeagueSection", "ClubHubOfficialTablePanel", "ClubHubHeroNextMatch", "ClubHubHomeStadiumIdentity", "ClubHubDeferredSection", "ClubHubChapterMarker", "ClubHubPage", "renderClubHubPage"];
 const selected = ast.statements.filter(node => (ts.isFunctionDeclaration(node) && names.includes(node.name?.text ?? ""))
   || (ts.isVariableStatement(node) && node.declarationList.declarations.some(d => d.name.getText(ast) === "CLUB_POSITION_LEADER_GROUPS")));
 const declarations = selected.map(node => node.getText(ast).replace(/^export default /, "")).join("\n");
@@ -120,7 +120,7 @@ async function fixture(locale: string, options: { future?: boolean; sentinel?: b
     touchlineCardTierPalette: () => ({ accent: "#abc" }),
     Suspense: (props: Props) => React.createElement(React.Fragment, null, props.fallback as React.ReactNode),
   };
-  for (const name of ["TouchlineBrandHeader", "ClubHubBrandHeader", "Image", "ClubTrophyCarousel", "ClubHubCrestTrace", "TouchlineGlobalNavigation", "ClubHubSectionNavigation", "ClubHubNextFixtureCard", "TouchlineClubPerimeterTrace", "TouchlineClubSocialFeed", "TouchlineOfficialLeagueTable", "TouchlineGameweekCard", "ClubHubOfficialLineup", "ClubHubTechnicalSections"]) context[name] = leaf(name);
+  for (const name of ["TouchlineBrandHeader", "ClubHubBrandHeader", "Image", "ClubTrophyCarousel", "ClubHubCrestTrace", "TouchlineGlobalNavigation", "ClubHubSectionNavigation", "ClubHubFixtureStrip", "ClubHubNextFixtureCard", "TouchlineClubPerimeterTrace", "TouchlineClubSocialFeed", "TouchlineOfficialLeagueTable", "TouchlineGameweekCard", "ClubHubOfficialLineup", "ClubHubTechnicalSections"]) context[name] = leaf(name);
   const exports = compile(declarations + "\nObject.assign(exports, {" + names.join(",") + "});", context);
   const invoke = async (name: string, props: Props) => (exports[name === "ClubHubPage" && options.future ? "renderClubHubPage" : name] as (props: Props, enabled?: boolean) => Promise<React.ReactElement> | React.ReactElement)({ ...props, draftLocalesEnabled: options.future ?? false }, options.future ?? false);
   return { mod, exports, invoke, copy, calls, reads, club, context };
@@ -170,6 +170,10 @@ test("ClubHub real page keeps async lookup, deferred reads, official identities,
     const tree = await f.invoke("ClubHubPage", { params: Promise.resolve({ club: f.club.slug }), searchParams: Promise.resolve({ lang: locale, feedCursor: "cursor" }) });
     assert.deepEqual(f.reads, ["snapshot", "presentation", "viewer", "table"]);
     const html = renderToStaticMarkup(tree);
+    const strips = f.calls.filter(call => call.kind === "ClubHubFixtureStrip");
+    assert.equal(strips.length, 1);
+    assert.equal(strips[0].props.locale, locale);
+    assert.equal(strips[0].props.draftLocalesEnabled, false);
     const expected = baseline[locale as keyof typeof baseline];
     for (const key of ["officialProfile", "rights", "updatingLeague", "preparingLineup", "preparingTechnical", "lineupCoachBench"] as const) assert.ok(html.includes(esc(expected[key])), key);
     assert.ok(html.includes(esc(f.club.name))); assert.ok(html.includes(esc(expected.trophyCabinet.replace("{name}", () => f.club.name))));
@@ -221,6 +225,10 @@ test("ClubHub draft consumer seams expose active texts and existing authorities 
   for (const locale of locales) {
     const f = await fixture(locale, { future: true, sentinel: true, honours: true, stadium: true });
     const chunks = [renderToStaticMarkup(await f.invoke("ClubHubPage", { params: Promise.resolve({ club: f.club.slug }), searchParams: Promise.resolve({ lang: locale }) }))];
+    const strips = f.calls.filter(call => call.kind === "ClubHubFixtureStrip");
+    assert.equal(strips.length, 1);
+    assert.equal(strips[0].props.locale, locale);
+    assert.equal(strips[0].props.draftLocalesEnabled, true);
     chunks.push(renderToStaticMarkup(await f.invoke("ClubHubHomeStadiumIdentity", { locale, stadium: { name: "$&<>", city: "CITY", country: "COUNTRY" } })));
     const presentation = { clubCards: [], matchSnapshot: { preview: { status: "unknown", home: {}, away: {} }, publicFixture: null }, matchdayPresentation: { lineup: {} } };
     const lineup = await f.invoke("ClubHubLineupSection", { club: f.club, locale, cardLabels: {}, dataSource: "direct", presentationPromise: Promise.resolve(presentation), viewerAccessPromise: Promise.resolve({ canEditCardEngine: false }) });
@@ -300,7 +308,22 @@ test("ClubHub extraction preserves CSS and inactive labels rather than activatin
   reverse("        @media (max-width: 720px) {\n          .club-hub-content { padding: 18px 10px 36px; }", "        @media (max-width: 720px) {\n          .club-hub { padding: 18px 10px 36px; }");
   reverse("        @media (orientation: landscape) and (max-width: 1100px) and (max-height: 520px) {\n          .club-hub-content {\n            padding: 12px 14px 28px;\n          }", "        @media (orientation: landscape) and (max-width: 1100px) and (max-height: 520px) {\n          .club-hub {\n            padding: 12px 14px 28px;\n          }");
   assert.doesNotMatch(originalCss, /\.club-hub-content/);
-  assert.equal(createHash("sha256").update(originalCss).digest("hex"), "6290377eeeeae5dd2006682cbe5744720b2929583c789ce9eaf55fa30eca5fb5");
+  reverse('width: clamp(144px, 14vw, 210px);', 'width: clamp(180px, 20vw, 298px);');
+  reverse('width: min(210px, 56vw);', 'width: min(260px, 70vw);');
+  reverse('.club-hub-logo { width: min(164px, 50vw); }', '.club-hub-logo { width: min(190px, 58vw); }');
+  reverse('animation: club-hub-stadium-breathe 18s ease-in-out infinite alternate;\n          animation-play-state: var(--touchline-decoration-motion, paused);', 'animation: club-hub-stadium-breathe 18s ease-in-out infinite alternate;');
+  reverse('animation: club-hub-border-sweep 8s linear infinite;\n          animation-play-state: var(--touchline-decoration-motion, paused);', 'animation: club-hub-border-sweep 8s linear infinite;');
+  // Reverse only the approved compact-hero spacing; keep the prior CSS hash
+  // as an independent guard against all other unreviewed style changes.
+  reverse('.club-hub-hero {\n          backdrop-filter: none;\n          min-height:', '.club-hub-hero {\n          min-height:');
+  reverse(".club-hub-hero {\n          min-height: 369px;\n          padding: clamp(20px, 2vw, 28px) clamp(24px, 4vw, 52px);", ".club-hub-hero {\n          min-height: 492px;\n          padding: clamp(24px, 4vw, 52px);");
+  reverse('grid-template-areas: "identity" "honours";\n          align-items: center;\n          gap: 16px;', 'grid-template-areas: "identity" "honours";\n          align-items: center;\n          gap: 24px;');
+  // Approved hero simplification and item 15: compact fixture above the table
+  // in the right rail; neither activates commercial UI or changes card art.
+  assert.match(css, /\.club-hub-right-rail \{ display: grid; min-width: 0; gap: 14px; \}/);
+  assert.match(css, /nextFixtureClub\} img \{ width: 44px; height: 44px; object-fit: contain; \}/);
+  assert.match(css, /@media \(max-width: 1150px\) \{\s*\.club-hub-field-table-layout \{ grid-template-columns: minmax\(0, 1fr\); \}/);
+  assert.equal(createHash("sha256").update(originalCss).digest("hex"), "ceea75caa043ed3380159bca63809a7a6208073fc5ec91e63a1410c6012c3de6");
   assert.match(source, /cardPrice: locale === "pt-BR" \? "Preço do card" : "Card price"/);
   assert.match(source, /previewHref=\{null\}/);
 });

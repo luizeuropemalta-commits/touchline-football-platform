@@ -2,7 +2,7 @@ import { exitTouchlineFullscreen, touchlineFullscreenElement } from "./fullscree
 
 /** Keep this query identical to TouchlineLandscapeBoundary.module.css. */
 export const TOUCHLINE_PORTRAIT_QUERY =
-  "(max-width: 767px) and (orientation: portrait)";
+  "(max-width: 767px) and (orientation: portrait) and (pointer: coarse)";
 
 /**
  * The CSS gate protects first paint/no-JS; this controller adds inert/focus

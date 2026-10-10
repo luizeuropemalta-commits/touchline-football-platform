@@ -50,12 +50,12 @@ function expressionText(attributeValue: ts.JsxAttribute) {
   return attributeValue.initializer.expression.getText(sourceFile);
 }
 
-test("the public player profile hides market value on exactly its three ExactCard renders", () => {
+test("the public player profile preserves market value on exactly its three ExactCard renders", () => {
   const cards = exactCards();
   assert.equal(cards.length, 3);
 
   for (const card of cards) {
-    assert.equal(attribute(card, "hideMarketValuePanel").initializer, undefined);
+    assert.equal(expressionText(attribute(card, "hideMarketValuePanel")), "false");
     assert.equal(expressionText(attribute(card, "player")), "exactPlayer");
     assert.equal(expressionText(attribute(card, "runtimeLocaleOverride")), "locale");
     assert.equal(

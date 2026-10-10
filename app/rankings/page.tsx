@@ -160,10 +160,9 @@ async function renderRankingsPage({ searchParams }: RankingsPageProps, draftLoca
   const pending = presentationCopy.loadingRankings;
   const navigationSurface = resolveTouchlineGlobalNavigationSurface({ isAuthenticated: Boolean(user), isAdmin: Boolean(user && isOwnerEmail(user.email)) });
   return <main className={styles.page} dir="ltr">
-    <TouchlineBrandHeader href={`/rankings?lang=${encodeURIComponent(locale)}`} locale={locale} accountLocaleContext={accountLocaleContext} draftLocalesEnabled={draftLocalesEnabled} />
+    <TouchlineBrandHeader href={`/rankings?lang=${encodeURIComponent(locale)}`} locale={locale} accountLocaleContext={accountLocaleContext} draftLocalesEnabled={draftLocalesEnabled} navigation={<TouchlineGlobalNavigation locale={locale} draftLocalesEnabled={draftLocalesEnabled} currentRoute="rankings" surface={navigationSurface} showAudioControl={false} />} />
     <div className={styles.content}>
     <header className={styles.topbar}>
-      <TouchlineGlobalNavigation locale={locale} draftLocalesEnabled={draftLocalesEnabled} currentRoute="rankings" surface={navigationSurface} className={styles.globalNavigation} showAudioControl={false} />
       <Suspense fallback={<span className={styles.status} role="status">{presentationCopy.loadingMatchweek}</span>}>
         <RoundBadge fixtures={fixtures} locale={locale} draftLocalesEnabled={draftLocalesEnabled} />
       </Suspense>

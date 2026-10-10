@@ -38,6 +38,67 @@
   border-bottom: 1px solid rgba(163, 255, 18, .24);
 }
 
+.recordedXiArchive {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(190px, .45fr) minmax(0, 1fr);
+  gap: 18px;
+  margin: 18px 0 4px;
+  padding: 16px;
+  border: 1px solid rgba(163, 255, 18, .24);
+  border-radius: 14px;
+  background: linear-gradient(140deg, rgba(15, 35, 24, .86), rgba(3, 12, 10, .9));
+}
+
+.recordedXiArchive h3 {
+  margin: 0 0 7px;
+  color: #e8ffd4;
+  font-size: 17px;
+}
+
+.recordedXiArchive p {
+  margin: 0 0 8px;
+  color: rgba(239, 255, 231, .68);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.recordedXiArchive ol {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(125px, 1fr));
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.recordedXiArchive li {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 7px;
+  padding: 8px 10px;
+  border: 1px solid rgba(163, 255, 18, .13);
+  border-radius: 8px;
+  color: #f3fff0;
+  background: rgba(3, 14, 10, .65);
+  font-size: 12px;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.recordedXiArchive li span:first-child[aria-hidden] {
+  flex-shrink: 0;
+  white-space: nowrap;
+  color: #a3ff12;
+  font-weight: 900;
+}
+
+@media (max-width: 760px) {
+  .recordedXiArchive { grid-template-columns: minmax(0, 1fr); }
+}
+
 .eyebrow,
 .syncLabel {
   color: #b5ff4b;
@@ -180,11 +241,10 @@
 
 .pitchAndLeaders {
   display: grid;
-  /* Reserve a deliberate leader rail before growing the field. A 105×68
-     pitch remains the dominant surface, but it no longer consumes the rail
-     at desktop widths and forces live cards into a clipped 2×2 grid. */
-  grid-template-columns: minmax(0, min(64%, 922px)) minmax(0, 1fr);
-  justify-content: center;
+  /* Keep the regulation field full width beside the separate league table.
+     The four leader cards form a compact strip beneath it. */
+  grid-template-columns: minmax(0, 1fr);
+  justify-content: start;
   align-items: start;
   gap: clamp(14px, 2vw, 24px);
   margin-top: 18px;
@@ -193,11 +253,12 @@
 .pitchViewport {
   position: relative;
   z-index: 1;
-  width: 100%;
+  width: min(100%, 922px);
   min-width: 0;
   max-width: 100%;
   display: grid;
   place-items: center;
+  justify-self: start;
   margin-top: 0;
   border: 1px solid rgba(163,255,18,.16);
   border-radius: 14px;
@@ -207,11 +268,12 @@
 
 .positionLeaders {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   align-content: start;
   align-items: start;
   gap: 12px;
   min-width: 0;
+  width: min(100%, 922px);
 }
 
 /* These four cards are the live ClubHub leaders, not static images. The
@@ -266,11 +328,62 @@
   transform: translate(-50%, -50%);
 }
 
+.availabilityBadge {
+  position: absolute;
+  z-index: 8;
+  top: -18px;
+  right: -18px;
+}
+
+.playerCaption {
+  position: absolute;
+  top: calc(100% + 2px);
+  width: max-content;
+  max-width: 110px;
+  color: #fff;
+  font-size: clamp(8px, 1.3cqw, 12px);
+  font-weight: 700;
+  line-height: 1.15;
+  text-align: center;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+  text-shadow: 0 1px 3px #000, 0 0 5px #000;
+}
+
+.identityPlaceholder {
+  width: clamp(24px, 7cqw, 58px);
+  height: clamp(28px, calc(14cqw - 34px), 94px);
+  display: grid;
+  place-items: center;
+  border: 1px dashed rgba(255,255,255,.5);
+  border-radius: 8px;
+  background: rgba(3,14,10,.65);
+  color: #fff;
+}
+
+.goalkeeperMobileName { display: none; }
+
+.header.compactHeader {
+  gap: 16px;
+  align-items: center;
+  padding-bottom: 12px;
+}
+
+.header.compactHeader h2 {
+  font-size: clamp(22px, 3vw, 32px);
+  line-height: 1.1;
+  margin: 6px 0;
+}
+
+.header.compactHeader p {
+  font-size: 11px;
+  line-height: 1.35;
+  margin: 4px 0;
+}
 
 
-/* The closest canonical defensive slots are 22% of pitch height apart,
-   about 14% of its width. The card itself is the visible identity surface;
-   keeping no second floating label prevents an extra dark box above players. */
+
+/* Keep artwork within canonical slot spacing; captions sit directly below it. */
 .pitchCard { --touchline-attack-card-long-edge: clamp(28px, calc(14cqw - 34px), 94px); }
 
 .card {
@@ -327,7 +440,7 @@
   .statusPanel { width: min(100%, 560px); justify-self: start; }
   .pitch { width: min(100%, 760px); }
   .pitchAndLeaders { grid-template-columns: 1fr; }
-  .positionLeaders { width: min(100%, 620px); justify-self: center; }
+  .positionLeaders { width: min(100%, 620px); grid-template-columns: repeat(2, minmax(0, 1fr)); justify-self: center; }
 
   .pendingCard { min-height: 86px; }
 }
@@ -360,6 +473,12 @@
 }
 
 @media (max-width: 720px) {
+  .playerCaption {
+    font-size: clamp(7px, 1.1cqw, 10px);
+    max-width: min(96px, 23cqw);
+  }
+  .goalkeeperFullName { display: none; }
+  .goalkeeperMobileName { display: inline; }
   .shell {
     padding: 14px 10px;
   }
@@ -422,6 +541,12 @@
    remaining very short. Fit the complete XI instead of exposing a desktop
    940px pitch that cuts the right winger and full-back. */
 @media (orientation: landscape) and (max-width: 1100px) and (max-height: 520px) {
+  .playerCaption {
+    font-size: clamp(7px, 1.1cqw, 10px);
+    max-width: min(96px, 23cqw);
+  }
+  .goalkeeperFullName { display: none; }
+  .goalkeeperMobileName { display: inline; }
   .shell {
     padding: 12px;
   }

@@ -15,6 +15,7 @@ import { selectArenaFixtureRound } from "../lib/touchlineArena/arena-fixture-rou
 const repositoryRoot = new URL("../", import.meta.url);
 registerHooks({
   resolve(specifier, context, nextResolve) {
+    if (specifier === "server-only") return nextResolve(new URL("tests/fixtures/server-only.mts", repositoryRoot).href, context);
     if (specifier.startsWith("@/")) return nextResolve(new URL(`${specifier.slice(2)}.ts`, repositoryRoot).href, context);
     return nextResolve(specifier, context);
   },
@@ -48,6 +49,43 @@ function rawFixture(id: string, index: number) {
     scores: [],
   };
 }
+
+test("real provider carries requested timezone into fallback fixture timestamps without shifting canonical UTC", async () => {
+  const savedFetch = globalThis.fetch;
+  const token = process.env.SPORTMONKS_API_TOKEN, base = process.env.SPORTMONKS_BASE_URL;
+  const hostZone = process.env.TZ;
+  clearFootballDataCache();
+  process.env.SPORTMONKS_API_TOKEN = "synthetic-timezone-test";
+  process.env.SPORTMONKS_BASE_URL = "https://sportmonks.invalid/v3/football";
+  process.env.TZ = "America/Sao_Paulo";
+  globalThis.fetch = async input => {
+    const url = new URL(String(input));
+    assert.equal(url.hostname, "sportmonks.invalid");
+    const localized = url.searchParams.get("timezone") === "Europe/London";
+    const raw = { ...rawFixture("19", 0), starting_at_timestamp: null,
+      starting_at: localized ? "2026-10-10 12:30:00" : "2026-10-10 11:30:00" };
+    return jsonResponse({ data: url.pathname.endsWith("/fixtures/19") ? raw : [raw] });
+  };
+  try {
+    const provider = new SportmonksFootballProvider();
+    const single = await provider.getFixtureById("19");
+    assert.equal(single.ok, true);
+    if (single.ok) assert.equal(single.data?.startsAt, "2026-10-10T11:30:00.000Z");
+    for (const response of [await provider.getFixturesByDate({ date: "2026-10-10", timezone: "Europe/London" }),
+      await provider.getFixturesByDate({ date: "2026-10-10", timezone: "" }),
+      await provider.getFixturesBetween({ fromDate: "2026-10-10", throughDate: "2026-10-11", competitionId: "8", timezone: "Europe/London" }),
+      await provider.getLiveScores(), await provider.getLatestLiveScores()]) {
+      assert.equal(response.ok, true);
+      if (response.ok) assert.equal(response.data[0]?.startsAt, "2026-10-10T11:30:00.000Z");
+    }
+  } finally {
+    globalThis.fetch = savedFetch;
+    if (token === undefined) delete process.env.SPORTMONKS_API_TOKEN; else process.env.SPORTMONKS_API_TOKEN = token;
+    if (base === undefined) delete process.env.SPORTMONKS_BASE_URL; else process.env.SPORTMONKS_BASE_URL = base;
+    if (hostZone === undefined) delete process.env.TZ; else process.env.TZ = hostZone;
+    clearFootballDataCache();
+  }
+});
 
 test("Sportmonks fixture window scopes league 8 before collecting every page and cannot reuse date cache", async () => {
   const originalFetch = globalThis.fetch;

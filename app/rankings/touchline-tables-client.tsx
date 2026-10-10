@@ -107,7 +107,7 @@ function CompactPlayerCard({
       layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY}
       imageLoading={expanded ? "eager" : "lazy"}
       rankingMode="preview"
-      hideMarketValuePanel
+      hideMarketValuePanel={false}
       showCardActions={expanded}
       showProfileAction={false}
       showSocialMetrics={expanded}

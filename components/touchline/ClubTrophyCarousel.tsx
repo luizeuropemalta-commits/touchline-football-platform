@@ -100,10 +100,14 @@ export default function ClubTrophyCarousel({
   const transitionTimersRef = useRef<number[]>([]);
   const transitionFrameRef = useRef<number | null>(null);
   const transitionInFlightRef = useRef(false);
+  const transitionOriginRef = useRef<"auto" | "manual" | null>(null);
+  const autoAdvanceVisibleRef = useRef(false);
+  const transitionGenerationRef = useRef(0);
   const [pageSize, setPageSize] = useState(6);
   const [activePage, setActivePage] = useState(0);
   const [phase, setPhase] = useState<TrophyTransitionPhase>("idle");
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const [autoAdvanceVisible, setAutoAdvanceVisible] = useState(false);
   const viewportId = useId();
   const pages = useMemo(() => splitIntoPages(honours, pageSize), [honours, pageSize]);
   const isCarousel = pages.length > 1;
@@ -111,6 +115,7 @@ export default function ClubTrophyCarousel({
   const activeHonours = pages[currentPageIndex] ?? [];
 
   const clearTransition = useCallback(() => {
+    transitionGenerationRef.current++;
     for (const timer of transitionTimersRef.current) window.clearTimeout(timer);
     transitionTimersRef.current = [];
     if (transitionFrameRef.current !== null) {
@@ -118,6 +123,7 @@ export default function ClubTrophyCarousel({
       transitionFrameRef.current = null;
     }
     transitionInFlightRef.current = false;
+    transitionOriginRef.current = null;
   }, []);
 
   useEffect(() => {
@@ -127,6 +133,32 @@ export default function ClubTrophyCarousel({
     media.addEventListener("change", syncPreference);
     return () => media.removeEventListener("change", syncPreference);
   }, []);
+
+  useEffect(() => {
+    const row = rowRef.current;
+    if (!row) return;
+    let visible = false;
+    const sync = () => {
+      const canAdvance = visible && !document.hidden;
+      autoAdvanceVisibleRef.current = canAdvance;
+      setAutoAdvanceVisible(canAdvance);
+      if (!canAdvance && transitionOriginRef.current === "auto") {
+        clearTransition();
+        setPhase("idle");
+      }
+    };
+    const observer = new IntersectionObserver(([entry]) => {
+      visible = entry.isIntersecting;
+      sync();
+    });
+    observer.observe(row);
+    document.addEventListener("visibilitychange", sync);
+    return () => {
+      autoAdvanceVisibleRef.current = false;
+      observer.disconnect();
+      document.removeEventListener("visibilitychange", sync);
+    };
+  }, [clearTransition]);
 
   useEffect(() => {
     const row = rowRef.current;
@@ -143,7 +175,7 @@ export default function ClubTrophyCarousel({
     return () => resizeObserver.disconnect();
   }, [honours.length]);
 
-  const movePage = useCallback((direction: -1 | 1) => {
+  const movePage = useCallback((direction: -1 | 1, origin: "auto" | "manual" = "manual") => {
     if (pages.length < 2 || transitionInFlightRef.current) return;
 
     const moveImmediately = () => {
@@ -157,18 +189,25 @@ export default function ClubTrophyCarousel({
     }
 
     transitionInFlightRef.current = true;
+    transitionOriginRef.current = origin;
+    const generation = ++transitionGenerationRef.current;
     setPhase("exit");
     const exitTimer = window.setTimeout(() => {
+      if (generation !== transitionGenerationRef.current) return;
       setPhase("empty");
       const emptyTimer = window.setTimeout(() => {
+        if (generation !== transitionGenerationRef.current) return;
         setActivePage((current) => (current + direction + pages.length) % pages.length);
         setPhase("enter");
         transitionFrameRef.current = window.requestAnimationFrame(() => {
+          if (generation !== transitionGenerationRef.current) return;
           transitionFrameRef.current = null;
           setPhase("idle");
         });
         const finishTimer = window.setTimeout(() => {
+          if (generation !== transitionGenerationRef.current) return;
           transitionInFlightRef.current = false;
+          transitionOriginRef.current = null;
         }, ENTER_DURATION_MS);
         transitionTimersRef.current.push(finishTimer);
       }, EMPTY_GAP_MS);
@@ -179,9 +218,12 @@ export default function ClubTrophyCarousel({
 
   useEffect(() => {
     if (!isCarousel || prefersReducedMotion || phase !== "idle") return;
-    const timer = window.setTimeout(() => movePage(1), AUTO_ADVANCE_DELAY_MS);
+    if (!autoAdvanceVisible) return;
+    const timer = window.setTimeout(() => {
+      if (autoAdvanceVisibleRef.current && !document.hidden) movePage(1, "auto");
+    }, AUTO_ADVANCE_DELAY_MS);
     return () => window.clearTimeout(timer);
-  }, [isCarousel, movePage, phase, prefersReducedMotion]);
+  }, [isCarousel, movePage, phase, prefersReducedMotion, autoAdvanceVisible]);
 
   useEffect(() => clearTransition, [clearTransition]);
 
@@ -193,6 +235,7 @@ export default function ClubTrophyCarousel({
     <div
       ref={rowRef}
       className={`club-hub-honour-row ${isCarousel ? "is-carousel" : "is-static"}`}
+      data-auto-advance-enabled={isCarousel && autoAdvanceVisible && !prefersReducedMotion}
       role="region"
       aria-roledescription="carousel"
       aria-label={ariaLabel}

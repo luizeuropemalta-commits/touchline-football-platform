@@ -79,6 +79,9 @@ export const TOUCHLINE_QA_PREVIEW_ALLOWED_APPLICATION_ENVIRONMENT_KEYS = [
   "TOUCHLINE_QA_RANKING_TIMINGS",
   "TOUCHLINE_CURRENT_SEASON",
   "TOUCHLINE_CARD_PUBLICATION_GATE",
+  // Exact server-only public locale release gate; no client override and no
+  // admission in the separate inert isolated-preview environment.
+  "TOUCHLINE_SITE_LOCALES_ENABLED",
   // Server-only social gate. Runtime policy remains fail-closed in its route.
   "TOUCHLINE_PLAYER_SOCIAL_ENABLED",
   // Exact server-only award switches and worker bearer. Route gates and
@@ -108,12 +111,25 @@ export const TOUCHLINE_QA_PREVIEW_ALLOWED_APPLICATION_ENVIRONMENT_KEYS = [
   "TOUCHLINE_CLUB_OWNER_AVATAR_READ_ENABLED",
   "TOUCHLINE_CLUB_OWNER_AVATAR_UPLOAD_ENABLED",
   "TOUCHLINE_CLUB_OWNER_AVATAR_UPLOAD_ACCOUNT_ID",
+  "TOUCHLINE_CLUB_OWNER_AVATAR_SELECTION_ENABLED",
+  "TOUCHLINE_CLUB_OWNER_AVATAR_RETENTION_READY",
   "TOUCHLINE_SITE_OFFLINE",
   // Functional QA is the only Preview contract allowed to call Sportmonks.
   // Isolated previews remain provider-free via the separate allowlist above.
   "SPORTMONKS_API_TOKEN",
   // Private Fixture guard account binding only; no quota or scheduler activation.
   "TOUCHLINE_SPORTMONKS_FIXTURE_ACCOUNT_SCOPE",
+  // Exact central transport bindings only. Name admission does not enable
+  // workers or the authority: their independent OFF/auth/SQL gates still apply.
+  // Operator recovery credentials and inert isolated previews remain excluded.
+  "TOUCHLINE_SPORTMONKS_CENTRAL_ENABLED",
+  "TOUCHLINE_SPORTMONKS_CENTRAL_URL",
+  "TOUCHLINE_SPORTMONKS_CENTRAL_WORKER_TOKEN",
+  "TOUCHLINE_QUOTA_AUTHORITY_ENABLED",
+  "TOUCHLINE_QUOTA_AUTHORITY_PROJECT_REF",
+  "TOUCHLINE_QUOTA_AUTHORITY_SERVICE_KEY",
+  "TOUCHLINE_QUOTA_AUTHORITY_ACCOUNT_SCOPE",
+  "TOUCHLINE_QUOTA_AUTHORITY_WORKERS_JSON",
   // Supabase QA Vault sends this bearer only to the protected server route.
   // It must remain branch-scoped to Preview/qa.
   "TOUCHLINE_LIVE_SYNC_SECRET",
@@ -234,6 +250,13 @@ export function inspectTouchlineIsolatedPreviewEnvironment(
       || !isPresent(environment.NEXT_PUBLIC_SUPABASE_ANON_KEY)
       || !isPresent(environment.SUPABASE_SERVICE_ROLE_KEY)) {
       reasons.push("missing-or-mismatched-qa-supabase-contract");
+    }
+    // Co-hosting the authority in functional QA never authorizes attaching a
+    // different (especially Production) database, even while its flag is OFF.
+    // A separately hosted authority needs its own deployment contract.
+    if (environment.TOUCHLINE_QUOTA_AUTHORITY_PROJECT_REF !== undefined
+      && environment.TOUCHLINE_QUOTA_AUTHORITY_PROJECT_REF !== environment.TOUCHLINE_QA_SUPABASE_PROJECT_REF?.trim().toLowerCase()) {
+      reasons.push("mismatched-qa-authority-project");
     }
     Object.keys(environment)
       .filter(isTouchlineApplicationEnvironmentKey)

@@ -2,6 +2,13 @@
 
 Status: **local candidate catalogue complete; remote activation disabled**
 
+Audit clarification (10 October 2026): historical V3 settlement references in
+this catalogue and frozen owner samples do not override the current V4 live
+readers. Current confirmed-event/ranking generation must pass its rating-only
+V4 provenance checks. “Implemented and tested” below is historical local
+catalogue status, not clearance of the current dirty candidate, remote SQL,
+rendered artwork or delivery. Revalidate the exact candidate before release.
+
 There is no registered social module `038` in this repository. The numbered
 social automation family begins at `039`; assigning a purpose to `038` without
 an approved contract would create a second, unaudited authority.

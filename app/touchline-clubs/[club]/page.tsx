@@ -24,9 +24,11 @@ import TouchlineGameweekCard from "@/components/touchline/fantasy/TouchlineGamew
 import { touchlineCardTierPalette } from "@/lib/touchlineArena/card-rules";
 import ClubHubNextFixtureCard from "@/components/touchline/club-hub/ClubHubNextFixtureCard";
 import ClubHubSectionNavigation from "@/components/touchline/club-hub/ClubHubSectionNavigation";
+import ClubHubFixtureStrip from "@/components/touchline/ClubHubFixtureStrip";
 import officialLeagueStyles from "@/components/touchline/club-hub/ClubHubOfficialLeague.module.css";
+import { resolveClubHubFixtureRail } from "@/lib/touchlineArena/club-hub-fixture-rail";
 import premiumStyles from "@/components/touchline/club-hub/ClubHubPremiumPrototype.module.css";
-import type { TouchlineFantasyLineupMember, TouchlineFixture } from "@/lib/football-data/types";
+import type { TouchlineFantasyLineupMember, TouchlineFantasySidelinedPlayer, TouchlineFixture } from "@/lib/football-data/types";
 import type { TouchlinePublicFixture, TouchlinePublicTeam } from "@/lib/football-data/public-fixture";
 import {
   TOUCHLINE_ENGLAND_CLUBS,
@@ -46,6 +48,7 @@ import { readPublicCompetitionFixtures } from "@/lib/football-data/fixture-sched
 import { loadTouchlineOfficialLeagueTable } from "@/lib/football-data/official-league-table-server";
 import { selectPublicClubFixture } from "@/lib/football-data/public-fixture-selection";
 import { buildTouchLineClubMatchdayPresentation } from "@/lib/touchlineArena/club-lineup";
+import { selectTouchlineLastCompletedXi, type TouchlineLastCompletedXi } from "@/lib/touchlineArena/club-last-xi";
 import { applyTouchlineMatchdayPoints, applyTouchlineSeasonPoints } from "@/lib/touchlineArena/matchday-player-points";
 import { readPublicSeasonPlayerPoints } from "@/lib/touchlineArena/public-season-player-points-server";
 import {
@@ -109,6 +112,8 @@ type ClubMatchSnapshot = {
   previewFixtureId: string | null;
   fixtureId: string | null;
   lineups: TouchlineFantasyLineupMember[];
+  lastCompletedXi: TouchlineLastCompletedXi | null;
+  sidelined: TouchlineFantasySidelinedPlayer[];
   formation: string | null;
   /** No persisted matchday-coach DTO exists yet. Never infer a coach by club. */
   coach: null;
@@ -305,6 +310,8 @@ async function loadClubMatchSnapshot(
     previewFixtureId: null as string | null,
     fixtureId: null as string | null,
     lineups: [] as TouchlineFantasyLineupMember[],
+    lastCompletedXi: null,
+    sidelined: [] as TouchlineFantasySidelinedPlayer[],
     formation: null as string | null,
     coach: null,
     publicFixture: null,
@@ -329,6 +336,8 @@ async function loadClubMatchSnapshot(
       previewFixtureId: null,
       fixtureId: null,
       lineups: [],
+      lastCompletedXi: null,
+      sidelined: [],
       formation: null,
       coach: null,
       publicFixture: fixture,
@@ -373,6 +382,8 @@ async function loadClubMatchSnapshot(
       previewFixtureId: previewFixture.providerId,
       fixtureId: matchdayFeed?.fixture.providerId ?? null,
       lineups: matchdayFeed?.lineups ?? [],
+      lastCompletedXi: selectTouchlineLastCompletedXi(persistedFeeds, club.teamId, fixture?.startsAt ?? null),
+      sidelined: matchdayFeed?.sidelined ?? [],
       formation,
       coach: null,
       publicFixture: toTouchlineLiveFixture(previewFixture),
@@ -519,6 +530,7 @@ async function loadClubHubPresentation(
     club,
     squadCards: clubCards,
     officialLineup: matchSnapshot.lineups,
+    lastCompletedXi: matchSnapshot.lastCompletedXi,
     formation: matchSnapshot.formation,
     fixtureId: matchSnapshot.fixtureId,
     officialCoach: matchSnapshot.coach,
@@ -626,10 +638,14 @@ async function ClubHubLineupSection({
     <ClubHubOfficialLineup draftLocalesEnabled={draftLocalesEnabled}
       clubName={club.name}
       lineup={matchdayPresentation.lineup}
+      recordedXiWithoutCards={matchdayPresentation.recordedXiWithoutCards}
+      lastCompletedXiStartsAt={matchSnapshot.lastCompletedXi?.startsAt ?? null}
+      sidelined={matchSnapshot.sidelined}
+      sidelinedFixtureId={matchSnapshot.fixtureId}
       locale={locale}
       labels={cardLabels}
       canEditCardEngine={viewerAccess.canEditCardEngine}
-      hideMarketValuePanel
+      hideMarketValuePanel={false}
       leaderCards={(
         <>
           {clubPositionLeaders.map(({ key, copyKey, leader }) => {
@@ -693,10 +709,12 @@ async function ClubHubTechnicalSections({
       <ClubHubMatchdayTechnicalArea draftLocalesEnabled={draftLocalesEnabled}
         clubName={club.name}
         technical={presentation.matchdayPresentation.technical}
+        sidelined={presentation.matchSnapshot.sidelined}
+        sidelinedFixtureId={presentation.matchSnapshot.fixtureId}
         locale={locale}
         labels={cardLabels}
         canEditCardEngine={viewerAccess.canEditCardEngine}
-        hideMarketValuePanel
+        hideMarketValuePanel={false}
         coachCard={dataSource === "direct" ? (
           <ClubHubCanonicalCoachPanel draftLocalesEnabled={draftLocalesEnabled}
             teamId={club.teamId}
@@ -712,11 +730,13 @@ async function ClubHubTechnicalSections({
       <ClubHubOutsideMatchRoster draftLocalesEnabled={draftLocalesEnabled}
         clubName={club.name}
         cards={outsideMatchdayCards}
+        sidelined={presentation.matchSnapshot.sidelined}
+        sidelinedFixtureId={presentation.matchSnapshot.fixtureId}
         selectionState={presentation.matchdayPresentation.remainingSquad.state}
         locale={locale}
         labels={cardLabels}
         squadUnavailable={presentation.squadLoad.state === "unavailable"}
-        hideMarketValuePanel
+        hideMarketValuePanel={false}
         retryHref={`/touchline-clubs/${club.slug}?lang=${encodeURIComponent(locale)}`}
       />
     </>
@@ -727,13 +747,14 @@ async function ClubHubOfficialLeagueSection({
   club,
   locale,
   matchSnapshotPromise,
-  tablePromise, draftLocalesEnabled = false,
+  tablePromise, draftLocalesEnabled = false, fixtureOnly = false,
 }: {
   club: NonNullable<ReturnType<typeof findTouchLineClub>>;
   locale: TouchLineLocale;
   matchSnapshotPromise: Promise<ClubMatchSnapshot>;
   tablePromise: ReturnType<typeof loadClubHubLeagueTable>;
   draftLocalesEnabled?: boolean;
+  fixtureOnly?: boolean;
 }) {
   const [matchSnapshot, table] = await Promise.all([
     matchSnapshotPromise,
@@ -758,11 +779,7 @@ async function ClubHubOfficialLeagueSection({
   );
 
   return (
-    <section
-      className={officialLeagueStyles.layout}
-      aria-label={copy.nextAndTable}
-      data-clubhub-official-league="true"
-    >
+    <section className={officialLeagueStyles.layout} aria-label={fixtureOnly ? (fixture ? resolveClubHubFixtureRail(fixture, locale, undefined, draftLocalesEnabled).heading : copy.nextMatchChecking) : copy.nextAndTable} data-clubhub-official-league="true">
       <div className={officialLeagueStyles.panel}>
         <TouchlineClubPerimeterTrace accent="#a3ff12" className={officialLeagueStyles.surfaceTrace} />
         {hasVerifiedFixture && fixture?.startsAt && homeClub?.logoUrl && awayClub?.logoUrl ? (
@@ -801,8 +818,7 @@ async function ClubHubOfficialLeagueSection({
           </article>
         )}
       </div>
-
-      <div className={officialLeagueStyles.panel}>
+      {!fixtureOnly ? <div className={officialLeagueStyles.panel}>
         <TouchlineClubPerimeterTrace accent="#a3ff12" className={officialLeagueStyles.surfaceTrace} />
         <TouchlineOfficialLeagueTable draftLocalesEnabled={draftLocalesEnabled}
           className={officialLeagueStyles.table}
@@ -812,9 +828,32 @@ async function ClubHubOfficialLeagueSection({
           table={table}
           variant="clubHubRail"
         />
-      </div>
+      </div> : null}
+
     </section>
   );
+}
+
+async function ClubHubOfficialTablePanel({
+  club, locale, tablePromise, draftLocalesEnabled = false,
+}: {
+  club: NonNullable<ReturnType<typeof findTouchLineClub>>;
+  locale: TouchLineLocale;
+  tablePromise: ReturnType<typeof loadClubHubLeagueTable>;
+  draftLocalesEnabled?: boolean;
+}) {
+  const table = await tablePromise;
+  return <aside className={officialLeagueStyles.panel} aria-label={getTouchlineClubHubProfileCopy(locale, draftLocalesEnabled).nextAndTable} data-clubhub-table-rail="true">
+    <TouchlineClubPerimeterTrace accent="#a3ff12" className={officialLeagueStyles.surfaceTrace} />
+    <TouchlineOfficialLeagueTable draftLocalesEnabled={draftLocalesEnabled}
+      className={officialLeagueStyles.table}
+      currentTeamId={club.teamId}
+      id="club-table"
+      locale={locale}
+      table={table}
+      variant="clubHubRail"
+    />
+  </aside>;
 }
 
 async function ClubHubHeroNextMatch({
@@ -880,9 +919,8 @@ const CLUB_POSITION_LEADER_GROUPS = [
 ] as const;
 
 /**
- * The hero is reserved for the next match. The permanent club ground belongs
- * to the page identity, but must not compete with that fixture or expose the
- * operational stadium facts that were previously shown here.
+ * Permanent club ground, directly below the club name in the shared hero.
+ * Match information remains in the matchday section, not duplicated here.
  */
 function ClubHubHomeStadiumIdentity({
   locale,
@@ -967,7 +1005,7 @@ async function renderClubHubPage({ params, searchParams }: ClubHubPageProps, dra
         }}
       />
       <section className="club-hub-shell">
-        <header className="club-hub-hero">
+        <header className="club-hub-hero" data-touchline-decoration-motion="club-cover">
           <svg className="club-hub-neon-frame" aria-hidden="true" focusable="false">
             <rect className="club-hub-neon-trace" x="0" y="0" width="100%" height="100%" rx="23" pathLength="100" />
           </svg>
@@ -982,9 +1020,6 @@ async function renderClubHubPage({ params, searchParams }: ClubHubPageProps, dra
             />
           ) : null}
           <div className="club-hub-hero-shade" aria-hidden="true" />
-          <Suspense fallback={<div className="club-hub-hero-next-match club-hub-hero-next-match-awaiting" aria-hidden="true" />}>
-            <ClubHubHeroNextMatch draftLocalesEnabled={draftLocalesEnabled} locale={locale} matchSnapshotPromise={matchSnapshotPromise} />
-          </Suspense>
           <div className="club-hub-identity">
             <div className="club-hub-logo-stack">
               {club.logoUrl ? (
@@ -1000,6 +1035,7 @@ async function renderClubHubPage({ params, searchParams }: ClubHubPageProps, dra
             <div className="club-hub-title-block">
               <span>{copy.officialProfile}</span>
               <h1>{club.name}</h1>
+              {homeStadium ? <ClubHubHomeStadiumIdentity draftLocalesEnabled={draftLocalesEnabled} locale={locale} stadium={homeStadium} /> : null}
             </div>
           </div>
           <div className="club-hub-hero-footer">
@@ -1022,18 +1058,7 @@ async function renderClubHubPage({ params, searchParams }: ClubHubPageProps, dra
           </div>
         </header>
         <ClubHubSectionNavigation draftLocalesEnabled={draftLocalesEnabled} locale={locale} />
-        {homeStadium ? <ClubHubHomeStadiumIdentity draftLocalesEnabled={draftLocalesEnabled} locale={locale} stadium={homeStadium} /> : null}
-
-        <div className="club-hub-chapter club-hub-official-league-chapter">
-          <Suspense fallback={<ClubHubDeferredSection size="table" label={copy.updatingLeague} />}>
-            <ClubHubOfficialLeagueSection draftLocalesEnabled={draftLocalesEnabled}
-              club={club}
-              locale={locale}
-              matchSnapshotPromise={matchSnapshotPromise}
-              tablePromise={tablePromise}
-            />
-          </Suspense>
-        </div>
+        <ClubHubFixtureStrip draftLocalesEnabled={draftLocalesEnabled} locale={locale} />
 
         <div className="club-hub-chapter club-hub-matchday-chapter">
           <ClubHubChapterMarker
@@ -1041,16 +1066,31 @@ async function renderClubHubPage({ params, searchParams }: ClubHubPageProps, dra
             label={getTouchlineClubHubSectionNavigationCopy(locale, draftLocalesEnabled).matchday}
             note={copy.lineupCoachBench}
           />
-          <Suspense fallback={<ClubHubDeferredSection size="lineup" label={copy.preparingLineup} />}>
-            <ClubHubLineupSection draftLocalesEnabled={draftLocalesEnabled}
-              club={club}
-              locale={locale}
-              cardLabels={cardLabels}
-              presentationPromise={presentationPromise}
-              viewerAccessPromise={viewerAccessPromise}
-              dataSource={dataSource}
-            />
-          </Suspense>
+          <div className="club-hub-field-table-layout" data-clubhub-field-table-layout="true">
+            <Suspense fallback={<ClubHubDeferredSection size="lineup" label={copy.preparingLineup} />}>
+              <ClubHubLineupSection draftLocalesEnabled={draftLocalesEnabled}
+                club={club}
+                locale={locale}
+                cardLabels={cardLabels}
+                presentationPromise={presentationPromise}
+                viewerAccessPromise={viewerAccessPromise}
+                dataSource={dataSource}
+              />
+            </Suspense>
+            <div className="club-hub-right-rail" data-clubhub-right-rail="true">
+              <Suspense fallback={<ClubHubDeferredSection size="panel" label={copy.nextMatchChecking} />}>
+                <ClubHubOfficialLeagueSection draftLocalesEnabled={draftLocalesEnabled} fixtureOnly
+                  club={club}
+                  locale={locale}
+                  matchSnapshotPromise={matchSnapshotPromise}
+                  tablePromise={tablePromise}
+                />
+              </Suspense>
+              <Suspense fallback={<ClubHubDeferredSection size="table" label={copy.updatingLeague} />}>
+                <ClubHubOfficialTablePanel draftLocalesEnabled={draftLocalesEnabled} club={club} locale={locale} tablePromise={tablePromise} />
+              </Suspense>
+            </div>
+          </div>
 
           <div className="club-hub-matchday-support">
             <Suspense fallback={<ClubHubDeferredSection size="panel" label={copy.preparingTechnical} />}>
@@ -1194,6 +1234,29 @@ async function renderClubHubPage({ params, searchParams }: ClubHubPageProps, dra
         .club-hub-matchday-chapter {
           gap: 14px;
         }
+        .club-hub-field-table-layout {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) minmax(290px, 340px);
+          align-items: start;
+          gap: clamp(12px, 1.4vw, 22px);
+          min-width: 0;
+        }
+        .club-hub-field-table-layout > * { min-width: 0; }
+        .club-hub-right-rail { display: grid; min-width: 0; gap: 14px; }
+        .club-hub-right-rail .${officialLeagueStyles.layout} { width: 100%; margin: 0; }
+        .club-hub-right-rail .${officialLeagueStyles.fixture} { padding: 16px; gap: 10px; }
+        .club-hub-right-rail .${premiumStyles.nextFixtureTeams} { width: 100%; gap: 8px; }
+        .club-hub-right-rail .${premiumStyles.nextFixtureClub} { display: grid; min-width: 0; justify-items: center; gap: 4px; }
+        .club-hub-right-rail .${premiumStyles.nextFixtureClub} img { width: 44px; height: 44px; object-fit: contain; }
+        .club-hub-right-rail .${premiumStyles.nextFixtureClub} b { white-space: normal; overflow-wrap: anywhere; line-height: 1.2; }
+        .club-hub-right-rail .${premiumStyles.nextFixtureKickoff} { flex-wrap: wrap; gap: 4px 8px; }
+        .club-hub-right-rail .${premiumStyles.nextFixtureVenue} { min-height: 40px; }
+        .club-hub-right-rail .${premiumStyles.nextFixtureVenueImage} { width: 40px; height: 40px; flex: 0 0 40px; }
+        .club-hub-right-rail .${premiumStyles.nextFixtureVenueCopy} { min-width: 0; }
+        .club-hub-right-rail .${officialLeagueStyles.fixture}[data-state="awaiting"] > div:last-child { min-height: 80px; }
+        @media (max-width: 1150px) {
+          .club-hub-field-table-layout { grid-template-columns: minmax(0, 1fr); }
+        }
         .club-hub-matchday-support {
           min-width: 0;
           display: grid;
@@ -1257,13 +1320,14 @@ async function renderClubHubPage({ params, searchParams }: ClubHubPageProps, dra
           backdrop-filter: blur(18px);
         }
         .club-hub-hero {
-          min-height: 492px;
-          padding: clamp(24px, 4vw, 52px);
+          backdrop-filter: none;
+          min-height: 369px;
+          padding: clamp(20px, 2vw, 28px) clamp(24px, 4vw, 52px);
           display: grid;
-          grid-template-columns: minmax(0, 1fr) minmax(240px, 32%);
-          grid-template-areas: "identity match" "honours honours";
+          grid-template-columns: minmax(0, 1fr);
+          grid-template-areas: "identity" "honours";
           align-items: center;
-          gap: 24px;
+          gap: 16px;
           overflow: hidden;
           position: relative;
           isolation: isolate;
@@ -1283,6 +1347,7 @@ async function renderClubHubPage({ params, searchParams }: ClubHubPageProps, dra
           object-position: center 48%;
           transform: scale(1.012);
           animation: club-hub-stadium-breathe 18s ease-in-out infinite alternate;
+          animation-play-state: var(--touchline-decoration-motion, paused);
           will-change: transform;
         }
         .club-hub-hero-shade {
@@ -1318,6 +1383,7 @@ async function renderClubHubPage({ params, searchParams }: ClubHubPageProps, dra
             drop-shadow(0 0 2px rgba(163,255,18,.98))
             drop-shadow(0 0 7px rgba(163,255,18,.72));
           animation: club-hub-border-sweep 8s linear infinite;
+          animation-play-state: var(--touchline-decoration-motion, paused);
         }
         .club-hub-identity {
           grid-area: identity;
@@ -1366,7 +1432,7 @@ async function renderClubHubPage({ params, searchParams }: ClubHubPageProps, dra
           font-size: 10px;
         }
         .club-hub-logo {
-          width: clamp(180px, 20vw, 298px);
+          width: clamp(144px, 14vw, 210px);
           aspect-ratio: 1;
           display: grid;
           place-items: center;
@@ -1419,7 +1485,7 @@ async function renderClubHubPage({ params, searchParams }: ClubHubPageProps, dra
           align-items: baseline;
           column-gap: 9px;
           row-gap: 2px;
-          margin: 18px auto 0;
+          margin: 12px 0 0;
           padding: 9px 13px;
           border: 1px solid color-mix(in srgb, var(--club-accent) 35%, rgba(255,255,255,.13));
           border-radius: 999px;
@@ -1935,7 +2001,7 @@ async function renderClubHubPage({ params, searchParams }: ClubHubPageProps, dra
           .club-hub-content { padding: 22px 14px 42px; }
           .club-hub-hero {
             grid-template-columns: minmax(0, 1fr);
-            grid-template-areas: "identity" "match" "honours";
+            grid-template-areas: "identity" "honours";
           }
           .club-hub-identity,
           .club-hub-section-head { align-items: stretch; flex-direction: column; }
@@ -1970,7 +2036,7 @@ async function renderClubHubPage({ params, searchParams }: ClubHubPageProps, dra
             justify-items: center;
           }
           .club-hub-logo {
-            width: min(260px, 70vw);
+            width: min(210px, 56vw);
           }
           .club-hub-honour-row {
             margin-inline: -4px;
@@ -2023,7 +2089,7 @@ async function renderClubHubPage({ params, searchParams }: ClubHubPageProps, dra
           }
           .club-hub-identity { gap: 20px; }
           .club-hub-logo-stack { width: 100%; }
-          .club-hub-logo { width: min(190px, 58vw); }
+          .club-hub-logo { width: min(164px, 50vw); }
           .club-hub-identity h1 {
             margin-top: 17px;
             font-size: clamp(38px, 13vw, 56px);
@@ -2070,8 +2136,8 @@ async function renderClubHubPage({ params, searchParams }: ClubHubPageProps, dra
             flex-direction: row;
           }
           .club-hub-hero {
-            grid-template-columns: minmax(0, 1fr) minmax(220px, 32%);
-            grid-template-areas: "identity match" "honours honours";
+            grid-template-columns: minmax(0, 1fr);
+            grid-template-areas: "identity" "honours";
             min-height: 0;
             padding: 16px 20px;
           }
@@ -2120,7 +2186,7 @@ async function renderClubHubPage({ params, searchParams }: ClubHubPageProps, dra
         @media (orientation: landscape) and (max-width: 720px) and (max-height: 520px) {
           .club-hub-hero {
             grid-template-columns: minmax(0, 1fr);
-            grid-template-areas: "identity" "match" "honours";
+            grid-template-areas: "identity" "honours";
           }
           .club-hub-logo-stack {
             width: 136px;

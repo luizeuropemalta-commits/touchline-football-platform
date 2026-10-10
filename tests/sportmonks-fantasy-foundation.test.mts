@@ -157,4 +157,23 @@ describe("SportMonks fantasy foundation", () => {
     assert.equal(serialized.includes("mediaPolicy"), false);
     assert.equal(serialized.includes("raw"), false);
   });
+
+  it("preserves card-event disposition for downstream rescinded-card filtering", () => {
+    const feed: TouchlineFantasyFixtureFeed = {
+      fixture: { id: "sportmonks:fixture-1", providerId: "fixture-1", provider: "sportmonks",
+        source: { provider: "sportmonks", providerId: "fixture-1" } },
+      lineups: [], formations: [], sidelined: [],
+      events: [
+        { id: "sportmonks:101", providerId: "101", provider: "sportmonks", fixtureId: "fixture-1", playerId: "7", type: "Yellowcard", status: "recorded" },
+        { id: "sportmonks:102", providerId: "102", provider: "sportmonks", fixtureId: "fixture-1", playerId: "7", type: "Redcard", status: "rescinded" },
+      ],
+      fetchedAt: "2026-10-07T23:00:00.000Z",
+      mediaPolicy: { officialMediaExposed: false, note: "Synthetic fixture" },
+    };
+    const result = toPublicFantasyFixtureFeed(feed);
+    assert.deepEqual(result?.events.map(({ id, status }) => ({ id, status })), [
+      { id: "101", status: "recorded" },
+      { id: "102", status: "rescinded" },
+    ]);
+  });
 });

@@ -6,6 +6,7 @@ import test from "node:test";
 import { applyTouchlineSeasonPoints } from "../lib/touchlineArena/matchday-player-points.ts";
 import { projectTouchlineCardStatsByPosition } from "../lib/touchlineArena/position-aware-card-stats.ts";
 import { squadCardToExactPlayer, type ClubOwnerSquadCard } from "../lib/touchlineArena/demo-data.ts";
+import { canonicalSportmonksPlayerId } from "../lib/touchlineArena/match-card-indicator.ts";
 
 const SEASON = "00000000-0000-4000-8000-000000000010";
 const COMPETITION = "00000000-0000-4000-8000-000000000020";
@@ -65,7 +66,7 @@ function catalogue(options: { statsError?: boolean; noStats?: boolean; otherSeas
   };
   const readPublicSeasonPlayerPoints = runInNewContext(`${code("lib/touchlineArena/public-season-player-points-server.ts")}\nreadPublicSeasonPlayerPoints;`, shared);
   const context = {
-    ...shared, readPublicSeasonPlayerPoints, applyTouchlineSeasonPoints,
+    ...shared, readPublicSeasonPlayerPoints, applyTouchlineSeasonPoints, canonicalSportmonksPlayerId,
     loadTouchlinePublishedCardPresentations: async () => new Map(ids.map(id => [id, { tierKey: "elite", marketValueEur: 1000000, shirtNumber: 1 }])),
     inferArenaRole: () => "goalkeeper", makeArenaShortName: (value: string) => value,
     normalizeOfficialShirtNumber: (value: unknown) => value,

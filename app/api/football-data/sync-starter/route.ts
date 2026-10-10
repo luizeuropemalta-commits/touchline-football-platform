@@ -118,7 +118,7 @@ async function runFootballDataSync(request: NextRequest) {
         : scope === "qa_country_sync"
           ? "QA-only country data was reconciled from the complete provider scope after a reversible 588-player backup."
         : scope === "qa_twenty_club_roster_sync"
-          ? "QA-only current rosters were reconciled across all twenty clubs after a reversible provider snapshot; players and card history were not deleted."
+          ? "QA-only current rosters were applied as one atomic database operation across twenty clubs; players and card history were not deleted."
         : "TouchLine Data feeds the normalized TouchLine database. Public modules read only dedicated TouchLine allowlisted DTOs.",
     });
   } catch (error) {

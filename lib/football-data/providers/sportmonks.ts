@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
+import { sportmonksFixtureInstant } from "../sportmonks-fixture-instant.ts";
 import {
-  createSportmonksQuotaRead, observeSportmonksQuota,
+  createSportmonksQuotaRead, observeSportmonksQuota, sportmonksPrequeryEndpoint,
   SPORTMONKS_PREQUERY_ENDPOINTS, type SportmonksPrequeryEndpoint,
   type SportmonksObservedQuotaOperation, type SportmonksQuotaObservation, type SportmonksRequestQuota,
   type SportmonksQuotaObserver,
@@ -117,6 +118,8 @@ export type SportmonksFixtureRequestContext = Readonly<{
 export type SportmonksFixtureGuard = Readonly<{
   /** Trusted non-secret account identity, never a token or URL. No normalization. */
   accountScope: string;
+  /** Opaque digest of authority/policy/worker binding; never a plaintext secret. */
+  cacheNamespace?: string;
   /** Synchronous construction only. All authority I/O belongs in bounded callbacks. */
   createPort(context: SportmonksFixtureRequestContext): Readonly<{
     beforeAttempt: FootballDataAttemptEnforcement<unknown>["beforeAttempt"];
@@ -129,24 +132,7 @@ export type SportmonksFixtureGuard = Readonly<{
 }>;
 
 function fixtureEndpoint(path: string): FixtureEndpoint | null {
-  if (/^\/squads\/teams\/[1-9][0-9]{0,19}$/.test(path)) return "squad";
-  if (/^\/squads\/teams\/[1-9][0-9]{0,19}\/extended$/.test(path)) return "squadExtended";
-  if (/^\/leagues\/[1-9][0-9]{0,19}$/.test(path)) return "league";
-  if (/^\/seasons\/[1-9][0-9]{0,19}$/.test(path)) return "season";
-  if (/^\/stages\/seasons\/[1-9][0-9]{0,19}$/.test(path)) return "stages";
-  if (/^\/topscorers\/seasons\/[1-9][0-9]{0,19}$/.test(path)) return "topscorers";
-  if (/^\/fixtures\/[1-9][0-9]{0,19}$/.test(path)) return "fixture";
-  if (path === SPORTMONKS_INPLAY_LIVESCORES_PATH) return "inplay";
-  if (path === SPORTMONKS_LATEST_LIVESCORES_PATH) return "latest";
-  const date = /^\/fixtures\/date\/(\d{4}-\d{2}-\d{2})$/.exec(path);
-  const between = /^\/fixtures\/between\/(\d{4}-\d{2}-\d{2})\/(\d{4}-\d{2}-\d{2})$/.exec(path);
-  const validDay = (day: string) => {
-    const time = Date.parse(`${day}T00:00:00.000Z`);
-    return Number.isFinite(time) && new Date(time).toISOString().slice(0, 10) === day;
-  };
-  if (date && validDay(date[1])) return "date";
-  if (between && validDay(between[1]) && validDay(between[2]) && between[1] <= between[2]) return "between";
-  return null;
+  return sportmonksPrequeryEndpoint(path);
 }
 
 function fixtureEnforcementUnavailable<T>(): FootballDataHttpResponse<SportmonksEnvelope<T>> {
@@ -180,19 +166,6 @@ function earliestFetchedAt(first: string, second?: string) {
   return second && second < first ? second : first;
 }
 
-/**
- * Sportmonks supplies `starting_at` without an offset and, when available,
- * `starting_at_timestamp` in UTC seconds. Prefer the latter so a server or
- * browser timezone can never move a fixture into the wrong TouchLine round.
- */
-function sportmonksFixtureStartAt(raw: SportmonksEntity) {
-  const seconds = asNumber(raw.starting_at_timestamp);
-  if (typeof seconds === "number" && Number.isFinite(seconds) && seconds > 0) {
-    return new Date(seconds * 1_000).toISOString();
-  }
-  return asString(raw.starting_at);
-}
-
 export class SportmonksFootballProvider implements FootballDataProvider {
   readonly name = "sportmonks" as const;
   private readonly fixtureGuard: SportmonksFixtureGuard | null | undefined;
@@ -206,11 +179,13 @@ export class SportmonksFootballProvider implements FootballDataProvider {
     try {
       const binding = options?.fixtureGuard;
       const accountScope = binding?.accountScope, createPort = binding?.createPort, quotaObserver = binding?.quotaObserver;
+      const cacheNamespace = binding?.cacheNamespace;
       this.fixtureGuard = binding && typeof accountScope === "string"
         && /^[a-z][a-z0-9_-]{0,63}$/.test(accountScope)
         && typeof createPort === "function"
+        && (cacheNamespace === undefined || typeof cacheNamespace === "string" && /^[a-f0-9]{64}$/.test(cacheNamespace))
         && (quotaObserver === undefined || typeof quotaObserver === "function")
-        ? Object.freeze({ accountScope, createPort: createPort.bind(binding), quotaObserver: quotaObserver?.bind(binding) }) : null;
+        ? Object.freeze({ accountScope, cacheNamespace, createPort: createPort.bind(binding), quotaObserver: quotaObserver?.bind(binding) }) : null;
     } catch { this.fixtureGuard = null; }
   }
 
@@ -318,7 +293,8 @@ export class SportmonksFootballProvider implements FootballDataProvider {
     const cachedResponse = await withFootballDataCache(
       bucket,
       ["sportmonks", path, JSON.stringify(params), ...(cachePolicy ? [cachePolicy] : []),
-        ...(endpoint ? ["sportmonks-prequery-enforcement-v2", this.fixtureGuard!.accountScope] : [])],
+        ...(endpoint ? ["sportmonks-prequery-enforcement-v2", this.fixtureGuard!.accountScope,
+          ...(this.fixtureGuard!.cacheNamespace ? [this.fixtureGuard!.cacheNamespace] : [])] : [])],
       async (): Promise<FootballDataHttpResponse<SportmonksEnvelope<T>> & { quota?: SportmonksRequestQuota }> => {
         const baseUrl = path.startsWith("/my/") ? this.rootBaseUrl() : this.baseUrl();
         const url = new URL(path.replace(/^\//, ""), `${baseUrl.replace(/\/$/, "")}/`);
@@ -349,6 +325,9 @@ export class SportmonksFootballProvider implements FootballDataProvider {
         }
         const response = await footballDataFetchJson<SportmonksEnvelope<T>>(url, {
           provider: this.name,
+          // A redirect would issue an unadmitted request (possibly to another
+          // quota entity). Preserve legacy transport only for unguarded callers.
+          ...(endpoint ? { redirect: "error" as const } : {}),
           timeoutMs,
           enforcement,
           onAttemptCompleted: quotaOperation ? ({ attempt, response: completed }) => {
@@ -642,7 +621,7 @@ export class SportmonksFootballProvider implements FootballDataProvider {
     if (!request.configured) return this.notConfigured<TouchlineFixture[]>();
     const { value, cached } = request;
     if (!value.ok) return this.providerFailure<TouchlineFixture[]>(value, "Sportmonks fixtures by date failed.");
-    return resultOk(this.name, (value.data?.data ?? []).map((item) => this.mapFixture(item)).filter(Boolean) as TouchlineFixture[], value.data, cached, value.fetchedAt);
+    return resultOk(this.name, (value.data?.data ?? []).map((item) => this.mapFixture(item, params.timezone)).filter(Boolean) as TouchlineFixture[], value.data, cached, value.fetchedAt);
   }
 
   async getFixturesBetween(params: FixturesBetweenParams): Promise<FootballDataResult<TouchlineFixture[]>> {
@@ -666,7 +645,7 @@ export class SportmonksFootballProvider implements FootballDataProvider {
     if (!request.configured) return this.notConfigured<TouchlineFixture[]>();
     const { value, cached } = request;
     if (!value.ok) return this.providerFailure<TouchlineFixture[]>(value, "Sportmonks fixture window lookup failed.");
-    return resultOk(this.name, (value.data?.data ?? []).map((item) => this.mapFixture(item)).filter(Boolean) as TouchlineFixture[], value.data, cached, value.fetchedAt);
+    return resultOk(this.name, (value.data?.data ?? []).map((item) => this.mapFixture(item, params.timezone)).filter(Boolean) as TouchlineFixture[], value.data, cached, value.fetchedAt);
   }
 
   async getLiveScores(params: { competitionId?: string } = {}): Promise<FootballDataResult<TouchlineFixture[]>> {
@@ -772,6 +751,12 @@ export class SportmonksFootballProvider implements FootballDataProvider {
     if (!request.configured) return this.notConfigured<TouchlineSquadMember[]>();
     const { value, cached } = request;
     if (!value.ok) return this.providerFailure<TouchlineSquadMember[]>(value, "Sportmonks squad failed.");
+    // Guarded reconciliation must not publish a partial squad after a denied
+    // enrichment or an unconfirmed durable completion (including the last club).
+    if (this.fixtureGuard !== undefined) {
+      if (!extendedRequest.configured) return this.notConfigured<TouchlineSquadMember[]>();
+      if (!extendedRequest.value.ok) return this.providerFailure<TouchlineSquadMember[]>(extendedRequest.value, "Sportmonks squad enrichment failed.");
+    }
 
     const extendedPlayersById = new Map<string, SportmonksEntity>();
     if (extendedRequest.configured && extendedRequest.value.ok) {
@@ -919,7 +904,7 @@ export class SportmonksFootballProvider implements FootballDataProvider {
       return resultError(this.name, "invalid_request", "Invalid fixture diagnostic budget.");
     }
     const pending = this.request<SportmonksEntity>(`/fixtures/${encodeURIComponent(fixtureId)}`, {
-      include: "participants;scores;league;season;round;state;periods;lineups.player;lineups.position;lineups.details.type;formations;sidelined.sideline;sidelined.player;events.type;events.player;events.relatedPlayer",
+      include: "participants;scores;league;season;round;state;periods;lineups.player;lineups.position;lineups.details.type;formations;sidelined.sideline;sidelined.player;sidelined.type;events.type;events.player;events.relatedPlayer",
     }, "live", "live", options?.totalBudgetMs, options ? 1 : 3, options ? "fixture-diagnostic-v1" : undefined);
     // Diagnostics own a separate cache/flight policy: their short single
     // attempt must never reduce a normal caller's retry budget. TTL is unchanged.
@@ -1139,7 +1124,7 @@ export class SportmonksFootballProvider implements FootballDataProvider {
       provider: this.name,
       name: asString(raw.name) ?? `Season ${id}`,
       competitionId: asString(raw.league_id),
-      startsAt: sportmonksFixtureStartAt(raw),
+      startsAt: sportmonksFixtureInstant(raw) ?? asString(raw.starting_at),
       endsAt: asString(raw.ending_at),
       isCurrent: Boolean(raw.is_current),
       source: { provider: this.name, providerId: id, raw },
@@ -1175,7 +1160,7 @@ export class SportmonksFootballProvider implements FootballDataProvider {
     return result;
   }
 
-  private mapFixture(raw?: SportmonksEntity): TouchlineFixture | null {
+  private mapFixture(raw?: SportmonksEntity, sourceTimeZone = "UTC"): TouchlineFixture | null {
     if (!raw?.id) return null;
     const id = String(raw.id);
     const participants = Array.isArray(raw.participants) ? raw.participants as SportmonksEntity[] : [];
@@ -1195,7 +1180,8 @@ export class SportmonksFootballProvider implements FootballDataProvider {
       providerId: id,
       provider: this.name,
       name: asString(raw.name),
-      startsAt: sportmonksFixtureStartAt(raw),
+      // Empty query values are omitted by requestCached, so they mean UTC too.
+      startsAt: sportmonksFixtureInstant(raw, sourceTimeZone || "UTC"),
       status: asString((raw.state as SportmonksEntity | undefined)?.name) ?? asString(raw.state_id),
       competitionId: asString(raw.league_id),
       seasonId: asString(raw.season_id),
@@ -1370,6 +1356,7 @@ export class SportmonksFootballProvider implements FootballDataProvider {
       const id = asString(item.id) ?? `${fixtureId}-sidelined-${index}`;
       const player = this.relationEntity(item, "player") ?? (item.player as SportmonksEntity | undefined);
       const sideline = this.relationEntity(item, "sideline") ?? (item.sideline as SportmonksEntity | undefined);
+      const type = this.relationEntity(item, "type") ?? (item.type as SportmonksEntity | undefined);
       const teamId = asString(item.team_id) ?? asString(item.participant_id);
       return {
         id: providerId(this.name, id),
@@ -1381,7 +1368,11 @@ export class SportmonksFootballProvider implements FootballDataProvider {
         playerId: asString(item.player_id) ?? asString(player?.id),
         playerName: asString(player?.display_name) ?? asString(player?.name) ?? asString(item.player_name),
         reason: asString(item.reason) ?? asString(sideline?.name) ?? asString(item.description),
-        category: asString(item.category) ?? asString(item.type),
+        category: asString(item.category) ?? asString(sideline?.category) ?? asString(item.type),
+        typeName: asString(type?.name),
+        completed: typeof item.completed === "boolean" ? item.completed : typeof sideline?.completed === "boolean" ? sideline.completed : undefined,
+        startDate: asString(item.start_date) ?? asString(sideline?.start_date),
+        endDate: asString(item.end_date) ?? asString(sideline?.end_date),
         raw: item,
       };
     });

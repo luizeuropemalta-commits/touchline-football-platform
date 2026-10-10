@@ -175,6 +175,7 @@
   stroke-dashoffset: 0;
   opacity: 0;
   animation: club-owner-portrait-perimeter-trace 8s cubic-bezier(.22,.74,.28,1) infinite;
+  animation-play-state: var(--touchline-decoration-motion, paused);
 }
 
 @keyframes club-owner-portrait-perimeter-trace {

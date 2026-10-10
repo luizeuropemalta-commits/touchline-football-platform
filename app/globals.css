@@ -98,9 +98,9 @@ body::before {
 button, a, input, textarea, select { font: inherit; }
 /* Owner rule: phone gameplay is landscape-only, including body-portaled zooms.
    Keep this query aligned with TOUCHLINE_PORTRAIT_QUERY and the boundary CSS. */
-@media (max-width: 767px) and (orientation: portrait) {
+@media (max-width: 767px) and (orientation: portrait) and (pointer: coarse) {
   html, body { overflow: hidden !important; overscroll-behavior: none; }
-  body > :not([data-touchline-orientation-root]):not([data-touchline-orientation-gate]) { display: none !important; }
+  body:not([data-touchline-global-error]) > :not([data-touchline-orientation-root]):not([data-touchline-orientation-gate]) { display: none !important; }
 }
 button, a { -webkit-tap-highlight-color: transparent; }
 button { cursor: pointer; }
@@ -894,20 +894,16 @@ a, button { outline: none; }
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 3.1;
-  stroke-dasharray: 2 98;
+  stroke-dasharray: 16 84;
   stroke-dashoffset: 0;
-  opacity: 0;
-  animation: touchline-card-perimeter-trace 8s cubic-bezier(.22,.74,.28,1) infinite;
+  opacity: .82;
+  animation: touchline-card-perimeter-trace 3s linear infinite;
+  animation-play-state: var(--touchline-decoration-motion, paused);
 }
 
 @keyframes touchline-card-perimeter-trace {
-  0% { stroke-dasharray: 2 98; stroke-dashoffset: 0; opacity: 0; }
-  1.7% { stroke-dasharray: 14 86; opacity: .82; }
-  13.3% { stroke-dasharray: 16 84; stroke-dashoffset: -74; opacity: .72; }
-  16.5% { stroke-dasharray: 100 0; stroke-dashoffset: -100; opacity: .44; }
-  18.75%, 89% { stroke-dasharray: 100 0; stroke-dashoffset: -100; opacity: .28; }
-  94% { stroke-dasharray: 100 0; stroke-dashoffset: -100; opacity: 0; }
-  100% { stroke-dasharray: 2 98; stroke-dashoffset: 0; opacity: 0; }
+  from { stroke-dashoffset: 0; }
+  to { stroke-dashoffset: -100; }
 }
 
 [data-touchline-card-crest-host="true"] {
@@ -1071,6 +1067,22 @@ a, button { outline: none; }
   direction: ltr;
   position: relative;
   z-index: 40;
+}
+
+/* The customer login keeps one full-screen cinematic background, not a side panel. */
+.auth-full-video { grid-template-columns: minmax(0,1fr); }
+.auth-full-video .auth-login-hero { width: 100%; max-width: 1320px; min-height: 640px; margin-inline: auto; padding-block: 48px; }
+.auth-full-video .auth-login-story { align-self: center; width: 100%; max-width: 800px; }
+.auth-full-video .auth-login-story h1 { font-size: clamp(72px,8.4vw,132px); line-height: .92; letter-spacing: -.065em; }
+.auth-full-video .auth-login-story > div > span { font-size: 11px; }
+.auth-full-video .auth-login-story > p:first-of-type { margin-bottom: 20px; font-size: 12px; }
+.auth-full-video .auth-login-story > p:last-of-type { max-width: 39rem; margin-top: 28px; font-size: clamp(16px,1.3vw,19px); line-height: 1.75; }
+.auth-full-video .auth-login-story > details { margin-top: 30px; }
+@media (max-width: 1279px) { .auth-full-video .auth-login-hero { min-height: auto; padding-block: 32px; } }
+@media (max-width: 640px) {
+  .auth-full-video .auth-brand-header { flex-wrap: wrap; gap: 16px; }
+  .auth-full-video .auth-brand-header > div { width: 100%; justify-content: flex-end; }
+  .auth-full-video .auth-login-story h1 { font-size: clamp(56px,13.5vw,86px); }
 }
 
 .auth-language-switcher {

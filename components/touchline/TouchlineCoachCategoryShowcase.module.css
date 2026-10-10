@@ -121,6 +121,23 @@
   filter: saturate(.7) brightness(.8);
 }
 
+.pendingCoachVisual {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  border: 1px dashed color-mix(in srgb, var(--tier-accent) 46%, transparent);
+  border-radius: 12px;
+  background: radial-gradient(circle, color-mix(in srgb, var(--tier-accent) 13%, transparent), transparent 65%);
+}
+
+.pendingCoachVisual img {
+  width: clamp(34px, 28%, 58px);
+  height: auto;
+  opacity: .7;
+  filter: drop-shadow(0 0 16px color-mix(in srgb, var(--tier-accent) 32%, transparent));
+}
+
 .identity {
   min-width: 0;
   display: grid;

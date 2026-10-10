@@ -54,6 +54,8 @@ type Input = {
   lineupError?: string;
   stateErrors?: string[];
   stateUpdates?: number;
+  incomingHomeScore?: number;
+  secondUnwrittenFixture?: boolean;
   fantasyWindowError?: { code?: string; message?: string };
   thrownFantasyWindowError?: boolean;
   fantasyLifecycleError?: { code?: string; message?: string };
@@ -74,6 +76,7 @@ type Input = {
   cadenceNotDue?: boolean;
   leaseUnavailable?: boolean;
   thrownPlayerError?: boolean;
+  providerInitializationFailure?: boolean;
   eventObservationStatus?: string;
   eventObservationThrows?: boolean;
   pushProducerThrows?: boolean;
@@ -87,6 +90,10 @@ type Write = {
 const defaultFixture = fixture;
 function scenario(input: Input = {}) {
   const fixture = input.fixtureOverride ?? defaultFixture;
+  const incomingFixture = { ...fixture, homeScore: input.incomingHomeScore ?? fixture.homeScore };
+  const secondFixture = { ...fixture, id: 'sportmonks:19722168', providerId: '19722168', homeScore: 0,
+    source: { provider: 'sportmonks' as const, providerId: '19722168' } };
+  const secondIncoming = { ...secondFixture, homeScore: 7 };
   const now = input.now ?? NOW;
   const writes: Write[] = [];
   const calls: string[] = [];
@@ -155,7 +162,7 @@ function scenario(input: Input = {}) {
       return { data: { reconciled: 2 }, error: input.coachError ? { code: input.coachError } : null };
     },
   };
-  const readFixtures = async () => input.noIncomingFixtures ? [] : [fixture];
+  const readFixtures = async () => input.noIncomingFixtures ? [] : input.secondUnwrittenFixture ? [fixture, secondFixture] : [fixture];
   const sync = runInNewContext(`${syncSource}\nsyncSportmonksLiveState;`, {
     decideLiveSyncCadence, mergeCanonicalLiveFixture, reconcilePendingTouchlineFantasyGameweeks, AbortController,
     recoveryFixtureMatches, BACKLOG_MAX_PER_RUN, BACKLOG_DEADLINE_MS,
@@ -166,6 +173,7 @@ function scenario(input: Input = {}) {
     touchlineCompetitionCoachAssignments: () => [],
     console: { info: (message: string) => logs.push({ ...JSON.parse(message), level: "info" }), warn: (message: string) => logs.push({ ...JSON.parse(message), level: "warn" }) },
     readPublicCompetitionFixtures: readFixtures,
+    createGuardedFixtureProvider: () => { throw new Error("private-provider-configuration-details"); },
     syncSportmonksFixtureSchedule: async () => ({ ok: false, errors: [input.scheduleError] }),
     syncTouchLinePlayerSeasonStatistics: async () => {
       calls.push("players");
@@ -196,19 +204,21 @@ function scenario(input: Input = {}) {
       ? { acquired: false, reason: "live_sync_in_flight" }
       : { acquired: true, runId: RUN_ID }; },
     ...(input.scheduleError ? {} : { readFixtures }),
-    provider: {
+    provider: input.providerInitializationFailure ? undefined : {
       async getLiveScores() {
         calls.push("provider-live");
-        return input.liveError ? { ok: false, error: { code: input.liveError } } : { ok: true, data: input.noIncomingFixtures ? [] : [fixture] };
+        return input.liveError ? { ok: false, error: { code: input.liveError } } : { ok: true, data: input.noIncomingFixtures ? []
+          : input.secondUnwrittenFixture ? [incomingFixture, secondIncoming] : [incomingFixture] };
       },
       async getFixtureFantasyFeed(providerId: string) {
+        if (input.secondUnwrittenFixture && providerId === secondFixture.providerId) return { ok: true, data: { fixture: secondIncoming } };
         if (providerId !== fixture.providerId) {
           calls.push(`fetch-${providerId}`);
           return input.backlogError ? {ok:false,error:{code:input.backlogError,retryAfterSeconds:600}}
             : {ok:true,data:{fixture:{...fixture,providerId,status:"Full Time"}}};
         }
         calls.push("provider-feed");
-        return input.feedError ? { ok: false, error: { code: input.feedError } } : { ok: true, data: { fixture: input.wrongSeason ? { ...fixture, seasonId: "wrong-season" } : fixture } };
+        return input.feedError ? { ok: false, error: { code: input.feedError } } : { ok: true, data: { fixture: input.wrongSeason ? { ...incomingFixture, seasonId: "wrong-season" } : incomingFixture } };
       },
     },
     persistFantasyFeed: async () => { calls.push("persist-feed"); return { persisted: !input.feedPersistenceError, reason: input.feedPersistenceError }; },
@@ -216,7 +226,8 @@ function scenario(input: Input = {}) {
     persistStates: async () => {
       await Promise.resolve();
       calls.push("states");
-      return { updated: input.stateUpdates ?? 1, errors: input.stateErrors ?? [] };
+      return { updated: input.stateUpdates ?? 1, errors: input.stateErrors ?? [],
+        merged: (input.stateUpdates ?? 1) > 0 ? [incomingFixture] : [] };
     },
     persistSnapshot: async (snapshot: TouchlineFixture[]) => {
       calls.push("snapshot"); snapshots.push(snapshot);
@@ -497,6 +508,24 @@ for (const [input, expectedError] of [
   });
 }
 
+test("snapshot never distributes a provider score whose canonical write was not acknowledged", async () => {
+  const s = scenario({ incomingHomeScore: 4, stateUpdates: 0, stateErrors: ["fixture-write:failed"] });
+  const result = await s.run();
+  assert.equal(result.ok, false);
+  assert.equal(s.snapshots[0][0].homeScore, 1, "Keep the previously persisted score, not the uncommitted provider score");
+  assertCompletion(s, result);
+});
+
+test("mixed snapshot advances the acknowledged fixture while preserving the failed fixture", async () => {
+  const s = scenario({ incomingHomeScore: 4, secondUnwrittenFixture: true, stateUpdates: 1,
+    stateErrors: ['19722168:write-failed'] });
+  const result = await s.run();
+  assert.equal(result.status, 'partial'); assert.equal(result.updated, 1);
+  assert.equal(s.snapshots[0][0].homeScore, 4);
+  assert.equal(s.snapshots[0][1].homeScore, 0, 'Unacknowledged score 7 cannot replace persisted score 0');
+  assertCompletion(s, result);
+});
+
 test("Fantasy windows are not materialized without successfully persisted fixture states", async () => {
   for (const stateErrors of [[], ["fixture-write:failed"]]) {
     const s = scenario({ stateUpdates: 0, stateErrors }); const result = await s.run();
@@ -617,4 +646,16 @@ test("a thrown reconciliation error still finalizes the acquired run as error", 
   await assert.rejects(s.run, /player-reconciliation-threw/);
   assert.equal(s.writes.length, 1); assert.equal(s.writes[0].status, "error");
   assert.equal(s.calls.at(-1), "complete-run"); assert.equal(s.snapshots.length, 0);
+  assert.equal(s.writes[0].error_message, "live-sync:orchestration-failed");
+  assert.equal(s.logs[0].errorCount, 1);
+});
+
+test("provider initialization failure leaves a safe diagnostic and makes no provider request", async () => {
+  const s = scenario({ providerInitializationFailure: true });
+  await assert.rejects(s.run, /private-provider-configuration-details/);
+  assert.deepEqual(s.calls, ["lease", "complete-run"]);
+  assert.equal(s.writes[0].status, "error");
+  assert.equal(s.writes[0].error_message, "live-sync:provider-initialization-failed");
+  assert.equal(s.logs[0].errorCount, 1);
+  assert.doesNotMatch(JSON.stringify([s.writes, s.logs]), /private-provider/);
 });

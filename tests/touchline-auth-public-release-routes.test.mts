@@ -30,6 +30,7 @@ function harness(flag?: string) {
     return exports;
   }
   const modules: Record<string, unknown> = {
+    '@/components/touchline/LoginPlanGallery': { default: empty },
     react: React,
     'next/navigation': { usePathname: () => '/login' },
     './SiteLocaleReleaseContext': { useSiteLocaleRelease: () => false },

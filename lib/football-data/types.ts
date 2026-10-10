@@ -314,6 +314,10 @@ export type TouchlineFantasySidelinedPlayer = {
   playerName?: string;
   reason?: string;
   category?: string;
+  typeName?: string;
+  completed?: boolean;
+  startDate?: string;
+  endDate?: string | null;
   raw?: unknown;
 };
 

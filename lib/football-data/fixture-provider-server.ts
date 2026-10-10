@@ -1,20 +1,15 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { SportmonksFootballProvider } from "@/lib/football-data/providers/sportmonks";
-import { createSportmonksFixtureAuthority } from "@/lib/football-data/sportmonks-fixture-authority";
+import "server-only";
+import { createConfiguredCentralFootballDataProvider } from "./central-provider-server.ts";
 
 /** Deliberately no fallback to an unguarded provider. The non-secret account
  * binding must be explicitly configured consistently across guarded workers.
+ * The legacy admin argument is retained for caller compatibility only: it is
+ * NEVER used for quota RPCs. Content writes remain owned by each sync job.
  */
 export function createGuardedFixtureProvider(
-  admin: SupabaseClient,
-  accountScope: string | undefined = process.env.TOUCHLINE_SPORTMONKS_FIXTURE_ACCOUNT_SCOPE,
+  _admin: SupabaseClient,
+  accountScope?: string,
 ) {
-  if (!accountScope) throw new Error("Fixture authority account binding unavailable.");
-  const guard = createSportmonksFixtureAuthority(accountScope, async (name, args, signal) => {
-    if (signal.aborted) throw new Error("Fixture authority unavailable.");
-    const { data, error } = await admin.rpc(name, args).abortSignal(signal);
-    if (error || signal.aborted) throw new Error("Fixture authority unavailable.");
-    return data;
-  });
-  return new SportmonksFootballProvider({ fixtureGuard: guard });
+  return createConfiguredCentralFootballDataProvider(accountScope);
 }

@@ -34,11 +34,10 @@ export function resolveTouchlineFantasyBrowseSlot({ geometry, bucket, activeSlot
 /** Fit the whole card + position + status envelope, not just the artwork.
  * Canonical tactical coordinates remain unchanged. Width/height are unscaled
  * layout pixels, so this also respects the existing miniature mobile board. */
-export function touchlineFantasyPitchCardWidth(slots: readonly TouchlineFormationGeometrySlot[], width: number, height: number): number {
+export function touchlineFantasyPitchCardWidth(slots: readonly TouchlineFormationGeometrySlot[], width: number, height: number, envelope: { labelHeight: number; gap: number } = { labelHeight: 42, gap: 12 }): number {
   if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return 48;
   const ratio = 691 / 430;
-  const labelHeight = 42;
-  const gap = 12;
+  const { labelHeight, gap } = envelope;
   const centres = slots.map((slot) => ({ x: Math.min(89, Math.max(11, slot.x)) * width / 100, y: Math.min(86, Math.max(14, slot.y)) * height / 100 }));
   let limit = 96;
   for (const [index, centre] of centres.entries()) {

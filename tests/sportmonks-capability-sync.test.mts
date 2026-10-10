@@ -7,6 +7,7 @@ import type { TouchlineProviderCapabilities } from "../lib/football-data/types.t
 const repositoryRoot = new URL("../", import.meta.url);
 registerHooks({
   resolve(specifier, context, nextResolve) {
+    if (specifier === "server-only") return nextResolve(new URL("tests/fixtures/server-only.mts", repositoryRoot).href, context);
     if (specifier.startsWith("@/")) {
       return nextResolve(new URL(`${specifier.slice(2)}.ts`, repositoryRoot).href, context);
     }

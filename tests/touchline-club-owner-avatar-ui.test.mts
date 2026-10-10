@@ -8,6 +8,7 @@ import * as client from "../lib/touchlineArena/club-owner-avatar-client.ts";
 import * as catalogue from "../lib/touchlineArena/club-owner-avatar-ui-i18n.ts";
 import * as localeModule from "../lib/touchlineArena/i18n.ts";
 import * as selection from "../lib/touchlineArena/club-owner-avatar-selection-contract.ts";
+import * as profileMetrics from "../lib/touchlineArena/club-owner-profile-metrics.ts";
 
 const actor = "11111111-1111-4111-8111-111111111111", other = "33333333-3333-4333-8333-333333333333";
 const operation = "22222222-2222-4222-8222-222222222222";
@@ -29,6 +30,29 @@ function compile(path: string, dependencies: Record<string, unknown>, globals = 
   return exports;
 }
 function copyModule(_drafts = false) { return catalogue; }
+
+test("real header forwards separate dormant selection capabilities without changing recovery identity", () => {
+  const header = compile("components/touchline/ClubOwnerMarketHeader.tsx", {
+    "react/jsx-runtime": jsx, "next/image": { default: "img" }, "next/link": { default: "a" },
+    "lucide-react": { Camera: "camera", Landmark: "landmark" },
+    "@/lib/touchlineArena/club-owner-market-i18n": { getTouchlineClubOwnerMarketCopy: () => ({ nameUnavailable: "Unavailable" }) },
+    "@/lib/touchlineArena/club-owner-profile-metrics": profileMetrics,
+    "./market/TouchlineMarketMarks": { TouchlineCoinMark: "coin" },
+    "./ClubOwnerPlanShowcase": { default: "plan-showcase" },
+    "./ClubOwnerAvatarControl": { default: "avatar-control" },
+    "./TouchlineGlobalNavigation.module.css": { default: {} }, "./ClubOwnerMarketHeader.module.css": { default: {} },
+  }).default as (props: unknown) => unknown;
+  const recovery = context(), owner = { name: "Synthetic", avatarUrl: "", city: "", nationality: "", since: "" };
+  for (const flags of [{}, { avatarSelectionEnabled: true }, { retentionReady: true }, { avatarSelectionEnabled: true, retentionReady: true }]) {
+    const tree = header({ owner, locale: "en-GB", accountId: actor, avatarContext: recovery, ...flags });
+    const controls = nodes(tree, "avatar-control"); assert.equal(controls.length, 1);
+    assert.equal(controls[0].props.context, recovery);
+    assert.equal(controls[0].props.avatarSelectionEnabled, "avatarSelectionEnabled" in flags && flags.avatarSelectionEnabled === true);
+    assert.equal(controls[0].props.retentionReady, "retentionReady" in flags && flags.retentionReady === true);
+  }
+  assert.equal(nodes(header({ owner, locale: "en-GB", accountId: other, avatarContext: recovery,
+    avatarSelectionEnabled: true, retentionReady: true }), "avatar-control").length, 0);
+});
 
 // Real component + real C2 controller. Hook slots/effects, auth notifications,
 // router and HTTP are controlled boundaries; not a React scheduler or DOM proof.

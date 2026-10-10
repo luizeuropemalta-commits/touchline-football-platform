@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readFile, realpath } from "node:fs/promises";
+import { pathToFileURL } from "node:url";
 import test from "node:test";
 import { auditTouchlineRankingDraft, buildSportmonksRankingDraft } from "../lib/touchlineArena/card-ranking-pipeline.ts";
 import { buildTouchlineRankingPersistenceRecord } from "../lib/touchlineArena/card-ranking-persistence.ts";
@@ -8,6 +9,7 @@ import { buildTouchlineSelection } from "../lib/touchlineArena/touchline-selecti
 // Synthetic local PostgreSQL only. Real ranking/storage DDL and publisher;
 // reduced canonical identity parents. No remote connection or provider data.
 const modulePath = process.env.TOUCHLINE_FANTASY_PGLITE_MODULE;
+const nativeRuntime = process.env.TOUCHLINE_QUOTA_NATIVE_RUNTIME;
 const baseline = process.env.TOUCHLINE_V4_PUBLISHER_BASELINE === "1";
 const migration = "20261001085725_touchline_player_rating_v4_publisher";
 type Row = Record<string, unknown>;
@@ -19,7 +21,18 @@ function table(s: string, name: string) {
   assert.ok(start>=0 && end>start); return s.slice(start,end+3);
 }
 async function database(): Promise<DB> {
-  const { PGlite }=await import(modulePath!); const db: DB=new PGlite();
+  let db: DB;
+  if (nativeRuntime) {
+    // Reuse only the audited disposable Unix-socket adapter. It independently
+    // verifies socket ownership/mode, database/user, data directory and no TCP.
+    assert.equal(await realpath(nativeRuntime), "/private/tmp/touchline-pg-native-sbvcel/native-quota-runtime.mjs");
+    const { NativeQuotaDatabase } = await import(pathToFileURL(nativeRuntime).href);
+    assert.equal(typeof NativeQuotaDatabase, "function");
+    db = new NativeQuotaDatabase();
+  } else {
+    const { PGlite } = await import(modulePath!);
+    db = new PGlite();
+  }
   try {
     await db.exec(`create role anon; create role authenticated; create role service_role bypassrls;
       create schema auth; create function auth.jwt() returns jsonb language sql as $$select jsonb_build_object('role',current_setting('request.jwt.claim.role',true))$$;
@@ -99,11 +112,12 @@ async function persistRealCandidate(db: DB, firstRating=16.18, coverageStatus: "
   return r;
 }
 
-test("V4 publisher validates decimal raw-rating provenance without converted totals",{skip:!modulePath},async t=>{
+test("V4 publisher validates decimal raw-rating provenance without converted totals",{skip:!modulePath && !nativeRuntime},async t=>{
   const db=await database();
+  let scenarios = 0;
   try {
     async function scenario(name:string,body:()=>Promise<void>) {
-      await t.test(name,async()=>{await db.exec("begin");try {await seed(db);await body();} finally {await db.exec("rollback");}});
+      await t.test(name,async()=>{await db.exec("begin");try {await seed(db);await body();scenarios++;} finally {await db.exec("rollback");}});
     }
     await scenario("raw 16.18 season total publishes; V3 history remains byte-identical",async()=>{
       const old=await rows(db); assert.equal((await publish(db)).rows[0].id,"new-v4");
@@ -118,6 +132,16 @@ test("V4 publisher validates decimal raw-rating provenance without converted tot
         update public.touchline_card_ranking_snapshots set coverage_status='complete_for_scoring',
           ranking_payload=jsonb_set(ranking_payload,'{coverageStatus}','"complete_for_scoring"') where snapshot_id='new-v4'`);
       assert.equal((await publish(db)).rows[0].id,"new-v4");
+    });
+    await scenario("repeated SQL publication rejects without changing the immutable snapshot or active pointer",async()=>{
+      await publish(db);
+      const before = await db.query("select to_jsonb(s) as row from public.touchline_card_ranking_snapshots s order by snapshot_id");
+      const pointer = await db.query("select to_jsonb(a) as row from public.touchline_card_ranking_active_snapshots a");
+      await db.exec("savepoint repeated_publish");
+      await assert.rejects(publish(db), /TL_RANKING_NOT_AUDITED/);
+      await db.exec("rollback to savepoint repeated_publish");
+      assert.deepEqual((await db.query("select to_jsonb(s) as row from public.touchline_card_ranking_snapshots s order by snapshot_id")).rows, before.rows);
+      assert.deepEqual((await db.query("select to_jsonb(a) as row from public.touchline_card_ranking_active_snapshots a")).rows, pointer.rows);
     });
     await scenario("actual TS draft, audit, XI and persistence chain publishes decimal totals",async()=>{
       const record=await persistRealCandidate(db);
@@ -183,5 +207,6 @@ test("V4 publisher validates decimal raw-rating provenance without converted tot
       await db.exec("select set_config('request.jwt.claim.role','authenticated',true)");
       await assert.rejects(publish(db),/TL_RANKING_ADMIN_REQUIRED/);
     });
+    assert.equal(scenarios, 28, "Every publisher scenario must finish; no skipped or cancelled coverage.");
   } finally {await db.close();}
 });

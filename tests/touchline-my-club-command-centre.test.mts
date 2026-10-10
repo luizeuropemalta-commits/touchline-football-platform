@@ -9,7 +9,29 @@ const styles = readFileSync(new URL("../app/fantasy/fantasy.module.css", import.
 const socialStyles = readFileSync(new URL("../components/touchline/social/TouchlineSocial.module.css", import.meta.url), "utf8");
 const gameweekCard = readFileSync(new URL("../components/touchline/fantasy/TouchlineGameweekCard.tsx", import.meta.url), "utf8");
 
-test("Market preserves its ClubOwner photo, name, remaining budget and points", () => {
+test("Arena preserves the football field proportion instead of stretching to the screen", () => {
+  const rule = styles.match(/\.myClubCommand\.arenaOverlay\[data-fantasy-context="market"\] \.myClubPitchViewport \.myClubTacticalPitch\s*\{([^}]+)\}/)?.[1];
+  assert.ok(rule);
+  assert.match(rule, /aspect-ratio:\s*105\s*\/\s*68/);
+  assert.match(rule, /height:\s*auto/);
+  assert.doesNotMatch(rule, /(?:^|;)\s*height:\s*100%/);
+});
+
+test("Arena removes the decorative frame and background and reserves coach space without another box", () => {
+  assert.match(styles, /\.myClubCommand\.arenaOverlay\[data-fantasy-context="market"\] \.myClubTacticalPitch \{ border: 0; border-radius: 0; box-shadow: none; background: transparent !important; overflow: visible; \}/);
+  assert.match(styles, /\.myClubCommand\.arenaOverlay\[data-fantasy-context="market"\] \.myClubTacticalPitch::after \{ content: none; display: none; \}/);
+  assert.match(styles, /100dvh - 150px/);
+  assert.match(styles, /\.arenaOverlay \.myClubPitchViewport \{[^}]*padding-top: 60px/);
+  assert.match(styles, /\.arenaOverlay \.myClubSquad \{[^}]*border: 1px solid #a3c94b/);
+  assert.doesNotMatch(client, /styles\.arenaTechnicalArea/);
+});
+
+test("Arena measures the pitch rather than the coach when sizing players", () => {
+  assert.ok(client.includes('querySelector<HTMLElement>(`.${styles.myClubTacticalPitch}`)'));
+  assert.doesNotMatch(client, /pitchViewportRef\.current\?\.firstElementChild/);
+});
+
+test("Market preserves its ClubOwner photo, name, market power and points", () => {
   const market = readFileSync(new URL("../app/clubowner/page.tsx", import.meta.url), "utf8");
   const header = readFileSync(new URL("../components/touchline/ClubOwnerMarketHeader.tsx", import.meta.url), "utf8");
   const start = client.indexOf('data-market-owner-metrics="true"');
@@ -19,22 +41,23 @@ test("Market preserves its ClubOwner photo, name, remaining budget and points", 
 
   assert.match(market, /resolveTouchlineClubOwnerPageIdentity\(user, undefined, avatarContext\?\.avatarUrl\)/);
   assert.match(market, /<ClubOwnerMarketHeader owner=\{clubOwner\?\.isAuthenticatedClubOwner \? clubOwner : null\}/);
+  assert.match(market, /remainingMarketPower=\{snapshot \? Math\.max\(0, snapshot\.config\.budgetEur - \(snapshot\.userGameweek\?\.totalMarketValueEur \?\? 0\)\) : null\}/);
   assert.match(header, /<Image src=\{owner\?\.avatarUrl \|\| "\/icons\/touchline-512\.png"\}/);
   assert.match(header, /owner\?\.name/);
+  assert.match(header, /copy\.marketPower/);
   assert.doesNotMatch(client, /data-market-club-owner-area/);
-  assert.match(area, /formatTouchlineFantasyMarketValue\(validation\?\.budgetRemainingEur \?\? snapshot\.config\.budgetEur, locale, draftLocalesEnabled\)/);
+  assert.doesNotMatch(area, /marketMetricsCopy\.remainingBudget/);
   assert.match(area, /\(live\?\.gameweekScore \?\? snapshot\.gameweekScore\)\.toFixed\(2\)/);
   assert.match(area, /\(live\?\.seasonScore \?\? snapshot\.seasonScore\)\.toFixed\(2\)/);
   assert.equal((area.match(/href=\{`\/rankings\?lang=/g) ?? []).length, 2);
 });
 
-test("My Club grid cards fit their real container without changing pitch or zoom scale", () => {
-  assert.match(client, /displayWidth=\{116\} fitContainer/);
+test("Market cards fit their real container without changing pitch or zoom scale", () => {
   assert.match(client, /displayWidth=\{126\} fitContainer/);
   assert.match(gameweekCard, /fitContainer = false/);
   assert.match(gameweekCard, /staticRenderScale=\{fitContainer \? undefined : resolvedDisplayWidth \/ 430\}/);
   assert.match(gameweekCard, /staticRenderScale=\{390 \/ 430\}/);
-  assert.match(client, /compact displayWidth=\{pitchCardWidth\} \/>/);
+  assert.match(client, /compact displayWidth=\{pitchCardWidth\} replacementAction=/);
   assert.match(styles, /\.myClubMarketResults article\{height:100%;grid-template-columns:minmax\(0,1fr\)\}/);
   assert.match(styles, /\.myClubCardRows article\{grid-template-columns:minmax\(0,1fr\)\}/);
 });
@@ -42,14 +65,12 @@ test("My Club grid cards fit their real container without changing pitch or zoom
 test("My Club renders a pitch-first command centre instead of the Gameweek wizard", () => {
   assert.match(client, /if \(embedded\) \{/);
   assert.match(client, /className=\{styles\.myClubCommand\}/);
-  assert.match(client, /className=\{styles\.myClubCardRows\}/);
-  assert.match(client, /<TouchlineGameweekCard card=\{card\} locale=\{locale\} draftLocalesEnabled=\{draftLocalesEnabled\} displayWidth=\{116\}/);
+  assert.match(client, /<ArenaView expanded=\{arenaOpen\}/);
   assert.match(client, /className=\{styles\.myClubMarket\}/);
   assert.equal(getTouchlineFantasyMarketAccessCopy("en-GB").lineupWindow, "LINEUP WINDOW");
   assert.match(client, /const marketAccessCopy = getTouchlineFantasyMarketAccessCopy\(locale, draftLocalesEnabled\)/);
   assert.match(client, /<span>\{marketAccessCopy\.lineupWindow\}<\/span>/);
   assert.match(client, /<MarketWindowClock gameweeks=\{gameweeks\} locale=\{locale\} draftLocalesEnabled=\{draftLocalesEnabled\} \/>/);
-  assert.match(client, /removePlayer\(selection!\.playerId\)/);
   assert.match(client, /replaceTouchlineFantasyPlayerAtSlot/);
   assert.ok(client.indexOf("if (embedded) {") < client.indexOf('className={styles.shell}'));
 });
@@ -57,7 +78,8 @@ test("My Club renders a pitch-first command centre instead of the Gameweek wizar
 test("My Club opens the tactical field by default and keeps eligibility contextual", () => {
   assert.match(client, /useState<"squad" \| "tactical">\("tactical"\)/);
   assert.deepEqual([getTouchlineFantasyMarketWorkflowCopy("en-GB").viewTactical, getTouchlineFantasyMarketWorkflowCopy("pt-BR").viewTactical], ["View tactical layout", "Ver visão tática"]);
-  assert.match(client, /squadView === "squad" \? \(workflowCopy\.viewTactical\) : \(workflowCopy\.viewCards\)/);
+  assert.deepEqual([getTouchlineFantasyMarketWorkflowCopy("en-GB").arenaMode, getTouchlineFantasyMarketWorkflowCopy("pt-BR").arenaMode], ["Arena mode", "Modo Arena"]);
+  assert.match(client, /arenaOpen \? workflowCopy\.closeArena : workflowCopy\.arenaMode/);
   assert.deepEqual([getTouchlineFantasyMarketWorkflowCopy("en-GB").pitchAria, getTouchlineFantasyMarketWorkflowCopy("pt-BR").pitchAria], ["Interactive tactical field", "Campo tático interativo"]);
   assert.match(client, /<TouchlinePitchSurface className=\{styles\.myClubTacticalPitch\} ariaLabel=\{workflowCopy\.pitchAria\}/);
   assert.match(client, /const openTacticalSelector = \(slotId: string\)/);
@@ -75,9 +97,9 @@ test("My Club opens the tactical field by default and keeps eligibility contextu
   assert.match(embedded, /"--touchline-card-static-scale": pitchCardWidth \/ 430/);
   assert.match(embedded, /className=\{styles\.myClubTacticalSlot\}/);
   assert.match(embedded, /data-pitch-edge=\{slot\.x >= 75 \? "end" : undefined\}/);
-  assert.match(embedded, /<TouchlineGameweekCard card=\{card\} locale=\{locale\} draftLocalesEnabled=\{draftLocalesEnabled\} compact displayWidth=\{pitchCardWidth\} \/>/);
+  assert.match(embedded, /<TouchlineGameweekCard card=\{card\} locale=\{locale\} draftLocalesEnabled=\{draftLocalesEnabled\} compact displayWidth=\{pitchCardWidth\} replacementAction=/);
   assert.doesNotMatch(embedded, /data-slot-action/);
-  assert.match(embedded, /className=\{styles\.pitchRemove\}/);
+  assert.match(embedded, /removalAction=\{editable && selection \? \{ label: `\$\{workflowCopy\.remove\} · \$\{card\.name\}`/);
   assert.match(embedded, /className=\{styles\.emptyPosition\}[^\n]*onClick=\{\(\) => openTacticalSelector\(slot\.id\)\}/);
   assert.match(embedded, /selectMyClubPlayer\(card\)/);
   assert.doesNotMatch(embedded, /browseCards\.slice\(0, 10\)/);
@@ -95,8 +117,9 @@ test("My Club opens the tactical field by default and keeps eligibility contextu
   assert.match(styles, /\.myClubMarketResults\{grid-template-columns:repeat\(2/);
   assert.match(styles, /\.myClubCommandGrid\{display:grid/);
   assert.doesNotMatch(styles, /data-touchline-pitch-boundary-run=true/);
-  assert.match(styles, /data-touchline-card-neon-trace=true\]\{display:block;opacity:\.38/);
-  assert.match(styles, /data-touchline-card-neon-trace-run=true\]\{display:none/);
+  // Pitch players use the same visible perimeter animation as the coach.
+  // Visibility/reduced-motion controls remain in the shared card system.
+  assert.doesNotMatch(styles, /\.myClubTacticalPitch \[data-touchline-card-neon-trace(?:-run|-base)?=true\]/);
   assert.match(styles, /\.myClubTacticalSlot>span\{width:96px\}/);
   assert.match(styles, /@media\(max-width:1180px\)\{[\s\S]*?--touchline-card-static-scale:\.181395/);
   assert.match(styles, /\.myClubTacticalSlot\[data-pitch-edge=end\]>button\{right:calc\(50% \+ 43px\);left:auto\}/);

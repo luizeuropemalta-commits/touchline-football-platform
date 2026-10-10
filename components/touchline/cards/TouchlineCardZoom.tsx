@@ -1,9 +1,10 @@
 "use client";
 
 import { useId, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent, type PointerEvent, type ReactNode } from "react";
-import { createPortal } from "react-dom";
+import { createPortal, flushSync } from "react-dom";
 import {
   Activity,
+  ArrowLeftRight,
   Award,
   BadgeDollarSign,
   Building2,
@@ -23,6 +24,7 @@ import {
   Star,
   Target,
   Trophy,
+  Trash2,
   UserRound,
 } from "lucide-react";
 import { useTouchlineDialog, useTouchlineDialogScrollLock } from "@/components/touchline/a11y/TouchlineDialog";
@@ -130,9 +132,11 @@ type TouchlineCardZoomProps = {
   details?: TouchlineCardZoomDetails;
   detailsContent?: ReactNode;
   socialProviderId?: string;
+  replacementAction?: { label: string; onSelect: () => void; disabled?: boolean };
+  removalAction?: { label: string; onSelect: () => void; disabled?: boolean };
 };
 
-export function TouchlineCardZoomDetailsPanel({ details, locale, draftLocalesEnabled = false }: { details: TouchlineCardZoomDetails; locale?: string; draftLocalesEnabled?: boolean }) {
+export function TouchlineCardZoomDetailsPanel({ details, locale, draftLocalesEnabled = false, primaryAction }: { details: TouchlineCardZoomDetails; locale?: string; draftLocalesEnabled?: boolean; primaryAction?: ReactNode }) {
   const identityFields = details.fields.filter((field) => field.group !== "performance");
   const performanceFields = details.fields.filter((field) => field.group === "performance");
   const [isFullPerformanceOpen, setIsFullPerformanceOpen] = useState(false);
@@ -246,8 +250,9 @@ export function TouchlineCardZoomDetailsPanel({ details, locale, draftLocalesEna
         </nav>
       ) : null}
     </aside>
-    {performanceFields.length ? (
+    {performanceFields.length || primaryAction ? (
       <aside className={`${styles.details} ${styles.performanceDetails}`} aria-label={details.performanceTitle ?? copy.performance}>
+        {primaryAction}
         <header className={styles.detailsHeader}>
           <span>TouchLine Verified</span>
           <h2>{details.performanceTitle ?? copy.performance}</h2>
@@ -318,6 +323,8 @@ export default function TouchlineCardZoom({
   details,
   detailsContent,
   socialProviderId,
+  replacementAction,
+  removalAction,
 }: TouchlineCardZoomProps) {
   const explicitLocale = locale === undefined ? undefined : resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled);
   const socialPlayerId = details?.profileActionKind === "coach" ? null : resolvePlayerSocialSubject(socialProviderId, details?.profileHref);
@@ -393,6 +400,19 @@ export default function TouchlineCardZoom({
     setIsOpen(true);
   }
 
+  const replacementButton = replacementAction ? <button type="button" className={`${styles.contractAction} ${styles.replacementAction}`} disabled={replacementAction.disabled} onClick={() => {
+    if (replacementAction.disabled) return;
+    // Release modal focus/scroll locks before opening the slot selector.
+    flushSync(() => setIsOpen(false));
+    replacementAction.onSelect();
+  }}><ArrowLeftRight size={24} aria-hidden="true" /><span>{replacementAction.label}</span></button> : null;
+  const removalButton = removalAction ? <button type="button" className={`${styles.contractAction} ${styles.removalAction}`} disabled={removalAction.disabled} onClick={() => {
+    if (removalAction.disabled) return;
+    flushSync(() => setIsOpen(false));
+    removalAction.onSelect();
+  }}><Trash2 size={22} aria-hidden="true" /><span>{removalAction.label}</span></button> : null;
+  const lineupActions = replacementButton || removalButton ? <div className={styles.lineupActions}>{replacementButton}{removalButton}</div> : null;
+
   return (
     <>
       <div
@@ -436,6 +456,7 @@ export default function TouchlineCardZoom({
             </button>
             <div className={styles.cardColumn}>
               <div ref={expandedRef} className={styles.expandedCard} data-card-zoom="expanded">{expandedContent ?? children}</div>
+              {!details || detailsContent ? lineupActions : null}
               {socialPlayerId && details ? <TouchlinePlayerSocialActions
                 draftLocalesEnabled={draftLocalesEnabled}
                 providerId={socialPlayerId}
@@ -456,7 +477,7 @@ export default function TouchlineCardZoom({
                 </a>
               ) : null}
             </div>
-            {detailsContent ? <aside className={styles.details}>{detailsContent}</aside> : details ? <TouchlineCardZoomDetailsPanel details={details} locale={explicitLocale} draftLocalesEnabled={draftLocalesEnabled} /> : null}
+            {detailsContent ? <aside className={styles.details}>{detailsContent}</aside> : details ? <TouchlineCardZoomDetailsPanel details={details} locale={explicitLocale} draftLocalesEnabled={draftLocalesEnabled} primaryAction={lineupActions} /> : null}
           </div>
         </div>,
         document.body,

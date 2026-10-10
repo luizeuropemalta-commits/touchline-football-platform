@@ -5,6 +5,9 @@ import TouchlineClubPerimeterTrace from "@/components/touchline/TouchlineClubPer
 import styles from "./ClubHubSquadGrid.module.css";
 
 import TouchlineCardZoom from "@/components/touchline/cards/TouchlineCardZoom";
+import TouchlinePlayerAvailabilityBadge from "@/components/touchline/cards/TouchlinePlayerAvailabilityBadge";
+import type { TouchlineFantasySidelinedPlayer } from "@/lib/football-data/types";
+import { availabilityBadgeForPlayer } from "@/lib/touchlineArena/player-availability-badge";
 import { getTouchlineCardZoomCopy } from "@/lib/touchlineArena/card-zoom-i18n";
 import { getTouchlineExactCardCopy } from "@/lib/touchlineArena/exact-card-i18n";
 import { getTouchlineClubHubRosterCopy, getTouchlineClubHubContractLabel } from "@/lib/touchlineArena/club-hub-roster-i18n";
@@ -36,6 +39,8 @@ const CARD_BATCH_SIZE = 8;
 
 type ClubHubSquadGridProps = {
   cards: ClubOwnerSquadCard[];
+  sidelined?: readonly TouchlineFantasySidelinedPlayer[];
+  sidelinedFixtureId?: string | null;
   locale: TouchLineLocale;
   draftLocalesEnabled?: boolean;
   labels: {
@@ -59,7 +64,7 @@ type ClubHubSquadGridProps = {
  * them. This preserves the canonical card component without hydrating 25–30
  * heavy products during the first mobile render.
  */
-export default function ClubHubSquadGrid({ cards, locale, labels, openProfileLabel, canEditCardEngine = false, initialCardCount = INITIAL_CARD_COUNT, cardRenderScale = 180 / 430, hideMarketValuePanel = false, className, draftLocalesEnabled = false }: ClubHubSquadGridProps) {
+export default function ClubHubSquadGrid({ cards, sidelined = [], sidelinedFixtureId = null, locale, labels, openProfileLabel, canEditCardEngine = false, initialCardCount = INITIAL_CARD_COUNT, cardRenderScale = 180 / 430, hideMarketValuePanel = false, className, draftLocalesEnabled = false }: ClubHubSquadGridProps) {
   const [visibleCount, setVisibleCount] = useState(initialCardCount);
   // The footballer remains present on every Club Hub surface. Published
   // profiles render in colour; incomplete editorial inputs use the same
@@ -97,6 +102,7 @@ export default function ClubHubSquadGrid({ cards, locale, labels, openProfileLab
             shirtNumber: card.shirtNumber,
             countryCode3: card.countryCode3,
           }, locale);
+          const availabilityBadge = availabilityBadgeForPlayer(sidelined, sidelinedFixtureId, card.id);
 
           return (
             <article
@@ -106,6 +112,9 @@ export default function ClubHubSquadGrid({ cards, locale, labels, openProfileLab
               data-squad-tier-frame={tierKey ?? "unresolved"}
             >
               <TouchlineClubPerimeterTrace accent={tierKey ? tierAccent : undefined} />
+              {availabilityBadge ? <span className={styles.availabilityBadge}>
+                <TouchlinePlayerAvailabilityBadge badge={availabilityBadge} locale={locale} />
+              </span> : null}
               <span className={`club-hub-rank ${styles.rank}`}>#{index + 1}</span>
               <TouchlineCardZoom draftLocalesEnabled={draftLocalesEnabled}
                 locale={locale}

@@ -1,6 +1,10 @@
 import type { ReactNode } from "react";
 
 import TouchlineCardZoom from "@/components/touchline/cards/TouchlineCardZoom";
+import TouchlinePlayerAvailabilityBadge from "@/components/touchline/cards/TouchlinePlayerAvailabilityBadge";
+import type { TouchlineFantasySidelinedPlayer } from "@/lib/football-data/types";
+import { availabilityBadgeForPlayer } from "@/lib/touchlineArena/player-availability-badge";
+import { resolveTouchlineCatalogueLocale } from "@/lib/touchlineArena/catalogue-locale";
 import { getTouchlineCardZoomCopy } from "@/lib/touchlineArena/card-zoom-i18n";
 import { getTouchlineExactCardCopy } from "@/lib/touchlineArena/exact-card-i18n";
 import { getTouchlineClubHubRosterCopy } from "@/lib/touchlineArena/club-hub-roster-i18n";
@@ -26,6 +30,8 @@ import styles from "./ClubHubMatchdayTechnicalArea.module.css";
 type ClubHubMatchdayTechnicalAreaProps = {
   clubName: string;
   technical: TouchLineClubMatchdayPresentation["technical"];
+  sidelined?: readonly TouchlineFantasySidelinedPlayer[];
+  sidelinedFixtureId?: string | null;
   locale: string;
   draftLocalesEnabled?: boolean;
   coachCard: ReactNode;
@@ -48,6 +54,8 @@ type ClubHubMatchdayTechnicalAreaProps = {
 export default function ClubHubMatchdayTechnicalArea({
   clubName,
   technical,
+  sidelined = [],
+  sidelinedFixtureId = null,
   locale,
   draftLocalesEnabled = false,
   coachCard,
@@ -123,9 +131,14 @@ export default function ClubHubMatchdayTechnicalArea({
                   shirtNumber: card.shirtNumber,
                   countryCode3: card.countryCode3,
                 }, locale);
+                const availabilityBadge = availabilityBadgeForPlayer(sidelined, sidelinedFixtureId, card.id);
                 return (
                   <li key={card.id}>
                     <span className={styles.cardNumber}>{index + 1}</span>
+                    {availabilityBadge ? <span className={styles.availabilityBadge}>
+                      <TouchlinePlayerAvailabilityBadge badge={availabilityBadge}
+                        locale={resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled)} />
+                    </span> : null}
                     <TouchlineCardZoom draftLocalesEnabled={draftLocalesEnabled}
                       locale={locale}
                       ariaLabel={zoomCopy.expandCard.replace("{playerName}", () => card.name)}
@@ -191,7 +204,7 @@ export default function ClubHubMatchdayTechnicalArea({
                         labels={labels}
                         imageLoading="lazy"
                         playerProfileHref={profileHref}
-                        staticRenderScale={104 / 430}
+                        initialRenderScale={104 / 430}
                         subscribeToRanking={false}
                         enableInteractiveNeon={false}
                         rankingMode="preview"

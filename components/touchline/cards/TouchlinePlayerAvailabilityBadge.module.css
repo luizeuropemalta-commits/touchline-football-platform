@@ -1,0 +1,59 @@
+.anchor {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 48px;
+  height: 48px;
+  z-index: 5;
+}
+
+.trigger {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border: 0;
+  padding: 0;
+  border-radius: 10px;
+  background: transparent;
+  cursor: help;
+}
+
+.trigger img {
+  display: block;
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+}
+
+.anchor[data-player-availability-badge="injury"] .trigger,
+.anchor[data-player-availability-badge="illness"] .trigger {
+  filter: drop-shadow(0 0 8px rgba(255, 30, 44, .42));
+}
+
+.trigger:focus-visible {
+  outline: 2px solid #a3ff12;
+  outline-offset: 2px;
+}
+
+.tooltip {
+  position: fixed;
+  z-index: 2147483000;
+  box-sizing: border-box;
+  width: max-content;
+  max-width: min(260px, calc(100vw - 32px));
+  padding: 8px 10px;
+  border: 1px solid rgba(163, 255, 18, .52);
+  border-radius: 9px;
+  background: #07120e;
+  color: #fff;
+  font: 600 12px/1.35 system-ui, sans-serif;
+  white-space: normal;
+  text-align: start;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .5);
+  pointer-events: auto;
+}
+
+/* Invisible hit area bridges the visual gap without changing the artwork. */
+.tooltip::before { content: ""; position: absolute; inset: -8px 0; z-index: -1; }

@@ -9,7 +9,7 @@ import { touchlinePlayerProfileHref } from "@/lib/touchlineArena/player-links";
 import { getTouchlineExactCardCopy } from "@/lib/touchlineArena/exact-card-i18n";
 import { touchlinePlayerPositionKind } from "@/lib/touchlineArena/position-aware-card-stats";
 
-export default function TouchlineGameweekCard({ card, locale, compact = false, displayWidth, fitContainer = false, draftLocalesEnabled = false }: {
+export default function TouchlineGameweekCard({ card, locale, compact = false, displayWidth, fitContainer = false, draftLocalesEnabled = false, replacementAction, removalAction }: {
   card: ClubOwnerSquadCard;
   locale: string;
   draftLocalesEnabled?: boolean;
@@ -17,6 +17,8 @@ export default function TouchlineGameweekCard({ card, locale, compact = false, d
   displayWidth?: number;
   /** Grid thumbnails follow their column; transformed pitch cards retain an explicit scale. */
   fitContainer?: boolean;
+  replacementAction?: { label: string; onSelect: () => void; disabled?: boolean };
+  removalAction?: { label: string; onSelect: () => void; disabled?: boolean };
 }) {
   const copy = getTouchlineExactCardCopy(locale, draftLocalesEnabled);
   const positionKind = touchlinePlayerPositionKind(card.position);
@@ -55,6 +57,8 @@ export default function TouchlineGameweekCard({ card, locale, compact = false, d
     profileHref,
   });
   return <TouchlineCardZoom
+    replacementAction={replacementAction}
+    removalAction={removalAction}
     locale={locale}
     draftLocalesEnabled={draftLocalesEnabled}
     ariaLabel={copy.cardAria.replace("{playerName}", () => card.name)}
@@ -64,7 +68,7 @@ export default function TouchlineGameweekCard({ card, locale, compact = false, d
     expandedContent={<TouchlineEliteExactCard
       player={exact}
       draftLocalesEnabled={draftLocalesEnabled}
-      hideMarketValuePanel
+      hideMarketValuePanel={false}
       staticRenderScale={390 / 430}
       runtimeLocaleOverride={locale}
       subscribeToRanking={false}
@@ -76,7 +80,7 @@ export default function TouchlineGameweekCard({ card, locale, compact = false, d
     <TouchlineEliteExactCard
       player={exact}
       draftLocalesEnabled={draftLocalesEnabled}
-      hideMarketValuePanel
+      hideMarketValuePanel={false}
       staticRenderScale={fitContainer ? undefined : resolvedDisplayWidth / 430}
       optimizeForLiveCompact={useLiveCompactAsset}
       runtimeLocaleOverride={locale}

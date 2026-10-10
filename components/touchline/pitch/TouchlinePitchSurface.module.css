@@ -93,6 +93,7 @@
   stroke-dasharray: 13 87;
   filter: drop-shadow(0 0 4px rgba(169,255,68,.88)) drop-shadow(0 0 10px rgba(108,255,55,.46));
   animation: touchlinePitchBoundaryTrace 9s linear infinite;
+  animation-play-state: var(--touchline-decoration-motion, paused);
 }
 
 @keyframes touchlinePitchBoundaryTrace {
@@ -466,6 +467,7 @@
   padding-inline: 2%;
   white-space: nowrap;
   animation: touchlineLedMarquee 20s linear infinite;
+  animation-play-state: var(--touchline-decoration-motion, paused);
   backface-visibility: hidden;
   will-change: translate;
 }

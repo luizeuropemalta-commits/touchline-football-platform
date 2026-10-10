@@ -4,17 +4,192 @@ import test from "node:test";
 
 const runtime = process.env.TOUCHLINE_FANTASY_PGLITE_MODULE;
 const { PGlite } = runtime ? await import(runtime) : { PGlite: null };
-const sql = ["20261002152457_touchline_fixture_quota_authority.sql", "20261003233637_touchline_sportmonks_prequery_authority.sql"]
+const baseSql = ["20261002152457_touchline_fixture_quota_authority.sql", "20261003233637_touchline_sportmonks_prequery_authority.sql"]
   .map(name => readFileSync(new URL(`../supabase/migrations/${name}`, import.meta.url), "utf8")).join("\n");
+const squadForward = readFileSync(new URL("../supabase/migrations/20261008120529_touchline_squad_quota_prequery_authority.sql", import.meta.url), "utf8");
+const qaCheckpointSql = readFileSync(new URL("../supabase/qa/012_touchline_qa_roster_quota_checkpoint.sql", import.meta.url), "utf8");
+const sql = `${baseSql}\n${squadForward}`;
 const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 
 test("forward authority expands only the endpoint constraint and existing service-only RPCs", () => {
-  const forward = readFileSync(new URL("../supabase/migrations/20261003233637_touchline_sportmonks_prequery_authority.sql",import.meta.url),"utf8");
+  const forward = squadForward;
   assert.doesNotMatch(forward,/create table|truncate|delete from|set enabled\s*=\s*true/i);
   assert.match(forward,/for update/);
   assert.match(forward,/security definer set search_path = ''/);
   assert.match(forward,/revoke all on function public\.touchline_fixture_quota_admit/);
   assert.match(forward,/grant execute on function public\.touchline_fixture_quota_complete[\s\S]*to service_role/);
+});
+
+test("actual quota SQL denies squad families until their provider entities are admitted", {skip:!runtime}, async () => {
+  const db = new PGlite();
+  try {
+    await db.exec("create role anon; create role authenticated; create role service_role;");
+    await db.exec(baseSql);
+    await db.exec("insert into public.touchline_fixture_quota_scopes(account_scope,enabled) values('qa-roster',true);");
+    for (const [number, endpoint] of [[1, "squad"], [2, "squadExtended"]] as const) {
+      const receipt = (await db.query(
+        "select public.touchline_fixture_quota_admit('qa-roster',$1,$2,1,60000) receipt",
+        [id(number), endpoint],
+      )).rows[0].receipt;
+      assert.deepEqual(receipt, { allowed: false }, `${endpoint} must fail closed before a verified SQL expansion`);
+    }
+    assert.equal((await db.query(
+      "select count(*)::int n from public.touchline_fixture_quota_attempts where account_scope='qa-roster'",
+    )).rows[0].n, 0);
+  } finally { await db.close(); }
+});
+
+test("actual squad forward SQL admits only verified PlayerTeam and Player receipts", {skip:!runtime}, async () => {
+  const db = new PGlite();
+  try {
+    await db.exec("create role anon; create role authenticated; create role service_role;");
+    await db.exec(sql);
+    assert.doesNotMatch(squadForward, /create table|truncate|delete from|set enabled\s*=\s*true/i);
+    for (const [endpoint, entity] of [["squad", "PlayerTeam"], ["squadExtended", "Player"]] as const) {
+      for (const mode of ["success", "wrong-entity", "null-entity", "transport", "cooldown"] as const) {
+        const scope = `${endpoint.toLowerCase()}-${mode}`;
+        await db.query("insert into public.touchline_fixture_quota_scopes(account_scope,enabled) values($1,true)", [scope]);
+        const admit = async (n: number) => (await db.query(
+          "select public.touchline_fixture_quota_admit($1,$2,$3,1,60000) v", [scope,id(n),endpoint],
+        )).rows[0].v;
+        const first = await admit(1);
+        assert.equal(first.allowed, true, `${endpoint}/${mode} admission`);
+        assert.deepEqual(await admit(2), {allowed:false}, "account token must exclude a second request");
+        const obs = {
+          requestId:id(1),attempt:1,operation:endpoint,observedAt:new Date().toISOString(),
+          status:mode==="transport"?0:mode==="cooldown"?429:200,
+          remaining:mode==="cooldown"?0:10,
+          requestedEntity:mode==="wrong-entity"?"Fixture":mode==="null-entity"?null:entity,
+          resetAt:new Date(Date.now()+120000).toISOString(),
+          cooldownUntil:mode==="cooldown"?new Date(Date.now()+120000).toISOString():null,
+        };
+        const complete = () => db.query(
+          "select public.touchline_fixture_quota_complete($1,$2,$3,1,$4,$5::jsonb) v",
+          [scope,id(1),endpoint,first.token,JSON.stringify(obs)],
+        );
+        assert.deepEqual((await complete()).rows[0].v,{persisted:true});
+        assert.deepEqual(await admit(1),{allowed:false},"request replay must not admit HTTP again");
+        assert.equal((await admit(2)).allowed,mode==="success",`${endpoint}/${mode} next request`);
+        assert.deepEqual((await complete()).rows[0].v,{persisted:true},"identical completion is idempotent");
+        const state = (await db.query(
+          "select blocked_unknown,cooldown_until > clock_timestamp() cooling from public.touchline_fixture_quota_scopes where account_scope=$1",
+          [scope],
+        )).rows[0];
+        if (["wrong-entity","null-entity","transport"].includes(mode)) assert.equal(state.blocked_unknown,true);
+        if (mode==="cooldown") assert.equal(state.cooling,true);
+      }
+    }
+    const acl=(await db.query(
+      "select has_function_privilege('anon','public.touchline_fixture_quota_admit(text,uuid,text,integer,integer)','execute') anon, has_function_privilege('service_role','public.touchline_fixture_quota_admit(text,uuid,text,integer,integer)','execute') service",
+    )).rows[0];
+    assert.deepEqual(acl,{anon:false,service:true});
+  } finally { await db.close(); }
+});
+
+test("characterization: squad admission does not reserve the twenty-club batch budget", {skip:!runtime}, async () => {
+  const db = new PGlite();
+  try {
+    await db.exec("create role anon; create role authenticated; create role service_role;");
+    await db.exec(sql);
+    await db.exec("insert into public.touchline_fixture_quota_scopes(account_scope,enabled) values('qa-roster',true);");
+    const first = (await db.query(
+      "select public.touchline_fixture_quota_admit('qa-roster',$1,'squad',1,60000) v", [id(101)],
+    )).rows[0].v;
+    assert.equal(first.allowed, true);
+    const observation = {
+      requestId:id(101),attempt:1,operation:"squad",observedAt:new Date().toISOString(),status:200,
+      remaining:1,requestedEntity:"PlayerTeam",resetAt:new Date(Date.now()+120000).toISOString(),cooldownUntil:null,
+    };
+    assert.deepEqual((await db.query(
+      "select public.touchline_fixture_quota_complete('qa-roster',$1,'squad',1,$2,$3::jsonb) v",
+      [id(101),first.token,JSON.stringify(observation)],
+    )).rows[0].v,{persisted:true});
+    const second = (await db.query(
+      "select public.touchline_fixture_quota_admit('qa-roster',$1,'squad',1,60000) v", [id(102)],
+    )).rows[0].v;
+    assert.equal(second.allowed, true,"the current SQL admits the next request with only one remaining; this is not a batch reservation");
+  } finally { await db.close(); }
+});
+
+test("QA roster checkpoint requires fresh headroom for both Sportmonks squad entities", {skip:!runtime}, async () => {
+  const db = new PGlite();
+  try {
+    await db.exec("create role anon; create role authenticated; create role service_role;");
+    await db.exec(sql);
+    await db.exec(`create function public.touchline_assert_qa_fixture_target(p_project_ref text)
+      returns void language plpgsql as $$ begin
+        if p_project_ref is distinct from 'xgxbwqxjssxxuihuwmgy' then raise exception 'wrong QA project'; end if;
+      end $$;`);
+    await db.exec(qaCheckpointSql);
+    await db.exec("insert into public.touchline_fixture_quota_scopes(account_scope,enabled) values('qa-roster',true);");
+    const checkpoint = async (remainingClubs: number) => (await db.query(
+      "select public.touchline_qa_roster_quota_checkpoint('xgxbwqxjssxxuihuwmgy','qa-roster',$1) v",
+      [remainingClubs],
+    )).rows[0].v;
+    assert.deepEqual(await checkpoint(20),{allowed:false},"unobserved balance must not authorize the first request");
+    async function observe(number: number, endpoint: "squad" | "squadExtended", entity: string, remaining: number) {
+      const admission = (await db.query(
+        "select public.touchline_fixture_quota_admit('qa-roster',$1,$2,1,60000) v",
+        [id(number),endpoint],
+      )).rows[0].v;
+      assert.equal(admission.allowed,true);
+      const observation = {
+        requestId:id(number),attempt:1,operation:endpoint,observedAt:new Date().toISOString(),
+        status:200,remaining,requestedEntity:entity,
+        resetAt:new Date(Date.now()+120000).toISOString(),cooldownUntil:null,
+      };
+      assert.deepEqual((await db.query(
+        "select public.touchline_fixture_quota_complete('qa-roster',$1,$2,1,$3,$4::jsonb) v",
+        [id(number),endpoint,admission.token,JSON.stringify(observation)],
+      )).rows[0].v,{persisted:true});
+    }
+    await observe(201,"squad","PlayerTeam",1000);
+    assert.deepEqual(await checkpoint(19),{allowed:false},"both entity balances are required");
+    await observe(202,"squadExtended","Player",1000);
+    assert.deepEqual(await checkpoint(20),{allowed:true,remaining_clubs:20},"the initial preflight needs the whole batch budget");
+    assert.deepEqual(await checkpoint(19),{allowed:true,remaining_clubs:19});
+    // Corrupt only the disposable database's receipts to exercise the read gate
+    // independently of the completion RPC's own input validation.
+    for (const requestId of [id(201),id(202)]) {
+      const original = (await db.query(
+        "select observation from public.touchline_fixture_quota_attempts where request_id=$1",
+        [requestId],
+      )).rows[0].observation;
+      const cases: [string, Record<string, unknown>][] = [
+        ["stale", {observedAt:new Date(Date.now()-180000).toISOString()}],
+        ["future", {observedAt:new Date(Date.now()+60000).toISOString()}],
+        ["expired reset", {resetAt:new Date(Date.now()-60000).toISOString()}],
+        ["invalid observation time", {observedAt:"not-a-date"}],
+        ["invalid reset time", {resetAt:"not-a-date"}],
+        ["missing observation time", {observedAt:null}],
+        ["missing reset time", {resetAt:null}],
+        ["invalid remaining", {remaining:"unknown"}],
+        ["overflow remaining", {remaining:"9999999999999999999999"}],
+        ["missing remaining", {remaining:null}],
+        ["non-success status", {status:503}],
+        ["wrong entity", {requestedEntity:"Fixture"}],
+      ];
+      for (const [label,patch] of cases) {
+        await db.query(
+          "update public.touchline_fixture_quota_attempts set observation=$2::jsonb where request_id=$1",
+          [requestId,JSON.stringify({...original,...patch})],
+        );
+        assert.deepEqual(await checkpoint(20),{allowed:false},`${requestId}/${label} must fail closed`);
+        await db.query(
+          "update public.touchline_fixture_quota_attempts set observation=$2::jsonb where request_id=$1",
+          [requestId,JSON.stringify(original)],
+        );
+        assert.deepEqual(await checkpoint(20),{allowed:true,remaining_clubs:20},`${label}: restored receipt must recover`);
+      }
+    }
+    await observe(203,"squad","PlayerTeam",550);
+    assert.deepEqual(await checkpoint(19),{allowed:false},"500-call reserve plus 57 possible attempts is required");
+    assert.deepEqual(await checkpoint(21),{allowed:false},"a malformed remaining-club count fails closed");
+    const acl = (await db.query(
+      "select has_function_privilege('anon','public.touchline_qa_roster_quota_checkpoint(text,text,integer)','execute') anon, has_function_privilege('authenticated','public.touchline_qa_roster_quota_checkpoint(text,text,integer)','execute') authenticated, has_function_privilege('service_role','public.touchline_qa_roster_quota_checkpoint(text,text,integer)','execute') service",
+    )).rows[0];
+    assert.deepEqual(acl,{anon:false,authenticated:false,service:true});
+  } finally { await db.close(); }
 });
 
 test("actual forward SQL: four exact tuples, mismatches, transport uncertainty, cooldown and replay fail closed", {skip:!runtime}, async () => {

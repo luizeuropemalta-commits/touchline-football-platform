@@ -67,6 +67,9 @@ function produce(expression: typeof expressions[number], locale: string, positio
     TOUCHLINE_CARD_STUDIO_LAYOUT_KEY: "preserved-layout", staticVisualQa: false, cardRenderScale: 0.5,
     // Matches the default prop on all three ClubHub artwork consumers.
     hideMarketValuePanel: false,
+    // Optional Gameweek action is absent in this position-only caller fixture.
+    replacementAction: undefined,
+    removalAction: undefined,
     fitContainer: false, resolvedDisplayWidth: 132, useLiveCompactAsset: false,
     TouchlineCardZoom: "zoom-boundary", TouchlineEliteExactCard: "artwork-boundary", CompactPlayerCard: "compact-boundary",
   };

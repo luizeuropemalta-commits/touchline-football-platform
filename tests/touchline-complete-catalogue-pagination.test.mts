@@ -5,6 +5,7 @@ import test from "node:test";
 import { runInNewContext } from "node:vm";
 import { applyTouchlineSeasonPoints } from "../lib/touchlineArena/matchday-player-points.ts";
 import { projectTouchlineCardStatsByPosition } from "../lib/touchlineArena/position-aware-card-stats.ts";
+import { canonicalSportmonksPlayerId } from "../lib/touchlineArena/match-card-indicator.ts";
 import { parseTouchlinePublicEditorialCardPresentation } from "../lib/touchlineArena/editorial-card-profile.ts";
 import { isTouchlineProvisionalColumnsUnavailable } from "../lib/touchlineArena/card-engine-provisional-schema-compat.ts";
 import { TOUCHLINE_PROVISIONAL_MARKET_VALUE_EUR, TOUCHLINE_PROVISIONAL_MISSING_MARKET_VALUE, TOUCHLINE_PROVISIONAL_MISSING_SHIRT } from "../lib/touchlineArena/card-engine-provisional-policy.ts";
@@ -108,7 +109,7 @@ function scenario(options: Options = {}) {
   const helperPath = "lib/touchlineArena/complete-catalogue-read-server.ts";
   const pagination = runInNewContext(`${code(helperPath)}\n({ createCompleteTouchlineCatalogueAdmin, loadCompleteTouchlineCataloguePresentations });`, { loadTouchlinePublishedCardPresentations, isTouchlineProvisionalColumnsUnavailable, console: { warn() {} } });
   const context = {
-    ...shared, ...pagination, loadTouchlinePublishedCardPresentations, applyTouchlineSeasonPoints,
+    ...shared, ...pagination, loadTouchlinePublishedCardPresentations, applyTouchlineSeasonPoints, canonicalSportmonksPlayerId,
     readPublicSeasonPlayerPoints: (...args: unknown[]) => { projectionReads++; return realSeasonReader(...args); },
     inferArenaRole: () => "goalkeeper", makeArenaShortName: (value: string) => value,
     normalizeOfficialShirtNumber: (value: unknown) => value,

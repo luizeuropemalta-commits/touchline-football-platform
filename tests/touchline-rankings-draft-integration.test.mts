@@ -48,7 +48,7 @@ function compile(source: string, modules: Record<string, unknown> = {}) {
 }
 function nodes(node: React.ReactNode): Element[] {
   return React.Children.toArray(node).flatMap(child => React.isValidElement<Record<string, unknown>>(child)
-    ? [child, ...nodes(child.props.children as React.ReactNode)] : []);
+    ? [child, ...nodes(child.props.children as React.ReactNode), ...nodes(child.props.navigation as React.ReactNode)] : []);
 }
 
 test("actual Rankings panels propagate opt-in while default remains English", () => {

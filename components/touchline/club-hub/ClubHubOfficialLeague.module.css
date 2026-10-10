@@ -1,8 +1,8 @@
 .layout {
   display: grid;
   width: min(920px, 100%);
-  margin-inline: auto;
-  grid-template-columns: minmax(0, 45fr) minmax(0, 55fr);
+  margin-inline: 0;
+  grid-template-columns: minmax(0, 1fr);
   align-items: start;
   gap: clamp(14px, 1.6vw, 24px);
 }

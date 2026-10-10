@@ -32,9 +32,9 @@ function harness() {
   let timerCount = 0;
   let nextDeadline = 0;
   const deadlines = new Map<number, () => void>();
-  const exports: { select?: (id: number, permitted?: boolean) => (() => void) | undefined; poll?: () => () => void } = {};
+  const exports: { select?: (id: number, permitted?: boolean, railOnly?: boolean) => (() => void) | undefined; poll?: () => () => void } = {};
   runInNewContext(ts.transpileModule(`
-    export function select(id, canReadMatchDetail=true) {
+    export function select(id, canReadMatchDetail=true, railOnly=false) {
       const selected={providerId:id};
       return (${detail.arguments[0].getText(ast)})();
     }
@@ -75,6 +75,30 @@ test("existing 45-second cadence refreshes events without a goal and replaces co
   assert.deepEqual(h.snapshots.map(s => { assert.ok(s); return s.events; }), [["yellow"], ["yellow", "substitution"], ["substitution", "late-final-correction"]]);
   assert.equal(h.timerCount, 1);
   stop(); h.stopPolling(); assert.equal(h.timerActive, false);
+  assert.equal(h.deadlineCount, 0);
+});
+
+test("embedded rail never reads protected detail, while the authorized full view still refreshes", async () => {
+  const h = harness();
+  for (const permitted of [false, true]) {
+    assert.equal(h.select(7, permitted, true), undefined);
+    await h.tick();
+    assert.equal(h.requests.length, 0);
+    assert.equal(h.deadlineCount, 0);
+  }
+  assert.equal(h.select(7, false, false), undefined);
+  await h.tick();
+  assert.equal(h.requests.length, 0);
+  const stop = h.select(7, true, false)!;
+  assert.equal(h.requests.length, 1, "positive control: authorized full view reads detail");
+  h.requests[0].result.resolve(response(7, ["verified"]));
+  await flush();
+  assert.equal(h.snapshots.length, 1);
+  stop();
+  assert.equal(h.select(7, true, true), undefined);
+  await h.tick();
+  assert.equal(h.requests.length, 1, "returning to the rail must remove the detail refresh callback");
+  h.stopPolling();
   assert.equal(h.deadlineCount, 0);
 });
 

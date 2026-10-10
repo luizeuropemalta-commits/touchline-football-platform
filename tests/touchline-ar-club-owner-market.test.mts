@@ -11,22 +11,24 @@ import {
 const ar = {
   nameUnavailable: "الاسم غير متاح", photoAria: "تغيير صورة الملف الشخصي — غير متاح", photoUnavailable: "تحديث الصورة غير متاح بعد",
   yourProfile: "ملفك الشخصي", location: "الموقع", nationality: "الجنسية", memberSince: "عضو منذ", watchIntro: "مشاهدة المقدمة",
-  bank: "البنك", inactive: "غير نشط", credits: "أرصدة TouchLine",
-  purchasesUnavailable: "شراء الأرصدة غير متاح بعد. لا يمكن إجراء أي دفعة في هذا القسم.", buyCredits: "شراء الأرصدة",
-  notCreditBalance: "تظهر أدناه ميزانية تشكيلتك الأساسية ونقاطك. وهي ليست رصيدًا من الأرصدة.",
+  plan: "خطتي", planStandard: "قياسي", planPro: "PRO", planActive: "نشط", planInactive: "غير نشط", marketPower: "قوة السوق", marketPowerUnavailable: "قوة السوق غير متاحة", activatePlan: "تفعيل الخطة", renewPlan: "تجديد",
+  proMember: "عضو PRO", proAccess: "وصول PRO", proPrivileges: "مزايا العضو الحصرية",
+  planUntil: "صالح حتى {date}", planActiveNoEnd: "خطتك نشطة.", planInactiveDetail: "فعّل خطة لإدارة تشكيلتك الأساسية.", planStandardPrice: "49.90 € سنويًا", planStandardBenefit: "وصول كامل إلى اللعبة والترتيب.", planProPrice: "89.90 € سنويًا", planProBenefit: "مظهر مميز وسجل وتقارير وتنبيهات.",
+  planActionUnavailable: "تفعيل الخطة وتجديدها غير متاحين بعد.", virtualBudgetSeparate: "تبقى ميزانية تشكيلتك الأساسية منفصلة عن خطتك.",
 } as const;
 
-test("Arabic ClubOwner Market copy is complete without payment, currency, or placeholder invention", () => {
+test("Arabic ClubOwner plan copy preserves approved prices, unavailable payments and the date template", () => {
   assert.deepEqual(TOUCHLINE_CLUB_OWNER_MARKET_CATALOGUES["ar-SA"], ar);
   for (const [key, value] of Object.entries(ar)) {
     assert.ok(value.trim(), `${key} must not be empty`);
-    assert.doesNotMatch(value, /TODO|FIXME|\[(?:translate|missing)\]|\{[^}]+\}/i, `${key} unresolved marker`);
-    assert.doesNotMatch(value, /€|£|\b(?:GBP|BRL|USD|SAR)\b|9[,.]99/);
-    assert.match(value.replaceAll("TouchLine", ""), /[\u0600-\u06ff]/, `${key} must contain Arabic presentation text`);
+    const text = key === "planUntil" ? value.replace("{date}", "") : value;
+    assert.doesNotMatch(text, /TODO|FIXME|\[(?:translate|missing)\]|\{[^}]+\}/i, `${key} unresolved marker`);
+    if (key !== "planStandardPrice" && key !== "planProPrice") assert.doesNotMatch(value, /€|£|\b(?:GBP|BRL|USD|SAR)\b|9[,.]99/);
+    if (key !== "planPro") assert.match(text, /[\u0600-\u06ff]/, `${key} must contain Arabic presentation text`);
   }
-  assert.match(ar.credits, /TouchLine/);
-  assert.match(ar.purchasesUnavailable, /غير متاح/);
-  assert.match(ar.notCreditBalance, /ليست/);
+  assert.equal(ar.planPro, "PRO");
+  assert.match(ar.planActionUnavailable, /غير متاح/);
+  assert.match(ar.virtualBudgetSeparate, /منفصلة/);
 });
 
 test("Arabic ClubOwner Market copy remains an unpublished draft behind the EN/PT gate", () => {

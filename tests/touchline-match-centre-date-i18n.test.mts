@@ -185,7 +185,7 @@ test("real JSX keeps dates, labels, original datetime and conditional rows acros
   const probeValue = probe();
   for (const language of locales) {
     const dictionary = probeValue.copy(language, true);
-    const context = { ...probeValue.api, language, dictionary, textDirection: language === "ar-SA" ? "rtl" : "ltr", draftLocalesEnabled: true, initialTimeZone: "Europe/Malta", now: Date.parse(instant), fixture: { startsAt: instant },
+    const context = { ...probeValue.api, isResultSection: false, language, dictionary, textDirection: language === "ar-SA" ? "rtl" : "ltr", draftLocalesEnabled: true, timeZone: "Europe/Malta", now: Date.parse(instant), fixture: { startsAt: instant },
       selected: { name: "Official <&> $&", startsAt: instant, verifiedAt: instant },
       verifiedDetail: { lineupAvailableAt: "2026-08-29T14:05:00+02:00" },
       readMetadata: { degraded: true, state: "stale", fetchedAt: instant } };

@@ -2,6 +2,19 @@
 
 Status: **OWNER-APPROVED VISUAL — LOCAL QA ONLY**
 
+## Current-runtime audit note — 10 October 2026
+
+The V3 figures below are frozen historical artwork evidence, not the current
+scoring contract. The live 043 reader now requires persisted `player_scoring_v4`
+settlements (rating-only); the live package validator requires TouchLine Points
+to equal the verified match rating. It must not reuse the historical +5 sample
+as a current result or add a goal bonus. This note does not alter the approved
+artwork, checksums, source snapshot or publication eligibility.
+
+Current references: `lib/touchlineArena/social-confirmed-event-draft-server.ts`
+and `lib/touchlineArena/social-events-live-contract.ts`. Their source inspection
+does not establish rendered-art approval or hosted QA readiness.
+
 Approved by: Luiz Lopez
 
 Approved on: 2 September 2026 (Europe/Malta)

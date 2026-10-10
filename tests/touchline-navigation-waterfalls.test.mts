@@ -109,9 +109,9 @@ test("ClubHub returns club links before deferred catalogue is requested", async 
   assert.equal(tree.type, "main");
   assert.equal(reads, 0);
   const children = contentShell(tree).props.children;
-  assert.equal(children[2].props.children[0].props.href, "/touchline-clubs/synthetic?lang=en-GB");
-  assert.equal(children[3].type, require("react").Suspense);
-  assert.equal(children[3].props.fallback.props.role, "status");
+  assert.equal(children[1].props.children[0].props.href, "/touchline-clubs/synthetic?lang=en-GB");
+  assert.equal(children[2].type, require("react").Suspense);
+  assert.equal(children[2].props.fallback.props.role, "status");
 });
 
 test("Rankings starts independent reads while authentication is pending and shares one ranking", async () => {
@@ -141,9 +141,10 @@ test("Rankings starts independent reads while authentication is pending and shar
   await new Promise(resolve => setImmediate(resolve));
   assert.deepEqual(calls.slice().sort(), ["catalogue", "coaches", "count", "fixtures", "ranking", "xi"]);
   release({ data: { user: { email: "synthetic@example.test" } }, error: null });
-  const shell = contentShell(await result);
+  const pageTree = await result;
+  const shell = contentShell(pageTree);
   assert.equal(shell.type, "main");
-  const navigation = shell.props.children[0].props.children[0];
+  const navigation = pageTree.props.children[0].props.navigation;
   assert.equal(navigation.props.surface, "authenticated");
   const sportingBoundary = shell.props.children[1];
   assert.equal(sportingBoundary.type, require("react").Suspense);
@@ -164,7 +165,7 @@ test("Rankings starts independent reads while authentication is pending and shar
   const heroElement = frame.props.children[1].props.children;
   const hero = await heroElement.type(heroElement.props);
   assert.equal(hero.props.totalRankedCards, 5, "Do not truncate the catalogue to the top three");
-  assert.equal(shell.props.children[0].props.children[0], navigation, "Navigation is owned by the shell, not sporting completion");
+  assert.equal(pageTree.props.children[0].props.navigation, navigation, "Navigation is owned by the brand header, not sporting completion");
 });
 
 function deferred<T>() {
@@ -294,7 +295,7 @@ test("Ranking content resolves while only its round badge awaits the unchanged s
   const result = h.page({ searchParams: Promise.resolve({ lang: "en-GB" }) });
   h.auth.resolve({ data: { user: null } });
   const shell = contentShell(await result);
-  const badge = shell.props.children[0].props.children[1].props.children;
+  const badge = shell.props.children[0].props.children.props.children;
   const frameElement = shell.props.children[1].props.children;
   const frame = await frameElement.type(frameElement.props);
   const sporting = frame.props.children[2].props.children.props.children[0].props.children;
@@ -345,7 +346,7 @@ for (const timing of ["before auth", "after content"] as const) {
     await turn();
     if (timing === "after content") { h.fixtures.reject(error); await turn(); }
     await content;
-    const badge = shell.props.children[0].props.children[1].props.children;
+    const badge = shell.props.children[0].props.children.props.children;
     await assert.rejects(badge.type(badge.props), (reason: unknown) => reason === error);
     assert.equal(ready, true, "Schedule rejection belongs to the round badge, not the sporting boundary");
   });
@@ -364,7 +365,7 @@ test("Ranking still propagates catalogue rejection while schedule is pending", a
   h.catalogue.reject(error);
   await rejected;
   h.fixtures.resolve([]);
-  const badge = shell.props.children[0].props.children[1].props.children;
+  const badge = shell.props.children[0].props.children.props.children;
   assert.equal((await badge.type(badge.props)).props.children[1], "Matchweek awaiting provider");
 });
 

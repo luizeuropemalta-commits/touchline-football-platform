@@ -126,20 +126,20 @@ export async function syncSportmonksStarterFoundation(
     }
   }
 
-  await upsertProviderMapping(admin, {
-    provider: "sportmonks",
-    providerEntityType: "competition",
-    providerEntityId: competitionProviderId,
-    touchlineEntityType: "competition",
-    touchlineEntityId: competition.id,
-  });
-  await upsertProviderMapping(admin, {
-    provider: "sportmonks",
-    providerEntityType: "club",
-    providerEntityId: clubProviderId,
-    touchlineEntityType: "club",
-    touchlineEntityId: club.id,
-  });
+  for (const mapping of [
+    { type: "competition", providerId: competitionProviderId, id: competition.id },
+    { type: "club", providerId: clubProviderId, id: club.id },
+  ]) {
+    try {
+      await upsertProviderMapping(admin, {
+        provider: "sportmonks", providerEntityType: mapping.type,
+        providerEntityId: mapping.providerId, touchlineEntityType: mapping.type,
+        touchlineEntityId: mapping.id,
+      });
+    } catch {
+      result.errors.push(`Could not persist ${mapping.type} provider identity mapping.`);
+    }
+  }
 
   result.ok = result.errors.length === 0;
   result.status = result.errors.length === 0 ? "success" : "partial";
@@ -327,7 +327,7 @@ async function upsertProviderMapping(
     touchlineEntityId: string;
   },
 ) {
-  await admin
+  const { error } = await admin
     .from("football_provider_mappings")
     .upsert(
       {
@@ -341,4 +341,5 @@ async function upsertProviderMapping(
       },
       { onConflict: "provider,provider_entity_type,provider_entity_id" },
     );
+  if (error) throw new Error("Could not persist provider identity mapping.");
 }

@@ -20,6 +20,9 @@ import { createTouchlineArenaCoachSlot, type TouchlineArenaCoachSlot } from "@/l
 import { loadTouchLineCoachRanking } from "@/lib/touchlineArena/coach-ranking-server";
 import type { TouchlineCoachCompetitionSnapshot } from "@/lib/touchlineArena/coach-scoring";
 import { formatTouchlineMarketValueEur } from "@/lib/touchlineArena/editorial-card-profile";
+import { canonicalSportmonksPlayerId } from "@/lib/touchlineArena/match-card-indicator";
+import { readGameweekMatchCardIndicators, type GameweekMatchCardIndicator } from "@/lib/touchlineArena/match-card-feed-reader";
+import { readGameweekPlayerAvailability, type GameweekPlayerAvailabilityIndicator } from "@/lib/touchlineArena/player-availability-reader";
 import { readTouchlineFormationGeometryRegistry } from "@/lib/touchlineArena/formation-geometry-server";
 import type { TouchlineFormationGeometryRegistry } from "@/lib/touchlineArena/formation-geometry";
 import {
@@ -84,6 +87,7 @@ export type TouchlineFantasyMatchHistory = Readonly<{
 export type TouchlineFantasySnapshot = Readonly<{
   userId: string;
   entitlementActive: boolean;
+  plan: Readonly<{ active: boolean; expiresAt: string | null }>;
   subscription: Readonly<{ amountMinor: 2990; currency: "GBP" }>;
   config: Readonly<{
     budgetEur: number;
@@ -104,6 +108,8 @@ export type TouchlineFantasySnapshot = Readonly<{
   catalogue: readonly ClubOwnerSquadCard[];
   coaches: readonly TouchlineFantasyCoachView[];
   lineupAlerts: readonly TouchlineFantasyLineupAlert[];
+  matchCardIndicators?: readonly GameweekMatchCardIndicator[] | null;
+  playerAvailabilityIndicators?: readonly GameweekPlayerAvailabilityIndicator[] | null;
   formationRegistry: TouchlineFormationGeometryRegistry;
   gameweekScore: number;
   seasonScore: number;
@@ -160,7 +166,7 @@ async function loadCatalogue(admin: NonNullable<ReturnType<typeof createAdminCli
     readPublicSeasonPlayerPoints(playerIds, { providedAdmin: catalogueAdmin }),
     (async () => {
       const playersResponse = await catalogueAdmin.from("football_players")
-        .select("id,display_name,name,current_club_id,nationality,country_id,position,provider_position,detailed_position")
+        .select("id,provider,provider_player_id,display_name,name,current_club_id,nationality,country_id,position,provider_position,detailed_position")
         .in("id", playerIds);
       const players = rows(playersResponse.data);
       const clubIds = [...new Set(players.map((player) => text(player.current_club_id)).filter((id): id is string => Boolean(id)))];
@@ -197,6 +203,7 @@ async function loadCatalogue(admin: NonNullable<ReturnType<typeof createAdminCli
     return [{
       id: playerId,
       canonicalPlayerId: playerId,
+      providerPlayerId: canonicalSportmonksPlayerId(player, playerId),
       name,
       shortName: makeArenaShortName(name),
       role: inferArenaRole(position),
@@ -336,7 +343,7 @@ export async function loadTouchlineFantasySnapshot(user: User): Promise<Touchlin
 }
 
 export type TouchlineFantasyArenaSnapshot = Pick<TouchlineFantasySnapshot,
-  "activeGameweek" | "userGameweek" | "selections" | "catalogue" | "formationRegistry">;
+  "activeGameweek" | "userGameweek" | "selections" | "catalogue" | "formationRegistry" | "playerAvailabilityIndicators">;
 
 export async function loadTouchlineFantasyArenaSnapshot(user: User, formationRegistry?: TouchlineFormationGeometryRegistry, timing?: ArenaPhaseTiming): Promise<TouchlineFantasyArenaSnapshot | null> {
   try { return await loadFantasySnapshotCore(user, "arena", formationRegistry, timing); }
@@ -404,6 +411,9 @@ async function loadFantasySnapshotCore(user: User, projection: "full" | "arena",
   const entitlementActive = text(entitlement?.status) === "active"
     && (!text(entitlement?.current_period_start) || Date.parse(text(entitlement?.current_period_start)!) <= now)
     && (!text(entitlement?.current_period_end) || Date.parse(text(entitlement?.current_period_end)!) > now);
+  const entitlementPeriodEnd = text(entitlement?.current_period_end);
+  const planExpiresAt = entitlementActive && entitlementPeriodEnd && Number.isFinite(Date.parse(entitlementPeriodEnd))
+    ? entitlementPeriodEnd : null;
   if (entitlementActive && activeGameweek?.state === "MARKET_OPEN") {
     timing?.mark("prepare");
     const { error: preparationError } = await admin.rpc("touchline_fantasy_prepare_user_gameweek", { p_user_id: user.id, p_gameweek_id: activeGameweek.id });
@@ -482,7 +492,14 @@ async function loadFantasySnapshotCore(user: User, projection: "full" | "arena",
   } : null;
   // Keep every lifecycle writer above. Only unused read-only enrichments are
   // omitted; the Arena receives the same complete catalogue and locked XI.
-  if (projection === "arena") return { activeGameweek, userGameweek, selections, catalogue, formationRegistry };
+  const playerAvailabilityIndicators = activeGameweek
+    ? await readGameweekPlayerAvailability(admin, seasonId, activeGameweek.id,
+      selections.map(selection => selection.playerId), catalogue) : [];
+  if (projection === "arena") return { activeGameweek, userGameweek, selections, catalogue, formationRegistry, playerAvailabilityIndicators };
+  const matchCardIndicators = activeGameweek && ["LOCKED", "LIVE", "FINAL", "SETTLED"].includes(activeGameweek.state)
+    ? await readGameweekMatchCardIndicators(admin, seasonId, activeGameweek.id,
+      selections.map((selection) => selection.playerId), catalogue)
+    : [];
   const matchHistory = rows(historyData).flatMap((row): TouchlineFantasyMatchHistory[] => {
     const fixtureId = text(row.fixture_id);
     const playerId = text(row.player_id);
@@ -516,6 +533,7 @@ async function loadFantasySnapshotCore(user: User, projection: "full" | "arena",
   return {
     userId: user.id,
     entitlementActive,
+    plan: { active: entitlementActive, expiresAt: planExpiresAt },
     subscription: { amountMinor: 2990, currency: "GBP" },
     config: {
       budgetEur: number(config.budget_eur) ?? TOUCHLINE_FANTASY_INITIAL_BUDGET_EUR,
@@ -529,6 +547,8 @@ async function loadFantasySnapshotCore(user: User, projection: "full" | "arena",
     catalogue,
     coaches,
     lineupAlerts,
+    matchCardIndicators,
+    playerAvailabilityIndicators,
     formationRegistry,
     gameweekScore: number((scoreResponse.data as Row | null)?.gameweek_score) ?? 0,
     seasonScore: rows(seasonScoresResponse.data)

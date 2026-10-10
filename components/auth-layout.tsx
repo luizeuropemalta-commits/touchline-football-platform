@@ -22,6 +22,7 @@ export function AuthLayout({
   showBrandMark = true,
   minimalBrandMark = false,
   keepLoginLayoutStable = false,
+  planGallery,
 }: {
   children: React.ReactNode;
   cinematic?: boolean;
@@ -37,6 +38,7 @@ export function AuthLayout({
   showBrandMark?: boolean;
   minimalBrandMark?: boolean;
   keepLoginLayoutStable?: boolean;
+  planGallery?: React.ReactNode;
 }) {
   const presentationLocalesEnabled = draftLocalesEnabled || siteLocalesEnabled;
   const normalizedLocale = presentationLocalesEnabled ? normalizeTouchLineLoginLocale(locale) : normalizeTouchLineAuthLocale(locale);
@@ -44,14 +46,14 @@ export function AuthLayout({
   const publicArenaHref = touchLineAuthHref("/intro", normalizedLocale, siteLocalesEnabled);
 
   return (
-    <main lang={normalizedLocale} dir={normalizedLocale === "ar-SA" ? "rtl" : "ltr"} className={`arena-bg console-shell relative min-h-[100dvh] overflow-x-clip bg-[#02050a]${cinematic ? " auth-cinematic" : ""}`}>
+    <main lang={normalizedLocale} dir={!planGallery && normalizedLocale === "ar-SA" ? "rtl" : "ltr"} className={`arena-bg console-shell relative min-h-[100dvh] overflow-x-clip bg-[#02050a]${cinematic ? " auth-cinematic" : ""}`}>
       {cinematic ? <AuthCinematicMedia /> : null}
       <div className="stadium-light stadium-light-left" />
       <div className="stadium-light stadium-light-right" />
       <div className="football-orb" />
       <div className="stadium-skyline" />
 
-      <section dir={keepLoginLayoutStable ? "ltr" : undefined} className="relative z-10 grid min-h-[100dvh] min-w-0 2xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,.55fr)]">
+      <section dir={keepLoginLayoutStable ? "ltr" : undefined} className={`relative z-10 grid min-h-[100dvh] min-w-0 ${planGallery ? "auth-full-video" : "2xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,.55fr)]"}`}>
         <div className="auth-entry-content flex min-h-[100dvh] min-w-0 flex-col">
           <header className="auth-brand-header flex shrink-0 items-center justify-between">
             <Logo href={brandHref ?? publicArenaHref} officialArena subtitle={brandSubtitle} wordmarkClassName={brandWordmarkClassName} showMark={showBrandMark} minimalMark={minimalBrandMark} />
@@ -65,8 +67,8 @@ export function AuthLayout({
             </div>
           </header>
 
-          <div className="grid flex-1 content-center gap-6 py-6 xl:grid-cols-[minmax(0,1fr)_minmax(360px,430px)] xl:items-center">
-            <div dir={keepLoginLayoutStable && normalizedLocale === "ar-SA" ? "rtl" : undefined} className="order-2 min-w-0 max-w-3xl xl:order-1">
+          <div className={`grid flex-1 content-center gap-6 py-6 xl:grid-cols-[minmax(0,1fr)_minmax(360px,430px)] xl:items-center${planGallery ? " auth-login-hero" : ""}`}>
+            <div dir={planGallery ? "ltr" : keepLoginLayoutStable && normalizedLocale === "ar-SA" ? "rtl" : undefined} className={`order-2 min-w-0 max-w-3xl xl:order-1${planGallery ? " auth-login-story" : ""}`}>
               <div className="mb-5 flex flex-wrap items-center gap-3">
                 <span className="inline-flex items-center gap-2 rounded-full border border-[#a3ff12]/25 bg-[#a3ff12]/[.08] px-3 py-1.5 text-[10px] font-black text-[#b7ff45]"><span className="pulse-live size-1.5 rounded-full bg-[#a3ff12]"/> {copy.arenaOnline}</span>
                 <span className="rounded-full border border-cyan-300/20 bg-cyan-300/[.07] px-3 py-1.5 text-[10px] font-black text-cyan-100">{copy.productAreas}</span>
@@ -82,15 +84,15 @@ export function AuthLayout({
               </p>
               <AuthLeaguePicker locale={normalizedLocale} allowDraftLocales={presentationLocalesEnabled} />
 
-              <div className="mt-6 grid max-w-2xl gap-3 sm:grid-cols-3">
+              {!planGallery ? <div className="mt-6 grid max-w-2xl gap-3 sm:grid-cols-3">
                 <div className="console-mini-card p-4"><Trophy size={18} className="text-amber-300"/><p className="mt-4 text-[10px] font-black text-slate-400">{copy.cardLabel}</p><p className="mt-1 text-xl font-black">{copy.cardValue}</p></div>
                 <div className="console-mini-card p-4"><Users size={18} className="text-cyan-300"/><p className="mt-4 text-[10px] font-black text-slate-400">{copy.squadLabel}</p><p className="mt-1 text-xl font-black">{copy.squadValue}</p></div>
                 <div className="console-mini-card p-4"><Zap size={18} className="text-[#a3ff12]"/><p className="mt-4 text-[10px] font-black text-slate-400">{copy.arenaLabel}</p><p className="mt-1 text-xl font-black">{copy.arenaValue}</p></div>
-              </div>
+              </div> : null}
             </div>
 
             <div className="premium-ring stadium-scoreboard order-1 w-full max-w-[430px] justify-self-center p-5 sm:p-6 xl:order-2 xl:justify-self-end">
-              <div className="relative z-10" dir={keepLoginLayoutStable && normalizedLocale === "ar-SA" ? "rtl" : undefined}>
+              <div className="relative z-10" dir={planGallery ? "ltr" : keepLoginLayoutStable && normalizedLocale === "ar-SA" ? "rtl" : undefined}>
                 {showPanelHeader ? <div className="mb-5 flex items-center justify-between">
                   <div>
                     <p className="text-[10px] font-black text-cyan-200">{cinematic ? copy.onboardingEyebrow : copy.accessPanelEyebrow}</p>
@@ -103,13 +105,15 @@ export function AuthLayout({
             </div>
           </div>
 
+          {planGallery ? <div dir="ltr">{planGallery}</div> : null}
+
           <footer className="flex shrink-0 items-center justify-between gap-3">
             <p dir={keepLoginLayoutStable && normalizedLocale === "ar-SA" ? "rtl" : undefined} className="text-[10px] text-slate-500">{copy.rights}</p>
             <div dir={keepLoginLayoutStable && normalizedLocale === "ar-SA" ? "rtl" : undefined} className="hidden items-center gap-2 text-[10px] font-black text-slate-500 sm:flex"><Radio size={12} className="text-[#a3ff12]"/> {copy.marketOnline}</div>
           </footer>
         </div>
 
-        <aside className="ps-career-home relative hidden min-h-[100dvh] border-l border-cyan-100/10 p-8 2xl:block 2xl:p-10">
+        {!planGallery ? <aside className="ps-career-home relative hidden min-h-[100dvh] border-l border-cyan-100/10 p-8 2xl:block 2xl:p-10">
           <div className="stadium-stands" />
           <div className="pitch-lines" />
           <div className="manager-silhouette" />
@@ -118,7 +122,7 @@ export function AuthLayout({
             <h2 className="font-display mt-5 text-6xl  italic leading-[.86] xl:text-7xl">{copy.asideTitleTop}<br/><span className="text-[#a3ff12]">{copy.asideTitleBottom}</span></h2>
             <div className="mt-9 space-y-4">{copy.features.map(x=><div key={x} className="console-mini-card flex items-center gap-3 p-4 text-[10px] font-bold text-slate-300"><span className="grid size-7 place-items-center rounded-lg border border-[#a3ff12]/25 bg-[#a3ff12]/10 text-[#a3ff12]"><Check size={13} strokeWidth={3}/></span>{x}</div>)}</div>
           </div>
-        </aside>
+        </aside> : null}
       </section>
     </main>
   );

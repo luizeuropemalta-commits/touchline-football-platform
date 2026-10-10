@@ -128,13 +128,12 @@ async function renderCoachProfilePage({
 
   return (
     <main className="coach-profile-page" dir="ltr">
-      <TouchlineBrandHeader href={`/touchline-coaches/${encodeURIComponent(entry.coach.providerId)}${profileLocale}`} locale={locale} accountLocaleContext={accountLocaleContext} draftLocalesEnabled={draftLocalesEnabled} />
+      <TouchlineBrandHeader href={`/touchline-coaches/${encodeURIComponent(entry.coach.providerId)}${profileLocale}`} locale={locale} accountLocaleContext={accountLocaleContext} draftLocalesEnabled={draftLocalesEnabled} navigation={<TouchlineGlobalNavigation locale={locale} draftLocalesEnabled={draftLocalesEnabled} currentRoute="coachProfile" surface="public" showAudioControl={false} />} />
       <div className="coach-profile-content">
       <TouchlineLivePresentationRefresh
         initialCoachRankingSnapshotId={coachRanking.snapshotId}
       />
       <div className="coach-profile-nav">
-        <TouchlineGlobalNavigation locale={locale} draftLocalesEnabled={draftLocalesEnabled} currentRoute="coachProfile" surface="public" showAudioControl={false} />
         <Link className={navigationStyles.link} href={`/touchline-clubs/${club.slug}${profileLocale}`}>← {club.name}</Link>
       </div>
       <div className="coach-profile-composition">

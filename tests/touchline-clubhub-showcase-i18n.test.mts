@@ -6,6 +6,7 @@ import { runInNewContext } from "node:vm";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import ts from "typescript";
+import { chromium } from "@playwright/test";
 import * as i18n from "../lib/touchlineArena/i18n.ts";
 import * as catalogueLocale from "../lib/touchlineArena/catalogue-locale.ts";
 import * as tiers from "../lib/touchlineArena/card-tier-names.ts";
@@ -149,13 +150,13 @@ test("real eight-locale SSR preserves representatives, seven-tier order, names, 
       assert.equal(row.props.runtimeLocaleOverride, locale);
       assert.equal(row.props.showCardActions, false);
       assert.equal(row.props.showSocialMetrics, false);
-      assert.equal(row.props.hideMarketValuePanel, true, "the public showcase must not render a market-value panel");
+      assert.equal(row.props.hideMarketValuePanel, false, "public cards preserve football market value while commercial card prices stay absent");
     }
     for (const card of cards.slice(0, 3)) {
       assert.ok(html.includes(`aria-label="${esc(`${copy.openPlayer}: ${card.name}`)}"`));
       assert.ok(html.includes(esc(links.touchlinePlayerProfileHref(demo.squadCardToExactPlayer(card), locale))));
     }
-    assert.ok(!html.includes(esc(copy.verifiedValue)), "the public showcase must not render its market-value label");
+    assert.ok(!html.includes(esc(copy.verifiedValue)), "the outer showcase must not duplicate the value label owned by the card");
     const coaches = view.captures.filter(row => row.kind === "coach");
     const reps = selection.selectTouchlineCoachTierRepresentatives().filter(row => row.snapshot && row.classification);
     assert.equal(coaches.length, reps.length);
@@ -235,23 +236,47 @@ test("real JSX renders promotion and position evidence with synthetic records on
   }
 });
 
-test("showcase JSX, tier styling and evidence logic remain byte-identical to the admitted preimage", () => {
+test("showcase JSX, tier styling and evidence logic retain the admitted preimage except approved locale, value and pending-state changes", () => {
   const expected: Record<string, string> = { tierStyle: "9a8dfb2be2686c166f3cf1b0016a95addb3b8fd40434a314f11e2e26c314a8eb", coachEvidenceLabel: "25f8f180c73eafb7a25d092a68fbb6d6fb3ea1434790fd6e76d3b85e24e9449c" };
   for (const node of ast.statements) if (ts.isFunctionDeclaration(node)) {
     if (node.name?.text === "TouchlineCoachCategoryShowcase") {
       let preimage = node.body!.statements.find(ts.isReturnStatement)!.getText(ast);
-      // Only the three later opt-in bindings are inverted. Public price-panel
-      // removal was already in this admitted JSX digest and remains required.
+      // Invert only the admitted locale bindings and the explicitly authorized
+      // restoration of football market value (not commercial card price).
       for (const [added, previous, count] of [
         ['touchlineCardTierName(tierKey, effectiveLocale, draftLocalesEnabled)', 'touchlineCardTierName(tierKey, effectiveLocale)', 2],
         ['<TouchlineEliteExactCard draftLocalesEnabled={draftLocalesEnabled}', '<TouchlineEliteExactCard', 1],
         ['<TouchlineCoachCardZoom draftLocalesEnabled={draftLocalesEnabled}', '<TouchlineCoachCardZoom', 1],
+        ['hideMarketValuePanel={false}', 'hideMarketValuePanel', 1],
       ] as const) {
         assert.equal(preimage.split(added).length - 1, count, `exact authorized delta: ${added}`);
         preimage = preimage.split(added).join(previous);
       }
-      assert.equal(hash(preimage), "f9f5982dcaf2ef3179487afdcc209ccf461281a237648f714511a7f3197dec69");
+      // The explicit pending-state placeholder replaces headless coach artwork;
+      // the evidence selector and all populated coach-card branches stay fixed.
+      assert.equal(hash(preimage), "dcdd5f99ec0a8055cda9f193c86828709b85257d7fec851968a8bc50b4930399");
     }
     else assert.equal(hash(node.getText(ast)), expected[node.name!.text]);
   }
+});
+
+test("pending Ruby coach is a complete branded state at desktop and phone widths", async () => {
+  const view = await fixture(true);
+  const shield = readFileSync(new URL("../public/touchlineArena/brand/tl-shield-lime.svg", import.meta.url)).toString("base64");
+  const css = readFileSync(new URL("../components/touchline/TouchlineCoachCategoryShowcase.module.css", import.meta.url), "utf8");
+  const html = view.render("pt-BR", []).replaceAll("/touchlineArena/brand/tl-shield-lime.svg", `data:image/svg+xml;base64,${shield}`);
+  const browser = await chromium.launch({ headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1600, height: 900 } });
+    await page.setContent(`<style>body{margin:0;background:#07100e;color:#fff}${css}</style>${html}`);
+    for (const width of [1600, 390]) {
+      await page.setViewportSize({ width, height: 900 });
+      const pending = page.locator('[data-coach-representative="pending"]');
+      assert.equal(await pending.count(), 1);
+      assert.equal(await pending.getByText("Representante pendente").isVisible(), true);
+      assert.equal(await pending.locator("img").evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0), true);
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+      if (process.env.TOUCHLINE_VISUAL_CAPTURE && width === 1600) await pending.screenshot({ path: process.env.TOUCHLINE_VISUAL_CAPTURE });
+    }
+  } finally { await browser.close(); }
 });

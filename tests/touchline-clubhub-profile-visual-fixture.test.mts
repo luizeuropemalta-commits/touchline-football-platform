@@ -86,8 +86,11 @@ test("the nine-card bench is a premium responsive card rail", () => {
   assert.match(component, /buildTouchlineVerifiedMatchFactFields/);
   assert.match(component, /technical\.previewBench/);
   assert.match(component, /\.slice\(0, 9\)/);
-  assert.match(css, /grid-template-columns:\s*repeat\(9, minmax\(74px, 1fr\)\)/);
-  assert.match(css, /overflow-x:\s*auto/);
-  assert.match(css, /scroll-snap-type:\s*x proximity/);
+  assert.match(css, /grid-template-columns:\s*repeat\(9, minmax\(0, 1fr\)\)/);
+  assert.match(css, /@container technical-bench \(max-width: 720px\)/);
+  assert.match(css, /repeat\(3, minmax\(0, 1fr\)\)/);
+  assert.match(component, /initialRenderScale=\{104 \/ 430\}/);
+  assert.doesNotMatch(component, /staticRenderScale=\{104 \/ 430\}/);
+  assert.match(component, /staticRenderScale=\{390 \/ 430\}/, "expanded modal retains its independent scale");
   assert.doesNotMatch(css, /text-overflow:\s*ellipsis/);
 });

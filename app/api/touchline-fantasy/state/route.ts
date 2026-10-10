@@ -20,6 +20,7 @@ export async function GET() {
     userGameweek: snapshot.userGameweek,
     selections: snapshot.selections,
     lineupAlerts: snapshot.lineupAlerts,
+    matchCardIndicators: snapshot.matchCardIndicators ?? null,
     gameweekScore: snapshot.gameweekScore,
     seasonScore: snapshot.seasonScore,
     matchHistory: snapshot.matchHistory,

@@ -5,7 +5,6 @@ import TouchlineClubPerimeterTrace from "@/components/touchline/TouchlineClubPer
 
 import TouchlineEliteExactCard from "@/components/touchline/cards/TouchlineEliteExactCard";
 import TouchlineCoachCardZoom from "@/components/touchline/cards/TouchlineCoachCardZoom";
-import { TOUCHLINE_COACH_TIER_GALLERY } from "@/lib/touchlineArena/coach-tier-gallery";
 import { createTouchlineArenaCoachSlot } from "@/lib/touchlineArena/coach-card";
 import { coachCompetitionFromRanking } from "@/lib/touchlineArena/coach-competition-projection";
 import type { TouchLineCoachRankingState } from "@/lib/touchlineArena/coach-ranking-server";
@@ -62,7 +61,6 @@ export default function TouchlineCoachCategoryShowcase({ locale, playerCards, co
   const dictionary = getTouchlineClubHubShowcaseCopy(effectiveLocale, draftLocalesEnabled);
   const playerRepresentatives = selectTouchlinePlayerTierRepresentatives(playerCards);
   const coachRepresentatives = selectTouchlineCoachTierRepresentatives();
-  const galleryByTier = new Map(TOUCHLINE_COACH_TIER_GALLERY.map((item) => [item.tierKey, item]));
 
   return (
     <div className={styles.showcases}>
@@ -95,7 +93,7 @@ export default function TouchlineCoachCategoryShowcase({ locale, playerCards, co
                         showCardActions={false}
                         showProfileAction={false}
                         showSocialMetrics={false}
-                        hideMarketValuePanel
+                        hideMarketValuePanel={false}
                         rankingMode="live"
                       />
                     </span>
@@ -134,7 +132,6 @@ export default function TouchlineCoachCategoryShowcase({ locale, playerCards, co
             const club = snapshot
               ? TOUCHLINE_ENGLAND_CLUBS.find((candidate) => candidate.teamId === snapshot.coach.teamId)
               : null;
-            const gallery = galleryByTier.get(tierKey);
             const coachHref = snapshot
               ? `/touchline-coaches/${encodeURIComponent(snapshot.coach.providerId)}?lang=${encodeURIComponent(effectiveLocale)}`
               : null;
@@ -174,8 +171,10 @@ export default function TouchlineCoachCategoryShowcase({ locale, playerCards, co
                     </Link>
                   </div>
                 ) : (
-                  <div className={styles.pendingCard}>
-                    {gallery ? <img src={gallery.compactArtUrl} alt="" aria-hidden="true" /> : null}
+                  <div className={styles.pendingCard} data-coach-representative="pending">
+                    <span className={styles.pendingCoachVisual} aria-hidden="true">
+                      <img src="/touchlineArena/brand/tl-shield-lime.svg" alt="" />
+                    </span>
                     <span className={styles.identity}>
                       <small>{tierLabel}</small>
                       <strong>{dictionary.representativePending}</strong>

@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CalendarDays, MapPin } from "lucide-react";
-import { useEffect, useMemo, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useSyncExternalStore, useTransition } from "react";
 
 import { formatTouchlineLocalKickoff } from "@/lib/touchlineArena/local-kickoff";
 import { normalizeTouchlineMatchCentreTimeZone } from "@/lib/touchlineArena/match-centre";
@@ -76,6 +76,7 @@ export default function ClubHubNextFixtureCard({
 }: Props) {
   const copy = getTouchlineClubHubFixtureCopy(locale, draftLocalesEnabled);
   const router = useRouter();
+  const [isRefreshing, startRefresh] = useTransition();
   const timeZone = useSyncExternalStore(
     subscribeToBrowserTimeZone,
     readBrowserTimeZone,
@@ -93,10 +94,10 @@ export default function ClubHubNextFixtureCard({
   const refreshMs = clubHubFixtureRailRefreshMs(rail, startsAt);
 
   useEffect(() => {
-    if (!refreshMs) return undefined;
-    const refresh = window.setTimeout(() => router.refresh(), refreshMs);
+    if (!refreshMs || isRefreshing) return undefined;
+    const refresh = window.setTimeout(() => startRefresh(() => router.refresh()), refreshMs);
     return () => window.clearTimeout(refresh);
-  }, [refreshMs, router]);
+  }, [refreshMs, router, isRefreshing, startRefresh]);
 
   if (!localKickoff) return null;
 

@@ -2,8 +2,8 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { createFootballDataProvider } from "@/lib/football-data/provider-factory";
-import { persistSquadSnapshot, type SquadSnapshotPlayerInput } from "@/lib/football-data/squad-snapshot-store";
+import { createGuardedFixtureProvider } from "@/lib/football-data/fixture-provider-server";
+import type { SquadSnapshotPlayerInput } from "@/lib/football-data/squad-snapshot-store";
 import type { TouchlineSquadMember } from "@/lib/football-data/types";
 import { inspectTouchlineIsolatedPreviewEnvironment } from "@/lib/touchlinePreview/isolation";
 import { TOUCHLINE_ENGLAND_CLUBS } from "@/lib/touchlineArena/demo-data";
@@ -48,6 +48,29 @@ function text(value: unknown) {
 
 function isUuid(value: unknown) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(text(value));
+}
+
+export function assertQaRosterAtomicReceipt(
+  result: Readonly<{ data: unknown; error: unknown }>,
+  runId: string,
+  providerPlayers: number,
+): void {
+  const receipt = result.data;
+  if (
+    result.error
+    || !receipt
+    || typeof receipt !== "object"
+    || !("status" in receipt)
+    || !("run_id" in receipt)
+    || !("clubs" in receipt)
+    || !("provider_players" in receipt)
+    || receipt.status !== "applied"
+    || receipt.run_id !== runId
+    || receipt.clubs !== TOUCHLINE_ENGLAND_CLUBS.length
+    || receipt.provider_players !== providerPlayers
+  ) {
+    throw new Error("QA atomic roster application could not be confirmed; inspect QA state before retrying.");
+  }
 }
 
 function assertQaRuntime() {
@@ -113,9 +136,13 @@ export function buildQaTwentyClubRosterSyncPlan(squads: readonly ProviderSquad[]
   });
 }
 
-async function readProviderSquads(): Promise<ProviderSquad[]> {
-  const provider = createFootballDataProvider("sportmonks");
+async function readProviderSquads(admin: AdminClient): Promise<ProviderSquad[]> {
+  const accountScope = process.env.TOUCHLINE_SPORTMONKS_FIXTURE_ACCOUNT_SCOPE;
+  const provider = createGuardedFixtureProvider(admin, accountScope);
   const squads: ProviderSquad[] = [];
+  // The central authority admits every HTTP attempt and commits its receipt
+  // before the guarded provider returns. Its entity reserve/lease policy is
+  // authoritative; the content database has no copy of that quota ledger.
   // Serial reads keep the run bounded and make every provider failure happen
   // before the QA backup/write boundary.
   for (const club of TOUCHLINE_ENGLAND_CLUBS) {
@@ -141,7 +168,7 @@ function playerInput(member: TouchlineSquadMember): SquadSnapshotPlayerInput {
     shirtNumber: Number.isInteger(member.jerseyNumber) && (member.jerseyNumber ?? 0) > 0
       ? member.jerseyNumber
       : null,
-    marketValue: member.player.marketValue ?? null,
+    // Market value is editorially approved by Admin, not writable by roster sync.
   };
 }
 
@@ -179,7 +206,7 @@ type CurrentPlayerRow = Readonly<{
  * shirt value before the backup/write boundary. Missing provider shirt values
  * deliberately preserve the known canonical shirt number.
  */
-async function isCurrentQaTwentyClubRoster(admin: AdminClient, squads: readonly ProviderSquad[]) {
+export async function isCurrentQaTwentyClubRoster(admin: AdminClient, squads: readonly ProviderSquad[]) {
   const teamIds = squads.map((squad) => squad.teamId);
   const { data: clubs, error: clubsError } = await admin
     .from("football_clubs")
@@ -225,8 +252,9 @@ async function isCurrentQaTwentyClubRoster(admin: AdminClient, squads: readonly 
       const current = currentByProviderId.get(text(expected.providerId));
       if (!current?.player || text(current.player.current_club_id) !== clubId) return false;
       if ((text(current.player.display_name) || text(current.player.name)) !== text(expected.name)) return false;
-      if (text(current.player.nationality) !== text(expected.nationality)) return false;
-      if (text(current.player.country_id) !== text(expected.countryId)) return false;
+      // Atomic persistence preserves these known fields when enrichment is absent.
+      if (expected.nationality !== null && text(current.player.nationality) !== text(expected.nationality)) return false;
+      if (expected.countryId !== null && text(current.player.country_id) !== text(expected.countryId)) return false;
       if (text(current.player.provider_position) !== text(expected.broadPosition)) return false;
       if (text(current.player.provider_position_id) !== text(expected.broadPositionId)) return false;
       if (text(current.player.detailed_position) !== text(expected.detailedPosition)) return false;
@@ -274,17 +302,12 @@ async function verifyAppliedRoster(admin: AdminClient, squads: readonly Provider
   }
 }
 
-/**
- * QA-only global roster reconciliation. No player/card/publication is
- * deleted. The RPC captures a reversible provider snapshot before the first
- * write; any failure returns every pre-existing membership to its prior state
- * and marks newly-added rows inactive rather than erasing history.
- */
+/** QA-only roster reconciliation; all database writes happen in one atomic RPC. */
 export async function syncQaTwentyClubRosters(admin: AdminClient, runId: string): Promise<QaTwentyClubRosterSyncResult> {
   assertQaRuntime();
   if (!isUuid(runId)) throw new Error("A valid QA twenty-club roster backup run ID is required.");
 
-  const squads = await readProviderSquads();
+  const squads = await readProviderSquads(admin);
   const plan = buildQaTwentyClubRosterSyncPlan(squads);
   if (!plan.ok) throw new Error(`QA twenty-club roster preflight failed: ${plan.errors.join(",")}`);
 
@@ -302,46 +325,20 @@ export async function syncQaTwentyClubRosters(admin: AdminClient, runId: string)
     });
   }
 
-  const { data: backup, error: backupError } = await admin.rpc("touchline_capture_qa_twenty_club_roster_backup", {
+  const result = await admin.rpc("touchline_apply_qa_twenty_club_roster_atomic", {
     p_project_ref: QA_PROJECT_REF,
     p_run_id: runId,
+    p_squads: squads.map((squad) => ({
+      teamId: squad.teamId,
+      members: squad.members.map(playerInput),
+    })),
   });
-  if (backupError || !backup) throw new Error("QA twenty-club roster backup was not captured.");
-
+  assertQaRosterAtomicReceipt(result, runId, plan.providerPlayers);
   try {
-    for (const club of TOUCHLINE_ENGLAND_CLUBS) {
-      const squad = squads.find((entry) => entry.teamId === club.teamId);
-      if (!squad) throw new Error(`QA roster preflight lost club ${club.teamId}.`);
-      const stored = await persistSquadSnapshot({
-        teamId: club.teamId,
-        clubName: club.name,
-        clubShortCode: club.shortCode,
-        clubLogoUrl: club.logoUrl ?? null,
-      }, squad.members.map(playerInput), admin);
-      if (!stored.stored) throw new Error(`QA roster persistence failed for ${club.teamId}: ${stored.reason ?? "unknown"}`);
-    }
-
     await verifyAppliedRoster(admin, squads);
-    const { error: markError } = await admin.rpc("touchline_mark_qa_twenty_club_roster_applied", {
-      p_project_ref: QA_PROJECT_REF,
-      p_run_id: runId,
-      p_observed_counts: {
-        clubs: squads.length,
-        provider_players: plan.providerPlayers,
-        nationality_provided: plan.nationalityProvided,
-        country_ids_provided: plan.countryIdsProvided,
-        shirt_numbers_provided: plan.shirtNumbersProvided,
-        detailed_positions_provided: plan.detailedPositionsProvided,
-        detailed_positions_pending: plan.detailedPositionsPending,
-      },
-    });
-    if (markError) throw new Error("QA twenty-club roster sync could not be marked applied.");
   } catch (error) {
-    await admin.rpc("touchline_rollback_qa_twenty_club_roster", {
-      p_project_ref: QA_PROJECT_REF,
-      p_run_id: runId,
-    });
-    throw error;
+    throw new Error("QA atomic roster application committed but post-write verification failed; inspect state before retrying.",
+      { cause: error });
   }
 
   return Object.freeze({

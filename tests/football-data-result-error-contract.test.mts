@@ -65,7 +65,7 @@ test("resultError preserves the canonical error envelope without coercing deferr
   assert.deepEqual(details, { retryAfterSeconds: 0, remaining: 0, requestedEntity: "Fixture" });
 });
 
-test("resultError body and complete HTTP module emitted JavaScript remain byte-identical", () => {
+test("resultError body remains unchanged and HTTP emission matches the reviewed transport-injection revision", () => {
   const source = readFileSync(resolve(root, "lib/football-data/http.ts"), "utf8");
   const ast = ts.createSourceFile("http.ts", source, ts.ScriptTarget.Latest, true);
   const declaration = ast.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === "resultError");
@@ -73,5 +73,8 @@ test("resultError body and complete HTTP module emitted JavaScript remain byte-i
   const hash = (text: string) => createHash("sha256").update(text).digest("hex");
   assert.equal(hash(declaration.body.getText(ast)), "ea61342655dd8368d1b39f5fa13357e48735b43b9435a8e8a1ad240b4e93f92a");
   const emitted = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2017, module: ts.ModuleKind.ESNext } }).outputText;
-  assert.equal(hash(emitted), "26100ebeaaf8050d6b7e6722fbabeb665b788e2e1906ddf590b7d9d39d7a1cc2");
+  // Central/recovery integration added only a server-owned fetchImpl argument,
+  // defaulting to fetch and removed before forwarding RequestInit. The error
+  // body above retains its original hash; runtime transport proof is separate.
+  assert.equal(hash(emitted), "15117b4aef1897c22df7de0cf91154d656f4e7c2ec86c9c5ecb6123364fee786");
 });

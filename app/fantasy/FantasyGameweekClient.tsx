@@ -2,11 +2,15 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { BadgeCheck, CalendarClock, Check, ChevronRight, CircleAlert, Crown, House, LockKeyhole, PlaneTakeoff, Save, Search, Send, ShieldCheck, Sparkles, TimerReset, Trophy, Users, WalletCards } from "lucide-react";
 
 import TouchlineCoachCardZoom from "@/components/touchline/cards/TouchlineCoachCardZoom";
 import TouchlineGameweekCard from "@/components/touchline/fantasy/TouchlineGameweekCard";
+import TouchlineMatchCentre from "@/components/touchline/match-centre/TouchlineMatchCentre";
+import TouchlineMatchCardBadge from "@/components/touchline/cards/TouchlineMatchCardBadge";
+import TouchlinePlayerAvailabilityBadge from "@/components/touchline/cards/TouchlinePlayerAvailabilityBadge";
 import TouchlineClubPerimeterTrace from "@/components/touchline/TouchlineClubPerimeterTrace";
 import { touchlineCardTierPalette } from "@/lib/touchlineArena/card-rules";
 import TouchlinePitchSurface, { TOUCHLINE_MARKET_HOUSE_CAMPAIGN } from "@/components/touchline/pitch/TouchlinePitchSurface";
@@ -23,10 +27,36 @@ import { formatTouchlineFantasyClockUnit, getTouchlineFantasyMarketClockCopy } f
 import { getTouchlineFantasyMarketAccessCopy } from "@/lib/touchlineFantasy/market-access-i18n";
 import { getTouchlineFantasyMarketMetricsCopy } from "@/lib/touchlineFantasy/market-metrics-i18n";
 import { getTouchlineFantasyMarketWorkflowCopy } from "@/lib/touchlineFantasy/market-workflow-i18n";
+import { resolveTouchlineCatalogueLocale } from "@/lib/touchlineArena/catalogue-locale";
 import styles from "./fantasy.module.css";
 
-type LiveState = Pick<NonNullable<TouchlineFantasySnapshot>, "gameweeks" | "activeGameweek" | "userGameweek" | "selections" | "gameweekScore" | "seasonScore" | "matchHistory" | "gameweekRanking" | "seasonRanking" | "lineupAlerts">;
+type LiveState = Pick<NonNullable<TouchlineFantasySnapshot>, "gameweeks" | "activeGameweek" | "userGameweek" | "selections" | "gameweekScore" | "seasonScore" | "matchHistory" | "gameweekRanking" | "seasonRanking" | "lineupAlerts" | "matchCardIndicators" | "playerAvailabilityIndicators">;
 const STEPS: readonly TouchlineFantasyBuilderStep[] = ["coach", "formation", "players", "review", "locked"];
+
+function ArenaView({ expanded, label, onClose, children }: { expanded: boolean; label: string; onClose: () => void; children: ReactNode }) {
+  const root = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!expanded) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    root.current?.querySelector<HTMLButtonElement>("button")?.focus();
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.requestAnimationFrame(() => document.querySelector<HTMLButtonElement>("#my-club-xi-pitch > header button")?.focus({ preventScroll: true }));
+    };
+  }, [expanded]);
+  if (!expanded) return children;
+  return createPortal(<div ref={root} className={`${styles.myClubCommand} ${styles.arenaOverlay}`} data-fantasy-context="market" role="dialog" aria-modal="true" aria-label={label} onKeyDown={(event) => {
+    // Card zoom owns its own portal and Escape handling above the Arena.
+    if (!root.current?.contains(event.target as Node)) return;
+    if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); onClose(); }
+    if (event.key !== "Tab") return;
+    const controls = Array.from(root.current.querySelectorAll<HTMLElement>('button:not(:disabled), a[href], [tabindex="0"]')).filter((element) => element.getClientRects().length > 0);
+    const first = controls[0]; const last = controls.at(-1);
+    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+  }}>{children}</div>, document.body);
+}
 
 function newIdempotencyKey(action: "draft" | "confirm") { return `fantasy:${action}:${crypto.randomUUID()}`; }
 function lineupFingerprint(input: Readonly<{ selectedCoachId: string | null; formationCode: string | null; selections: readonly TouchlineFantasySelection[] }>) {
@@ -106,8 +136,8 @@ function MarketWindowClock({ gameweeks, locale, marketStatus, draftLocalesEnable
     formatTouchlineFantasyClockUnit(parts[2].value, "second", locale, draftLocalesEnabled),
   ].join(", ");
   return <aside className={styles.marketClock} data-market-clock-phase={phase} aria-label={`${heading}. ${timed ? accessibleCountdown : detail}`}>
-    <div className={styles.clockHeading}><i aria-hidden="true"><TimerReset /></i><span><small>TOUCHLINE · MARKET</small><b>{heading}</b></span>{clock?.gameweekNumber ? <em>GW {clock.gameweekNumber}</em> : null}</div>
     {marketStatus ? <strong className={styles.clockRule}>{marketStatus}</strong> : null}
+    <div className={styles.clockHeading}><i aria-hidden="true"><TimerReset /></i><span><small>TOUCHLINE · MARKET</small><b>{heading}</b></span>{clock?.gameweekNumber ? <em>GW {clock.gameweekNumber}</em> : null}</div>
     {timed ? <><div className={styles.clockDigits} aria-hidden="true">{parts.map((part) => <span key={part.unit}><b>{String(part.value).padStart(2, "0")}</b><small>{part.unit}</small></span>)}</div><time className={styles.srOnly} dateTime={clock?.targetAt ?? undefined}>{accessibleCountdown}</time></> : !marketStatus ? <strong className={styles.clockRule}>{phase === "awaiting-final" || phase === "opening" ? copy.closedStatus : phase === "closing" ? copy.openStatus : phase === "syncing" ? copy.syncingStatus : copy.unconfirmedStatus}</strong> : null}
     <p><span aria-hidden="true" />{detail}</p>
   </aside>;
@@ -185,9 +215,11 @@ export default function FantasyGameweekClient({
   marketPage = false,
   draftLocalesEnabled = false,
   initialPlayerClubTeamId,
+  liveTimeZone = "UTC",
 }: {
   initialSnapshot: TouchlineFantasySnapshot | null;
   locale: string;
+  liveTimeZone?: string;
   /** The ClubOwner page owns the outer identity/navigation shell. */
   embedded?: boolean;
   /** Standalone game presentation; shares the same rules, state and save API. */
@@ -212,22 +244,39 @@ export default function FantasyGameweekClient({
   // My Club is pitch-first. The legacy standalone Gameweek builder keeps its
   // own default, but the owner command centre should always make the XI clear.
   const [squadView, setSquadView] = useState<"squad" | "tactical">("tactical");
+  const [arenaOpen, setArenaOpen] = useState(false);
   const [visibleStep, setVisibleStep] = useState<TouchlineFantasyBuilderStep>(selectedCoachId ? (formationCode ? "players" : "formation") : "coach");
   const [query, setQuery] = useState("");
-  const [playerClubTeamId, setPlayerClubTeamId] = useState(() => (
+  const [playerClubTeamId, applyPlayerClubTeamId] = useState(() => (
     TOUCHLINE_ENGLAND_CLUBS_BY_RANK.some((club) => club.teamId === initialPlayerClubTeamId)
       ? initialPlayerClubTeamId!
       : TOUCHLINE_ENGLAND_CLUBS_BY_RANK[0]?.teamId ?? ""
   ));
-  const [previousClubHandoff, setPreviousClubHandoff] = useState(initialPlayerClubTeamId);
-  // A new ClubHub link changes the browse filter, not the unsaved XI.
-  // Repeated server renders must preserve a manually selected browse club.
-  if (previousClubHandoff !== initialPlayerClubTeamId) {
-    setPreviousClubHandoff(initialPlayerClubTeamId);
-    setPlayerClubTeamId(TOUCHLINE_ENGLAND_CLUBS_BY_RANK.some((club) => club.teamId === initialPlayerClubTeamId)
-      ? initialPlayerClubTeamId!
-      : TOUCHLINE_ENGLAND_CLUBS_BY_RANK[0]?.teamId ?? "");
+  const appliedClubRoute = useRef(initialPlayerClubTeamId);
+  const clubSelectionVersion = useRef(0);
+  function setPlayerClubTeamId(teamId: string) {
+    clubSelectionVersion.current++;
+    applyPlayerClubTeamId(teamId);
   }
+  // A new ClubHub link changes the browse filter, not the unsaved XI.
+  // Keep this work after mount: updating state during render can race a
+  // streaming hand-off and makes React warn before the client is mounted.
+  useEffect(() => {
+    if (appliedClubRoute.current === initialPlayerClubTeamId) return;
+    const selectionVersion = clubSelectionVersion.current;
+    const nextClubTeamId = TOUCHLINE_ENGLAND_CLUBS_BY_RANK.some((club) => club.teamId === initialPlayerClubTeamId)
+      ? initialPlayerClubTeamId!
+      : TOUCHLINE_ENGLAND_CLUBS_BY_RANK[0]?.teamId ?? "";
+    // Apply the route hand-off after the committed frame, without remounting
+    // the builder. Cancel superseded/unmounted work so it cannot reset a newer
+    // filter or touch the user's draft during a streaming transition.
+    const frame = window.requestAnimationFrame(() => {
+      appliedClubRoute.current = initialPlayerClubTeamId;
+      if (clubSelectionVersion.current !== selectionVersion) return;
+      applyPlayerClubTeamId((current) => current === nextClubTeamId ? current : nextClubTeamId);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [initialPlayerClubTeamId]);
   const [coachClubTeamId, setCoachClubTeamId] = useState(TOUCHLINE_ENGLAND_CLUBS_BY_RANK[0]?.teamId ?? "");
   const [feedback, setFeedback] = useState<string | null>(null); const [saving, setSaving] = useState(false);
   const [deadlineReachedFor, setDeadlineReachedFor] = useState<string | null>(null);
@@ -265,17 +314,47 @@ export default function FantasyGameweekClient({
   const browseSlot = resolveTouchlineFantasyBrowseSlot({ geometry, bucket: browsingPosition, activeSlotId: activeSlot?.id ?? null, selections });
 
   useEffect(() => {
-    const pitch = pitchViewportRef.current?.firstElementChild as HTMLElement | null;
+    const pitch = pitchViewportRef.current?.querySelector<HTMLElement>(`.${styles.myClubTacticalPitch}`);
     if (!pitch || !geometry) return;
-    const resize = () => setPitchCardWidth(touchlineFantasyPitchCardWidth(geometry.slots, pitch.offsetWidth, pitch.offsetHeight));
+    const resize = () => setPitchCardWidth(touchlineFantasyPitchCardWidth(geometry.slots, pitch.offsetWidth, pitch.offsetHeight, arenaOpen ? { labelHeight: editable ? 18 : 30, gap: 6 } : undefined));
     resize();
     const observer = new ResizeObserver(resize);
     observer.observe(pitch);
     return () => observer.disconnect();
-  }, [embedded, geometry, selectedCoach, squadView]);
+  }, [embedded, geometry, selectedCoach, squadView, arenaOpen, editable]);
 
   useEffect(() => { if (!activeGameweek) return; const deadline = Date.parse(activeGameweek.locksAt); if (!Number.isFinite(deadline)) return; const remaining = Math.max(0, deadline - Date.now()); const gameweekId = activeGameweek.id; const timer = window.setTimeout(() => setDeadlineReachedFor(gameweekId), Math.min(remaining, 2_147_000_000)); return () => window.clearTimeout(timer); }, [activeGameweek]);
-  useEffect(() => { if (!snapshot?.entitlementActive || !activeGameweek) return; const poll = window.setInterval(() => { fetch("/api/touchline-fantasy/state", { cache: "no-store" }).then((response) => response.ok ? response.json() : null).then((payload) => { if (!payload?.ok) return; setLive(payload); if (payload.activeGameweek?.id !== activeGameweek.id) { setSelectedCoachId(payload.userGameweek?.selectedCoachId ?? null); setFormationCode(payload.userGameweek?.formationCode ?? null); setSelections(Array.isArray(payload.selections) ? payload.selections : []); setVisibleStep(payload.userGameweek?.selectedCoachId ? "players" : "coach"); } }).catch(() => undefined); }, 20_000); return () => window.clearInterval(poll); }, [activeGameweek, snapshot?.entitlementActive]);
+  useEffect(() => {
+    if (!snapshot?.entitlementActive || !activeGameweek) return;
+    let disposed = false;
+    let pending: AbortController | null = null;
+    let pendingDeadline: number | undefined;
+    const invalidateIndicators = () => {
+      if (!disposed) setLive(previous => previous ? { ...previous, matchCardIndicators: null, playerAvailabilityIndicators: null } : previous);
+    };
+    const poll = window.setInterval(async () => {
+      if (pending || disposed) return;
+      const controller = new AbortController();
+      pending = controller;
+      const deadline = window.setTimeout(() => controller.abort(), 20_000);
+      pendingDeadline = deadline;
+      try {
+        const response = await fetch("/api/touchline-fantasy/state", { cache: "no-store", signal: controller.signal });
+        const payload = response.ok ? await response.json() : null;
+        if (disposed) return;
+        if (controller.signal.aborted || !payload?.ok) { invalidateIndicators(); return; }
+        setLive(payload);
+        if (payload.activeGameweek?.id !== activeGameweek.id) {
+          setSelectedCoachId(payload.userGameweek?.selectedCoachId ?? null);
+          setFormationCode(payload.userGameweek?.formationCode ?? null);
+          setSelections(Array.isArray(payload.selections) ? payload.selections : []);
+          setVisibleStep(payload.userGameweek?.selectedCoachId ? "players" : "coach");
+        }
+      } catch { invalidateIndicators(); }
+      finally { window.clearTimeout(deadline); pendingDeadline = undefined; pending = null; }
+    }, 20_000);
+    return () => { disposed = true; window.clearInterval(poll); window.clearTimeout(pendingDeadline); pending?.abort(); };
+  }, [activeGameweek, snapshot?.entitlementActive]);
   useEffect(() => {
     const builder = builderRef.current;
     const guidePanel = guidePanelRef.current;
@@ -390,6 +469,9 @@ export default function FantasyGameweekClient({
     && (!normalizedQuery || `${card.name} ${card.position}`.toLowerCase().includes(normalizedQuery))
   ));
   const currentAlerts = live?.lineupAlerts ?? snapshot.lineupAlerts;
+  // A failed fresh read must not restore an older match's badge from SSR.
+  const currentMatchCards = live?.matchCardIndicators ?? [];
+  const currentAvailability = live?.playerAvailabilityIndicators ?? [];
 
   // My Club is a club command centre, not the legacy step-by-step Gameweek
   // wizard. The same canonical eligibility and persistence code remains in
@@ -404,6 +486,7 @@ export default function FantasyGameweekClient({
     // board is the default overview, while the field remains the deliberate,
     // visible way to place or replace a player by position.
     const openTacticalSelector = (slotId: string) => {
+      setArenaOpen(false);
       setActiveSlotId(slotId);
       setBrowsePosition(null);
       setVisibleStep("players");
@@ -411,9 +494,8 @@ export default function FantasyGameweekClient({
       setQuery("");
       scrollToLineupSection("my-club-player-selection");
     };
-    const removeMyClubPlayer = (playerId: string, slotId: string) => {
+    const replaceMyClubPlayer = (playerId: string, slotId: string) => {
       if (!editable || saving || !selections.some((entry) => entry.playerId === playerId && entry.slotId === slotId)) return;
-      removePlayer(playerId);
       openTacticalSelector(slotId);
     };
     const selectMyClubPlayer = (card: ClubOwnerSquadCard) => {
@@ -423,31 +505,34 @@ export default function FantasyGameweekClient({
       setSquadView("tactical");
       scrollToLineupSection("my-club-xi-pitch");
     };
+    const squadHeader = <header className={styles.myClubSquadHeader}>
+      <div><span>{arenaOpen ? workflowCopy.arenaMode : workflowCopy.startingXI}</span><strong>{selectedCount}/11 · {formationCode}</strong></div>
+      <button type="button" className={styles.viewToggle} aria-expanded={arenaOpen} onClick={() => setArenaOpen((current) => !current)}>{arenaOpen ? workflowCopy.closeArena : workflowCopy.arenaMode}</button>
+    </header>;
     return <section className={styles.myClubCommand} data-fantasy-context={marketPage ? "market" : "my-club"} data-market-state={activeGameweek?.state ?? "unknown"} aria-label={marketPage ? (workflowCopy.playAria) : (workflowCopy.commandAria)}>
       {marketPage ? <dl className={styles.ownerSummary} data-market-owner-metrics="true" aria-label={marketMetricsCopy.summaryAria}>
-        <div><dt>{marketMetricsCopy.remainingBudget}</dt><dd>{formatTouchlineFantasyMarketValue(validation?.budgetRemainingEur ?? snapshot.config.budgetEur, locale, draftLocalesEnabled)}</dd></div>
         <div><dt>{marketMetricsCopy.roundPoints}</dt><dd><Link href={`/rankings?lang=${encodeURIComponent(locale)}`} aria-label={marketMetricsCopy.roundPointsAria}>{(live?.gameweekScore ?? snapshot.gameweekScore).toFixed(2)}</Link></dd></div>
         <div><dt>{marketMetricsCopy.seasonPoints}</dt><dd><Link href={`/rankings?lang=${encodeURIComponent(locale)}`} aria-label={marketMetricsCopy.seasonPointsAria}>{(live?.seasonScore ?? snapshot.seasonScore).toFixed(2)}</Link></dd></div>
       </dl> : null}
-      <section className={styles.myClubMarketStatus} data-market-open={marketOpen ? "true" : "false"} aria-label={marketAccessCopy.statusAria}>
+      {!(marketPage && selectedCoach && formationCode) ? <section className={styles.myClubMarketStatus} data-market-open={marketOpen ? "true" : "false"} aria-label={marketAccessCopy.statusAria}>
         <div><span>{marketAccessCopy.lineupWindow}</span>{!marketPage ? <strong>{marketStatusLabel}</strong> : null}<small>{editable ? marketAccessCopy.manageXI : marketAccessCopy.browseReadOnly}</small><p className={styles.myClubMarketRule}>{marketAccessCopy.windowRule}</p></div>
         <MarketWindowClock gameweeks={gameweeks} locale={locale} draftLocalesEnabled={draftLocalesEnabled} marketStatus={marketPage ? marketStatusLabel : undefined} />
-      </section>
-      <header className={styles.myClubCommandHeader}>
+      </section> : null}
+      {!(marketPage && selectedCoach && formationCode) ? <header className={styles.myClubCommandHeader}>
         <div>
           <span>{workflowCopy.myXI}</span>
           <h1>{formationCode ?? (workflowCopy.setFormation)}</h1>
-          <p>{!selectedCoach
+          {!(marketPage && selectedCoach && formationCode && editable) ? <p>{!selectedCoach
             ? (workflowCopy.chooseCoachFirst)
             : !formationCode
               ? (workflowCopy.chooseFormationFirst)
-              : editable ? (workflowCopy.editInstruction) : (workflowCopy.readOnlyInstruction)}</p>
+              : editable ? (workflowCopy.editInstruction) : (workflowCopy.readOnlyInstruction)}</p> : null}
         </div>
-        <div className={styles.myClubCommandStatus} data-round-frame="true">
+        {!marketPage ? <div className={styles.myClubCommandStatus} data-round-frame="true">
           <span>{workflowCopy.round}</span><strong>{activeGameweek?.number ?? "—"}</strong>
           <small>{statusCopy(activeGameweek?.state, locale, draftLocalesEnabled)}</small>
-        </div>
-      </header>
+        </div> : null}
+      </header> : null}
       {!selectedCoach ? <section className={styles.myClubSetup} data-my-club-setup="coach" aria-label={workflowCopy.coachSelectionAria}>
         <header><span>{workflowCopy.step1}</span><h2>{workflowCopy.chooseYourCoach}</h2><p>{workflowCopy.coachInstruction}</p></header>
         <CompactClubSelector selectedTeamId={selectedCoachClub?.teamId ?? ""} onSelect={(club) => setCoachClubTeamId(club.teamId)} locale={locale} draftLocalesEnabled={draftLocalesEnabled} />
@@ -456,18 +541,50 @@ export default function FantasyGameweekClient({
         <header><span>{workflowCopy.step2}</span><h2>{workflowCopy.chooseFormation}</h2><p>{workflowCopy.formationInstruction}</p></header>
         <div className={styles.formationGrid}>{Object.keys(snapshot.formationRegistry).map((code) => <button type="button" key={code} onClick={() => changeFormation(code)} disabled={!editable}><b>{code}</b><small>11 {workflowCopy.slots}</small></button>)}</div>
       </section> : <div className={styles.myClubCommandGrid}>
+        <ArenaView expanded={arenaOpen} label={workflowCopy.arenaMode} onClose={() => setArenaOpen(false)}>
         <section className={styles.myClubSquad} id="my-club-xi-pitch" tabIndex={-1} data-market-starting-xi="true" aria-label={workflowCopy.xiLinesAria}>
-          <header><div><span>{workflowCopy.startingXI}</span><strong>{selectedCount}/11</strong></div><button type="button" className={styles.viewToggle} onClick={() => setSquadView((current) => current === "squad" ? "tactical" : "squad")}>{squadView === "squad" ? (workflowCopy.viewTactical) : (workflowCopy.viewCards)}</button></header>
-          {squadView === "tactical" ? <>
+          {marketPage && !arenaOpen ? null : squadHeader}
+          {<>
+            <div className={styles.arenaBody}>
             <div className={styles.myClubPitchViewport} ref={pitchViewportRef}>
-              <TouchlinePitchSurface className={styles.myClubTacticalPitch} ariaLabel={workflowCopy.pitchAria} orientation="horizontal" surfaceVariant={marketPage ? "smoked-glass" : "premium-stadium"}>{selectedCards.map(({ slot, selection }) => {
+              {!arenaOpen && marketPage && selectedCoach ? <div className={styles.myClubFieldCoach} aria-label={workflowCopy.technicalArea}>
+                <div style={{ width: pitchCardWidth * 1.12 }}><FantasyCoachZoom entry={selectedCoach} locale={locale} draftLocalesEnabled={draftLocalesEnabled} eager /></div>
+                <span>{workflowCopy.coach}</span>
+              </div> : null}
+              {!arenaOpen && marketPage && selectedCoach ? <div className={styles.myClubTechnicalLine} aria-label={workflowCopy.technicalArea}>
+                <span>{workflowCopy.technicalArea}</span>
+              </div> : null}
+              {marketPage && !arenaOpen ? squadHeader : null}
+              {arenaOpen && selectedCoach ? <div className={styles.arenaCoach} aria-label={workflowCopy.technicalArea}>
+                <div style={{ width: pitchCardWidth * 1.12 }}><FantasyCoachZoom entry={selectedCoach} locale={locale} draftLocalesEnabled={draftLocalesEnabled} eager /></div>
+                <span>{workflowCopy.coach}</span>
+              </div> : null}
+              <TouchlinePitchSurface className={styles.myClubTacticalPitch} ariaLabel={workflowCopy.pitchAria} orientation="horizontal" surfaceVariant={marketPage ? "smoked-glass" : "premium-stadium"}>
+                {arenaOpen ? <output className={styles.arenaRoundPoints} data-arena-round-points="true" aria-live="polite" aria-atomic="true" dir="auto">
+                  <span>{marketMetricsCopy.roundPoints}</span>
+                  <strong>{(live?.gameweekScore ?? snapshot.gameweekScore).toLocaleString(resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled), { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                </output> : null}
+                {selectedCards.map(({ slot, selection }) => {
                 const card = selection ? catalogueById.get(selection.playerId) : null;
+                const availability = selection ? currentAvailability.filter((entry) => entry.playerId === selection.playerId) : [];
+                const matchCard = selection ? currentMatchCards.filter((event) => event.playerId === selection.playerId)
+                  .sort((first, second) => Number(second.kind === "red") - Number(first.kind === "red"))[0] : null;
                 return <div key={slot.id} className={styles.myClubTacticalSlot} data-pitch-edge={slot.x >= 75 ? "end" : undefined} style={{ ...horizontalMyClubPitchPosition(slot), width: Math.max(44, pitchCardWidth) }}>
-                  <span style={{ width: pitchCardWidth, "--touchline-card-static-scale": pitchCardWidth / 430 } as CSSProperties}>{card ? <TouchlineGameweekCard card={card} locale={locale} draftLocalesEnabled={draftLocalesEnabled} compact displayWidth={pitchCardWidth} /> : <button type="button" className={styles.emptyPosition} aria-label={`${workflowCopy.choosePlayer} · ${slot.id}`} aria-controls="my-club-player-selection" onClick={() => openTacticalSelector(slot.id)}>+</button>}</span>
+                  <span style={{ width: pitchCardWidth, "--touchline-card-static-scale": pitchCardWidth / 430 } as CSSProperties}>{card ? <TouchlineGameweekCard card={card} locale={locale} draftLocalesEnabled={draftLocalesEnabled} compact displayWidth={pitchCardWidth} replacementAction={editable && selection ? { label: `${workflowCopy.replace} · ${card.name}`, disabled: saving, onSelect: () => replaceMyClubPlayer(selection.playerId, slot.id) } : undefined} removalAction={editable && selection ? { label: `${workflowCopy.remove} · ${card.name}`, disabled: saving, onSelect: () => removePlayer(selection.playerId) } : undefined} /> : marketOpen ? <button type="button" className={styles.emptyPosition} aria-label={`${workflowCopy.choosePlayer} · ${slot.id}`} aria-controls="my-club-player-selection" onClick={() => openTacticalSelector(slot.id)}>+</button> : null}</span>
+                  {card && matchCard ? <div className={styles.myClubMatchCardBadge}>
+                    <TouchlineMatchCardBadge kind={matchCard.kind} playerName={card.name} locale={locale} draftLocalesEnabled={draftLocalesEnabled} />
+                  </div> : null}
+                  {card && availability.length === 1 ? <div className={styles.myClubAvailabilityBadge}>
+                    <TouchlinePlayerAvailabilityBadge badge={availability[0].badge} locale={resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled)} />
+                  </div> : null}
                   <b>{slot.id}</b>
-                  {card && selection && editable ? <button type="button" className={styles.pitchRemove} disabled={saving} aria-controls="my-club-player-selection" aria-label={`${workflowCopy.removeFromXI}: ${card.name} · ${slot.id}`} onClick={() => removeMyClubPlayer(selection.playerId, slot.id)}><span aria-hidden="true">×</span></button> : !editable ? <small className={styles.marketClosedLabel}>{marketAccessLabel}</small> : null}
+                  {!editable ? <small className={styles.marketClosedLabel}>{marketAccessLabel}</small> : null}
                 </div>;
               })}</TouchlinePitchSurface>
+            </div>
+            {(arenaOpen || marketPage) ? <div className={styles.arenaLiveRail}>
+              <TouchlineMatchCentre railOnly initialFixtures={[]} initialNow={0} initialTimeZone={liveTimeZone} initialLocale={resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled)} draftLocalesEnabled={draftLocalesEnabled} />
+            </div> : null}
             </div>
             <nav className={styles.myClubMobileSlotNav} aria-label={workflowCopy.browsePosition}>
               {selectedCards.map(({ slot, selection }) => {
@@ -477,29 +594,15 @@ export default function FantasyGameweekClient({
                 </button>;
               })}
             </nav>
-          </> : <div className={styles.myClubCardRows}>{selectedCards.map(({ slot, selection }) => {
-            const card = selection ? catalogueById.get(selection.playerId) : null;
-            const active = activeSlot?.id === slot.id;
-            return <article key={slot.id} data-active={active ? "true" : undefined} data-empty={!card ? "true" : undefined}>
-              <span className={styles.myClubPosition}>{slot.id}</span>
-              {card ? <span className={styles.myClubCard}><TouchlineGameweekCard card={card} locale={locale} draftLocalesEnabled={draftLocalesEnabled} displayWidth={116} fitContainer /></span> : <span className={styles.myClubEmptyCard}>+</span>}
-              <strong>{card?.shortName ?? (workflowCopy.openSlot)}</strong>
-              {editable ? <button type="button" className={styles.myClubSelect} onClick={() => openTacticalSelector(slot.id)} aria-label={`${card ? (workflowCopy.replace) : (workflowCopy.choose)} ${slot.id}`}>{card ? (workflowCopy.replace) : (workflowCopy.choose)}</button> : <small className={styles.marketClosedLabel}>{marketAccessLabel}</small>}
-              {card && editable ? <button className={styles.myClubRemove} type="button" onClick={() => removePlayer(selection!.playerId)} aria-label={`${workflowCopy.remove} ${card.name}`}>{workflowCopy.remove}</button> : null}
-            </article>;
-          })}</div>}
+          </>}
         </section>
-        {marketPage && selectedCoach ? <div className={styles.marketSideColumn} data-market-side-column="true">
-          <aside className={styles.technicalArea} data-market-technical-area="true" aria-label={workflowCopy.technicalArea}>
-          <h2>{workflowCopy.technicalArea}</h2>
-          <div className={styles.technicalCoach}><FantasyCoachZoom entry={selectedCoach} locale={locale} draftLocalesEnabled={draftLocalesEnabled} eager /></div>
-          <strong>{selectedCoach.coach.displayName}</strong>
-          <label>{workflowCopy.coach}<select value={selectedCoachId ?? ""} disabled={!editable || saving} onChange={(event) => setSelectedCoachId(event.target.value)}>{snapshot.coaches.map((entry) => <option key={entry.id} value={entry.id}>{entry.coach.displayName} · {entry.clubName}</option>)}</select></label>
-          <label>{workflowCopy.formation}<select value={formationCode ?? ""} disabled={!editable || saving} onChange={(event) => changeFormation(event.target.value)}>{Object.keys(snapshot.formationRegistry).map((code) => <option key={code} value={code}>{code}</option>)}</select></label>
-        </aside></div> : null}
+        </ArenaView>
       </div>}
         <aside className={styles.myClubMarket} id="my-club-player-selection" tabIndex={-1} data-open="true" data-inline-selection="true" aria-label={workflowCopy.positionSelectionAria}>
-          {marketPage ? <header className={styles.myClubMarketHeading}><h2>{workflowCopy.market}</h2><p>{workflowCopy.choosePlayer} · {activeSlot?.id ?? "XI"}</p><button type="button" className={styles.viewToggle} onClick={() => scrollToLineupSection("my-club-xi-pitch")}>{workflowCopy.backToPitch}</button></header> : null}
+          {marketPage ? <header className={styles.myClubMarketHeading} data-market-heading="status">
+            <MarketWindowClock gameweeks={gameweeks} locale={locale} draftLocalesEnabled={draftLocalesEnabled} />
+            <button type="button" className={styles.viewToggle} onClick={() => scrollToLineupSection("my-club-xi-pitch")}>{workflowCopy.backToPitch}</button>
+          </header> : null}
           {!marketPage ? <header className={styles.myClubMarketHeading}><span>{workflowCopy.scouting}</span><h2>Market Transfer TouchLine</h2><p>{workflowCopy.exploreInstruction}</p></header> : null}
           <label className={styles.myClubSearch}><Search aria-hidden="true" /><span className={styles.srOnly}>{workflowCopy.searchPlayer}</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={workflowCopy.searchPlayer} /></label>
           <CompactClubSelector selectedTeamId={selectedPlayerClub?.teamId ?? ""} onSelect={(club) => setPlayerClubTeamId(club.teamId)} locale={locale} draftLocalesEnabled={draftLocalesEnabled} />

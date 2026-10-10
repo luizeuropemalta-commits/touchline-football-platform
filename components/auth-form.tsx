@@ -90,7 +90,6 @@ export function AuthForm({
   const copy = getTouchLineAuthCopy(displayLocale, draftLocaleEnabled || publicSiteLocalesEnabled).form;
   const normalizedReturnTo = normalizeTouchLineAuthReturnTo(returnTo, publicSiteLocalesEnabled);
   const arenaHref = touchLinePostAuthHref(normalizedReturnTo, normalizedLocale, "/clubowner", publicSiteLocalesEnabled);
-  const publicClubHref = touchLineAuthHref("/touchline-clubs", normalizedLocale, publicSiteLocalesEnabled);
   const loginHref = touchLineAuthEntryHref("/login", normalizedLocale, normalizedReturnTo, publicSiteLocalesEnabled);
   const registerHref = touchLineAuthEntryHref("/register", normalizedLocale, normalizedReturnTo, publicSiteLocalesEnabled);
   const forgotPasswordHref = touchLineAuthEntryHref("/forgot-password", normalizedLocale, normalizedReturnTo, publicSiteLocalesEnabled);
@@ -427,11 +426,6 @@ export function AuthForm({
           <span>{copy.alreadyRegistered}</span>
           <Link href={loginHref}>{copy.accessAccount}</Link>
         </p>
-      )}
-      {mode === "login" && (
-        <Link href={publicClubHref} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl border border-cyan-300/20 bg-cyan-300/[.06] px-4 text-xs font-black text-cyan-100 transition hover:border-cyan-200/40 hover:bg-cyan-300/[.12]">
-          {copy.watchWithoutLogin} <ArrowRight size={15} />
-        </Link>
       )}
       {mode !== "forgot" && enabledSocialProviders.length > 0 && (
         <>

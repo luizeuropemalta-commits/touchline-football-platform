@@ -13,7 +13,7 @@ const locales = ["en-GB", "pt-BR", "es-ES", "it-IT", "fr-FR", "ar-SA", "tr-TR", 
 // Owner-approved protected terms at actual paths, not an English-only sentence rule.
 // Other governed names (ClubHub, TouchLine Verified, etc.) do not occur in these catalogues.
 const requirements = [
-  { path: ["header", "credits"], token: "TouchLine" },
+  { path: ["header", "planPro"], token: "PRO" },
   { path: ["state", "steps", "locked"], token: "Arena" },
 ] as const;
 
@@ -36,22 +36,22 @@ for (const locale of locales) {
   });
 }
 
-test("the shared oracle accepts translated generic bank/credits/sync words", () => {
+test("the shared oracle accepts translated generic plan/sync words", () => {
   for (const fixture of [
-    { header: { bank: "Banco", credits: "Créditos TouchLine" }, state: { steps: { locked: "Enviar à Arena" } } },
-    { header: { bank: "البنك", credits: "أرصدة TouchLine" }, state: { steps: { locked: "المزامنة مع Arena" } } },
-    { header: { bank: "Bank", credits: "TouchLine-Credits" }, state: { steps: { locked: "Mit der Arena synchronisieren" } } },
+    { header: { plan: "Meu plano", planPro: "PRO" }, state: { steps: { locked: "Enviar à Arena" } } },
+    { header: { plan: "خطتي", planPro: "PRO" }, state: { steps: { locked: "المزامنة مع Arena" } } },
+    { header: { plan: "Mein Plan", planPro: "PRO" }, state: { steps: { locked: "Mit der Arena synchronisieren" } } },
   ]) assert.doesNotThrow(() => assertProtectedVocabulary(fixture));
 });
 
 test("negative controls reject translated, misspelled, duplicated or missing protected terms", () => {
-  for (const credits of ["Créditos LinhaDeToque", "Touchline Credits", "NotTouchLine Credits", "TouchLine TouchLine Credits", ""]) {
-    assert.throws(() => assertProtectedVocabulary({ header: { credits }, state: { steps: { locked: "Arena sync" } } }), /header\.credits/);
+  for (const planPro of ["Profissional", "Pro", "NotPRO", "PRO PRO", ""]) {
+    assert.throws(() => assertProtectedVocabulary({ header: { planPro }, state: { steps: { locked: "Arena sync" } } }), /header\.planPro/);
   }
   for (const locked of ["المزامنة مع الساحة", "arena sync", "ArenaExtra", "Arena Arena", ""]) {
-    assert.throws(() => assertProtectedVocabulary({ header: { credits: "TouchLine Credits" }, state: { steps: { locked } } }), /state\.steps\.locked/);
+    assert.throws(() => assertProtectedVocabulary({ header: { planPro: "PRO" }, state: { steps: { locked } } }), /state\.steps\.locked/);
   }
-  assert.throws(() => assertProtectedVocabulary({ header: {}, state: {} }), /header\.credits/);
+  assert.throws(() => assertProtectedVocabulary({ header: {}, state: {} }), /header\.planPro/);
 });
 
 test("preserving product names does not publish any of the six draft locales", () => {
@@ -59,6 +59,28 @@ test("preserving product names does not publish any of the six draft locales", (
     assert.equal(isTouchLineLocaleComplete(locale), false);
     assert.equal(getTouchlineClubOwnerMarketCopy(locale), headerCopy["en-GB"]);
     assert.equal(getTouchlineFantasyMarketStateCopy(locale), stateCopy["en-GB"]);
+  }
+});
+
+test("real market-power accessible label retains TouchLine Credits across locales without inventing a balance", () => {
+  const source = readFileSync(new URL("../components/touchline/ClubOwnerMarketHeader.tsx", import.meta.url), "utf8");
+  const tree = ts.createSourceFile("header.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const labels: ts.JsxAttribute[] = [];
+  function visit(node: ts.Node) {
+    if (ts.isJsxAttribute(node) && node.name.getText(tree) === "aria-label" && node.getText(tree).includes("TouchLine Credits")) labels.push(node);
+    ts.forEachChild(node, visit);
+  }
+  visit(tree);
+  assert.equal(labels.length, 1);
+  const initializer = labels[0].initializer;
+  assert.ok(initializer && ts.isJsxExpression(initializer) && initializer.expression);
+  const expression = initializer.expression.getText(tree);
+  for (const locale of locales) {
+    const copy = headerCopy[locale];
+    for (const marketPower of [0, 121_000_000]) {
+      assert.equal(runInNewContext(expression, { copy, marketPower }), `${copy.marketPower} ${marketPower} TouchLine Credits`);
+    }
+    assert.equal(runInNewContext(expression, { copy, marketPower: null }), copy.marketPowerUnavailable);
   }
 });
 

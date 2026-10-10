@@ -82,11 +82,11 @@ function cardBoundary(node: React.ReactNode): React.ReactNode {
 }
 function html(node: React.ReactNode) { return renderToStaticMarkup(React.createElement(React.Fragment, null, cardBoundary(node))); }
 
-test("public tables card renders suppress the value panel without changing their controls", () => {
+test("public tables cards preserve football market values without changing their controls", () => {
   const cards = clientSource.match(/<TouchlineEliteExactCard\b[\s\S]*?\/>/g) ?? [];
 
   assert.equal(cards.length, 1);
-  assert.match(cards[0], /\bhideMarketValuePanel\b/);
+  assert.match(cards[0], /\bhideMarketValuePanel=\{false\}/);
   assert.match(cards[0], /showCardActions=\{expanded\}/);
   assert.match(cards[0], /showSocialMetrics=\{expanded\}/);
 });

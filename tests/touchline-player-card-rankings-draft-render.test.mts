@@ -34,6 +34,7 @@ import * as access from '../lib/touchlineArena/auth-access.ts';
 const empty=()=>null;
 type CapturedProps = Record<string, unknown> & {
   children?: React.ReactNode;
+  navigation?: React.ReactNode;
   expandedContent?: React.ReactNode;
   player: { name: string; id: string };
   details: { cardEngineHref?: string };
@@ -44,7 +45,7 @@ function harness(authFailure?:Error, publicationFailure?:Error, envelope: unknow
   let authReads=0;
   const captures:Array<{kind:string;props:CapturedProps}>=[];
   const card={id:'literal-id',canonicalPlayerId:'22222222-2222-4222-8222-222222222222',name:'Player $& <official>',clubName:'Official FC',position:'Defender',role:'DEF',countryCode3:'FRA',shirtNumber:4,seasonTotalRating:12.75,matchRating:7.5,matchStats:{},seasonStats:{},editorialCard:null,cardReview:null};
-  const leaf=(kind:string)=>function CapturedLeaf(props:CapturedProps){captures.push({kind,props}); return kind==='zoom'?React.createElement(React.Fragment,null,props.children,props.expandedContent):null;};
+  const leaf=(kind:string)=>function CapturedLeaf(props:CapturedProps){captures.push({kind,props}); return kind==='zoom'?React.createElement(React.Fragment,null,props.children,props.expandedContent):kind==='header'?props.navigation:null;};
   const modules:Record<string,unknown>={
     "@/lib/touchlineArena/site-locales-release": siteLocalePolicy,
     'react/jsx-runtime':jsx,
@@ -99,7 +100,7 @@ test('real ranking route keeps defaults and propagates all eight opted-in presen
     for(const {props:child} of cards) {
       assert.equal(child.runtimeLocaleOverride,effective);assert.equal(child.draftLocalesEnabled,draft);
       assert.equal(child.player.name,h.card.name);assert.equal(child.player.id,h.card.id);
-      assert.equal(child.hideMarketValuePanel,true);
+      assert.equal(child.hideMarketValuePanel,false);
     }
     for(const {props:child} of zooms) {
       assert.equal(child.locale,effective);assert.equal(child.draftLocalesEnabled,draft);

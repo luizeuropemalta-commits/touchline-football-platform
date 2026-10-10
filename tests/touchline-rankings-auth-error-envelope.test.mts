@@ -26,7 +26,7 @@ const owner = { id: '11111111-1111-4111-8111-111111111111', email: 'owner@exampl
 const customer = { ...owner, email: 'customer@example.test' };
 function nodes(node: React.ReactNode): Element[] {
   return React.Children.toArray(node).flatMap(child => React.isValidElement<Record<string, unknown>>(child)
-    ? [child, ...nodes(child.props.children as React.ReactNode)] : []);
+    ? [child, ...nodes(child.props.children as React.ReactNode), ...nodes(child.props.navigation as React.ReactNode)] : []);
 }
 function compile(source: string, context: Record<string, unknown>) {
   const exports: Record<string, unknown> = {};

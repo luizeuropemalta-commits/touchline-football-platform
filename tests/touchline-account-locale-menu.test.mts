@@ -58,6 +58,24 @@ function harness(mode = context, request = async (_url: string, init: RequestIni
     emit: (id: string | null) => identity!('SIGNED_IN', id === null ? null : { user: { id } }), counts: () => ({ authCalls, unsubscribes, refreshes }) };
 }
 type Element = { type: unknown; props: Record<string, unknown> };
+test('locale loading stays accessible without visible text flash; blocked feedback remains visible', async () => {
+  for (const variant of ['select', 'menu']) {
+    const pending = deferred<Response>();
+    const h = harness(context, async () => pending.promise, variant);
+    const loading = elements(h.render(), 'p')[0];
+    assert.equal(loading.props.className, 'sr-only');
+    assert.equal(loading.props.role, 'status');
+    assert.equal(loading.props['aria-live'], 'polite');
+    assert.ok(loading.props.children);
+    pending.resolve(new Response('{}', { status: 503 }));
+    await settle();
+    const blocked = elements(h.render(), 'p')[0];
+    assert.notEqual(blocked.props.className, 'sr-only');
+    assert.ok(blocked.props.children);
+    assert.deepEqual(h.navigations, []);
+    h.cleanup();
+  }
+});
 function elements(tree: unknown, type: string): Element[] {
   if (Array.isArray(tree)) return tree.flatMap(n => elements(n, type));
   if (!tree || typeof tree !== 'object' || !('props' in tree)) return [];

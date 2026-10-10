@@ -17,6 +17,8 @@ import { resolveTouchlineClubOwnerPageIdentity } from "../lib/touchlineArena/clu
 import { touchLineAuthEntryHref } from "../lib/touchlineArena/auth-i18n.ts";
 import { resolveServerReadWithin } from "../lib/touchlineArena/server-read-deadline.ts";
 import { TOUCHLINE_ENGLAND_CLUBS } from "../lib/touchlineArena/demo-data.ts";
+import * as profileMetrics from "../lib/touchlineArena/club-owner-profile-metrics.ts";
+import { normalizeTouchlineMatchCentreTimeZone } from "../lib/touchlineArena/match-centre.ts";
 
 type User = { id: string; email: string; user_metadata: { full_name: string } };
 type Params = { lang?: string | string[]; club?: string | string[] };
@@ -39,16 +41,19 @@ function fixture(options: { user?: User | null; configured?: boolean; rejectAuth
   const events: string[] = [];
   const authentication = { data: { user }, error: null };
   const avatarContext = Object.freeze({ avatarUrl: "/confirmed-avatar.png" });
-  const snapshot = Object.freeze({ sentinel: "canonical-snapshot" });
+  const snapshot = Object.freeze({ sentinel: "canonical-snapshot", config: { budgetEur: 500_000_000 }, userGameweek: { totalMarketValueEur: 120_000_000 } });
   // Leaf identities inspect the actual route's props without running browser
   // components. This suite does not claim child rendering or visual coverage.
-  const leaves = Object.fromEntries(["brand", "navigation", "header", "notifications", "fantasy"].map(name => [name, function Leaf() { return null; }]));
+  const leaves = Object.fromEntries(["brand", "navigation", "header", "fantasy"].map(name => [name, function Leaf() { return null; }]));
   const ownerModule = compile(ownerSource, {
     process: { env: { TOUCHLINE_OWNER_EMAILS: "owner@example.test, admin@example.test" } },
   });
   const modules: Record<string, unknown> = {
     "@/lib/touchlineArena/site-locales-release": siteLocalePolicy,
     "react/jsx-runtime": jsxRuntime,
+    "next/headers": { headers: async () => ({ get: () => "Europe/Malta" }) },
+    "@/lib/touchlineArena/match-centre": { normalizeTouchlineMatchCentreTimeZone },
+    "@/lib/touchlineArena/club-owner-profile-metrics": profileMetrics,
     "next/navigation": {
       redirect: (href: string) => { events.push("redirect"); throw Object.assign(new Error("route redirect"), { kind: "redirect", href }); },
       notFound: () => { events.push("notFound"); throw Object.assign(new Error("route unavailable"), { kind: "notFound" }); },
@@ -57,7 +62,6 @@ function fixture(options: { user?: User | null; configured?: boolean; rejectAuth
     "@/components/touchline/TouchlineBrandHeader": { default: leaves.brand },
     "@/app/fantasy/FantasyGameweekClient": { default: leaves.fantasy },
     "@/components/touchline/TouchlineGlobalNavigation": { default: leaves.navigation },
-    "@/components/touchline/notifications/TouchlineMarketNotifications": { default: leaves.notifications },
     "@/lib/supabase/server": { createClient: async () => {
       events.push("createClient");
       return options.configured === false ? null : { auth: { getUser: async () => {
@@ -91,6 +95,7 @@ function fixture(options: { user?: User | null; configured?: boolean; rejectAuth
     "@/lib/touchlineFantasy/market-workflow-i18n": { getTouchlineFantasyMarketWorkflowCopy },
   };
   const loaded = compile(`${source}\nexports.internalRoute = typeof renderClubOwnerPage === "function" ? renderClubOwnerPage : undefined;\nexports.internalMetadata = typeof generateClubOwnerMetadata === "function" ? generateClubOwnerMetadata : undefined;`, {
+    process: { env: {} },
     require: (name: string) => { assert.ok(Object.hasOwn(modules, name), `Unexpected dependency ${name}`); return modules[name]; },
     fetch: () => assert.fail("No network permitted"),
   });
@@ -109,7 +114,7 @@ function fixture(options: { user?: User | null; configured?: boolean; rejectAuth
 
 function descendants(node: React.ReactNode): Element[] {
   return React.Children.toArray(node).flatMap(child => React.isValidElement<Record<string, unknown>>(child)
-    ? [child, ...descendants(child.props.children as React.ReactNode)] : []);
+    ? [child, ...descendants(child.props.children as React.ReactNode), ...descendants(child.props.navigation as React.ReactNode)] : []);
 }
 
 test("default route keeps all draft requests in English and passes false to every child boundary", async () => {
@@ -137,6 +142,8 @@ test("default route keeps all draft requests in English and passes false to ever
     assert.equal(elements.find(element => element.type === h.leaves.navigation)!.props.showAudioControl, false);
     const fantasy = elements.find(element => element.type === h.leaves.fantasy)!;
     assert.equal(header.props.accountId, customer.id);
+    assert.equal(header.props.remainingMarketPower, 380_000_000);
+    assert.equal(fantasy.props.liveTimeZone, "Europe/Malta");
     assert.equal(header.props.avatarContext, h.avatarContext);
     assert.equal((header.props.owner as { name: string }).name, customer.user_metadata.full_name);
     assert.equal(fantasy.props.initialSnapshot, h.snapshot);

@@ -189,7 +189,6 @@
 .playerGrid article::before{position:absolute;inset:0;border-radius:inherit;background:linear-gradient(120deg,rgba(255,255,255,.06),transparent 28%,transparent 70%,rgba(170,255,62,.05));content:"";pointer-events:none}
 .playerGrid article:hover{border-color:rgba(170,255,62,.4);box-shadow:0 18px 36px rgba(0,0,0,.42),0 0 24px rgba(170,255,62,.08),inset 0 1px 0 rgba(255,255,255,.08);transform:translateY(-2px)}
 .marketCard{position:relative;z-index:1;display:grid;place-items:center;width:var(--choice-card-width,146px);max-width:100%;aspect-ratio:430 / 691;overflow:visible;filter:drop-shadow(0 14px 18px rgba(0,0,0,.48))}
-.marketCard [data-card-market-value-panel="true"]{display:none!important}
 .playerIdentity{position:relative;z-index:1;display:grid;width:100%;min-width:0;gap:4px;padding:10px 4px 8px;text-align:center}
 .playerIdentity b{min-height:2.3em;overflow:visible;color:#f7fff8;font-size:.78rem;line-height:1.15;text-wrap:balance;text-transform:uppercase;white-space:normal}
 .clubIdentity{display:grid;grid-template-columns:22px minmax(0,1fr);align-items:center;justify-self:start;width:calc(100% - 4px);max-width:100%;min-width:0;min-height:34px;gap:7px;padding:5px 8px;box-sizing:border-box;border:1px solid rgba(170,255,62,.14);border-radius:10px;background:rgba(2,10,7,.72);overflow:hidden;text-align:left}
@@ -390,13 +389,16 @@
 .myClubPitchViewport{min-width:0}
 .myClubMobileSlotNav{display:none}
 .myClubTacticalPitch::after{content:none;animation:none}
-.myClubTacticalPitch [data-touchline-card-neon-trace=true]{display:block;opacity:.38;filter:drop-shadow(0 0 7px currentColor)}
-.myClubTacticalPitch [data-touchline-card-neon-trace-run=true]{display:none}
-.myClubTacticalPitch [data-touchline-card-neon-trace-base=true]{opacity:.46}
+/* Keep the shared player/coach perimeter trace, including its visibility and
+   reduced-motion controls. The pitch must not hide or dim the animated run. */
 /* 96px is a 71% increase from the former 56px tactical card. The wider
    placement envelope preserves the shortest vertical formation gaps and
    leaves the position/action labels readable below every card. */
 .myClubTacticalSlot{width:140px;gap:5px;cursor:default}
+.myClubAvailabilityBadge{position:absolute;z-index:8;top:22px;left:-18px;display:grid;place-items:center;width:48px;height:48px}
+/* Separate hit targets; the wrapper also prevents legacy card-span sizing
+   from stretching the ordinary match-card badge to the artwork width. */
+.myClubMatchCardBadge{position:absolute;z-index:8;top:1px;right:-18px;width:30px;height:38px}
 .myClubTacticalSlot>span{width:96px}
 .myClubTacticalSlot>span>i{width:58px;font-size:1.65rem}
 .myClubTacticalSlot>b{max-width:132px;overflow:hidden;padding:2px 6px;font-size:.58rem;text-overflow:ellipsis;white-space:nowrap}
@@ -499,18 +501,19 @@
 .gameSummary > div { padding: 16px; border: 1px solid #33433c; border-radius: 12px; background: #101a17; }
 .gameSummary span { display: block; color: #bac9bf; font-size: 13px; }
 .gameSummary strong { display: block; margin-top: 6px; color: #d5ffab; font-size: clamp(16px, 2vw, 24px); }
-.myClubCommand[data-fantasy-context="market"] .myClubCommandGrid { display: grid; grid-template-columns: minmax(0, 1fr) 220px; gap: 20px; align-items: start; }
+.myClubCommand[data-fantasy-context="market"] .myClubCommandGrid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, .34fr); gap: 20px; align-items: start; }
 .technicalArea { display: grid; gap: 12px; padding: 18px; border: 1px solid #7ebf2a; border-radius: 16px; background: #101b18; min-width: 0; }
 .technicalArea h2 { margin: 0; color: #a3ff12; font-size: 16px; }
 .technicalCoach { width: 140px; max-width: 100%; margin: auto; }
 .technicalArea label { display: grid; gap: 6px; font-size: 13px; color: #c7d8cb; }
 .technicalArea select { width: 100%; min-height: 44px; color: #f3f8f1; background: #111c18; border: 1px solid #607b60; border-radius: 8px; padding: 8px; }
 .technicalArea select:focus-visible { outline: 2px solid #a3ff12; outline-offset: 3px; }
-.marketSideColumn { display: flex; flex-direction: column; gap: 20px; align-self: stretch; min-width: 0; }
+.marketSideColumn { display: flex; flex-direction: column; gap: 20px; align-self: stretch; min-width: 0; padding-top: 142px; }
 .marketSideColumn > .technicalArea { margin-top: auto; }
 .marketSideColumn .technicalCoach { width: 104px; }
 .marketSideColumn .technicalArea { gap: 8px; }
-.ownerSummary { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; margin: 0; }
+.technicalCoachName { text-align: center; }
+.ownerSummary { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; margin: 0; }
 .ownerSummary > div { display: grid; align-content: start; gap: 7px; min-width: 0; padding: 15px 18px; border: 1px solid rgba(192,231,162,.16); border-radius: 14px; background: linear-gradient(120deg,rgba(160,212,125,.055),rgba(7,18,12,.86)); }
 .ownerSummary dt { color: #b1c1ac; font-size: 11px; line-height: 1.4; }
 .ownerSummary dd { margin: 0; color: #e8f6dc; font-size: clamp(20px,2.3vw,28px); font-weight: 800; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
@@ -519,6 +522,7 @@
 .ownerSummary a:focus-visible { outline: 2px solid #a3ff12; outline-offset: 3px; }
 @media (max-width: 1000px) {
   .myClubCommand[data-fantasy-context="market"] .myClubCommandGrid { grid-template-columns: minmax(0, 1fr); }
+  .marketSideColumn { padding-top: 0; }
   .technicalArea { grid-template-columns: 140px minmax(0, 1fr); }
   .technicalArea h2 { grid-column: 1 / -1; }
   .technicalCoach { grid-row: span 3; }
@@ -528,6 +532,26 @@
 /* The field remains in place while the position catalogue drops over it. */
 .myClubCommand[data-fantasy-context="market"] { --market-border: #7ebf2a; border-color: var(--market-border); }
 .myClubCommand[data-fantasy-context="market"] :is(.myClubSquad, .myClubMarketStatus, .myClubGameweekFooter, .technicalArea, .myClubSetup, .myClubMarket) { border-color: var(--market-border); }
+.myClubCommand[data-fantasy-context="market"]:not(.arenaOverlay) {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+}
+.myClubCommand[data-fantasy-context="market"]:not(.arenaOverlay) .myClubSquad {
+  border: 0 !important;
+  border-radius: 0;
+  background: transparent !important;
+  box-shadow: none !important;
+  overflow: visible;
+}
+.myClubCommand[data-fantasy-context="market"]:not(.arenaOverlay) .myClubMarketStatus {
+  border: 0 !important;
+  border-radius: 0;
+  background: transparent !important;
+  box-shadow: none !important;
+}
 .myClubCommand[data-fantasy-context="market"] .myClubTacticalPitch {
   --pitch-line: var(--market-border) !important;
   --pitch-line-soft: var(--market-border) !important;
@@ -554,6 +578,19 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .myClubCommand[data-fantasy-context="market"] .myClubTacticalPitch::after { animation: none; background-position: 50% 50%; }
+}
+/* The normal ClubOwner view keeps only the actual grass/pitch markings.
+   The separate Arena presentation retains its own surface treatment. */
+.myClubCommand[data-fantasy-context="market"]:not(.arenaOverlay) .myClubTacticalPitch {
+  border: 0;
+  border-radius: 0;
+  background: transparent !important;
+  box-shadow: none;
+  overflow: visible;
+}
+.myClubCommand[data-fantasy-context="market"]:not(.arenaOverlay) .myClubTacticalPitch::after {
+  display: none;
+  content: none;
 }
 /* The Market picker must remain reachable directly from every field position,
    including landscape phones; the legacy mobile list is only an alternative. */
@@ -586,22 +623,134 @@
 @media (any-hover: none), (any-pointer: coarse) {
   .myClubPitchViewport .myClubTacticalSlot > .pitchRemove { opacity: 1; }
 }
-.myClubCommand[data-fantasy-context="market"] .myClubMarketStatus { display: grid; grid-template-columns: minmax(0,1fr) minmax(260px,.8fr); align-items: center; gap: 26px; padding: 22px 26px; border-radius: 20px; background: radial-gradient(ellipse at 100% 0,rgba(177,212,137,.075),transparent 65%),linear-gradient(125deg,#0c1913,#08110e); box-shadow: inset 0 1px rgba(242,255,222,.055); }
+.myClubCommand[data-fantasy-context="market"] .myClubMarketStatus { display: grid; grid-template-columns: 1fr; align-items: start; gap: 13px; padding: 14px 16px; border-radius: 16px; background: radial-gradient(ellipse at 100% 0,rgba(177,212,137,.075),transparent 65%),linear-gradient(125deg,#0c1913,#08110e); box-shadow: inset 0 1px rgba(242,255,222,.055); }
 .myClubCommand[data-fantasy-context="market"] .myClubMarketStatus > div { min-width: 0; }
 .myClubCommand[data-fantasy-context="market"] .myClubMarketStatus > div > span { color: #bfd1b2; font-size: 10px; letter-spacing: .16em; }
-.myClubCommand[data-fantasy-context="market"] .myClubMarketStatus > div > small { margin-top: 12px; color: #eff8e8; font-size: clamp(15px,1.5vw,19px); line-height: 1.4; }
-.myClubCommand[data-fantasy-context="market"] .myClubMarketRule { max-width: 600px; margin-top: 12px; color: #9cac99; font-size: 12px; line-height: 1.6; }
-.myClubCommand[data-fantasy-context="market"] .myClubMarketStatus .marketClock { width: 100%; min-width: 0; max-width: none; padding: 16px 18px; border: 1px solid rgba(201,217,170,.17); border-radius: 14px; background: rgba(1,8,5,.34); }
-.myClubCommand[data-fantasy-context="market"] .myClubMarketStatus .clockRule { display: flex; align-items: center; gap: 12px; margin: 0; color: #dccfab; font-size: clamp(24px,2.5vw,34px); letter-spacing: -.025em; }
+.myClubCommand[data-fantasy-context="market"] .myClubMarketStatus > div > small { margin-top: 5px; color: #eff8e8; font-size: 13px; line-height: 1.35; }
+.myClubCommand[data-fantasy-context="market"] .myClubMarketRule { max-width: 38ch; margin-top: 7px; color: #9cac99; font-size: 11px; line-height: 1.45; }
+.myClubCommand[data-fantasy-context="market"] .myClubMarketStatus .marketClock { width: 100%; min-width: 0; max-width: none; padding: 11px 13px; border: 1px solid rgba(201,217,170,.17); border-radius: 12px; background: rgba(1,8,5,.34); }
+.myClubCommand[data-fantasy-context="market"] .myClubMarketStatus .clockRule { display: flex; align-items: center; gap: 8px; margin: 0; color: #dccfab; font-size: clamp(20px,2vw,28px); letter-spacing: -.025em; }
+.marketSideColumn .clockRule { font-size: clamp(17px,1.35vw,21px) !important; }
 .myClubCommand[data-fantasy-context="market"] .myClubMarketStatus .clockRule::before { content: ""; flex: 0 0 auto; width: 8px; height: 8px; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 5px rgba(220,207,171,.065); }
 .myClubCommand[data-fantasy-context="market"] .myClubMarketStatus[data-market-open="true"] .clockRule { color: #cff39c; }
 .myClubCommand[data-fantasy-context="market"] .myClubMarketStatus .clockHeading small { display: none; }
+.myClubCommand[data-fantasy-context="market"] .myClubMarketHeading[data-market-heading="status"] { position: relative; display: grid; justify-items: center; gap: 10px; padding: 16px 18px 14px; text-align: center; }
+.myClubCommand[data-fantasy-context="market"] .myClubMarketHeading[data-market-heading="status"] .marketClock { display: grid; justify-items: center; width: min(100%, 420px); min-width: 0; max-width: none; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.myClubCommand[data-fantasy-context="market"] .myClubMarketHeading[data-market-heading="status"] .marketClock::before { content: none; }
+.myClubCommand[data-fantasy-context="market"] .myClubMarketHeading[data-market-heading="status"] .clockRule { display: inline-flex; align-items: center; gap: 8px; margin: 0; color: #cff39c; font-size: clamp(18px, 2vw, 26px); letter-spacing: -.025em; }
+.myClubCommand[data-fantasy-context="market"] .myClubMarketHeading[data-market-heading="status"] .clockRule::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 5px rgba(207,243,156,.065); }
+.myClubCommand[data-fantasy-context="market"] .myClubMarketHeading[data-market-heading="status"] .marketClock[data-market-clock-phase="closing"] .clockRule { color: var(--lime); animation: marketStatusPulse 1.8s ease-in-out infinite; }
+.myClubCommand[data-fantasy-context="market"] .myClubMarketHeading[data-market-heading="status"] .marketClock:is([data-market-clock-phase="opening"],[data-market-clock-phase="awaiting-final"]) .clockRule { color: #ff737d; animation: marketStatusPulse 1.8s ease-in-out infinite; }
+@keyframes marketStatusPulse { 50% { opacity: .45; text-shadow: 0 0 18px currentColor; } }
+.myClubCommand[data-fantasy-context="market"] .myClubMarketHeading[data-market-heading="status"] .clockHeading { grid-template-columns: auto; justify-items: center; width: 234px; }
+.myClubCommand[data-fantasy-context="market"] .myClubMarketHeading[data-market-heading="status"] .clockHeading i, .myClubCommand[data-fantasy-context="market"] .myClubMarketHeading[data-market-heading="status"] .clockHeading small { display: none; }
+.myClubCommand[data-fantasy-context="market"] .myClubMarketHeading[data-market-heading="status"] .clockHeading em { display: none; }
+.myClubCommand[data-fantasy-context="market"] .myClubMarketHeading[data-market-heading="status"] .clockHeading b { width: 234px; overflow: visible; color: var(--gold); font-family: inherit; font-size: clamp(18px, 1.5vw, 24px); font-weight: 900; letter-spacing: .02em; text-align: center; text-overflow: clip; text-transform: uppercase; white-space: nowrap; }
+.myClubCommand[data-fantasy-context="market"] .myClubMarketHeading[data-market-heading="status"] .marketClock[data-market-clock-phase="closing"] .clockHeading b { animation: marketStatusPulse 1.8s ease-in-out infinite; }
+.myClubCommand[data-fantasy-context="market"] .myClubMarketHeading[data-market-heading="status"] .marketClock:is([data-market-clock-phase="opening"],[data-market-clock-phase="awaiting-final"]) .clockHeading b { animation: marketStatusPulse 1.8s ease-in-out infinite; }
+.myClubCommand[data-fantasy-context="market"] .myClubMarketHeading[data-market-heading="status"] .clockDigits { grid-template-columns: repeat(3, 70px); justify-content: center; width: 234px; gap: 12px; }
+.myClubCommand[data-fantasy-context="market"] .myClubMarketHeading[data-market-heading="status"] .clockDigits span { min-width: 70px; padding: 13px 12px 11px; }
+.myClubCommand[data-fantasy-context="market"] .myClubMarketHeading[data-market-heading="status"] .clockDigits b { font-size: clamp(42px, 4vw, 64px); }
+.myClubCommand[data-fantasy-context="market"] .myClubMarketHeading[data-market-heading="status"] .marketClock > p { text-align: center; }
+.myClubCommand[data-fantasy-context="market"] .myClubMarketHeading[data-market-heading="status"] > .viewToggle { position: absolute; top: 16px; right: 18px; margin: 0; }
+@media(max-width:700px){.myClubCommand[data-fantasy-context="market"] .myClubMarketHeading[data-market-heading="status"] > .viewToggle { position: static; }}
+@media(prefers-reduced-motion:reduce){.myClubCommand[data-fantasy-context="market"] .myClubMarketHeading[data-market-heading="status"] .clockRule { animation:none; }}
 .myClubCommandStatus[data-round-frame="true"] { display: grid; grid-template-columns: auto auto; align-items: baseline; justify-content: center; gap: 8px 13px; flex: 0 0 auto; align-self: start; width: min(100%,230px); min-width: 165px; padding: 19px 23px; border: 1px solid rgba(215,225,157,.32); border-radius: 18px; background: radial-gradient(ellipse at 50% 0,rgba(211,220,134,.11),transparent 75%),linear-gradient(135deg,#182219,#0a130e); box-shadow: inset 0 1px rgba(246,255,209,.09),0 12px 28px rgba(0,0,0,.16); text-align: center; }
 .myClubCommandStatus[data-round-frame="true"] > span { color: #d0debb; font-size: 16px; font-weight: 700; text-transform: none; letter-spacing: -.02em; }
 .myClubCommandStatus[data-round-frame="true"] > strong { color: #e9f5c4; font-size: 38px; font-variant-numeric: tabular-nums; }
 .myClubCommandStatus[data-round-frame="true"] > small { grid-column: 1 / -1; padding-top: 8px; border-top: 1px solid rgba(218,239,188,.12); color: #afbea3; font-size: 11px; line-height: 1.4; text-transform: none; }
 @media (max-width: 720px) {
   .myClubCommand[data-fantasy-context="market"] .myClubMarketStatus { grid-template-columns: minmax(0,1fr); gap: 16px; padding: 18px; }
+  .marketSideColumn { padding-top: 0; }
   .ownerSummary { gap: 7px; }
   .ownerSummary > div { padding: 11px; }
+}
+.myClubCommand.arenaOverlay[data-fantasy-context="market"] {
+  display: block;
+  border: 0;
+  border-radius: 0;
+  position: fixed;
+  inset: 0;
+  z-index: 1700;
+  width: 100%;
+  height: 100dvh;
+  max-width: none;
+  margin: 0;
+  padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+  box-sizing: border-box;
+  overflow: auto;
+  background: #030c08;
+}
+.arenaOverlay .myClubSquad { display: flex; flex-direction: column; width: 100%; height: 100%; margin: 0; border: 1px solid #a3c94b; border-radius: 18px; background: transparent; overflow: hidden; }
+.arenaBody { display: contents; }
+.arenaOverlay .arenaBody { display: grid; direction: ltr; grid-template-columns: minmax(0, 1fr) clamp(260px, 27vw, 370px); gap: 12px; flex: 1; min-height: 0; padding: 0 10px 10px; }
+.arenaLiveRail { min-width: 0; min-height: 0; height: 100%; }
+.arenaOverlay .myClubPitchViewport { position: relative; }
+.arenaCoach { position: absolute; top: -30px; left: min(50%, calc((100dvh - 150px) * 105 / 68 / 2)); transform: translateX(-50%); z-index: 5; display: grid; justify-items: center; gap: 2px; background: transparent; border: 0; }
+.arenaCoach > span { padding: 2px 6px; border-radius: 6px; color: #fff; background: #020a07; font-family: inherit; font-size: .58rem; font-weight: bold; letter-spacing: normal; text-transform: uppercase; white-space: nowrap; }
+.myClubFieldCoach { position: static; justify-self: center; margin: 0; transform: translateY(18px); z-index: 5; display: grid; justify-items: center; gap: 6px; background: transparent; border: 0; }
+.myClubFieldCoach > span { padding: 2px 6px; border-radius: 6px; color: #fff; background: #020a07; font-family: inherit; font-size: .58rem; font-weight: bold; letter-spacing: normal; text-transform: uppercase; white-space: nowrap; }
+.myClubTechnicalLine { position: relative; display: flex; align-items: center; justify-content: center; width: calc(100% - 32px); height: 18px; margin: 0 16px; border-bottom: 1px solid rgba(170,255,62,.72); }
+.myClubTechnicalLine > span { position: relative; top: 9px; padding: 0 8px; color: #baff72; background: #07110d; font-size: .58rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; white-space: nowrap; }
+/* This wrapper also contains coach and controls. Only the grass has a pitch
+   aspect ratio; constraining the wrapper compresses its mobile header to zero. */
+.myClubCommand[data-fantasy-context="market"]:not(.arenaOverlay) .myClubPitchViewport { position: relative; display: grid; justify-items: stretch; align-items: start; gap: 10px; height: auto; aspect-ratio: auto; padding-top: 0; box-sizing: border-box; overflow: visible; }
+.myClubCommand[data-fantasy-context="market"]:not(.arenaOverlay) .myClubPitchViewport .myClubTacticalPitch { margin: 0 16px; }
+.myClubCommand[data-fantasy-context="market"]:not(.arenaOverlay) .myClubSquad { position: relative; }
+.myClubCommand[data-fantasy-context="market"]:not(.arenaOverlay) .myClubPitchViewport > .myClubSquadHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  position: static;
+  z-index: auto;
+  width: calc(100% - 32px);
+  margin: 0 16px;
+  box-sizing: border-box;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  pointer-events: auto;
+}
+.myClubCommand[data-fantasy-context="market"]:not(.arenaOverlay) .myClubPitchViewport > .myClubSquadHeader > div,
+.myClubCommand[data-fantasy-context="market"]:not(.arenaOverlay) .myClubPitchViewport > .myClubSquadHeader > button { pointer-events: auto; }
+.myClubCommand[data-fantasy-context="market"]:not(.arenaOverlay) .myClubPitchViewport > .myClubSquadHeader > div { gap: 2px; }
+.myClubCommand[data-fantasy-context="market"]:not(.arenaOverlay) .myClubPitchViewport > .myClubSquadHeader strong { font-size: .8rem; }
+.myClubCommand[data-fantasy-context="market"]:not(.arenaOverlay) .myClubPitchViewport > .myClubSquadHeader .viewToggle { margin: 0 0 2px; }
+@media (min-width: 1001px) {
+  /* Keep the normal XI at its full width.  Live occupies only the space
+     alongside the grass, rather than shrinking the whole ClubOwner grid. */
+  .myClubCommand[data-fantasy-context="market"]:not(.arenaOverlay) .myClubCommandGrid { grid-template-columns: minmax(0, 1fr); }
+  .myClubCommand[data-fantasy-context="market"]:not(.arenaOverlay) .arenaBody { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(360px, .42fr); align-items: stretch; gap: 18px; }
+  .myClubCommand[data-fantasy-context="market"]:not(.arenaOverlay) .myClubPitchViewport { align-self: start; height: auto; aspect-ratio: auto; }
+  .myClubCommand[data-fantasy-context="market"]:not(.arenaOverlay) .myClubPitchViewport .myClubTacticalPitch { width: calc(100% - 32px); height: auto; min-height: 0; max-width: none; aspect-ratio: 105 / 68; }
+  .myClubCommand[data-fantasy-context="market"] .marketSideColumn { padding-top: 206px; transform: translateX(clamp(16px, 2vw, 36px)); }
+  .myClubCommand[data-fantasy-context="market"]:not(.arenaOverlay) .arenaLiveRail { align-self: stretch; min-width: 0; height: auto; min-height: 0; margin-top: 88px; padding-top: 0; overflow: auto; }
+}
+@media (max-width: 1180px) { .arenaCoach > span { font-size: .52rem; } }
+@media (max-width: 900px) { .arenaCoach > span { padding: 1px 4px; font-size: .47rem; } }
+.arenaCoach > div { width: 52px; }
+.arenaOverlay .myClubSquad > header { flex: 0 0 auto; padding: 6px 10px; border: 0; }
+.arenaOverlay .myClubSquad > header > div { display: flex; align-items: center; gap: 12px; }
+.arenaRoundPoints { position: absolute; right: 5%; bottom: calc(95% + 8px); z-index: 5; display: grid; justify-items: end; gap: 4px; width: max-content; text-align: end; }
+.arenaRoundPoints > span { color: #b9c8b5; font-size: .64rem; font-weight: 600; letter-spacing: .06em; }
+.arenaRoundPoints > strong { color: #dfff9a; font-size: 1.85rem; line-height: 1.1; font-weight: 800; font-variant-numeric: tabular-nums; }
+@media (max-width: 900px) {
+  .arenaRoundPoints { gap: 2px; }
+  .arenaRoundPoints > span { font-size: .58rem; letter-spacing: .025em; }
+  .arenaRoundPoints > strong { font-size: 1.35rem; }
+}
+.arenaOverlay .myClubPitchViewport { display: grid; place-items: end start; flex: 1; min-height: 0; width: 100%; margin: 0; padding-top: 60px; box-sizing: border-box; aspect-ratio: auto; overflow: visible; }
+.myClubCommand.arenaOverlay[data-fantasy-context="market"] .myClubPitchViewport .myClubTacticalPitch { width: min(100%, calc((100dvh - 150px) * 105 / 68)); height: auto; min-height: 0; max-width: 100%; aspect-ratio: 105 / 68; margin: 0; transform: none; }
+.myClubCommand.arenaOverlay[data-fantasy-context="market"] .arenaCoach {
+  top: clamp(100px, 18dvh, 210px);
+  bottom: auto;
+  transform: translateX(-50%);
+}
+.arenaOverlay .myClubMobileSlotNav { display: none; }
+.myClubCommand.arenaOverlay[data-fantasy-context="market"] .myClubTacticalPitch { border: 0; border-radius: 0; box-shadow: none; background: transparent !important; overflow: visible; }
+.myClubCommand.arenaOverlay[data-fantasy-context="market"] .myClubTacticalPitch::after { content: none; display: none; }
+/* Portals must respect the existing landscape-only gameplay boundary. */
+@media (max-width: 767px) and (orientation: portrait) and (pointer: coarse) {
+  .myClubCommand.arenaOverlay[data-fantasy-context="market"] { visibility: hidden; pointer-events: none; }
 }

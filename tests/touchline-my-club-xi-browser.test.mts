@@ -15,6 +15,7 @@ import { validateTouchlineFantasyLineup } from "../lib/touchlineFantasy/domain.t
 import { touchlineMarketPositionBucket, type TouchlineRosterRole } from "../lib/touchlineArena/position-eligibility.ts";
 import type { TouchlineCoach } from "../lib/football-data/types.ts";
 import type { TouchlineFantasySnapshot } from "../lib/touchlineFantasy/server.ts";
+import { resolvePlayerAvailabilityBadge } from "../lib/touchlineArena/player-availability-badge.ts";
 
 // Finite, opt-in DOM proof only. No server, credentials, real account, provider,
 // DB, Next build or remote assets. All requests are fulfilled/aborted locally.
@@ -158,6 +159,9 @@ function bundleProduct(): Bundle {
     "next/image": `const React=require('react'); module.exports=React.forwardRef(function Image(p,ref){const {unoptimized,priority,fill,quality,loader,placeholder,blurDataURL,onLoadingComplete,...rest}=p;return React.createElement('img',{...rest,ref});});`,
     "next/link": `const React=require('react'); module.exports=React.forwardRef(function Link(p,ref){const {prefetch,replace,scroll,shallow,locale,legacyBehavior,passHref,...rest}=p;return React.createElement('a',{...rest,ref});});`,
     "next/navigation": `exports.usePathname=()=>location.pathname;exports.useRouter=()=>({refresh(){throw Error('Unexpected Next refresh');},push(){throw Error('Unexpected Next navigation');},replace(){throw Error('Unexpected Next navigation');}});`,
+    // Real createClient executes its missing-config branch in this credential-free
+    // fixture. The SDK is a forbidden transport, not a fake authenticated session.
+    "@supabase/ssr": `const forbidden=()=>{throw Error('Unexpected Supabase transport in isolated XI fixture');};exports.createBrowserClient=forbidden;exports.parseCookieHeader=forbidden;exports.serializeCookieHeader=forbidden;`,
   };
   const allowedPackages = new Set(["react", "react-dom", "scheduler", "lucide-react"]);
   function resolve(specifier: string, parent: string): string {
@@ -221,36 +225,77 @@ function bundleProduct(): Bundle {
   return { sources: [...sources].sort(), css: css.join("\n"), script: `
     const process={env:{NODE_ENV:'development'}};const modules={${definitions}},cache={};
     function load(id){if(cache[id])return cache[id].exports;const definition=modules[id];if(!definition)throw Error('Missing bundled module');const module={exports:{}};cache[id]=module;definition[0](module,module.exports,name=>{if(!Object.hasOwn(definition[1],name))throw Error('Unmapped import '+name);return load(definition[1][name]);});return module.exports;}
-    window.fixtureMountPhase='module-load';
+    function markPhase(phase){window.fixtureMountPhase=phase;console.info('XI_MOUNT_PHASE '+JSON.stringify({phase,atMs:Math.round(performance.now())}));}
+    markPhase('module-load');
     const React=load(${JSON.stringify(react)}),root=load(${JSON.stringify(client)}).createRoot(document.getElementById('root'));
     const flushSync=load(${JSON.stringify(dom)}).flushSync,Fantasy=load(${JSON.stringify(entry)}).default;
     window.fixtureScrolls=[];const nativeScroll=Element.prototype.scrollIntoView;
     Element.prototype.scrollIntoView=function(options){window.fixtureScrolls.push({id:this.id,behavior:options?.behavior});return nativeScroll.call(this,options);};
     window.unmountFixture=()=>flushSync(()=>root.unmount());
-    window.fixtureMountPhase='render-start';
+    markPhase('render-start');
     flushSync(()=>root.render(React.createElement(React.StrictMode,null,React.createElement(Fantasy,window.fixtureProps))));
-    window.fixtureMountPhase='render-returned';
+    markPhase('render-returned');
   ` };
 }
 
 type Mode = { locale: "en-GB" | "pt-BR"; touch: boolean; reduced: boolean };
 const modes: Mode[] = [{ locale: "en-GB", touch: false, reduced: false }, { locale: "pt-BR", touch: true, reduced: true }];
 type SaveRequest = { gameweekId: string; selectedCoachId: string; formationCode: string; selections: Array<{ playerId: string; slotId: string }>; action: string; idempotencyKey: string };
-async function openFixture(browser: Browser, bundle: Bundle, mode: Mode, options: { locked?: boolean; divergent?: boolean } = {}) {
+async function openFixture(browser: Browser, bundle: Bundle, mode: Mode, options: { locked?: boolean; divergent?: boolean; indicators?: boolean } = {}) {
   const snapshot = fixtureSnapshot(options.locked), initialSelections = JSON.stringify(snapshot.selections);
+  if (options.indicators) {
+    const playerId = snapshot.selections[0].playerId;
+    const badge = resolvePlayerAvailabilityBadge({ source: "sportmonks", fixtureId: "991", playerId,
+      confirmed: true, reason: "injury" }, "991", playerId);
+    assert.ok(badge);
+    snapshot.playerAvailabilityIndicators = [{ playerId, fixtureId: "991", badge }];
+    snapshot.matchCardIndicators = [{ playerId, fixtureId: "991", eventId: "synthetic-yellow", kind: "yellow" }];
+  }
+  let stateUnavailable = false, stateReads = 0;
   const context = await browser.newContext({ viewport: mode.touch ? { width: 844, height: 390 } : { width: 1280, height: 900 },
     hasTouch: mode.touch, reducedMotion: mode.reduced ? "reduce" : "no-preference", serviceWorkers: "block" });
   let page: Page | undefined;
   const errors: string[] = [], consoleErrors: string[] = [], unexpected: string[] = [];
+  const expectedHttpErrors = new Map<string, number>();
+  const unexpectedConsoleErrors: string[] = [];
   let pageErrorCount = 0, consoleErrorCount = 0;
+  const mountStartedAt = performance.now();
+  const resourceTiming = { started: 0, finished: 0, failed: 0, lastEventMs: 0 };
+  const mountPhases: string[] = [];
+  const pendingResources = new Map<string, number>();
   const capture = (messages: string[], message: string) => { if (messages.length < 6) messages.push(message.slice(0, 1_000)); };
   const heldSaves = new Set<() => void>();
   try {
     page = await context.newPage(); page.setDefaultTimeout(5_000); page.setDefaultNavigationTimeout(10_000);
+    if (options.indicators) await page.clock.install();
     const mountedPage = page;
+    page.on("request", request => {
+      resourceTiming.started++;
+      resourceTiming.lastEventMs = Math.round(performance.now() - mountStartedAt);
+      pendingResources.set(new URL(request.url()).pathname, resourceTiming.lastEventMs);
+    });
+    page.on("requestfinished", request => {
+      resourceTiming.finished++;
+      resourceTiming.lastEventMs = Math.round(performance.now() - mountStartedAt);
+      pendingResources.delete(new URL(request.url()).pathname);
+    });
+    page.on("requestfailed", request => {
+      resourceTiming.failed++;
+      pendingResources.delete(new URL(request.url()).pathname);
+    });
     const writes: SaveRequest[] = [];
     page.on("pageerror", error => { pageErrorCount++; capture(errors, error.stack ?? error.message); });
-    page.on("console", message => { if (message.type() === "error") { consoleErrorCount++; capture(consoleErrors, message.text()); } });
+    page.on("console", message => {
+      if (message.text().startsWith("XI_MOUNT_PHASE ") && mountPhases.length < 4) mountPhases.push(message.text().slice(0, 180));
+      if (message.type() === "error") {
+        consoleErrorCount++; capture(consoleErrors, message.text());
+        const url = message.location().url;
+        const remaining = expectedHttpErrors.get(url) ?? 0;
+        if (message.text() === "Failed to load resource: the server responded with a status of 503 (Service Unavailable)" && remaining > 0)
+          expectedHttpErrors.set(url, remaining - 1);
+        else capture(unexpectedConsoleErrors, message.text());
+      }
+    });
     let releaseSave: (() => void) | undefined, committed: SaveRequest | undefined, readsAfterSave = 0;
     const publicRoot = realpathSync(path.join(root, "public"));
     const props = { initialSnapshot: snapshot, locale: mode.locale, embedded: true, marketPage: true, initialPlayerClubTeamId: club.teamId };
@@ -272,6 +317,11 @@ async function openFixture(browser: Browser, bundle: Bundle, mode: Mode, options
         await route.fulfill({ json: { ok: true } }).catch(() => {}); return;
       }
       if (url.pathname === "/api/touchline-fantasy/state" && method === "GET") {
+        stateReads++;
+        if (stateUnavailable) {
+          expectedHttpErrors.set(request.url(), (expectedHttpErrors.get(request.url()) ?? 0) + 1);
+          await route.fulfill({ status: 503, json: { ok: false } }); return;
+        }
         if (committed) readsAfterSave++;
         await route.fulfill({ json: { ok: true, ...snapshot, ...(committed && !options.divergent ? {
           selections: committed.selections, userGameweek: { ...snapshot.userGameweek, selectedCoachId: committed.selectedCoachId,
@@ -279,7 +329,8 @@ async function openFixture(browser: Browser, bundle: Bundle, mode: Mode, options
         } : {}) } }); return;
       }
       // Real read-only hooks remain mounted; no award/ranking authority is fabricated.
-      if (method === "GET" && ["/api/touchline-awards/golden-boot", "/api/touchline-arena/card-ranking/active"].includes(url.pathname)) {
+      if (method === "GET" && ["/api/touchline-awards/golden-boot", "/api/touchline-arena/card-ranking/active", "/api/football-data/fantasy/livescores"].includes(url.pathname)) {
+        expectedHttpErrors.set(request.url(), (expectedHttpErrors.get(request.url()) ?? 0) + 1);
         await route.fulfill({ status: 503, json: { ok: false } }); return;
       }
       if (method === "GET" && /\.(?:png|webp|svg|jpg|jpeg|woff2?|json)$/i.test(url.pathname)) {
@@ -295,13 +346,21 @@ async function openFixture(browser: Browser, bundle: Bundle, mode: Mode, options
     const removeName = `${mode.locale === "pt-BR" ? "Retirar do XI" : "Remove from XI"}: ${original.name} · ${targetSlot.id}`;
     const pitch = page.locator("#my-club-xi-pitch"), list = page.locator("#my-club-player-selection");
     const confirm = page.getByRole("button", { name: mode.locale === "pt-BR" ? "Confirmar XI" : "Confirm XI", exact: true });
-    await page.goto(`${origin}/fixture`, { waitUntil: "load" });
+    // This is a workflow oracle, not an all-assets performance budget. Wait
+    // for the actual mounted XI; unrelated offscreen artwork may finish later.
+    await page.goto(`${origin}/fixture`, { waitUntil: "domcontentloaded" });
     await expect(pitch).toBeVisible();
     await expect(pitch.locator("[data-touchline-pitch-surface]")).toHaveCount(1);
+    // The coach now belongs to the pitch section but remains outside its playing
+    // surface. Count the actual XI, not every card in the enclosing section.
+    await expect(pitch.locator('[data-touchline-pitch-surface] [data-touchline-card-zoom="trigger"]')).toHaveCount(11);
+    console.log(`XI_FIXTURE_READY ${JSON.stringify({ engine: browser.browserType().name(), elapsedMs: Math.round(performance.now() - mountStartedAt), scriptBytes: Buffer.byteLength(bundle.script), cssBytes: Buffer.byteLength(bundle.css), mountPhases, resourceTiming })}`);
     return { page, snapshot, writes, errors, unexpected, pitch, list, confirm, removeName,
+      setStateUnavailable(value: boolean) { stateUnavailable = value; },
+      get stateReads() { return stateReads; },
       get readsAfterSave() { return readsAfterSave; },
       release() { assert.ok(releaseSave, "POST receipt must be held"); releaseSave(); releaseSave = undefined; },
-      async assertClean() { assert.deepEqual(errors, []); assert.deepEqual(unexpected, []); assert.equal(JSON.stringify(snapshot.selections), initialSelections); },
+      async assertClean() { assert.deepEqual(errors, []); assert.deepEqual(unexpectedConsoleErrors, [], "Unexpected browser console errors"); assert.deepEqual(unexpected, []); assert.equal(JSON.stringify(snapshot.selections), initialSelections); },
       async close() { for (const release of heldSaves) release(); await mountedPage.evaluate("window.unmountFixture()").catch(() => {}); await context.close(); },
     };
   } catch (error) {
@@ -331,6 +390,7 @@ async function openFixture(browser: Browser, bundle: Bundle, mode: Mode, options
       engine: browser.browserType().name(), mode, locked: Boolean(options.locked), divergent: Boolean(options.divergent),
       failure: (error instanceof Error ? error.message : String(error)).slice(0, 1_500),
       pageErrorCount, pageErrors: errors, consoleErrorCount, consoleErrors,
+      mountPhases, resourceTiming, pendingResources: [...pendingResources].slice(0, 12),
       unexpected: unexpected.slice(0, 8).map(value => value.slice(0, 200)), dom,
     })}`);
   }
@@ -521,8 +581,8 @@ async function diagnoseRealTab(page: Page, pitch: Locator, target: Locator, sele
 
 async function replacePlayer(fixture: Awaited<ReturnType<typeof openFixture>>, mode: Mode, keyboardDiagnostic = false, keyboardKey?: KeyboardKey) {
   const { page, pitch, list } = fixture;
-  await activate(page.getByRole("button", { name: fixture.removeName, exact: true }), mode);
-  await expect(pitch.locator("header strong")).toHaveText("10/11");
+  await openReplacement(fixture, mode);
+  await expect(pitch.locator("header strong")).toHaveText("11/11 · 4-3-3");
   await expect(list).toBeFocused();
   await expect(list).toContainText(`${mode.locale === "pt-BR" ? "Vaga do XI" : "XI slot"}: ${targetSlot.id}`);
   const results = page.locator("#my-club-position-results");
@@ -531,15 +591,17 @@ async function replacePlayer(fixture: Awaited<ReturnType<typeof openFixture>>, m
   await expect(results).not.toContainText("Synthetic GK Player");
   const replacement = results.locator("article").filter({ has: page.locator("strong", { hasText: /^Synthetic Replacement$/ }) });
   await expect(replacement).toHaveCount(1);
-  await activate(replacement.getByRole("button", { name: `${mode.locale === "pt-BR" ? "Escolher" : "Choose"} · ${targetSlot.id}`, exact: true }), mode);
-  await expect(pitch.locator("header strong")).toHaveText("11/11");
+  await activate(replacement.getByRole("button", { name: `${mode.locale === "pt-BR" ? "Substituir" : "Replace"} · ${targetSlot.id}`, exact: true }), mode);
+  await expect(pitch.locator("header strong")).toHaveText("11/11 · 4-3-3");
   await expect(pitch).toBeFocused();
-  await expect(page.getByRole("button", { name: `${mode.locale === "pt-BR" ? "Retirar do XI" : "Remove from XI"}: Synthetic Replacement · ${targetSlot.id}`, exact: true })).toHaveCount(1);
+  await expect(pitch.getByRole("button", { name: /Synthetic Replacement/ })).toHaveCount(1);
   await expect.poll(() => pitch.evaluate(node => { const box = node.getBoundingClientRect(); return box.top < innerHeight && box.bottom > 0; })).toBe(true);
   const scrolls = await page.evaluate("window.fixtureScrolls") as Array<{ id: string; behavior: string }>;
   assert.deepEqual(scrolls.slice(-2), ["my-club-player-selection", "my-club-xi-pitch"].map(id => ({ id, behavior: mode.reduced ? "instant" : "smooth" })));
   if (!mode.touch) {
-    const target = pitch.getByRole("button", { name: "View cards", exact: true });
+    // The approved technical-area layout puts the coach before the Arena
+    // control. Verify both through native keyboard traversal, never focus them.
+    const target = pitch.getByRole("button", { name: "Open Synthetic XI Coach coach card", exact: true });
     if (keyboardDiagnostic) {
       assert.ok(keyboardKey, "Native keyboard calibration must precede the diagnostic product scenario");
       await diagnoseRealTab(page, pitch, target, keyboardKey);
@@ -547,13 +609,140 @@ async function replacePlayer(fixture: Awaited<ReturnType<typeof openFixture>>, m
     else {
       assert.ok(keyboardKey, "Native keyboard calibration must precede the product scenario");
       await assertCalibratedKeyboardReachability(page, pitch, target, keyboardKey);
+      const arena = pitch.getByRole("button", { name: "Arena mode", exact: true });
+      await page.keyboard.press(keyboardKey);
+      await expect(arena).toBeFocused();
+      await expect(arena).toBeEnabled();
     }
   }
   assert.equal(fixture.writes.length, 0, "local XI changes never save automatically");
 }
 
-test("diagnostic: WebKit EN native and real XI keyboard navigation", { skip: !enabled || keyboardMode === "normal", timeout: 45_000 }, async () => {
+async function openReplacement(fixture: Awaited<ReturnType<typeof openFixture>>, mode: Mode) {
+  const original = fixture.snapshot.catalogue[geometry.slots.indexOf(targetSlot)];
+  await activate(fixture.pitch.getByRole("button", { name: new RegExp(original.name) }), mode);
+  const dialog = fixture.page.getByRole("dialog");
+  await expect(dialog).toBeVisible();
+  // The dialog installs initial focus on the next animation frame. Visibility
+  // alone does not prove keyboard readiness, especially in WebKit.
+  await expect(dialog.getByRole("button", { name: mode.locale === "pt-BR" ? "Fechar card" : "Close card", exact: true })).toBeFocused();
+  await activate(dialog.getByRole("button", { name: `${mode.locale === "pt-BR" ? "Trocar" : "Replace"} · ${original.name}`, exact: true }), mode);
+  await expect(dialog).toHaveCount(0);
+  await expect(fixture.list).toBeFocused();
+  assert.equal(fixture.writes.length, 0);
+}
+
+test("real XI indicator integration: geometry, tooltip, Arena and failed-read recovery", {
+  skip: process.env.TOUCHLINE_XI_INDICATOR_PROOF !== "1", timeout: 55_000,
+}, async t => {
+  const bundle = bundleProduct();
+  for (const source of ["components/touchline/cards/TouchlinePlayerAvailabilityBadge.tsx", "components/touchline/cards/TouchlineMatchCardBadge.tsx"])
+    assert.ok(bundle.sources.includes(source), `Real component required: ${source}`);
+  const engineName = process.env.TOUCHLINE_XI_INDICATOR_ENGINE ?? "chromium";
+  assert.ok(engineName === "chromium" || engineName === "webkit", "Unknown XI indicator engine");
+  const modeScope = process.env.TOUCHLINE_XI_INDICATOR_MODE ?? "all";
+  assert.ok(["all", "en-GB", "pt-BR"].includes(modeScope), "Unknown XI indicator mode");
+  const selectedModes = modes.filter(mode => modeScope === "all" || mode.locale === modeScope);
+  console.log(`XI_INDICATOR_SCOPE ${JSON.stringify({ engineName, modeScope, modes: selectedModes.map(mode => mode.locale) })}`);
+  const browser = await (engineName === "webkit" ? webkit : chromium).launch({ headless: true, timeout: 15_000 });
+  const abort = () => { void browser.close().catch(() => {}); };
+  t.signal.addEventListener("abort", abort, { once: true });
+  try {
+    for (const mode of selectedModes) {
+      const fixture = await openFixture(browser, bundle, mode, { indicators: true });
+      try {
+        const { page, pitch } = fixture;
+        const injury = pitch.locator('[data-player-availability-badge="injury"] button');
+        const yellow = pitch.locator('[data-match-card="yellow"] button');
+        await expect(injury).toHaveCount(1); await expect(yellow).toHaveCount(1);
+        await injury.scrollIntoViewIfNeeded();
+        const first = await injury.boundingBox(), second = await yellow.boundingBox();
+        assert.ok(first && second);
+        console.log(`XI_INDICATOR_GEOMETRY ${JSON.stringify({ locale: mode.locale, injury: first, yellow: second })}`);
+        if (process.env.TOUCHLINE_XI_INDICATOR_SCREENSHOTS === "1")
+          await page.screenshot({ path: path.join(root, `outputs/xi-indicator-${mode.locale}-20261010.png`) });
+        assert.ok(first.x + first.width <= second.x || second.x + second.width <= first.x
+          || first.y + first.height <= second.y || second.y + second.height <= first.y,
+        "injury and ordinary yellow must have distinct, nonoverlapping hit targets");
+        if (mode.touch) await injury.tap(); else await injury.focus();
+        await expect(injury).toHaveAttribute("aria-expanded", "true");
+        await expect(page.getByRole("tooltip")).toHaveText(mode.locale === "pt-BR"
+          ? "Lesionado — fora desta partida" : "Injured — unavailable for this match");
+        const tip = await page.getByRole("tooltip").boundingBox();
+        assert.ok(tip && tip.x >= 0 && tip.y >= 0 && tip.x + tip.width <= page.viewportSize()!.width
+          && tip.y + tip.height <= page.viewportSize()!.height, "tooltip must stay within viewport");
+        if (process.env.TOUCHLINE_XI_INDICATOR_SCREENSHOTS === "1")
+          await page.screenshot({ path: path.join(root, `outputs/xi-indicator-${mode.locale}-20261010.png`) });
+        await page.keyboard.press("Escape");
+        await expect(page.getByRole("tooltip")).toHaveCount(0);
+        await expect(page.getByRole("dialog")).toHaveCount(0);
+        assert.equal(fixture.writes.length, 0, "indicator interaction cannot save or replace XI");
+        const arenaButton = page.getByRole("button", { name: mode.locale === "pt-BR" ? "Modo Arena" : "Arena mode", exact: true });
+        await arenaButton.scrollIntoViewIfNeeded();
+        const controlBox = await arenaButton.boundingBox(), fieldBox = await pitch.locator('[data-touchline-pitch-surface]').boundingBox();
+        assert.ok(controlBox && fieldBox && controlBox.y + controlBox.height <= fieldBox.y,
+          "Arena control must remain entirely above the interactive grass");
+        console.log(`XI_ARENA_CONTROL ${JSON.stringify({ locale: mode.locale, button: await arenaButton.boundingBox(),
+          field: await pitch.locator('[data-touchline-pitch-surface]').boundingBox() })}`);
+        if (process.env.TOUCHLINE_XI_INDICATOR_SCREENSHOTS === "1")
+          await page.screenshot({ path: path.join(root, `outputs/xi-control-${mode.locale}-20261010.png`) });
+        await arenaButton.click();
+        await expect(injury).toHaveCount(1); await expect(yellow).toHaveCount(1);
+        await expect(injury).toBeVisible(); await expect(yellow).toBeVisible();
+        await injury.scrollIntoViewIfNeeded();
+        const arenaInjury = await injury.boundingBox(), arenaYellow = await yellow.boundingBox();
+        assert.ok(arenaInjury && arenaYellow);
+        assert.ok(arenaInjury.x + arenaInjury.width <= arenaYellow.x || arenaYellow.x + arenaYellow.width <= arenaInjury.x
+          || arenaInjury.y + arenaInjury.height <= arenaYellow.y || arenaYellow.y + arenaYellow.height <= arenaInjury.y,
+        "Arena must preserve distinct injury and ordinary card hit targets");
+        if (mode.touch) await injury.tap(); else await injury.focus();
+        await expect(injury).toHaveAttribute("aria-expanded", "true");
+        await expect(page.getByRole("tooltip")).toHaveText(mode.locale === "pt-BR"
+          ? "Lesionado — fora desta partida" : "Injured — unavailable for this match");
+        const arenaTip = await page.getByRole("tooltip").boundingBox();
+        assert.ok(arenaTip && arenaTip.x >= 0 && arenaTip.y >= 0
+          && arenaTip.x + arenaTip.width <= page.viewportSize()!.width
+          && arenaTip.y + arenaTip.height <= page.viewportSize()!.height);
+        await page.keyboard.press("Escape");
+        await expect(page.getByRole("tooltip")).toHaveCount(0);
+        await expect(page.getByRole("button", { name: mode.locale === "pt-BR" ? "Fechar Arena" : "Close Arena", exact: true })).toBeVisible();
+        await page.getByRole("button", { name: mode.locale === "pt-BR" ? "Fechar Arena" : "Close Arena", exact: true }).click();
+        const readsBefore = fixture.stateReads;
+        fixture.setStateUnavailable(true);
+        await page.clock.fastForward(20_001);
+        await expect.poll(() => fixture.stateReads).toBeGreaterThan(readsBefore);
+        await expect(injury).toHaveCount(0); await expect(yellow).toHaveCount(0);
+        await expect(pitch.locator('[data-touchline-pitch-surface] [data-touchline-card-zoom="trigger"]')).toHaveCount(11);
+        fixture.setStateUnavailable(false);
+        await page.clock.fastForward(20_001);
+        await expect(injury).toHaveCount(1); await expect(yellow).toHaveCount(1);
+        assert.equal(fixture.writes.length, 0);
+        await fixture.assertClean();
+        console.log(`XI_INDICATOR_PROOF ${JSON.stringify({ locale: mode.locale, touch: mode.touch, reads: fixture.stateReads,
+          injury: first, yellow: second, tooltip: tip, arenaInjury, arenaYellow, arenaTip, writes: fixture.writes.length })}`);
+      } finally { await fixture.close(); }
+    }
+  } finally { t.signal.removeEventListener("abort", abort); await browser.close(); }
+});
+
+test("diagnostic: repeated Chromium mount without interaction", { skip: process.env.TOUCHLINE_XI_MOUNT_DIAGNOSTIC !== "1", timeout: 45_000 }, async t => {
+  const bundle = bundleProduct();
+  const browser = await chromium.launch({ headless: true, timeout: 15_000 });
+  const abort = () => { void browser.close().catch(() => {}); };
+  t.signal.addEventListener("abort", abort, { once: true });
+  try {
+    for (let index = 0; index < 2; index++) {
+      console.log(`XI_MOUNT_CONTROL ${index + 1}`);
+      const fixture = await openFixture(browser, bundle, modes[0]);
+      try { await fixture.assertClean(); } finally { await fixture.close(); }
+    }
+  } finally { t.signal.removeEventListener("abort", abort); await browser.close(); }
+});
+
+test("diagnostic: WebKit EN native and real XI keyboard navigation", { skip: !enabled || keyboardMode === "normal", timeout: 45_000 }, async t => {
   const browser = await webkit.launch({ headless: true, timeout: 15_000 });
+  const abortBrowser = () => { void browser.close().catch(() => {}); };
+  t.signal.addEventListener("abort", abortBrowser, { once: true });
   try {
     let selectedKey: KeyboardKey;
     const control = await browser.newContext({ viewport: { width: 1280, height: 900 }, serviceWorkers: "block" });
@@ -581,18 +770,34 @@ test("diagnostic: WebKit EN native and real XI keyboard navigation", { skip: !en
     const h = await openFixture(browser, bundleProduct(), modes[0]);
     try { await replacePlayer(h, modes[0], true, selectedKey); await h.assertClean(); }
     finally { await h.close(); }
-  } finally { await browser.close(); }
+  } finally { t.signal.removeEventListener("abort", abortBrowser); await browser.close(); }
 });
 
 test("real My Club XI DOM: replace, focus, explicit save and readback", { skip: !enabled || keyboardMode === "diagnostic", timeout: 180_000 }, async t => {
   const bundle = bundleProduct();
   let mountFailure: unknown;
+  let activeFixture: Awaited<ReturnType<typeof openFixture>> | undefined;
   async function open(browser: Browser, mode: Mode, options: { locked?: boolean; divergent?: boolean } = {}) {
-    try { return await openFixture(browser, bundle, mode, options); }
+    try { activeFixture = await openFixture(browser, bundle, mode, options); return activeFixture; }
     catch (error) { mountFailure = error; throw error; }
   }
   async function scenario(name: string, options: { timeout: number }, run: () => Promise<void>) {
-    await t.test(name, options, run);
+    let cancelled = false;
+    let cleanup: Promise<void> | undefined;
+    await t.test(name, options, async child => {
+      const abort = () => {
+        cancelled = true;
+        cleanup = activeFixture?.close().catch(() => {});
+      };
+      child.signal.addEventListener("abort", abort, { once: true });
+      try { await run(); }
+      finally { child.signal.removeEventListener("abort", abort); }
+    });
+    await cleanup;
+    activeFixture = undefined;
+    // node:test cancellation does not stop an async browser callback by itself.
+    // Fail fast rather than stacking another scenario over a timed-out one.
+    assert.equal(cancelled, false, `Cancelled browser scenario: ${name}`);
     // node:test does not reject this await when a child test fails. Abort the
     // parent explicitly after a broken mount, so the same shared precondition
     // is not retried through all 14 scenarios/engines or reported as coverage.
@@ -602,11 +807,12 @@ test("real My Club XI DOM: replace, focus, explicit save and readback", { skip: 
   console.log(`XI_BROWSER_SCOPE ${JSON.stringify({ scope: browserScope, productScenarios: focusOnly ? 2 : 14 })}`);
   for (const engine of focusOnly ? [webkit] : [chromium, webkit]) {
     const browser = await engine.launch({ headless: true, timeout: 15_000 });
+    t.signal.addEventListener("abort", () => { void browser.close().catch(() => {}); }, { once: true });
     try {
       const keyboardKey = await calibrateNativeKeyboard(browser);
       for (const mode of focusOnly ? [modes[0]] : modes) {
         const prefix = `${engine.name()}/${mode.locale}/${mode.touch ? "touch-reduced" : "keyboard"}`;
-        await scenario(`${prefix}: X → eligible slot → replacement → focus → one held save → matching readback`, { timeout: 30_000 }, async () => {
+        await scenario(`${prefix}: zoom → eligible slot → replacement → focus → one held save → matching readback`, { timeout: 30_000 }, async () => {
           const h = await open(browser, mode);
           try {
             await replacePlayer(h, mode, false, keyboardKey);
@@ -614,8 +820,13 @@ test("real My Club XI DOM: replace, focus, explicit save and readback", { skip: 
             await expect.poll(() => h.writes.length).toBe(1);
             await expect(h.confirm).toBeDisabled();
             const removeButtons = h.pitch.locator('button[aria-label^="Remove from XI:"],button[aria-label^="Retirar do XI:"]');
-            assert.equal(await removeButtons.count(), 11);
-            for (const button of await removeButtons.all()) await expect(button).toBeDisabled();
+            assert.equal(await removeButtons.count(), 0);
+            await activate(h.pitch.getByRole("button", { name: /Synthetic Replacement/ }), mode);
+            const dialog = h.page.getByRole("dialog");
+            await expect(dialog.getByRole("button", { name: mode.locale === "pt-BR" ? "Fechar card" : "Close card", exact: true })).toBeFocused();
+            await expect(dialog.getByRole("button", { name: /(?:Replace|Trocar) · Synthetic Replacement/ })).toBeDisabled();
+            await h.page.keyboard.press("Escape");
+            await expect(dialog).toHaveCount(0);
             assert.equal(h.readsAfterSave, 0, "no verification before the POST receipt");
             const sent = h.writes[0];
             assert.deepEqual(Object.keys(sent).sort(), ["action", "formationCode", "gameweekId", "idempotencyKey", "selectedCoachId", "selections"]);
@@ -636,21 +847,21 @@ test("real My Club XI DOM: replace, focus, explicit save and readback", { skip: 
         await scenario(`${prefix}: unmatched search keeps catalogue and clearing restores eligible cards`, { timeout: 20_000 }, async () => {
           const h = await open(browser, mode);
           try {
-            await activate(h.page.getByRole("button", { name: h.removeName, exact: true }), mode);
+            await openReplacement(h, mode);
             const search = h.page.getByRole("textbox", { name: mode.locale === "pt-BR" ? "Pesquisar jogador" : "Search player" });
             await search.fill("not-a-fixture-player");
             await expect(h.page.locator("#my-club-position-results article")).toHaveCount(0);
             await expect(h.list).toContainText(mode.locale === "pt-BR" ? "Cards nesta posição: 0" : "Cards in this position: 0");
             await expect(h.list).toContainText(mode.locale === "pt-BR" ? "Nenhum card corresponde a esta seleção ou busca." : "No cards match this selection or search.");
-            await expect(h.confirm).toBeDisabled();
+            await expect(h.pitch.locator("header strong")).toHaveText("11/11 · 4-3-3");
             await search.fill(""); await expect(h.page.locator("#my-club-position-results article")).toHaveCount(4);
-            await expect(h.pitch.locator("header strong")).toHaveText("10/11"); assert.equal(h.writes.length, 0); await h.assertClean();
+            await expect(h.pitch.locator("header strong")).toHaveText("11/11 · 4-3-3"); assert.equal(h.writes.length, 0); await h.assertClean();
           } finally { await h.close(); }
         });
         await scenario(`${prefix}: locked XI has no remove or select mutation`, { timeout: 20_000 }, async () => {
           const h = await open(browser, mode, { locked: true });
           try {
-            await expect(h.pitch.locator("header strong")).toHaveText("11/11");
+            await expect(h.pitch.locator("header strong")).toHaveText("11/11 · 4-3-3");
             await expect(h.page.getByRole("button", { name: h.removeName, exact: true })).toHaveCount(0);
             await expect(h.confirm).toBeDisabled();
             await expect(h.page.locator("#my-club-position-results article > div > button")).toHaveCount(0);
@@ -666,7 +877,7 @@ test("real My Club XI DOM: replace, focus, explicit save and readback", { skip: 
           await expect(h.page.getByRole("status").filter({ hasText: "The server received the save, but verification has not returned yet." }).first()).toBeVisible();
           assert.equal(h.readsAfterSave, 3); assert.equal(h.writes.length, 1);
           await expect(h.page.getByText("XI confirmed, persisted and verified in TouchLine.", { exact: true })).toHaveCount(0);
-          await expect(h.pitch.locator("header strong")).toHaveText("11/11"); await h.assertClean();
+          await expect(h.pitch.locator("header strong")).toHaveText("11/11 · 4-3-3"); await h.assertClean();
         } finally { await h.close(); }
       });
     } finally { await browser.close(); }

@@ -203,7 +203,8 @@ test("outer GET route cannot restore image success after deadline or abort at it
   }
 });
 
-const uploadSettings = { TOUCHLINE_CLUB_OWNER_AVATAR_UPLOAD_ENABLED: "true", TOUCHLINE_CLUB_OWNER_AVATAR_UPLOAD_ACCOUNT_ID: actor };
+const uploadSettings = { TOUCHLINE_CLUB_OWNER_AVATAR_UPLOAD_ENABLED: "true", TOUCHLINE_CLUB_OWNER_AVATAR_UPLOAD_ACCOUNT_ID: actor,
+  TOUCHLINE_CLUB_OWNER_AVATAR_SELECTION_ENABLED: "true", TOUCHLINE_CLUB_OWNER_AVATAR_RETENTION_READY: "true" };
 function uploadRequest(headers: Record<string, string> = {}, target = origin, signal?: AbortSignal) {
   const request = new Request(`${target}/api/account/avatar`, { method: "POST", signal, body: new Uint8Array(image), headers: {
     origin: target, "content-type": "image/webp", "x-touchline-expected-account": actor,
@@ -217,9 +218,10 @@ async function post(f: ReturnType<typeof fixture>, request: Request) {
   assert.equal(typeof f.route.POST, "function", "Stage B must wire the existing upload composition");
   return f.route.POST!(request);
 }
-test("prepared POST requires both exact flags and its own configured UUID before all effects", async () => {
+test("prepared POST requires all four exact flags and its own configured UUID before all effects", async () => {
   const patches: Record<string, string | undefined>[] = [
-    ...["TOUCHLINE_CLUB_OWNER_AVATAR_READ_ENABLED", "TOUCHLINE_CLUB_OWNER_AVATAR_UPLOAD_ENABLED"].flatMap(key =>
+    ...["TOUCHLINE_CLUB_OWNER_AVATAR_READ_ENABLED", "TOUCHLINE_CLUB_OWNER_AVATAR_UPLOAD_ENABLED",
+      "TOUCHLINE_CLUB_OWNER_AVATAR_SELECTION_ENABLED", "TOUCHLINE_CLUB_OWNER_AVATAR_RETENTION_READY"].flatMap(key =>
       [undefined, "false", "TRUE", " true "].map(value => ({ [key]: value }))),
     ...[undefined, "", "bad", ` ${actor}`, `${actor},${other}`].map(value => ({ TOUCHLINE_CLUB_OWNER_AVATAR_UPLOAD_ACCOUNT_ID: value })),
     { TOUCHLINE_CLUB_OWNER_AVATAR_UPLOAD_ACCOUNT_ID: undefined, TOUCHLINE_PUSH_REHEARSAL_ACCOUNT_ID: actor, TOUCHLINE_PUSH_REHEARSAL_ENABLED: "true" },
@@ -238,6 +240,7 @@ test("prepared POST inspects full exact QA envelope and preserves same-origin fe
     { TOUCHLINE_DATA_SOURCE: "qa-mirror" }, { TOUCHLINE_OWNER_EMAILS: "" }, { TOUCHLINE_OWNER_EMAILS: "invalid" },
     { STRIPE_SECRET_KEY: "private-forbidden" }, { AWS_ACCESS_KEY_ID: "private-forbidden" },
     { NEXT_PUBLIC_TOUCHLINE_CLUB_OWNER_AVATAR_UPLOAD_ACCOUNT_ID: actor }, { TOUCHLINE_CLUB_OWNER_AVATAR_UPLOAD_ENABLED_OTHER: "true" },
+    { NEXT_PUBLIC_TOUCHLINE_CLUB_OWNER_AVATAR_SELECTION_ENABLED: "true" }, { NEXT_PUBLIC_TOUCHLINE_CLUB_OWNER_AVATAR_RETENTION_READY: "true" },
     { TOUCHLINE_DEPLOYMENT_MODE: "isolated-preview", NEXT_PUBLIC_TOUCHLINE_DEPLOYMENT_MODE: "isolated-preview" },
   ];
   for (const patch of patches) {
@@ -309,10 +312,12 @@ test("prepared POST body drift is unknown and stops before decode, even if the o
   f.environment.TOUCHLINE_CLUB_OWNER_AVATAR_UPLOAD_ACCOUNT_ID = actor;
   assert.equal(reads, 1); assert.equal(f.nativeCalls(), 0); assert.deepEqual(f.rpcInputs.map(input => input.rpc), ["touchline_begin_club_owner_avatar_operation"]);
 });
-test("prepared POST snapshot includes both flags, owner classification and added or removed environment keys", async () => {
+test("prepared POST snapshot includes all flags, owner classification and added or removed environment keys", async () => {
   const changes: Array<(environment: Record<string, string | undefined>) => void> = [
     environment => { environment.TOUCHLINE_CLUB_OWNER_AVATAR_READ_ENABLED = "false"; },
     environment => { environment.TOUCHLINE_CLUB_OWNER_AVATAR_UPLOAD_ENABLED = "false"; },
+    environment => { environment.TOUCHLINE_CLUB_OWNER_AVATAR_SELECTION_ENABLED = "false"; },
+    environment => { environment.TOUCHLINE_CLUB_OWNER_AVATAR_RETENTION_READY = "false"; },
     environment => { environment.TOUCHLINE_OWNER_EMAILS = "different@example.invalid"; },
     environment => { environment.STRIPE_SECRET_KEY = "synthetic-forbidden"; },
     environment => { delete environment.VERCEL_URL; },

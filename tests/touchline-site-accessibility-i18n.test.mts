@@ -67,6 +67,7 @@ function fixture(options: { releaseFlag?: string; copy?: Pick<CopyModule, "getTo
       "@/components/touchline/DocumentLocaleSync": { __esModule: true, default: ({ initialLocale }: { initialLocale: string }) => { seen.sync.push(initialLocale); return null; } },
       "@/components/touchline/TouchlineLandscapeBoundary": { __esModule: true, default: boundary },
       "@/components/touchline-activity-tracker": { TouchlineActivityTracker: () => { seen.activity++; return null; } },
+      "@/components/touchline/TouchlineDecorationMotion": { __esModule: true, default: () => null },
       "@/components/auth-ambient-audio": { TouchlineAmbientAudioProvider: ({ children, enabled }: { children: React.ReactNode; enabled: boolean }) => { seen.audio.push(enabled); return children; } },
       "@/lib/touchlinePreview/isolation": { isTouchlineIsolatedPreviewRequest, TOUCHLINE_ISOLATED_PREVIEW_HEADER },
       "@/lib/touchlineArena/public-origin": { TOUCHLINE_PUBLIC_ORIGIN: "https://touchline.com.br" },
@@ -235,7 +236,12 @@ test("the complete layout baseline differs only by the admitted import and label
   // unrelated media, landmarks, providers and isolation changes still fail.
   const coordinatedWrapper = 'export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {\n  return renderRootLayout({ children }, isTouchLineSiteLocalesEnabled());\n}\n\nasync function renderRootLayout({ children }: Readonly<{ children: React.ReactNode }>, draftLocalesEnabled = false) {';
   assert.ok(source.includes(coordinatedWrapper));
+  // Admit only the shared, content-free motion leaf; retain the historical hash
+  // for every other layout byte. Its effects have separate lifecycle/browser tests.
+  assert.equal(source.split('<TouchlineDecorationMotion />').length - 1, 1);
   const preCoordinated = source
+    .replace('import TouchlineDecorationMotion from "@/components/touchline/TouchlineDecorationMotion";\n', '')
+    .replace('        <TouchlineDecorationMotion />\n', '')
     .replace('import { isTouchLineSiteLocalesEnabled } from "@/lib/touchlineArena/site-locales-release";\n', '')
     .replace('import { SiteLocaleReleaseProvider } from "@/components/touchline/SiteLocaleReleaseContext";\n', '')
     .replace('        <SiteLocaleReleaseProvider enabled={draftLocalesEnabled}>\n', '')

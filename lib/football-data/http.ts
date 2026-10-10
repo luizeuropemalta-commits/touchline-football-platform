@@ -70,6 +70,8 @@ export type FootballDataAttemptEnforcement<T> = Readonly<{
 }>;
 
 type FootballDataFetchInit<T> = RequestInit & {
+  /** Server-owned transport injection; never forwarded as an HTTP option. */
+  fetchImpl?: typeof fetch;
   timeoutMs?: number;
   provider: FootballDataProviderName;
   retry?: FootballDataRetryPolicy;
@@ -265,6 +267,7 @@ async function fetchJsonCore<T>(
     retry,
     onAttemptCompleted,
     enforcement: _enforcement,
+    fetchImpl = fetch,
     signal: externalSignal,
     ...requestInit
   } = init;
@@ -323,7 +326,7 @@ async function fetchJsonCore<T>(
 
     try {
       fetchesStarted += 1;
-      const response = await fetch(url, {
+      const response = await fetchImpl(url, {
         ...requestInit,
         signal: controller.signal,
         headers: {

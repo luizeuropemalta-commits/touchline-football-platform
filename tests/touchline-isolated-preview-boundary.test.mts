@@ -46,6 +46,17 @@ function qaEnvironment(overrides: Record<string, string | undefined> = {}) {
   };
 }
 
+test("QA admits the exact server-side site locale gate without widening isolated Preview", () => {
+  const key = "TOUCHLINE_SITE_LOCALES_ENABLED";
+  for (const value of ["true", "false"]) {
+    assert.deepEqual(inspectTouchlineIsolatedPreviewEnvironment(qaEnvironment({[key]:value})), {status:"qa",reasons:[]});
+    assert.equal(inspectTouchlineIsolatedPreviewEnvironment(isolatedEnvironment({[key]:value})).status,"invalid");
+  }
+  for (const forbidden of [`NEXT_PUBLIC_${key}`,`${key}_OTHER`]) {
+    assert.equal(inspectTouchlineIsolatedPreviewEnvironment(qaEnvironment({[forbidden]:"true"})).status,"invalid");
+  }
+});
+
 test("Fixture account scope admits only its exact private name in the complete QA envelope", () => {
   const key = "TOUCHLINE_SPORTMONKS_FIXTURE_ACCOUNT_SCOPE";
   const environment: Readonly<Record<string, string | undefined>> = Object.freeze(qaEnvironment({
@@ -162,6 +173,19 @@ test("avatar upload configuration names admit only private QA preparation, never
     assert.equal(inspectTouchlineIsolatedPreviewEnvironment(qaEnvironment({ ...settings, ...patch })).status, "invalid");
   }
   assert.deepEqual(settings, before);
+});
+
+test("avatar selection/readiness flags are private QA-only inputs, not inferred readiness or isolated capabilities", () => {
+  for (const key of ["TOUCHLINE_CLUB_OWNER_AVATAR_SELECTION_ENABLED", "TOUCHLINE_CLUB_OWNER_AVATAR_RETENTION_READY"]) {
+    for (const value of ["false", "true"]) {
+      assert.equal(inspectTouchlineIsolatedPreviewEnvironment(qaEnvironment({ [key]: value })).status, "qa");
+      assert.equal(inspectTouchlineIsolatedPreviewEnvironment(isolatedEnvironment({ [key]: value })).status, "invalid");
+      assert.equal(inspectTouchlineIsolatedPreviewEnvironment(qaEnvironment({ [key]: value, VERCEL_ENV: "production" })).status, "invalid");
+      for (const forbidden of [`NEXT_PUBLIC_${key}`, `${key}_OTHER`]) {
+        assert.equal(inspectTouchlineIsolatedPreviewEnvironment(qaEnvironment({ [forbidden]: value })).status, "invalid");
+      }
+    }
+  }
 });
 
 test("match push worker settings remain server-only and constrained to functional QA", () => {

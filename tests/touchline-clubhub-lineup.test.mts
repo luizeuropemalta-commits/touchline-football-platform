@@ -9,6 +9,7 @@ import {
   isClubHubSquadPreviewWindow,
 } from "../lib/touchlineArena/club-lineup.ts";
 import { findTouchLineClub, TOUCHLINE_ENGLAND_CLUBS, type ClubOwnerSquadCard } from "../lib/touchlineArena/demo-data.ts";
+import { getTouchlineClubHubLineupCopy } from "../lib/touchlineArena/club-hub-lineup-i18n.ts";
 
 const city = findTouchLineClub("manchester-city")!;
 const starterRoles = ["goalkeeper", "defender", "defender", "defender", "defender", "midfielder", "midfielder", "midfielder", "forward", "forward", "forward"];
@@ -68,6 +69,22 @@ const matchingCoach = {
 } as const;
 
 for (const club of TOUCHLINE_ENGLAND_CLUBS) {
+  test(`${club.slug}: historical pitch never substitutes an unpublished starter or duplicates a starter on the bench`, () => {
+    const starters = officialStarters.map(member => ({ ...member, teamId: club.teamId, fixtureId: "historical" }));
+    const result = buildTouchLineClubMatchdayPresentation({
+      club, squadCards: squadCards.filter(card => card.id !== "1" && card.id !== "6"), fixtureId: "upcoming",
+      lastCompletedXi: { fixtureId: "historical", formation: "4-3-3", starters },
+    });
+    const slots = result.lineup.recordedPitch!.players;
+    assert.equal(slots.length, 11);
+    assert.deepEqual(slots.filter(slot=>slot.card === null).map(slot=>slot.playerId), ["1","6"]);
+    assert.ok(slots.every(slot=>!slot.card || String(slot.card.id) === slot.playerId));
+    const ids = new Set(slots.map(slot=>slot.playerId));
+    assert.ok(result.technical.previewBench.every(card=>!ids.has(String(card.id))));
+    assert.ok(result.remainingSquad.cards.every(card=>!ids.has(String(card.id))));
+    assert.equal(result.lineup.status, "preview");
+    assert.equal(result.technical.state, "awaiting_official_team_sheet");
+  });
   test(`${club.slug}: only an exact complete team sheet can classify remaining squad members`, () => {
     const extra = { ...squadCards[0]!, id: "31504", name: "Unselected squad member" };
     const cards = [...squadCards, extra];
@@ -89,6 +106,7 @@ test("ClubHub labels squad-only data as preview, never as official", () => {
   const lineup = presentation.lineup;
 
   assert.equal(lineup.status, "preview");
+  assert.equal(lineup.previewBasis, "illustrative");
   assert.equal(lineup.formation, "4-3-3");
   assert.equal(lineup.players.length, 11);
   assert.equal(presentation.technical.state, "awaiting_official_team_sheet");
@@ -97,6 +115,121 @@ test("ClubHub labels squad-only data as preview, never as official", () => {
   assert.equal(new Set(presentation.technical.previewBench.map((card) => card.id)).size, 9);
   assert.ok(presentation.technical.previewBench.every((card) => !lineup.players.some(({ card: starter }) => starter.id === card.id)));
 });
+
+test("ClubHub starts from the last completed XI without claiming the next XI is official", () => {
+  const prior = officialStarters.map((member) => ({ ...member, fixtureId: "previous-fixture" }));
+  const result = buildTouchLineClubMatchdayPresentation({
+    club: city, squadCards, fixtureId: "next-fixture",
+    lastCompletedXi: { fixtureId: "previous-fixture", formation: "4-2-3-1", starters: prior },
+  });
+  assert.equal(result.lineup.status, "preview");
+  assert.equal(result.lineup.previewBasis, "last-completed-xi");
+  assert.equal(result.lineup.formation, "4-2-3-1");
+  assert.equal(result.lineup.recordedFormation, "4-2-3-1");
+  assert.deepEqual(result.lineup.players.map(({ card }) => card.id), prior.map((member) => member.playerId));
+  assert.equal(result.technical.state, "awaiting_official_team_sheet");
+  const confirmed = buildTouchLineClubMatchdayPresentation({
+    club: city, squadCards, fixtureId: "next-fixture",
+    officialLineup: officialStarters.map((member) => ({ ...member, fixtureId: "next-fixture" })),
+    lastCompletedXi: { fixtureId: "previous-fixture", formation: "4-2-3-1", starters: prior },
+  });
+  assert.equal(confirmed.lineup.status, "confirmed");
+  assert.equal(confirmed.lineup.previewBasis, undefined);
+  assert.equal(confirmed.lineup.recordedFormation, undefined);
+  const missingCard = buildTouchLineClubMatchdayPresentation({
+    club: city, squadCards: squadCards.slice(1), fixtureId: "next-fixture",
+    lastCompletedXi: { fixtureId: "previous-fixture", formation: "4-2-3-1", starters: prior },
+  });
+  assert.equal(missingCard.lineup.previewBasis, "illustrative");
+  assert.equal(missingCard.recordedXiWithoutCards?.length, 11);
+  assert.deepEqual(missingCard.recordedXiWithoutCards?.map((member) => member.playerId), prior.map((member) => member.playerId));
+  assert.equal(missingCard.recordedXiWithoutCards?.[0]?.playerName, "City Player 1");
+  assert.equal(missingCard.lineup.recordedPitch?.formation, "4-2-3-1");
+  assert.equal(missingCard.lineup.recordedFormation, "4-2-3-1");
+  assert.equal(missingCard.lineup.recordedPitch?.players.length, 11);
+  assert.deepEqual(missingCard.lineup.recordedPitch?.players.map((slot) => slot.playerId), prior.map((member) => member.playerId));
+  assert.equal(missingCard.lineup.recordedPitch?.players[0]?.card, null);
+  assert.ok(missingCard.lineup.recordedPitch?.players.slice(1).every((slot) => slot.card?.id === slot.playerId));
+  assert.ok(missingCard.lineup.recordedPitch?.players.every((slot) => Number.isFinite(slot.x) && Number.isFinite(slot.y)));
+  assert.equal(confirmed.lineup.recordedPitch, undefined);
+  assert.equal(confirmed.recordedXiWithoutCards, null);
+  const unnamed = buildTouchLineClubMatchdayPresentation({
+    club: city, squadCards: squadCards.slice(1), fixtureId: "next-fixture",
+    lastCompletedXi: { fixtureId: "previous-fixture", formation: "4-2-3-1", starters: prior.map((member, index) => index === 0 ? { ...member, playerName: " " } : member) },
+  });
+  assert.equal(unnamed.recordedXiWithoutCards, null);
+  assert.equal(unnamed.lineup.recordedPitch, undefined);
+});
+
+test("official identities precede history when a published starter card is missing without confirming the technical sheet", () => {
+  const prior = officialStarters.map(member => ({ ...member, fixtureId: "previous-fixture", playerName: "Historical identity" }));
+  const input = { club: city, squadCards: squadCards.slice(1), fixtureId: "fixture-1", formation: "4-2-3-1",
+    officialLineup: [...officialStarters, ...officialBench], officialCoach: matchingCoach,
+    lastCompletedXi: { fixtureId: "previous-fixture", formation: "4-3-3", starters: prior } };
+  const result = buildTouchLineClubMatchdayPresentation(input);
+  assert.equal(result.lineup.status, "confirmed");
+  assert.equal(result.lineup.previewBasis, undefined);
+  assert.equal(result.lineup.recordedPitch, undefined);
+  assert.equal(result.recordedXiWithoutCards, null);
+  assert.equal(result.lineup.formation, "4-2-3-1");
+  assert.equal(result.lineup.officialPitch?.players.length, 11);
+  assert.equal(result.lineup.officialPitch?.players[0]?.card, null);
+  assert.deepEqual(result.lineup.officialPitch?.players.map(slot => slot.playerName), officialStarters.map(member => member.playerName));
+  assert.ok(result.lineup.officialPitch?.players.every(slot => !slot.card || slot.card.id === slot.playerId));
+  assert.equal(result.technical.state, "awaiting_official_team_sheet");
+  assert.equal(result.technical.coach, null);
+  assert.deepEqual(result.technical.bench, []);
+  assert.ok(result.technical.previewBench.every(card => !officialStarters.some(member => member.playerId === card.id)));
+  for (const bad of [
+    officialStarters.map((member, index) => index === 10 ? { ...member, playerId: "1" } : member),
+    officialStarters.map((member, index) => index === 0 ? { ...member, fixtureId: "wrong" } : member),
+    officialStarters.map((member, index) => index === 0 ? { ...member, provider: "other" as typeof member.provider } : member),
+    officialStarters.map((member, index) => index === 0 ? { ...member, playerName: " " } : member),
+  ]) {
+    const invalid = buildTouchLineClubMatchdayPresentation({ ...input, officialLineup: bad });
+    assert.equal(invalid.lineup.status, "preview");
+    assert.equal(invalid.lineup.officialPitch, undefined);
+  }
+});
+
+test("the last-completed-XI label and caution are present in all eight languages", () => {
+  for (const locale of ["en-GB", "pt-BR", "es-ES", "it-IT", "fr-FR", "ar-SA", "tr-TR", "de-DE"]) {
+    const copy = getTouchlineClubHubLineupCopy(locale, true);
+    assert.ok(copy.lastXiTitle.length > 4, locale);
+    assert.ok(copy.lastXiNotice.length > 40, locale);
+  }
+});
+
+for (const missingCard of [false, true]) {
+  test(`official formation stays unknown independently of geometry (missing card: ${missingCard})`, () => {
+    const input = { club: city, squadCards: missingCard ? squadCards.slice(1) : squadCards,
+      fixtureId: "fixture-1", officialLineup: officialStarters,
+      lastCompletedXi: { fixtureId: "previous", formation: "5-4-1", starters: officialStarters.map(member => ({ ...member, fixtureId: "previous" })) } };
+    const result = buildTouchLineClubMatchdayPresentation({ ...input, formation: null });
+    assert.equal(result.lineup.status, "confirmed");
+    assert.equal(result.lineup.officialFormation, null);
+    assert.equal(result.lineup.recordedFormation, undefined);
+    const slots = result.lineup.officialPitch?.players ?? result.lineup.players;
+    assert.equal(slots.length, 11);
+    assert.ok(slots.every(slot => Number.isFinite(slot.x) && Number.isFinite(slot.y)));
+    const known = buildTouchLineClubMatchdayPresentation({ ...input, formation: "4-2-3-1" });
+    assert.equal(known.lineup.officialFormation, "4-2-3-1");
+    assert.equal(known.lineup.formation, "4-2-3-1");
+  });
+
+  test(`historical formation stays unknown independently of fallback geometry (missing card: ${missingCard})`, () => {
+    const prior = officialStarters.map(member => ({ ...member, fixtureId: "previous-fixture" }));
+    const result = buildTouchLineClubMatchdayPresentation({
+      club: city, squadCards: missingCard ? squadCards.slice(1) : squadCards, fixtureId: "next-fixture",
+      lastCompletedXi: { fixtureId: "previous-fixture", formation: null, starters: prior },
+    });
+    assert.equal(result.lineup.recordedFormation, null);
+    const slots = result.lineup.recordedPitch?.players ?? result.lineup.players;
+    assert.equal(slots.length, 11);
+    assert.ok(slots.every(slot => Number.isFinite(slot.x) && Number.isFinite(slot.y)));
+    assert.deepEqual(result.lineup.recordedPitch?.players.map(slot => slot.playerId) ?? result.lineup.players.map(slot => slot.card.id), prior.map(member => member.playerId));
+  });
+}
 
 test("ClubHub confirms and distributes only a complete provider Starting XI for its club", () => {
   const officialLineup = [
@@ -236,7 +369,7 @@ test("ClubHub fail-closes the named technical bench for incomplete or mismatched
 test("ClubHub retains all eleven football slots even when a card publication is pending", () => {
   const source = readFileSync(new URL("../components/touchline/ClubHubOfficialLineup.tsx", import.meta.url), "utf8");
 
-  assert.match(source, /lineup\.players\.length \? lineup\.players\.map/);
+  assert.match(source, /pitchPlayers\.length \? pitchPlayers\.map/);
   assert.match(source, /evaluateTouchlineCardCompleteness/);
   assert.doesNotMatch(source, /CARD PENDING REVIEW|DATA PENDING/);
   assert.doesNotMatch(source, /lineup\.players\.filter\(\(\{ card \}\) => Boolean\(card\.editorialCard\)\)/);
@@ -276,17 +409,30 @@ test("ClubHub preview window requires an absolute fixture instant and preserves 
   assert.equal(isClubHubSquadPreviewWindow({ lineupStatus: "preview", startsAt: kickoff, now: Number.NaN }), false);
 });
 
-test("ClubHub pitch keeps names inside the approved card artwork and never adds a floating rating label", () => {
+test("ClubHub adds close identity captions without a floating rating label or substituted historical player", () => {
   const source = readFileSync(new URL("../components/touchline/ClubHubOfficialLineup.tsx", import.meta.url), "utf8");
   const styles = readFileSync(new URL("../components/touchline/ClubHubOfficialLineup.module.css", import.meta.url), "utf8");
 
   assert.doesNotMatch(source, /showMatchRating/);
   assert.doesNotMatch(source, /className=\{styles\.playerName\}/);
   assert.doesNotMatch(styles, /\.playerName\s*\{/);
-  assert.match(styles, /keeping no second floating label prevents an extra dark box above players/);
+  assert.match(source, /className=\{styles\.playerCaption\}/);
+  assert.match(source, /const pitchPlayers = officialPitch\?\.players \?\? recordedPitch\?\.players/);
+  assert.match(source, /!recordedPitch && recordedXiWithoutCards/);
+  assert.match(styles, /top: calc\(100% \+ 2px\)/);
 });
 
-test("ClubHub reserves a complete responsive surface for the four canonical positional leaders and leaves the Bench subtitle blank", () => {
+test("ClubHub mobile captions are smaller and goalkeeper first-name leaves full identity accessible", () => {
+  const source = readFileSync(new URL("../components/touchline/ClubHubOfficialLineup.tsx", import.meta.url), "utf8");
+  const css = readFileSync(new URL("../components/touchline/ClubHubOfficialLineup.module.css", import.meta.url), "utf8");
+  assert.match(source, /styles\.goalkeeperMobileName/);
+  assert.match(source, /aria-label=\{playerName\}/);
+  assert.match(source, /playerName\.trim\(\)\.split\(\/\\s\+\/u\)\[0\]/);
+  assert.match(css, /\.playerCaption\s*\{\s*font-size: clamp\(7px, 1\.1cqw, 10px\)/);
+  assert.match(css, /\.goalkeeperMobileName\s*\{\s*display: inline/);
+});
+
+test("ClubHub keeps the field beside the premium table and the four leaders below the field", () => {
   const page = readFileSync(new URL("../app/touchline-clubs/[club]/page.tsx", import.meta.url), "utf8");
   const lineup = readFileSync(new URL("../components/touchline/ClubHubOfficialLineup.tsx", import.meta.url), "utf8");
   const technical = readFileSync(new URL("../components/touchline/ClubHubMatchdayTechnicalArea.tsx", import.meta.url), "utf8");
@@ -297,7 +443,10 @@ test("ClubHub reserves a complete responsive surface for the four canonical posi
   assert.doesNotMatch(page, /ClubHubPremiumOverviewSection/);
   assert.match(lineup, /className=\{styles\.pitchAndLeaders\}/);
   assert.match(lineup, /className=\{styles\.positionLeaders\}/);
-  assert.match(styles, /grid-template-columns: minmax\(0, min\(64%, 922px\)\) minmax\(0, 1fr\)/);
+  assert.match(page, /className="club-hub-field-table-layout"[\s\S]*?<ClubHubLineupSection[\s\S]*?<ClubHubOfficialTablePanel/);
+  assert.match(page, /\.club-hub-field-table-layout \{[\s\S]*?grid-template-columns: minmax\(0, 1fr\) minmax\(290px, 340px\)/);
+  assert.match(styles, /\.pitchAndLeaders \{[\s\S]*?grid-template-columns: minmax\(0, 1fr\)/);
+  assert.match(styles, /\.positionLeaders \{[\s\S]*?grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/);
   assert.match(styles, /\[data-clubhub-card-spotlight\^="position-"\][\s\S]*?overflow: visible/);
   assert.match(styles, /@media \(min-width: 981px\) and \(max-width: 1599px\)[\s\S]*?grid-template-columns: minmax\(0, 1fr\)/);
   assert.match(technical, /<p aria-hidden="true"\s*\/>/);
@@ -337,7 +486,7 @@ test("shared player cards require publication and show only a verified market va
   assert.doesNotMatch(source, /resolveTouchlineVerifiedPlayerEconomy|formatTouchlineContractedCommercialCardPrice/);
 });
 
-test("only the public ClubHub route opts line-up cards into value hiding", () => {
+test("public ClubHub line-up preserves football market values", () => {
   const source = readFileSync(new URL("../components/touchline/ClubHubOfficialLineup.tsx", import.meta.url), "utf8");
   const publicPage = readFileSync(new URL("../app/touchline-clubs/[club]/page.tsx", import.meta.url), "utf8");
   const audit = readFileSync(new URL("../components/touchline/audit/TouchlineAuditStudio.tsx", import.meta.url), "utf8");
@@ -349,7 +498,7 @@ test("only the public ClubHub route opts line-up cards into value hiding", () =>
   cards.forEach(card => assert.match(card, /hideMarketValuePanel=\{hideMarketValuePanel\}/));
   assert.match(cards[0], /forceNeonActive/);
   assert.match(cards[1], /showProfileAction=\{false\}/);
-  assert.match(publicPage, /<ClubHubOfficialLineup[\s\S]*?hideMarketValuePanel/);
+  assert.match(publicPage, /<ClubHubOfficialLineup[\s\S]*?hideMarketValuePanel=\{false\}/);
   assert.doesNotMatch(audit, /hideMarketValuePanel/);
   assert.doesNotMatch(visualQa, /hideMarketValuePanel/);
 });

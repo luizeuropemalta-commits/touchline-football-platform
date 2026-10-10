@@ -6,6 +6,8 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import ts from "typescript";
 import { getTouchlineClubHubProfileCopy } from "../lib/touchlineArena/club-hub-profile-i18n.ts";
+import { resolveClubHubFixtureRail } from "../lib/touchlineArena/club-hub-fixture-rail.ts";
+import { getTouchlineClubHubFixtureCopy } from "../lib/touchlineArena/club-hub-fixture-i18n.ts";
 
 const source = readFileSync(new URL("../app/touchline-clubs/[club]/page.tsx", import.meta.url), "utf8");
 const css = readFileSync(new URL("../components/touchline/club-hub/ClubHubOfficialLeague.module.css", import.meta.url), "utf8");
@@ -26,7 +28,7 @@ function harness() {
   const forbidden = () => assert.fail("The public ClubHub must not request or render social feed content");
   runInNewContext(ts.transpileModule(section.getText(ast) + "\nexports.render = ClubHubOfficialLeagueSection;", {
     compilerOptions: { target: ts.ScriptTarget.ES2017, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.React },
-  }).outputText, { React, exports, getTouchlineClubHubProfileCopy, officialLeagueStyles: styles, premiumStyles: styles,
+  }).outputText, { React, exports, getTouchlineClubHubProfileCopy, resolveClubHubFixtureRail, officialLeagueStyles: styles, premiumStyles: styles,
     findTouchLineClub: (id: unknown) => id === 19 || id === club.name ? club : id === 20 || id === away.name ? away : null,
     normalizeTouchlineMatchCentreTimeZone: (value: string) => value, TOUCHLINE_STADIUM_CATALOG: [],
     readTouchlineClubSocialFeed: forbidden, loadTouchlineQaMirroredSocialFeed: forbidden, TouchlineClubSocialFeed: forbidden,
@@ -36,6 +38,17 @@ function harness() {
 }
 const input = (locale: string, dataSource: string) => ({ club, locale, dataSource, cursor: "legacy-cursor", mirrorResultPromise: null,
   matchSnapshotPromise: Promise.resolve({ railFixture: fixture }), tablePromise: Promise.resolve(table) });
+
+test("fixture-only accessible heading follows verified finished/live/upcoming state in all eight locales", async () => {
+  for (const locale of ["en-GB", "pt-BR", "es-ES", "it-IT", "fr-FR", "ar-SA", "tr-TR", "de-DE"] as const) {
+    const copy = getTouchlineClubHubFixtureCopy(locale, true);
+    for (const [status, startsAt, expected] of [["finished", "2000-01-01T00:00:00Z", copy.finished], ["live", "2000-01-01T00:00:00Z", copy.live], ["scheduled", "2099-01-01T00:00:00Z", copy.nextMatch]]) {
+      const h = harness();
+      const element = await h.render({ ...input(locale, "direct"), locale, draftLocalesEnabled: true, fixtureOnly: true, matchSnapshotPromise: Promise.resolve({ railFixture: { ...fixture, status, startsAt } }) });
+      assert.equal((element.props as Props)["aria-label"], expected);
+    }
+  }
+});
 
 test("public overview renders real fixture/table bindings without direct or mirrored social work", async () => {
   for (const locale of ["en-GB", "pt-BR"]) for (const mode of ["direct", "qa-mirror"]) {
@@ -80,13 +93,14 @@ test("page retires only social cursor/imports while retaining football loaders, 
   assert.match(source, /persistedFeeds/); assert.match(source, /feedTeamBelongsToClub/);
   for (const name of ["ClubHubHeroNextMatch", "ClubHubHomeStadiumIdentity", "ClubHubLineupSection", "ClubHubTechnicalSections", "ClubHubOutsideMatchRoster"]) assert.ok(source.includes(name), name);
   const navigation = source.indexOf("<ClubHubSectionNavigation"), overview = source.indexOf("<ClubHubOfficialLeagueSection", navigation), lineup = source.indexOf("<ClubHubLineupSection", navigation);
-  assert.ok(navigation < overview && overview < lineup);
+  assert.ok(navigation < lineup && lineup < overview, "the field precedes the next fixture");
+  assert.match(source, /<ClubHubLineupSection[\s\S]*?<ClubHubOfficialTablePanel/);
   assert.match(source, /matchSnapshotPromise=\{matchSnapshotPromise\}/); assert.match(source, /tablePromise=\{tablePromise\}/);
 });
 
-test("preview geometry is bounded 920px 45/55 and naturally stacked, not a rendered visual proof", () => {
+test("next-fixture base geometry remains bounded for the compact right rail, not a rendered visual proof", () => {
   assert.match(css, /width:\s*min\(920px,\s*100%\)/);
-  assert.match(css, /grid-template-columns:\s*minmax\(0,\s*45fr\) minmax\(0,\s*55fr\)/);
+  assert.match(css, /grid-template-columns:\s*minmax\(0,\s*1fr\)/);
   assert.match(css, /align-items:\s*start/); assert.match(css, /@media \(max-width: 1120px\)[\s\S]*?grid-template-columns:\s*1fr/);
   assert.doesNotMatch(css, /100dvh|height:\s*clamp|\.feed\b/);
   assert.match(css, /--touchline-perimeter-run-color:\s*#a3ff12/);

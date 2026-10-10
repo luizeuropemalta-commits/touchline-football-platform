@@ -167,6 +167,7 @@ async function rootLayout(enabled:boolean, publicRelease = false) {
     isTouchlineIsolatedPreviewRequest:()=>false,TOUCHLINE_ISOLATED_PREVIEW_HEADER:"x-touchline-isolated-preview",
     resolveTouchlineDataSource:()=>"direct",Suspense:"suspense",DocumentLocaleSync:"document-sync",
     TouchlineActivityTracker:"activity",TouchlineLandscapeBoundary:"landscape",TouchlineAmbientAudioProvider:"audio",
+    TouchlineDecorationMotion:"decoration-motion",
     require:(name:string)=>{assert.equal(name,"react/jsx-runtime");return jsx;},
   });
   return enabled?exports.internal!({children:null},true):exports.default!({children:null});

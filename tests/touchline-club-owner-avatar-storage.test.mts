@@ -267,6 +267,7 @@ test("verified private bucket and normalized bytes use canonical create-only pat
   assert.equal(f.calls[1].url, `${origin}/storage/v1/object/${CLUB_OWNER_AVATAR_BUCKET}/${input.objectKey}`);
   assert.equal(f.calls[2].url, `${origin}/storage/v1/object/authenticated/${CLUB_OWNER_AVATAR_BUCKET}/${input.objectKey}`);
   for (const call of f.calls) { assert.equal(call.init.redirect, "error"); assert.equal(call.init.cache, "no-store"); assert.ok(call.init.signal); }
+  for (const call of f.calls) assert.equal(new Headers(call.init.headers).get("accept-encoding"), "identity");
   const headers = new Headers(f.calls[1].init.headers);
   assert.equal(headers.get("x-upsert"), "false"); assert.equal(headers.get("content-type"), "image/webp");
   assert.deepEqual(Buffer.from(f.calls[1].init.body as Uint8Array), input.bytes);
@@ -283,6 +284,22 @@ test("explicit already-exists codes require exact existing bytes; HTTP conflict 
     const input = await upload(); const f = await fixture(input, call => call.init.method === "POST" ? Response.json({ code: "PRIVATE_PROVIDER", message: secret }, { status }) : undefined);
     await assert.rejects(f.create().createImmutable(input, signal()), errorIs("unknown")); assert.equal(f.calls.length, 2);
   }
+});
+
+test("hosted HTTP 400 duplicate envelope still requires explicit conflict code and exact readback", async () => {
+  const input = await upload();
+  const observed = { code: "KeyAlreadyExists", error: "Duplicate", statusCode: "409" };
+  const good = await fixture(input, call => call.init.method === "POST" ? Response.json(observed, { status: 400 }) : undefined);
+  assert.equal((await good.create().createImmutable(input, signal())).digest, input.digest);
+  assert.deepEqual(good.calls.map(call => call.init.method), ["GET", "POST", "GET"]);
+  for (const body of [{ ...observed, statusCode: "403" }, { ...observed, code: "AccessDenied" }, { error: "Duplicate", statusCode: "409" }, { code: "KeyAlreadyExists" }]) {
+    const bad = await fixture(input, call => call.init.method === "POST" ? Response.json(body, { status: 400 }) : undefined);
+    await assert.rejects(bad.create().createImmutable(input, signal()), errorIs("unknown"));
+    assert.equal(bad.calls.length, 2);
+  }
+  const wrongBytes = await fixture(input, call => call.init.method === "POST" ? Response.json(observed, { status: 400 })
+    : call.url.includes("object/authenticated/") ? new Response(new Uint8Array([1, 2]), { headers: { "content-type": "image/webp" } }) : undefined);
+  await assert.rejects(wrongBytes.create().createImmutable(input, signal()), errorIs("unknown"));
 });
 
 test("malformed source, mismatched digest/key and metadata-rich or oversized WebP never reach Storage", async () => {

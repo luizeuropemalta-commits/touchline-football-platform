@@ -68,7 +68,7 @@ test("the account header exposes four canonical metrics without fake capacity or
 
 test("coach remains a dedicated entity outside every player slot", async () => {
   const source = await readFile(stagePath, "utf8");
-  assert.match(source, /data-market-technical-area="true"/);
+  assert.match(source, /className=\{styles\.myClubFieldCoach\} aria-label=\{workflowCopy\.technicalArea\}/);
   const coachCardStyles = await readFile(new URL("../components/touchline/cards/TouchlineCoachCard.module.css", import.meta.url), "utf8");
   assert.match(coachCardStyles, /width: clamp\(9px, 16cqw, 28px\)/);
   const pitch = source.match(/<TouchlinePitchSurface className=\{styles\.myClubTacticalPitch\}[\s\S]*?<\/TouchlinePitchSurface>/)?.[0] ?? "";

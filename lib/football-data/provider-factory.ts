@@ -1,10 +1,9 @@
-import { SportmonksFootballProvider } from "@/lib/football-data/providers/sportmonks";
+import "server-only";
+import { createConfiguredCentralFootballDataProvider } from "./central-provider-server.ts";
 import type {
   FootballDataProvider,
   FootballDataProviderName,
 } from "@/lib/football-data/types";
-
-let cachedProvider: FootballDataProvider | null = null;
 
 /**
  * Sportmonks is the only approved external football-data API. Keeping this
@@ -18,14 +17,15 @@ export function getConfiguredFootballDataProviderName(): FootballDataProviderNam
 export function createFootballDataProvider(
   _name: FootballDataProviderName = "sportmonks",
 ): FootballDataProvider {
-  return new SportmonksFootballProvider();
+  return createConfiguredCentralFootballDataProvider();
 }
 
 export function getFootballDataProvider() {
-  cachedProvider ??= createFootballDataProvider();
-  return cachedProvider;
+  // Re-read binding on construction: a rotated/revoked worker or OFF flag must
+  // not retain an older enabled singleton. Response cache is policy-scoped.
+  return createFootballDataProvider();
 }
 
 export function resetFootballDataProviderForTests() {
-  cachedProvider = null;
+  // Compatibility hook; factory instances are no longer cached.
 }

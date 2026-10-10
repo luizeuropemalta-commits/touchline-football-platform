@@ -71,10 +71,31 @@ export type TouchLineClubLineupSlot = {
   y: number;
 };
 
+type TouchLineClubIdentityPitch = {
+  formation: string;
+  players: Array<{
+    playerId: string;
+    playerName: string;
+    jerseyNumber: number | null;
+    card: ClubOwnerSquadCard | null;
+    x: number;
+    y: number;
+  }>;
+};
+
 export type TouchLineClubLineup = {
   status: TouchLineClubLineupStatus;
+  previewBasis?: "last-completed-xi" | "illustrative";
   formation: string;
+  /** Historical fact, separate from the internal geometry fallback; null means not recorded. */
+  recordedFormation?: string | null;
+  /** Official formation evidence, separate from geometry; null does not unconfirm the XI identities. */
+  officialFormation?: string | null;
   players: TouchLineClubLineupSlot[];
+  /** Official identities survive missing publication without manufacturing a card. */
+  officialPitch?: TouchLineClubIdentityPitch;
+  /** Historical football slots; a missing published card stays null, never a replacement player. */
+  recordedPitch?: TouchLineClubIdentityPitch;
 };
 
 export type TouchLineClubOfficialMatchdayCoach = Readonly<{
@@ -87,6 +108,8 @@ export type TouchLineClubMatchdayTechnicalState = "confirmed" | "awaiting_offici
 
 export type TouchLineClubMatchdayPresentation = Readonly<{
   lineup: TouchLineClubLineup;
+  /** Historical provider names only; never current published cards or a next-match XI. */
+  recordedXiWithoutCards: readonly Readonly<{ playerId: string; playerName: string; jerseyNumber: number | null }>[] | null;
   technical: Readonly<{
     state: TouchLineClubMatchdayTechnicalState;
     coach: TouchLineClubOfficialMatchdayCoach | null;
@@ -185,9 +208,9 @@ export function buildTouchLineClubLineup(input: {
 }
 
 /**
- * Pure ClubHub read model. A public matchday is confirmed only after the
- * selected fixture supplies one exact 11-player XI and the complete technical
- * team sheet (the provider's unique substitutes, plus a coach when supplied).
+ * Pure ClubHub read model. An exact official XI can retain unpublished players
+ * as named identity slots. Technical confirmation remains independent and
+ * requires the published XI and the provider's complete unique substitutes.
  * It never infers a coach,
  * bench member, fixture or player identity.
  */
@@ -197,11 +220,16 @@ export function buildTouchLineClubMatchdayPresentation(input: {
   officialLineup?: TouchlineFantasyLineupMember[];
   formation?: string | null;
   fixtureId?: string | null;
+  lastCompletedXi?: {
+    fixtureId: string;
+    formation: string | null;
+    starters: readonly TouchlineFantasyLineupMember[];
+  } | null;
   officialCoach?: TouchLineClubOfficialMatchdayCoach | null;
   formationGeometryRegistry?: TouchlineFormationGeometryRegistry;
 }): TouchLineClubMatchdayPresentation {
   const strictMembers = (input.officialLineup ?? []).filter((member) => (
-    isStrictMatchdayMember(member, input.club, input.fixtureId)
+    member.provider === "sportmonks" && isStrictMatchdayMember(member, input.club, input.fixtureId)
   ));
   const officialStarters = strictMembers
     .filter((member) => member.isStarter)
@@ -213,19 +241,83 @@ export function buildTouchLineClubMatchdayPresentation(input: {
     ? officialStarters.map((member) => strictCardForOfficialMember(member, input.squadCards))
     : [];
   const hasConfirmedStartingEleven = confirmedStarterCards.length === 11 && confirmedStarterCards.every(Boolean);
-  const formation = hasConfirmedStartingEleven && input.formation?.trim()
-    ? input.formation.trim()
+  const hasOfficialStartingIdentities = confirmedStarterCards.length === 11
+    && officialStarters.every((member, index) => confirmedStarterCards[index] || member.playerName?.trim());
+  const priorFixtureId = input.lastCompletedXi?.fixtureId;
+  const priorMembers = priorFixtureId && priorFixtureId !== input.fixtureId
+    ? input.lastCompletedXi!.starters.filter((member) => isStrictMatchdayMember(member, input.club, priorFixtureId) && member.isStarter)
+    : [];
+  const priorIds = priorMembers.map(memberPlayerId);
+  const priorCards = priorMembers.length === 11 && priorIds.every(Boolean) && new Set(priorIds).size === 11
+    ? priorMembers.sort((first, second) => officialFormationPosition(first) - officialFormationPosition(second))
+      .map((member) => strictCardForOfficialMember(member, input.squadCards))
+    : [];
+  const hasLastCompletedXi = priorCards.length === 11 && priorCards.every(Boolean);
+  const recordedXiWithoutCards = !hasOfficialStartingIdentities && !hasLastCompletedXi
+    && priorMembers.length === 11 && priorIds.every(Boolean) && new Set(priorIds).size === 11
+    && priorMembers.every((member) => member.playerName.trim())
+    ? [...priorMembers].sort((first, second) => officialFormationPosition(first) - officialFormationPosition(second))
+      .map((member) => ({
+        playerId: memberPlayerId(member)!,
+        playerName: member.playerName.trim(),
+        jerseyNumber: normalizeOfficialShirtNumber(member.jerseyNumber, null),
+      }))
+    : null;
+  const formation = hasOfficialStartingIdentities
+    ? input.formation?.trim() || "4-3-3"
+    : hasLastCompletedXi && input.lastCompletedXi?.formation?.trim()
+      ? input.lastCompletedXi.formation.trim()
     : "4-3-3";
   const formationSlots = touchlineCanonicalFormationSlots(formation, input.formationGeometryRegistry);
   const cards = hasConfirmedStartingEleven
     ? confirmedStarterCards as ClubOwnerSquadCard[]
+    : hasOfficialStartingIdentities ? []
+    : hasLastCompletedXi
+      ? priorCards as ClubOwnerSquadCard[]
     : selectPreviewStartingEleven(input.squadCards, formationSlots);
 
   const lineup: TouchLineClubLineup = {
-    status: hasConfirmedStartingEleven ? "confirmed" : "preview",
+    status: hasOfficialStartingIdentities ? "confirmed" : "preview",
+    previewBasis: hasOfficialStartingIdentities ? undefined : hasLastCompletedXi ? "last-completed-xi" : "illustrative",
     formation,
     players: arrangeCards(cards, formationSlots),
   };
+
+  if (hasOfficialStartingIdentities) {
+    lineup.officialFormation = input.formation?.trim() || null;
+  }
+
+  if (hasOfficialStartingIdentities && !hasConfirmedStartingEleven) {
+    lineup.officialPitch = {
+      formation,
+      players: officialStarters.map((member, index) => ({
+        playerId: memberPlayerId(member)!,
+        playerName: member.playerName?.trim() || confirmedStarterCards[index]!.name,
+        jerseyNumber: normalizeOfficialShirtNumber(member.jerseyNumber, null),
+        card: confirmedStarterCards[index] ?? null,
+        x: formationSlots[index]!.x,
+        y: formationSlots[index]!.y,
+      })),
+    };
+  }
+
+  if (!hasOfficialStartingIdentities && (hasLastCompletedXi || recordedXiWithoutCards)) {
+    lineup.recordedFormation = input.lastCompletedXi?.formation?.trim() || null;
+  }
+
+  if (recordedXiWithoutCards) {
+    const recordedFormation = input.lastCompletedXi?.formation?.trim() || "4-3-3";
+    const recordedSlots = touchlineCanonicalFormationSlots(recordedFormation, input.formationGeometryRegistry);
+    lineup.recordedPitch = {
+      formation: recordedFormation,
+      players: recordedXiWithoutCards.map((member, index) => ({
+        ...member,
+        card: priorCards[index] ?? null,
+        x: recordedSlots[index]!.x,
+        y: recordedSlots[index]!.y,
+      })),
+    };
+  }
 
   const officialBench = strictMembers.filter((member) => member.isSubstitute);
   const benchIds = officialBench.map(memberPlayerId);
@@ -255,18 +347,23 @@ export function buildTouchLineClubMatchdayPresentation(input: {
   // A pre-match Club Hub is still useful before the official team sheet is
   // available. Keep nine real squad cards visible, but do not promote them to
   // the official bench DTO or claim they were selected for the fixture.
-  const displayedStartingIds = new Set(lineup.players.map(({ card }) => String(card.id)));
+  const identityPitch = lineup.officialPitch ?? lineup.recordedPitch;
+  const startingIds = identityPitch
+    ? identityPitch.players.map(({ playerId }) => playerId)
+    : lineup.players.map(({ card }) => String(card.id));
+  const displayedStartingIds = new Set(startingIds);
   const previewBench = input.squadCards
     .filter((card) => !displayedStartingIds.has(String(card.id)))
     .slice(0, 9);
   const displayBench = hasConfirmedTechnicalTeamSheet ? bench : previewBench;
   const displayedPlayerIds = [...new Set([
-    ...lineup.players.map(({ card }) => card.id),
+    ...startingIds,
     ...displayBench.map((card) => card.id),
   ])];
 
   return {
     lineup,
+    recordedXiWithoutCards,
     technical: {
       state: hasConfirmedTechnicalTeamSheet ? "confirmed" : "awaiting_official_team_sheet",
       coach: hasConfirmedTechnicalTeamSheet ? coach : null,

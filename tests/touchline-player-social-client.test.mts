@@ -75,7 +75,9 @@ test("runtime social controls are outside artwork and preserve field-card dimens
   const source = (file: string) => readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
   assert.match(source("components/touchline/cards/TouchlineEliteExactCard.tsx"), /showSocialMetrics && isEditable \?/);
   const zoom = source("components/touchline/cards/TouchlineCardZoom.tsx");
-  assert.match(zoom, /data-card-zoom="expanded">\{expandedContent \?\? children\}<\/div>\s*\{socialPlayerId && details \? <TouchlinePlayerSocialActions/);
+  assert.match(zoom, /data-card-zoom="expanded">\{expandedContent \?\? children\}<\/div>\s*\{!details \|\| detailsContent \? lineupActions : null\}/);
+  assert.match(zoom, /const lineupActions = replacementButton \|\| removalButton \? <div className=\{styles\.lineupActions\}>\{replacementButton\}\{removalButton\}<\/div> : null/);
+  assert.match(zoom, /<Trash2 size=\{22\} aria-hidden="true" \/><span>\{removalAction.label\}<\/span>/);
   const client = source("components/touchline/social/TouchlinePlayerSocialActions.tsx");
   assert.doesNotMatch(client, /localStorage|setIsLiked|setIsFollowing/);
   assert.match(client, /key=\{id\}/);

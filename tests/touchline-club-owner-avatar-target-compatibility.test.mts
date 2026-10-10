@@ -25,7 +25,7 @@ test("avatar dependencies typecheck with the repository's unmodified target/lib 
   assert.deepEqual(parsed.errors, []);
   assert.equal(parsed.options.target, ts.ScriptTarget.ES2017);
   const modules = readdirSync(resolve(root, "lib/touchlineArena")).filter(name => /^club-owner-avatar-.*\.ts$/.test(name)).sort();
-  assert.deepEqual(modules, ["client", "context-server", "control-admission", "output-policy", "persistence", "read-handler", "resource-admission", "selection-contract", "server", "storage", "transport-limits", "ui-i18n", "upload-contract", "upload-handler", "validation"].map(name => `club-owner-avatar-${name}.ts`).sort());
+  assert.deepEqual(modules, ["client", "context-server", "control-admission", "output-policy", "persistence", "read-handler", "resource-admission", "retention-discovery-worker", "retention-list-storage", "retention-rpc", "retention-server", "retention-storage", "retention-worker", "selection-contract", "server", "storage", "transport-limits", "ui-i18n", "upload-contract", "upload-handler", "validation-types", "validation"].map(name => `club-owner-avatar-${name}.ts`).sort());
   const roots = [resolve(root, "next-env.d.ts"), resolve(root, "app/api/account/avatar/route.ts"), resolve(root, "app/api/account/avatar/recovery/route.ts"),
     ...modules.map(name => resolve(root, "lib/touchlineArena", name))];
   // Compiler roots are read, never dynamically imported: server-only, GET and

@@ -79,6 +79,10 @@ export async function POST(request: Request) {
     const configuredAccount = environment.TOUCHLINE_CLUB_OWNER_AVATAR_UPLOAD_ACCOUNT_ID;
     if (environment.TOUCHLINE_CLUB_OWNER_AVATAR_READ_ENABLED !== "true"
       || environment.TOUCHLINE_CLUB_OWNER_AVATAR_UPLOAD_ENABLED !== "true"
+      // Selection is also a server gate; hiding a picker alone cannot prevent
+      // direct POST. Readiness is an operator assertion, never inferred here.
+      || environment.TOUCHLINE_CLUB_OWNER_AVATAR_SELECTION_ENABLED !== "true"
+      || environment.TOUCHLINE_CLUB_OWNER_AVATAR_RETENTION_READY !== "true"
       || !isAvatarAccountId(configuredAccount)
       || inspectTouchlineQaVercelEnvironment({ environment, requestHostname: target.hostname }).status !== "PASS"
       || target.origin !== TOUCHLINE_QA_ORIGIN || resolveTouchlineDataSource(environment) !== "direct"

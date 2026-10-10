@@ -1,5 +1,6 @@
 import { AuthForm } from "@/components/auth-form";
 import { AuthLayout } from "@/components/auth-layout";
+import LoginPlanGallery from "@/components/touchline/LoginPlanGallery";
 import { getTouchLineLoginCopy, normalizeTouchLineLoginLocale, normalizeTouchLineAuthLocale, normalizeTouchLineAuthReturnTo, touchLineAuthHref } from "@/lib/touchlineArena/auth-i18n";
 import { isTouchLineSiteLocalesEnabled } from "@/lib/touchlineArena/site-locales-release";
 
@@ -37,6 +38,7 @@ export default async function Login({
       brandWordmarkClassName="text-[clamp(26px,3.2vw,34px)]"
       minimalBrandMark
       keepLoginLayoutStable
+      planGallery={!protectedReturn ? <LoginPlanGallery locale={locale} draftLocalesEnabled /> : undefined}
     >
       <p className="text-[9px] font-black text-cyan-300">{copy.eyebrow}</p>
       <h1 className="font-display mt-3 text-4xl italic">{copy.title}</h1>

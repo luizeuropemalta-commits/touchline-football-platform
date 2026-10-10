@@ -56,17 +56,8 @@ async function renderTouchlineClubsPage({ searchParams }: ClubsPageProps, draftL
 
   return (
     <main dir="ltr" className={styles.shell}>
-      <TouchlineBrandHeader draftLocalesEnabled={draftLocalesEnabled} href={`/touchline-clubs?${localeQuery}`} locale={locale} accountLocaleContext={accountLocaleContext} />
+      <TouchlineBrandHeader draftLocalesEnabled={draftLocalesEnabled} href={`/touchline-clubs?${localeQuery}`} locale={locale} accountLocaleContext={accountLocaleContext} navigation={<TouchlineGlobalNavigation draftLocalesEnabled={draftLocalesEnabled} locale={locale} currentRoute="clubHub" surface="public" showAudioControl={false} />} />
       <div className={styles.content}>
-      <div className={styles.topbar}>
-        <TouchlineGlobalNavigation draftLocalesEnabled={draftLocalesEnabled}
-          locale={locale}
-          currentRoute="clubHub"
-          surface="public"
-          className={styles.globalNavigation}
-          showAudioControl={false}
-        />
-      </div>
 
       <section className={styles.hero}>
         <div>

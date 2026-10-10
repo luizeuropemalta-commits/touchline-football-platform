@@ -56,7 +56,7 @@
 }
 
 /* Keep identical to TOUCHLINE_PORTRAIT_QUERY. CSS protects even without JS. */
-@media (max-width: 767px) and (orientation: portrait) {
+@media (max-width: 767px) and (orientation: portrait) and (pointer: coarse) {
   .content {
     visibility: hidden !important;
     opacity: 0 !important;

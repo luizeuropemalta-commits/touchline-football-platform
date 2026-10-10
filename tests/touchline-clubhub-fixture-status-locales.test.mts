@@ -66,5 +66,5 @@ test("localized status remains wired into the rendered matchup without exporting
   assert.match(source, /status: localizedFixtureStatus\(matchPreview\.status, locale, draftLocalesEnabled\)/);
   assert.ok(!declaration.modifiers?.some(modifier => modifier.kind === ts.SyntaxKind.ExportKeyword));
   const lineup = readFileSync(new URL("../components/touchline/ClubHubOfficialLineup.tsx", import.meta.url), "utf8");
-  assert.match(lineup, /\[matchup\.status, matchup\.startsAt\]\.filter\(Boolean\)\.join\(" · "\)/);
+  assert.match(lineup, /<small>\{matchup\.status \? `\$\{matchup\.status\} · ` : null\}<ClubHubLocalKickoff startsAt=\{matchup\.startsAtIso\} locale=\{locale\} draftLocalesEnabled=\{draftLocalesEnabled\} fallback=\{matchup\.startsAt\} \/><\/small>/);
 });

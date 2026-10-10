@@ -82,7 +82,10 @@ function avatarStorageOperation(config: StorageConfig) {
           if (method === "POST") createStarted = true;
           return fetchImpl(`${origin}/storage/v1/${path}`, {
             method, redirect: "error", cache: "no-store", signal,
-            headers: { apikey: serviceRoleKey, authorization: `Bearer ${serviceRoleKey}`, ...(body ? { "content-type": "image/webp", "x-upsert": "false" } : {}) },
+            // Node fetch otherwise advertises compression while retaining the
+            // encoded headers on a decoded stream. Keep our byte/length contract
+            // explicit; a server ignoring identity still fails closed below.
+            headers: { apikey: serviceRoleKey, authorization: `Bearer ${serviceRoleKey}`, "accept-encoding": "identity", ...(body ? { "content-type": "image/webp", "x-upsert": "false" } : {}) },
             ...(body ? { body: body as BodyInit } : {}),
           }).then(response => {
             responses.add(response);
@@ -170,9 +173,13 @@ function avatarStorageOperation(config: StorageConfig) {
         }));
         await verifyBucket();
         const created = await request(`object/${path}`, "POST", bytes);
-        if (created.status === 409) {
+        if (created.status === 409 || created.status === 400) {
           const error = await json(created);
           if (!["ResourceAlreadyExists", "KeyAlreadyExists", "already_exists"].includes(String(error.code))) throw Error();
+          // Hosted Storage can wrap a duplicate as HTTP 400 with a precise
+          // internal 409 envelope. Never accept a generic 400 or error message.
+          if (created.status === 400 && (error.code !== "KeyAlreadyExists"
+            || error.statusCode !== "409" || error.error !== "Duplicate")) throw Error();
         } else {
           discard(created);
           if (created.status !== 200 && created.status !== 201) throw Error();

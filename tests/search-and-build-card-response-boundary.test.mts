@@ -121,6 +121,41 @@ test("manual editorial mode fails closed before an automatic player or valuation
   assert.match(post, /Cache-Control": "private, no-store"/);
 });
 
+test("actual POST preserves auth rejection and returns 410 without body, DB or provider work", async () => {
+  const compiled = ts.transpileModule(route, {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+  }).outputText;
+  const forbidden = () => { throw new Error('Forbidden legacy lookup reached'); };
+  for (const status of [401, 403, null]) {
+    let authCalls = 0, bodyCalls = 0, dataCalls = 0;
+    const access = status === null ? null : Response.json({ error: 'denied' }, { status });
+    const output: { POST?: (request: Request) => Promise<Response> } = {};
+    const load = (name: string) => {
+      if (name === 'next/server') return { NextResponse: { json: Response.json } };
+      if (name === '@/lib/touchlineArena/api-access') return {
+        requireAuthenticatedOrLocalTouchlineEditor: async () => { authCalls++; return access; },
+      };
+      if (name === '@supabase/supabase-js') return { createClient: () => { dataCalls++; return forbidden(); } };
+      if (name === '@/lib/touchlineArena/country-flags') return { touchlineCountryCode3FromName: forbidden, touchlineCountryFlagUrl: forbidden };
+      if (name === '@/lib/touchlineArena/demo-data') return { findTouchLineClub: forbidden };
+      throw new Error(`Unexpected dependency: ${name}`);
+    };
+    // Execute the entire current module, not a copied/reduced POST body.
+    new Function('require', 'exports', 'fetch', compiled)(load, output, () => { dataCalls++; return forbidden(); });
+    const request = new Request('https://qa.invalid/api/players/search-and-build-card', { method: 'POST' });
+    request.json = async () => { bodyCalls++; return forbidden(); };
+    assert.ok(output.POST);
+    const response = await output.POST(request);
+    assert.equal(authCalls, 1); assert.equal(bodyCalls, 0); assert.equal(dataCalls, 0);
+    assert.equal(response.status, status ?? 410);
+    if (access) assert.equal(response, access);
+    else {
+      assert.equal((await response.json()).code, 'manual_editorial_catalog_only');
+      assert.equal(response.headers.get('cache-control'), 'private, no-store');
+    }
+  }
+});
+
 test("Card Studio keeps the official editor without Runway or avatar-generation controls", () => {
   assert.doesNotMatch(
     cardStudio,

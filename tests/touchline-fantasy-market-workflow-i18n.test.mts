@@ -62,6 +62,8 @@ const baseline = {
     "startingXI": "STARTING XI",
     "viewTactical": "View tactical layout",
     "viewCards": "View cards",
+    "arenaMode": "Arena mode",
+    "closeArena": "Close Arena",
     "pitchAria": "Interactive tactical field",
     "choosePlayer": "Choose player",
     "removeFromXI": "Remove from XI",
@@ -136,6 +138,8 @@ const baseline = {
     "startingXI": "ELENCO TITULAR",
     "viewTactical": "Ver visão tática",
     "viewCards": "Ver cards",
+    "arenaMode": "Modo Arena",
+    "closeArena": "Fechar Arena",
     "pitchAria": "Campo tático interativo",
     "choosePlayer": "Escolher jogador",
     "removeFromXI": "Retirar do XI",
@@ -196,13 +200,13 @@ const child = ({ children }: { children?: React.ReactNode }) => React.createElem
 function actual(input: Record<string, unknown> = {}, getCopy: (locale: string, draftLocalesEnabled?: boolean) => unknown = () => ({}), draftLocalesEnabled = false) {
   assert.ok(embedded); const calls: Array<[string, unknown]> = [];
   const context: Record<string, unknown> = {
-    React, ...domain, locale: "en-GB", draftLocalesEnabled, pt: false, marketPage: true, editable: true, saving: false,
+    React, ArenaView: child, TouchlineMatchCentre: icon, resolveTouchlineCatalogueLocale, liveTimeZone: "UTC", arenaOpen: false, ...domain, locale: "en-GB", draftLocalesEnabled, pt: false, marketPage: true, editable: true, saving: false,
     styles: new Proxy({}, { get: (_, key) => String(key) }), gameweeks: [], activeGameweek: { id: "round-7", number: 7, state: "MARKET_OPEN" },
     selectedCoach: coach, selectedCoachId: coach.id, formationCode: "4-3-3", geometry, selections: [], eligiblePlayers: [player],
     catalogueById: new Map([[card.id, card]]), browseCards: [card], filteredCoaches: [coach], selectedPlayerClub: { name: "Canonical Club", teamId: "club-1" }, selectedCoachClub: { teamId: "club-1" },
     snapshot: { config: { budgetEur: 900, maxPlayersPerClub: 11 }, formationRegistry: { "4-3-3": geometry }, coaches: [coach], gameweekScore: 0, seasonScore: 0 },
     activeSlot: slot, browseSlot: slot, browsingPosition: "striker", squadView: "tactical", pitchCardWidth: 74, pitchViewportRef: { current: null }, query: "", feedback: null,
-    live: null, validation: { valid: true }, lineupConfirmed: false, hasUnsavedChanges: false,
+    live: null, currentMatchCards: [], currentAvailability: [], TouchlineMatchCardBadge: icon, TouchlinePlayerAvailabilityBadge: icon, validation: { valid: true }, lineupConfirmed: false, hasUnsavedChanges: false,
     marketOpen: true, marketStatusLabel: "Market open", marketAccessLabel: "View only", marketAccessCopy: getTouchlineFantasyMarketAccessCopy(String(input.locale ?? "en-GB"), draftLocalesEnabled), marketMetricsCopy: getTouchlineFantasyMarketMetricsCopy(String(input.locale ?? "en-GB"), draftLocalesEnabled),
     getTouchlineFantasyMarketWorkflowCopy: getCopy, touchlineMarketPositionBucketLabel, localizedPositionLabel,
     statusCopy: touchlineFantasyStatusCopy,
@@ -217,8 +221,8 @@ function actual(input: Record<string, unknown> = {}, getCopy: (locale: string, d
     loadPersistedLineup: async (fingerprint: string, state: string) => { calls.push(["verify", { fingerprint, state }]); return true; },
     ...input,
   };
-  for (const name of ["setSelections", "setActiveSlotId", "setBrowsePosition", "setVisibleStep", "setSquadView", "setQuery", "setSelectedCoachId", "setCoachClubTeamId", "setPlayerClubTeamId", "setFormationCode", "setFeedback", "setSaving"]) {
-    context[name] = (value: unknown) => calls.push([name, typeof value === "function" ? value(context.selections) : value]);
+  for (const name of ["setArenaOpen", "setSelections", "setActiveSlotId", "setBrowsePosition", "setVisibleStep", "setSquadView", "setQuery", "setSelectedCoachId", "setCoachClubTeamId", "setPlayerClubTeamId", "setFormationCode", "setFeedback", "setSaving"]) {
+    context[name] = (value: unknown) => calls.push([name, typeof value === "function" ? value(name === "setArenaOpen" ? context.arenaOpen : context.selections) : value]);
   }
   const functions = ["lineupFingerprint", "horizontalMyClubPitchPosition", "CompactClubSelector", "changeFormation", "addPlayer", "removePlayer", "save"].map(name => declarations.get(name)).join("\n");
   const js = ts.transpileModule(`(() => { ${getter} ${functions} return { render: () => ${embedded}, save, addPlayer, removePlayer, changeFormation, CompactClubSelector }; })()`, { compilerOptions: { target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.React } }).outputText;
@@ -227,6 +231,123 @@ function actual(input: Record<string, unknown> = {}, getCopy: (locale: string, d
 }
 
 type Element = React.ReactElement<Record<string, unknown>>;
+test("selected XI availability stays separate from match cards in both ClubOwner modes and eight locales", async () => {
+  const { getTouchlineFantasyMarketWorkflowCopy: getCopy } = await load();
+  const badge = { asset: "/touchlineArena/status-badges/injury-cross.png", width: 48, height: 48, reason: "injury", estimatedReturnDate: null };
+  const entry = { playerId: card.id, fixtureId: "101", badge };
+  for (const locale of ["en-GB", "pt-BR", "es-ES", "it-IT", "fr-FR", "ar-SA", "tr-TR", "de-DE"]) {
+    for (const arenaOpen of [false, true]) {
+      const rendered = actual({ locale, arenaOpen, selections: [{ playerId: card.id, slotId: slot.id }], currentAvailability: [entry],
+        currentMatchCards: [{ playerId: card.id, fixtureId: "101", eventId: "201", kind: "yellow" }] }, getCopy, true);
+      const nodes = elements(rendered.api.render());
+      const badges = nodes.filter(node => node.props.badge === badge);
+      assert.equal(badges.length, 1); assert.equal(badges[0].props.locale, locale);
+      assert.equal(nodes.filter(node => node.props.playerName === card.name && node.props.kind === "yellow").length, 1);
+      assert.deepEqual(rendered.calls, []);
+    }
+  }
+  for (const currentAvailability of [[], [entry, entry], [{ ...entry, playerId: "other" }]]) {
+    const rendered = actual({ selections: [{ playerId: card.id, slotId: slot.id }], currentAvailability }, getCopy);
+    assert.equal(elements(rendered.api.render()).filter(node => node.props.badge).length, 0);
+  }
+});
+test("persisted match cards appear in ClubOwner XI and its Arena, never in the market catalogue", async () => {
+  const { getTouchlineFantasyMarketWorkflowCopy: getCopy } = await load();
+  for (const marketPage of [false, true]) for (const arenaOpen of [false, true]) {
+    for (const kind of ["yellow", "red"]) {
+      const currentMatchCards = [{ playerId: card.id, fixtureId: "101", eventId: "201", kind },
+        { playerId: "other-player", fixtureId: "101", eventId: "202", kind: "red" }];
+      const rendered = actual({ marketPage, arenaOpen, currentMatchCards, selections: [{ playerId: card.id, slotId: slot.id }] }, getCopy);
+      const nodes = elements(rendered.api.render());
+      const badges = nodes.filter(node => node.props.playerName === card.name && node.props.kind);
+      assert.equal(badges.length, 1, `marketPage=${marketPage} arena=${arenaOpen} kind=${kind}`);
+      assert.equal(badges[0].props.kind, kind);
+      const pitch = nodes.find(node => node.props.className === "myClubTacticalPitch");
+      assert.ok(pitch && elements(pitch).includes(badges[0]), "badge belongs to selected XI, not catalogue inventory");
+      assert.deepEqual(rendered.calls, []);
+    }
+  }
+  const cleared = actual({ currentMatchCards: [], selections: [{ playerId: card.id, slotId: slot.id }] }, getCopy);
+  assert.ok(!elements(cleared.api.render()).some(node => node.props.kind && node.props.playerName), "no stale badge after events are cleared");
+});
+test("Arena round points reuse the persisted live total, never draft or coach points", async () => {
+  const { getTouchlineFantasyMarketWorkflowCopy: getCopy } = await load();
+  for (const locale of ["en-GB", "pt-BR", "es-ES", "it-IT", "fr-FR", "ar-SA", "tr-TR", "de-DE"]) {
+    for (const score of [0, 12.5, 98.25]) {
+      const rendered = actual({ arenaOpen: true, locale, live: { gameweekScore: score, seasonScore: 999 }, hasUnsavedChanges: true, selectedCoach: { ...coach, points: 999 }, selections: [] }, getCopy, true);
+      const output = elements(rendered.api.render()).find(node => node.props["data-arena-round-points"] === "true");
+      assert.ok(output);
+      const pitch = elements(rendered.api.render()).find(node => node.props.className === "myClubTacticalPitch");
+      assert.ok(pitch && elements(pitch).some(node => node.props["data-arena-round-points"] === "true"), "points follow the pitch boundary, not the coach position");
+      assert.equal(output.props["aria-live"], "polite");
+      const html = renderToStaticMarkup(output);
+      assert.ok(html.includes(getTouchlineFantasyMarketMetricsCopy(locale, true).roundPoints));
+      assert.ok(html.includes(score.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })));
+      assert.ok(!html.includes("999"));
+      assert.deepEqual(rendered.calls, [], "displaying points never saves or fetches separately");
+    }
+  }
+  const initial = actual({ arenaOpen: true }, getCopy);
+  assert.ok(renderToStaticMarkup(elements(initial.api.render()).find(node => node.props["data-arena-round-points"] === "true")!).includes("0.00"));
+  const closed = actual({ arenaOpen: false }, getCopy);
+  assert.ok(!elements(closed.api.render()).some(node => node.props["data-arena-round-points"] === "true"));
+});
+test("Arena opens and closes with incomplete or locked XI without changing or saving players", async () => {
+  const { getTouchlineFantasyMarketWorkflowCopy: getCopy } = await load();
+  for (const arenaOpen of [false, true]) for (const marketOpen of [false, true]) {
+    const rendered = actual({ arenaOpen, marketOpen, editable: marketOpen, selections: [] }, getCopy);
+    const label = arenaOpen ? "Close Arena" : "Arena mode";
+    const action = elements(rendered.api.render()).find(node => node.type === "button" && node.props.children === label);
+    assert.ok(action, label);
+    assert.ok(!action.props.disabled, "viewing the field does not require an open market or complete XI");
+    (action.props.onClick as () => void)();
+    assert.deepEqual(rendered.calls, [["setArenaOpen", !arenaOpen]]);
+  }
+});
+
+test("pitch replacement action preserves selection and respects edit and saving gates", async () => {
+  const mod = await load();
+  for (const editable of [true, false]) for (const saving of [true, false]) {
+    const rendered = actual({ selections: [{ playerId: card.id, slotId: slot.id }], editable, saving }, mod.getTouchlineFantasyMarketWorkflowCopy);
+    const zoom = elements(rendered.api.render()).find((element) => element.props.card === card && element.props.compact);
+    assert.ok(zoom);
+    const action = zoom.props.replacementAction as { disabled: boolean; onSelect: () => void } | undefined;
+    assert.equal(Boolean(action), editable);
+    if (action) {
+      assert.equal(action.disabled, saving);
+      action.onSelect();
+      assert.equal(rendered.calls.some(([name]) => name === "setActiveSlotId"), !saving);
+    }
+    assert.ok(!rendered.calls.some(([name]) => name === "setSelections" || name === "fetch"));
+  }
+});
+
+test("opening the existing replacement selector preserves the occupied slot and draft", async () => {
+  const mod = await load();
+  const selections = [{ playerId: card.id, slotId: slot.id }];
+  const rendered = actual({ selections, squadView: "squad" }, mod.getTouchlineFantasyMarketWorkflowCopy);
+  const action = elements(rendered.api.render()).find((element) => element.props.replacementAction)?.props.replacementAction as { onSelect: () => void } | undefined;
+  assert.ok(action);
+  action.onSelect();
+  assert.ok(rendered.calls.some(([name, value]) => name === "setActiveSlotId" && value === slot.id));
+  assert.ok(rendered.calls.some(([name, value]) => name === "scroll" && value === "my-club-player-selection"));
+  assert.ok(!rendered.calls.some(([name]) => name === "setSelections" || name === "fetch"));
+  assert.deepEqual(selections, [{ playerId: card.id, slotId: slot.id }]);
+});
+
+test("empty XI plus is visible only during the market window in both views", async () => {
+  const mod = await load();
+  for (const squadView of ["tactical", "squad"]) {
+    for (const marketOpen of [false, true]) {
+      const rendered = actual({ squadView, marketOpen, editable: marketOpen }, mod.getTouchlineFantasyMarketWorkflowCopy);
+      const empty = elements(rendered.api.render()).filter((element) =>
+        element.props.className === "emptyPosition" || element.props.className === "myClubEmptyCard");
+      assert.equal(empty.length, marketOpen ? 1 : 0, `${squadView}/${marketOpen}`);
+      assert.equal(rendered.calls.length, 0, "rendering does not change the lineup");
+    }
+  }
+});
+
 function elements(node: React.ReactNode): Element[] {
   if (Array.isArray(node)) return node.flatMap(elements);
   if (!React.isValidElement(node)) return [];
@@ -314,7 +435,8 @@ test("all six draft locales stay English in the actual embedded workflow, includ
   const mod = await load();
   for (const locale of mod.TOUCHLINE_FANTASY_MARKET_WORKFLOW_DRAFT_LOCALES) {
     const html = actual({ locale, pt: false }, mod.getTouchlineFantasyMarketWorkflowCopy).html();
-    for (const value of ["MY XI", "Round", "Search player", "XI slot: ST", "Confirm XI", "Technical area"]) assert.ok(html.includes(value), `${locale}: ${value}`);
+    for (const value of ["STARTING XI", "Search player", "XI slot: ST", "Confirm XI", "Technical area"]) assert.ok(html.includes(value), `${locale}: ${value}`);
+    assert.ok(!html.includes("MY XI"), "the redundant configured-XI heading was removed");
     assert.doesNotMatch(html, /\{slot\}/);
   }
 });
@@ -398,7 +520,7 @@ test("all workflow catalogue keys are consumed by actual branches, events or fee
   const getCopy = () => tracked;
   const scenarios = [
     {}, { marketPage: false }, { selectedCoach: null, formationCode: null }, { selectedCoach: null, filteredCoaches: [] },
-    { formationCode: null }, { squadView: "squad" }, { editable: false }, { browseSlot: null, activeSlot: null },
+    { formationCode: null }, { arenaOpen: true }, { editable: false }, { browseSlot: null, activeSlot: null },
     { selections: [{ playerId: card.id, slotId: "ST" }], squadView: "squad" },
     { selections: [{ playerId: card.id, slotId: "ST" }] }, { selectedCoach: null }, { hasUnsavedChanges: true },
     { selections: [{ playerId: "other-player", slotId: "ST" }] }, { browseCards: [] }, { lineupConfirmed: true },
@@ -426,7 +548,10 @@ test("all workflow catalogue keys are consumed by actual branches, events or fee
   const metadata = await metadataExports.generateMetadata({ searchParams: Promise.resolve({ lang: "en-GB" }) });
   assert.equal(metadata.description, "Manage your TouchLine XI by position.");
   assert.ok(used.has("metadataDescription"), "actual metadata consumes its workflow key");
-  assert.deepEqual([...used].filter(key => key !== "then").sort(), Object.keys(copy).sort());
+  // Retained catalogue entries for retired grid/technical-sidebar copy. Removal
+  // is active again in the player zoom and must remain covered by this oracle.
+  const legacyGridKeys = ["viewTactical", "viewCards", "removeFromXI", "openSlot", "choose", "formation", "market", "readOnlyInstruction"];
+  assert.deepEqual([...used].filter(key => key !== "then").sort(), Object.keys(copy).filter(key => !legacyGridKeys.includes(key)).sort());
 });
 
 test("actual PT setup/footer use Etapa and Rodada rather than untranslated STEP/GAMEWEEK", async () => {
@@ -441,8 +566,10 @@ test("actual embedded consumer obtains presentation from workflow getter, includ
   const main = actual({ locale: "pt-BR", pt: true }, locale => { read.push(locale); return copy; });
   const html = main.html();
   assert.ok(read.length > 0); assert.ok(read.every(locale => locale === "pt-BR"));
-  for (const key of ["playAria", "myXI", "editInstruction", "round", "startingXI", "viewCards", "browsePosition", "openShort", "technicalArea", "coach", "formation", "positionSelectionAria", "market", "backToPitch", "searchPlayer", "playerSelection", "cardsInPosition", "xiSlot", "chooseSlot", "readyConfirm", "squadSynced", "confirmXI"]) assert.ok(html.includes(`copy:${key}`), key);
-  assert.match(html, /Canonical Player/); assert.match(html, /Canonical Club/); assert.match(html, /4-3-3/); assert.match(html, />ST</); assert.match(html, />7</);
+  for (const key of ["playAria", "startingXI", "arenaMode", "browsePosition", "openShort", "technicalArea", "coach", "positionSelectionAria", "backToPitch", "searchPlayer", "playerSelection", "cardsInPosition", "xiSlot", "chooseSlot", "readyConfirm", "squadSynced", "confirmXI"]) assert.ok(html.includes(`copy:${key}`), key);
+  for (const key of ["myXI", "editInstruction", "formation", "market"]) assert.ok(!html.includes(`copy:${key}<`), `${key} is absent from the configured Market header`);
+  assert.match(html, /Canonical Player/); assert.match(html, /Canonical Club/); assert.match(html, /4-3-3/); assert.match(html, />ST</);
+  assert.doesNotMatch(html, />7</, "the redundant round-number box is removed");
 });
 
 test("catalogue has eight complete key sets, protected tokens and unchanged public gates", async () => {
@@ -473,7 +600,7 @@ test("real rendered setup, card/list, selection and footer retain EN/PT baseline
     html = actual({ ...base, formationCode: null }, getCopy).html();
     assert.ok(html.includes(pt ? "Etapa 2" : "STEP 2")); assert.ok(html.includes(pt ? "11 vagas" : "11 slots"));
     html = actual({ ...base, squadView: "squad", selections: [{ playerId: card.id, slotId: slot.id }], hasUnsavedChanges: true }, getCopy).html();
-    for (const value of pt ? ["Ver visão tática", "Trocar ST", "Remover Canonical Player", "No seu XI", "Alterações não salvas"] : ["View tactical layout", "Replace ST", "Remove Canonical Player", "In your XI", "Unsaved changes"]) assert.ok(html.includes(value), value);
+    for (const value of pt ? ["Modo Arena", "No seu XI", "Alterações não salvas"] : ["Arena mode", "In your XI", "Unsaved changes"]) assert.ok(html.includes(value), value);
     html = actual({ ...base, browseCards: [], editable: false, validation: { valid: false } }, getCopy).html();
     assert.ok(html.includes(pt ? "Nenhum card corresponde a esta seleção ou busca." : "No cards match this selection or search."));
     assert.match(html, /<button type="button" disabled="">(?:Confirmar XI|Confirm XI)<\/button>/);

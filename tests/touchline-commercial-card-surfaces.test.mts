@@ -36,7 +36,7 @@ test("market-value hiding remains a public opt-in and changes only the visual va
   ]) {
     const cards = exactCards(relativePath);
     assert.ok(cards.length, relativePath);
-    cards.forEach(instance => assert.match(instance, /\bhideMarketValuePanel\b/, relativePath));
+    cards.forEach(instance => assert.match(instance, /\bhideMarketValuePanel=\{false\}/, relativePath));
   }
 
   for (const relativePath of [

@@ -6,6 +6,7 @@ import { Suspense } from "react";
 
 import DocumentLocaleSync from "@/components/touchline/DocumentLocaleSync";
 import TouchlineLandscapeBoundary from "@/components/touchline/TouchlineLandscapeBoundary";
+import TouchlineDecorationMotion from "@/components/touchline/TouchlineDecorationMotion";
 import { TouchlineActivityTracker } from "@/components/touchline-activity-tracker";
 import { TouchlineAmbientAudioProvider } from "@/components/auth-ambient-audio";
 import {
@@ -87,6 +88,7 @@ async function renderRootLayout({ children }: Readonly<{ children: React.ReactNo
     <html lang={locale} dir={draftLocalesEnabled ? "ltr" : touchlineDocumentDirection(locale)} data-scroll-behavior="smooth">
       <body>
         <SiteLocaleReleaseProvider enabled={draftLocalesEnabled}>
+        <TouchlineDecorationMotion />
         {!isIsolatedPreview ? (
           <Suspense fallback={null}>
             <DocumentLocaleSync initialLocale={locale} draftLocalesEnabled={draftLocalesEnabled} />

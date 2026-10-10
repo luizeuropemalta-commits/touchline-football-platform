@@ -15,6 +15,8 @@ import * as catalogue from "../lib/touchlineArena/catalogue-locale.ts";
 import * as workflow from "../lib/touchlineFantasy/market-workflow-i18n.ts";
 import * as identity from "../lib/touchlineArena/club-owner-page-identity.ts";
 import * as authCopy from "../lib/touchlineArena/auth-i18n.ts";
+import * as profileMetrics from "../lib/touchlineArena/club-owner-profile-metrics.ts";
+import { normalizeTouchlineMatchCentreTimeZone } from "../lib/touchlineArena/match-centre.ts";
 import { TOUCHLINE_ENGLAND_CLUBS } from "../lib/touchlineArena/demo-data.ts";
 
 const read = (path: string) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
@@ -48,6 +50,9 @@ function fixture(getUser: () => Promise<unknown>) {
   const modules: Record<string, unknown> = {
     "@/lib/touchlineArena/site-locales-release": siteLocalePolicy,
     "react/jsx-runtime": jsx,
+    "next/headers": { headers: async () => new Headers({ "x-vercel-ip-timezone": "Europe/Malta" }) },
+    "@/lib/touchlineArena/match-centre": { normalizeTouchlineMatchCentreTimeZone },
+    "@/lib/touchlineArena/club-owner-profile-metrics": profileMetrics,
     "next/navigation": { redirect: (href: string) => { throw new Navigation(href); }, notFound: () => { throw new Navigation("not-found"); } },
     "@/lib/supabase/server": { createClient: async () => ({ auth: { getUser: () => { calls.push("auth"); return getUser(); } } }) },
     "@/lib/admin/owner": { isOwnerEmail: (email: string) => { calls.push("owner-policy"); return ownerPolicy(email); } },
@@ -57,7 +62,7 @@ function fixture(getUser: () => Promise<unknown>) {
     "@/lib/touchlineFantasy/market-workflow-i18n": workflow,
     "@/lib/touchlineArena/demo-data": { TOUCHLINE_ENGLAND_CLUBS },
     "@/lib/touchlineArena/club-owner-avatar-context-server": { createClubOwnerAvatarContextReader: () => async () => { calls.push("avatar"); return null; } },
-    "@/lib/touchlineFantasy/server": { loadTouchlineFantasySnapshot: async (actor: unknown) => { calls.push("snapshot"); return { actor }; } },
+    "@/lib/touchlineFantasy/server": { loadTouchlineFantasySnapshot: async (actor: unknown) => { calls.push("snapshot"); return { actor, config: { budgetEur: 500_000_000 } }; } },
     "@/lib/touchlineArena/club-owner-page-identity": { resolveTouchlineClubOwnerPageIdentity: (...args: Parameters<typeof identity.resolveTouchlineClubOwnerPageIdentity>) => { calls.push("identity"); return identity.resolveTouchlineClubOwnerPageIdentity(...args); } },
     "./market-game.module.css": { default: { page: "page", content: "content" } },
   };
@@ -66,10 +71,9 @@ function fixture(getUser: () => Promise<unknown>) {
     ["@/components/touchline/TouchlineBrandHeader", "brand-header"],
     ["@/app/fantasy/FantasyGameweekClient", "fantasy-client"],
     ["@/components/touchline/TouchlineGlobalNavigation", "navigation"],
-    ["@/components/touchline/notifications/TouchlineMarketNotifications", "notifications"],
   ]) modules[path] = { default: name };
   const exports: { default?: (props: object) => Promise<React.ReactElement> } = {};
-  runInNewContext(page, { exports, require: (name: string) => { assert.ok(Object.hasOwn(modules, name), name); return modules[name]; } });
+  runInNewContext(page, { exports, process: { env: {} }, require: (name: string) => { assert.ok(Object.hasOwn(modules, name), name); return modules[name]; } });
   assert.ok(exports.default);
   return {
     calls, run: () => exports.default!({ searchParams: Promise.resolve({ lang: "pt-BR" }) }),
@@ -78,7 +82,7 @@ function fixture(getUser: () => Promise<unknown>) {
 }
 function nodes(node: React.ReactNode): React.ReactElement<Record<string, unknown>>[] {
   return React.Children.toArray(node).flatMap(child => React.isValidElement<Record<string, unknown>>(child)
-    ? [child, ...nodes(child.props.children as React.ReactNode)] : []);
+    ? [child, ...nodes(child.props.children as React.ReactNode), ...nodes(child.props.navigation as React.ReactNode)] : []);
 }
 
 for (const email of ["owner@example.test", "customer@example.test"]) {

@@ -3,12 +3,22 @@ import { readFileSync } from "node:fs";
 import { stripTypeScriptTypes } from "node:module";
 import test from "node:test";
 import { runInNewContext } from "node:vm";
+import ts from "typescript";
 import { touchlineMarketPositionBucket } from "../lib/touchlineArena/position-eligibility.ts";
 import { touchlineFantasySlotAcceptsPlayer } from "../lib/touchlineFantasy/domain.ts";
 
 const source = readFileSync(new URL("../app/fantasy/FantasyGameweekClient.tsx", import.meta.url), "utf8");
 const css = readFileSync(new URL("../app/fantasy/fantasy.module.css", import.meta.url), "utf8");
-const handlers = source.slice(source.indexOf("    const openTacticalSelector ="), source.indexOf("    return <section className={styles.myClubCommand}"));
+const tree = ts.createSourceFile("client.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+const handlerNames = ["openTacticalSelector", "replaceMyClubPlayer", "selectMyClubPlayer"];
+const handlerDeclarations: string[] = [];
+function collectHandlers(node: ts.Node) {
+  if (ts.isVariableDeclaration(node) && handlerNames.includes(node.name.getText(tree))) handlerDeclarations.push(`const ${node.getText(tree)};`);
+  ts.forEachChild(node, collectHandlers);
+}
+collectHandlers(tree);
+assert.equal(handlerDeclarations.length, handlerNames.length);
+const handlers = handlerDeclarations.join("\n");
 
 function selectionHarness({ accepted = true, marketPage = true, compatibleBrowse = true } = {}) {
   const events: unknown[] = [];
@@ -19,6 +29,7 @@ function selectionHarness({ accepted = true, marketPage = true, compatibleBrowse
     browseSlot: { id: compatibleBrowse ? "ST" : "GK" },
     setActiveSlotId: record("slot"), setBrowsePosition: record("browse"),
     setVisibleStep: record("step"), setSquadView: record("view"), setQuery: record("query"),
+    setArenaOpen: record("arena"),
     scrollToLineupSection: record("scroll"),
     addPlayer: (card: unknown) => { events.push(["add", card]); return accepted; },
   };
@@ -30,7 +41,7 @@ test("slot selection clears search and scrolls to the same-page player list", ()
   for (const marketPage of [true, false]) {
     const { actions, events } = selectionHarness({ marketPage });
     actions.openTacticalSelector("ST");
-    assert.deepEqual(events, [["slot", "ST"], ["browse", null], ["step", "players"], ["view", "tactical"], ["query", ""], ["scroll", "my-club-player-selection"]]);
+    assert.deepEqual(events, [["arena", false], ["slot", "ST"], ["browse", null], ["step", "players"], ["view", "tactical"], ["query", ""], ["scroll", "my-club-player-selection"]]);
   }
 });
 
@@ -65,17 +76,15 @@ test("section scroll moves keyboard focus without double scrolling and honors re
   }
 });
 
-test("X removes locally and directly opens same-position replacement; empty slots retain +", () => {
+test("zoom replaces without a field X; explicit list removal stays local and open-market slots retain +", () => {
   const removal = source.slice(source.indexOf("  function removePlayer("), source.indexOf("  async function loadPersistedLineup("));
   assert.match(removal, /if \(!editable \|\| saving\) return/);
   assert.match(removal, /removeTouchlineFantasyPlayerFromSlot\(current, removed.slotId\)/);
   assert.doesNotMatch(removal, /fetch|DELETE|save\(|scrollToLineupSection|openTacticalSelector/);
-  assert.match(source, /card && selection && editable \? <button[^>]+className=\{styles.pitchRemove\} disabled=\{saving\}/);
-  const removeButton = source.match(/className=\{styles.pitchRemove\}[^\n]*<\/button>/)?.[0] ?? "";
-  assert.match(removeButton, /removeMyClubPlayer\(selection.playerId, slot.id\)/);
-  assert.doesNotMatch(removeButton, /querySelector|focus\(/);
+  assert.doesNotMatch(source, /className=\{styles.pitchRemove\}/);
+  assert.match(source, /replacementAction=\{editable && selection \? \{[^\n]*disabled: saving, onSelect: \(\) => replaceMyClubPlayer\(selection.playerId, slot.id\)/);
   assert.match(source, /function addPlayer[^]*?if \(saving\) return false/);
-  assert.match(source, /className=\{styles.emptyPosition\}[^\n]*>\+<\/button>/);
+  assert.match(source, /: marketOpen \? <button[^\n]*className=\{styles.emptyPosition\}[^\n]*>\+<\/button> : null/);
   assert.doesNotMatch(source, /TouchlinePositionPicker|data-slot-action|aria-haspopup/);
   assert.match(css, /\.pitchRemove[^}]*width: 44px; height: 44px; min-height: 44px/);
   assert.match(css, /@media \(hover: hover\) and \(pointer: fine\)/);
@@ -83,8 +92,8 @@ test("X removes locally and directly opens same-position replacement; empty slot
   assert.match(css, /@media \(any-hover: none\), \(any-pointer: coarse\)/);
 });
 
-test("X replacement action retains the removed slot and cannot mutate or scroll while locked/saving", () => {
-  assert.match(handlers, /const removeMyClubPlayer =/);
+test("zoom replacement preserves selection and cannot mutate or scroll while locked/saving", () => {
+  assert.match(handlers, /const replaceMyClubPlayer =/);
   for (const state of [
     { editable: true, saving: false, slotId: "ST", accepted: true },
     { editable: false, saving: false, slotId: "ST", accepted: false },
@@ -93,15 +102,16 @@ test("X replacement action retains the removed slot and cannot mutate or scroll 
   ]) {
     const events: unknown[] = [];
     const record = (name: string) => (value: unknown) => events.push([name, value]);
-    const remove = runInNewContext(`${stripTypeScriptTypes(handlers)}; removeMyClubPlayer;`, {
+    const remove = runInNewContext(`${stripTypeScriptTypes(handlers)}; replaceMyClubPlayer;`, {
       ...state, selections: [{ playerId: "player", slotId: "ST" }],
       removePlayer: record("remove"), setActiveSlotId: record("slot"), setBrowsePosition: record("browse"),
       setVisibleStep: record("step"), setSquadView: record("view"), setQuery: record("query"),
+      setArenaOpen: record("arena"),
       scrollToLineupSection: record("scroll"),
     });
     remove("player", state.slotId);
     assert.deepEqual(events, state.accepted
-      ? [["remove", "player"], ["slot", "ST"], ["browse", null], ["step", "players"], ["view", "tactical"], ["query", ""], ["scroll", "my-club-player-selection"]]
+      ? [["arena", false], ["slot", "ST"], ["browse", null], ["step", "players"], ["view", "tactical"], ["query", ""], ["scroll", "my-club-player-selection"]]
       : []);
   }
 });

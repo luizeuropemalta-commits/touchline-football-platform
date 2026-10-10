@@ -8,6 +8,26 @@ test("browsing exposes every classified football position, without the retired c
   assert.equal(new Set(TOUCHLINE_FANTASY_BROWSE_POSITIONS.map((entry) => entry.bucket)).size, 8);
 });
 
+test("Arena landscape keeps all formation card envelopes inside the available field", () => {
+  for (const code of TOUCHLINE_CALIBRATED_FORMATION_CODES) {
+    const slots = resolveTouchlineFormationGeometry(code).slots;
+    for (const height of [303, 318, 720]) {
+      const width = height * 105 / 68;
+      for (const labelHeight of [18, 30]) {
+        const cardWidth = touchlineFantasyPitchCardWidth(slots, width, height, { labelHeight, gap: 6 });
+        assert.ok(cardWidth >= 18, `${code}: Arena thumbnail must remain visible`);
+        const boxWidth = Math.max(44, cardWidth), boxHeight = cardWidth * 691 / 430 + labelHeight;
+        const boxes = slots.map(slot => ({ x: Math.min(89, Math.max(11, slot.x)) * width / 100, y: Math.min(86, Math.max(14, slot.y)) * height / 100 }));
+        for (const [index, a] of boxes.entries()) {
+          assert.ok(a.x >= boxWidth / 2 && a.x + boxWidth / 2 <= width);
+          assert.ok(a.y >= boxHeight / 2 && a.y + boxHeight / 2 <= height);
+          for (const b of boxes.slice(index + 1)) assert.ok(Math.abs(a.x - b.x) >= boxWidth + 5 || Math.abs(a.y - b.y) >= boxHeight + 5, `${code}: collision`);
+        }
+      }
+    }
+  }
+});
+
 test("position review preserves a compatible chosen slot and never moves the XI", () => {
   const geometry = resolveTouchlineFormationGeometry("4-3-3");
   const selections = [{ playerId: "existing-defender", slotId: "RCB" }];

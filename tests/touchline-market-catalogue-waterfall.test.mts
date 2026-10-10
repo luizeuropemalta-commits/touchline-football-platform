@@ -5,11 +5,12 @@ import { setImmediate } from "node:timers/promises";
 import { runInNewContext } from "node:vm";
 import test from "node:test";
 import { applyTouchlineSeasonPoints } from "../lib/touchlineArena/matchday-player-points.ts";
+import { canonicalSportmonksPlayerId } from "../lib/touchlineArena/match-card-indicator.ts";
 
 const playerId = "00000000-0000-4000-8000-000000000001";
 const presentation = { tierKey: "elite", marketValueEur: 1000000, shirtNumber: 1 };
 const golden = [{
-  id: playerId, canonicalPlayerId: playerId, name: "Test keeper", shortName: "Test keeper",
+  id: playerId, canonicalPlayerId: playerId, providerPlayerId: null, name: "Test keeper", shortName: "Test keeper",
   role: "goalkeeper", position: "Goalkeeper", clubName: "Manchester City", shirtNumber: 1,
   countryCode3: "ITA", marketValue: "€1M", marketValueSource: "verified-cache",
   marketValueState: "verified", classificationState: "verified", cardTier: "elite",
@@ -56,7 +57,7 @@ function scenario(failure?: string, empty = false) {
     return query;
   } };
   const context = {
-    applyTouchlineSeasonPoints,
+    applyTouchlineSeasonPoints, canonicalSportmonksPlayerId,
     loadTouchlinePublishedCardPresentations: async () => {
       reads.push("presentations"); await gates.presentations.promise;
       if (failure === "presentations") throw failureError;

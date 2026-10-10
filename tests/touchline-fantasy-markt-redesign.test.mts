@@ -17,7 +17,7 @@ test("Market reuses the Gameweek transaction boundary and legacy Fantasy forward
     source("app/fantasy/FantasyGameweekClient.tsx"),
     source("app/api/touchline-fantasy/lineup/route.ts"),
   ]);
-  assert.match(market, /<FantasyGameweekClient[^>]*initialSnapshot=\{snapshot\} locale=\{locale\} draftLocalesEnabled=\{draftLocalesEnabled\} embedded marketPage/);
+  assert.match(market, /<FantasyGameweekClient[^>]*initialSnapshot=\{snapshot\} locale=\{locale\} liveTimeZone=\{liveTimeZone\} draftLocalesEnabled=\{draftLocalesEnabled\} embedded marketPage/);
   assert.match(client, /initialPlayerClubTeamId\?: string \| null/);
   assert.match(client, /TOUCHLINE_ENGLAND_CLUBS_BY_RANK\.some\(\(club\) => club\.teamId === initialPlayerClubTeamId\)/);
   assert.doesNotMatch(market, /standaloneMarket|<ArenaClient/);
@@ -74,7 +74,7 @@ test("the My Club presentation keeps the guided coach-first Gameweek flow", asyn
   assert.match(card, /TouchlineEliteExactCard/);
   assert.match(card, /TouchlineCardZoom/);
   assert.match(exactCard, /data-card-market-value-panel="true"/);
-  assert.match(styles, /\.marketCard \[data-card-market-value-panel="true"\]\{display:none!important\}/);
+  assert.doesNotMatch(styles, /\.marketCard \[data-card-market-value-panel="true"\]\{display:none!important\}/);
   assert.match(styles, /\.playerIdentity\{[\s\S]*?text-align:center/);
   assert.match(styles, /\.clubIdentity\{[\s\S]*?justify-self:start[\s\S]*?width:calc\(100% - 4px\)[\s\S]*?max-width:100%[\s\S]*?box-sizing:border-box[\s\S]*?overflow:hidden/);
   assert.match(styles, /\.clubIdentity img\{[\s\S]*?width:22px[\s\S]*?height:22px[\s\S]*?object-fit:contain/);
