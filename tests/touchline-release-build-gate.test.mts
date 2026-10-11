@@ -4,7 +4,7 @@ import test from "node:test";
 
 const packageJsonUrl = new URL("../package.json", import.meta.url);
 
-test("Vercel build requires the non-mutating release verification gate", async () => {
+test("Vercel build installs required browsers before the release verification gate", async () => {
   const packageJson = JSON.parse(await readFile(packageJsonUrl, "utf8")) as {
     scripts?: Record<string, string>;
   };
@@ -14,7 +14,7 @@ test("Vercel build requires the non-mutating release verification gate", async (
   assert.match(scripts["verify:release"] ?? "", /eslint \./);
   assert.match(scripts["verify:release"] ?? "", /node scripts\/run-vercel-release-tests\.mjs/);
   assert.match(scripts["verify:release"] ?? "", /check-touchline-release-readiness\.mjs --check/);
-  assert.match(scripts["vercel-build"] ?? "", /^pnpm run verify:release && next build --webpack$/);
+  assert.match(scripts["vercel-build"] ?? "", /^pnpm exec playwright install chromium webkit && pnpm run verify:release && next build --webpack$/);
 });
 
 test("release runner bounds workers and preserves timeout, selection and exit status", async () => {

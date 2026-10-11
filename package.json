@@ -21,7 +21,7 @@
     "check:vercel-input": "node scripts/check-vercel-deployment-input.mjs",
     "check:release-readiness": "node scripts/check-touchline-release-readiness.mjs --check",
     "verify:release": "node scripts/check-touchline-mission-governance.mjs && node scripts/check-vercel-deployment-input.mjs && tsc --noEmit --incremental false && eslint . && node scripts/run-vercel-release-tests.mjs && node scripts/check-touchline-release-readiness.mjs --check",
-    "vercel-build": "pnpm run verify:release && next build --webpack",
+    "vercel-build": "pnpm exec playwright install chromium webkit && pnpm run verify:release && next build --webpack",
     "audit:card-assets": "node scripts/audit-touchline-card-assets.mjs",
     "audit:player-profiles": "node --experimental-strip-types scripts/audit-touchline-player-profiles.mts",
     "preflight:qa-persona": "node --experimental-strip-types scripts/assert-touchline-qa-persona.mts",
