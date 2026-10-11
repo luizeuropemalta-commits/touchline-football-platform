@@ -1,5 +1,19 @@
 # TouchLine Current Execution Ledger — Canonical Entry Point
 
+## 2026-10-11 — CI browser-library repair frozen for verification
+
+🟢 Scope: `.github/workflows/touchline-qa-release.yml`, `scripts/check-touchline-qa-ci-gate.mjs`, `tests/touchline-qa-ci-gate.test.mts`, `tests/touchline-release-build-gate.test.mts`, `package.json`, and these two canonical ledgers. No dependency/runtime/SQL/product changes. Ubuntu CI provisions browser OS libraries and preserves the complete release suite. Vercel QA accepts only exact-SHA success from the expected workflow/repository/push/branch and newest run/attempt; missing, failed or mismatched evidence blocks compilation. Bounded30min wait/poll60s covers workflow25min plus queue margin; no token added. Public API HTTP200 with real execution path confirmed. Focused14/14, TypeScript and ESLint0; final independent review closed with no unresolved P0/P1/P2.
+
+🟢 Complete verify:release exit0 (5240 total/5228PASS/0FAIL/0cancelled/12SKIP, 292.05s); TypeScript0, full ESLint0 errors/seven pre-existing warnings, local build0 with139 pages. Log evidence `/private/tmp/touchline-qa-ci-gate-verify-20261011.log` and `/private/tmp/touchline-qa-ci-gate-build-20261011.log`. Mac before build:10,697,856KiB available,56% memory free; one heavy process at a time. Remote `qa` still `b09aca9814d5f8ecc0d2289f384456ba32c093ed`; no queued/building candidate observed.
+
+🟡 Clean committed SHA and additional remote-build budget remain required before another Git-native build; authorization question sent to owner. Prior two ERROR builds are preserved, never retried unchanged. QA database remains on the once-applied receipt `18f23bcf…`; subsequent infrastructure-only ancestry must be recorded in the external release manifest, not by replaying/rebinding SQL. Recovery risk exception remains QA-only; keep Preview hold until Ready and remote checks. Production unchanged, Sportmonks OFF, September/iCloud paused.
+
+## 2026-10-11 18:26 UTC — QA cutover and remote build failure evidence
+
+🟢 Exact batch05000–15000 and JL VIP grant committed once in QA under Preview ingress hold; read-only reconciliation returned `TL_QA_BATCH_POSTCOMMIT_READ_ONLY_PASS`. Receipt remains bound to `18f23bcf04097a1ffe101753f1cae76385c2252c` and manifest `7b0e03f2888b2eb9881a0c77068f9277170fb171640fae1cc7be1cd2177579ec`. No SQL replay. User accepted QA-only lack of immediate post-COMMIT reversal. First Git build failed on absent browser binaries. Local two-file repair `b09aca9814d5f8ecc0d2289f384456ba32c093ed` passed complete release verification and Next build139 pages; manifest134 paths SHA256 `42230a783ca0222efad226d22193ed64de51f1de970891587d88989eab17186f` verified, clean tree, one fast-forward push.
+
+🔴 Second Git Preview `dpl_9RhnkttCHqg4Mx1AdMUd3FyQSt58` failed: 5228 total/5201pass/15fail/12skip. All15 are browser-launch failures (`libnspr4.so` absent), not completed visual assertions. Both builds consumed, neither Ready. 🟡 Infrastructure repair moves full release/browser coverage to supported Ubuntu CI and binds the Vercel Git build to green verification of the same SHA. No new build before local/review gates. WAF Preview deny active; hosted runtime/target/persistence/idempotency proof pending. Production/Sportmonks/iCloud unchanged. Prior unapplied-migration/grant entries are SUPERSEDED by this record.
+
 ## 2026-10-11 15:00 UTC — User-owned Luiz Beta registration
 
 🟢 Owner will sign up `luizeuropemalta@gmail.com` on the site; JL's lineup is disposable test data, but the existing account remains the canonical real-user VIP test persona. No agent-side signup, deletion, credential change, or blanket VIP mutation.

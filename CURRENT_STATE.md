@@ -1,5 +1,19 @@
 # TouchLine Current State
 
+## 2026-10-11 — Exact-SHA Ubuntu browser verification
+
+🟢 Build-infrastructure correction only: GitHub Actions on Ubuntu24.04 installs Chromium/WebKit and their OS libraries, runs the unchanged complete `verify:release`, and checks the tree. QA Vercel builds must obtain successful CI for the exact canonical repository/branch/workflow/SHA/latest run; non-QA contexts retain local release verification. Fourteen focused tests, TypeScript and focused ESLint passed; independent review closed without unresolved P0/P1/P2. Public GitHub API access and actual run shape verified. No product rule or migration changed from the applied QA receipt.
+
+🟢 Complete `verify:release` exit0: 5240 total, 5228 pass, zero fail/cancelled, 12 expected skips, 292.05s. Local Next build exit0 generated139 pages. Full ESLint had zero errors and seven pre-existing warnings. External logs: `/private/tmp/touchline-qa-ci-gate-verify-20261011.log` and `/private/tmp/touchline-qa-ci-gate-build-20261011.log`.
+
+🟡 Final committed SHA and new remote-build budget/CI/deployment proof remain required. WAF Preview hold remains active; never replay the applied QA SQL. The plugin's `admin@touchline.com.br` connection lacks access to the project team; the Mac CLI retains access. Owner-account reconnection is separate from browser-library repair. Production untouched; Sportmonks sync OFF and September/iCloud paused.
+
+## 2026-10-11 18:26 UTC — QA migration applied; build infrastructure repair
+
+🟢 QA batch05000–15000 and audited JL VIP grant applied once at release `18f23bcf04097a1ffe101753f1cae76385c2252c`; read-only post-COMMIT check PASS. Owner accepted QA-only forward-recovery risk; keep original receipt and never replay SQL. Local verification/build passed on two-file build repair `b09aca9814d5f8ecc0d2289f384456ba32c093ed`.
+
+🔴 Git Preview `dpl_9RhnkttCHqg4Mx1AdMUd3FyQSt58` ERROR: 5228 tests, 5201 pass, 15 fail, 12 skip. All15 fail at Chromium launch because Vercel AL2023 lacks `libnspr4.so`; installed WebKit also reports incompatible/missing OS libraries. No successful new deployment. 🟡 Prepare full browser/release verification on Ubuntu CI with exact-SHA success required before the Git-native Vercel build. WAF Preview deny remains active; runtime/browser/persistence/idempotency proof pending. Production untouched, Sportmonks sync OFF, September/iCloud paused. This supersedes earlier entries claiming QA migrations and JL grant are unapplied.
+
 ## 2026-10-11 15:00 UTC — Luiz signup owner action
 
 🟢 User will register `luizeuropemalta@gmail.com` personally via the site and accepts that JL lineups are test-only. No account recreation is needed for JL VIP; preserve existing Auth identity and audited grant path. Agent will not create Luiz or delete any account.

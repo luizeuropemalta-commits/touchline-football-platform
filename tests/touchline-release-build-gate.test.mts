@@ -4,7 +4,7 @@ import test from "node:test";
 
 const packageJsonUrl = new URL("../package.json", import.meta.url);
 
-test("Vercel build installs required browsers before the release verification gate", async () => {
+test("Vercel build requires the release verification gate before Next.js", async () => {
   const packageJson = JSON.parse(await readFile(packageJsonUrl, "utf8")) as {
     scripts?: Record<string, string>;
   };
@@ -14,7 +14,8 @@ test("Vercel build installs required browsers before the release verification ga
   assert.match(scripts["verify:release"] ?? "", /eslint \./);
   assert.match(scripts["verify:release"] ?? "", /node scripts\/run-vercel-release-tests\.mjs/);
   assert.match(scripts["verify:release"] ?? "", /check-touchline-release-readiness\.mjs --check/);
-  assert.match(scripts["vercel-build"] ?? "", /^pnpm exec playwright install chromium webkit && pnpm run verify:release && next build --webpack$/);
+  assert.equal(scripts["vercel-build"], "node scripts/check-touchline-qa-ci-gate.mjs && next build --webpack");
+  assert.doesNotMatch(scripts["verify:release"] ?? "", /check-touchline-qa-ci-gate/, "CI must not wait on itself");
 });
 
 test("release runner bounds workers and preserves timeout, selection and exit status", async () => {
@@ -25,4 +26,24 @@ test("release runner bounds workers and preserves timeout, selection and exit st
   assert.match(runner, /\.\.\.testFiles/);
   assert.match(runner, /process\.exit\(result\.status \?\? 1\)/);
   assert.doesNotMatch(runner, /"touchline-social-events-live\.test\.mts"/, "hermetic events contract tests must run in the remote gate too");
+});
+
+test("QA workflow provisions Ubuntu browsers and executes the complete suite independently of Vercel", async () => {
+  const workflow = await readFile(new URL("../.github/workflows/touchline-qa-release.yml", import.meta.url), "utf8");
+  assert.match(workflow, /on:\n  push:\n    branches: \[qa\]/);
+  assert.match(workflow, /permissions:\n  contents: read/);
+  assert.match(workflow, /cancel-in-progress: false/);
+  assert.match(workflow, /runs-on: ubuntu-24\.04/);
+  assert.match(workflow, /timeout-minutes: 25/);
+  assert.match(workflow, /node-version: 24/);
+  assert.match(workflow, /version: 11\.9\.0/);
+  assert.match(workflow, /run: pnpm install --frozen-lockfile/);
+  assert.match(workflow, /run: pnpm exec playwright install --with-deps chromium webkit/);
+  assert.match(workflow, /run: pnpm run verify:release/);
+  assert.match(workflow, /git diff --check/);
+  assert.match(workflow, /git status --porcelain/);
+  assert.doesNotMatch(workflow, /vercel-build|check-touchline-qa-ci-gate|secrets\./);
+  for (const action of workflow.matchAll(/uses: (\S+)/g)) {
+    assert.match(action[1], /^[\w-]+\/[\w-]+@[a-f0-9]{40}$/, "workflow actions must be pinned to immutable revisions");
+  }
 });
