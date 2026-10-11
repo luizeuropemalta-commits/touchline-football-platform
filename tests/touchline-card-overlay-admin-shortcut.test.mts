@@ -81,7 +81,7 @@ test("Market keeps card zoom on the Starting XI without rendering a substitute b
   assert.match(builder, /<aside className=\{styles\.myClubMarket\} id="my-club-player-selection" tabIndex=\{-1\} data-open="true" data-inline-selection="true"/);
   assert.match(builder, /const targetSlot = marketPage \? activeSlot : browseSlot/);
   assert.match(builder, /targetSlot && targetSlot\.id === activeSlot\?\.id && selectedCoach/);
-  assert.match(builder, /<button type="button" disabled=\{saving\} onClick=\{\(\) => selectMyClubPlayer\(card\)\}/);
+  assert.match(builder, /<button type="button" disabled=\{saving\} aria-disabled=\{overBudget \|\| undefined\}[^\n]*onClick=\{\(\) => selectMyClubPlayer\(card\)\}/);
   assert.match(builder, /if \(!activeSlot \|\| \(!marketPage && browseSlot\?\.id !== activeSlot\.id\)\) return/);
   assert.match(builder, /scrollToLineupSection\("my-club-xi-pitch"\)/);
 });

@@ -207,7 +207,7 @@ export default function ClubHubOfficialLineup({
         <TouchlinePitchSurface
           className={styles.pitch}
           orientation="horizontal"
-          surfaceVariant="premium-stadium"
+          surfaceVariant="smoked-glass"
           ariaLabel={`${clubName} ${lineupCopy.pitchAriaSuffix}`}
         >
           <div className={styles.geometryLayer}>

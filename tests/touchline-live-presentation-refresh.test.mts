@@ -15,6 +15,7 @@ import {
   TOUCHLINE_LIVE_PRESENTATION_DB_QUERY_BUDGET,
   TOUCHLINE_LIVE_PRESENTATION_PROJECTIONS,
   readTouchlineLivePresentationInput,
+  readPublishedTouchlineLivePresentationInput,
 } from "../lib/touchlineArena/live-presentation-read-model.ts";
 
 const componentSource = readFileSync(
@@ -75,6 +76,16 @@ test("one central cadence polls live and settling rankings but stops after final
     coachRankingFixtureIds: [],
     now,
   }), { mode: "idle", pollAfterMs: null, resumeAt: null });
+
+  assert.equal(touchlineLivePresentationRevisionChanged({
+    playerRankingSnapshotId: "player-v4:season-1:digest",
+    coachRankingSnapshotId: "coach-v2:season-1:digest",
+    livePresentationSnapshotId: "a".repeat(32),
+  }, {
+    playerRankingSnapshotId: "player-v4:season-1:digest",
+    coachRankingSnapshotId: "coach-v2:season-1:digest",
+    livePresentationSnapshotId: "b".repeat(32),
+  }), true, "a changed shared Live digest triggers a page refresh even when ranking pointers are stable");
 });
 
 test("prematch polling starts only inside the official one-hour window", () => {
@@ -97,6 +108,28 @@ test("prematch polling starts only inside the official one-hour window", () => {
     pollAfterMs: null,
     resumeAt: "2026-08-30T16:00:00.000Z",
   });
+});
+
+test("a delayed kickoff status keeps bounded polling until the published state catches up", () => {
+  const kickoff = Date.parse("2026-08-30T14:00:00.000Z");
+  const pendingFixture = fixture("19722190", "upcoming");
+  const delayed = resolveTouchlineLivePresentationTiming({
+    fixtures: [pendingFixture, fixture("19722191", "upcoming", "2026-08-31T14:00:00.000Z")],
+    playerRankingFixtureIds: [], coachRankingFixtureIds: [], now: kickoff + 30_000,
+  });
+  assert.deepEqual(delayed, { mode: "prematch", pollAfterMs: TOUCHLINE_PREMATCH_PRESENTATION_POLL_MS, resumeAt: null });
+  assert.equal(pendingFixture.state, "upcoming", "catch-up polling must not invent a live match status");
+  assert.deepEqual(resolveTouchlineLivePresentationTiming({
+    fixtures: [pendingFixture], playerRankingFixtureIds: [], coachRankingFixtureIds: [], now: kickoff,
+  }), delayed, "the kickoff instant must not turn polling off");
+  assert.deepEqual(resolveTouchlineLivePresentationTiming({
+    fixtures: [{ ...pendingFixture, state: "live" }],
+    playerRankingFixtureIds: [], coachRankingFixtureIds: [], now: kickoff + 60_000,
+  }), { mode: "live", pollAfterMs: TOUCHLINE_LIVE_PRESENTATION_POLL_MS, resumeAt: null });
+  assert.deepEqual(resolveTouchlineLivePresentationTiming({
+    fixtures: [pendingFixture], playerRankingFixtureIds: [], coachRankingFixtureIds: [],
+    now: kickoff + 4 * 60 * 60 * 1_000 + 1,
+  }), { mode: "idle", pollAfterMs: null, resumeAt: null }, "an unresolved old fixture must not poll forever");
 });
 
 test("the public state parser fails closed and revisions change atomically", () => {
@@ -265,6 +298,73 @@ test("the lightweight reader executes exactly six bounded projections", async ()
       status: "FT",
     }],
   });
+});
+
+test("the public Live reader consumes one verified immutable pointer revision", async () => {
+  const calls: Array<{ table: string; projection: string }> = [];
+  const snapshotId = "10000000-0000-4000-8000-000000000001";
+  const payload = {
+    version: 1,
+    scopeKey: "touchline-england",
+    windowStart: "2026-08-30T10:00:00.000Z",
+    playerRankingSnapshotId: "player-v4:season-1:digest",
+    playerRankingFixtureIds: ["19722190"],
+    coachRankingSnapshotId: "coach-v2:season-1:digest",
+    coachRankingFixtureIds: ["19722190"],
+    liveScoreSnapshotDigest: "b".repeat(32),
+    liveScorePayload: { fixtures: [{ provider: "sportmonks", providerId: "19722190" }], fetchedAt: "2026-08-30T14:00:00.000Z", storedAt: now },
+    fixtures: [{ fixtureId: "19722190", startsAt: "2026-08-30T14:00:00.000Z", status: "FT" }],
+  };
+  const rows: Record<string, unknown> = {
+    touchline_live_presentation_active_snapshots: { snapshot_id: snapshotId },
+    touchline_live_presentation_snapshots: {
+      id: snapshotId,
+      scope_key: "touchline-england",
+      content_digest: "a".repeat(32),
+      payload,
+      created_at: "2026-08-30T14:01:00.000Z",
+    },
+  };
+  const admin = {
+    from(table: string) {
+      let projection = "";
+      const builder = {
+        select(value: string) { projection = value; return builder; },
+        eq() { return builder; },
+        async maybeSingle() {
+          calls.push({ table, projection });
+          return { data: rows[table] ?? null, error: null };
+        },
+      };
+      return builder;
+    },
+  };
+
+  const input = await readPublishedTouchlineLivePresentationInput(admin as never);
+  assert.equal(calls.length, 2);
+  assert.deepEqual(calls, [
+    { table: "touchline_live_presentation_active_snapshots", projection: "snapshot_id" },
+    { table: "touchline_live_presentation_snapshots", projection: "id,scope_key,content_digest,payload,created_at" },
+  ]);
+  assert.deepEqual(input, {
+    snapshotId,
+    contentDigest: "a".repeat(32),
+    publishedAt: "2026-08-30T14:01:00.000Z",
+    playerRankingSnapshotId: "player-v4:season-1:digest",
+    playerRankingFixtureIds: ["19722190"],
+    coachRankingSnapshotId: "coach-v2:season-1:digest",
+    coachRankingFixtureIds: ["19722190"],
+    liveScoreSnapshotDigest: "b".repeat(32),
+    liveScorePayload: { fixtures: [{ provider: "sportmonks", providerId: "19722190" }], fetchedAt: "2026-08-30T14:00:00.000Z", storedAt: now },
+    fixtures: [{ fixtureId: "19722190", startsAt: "2026-08-30T14:00:00.000Z", status: "FT" }],
+  });
+
+  rows.touchline_live_presentation_snapshots = {
+    ...(rows.touchline_live_presentation_snapshots as Record<string, unknown>),
+    payload: { ...payload, scopeKey: "touchline-other" },
+  };
+  await assert.rejects(readPublishedTouchlineLivePresentationInput(admin as never), /published snapshot payload is invalid/,
+    "invalid or cross-scope payloads must not be confused with an absent first publication");
 });
 
 test("concurrent public reads share one in-flight load without stacking another cache window", async () => {

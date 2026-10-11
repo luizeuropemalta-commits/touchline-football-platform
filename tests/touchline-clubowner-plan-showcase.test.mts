@@ -4,14 +4,18 @@ import { existsSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import ts from "typescript";
-import { CLUB_OWNER_PLAN_PREVIEWS, CLUB_OWNER_PLAN_SHOWCASE_COPY, getClubOwnerPlanShowcaseCopy } from "../lib/touchlineArena/club-owner-plan-showcase.ts";
+import vm from "node:vm";
+import React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { CLUB_OWNER_PLAN_PREVIEWS, CLUB_OWNER_PLAN_SHOWCASE_COPY, getClubOwnerPlanShowcaseCopy, getClubOwnerVipPlanName } from "../lib/touchlineArena/club-owner-plan-showcase.ts";
+import { getTouchlineClubOwnerMarketCopy } from "../lib/touchlineArena/club-owner-market-i18n.ts";
 
 const require = createRequire(import.meta.url);
 const root = resolve(import.meta.dirname, "..");
 
 test("plan catalogue keeps the approved proposals separate from the real XI budget", () => {
   assert.deepEqual(CLUB_OWNER_PLAN_PREVIEWS.map(({ id, budget }) => [id, budget]), [
-    ["standard", 500_000_000], ["pro", 1_000_000_000], ["master", 2_000_000_000], ["vip", null],
+    ["beta", 50_000_000], ["standard", 500_000_000], ["pro", 1_000_000_000], ["master", 2_000_000_000], ["vip", null],
   ]);
   const view = readFileSync(join(root, "components/touchline/ClubOwnerPlanShowcase.tsx"), "utf8");
   assert.doesNotMatch(view, /fetch\(|localStorage|sessionStorage|router\.|useEffect|checkout|stripe/);
@@ -31,7 +35,147 @@ test("showcase copy covers eight languages and preserves the public draft gate",
     const copy = getClubOwnerPlanShowcaseCopy(locale, true);
     assert.deepEqual(Object.keys(copy), keys);
     for (const value of Object.values(copy)) assert.ok(value.trim());
+    assert.ok(getClubOwnerVipPlanName(locale, true).includes("VIP"));
+    assert.notEqual(getClubOwnerVipPlanName(locale, true), copy.betaPrice);
     if (!locales.slice(0, 2).includes(locale)) assert.deepEqual(getClubOwnerPlanShowcaseCopy(locale), getClubOwnerPlanShowcaseCopy("en-GB"));
+  }
+  assert.equal(getClubOwnerVipPlanName("pt-BR"), "VIP Convidado");
+});
+
+test("actual showcase keeps the real unlimited capability separate from all five preview choices", () => {
+  const source = readFileSync(join(root, "components/touchline/ClubOwnerPlanShowcase.tsx"), "utf8");
+  const tree = ts.createSourceFile("showcase.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const component = tree.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === "ClubOwnerPlanShowcase");
+  assert.ok(component);
+  const styles = new Proxy({}, { get: (_target, key) => String(key) });
+  const Showcase = vm.runInNewContext(ts.transpileModule(`${component.getText(tree).replace(/^export default\s+/, "")}\nClubOwnerPlanShowcase;`, {
+    compilerOptions: { jsx: ts.JsxEmit.React, target: ts.ScriptTarget.ES2022 },
+  }).outputText, { React, CLUB_OWNER_PLAN_PREVIEWS, getTouchlineClubOwnerMarketCopy, getClubOwnerPlanShowcaseCopy, getClubOwnerVipPlanName,
+    useState: (initial: () => unknown) => [initial(), () => assert.fail("SSR cannot activate a plan")],
+    useId: () => "fixture-showcase", useRef: () => ({ current: null }), styles, controls: styles,
+    ChevronDown: "svg", ChevronLeft: "svg", ChevronRight: "svg", LockKeyhole: "svg", X: "svg", ClubOwnerPlanCard: () => null });
+  for (const locale of Object.keys(CLUB_OWNER_PLAN_SHOWCASE_COPY)) {
+    const labels = getClubOwnerPlanShowcaseCopy(locale, true);
+    for (const { id: initialPlan } of CLUB_OWNER_PLAN_PREVIEWS) {
+      for (const [realUnlimited, amount, expected] of [[true, null, `∞ ${labels.unlimited}`], [false, null, "— TC"], [false, "121M", "121M TC"]] as const) {
+        const html = renderToStaticMarkup(React.createElement(Showcase, { initialPlan, name: "", locale,
+          draftLocalesEnabled: true, realUnlimited, remainingMarketPower: amount }));
+        const current = html.match(/<dd data-current-xi-budget="true"[^>]*>([^<]+)<\/dd>/)?.[0];
+        assert.ok(current, "real current-budget element exists");
+        assert.ok(current.endsWith(`>${expected}</dd>`));
+        assert.equal(current.includes('data-current-xi-unlimited="true"'), realUnlimited);
+        assert.match(html, /data-plan-state="inactive"/);
+      }
+    }
+  }
+});
+
+test("actual Beta card and login gallery reuse the artwork with 50M TC, free access and no plan activation", () => {
+  const view = readFileSync(join(root, "components/touchline/ClubOwnerPlanShowcase.tsx"), "utf8");
+  const tree = ts.createSourceFile("plans.tsx", view, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const card = tree.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === "ClubOwnerPlanCard");
+  assert.ok(card);
+  const css = new Proxy({}, { get: (_target, key) => String(key) });
+  const context = { React, CLUB_OWNER_PLAN_PREVIEWS, getTouchlineClubOwnerMarketCopy, getClubOwnerPlanShowcaseCopy, getClubOwnerVipPlanName,
+    styles: css, cardStyles: css, tierIcons: { beta: "svg", standard: "svg", pro: "svg", master: "svg", vip: "svg" },
+    ChevronDown: "svg", TouchlineCoinMark: () => React.createElement("span", { "data-coin": "TC" }) };
+  const execute = (source: string, scope: Record<string, unknown>) => vm.runInNewContext(ts.transpileModule(source, {
+    compilerOptions: { jsx: ts.JsxEmit.React, target: ts.ScriptTarget.ES2022 },
+  }).outputText, scope);
+  const traceSource = readFileSync(join(root, "components/touchline/TouchlineClubPerimeterTrace.tsx"), "utf8");
+  const traceTree = ts.createSourceFile("trace.tsx", traceSource, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const traceNode = traceTree.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === "TouchlineClubPerimeterTrace");
+  assert.ok(traceNode);
+  const Trace = execute(`${traceNode.getText(traceTree).replace(/^export default\s+/, "")}\nTouchlineClubPerimeterTrace;`, context);
+  const Card = execute(`${card.getText(tree).replace(/^export\s+/, "")}\nClubOwnerPlanCard;`, { ...context, TouchlineClubPerimeterTrace: Trace });
+  let priceDeclaration = "";
+  function findPrice(node: ts.Node) {
+    if (ts.isVariableDeclaration(node) && node.name.getText(tree) === "priceFor") priceDeclaration = node.getText(tree);
+    ts.forEachChild(node, findPrice);
+  }
+  findPrice(tree);
+  assert.ok(priceDeclaration);
+  const gallery = readFileSync(join(root, "components/touchline/LoginPlanGallery.tsx"), "utf8");
+  const galleryTree = ts.createSourceFile("gallery.tsx", gallery, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const galleryNode = galleryTree.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === "LoginPlanGallery");
+  assert.ok(galleryNode);
+  const Gallery = execute(`${galleryNode.getText(galleryTree).replace(/^export default\s+/, "")}\nLoginPlanGallery;`, { ...context, ClubOwnerPlanCard: Card });
+  for (const locale of Object.keys(CLUB_OWNER_PLAN_SHOWCASE_COPY)) {
+    const labels = getClubOwnerPlanShowcaseCopy(locale, true);
+    const copy = getTouchlineClubOwnerMarketCopy(locale, true);
+    const priceFor = execute(`const ${priceDeclaration}; priceFor;`, { ...context, labels, copy });
+    assert.equal(priceFor("beta"), labels.betaPrice);
+    assert.equal(priceFor("master"), labels.masterPrice);
+    assert.equal(priceFor("standard"), copy.planStandardPrice);
+    assert.equal(priceFor("pro"), copy.planProPrice);
+    assert.equal(priceFor("vip"), labels.invitation);
+    const beta = renderToStaticMarkup(React.createElement(Card, { tier: "beta", locale, draftLocalesEnabled: true }));
+    const standard = renderToStaticMarkup(React.createElement(Card, { tier: "standard", locale, draftLocalesEnabled: true }));
+    assert.ok(beta.includes('<strong>50M</strong><small>TC</small>'));
+    assert.doesNotMatch(beta, /€|EUR|500M/);
+    const pattern = beta.match(/<svg class="cardPattern"[\s\S]+?<\/svg>/)?.[0];
+    assert.ok(pattern);
+    assert.equal(pattern, standard.match(/<svg class="cardPattern"[\s\S]+?<\/svg>/)?.[0]);
+    assert.equal((pattern.match(/<path d="M\d+ -30C/g) ?? []).length, 3);
+    assert.doesNotMatch(pattern, /<rect|<circle/);
+    assert.ok(beta.includes(`<span class="cardKicker">${labels.membership}</span>`));
+    const html = renderToStaticMarkup(React.createElement(Gallery, { locale, draftLocalesEnabled: true }));
+    const offers = [...html.matchAll(/<article\b[\s\S]+?<\/article>/g)].map(match => match[0]);
+    assert.equal(offers.length, 5);
+    assert.ok(offers[0].includes('data-plan-preview="beta"'));
+    assert.ok(offers[1].includes('data-plan-preview="standard"'));
+    assert.ok(offers[0].includes(labels.betaPrice));
+    assert.ok(offers[0].includes(labels.betaBenefit.replaceAll("&", "&amp;").replaceAll("'", "&#x27;")));
+    assert.ok(!offers[0].includes(labels.pricePending));
+    assert.ok(!offers[0].includes(labels.annualPrice));
+    assert.ok(offers[3].includes(labels.masterPrice));
+    assert.ok(offers[3].includes(labels.seasonalPrice));
+    assert.ok(!offers[3].includes(labels.annualPrice));
+    assert.ok(offers[1].includes(copy.planStandardPrice));
+    assert.ok(offers[2].includes(copy.planProPrice));
+    for (const offer of offers) {
+      assert.equal((offer.match(/data-touchline-club-perimeter-trace="true"/g) ?? []).length, 1);
+      assert.match(offer, /<svg aria-hidden="true" class="trace memberNeon"[^>]+focusable="false"/);
+      assert.match(offer, /--touchline-perimeter-accent:var\(--plan-accent\)/);
+      assert.match(offer, /data-touchline-club-perimeter-trace-base="true" pathLength="100"/);
+      assert.match(offer, /data-touchline-club-perimeter-trace-run="true" pathLength="100"/);
+      assert.match(offer, /<div dir="ltr" class="memberCard"/);
+    }
+    assert.doesNotMatch(html, /<form|<button|href=/);
+  }
+});
+
+test("membership neon opts into the shared constant-speed perimeter without changing palettes or reduced motion", () => {
+  const css = readFileSync(join(root, "components/touchline/ClubOwnerPlanShowcase.module.css"), "utf8");
+  const traceCss = readFileSync(join(root, "components/touchline/TouchlineClubPerimeterTrace.module.css"), "utf8");
+  const neon = css.match(/\.memberNeon\s*\{([^}]+)\}/)?.[1];
+  assert.ok(neon);
+  assert.match(neon, /--touchline-decoration-motion:\s*running/);
+  assert.match(neon, /--touchline-perimeter-speed:\s*6s/);
+  assert.match(neon, /--touchline-perimeter-run-width:\s*2\.4px/);
+  assert.match(neon, /--touchline-perimeter-glow:\s*6px/);
+  assert.doesNotMatch(neon, /transform|opacity|filter/);
+  assert.match(traceCss, /animation:\s*touchlineClubEdgeTravel[^;]+linear infinite/);
+  assert.match(traceCss, /@keyframes touchlineClubEdgeTravel\s*\{\s*to\s*\{\s*stroke-dashoffset:\s*-100/);
+  assert.match(traceCss, /@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{\s*\.run\s*\{\s*animation:\s*none/);
+  assert.match(css, /@media\s*\(prefers-reduced-motion:\s*reduce\)[^}]+animation:\s*none !important/);
+  for (const [tier, color] of [["beta", "#61c7ff"], ["standard", "#d2dce5"], ["master", "#a5e4b6"], ["vip", "#d5b4f6"]]) {
+    assert.ok(css.includes(`[data-plan-preview="${tier}"] { --plan-accent: ${color};`));
+  }
+  assert.match(css, /\.planShowcase\s*\{\s*--plan-accent:\s*#e7cf91/);
+});
+
+test("approved prices are Beta free and Master 169.90 EUR per season in all eight languages", () => {
+  const expected = {
+    "en-GB": ["Free", "€169.90/season"], "pt-BR": ["Gratuito", "€169,90/temporada"],
+    "es-ES": ["Gratis", "169,90 €/temporada"], "it-IT": ["Gratuito", "169,90 €/stagione"],
+    "fr-FR": ["Gratuit", "169,90 €/saison"], "ar-SA": ["مجاني", "169.90 € لكل موسم"],
+    "tr-TR": ["Ücretsiz", "169,90 €/sezon"], "de-DE": ["Kostenlos", "169,90 €/Saison"],
+  };
+  for (const [locale, prices] of Object.entries(expected)) {
+    const labels = getClubOwnerPlanShowcaseCopy(locale, true);
+    assert.deepEqual([labels.betaPrice, labels.masterPrice], prices);
+    assert.notEqual(labels.seasonalPrice, labels.annualPrice);
   }
 });
 
@@ -62,15 +206,87 @@ function harness(locale: string, initialPlan = "pro", panelWidth = 600, gallery 
     return path;
   }
   const entry = bundle(join(root, `components/touchline/${surface === "cover" ? "ClubOwnerMarketHeader" : surface === "login" ? "LoginPlanGallery" : "ClubOwnerPlanShowcase"}.tsx`));
-  const css = ["TouchlineGlobalNavigation.module.css", "ClubOwnerPlanShowcase.module.css", ...(surface === "cover" ? ["ClubOwnerMarketHeader.module.css"] : surface === "login" ? ["LoginPlanGallery.module.css"] : [])].map(file => readFileSync(join(root, "components/touchline", file), "utf8")).join("\n").replace(/:global\(([^)]+)\)/g, "$1");
+  const css = ["TouchlineGlobalNavigation.module.css", "TouchlineClubPerimeterTrace.module.css", "ClubOwnerPlanShowcase.module.css", ...(surface === "cover" ? ["ClubOwnerMarketHeader.module.css"] : surface === "login" ? ["LoginPlanGallery.module.css"] : [])].map(file => readFileSync(join(root, "components/touchline", file), "utf8")).join("\n").replace(/:global\(([^)]+)\)/g, "$1");
   const defs = Object.entries(modules).map(([id, code]) => `${JSON.stringify(id)}:function(module,exports,require){${code}\n}`).join(",");
-  return `<!doctype html><html dir="${locale === "ar-SA" ? "rtl" : "ltr"}"><meta charset="utf-8"><style>*{box-sizing:border-box}body{margin:0;background:#08100c;color:white;padding:24px;font-family:Arial,sans-serif}#root{max-width:${gallery ? 1680 : panelWidth}px;margin:auto;${gallery ? "display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px" : ""}}${css}</style><div id="root"></div><script>
+  return `<!doctype html><html dir="${locale === "ar-SA" ? "rtl" : "ltr"}"><meta charset="utf-8"><style>*{box-sizing:border-box}body{margin:0;background:#08100c;color:white;padding:24px;font-family:Arial,sans-serif}#root{max-width:${gallery ? 1680 : panelWidth}px;margin:auto;${gallery ? "display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:16px" : ""}}${css}</style><div id="root"></div><script>
   const process={env:{NODE_ENV:'development'}},modules={${defs}},cache={};function require(id){if(cache[id])return cache[id].exports;const m={exports:{}};cache[id]=m;modules[id](m,m.exports,require);return m.exports;}
   const React=require('react');require('react-dom/client').createRoot(document.getElementById('root')).render(${JSON.stringify(gallery ? CLUB_OWNER_PLAN_PREVIEWS.map(plan => plan.id) : [initialPlan])}.map(tier => React.createElement(require(${JSON.stringify(entry)}).default,{key:tier,initialPlan:tier,planPreview:tier,owner:{name:'ClubOwner',avatarUrl:'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg"/%3E',city:'',nationality:'',since:''},name:'ClubOwner',locale:${JSON.stringify(locale)},remainingMarketPower:${surface === "cover" ? "121000000" : "'121M'"},rankingPoints:63.25,rankingPosition:1,draftLocalesEnabled:true})));
   </script></html>`;
 }
 
-if (process.env.TOUCHLINE_RUN_PLAN_BROWSER_TESTS === "1") test("membership cover follows every preview while login presents the same four offers", { timeout: 120_000 }, async () => {
+if (process.env.TOUCHLINE_RUN_PLAN_BROWSER_TESTS === "1") test("membership neon travels on all five plan frames and stays illuminated with reduced motion", { timeout: 120_000 }, async () => {
+  const { chromium, webkit, expect } = await import("@playwright/test");
+  const tiers = ["beta", "standard", "pro", "master", "vip"];
+  for (const engine of [chromium, webkit]) {
+    const browser = await engine.launch({ headless: true });
+    try {
+      for (const surface of ["showcase", "login"]) for (const [width, locale] of [[1440, "en-GB"], [844, "ar-SA"]] as const) {
+        const page = await browser.newPage({ viewport: { width, height: 900 }, reducedMotion: "no-preference" });
+        const errors: string[] = [], requests: string[] = [];
+        page.on("pageerror", error => errors.push(error.message));
+        page.on("console", message => { if (message.type() === "error") errors.push(message.text()); });
+        await page.route("**/*", route => { requests.push(route.request().url()); return route.fulfill({ status: 404, body: "" }); });
+        await page.setContent(harness(locale, "beta", surface === "login" ? 1500 : 600, false, surface));
+        for (const tier of tiers) {
+          if (surface === "showcase") await page.locator(`[role="tab"][data-tier="${tier}"]`).click();
+          const card = page.locator(`[data-plan-offer="${tier}"]`);
+          const trace = card.locator("[data-touchline-club-perimeter-trace]");
+          const run = trace.locator("[data-touchline-club-perimeter-trace-run]");
+          await expect(card).toBeVisible();
+          await expect(trace).toHaveCount(1);
+          await expect(trace).toHaveAttribute("aria-hidden", "true");
+          await expect(trace).toHaveAttribute("focusable", "false");
+          await expect(card).toHaveAttribute("dir", "ltr");
+          const style = await run.evaluate(el => {
+            const computed = getComputedStyle(el);
+            const card = el.closest("[data-plan-offer]")!;
+            const probe = document.createElement("span");
+            probe.style.color = "var(--plan-accent)"; card.append(probe);
+            const color = getComputedStyle(probe).color; probe.remove();
+            return { duration: computed.animationDuration, iterations: computed.animationIterationCount,
+              state: computed.animationPlayState, stroke: computed.stroke, color,
+              width: computed.strokeWidth, glow: computed.filter, offset: computed.strokeDashoffset,
+              transform: getComputedStyle(card).transform, direction: getComputedStyle(card).direction };
+          });
+          assert.equal(style.duration, "6s");
+          assert.equal(style.iterations, "infinite");
+          assert.equal(style.state, "running");
+          assert.equal(style.stroke, style.color, `${tier} keeps its own existing accent`);
+          assert.equal(style.width, "2.4px");
+          assert.notEqual(style.glow, "none");
+          assert.equal(style.transform, "none");
+          assert.equal(style.direction, "ltr");
+          await expect.poll(() => run.evaluate(el => getComputedStyle(el).strokeDashoffset), { timeout: 3000 }).not.toBe(style.offset);
+        }
+        if (engine === chromium && process.env.TOUCHLINE_PLAN_CAPTURE_PREFIX) await page.screenshot({ path: `${process.env.TOUCHLINE_PLAN_CAPTURE_PREFIX}-neon-${surface}-${width}.png`, fullPage: true });
+        await page.emulateMedia({ reducedMotion: "reduce" });
+        for (const tier of tiers) {
+          if (surface === "showcase") await page.locator(`[role="tab"][data-tier="${tier}"]`).click();
+          const card = page.locator(`[data-plan-offer="${tier}"]`);
+          const run = card.locator("[data-touchline-club-perimeter-trace-run]");
+          await expect.poll(() => run.evaluate(el => getComputedStyle(el).animationName)).toBe("none");
+          const still = await card.evaluate(async el => {
+            const run = el.querySelector("[data-touchline-club-perimeter-trace-run]")!;
+            const before = getComputedStyle(run).strokeDashoffset;
+            await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+            const base = getComputedStyle(el.querySelector("[data-touchline-club-perimeter-trace-base]")!);
+            return { before, after: getComputedStyle(run).strokeDashoffset, stroke: base.stroke,
+              opacity: Number(base.opacity), width: Number.parseFloat(base.strokeWidth), shadow: getComputedStyle(el).boxShadow };
+          });
+          assert.equal(still.before, still.after);
+          assert.notEqual(still.stroke, "none");
+          assert.ok(still.opacity > 0 && still.width > 0);
+          assert.notEqual(still.shadow, "none", "static neon remains illuminated");
+        }
+        assert.deepEqual(errors, []);
+        assert.deepEqual(requests, []);
+        await page.close();
+      }
+    } finally { await browser.close(); }
+  }
+});
+
+if (process.env.TOUCHLINE_RUN_PLAN_BROWSER_TESTS === "1") test("membership cover follows every preview while login presents the same five offers", { timeout: 120_000 }, async () => {
   const { chromium, webkit, expect } = await import("@playwright/test");
   for (const engine of [chromium, webkit]) {
     const browser = await engine.launch({ headless: true });
@@ -87,7 +303,7 @@ if (process.env.TOUCHLINE_RUN_PLAN_BROWSER_TESTS === "1") test("membership cover
           const cover = page.locator('[data-cover-preview="true"]');
           await expect(cover).toBeVisible();
           await expect(cover.locator(".coverPattern")).toHaveAttribute("aria-hidden", "true");
-          for (const [tier, color] of [["pro", "#e7cf91"], ["master", "#a5e4b6"], ["vip", "#d5b4f6"], ["standard", "#d2dce5"]]) {
+          for (const [tier, color] of [["pro", "#e7cf91"], ["master", "#a5e4b6"], ["vip", "#d5b4f6"], ["beta", "#61c7ff"], ["standard", "#d2dce5"]]) {
             await expect(cover.locator(`[data-profile-tier="${tier}"]`)).toBeVisible();
             assert.equal(await cover.locator("[data-profile-tier]:visible").count(), 1);
             assert.equal(await cover.evaluate(el => getComputedStyle(el).getPropertyValue("--cover-accent").trim()), color);
@@ -97,8 +313,8 @@ if (process.env.TOUCHLINE_RUN_PLAN_BROWSER_TESTS === "1") test("membership cover
           }
           await expect(cover.locator('[data-profile-tier="pro"]')).toBeVisible();
         } else {
-          await expect(page.locator("[data-plan-offer]")).toHaveCount(4);
-          for (const tier of ["standard", "pro", "master", "vip"]) {
+          await expect(page.locator("[data-plan-offer]")).toHaveCount(5);
+          for (const tier of ["beta", "standard", "pro", "master", "vip"]) {
             const offer = page.locator(`article[data-plan-preview="${tier}"]`);
             await expect(offer.locator("h3")).toBeVisible();
             await offer.locator("summary").focus(); await page.keyboard.press("Enter");
@@ -106,7 +322,7 @@ if (process.env.TOUCHLINE_RUN_PLAN_BROWSER_TESTS === "1") test("membership cover
             await page.keyboard.press("Enter");
             assert.equal(await offer.evaluate(el => el.scrollWidth > el.clientWidth + 1), false);
           }
-          await expect(page.locator("article[data-plan-preview='master']")).toContainText(labels.pricePending);
+          await expect(page.locator("article[data-plan-preview='master']")).toContainText(labels.masterPrice);
           await expect(page.locator("article[data-plan-preview='vip']")).toContainText(labels.invitation);
         }
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
@@ -140,7 +356,7 @@ if (process.env.TOUCHLINE_RUN_PLAN_BROWSER_TESTS === "1") test("premium plans: t
         const next = page.getByRole("button", { name: labels.next });
         const previous = page.getByRole("button", { name: labels.previous });
         await expect(bank).toHaveAttribute("data-plan-preview", "pro");
-        await expect(bank.locator(".cardKicker")).toHaveText(labels.fantasyFootball);
+        await expect(bank.locator(".cardKicker")).toHaveText(labels.membership);
         await expect(bank.locator("svg.cardPattern")).toHaveAttribute("aria-hidden", "true");
         await expect(bank.locator("svg.cardPattern")).toHaveAttribute("focusable", "false");
         assert.equal(await bank.locator("svg.cardPattern").evaluate(el => getComputedStyle(el).animationName), "none");
@@ -149,7 +365,7 @@ if (process.env.TOUCHLINE_RUN_PLAN_BROWSER_TESTS === "1") test("premium plans: t
         assert.equal(await bank.locator(".planAction").evaluate(el => getComputedStyle(el).minHeight), "32px");
         assert.equal(await bank.locator(".planAction").evaluate(el => getComputedStyle(el).animationName), "none");
         await next.focus();
-        for (const [id, amount] of [["master", "2B"], ["vip", "∞"], ["standard", "500M"], ["pro", "1B"]]) {
+        for (const [id, amount] of [["master", "2B"], ["vip", "∞"], ["beta", "50M"], ["standard", "500M"], ["pro", "1B"]]) {
           await page.keyboard.press("Enter");
           await expect(bank).toHaveAttribute("data-plan-preview", id);
           await expect(bank.locator(".marketPowerValue strong")).toHaveText(amount);
@@ -170,7 +386,7 @@ if (process.env.TOUCHLINE_RUN_PLAN_BROWSER_TESTS === "1") test("premium plans: t
               separated: title.right <= seal.left || seal.right <= title.left };
           });
           assert.deepEqual(layout, { clipped: false, titleFits: true, separated: true }, `${engine.name()}/${width}/${panelWidth}/${locale}/${id} card content`);
-          if (id === "master") await expect(bank.locator("[data-plan-price]")).toHaveText(labels.pricePending);
+          if (id === "master") await expect(bank.locator("[data-plan-price]")).toHaveText(labels.masterPrice);
           if (id === "vip") {
             await expect(bank.locator(".planAction")).toHaveText(labels.invitation);
             await expect(bank.locator(".marketPowerValue small")).toHaveText(labels.unlimited);
@@ -189,15 +405,16 @@ if (process.env.TOUCHLINE_RUN_PLAN_BROWSER_TESTS === "1") test("premium plans: t
           await next.focus();
         }
         await previous.click(); await expect(bank).toHaveAttribute("data-plan-preview", "standard");
+        await previous.click(); await expect(bank).toHaveAttribute("data-plan-preview", "beta");
         await previous.click(); await expect(bank).toHaveAttribute("data-plan-preview", "vip");
-        const vipTab = bank.getByRole("tab", { name: "VIP" });
+        const vipTab = bank.getByRole("tab", { name: getClubOwnerVipPlanName(locale), exact: true });
         await vipTab.focus(); await page.keyboard.press("Home");
-        await expect(bank.locator('[role="tab"][data-tier="standard"]')).toBeFocused();
-        await page.keyboard.press(locale === "ar-SA" ? "ArrowLeft" : "ArrowRight");
-        await expect(bank).toHaveAttribute("data-plan-preview", "pro");
-        await page.keyboard.press("End"); await expect(vipTab).toBeFocused();
-        await page.keyboard.press(locale === "ar-SA" ? "ArrowLeft" : "ArrowRight");
+        await expect(bank.locator('[role="tab"][data-tier="beta"]')).toBeFocused();
+        await page.keyboard.press("ArrowRight");
         await expect(bank).toHaveAttribute("data-plan-preview", "standard");
+        await page.keyboard.press("End"); await expect(vipTab).toBeFocused();
+        await page.keyboard.press("ArrowRight");
+        await expect(bank).toHaveAttribute("data-plan-preview", "beta");
         await bank.locator("summary").focus(); await page.keyboard.press("Enter");
         await expect(bank.getByRole("table")).toBeVisible();
         await bank.getByRole("button", { name: `${labels.viewPlan}: Master`, exact: true }).click();
@@ -216,8 +433,8 @@ if (process.env.TOUCHLINE_RUN_PLAN_BROWSER_TESTS === "1") test("premium plans: t
       if (engine === chromium && process.env.TOUCHLINE_PLAN_CAPTURE_PREFIX) {
         const gallery = await browser.newPage({ viewport: { width: 1680, height: 800 }, reducedMotion: "reduce" });
         await gallery.setContent(harness("pt-BR", "pro", 600, true));
-        await expect(gallery.getByRole("tablist")).toHaveCount(4);
-        await gallery.screenshot({ path: `${process.env.TOUCHLINE_PLAN_CAPTURE_PREFIX}-four-plans.png`, fullPage: true });
+        await expect(gallery.getByRole("tablist")).toHaveCount(5);
+        await gallery.screenshot({ path: `${process.env.TOUCHLINE_PLAN_CAPTURE_PREFIX}-five-plans.png`, fullPage: true });
         await gallery.close();
       }
     } finally { await browser.close(); }

@@ -5,6 +5,7 @@ import { runInNewContext } from "node:vm";
 import React from "react";
 import * as jsxRuntime from "react/jsx-runtime";
 import ts from "typescript";
+import * as marketPolicy from "../lib/touchlineFantasy/market-plan-policy.ts";
 
 const siteLocaleEnv: Record<string, string | undefined> = {};
 const siteLocalePolicy: Record<string, unknown> = {};
@@ -41,7 +42,8 @@ function fixture(options: { user?: User | null; configured?: boolean; rejectAuth
   const events: string[] = [];
   const authentication = { data: { user }, error: null };
   const avatarContext = Object.freeze({ avatarUrl: "/confirmed-avatar.png" });
-  const snapshot = Object.freeze({ sentinel: "canonical-snapshot", config: { budgetEur: 500_000_000 }, userGameweek: { totalMarketValueEur: 120_000_000 } });
+  const snapshot = Object.freeze({ sentinel: "canonical-snapshot", entitlementActive: true,
+    marketAccess: marketPolicy.resolveTouchlineFantasyMarketAccess("standard"), config: { budgetEur: 500_000_000 }, userGameweek: { totalMarketValueEur: 120_000_000 } });
   // Leaf identities inspect the actual route's props without running browser
   // components. This suite does not claim child rendering or visual coverage.
   const leaves = Object.fromEntries(["brand", "navigation", "header", "fantasy"].map(name => [name, function Leaf() { return null; }]));
@@ -54,6 +56,7 @@ function fixture(options: { user?: User | null; configured?: boolean; rejectAuth
     "next/headers": { headers: async () => ({ get: () => "Europe/Malta" }) },
     "@/lib/touchlineArena/match-centre": { normalizeTouchlineMatchCentreTimeZone },
     "@/lib/touchlineArena/club-owner-profile-metrics": profileMetrics,
+    "@/lib/touchlineFantasy/market-plan-policy": marketPolicy,
     "next/navigation": {
       redirect: (href: string) => { events.push("redirect"); throw Object.assign(new Error("route redirect"), { kind: "redirect", href }); },
       notFound: () => { events.push("notFound"); throw Object.assign(new Error("route unavailable"), { kind: "notFound" }); },

@@ -409,6 +409,15 @@ export function applyTouchlineQuickSubstitutionSession(
     return { status: "rejected", reason: "unknown_position_slot" };
   }
 
+  // A retry names the stable pitch slot, whose occupant changed on the first
+  // application. Rebuild its command from the recorded outgoing identity, not
+  // the current occupant. Still bind the retry to the original slot so a reused
+  // command ID cannot silently target another position.
+  const previousEvent = state.appliedEvents.find((event) => event.commandId === command.commandId);
+  if (previousEvent && previousEvent.outgoingPositionSlotId !== command.outgoingPositionSlotId) {
+    return { status: "rejected", reason: "duplicate_command_conflict" };
+  }
+
   const result = applyTouchlineDurableQuickSubstitution(state.durableState, {
     commandId: command.commandId,
     commandHash: command.commandHash,
@@ -416,7 +425,7 @@ export function applyTouchlineQuickSubstitutionSession(
     actorId: state.ownerId,
     expectedRosterRevision: state.rosterRevision,
     expectedRevision: command.expectedRevision,
-    outgoingInventoryId: outgoingSlot.inventoryId,
+    outgoingInventoryId: previousEvent?.outgoingInventoryId ?? outgoingSlot.inventoryId,
     incomingInventoryId: command.incomingInventoryId,
     occurredAt: command.occurredAt,
   });

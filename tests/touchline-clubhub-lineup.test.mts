@@ -459,7 +459,7 @@ test("ClubHub preserves the canonical Market formation on a regulation landscape
 
   assert.match(source, /const horizontalPitchPosition = \(x: number, y: number\) => \(\{ x, y \}\)/);
   assert.match(source, /orientation="horizontal"/);
-  assert.match(source, /surfaceVariant="premium-stadium"/);
+  assert.match(source, /surfaceVariant="smoked-glass"/);
   assert.match(source, /orientation="upright"/);
   assert.match(styles, /width: min\(100%, 922px\)/);
   const technical = readFileSync(new URL("../components/touchline/ClubHubMatchdayTechnicalArea.tsx", import.meta.url), "utf8");

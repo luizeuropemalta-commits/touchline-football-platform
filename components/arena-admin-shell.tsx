@@ -91,6 +91,12 @@ const OWNER_LINKS: ShellLink[] = [
     icon: Sparkles,
   },
   {
+    href: "/admin/vip-access",
+    label: "VIP Access",
+    description: "Owner-approved free access",
+    icon: ShieldCheck,
+  },
+  {
     href: "/admin/finance",
     label: "Finance Control",
     description: "Protected financial overview",
@@ -211,6 +217,7 @@ export function ArenaAdminShell({
     { href: "/admin/analytics", label: "Atividade", description: "Telemetria própria TouchLine", icon: Activity },
     { href: "/admin/cards", label: "Inventário de Cards", description: "Operações oficiais de cards", icon: WalletCards },
     { href: "/admin/promotions", label: "Promoções", description: "Controles de campanhas", icon: Sparkles },
+    { href: "/admin/vip-access", label: "Acesso VIP", description: "Concessão gratuita pelo proprietário", icon: ShieldCheck },
     { href: "/admin/finance", label: "Controle Financeiro", description: "Visão financeira protegida", icon: CircleDollarSign },
     { href: "/admin/football-data", label: "Dados de Futebol", description: "Saúde dos dados TouchLine", icon: Database },
   ] : OWNER_LINKS;

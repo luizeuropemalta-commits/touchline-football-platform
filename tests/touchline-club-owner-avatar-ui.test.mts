@@ -9,6 +9,7 @@ import * as catalogue from "../lib/touchlineArena/club-owner-avatar-ui-i18n.ts";
 import * as localeModule from "../lib/touchlineArena/i18n.ts";
 import * as selection from "../lib/touchlineArena/club-owner-avatar-selection-contract.ts";
 import * as profileMetrics from "../lib/touchlineArena/club-owner-profile-metrics.ts";
+import * as planShowcase from "../lib/touchlineArena/club-owner-plan-showcase.ts";
 
 const actor = "11111111-1111-4111-8111-111111111111", other = "33333333-3333-4333-8333-333333333333";
 const operation = "22222222-2222-4222-8222-222222222222";
@@ -34,9 +35,10 @@ function copyModule(_drafts = false) { return catalogue; }
 test("real header forwards separate dormant selection capabilities without changing recovery identity", () => {
   const header = compile("components/touchline/ClubOwnerMarketHeader.tsx", {
     "react/jsx-runtime": jsx, "next/image": { default: "img" }, "next/link": { default: "a" },
-    "lucide-react": { Camera: "camera", Landmark: "landmark" },
+    "lucide-react": { CalendarDays: "calendar", Camera: "camera", Crown: "crown", Diamond: "diamond", LockKeyhole: "lock", Shield: "shield" },
     "@/lib/touchlineArena/club-owner-market-i18n": { getTouchlineClubOwnerMarketCopy: () => ({ nameUnavailable: "Unavailable" }) },
     "@/lib/touchlineArena/club-owner-profile-metrics": profileMetrics,
+    "@/lib/touchlineArena/club-owner-plan-showcase": planShowcase,
     "./market/TouchlineMarketMarks": { TouchlineCoinMark: "coin" },
     "./ClubOwnerPlanShowcase": { default: "plan-showcase" },
     "./ClubOwnerAvatarControl": { default: "avatar-control" },

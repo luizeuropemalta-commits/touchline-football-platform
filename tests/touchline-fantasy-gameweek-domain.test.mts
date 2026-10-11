@@ -18,8 +18,8 @@ import { resolveTouchlineFormationGeometry } from "../lib/touchlineArena/formati
 
 const PLAYER_IDS = Array.from({ length: 12 }, (_, index) => `00000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`);
 
-test("the canonical Gameweek budget is €900M", () => {
-  assert.equal(TOUCHLINE_FANTASY_INITIAL_BUDGET_EUR, 900_000_000);
+test("the Standard baseline is 500M; the live budget is resolved by plan", () => {
+  assert.equal(TOUCHLINE_FANTASY_INITIAL_BUDGET_EUR, 500_000_000);
 });
 
 test("Sportmonks Rating is the sole score, including hat-tricks", () => {
@@ -116,7 +116,7 @@ test("lineup validation enforces 11, formation and budget while club choice rema
   assert.equal(valid.valid, true);
   assert.equal(valid.totalMarketValueEur, 220_000_000);
 
-  const premiumPlayers = players.map((player) => ({ ...player, marketValueEur: 80_000_000 }));
+  const premiumPlayers = players.map((player) => ({ ...player, marketValueEur: 40_000_000 }));
   const premium = validateTouchlineFantasyLineup({
     selections,
     players: premiumPlayers,
@@ -125,18 +125,18 @@ test("lineup validation enforces 11, formation and budget while club choice rema
     maxPlayersPerClub: 11,
     requireComplete: true,
   });
-  assert.equal(premium.valid, true, "an €880M XI remains selectable");
-  assert.equal(premium.budgetRemainingEur, 20_000_000);
+  assert.equal(premium.valid, true, "a 440M XI remains selectable under Standard");
+  assert.equal(premium.budgetRemainingEur, 60_000_000);
 
   const overBudget = validateTouchlineFantasyLineup({
     selections,
-    players: players.map((player) => ({ ...player, marketValueEur: 82_000_000 })),
+    players: players.map((player) => ({ ...player, marketValueEur: 50_000_000 })),
     geometry,
     budgetEur: TOUCHLINE_FANTASY_INITIAL_BUDGET_EUR,
     maxPlayersPerClub: 11,
     requireComplete: true,
   });
-  assert.equal(overBudget.totalMarketValueEur, 902_000_000);
+  assert.equal(overBudget.totalMarketValueEur, 550_000_000);
   assert.ok(overBudget.issues.includes("BUDGET_EXCEEDED"));
 
   const sameClubPlayers = players.map((player) => ({ ...player, clubId: "one-club" }));

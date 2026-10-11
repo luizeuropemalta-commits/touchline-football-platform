@@ -53,6 +53,8 @@ test("club handoff writes only after commit/frame; cleanup rejects stale routes 
     appliedClubRoute: { current: "initial" },
     clubSelectionVersion: { current: 0 },
     TOUCHLINE_ENGLAND_CLUBS_BY_RANK: [{ teamId: "first" }, { teamId: "second" }],
+    initialSnapshot: { marketAccess: { allowedClubTeamIds: ["first", "second"] } },
+    initialMarketClub(teamId: string) { return ["first", "second"].includes(teamId) ? teamId : "first"; },
     applyPlayerClubTeamId(update: (current: string) => string) { writes++; selected = update(selected); },
     setSelections: () => assert.fail("do not reset XI"),
     setSelectedCoachId: () => assert.fail("do not reset coach"),

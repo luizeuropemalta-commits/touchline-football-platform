@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { CalendarDays, Camera, Crown, Diamond, LockKeyhole, Shield } from "lucide-react";
 import { getTouchlineClubOwnerMarketCopy } from "@/lib/touchlineArena/club-owner-market-i18n";
+import { getClubOwnerPlanShowcaseCopy } from "@/lib/touchlineArena/club-owner-plan-showcase";
 import { formatClubOwnerRankingPosition, getClubOwnerProfileMetricsCopy } from "@/lib/touchlineArena/club-owner-profile-metrics";
 import { TouchlineCoinMark } from "./market/TouchlineMarketMarks";
 import ClubOwnerAvatarControl, { type ClubOwnerAvatarUiContext } from "./ClubOwnerAvatarControl";
@@ -10,7 +11,7 @@ import styles from "./ClubOwnerMarketHeader.module.css";
 
 type Owner = Readonly<{ name: string; avatarUrl: string; city: string; nationality: string; since: string }>;
 
-export default function ClubOwnerMarketHeader({ owner, locale, accountId, avatarContext, rankingPoints = null, rankingPosition = null, remainingMarketPower = null, plan = null, planPreview = null, draftLocalesEnabled = false, avatarSelectionEnabled = false, retentionReady = false }: Readonly<{
+export default function ClubOwnerMarketHeader({ owner, locale, accountId, avatarContext, rankingPoints = null, rankingPosition = null, remainingMarketPower = null, realUnlimited = false, plan = null, planPreview = null, draftLocalesEnabled = false, avatarSelectionEnabled = false, retentionReady = false }: Readonly<{
   owner: Owner | null; locale: string; accountId?: string; avatarContext?: ClubOwnerAvatarUiContext | null;
   plan?: Readonly<{ active: boolean; expiresAt: string | null }> | null;
   planPreview?: "standard" | "pro" | null;
@@ -19,8 +20,11 @@ export default function ClubOwnerMarketHeader({ owner, locale, accountId, avatar
   rankingPoints?: number | null;
   rankingPosition?: number | null;
   remainingMarketPower?: number | null;
+  /** Explicit server-derived capability; a null amount or preview never grants it. */
+  realUnlimited?: boolean;
 }>) {
   const copy = getTouchlineClubOwnerMarketCopy(locale, draftLocalesEnabled);
+  const labels = getClubOwnerPlanShowcaseCopy(locale, draftLocalesEnabled);
   const metricsCopy = getClubOwnerProfileMetricsCopy(locale, draftLocalesEnabled);
   const points = owner && typeof rankingPoints === "number" && Number.isFinite(rankingPoints)
     ? rankingPoints.toLocaleString(metricsCopy.locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : null;
@@ -30,6 +34,7 @@ export default function ClubOwnerMarketHeader({ owner, locale, accountId, avatar
   const marketPower = typeof remainingMarketPower === "number" && Number.isFinite(remainingMarketPower)
     ? new Intl.NumberFormat(locale, { notation: "compact", maximumFractionDigits: 1 }).format(Math.max(0, remainingMarketPower))
     : null;
+  const unlimited = realUnlimited === true && plan?.active === true;
   const tier = planPreview;
   // The tier samples are development-only product copy. They intentionally
   // render the acquisition state without changing the viewer's entitlement.
@@ -62,6 +67,7 @@ export default function ClubOwnerMarketHeader({ owner, locale, accountId, avatar
         <div className={styles.details}>
           <span className={styles.eyebrow}>{copy.yourProfile}</span>
           <h2 id="clubowner-heading">{name}{tier ? <>
+            <span className={`${styles.proBadge} ${styles.betaBadge}`} data-profile-tier="beta"><Shield size={14} aria-hidden="true" />Beta</span>
             <span className={`${styles.proBadge} ${styles.standardBadge}`} data-profile-tier="standard"><Shield size={14} aria-hidden="true" />{copy.planStandard}</span>
             <span className={styles.proBadge} data-profile-tier="pro"><Crown size={14} aria-hidden="true" />{copy.planPro}</span>
             <span className={`${styles.proBadge} ${styles.masterBadge}`} data-profile-tier="master"><Diamond size={14} aria-hidden="true" />Master</span>
@@ -75,7 +81,7 @@ export default function ClubOwnerMarketHeader({ owner, locale, accountId, avatar
         </div>
       </div>
     </section>
-    {tier ? <ClubOwnerPlanShowcase key={tier} initialPlan={tier} name={name} locale={locale} remainingMarketPower={marketPower} draftLocalesEnabled={draftLocalesEnabled} /> : <section className={styles.bank} data-plan-state={planActive ? "active" : "inactive"} aria-labelledby="clubowner-plan-heading">
+    {tier ? <ClubOwnerPlanShowcase key={tier} initialPlan={tier} name={name} locale={locale} remainingMarketPower={marketPower} realUnlimited={unlimited} draftLocalesEnabled={draftLocalesEnabled} /> : <section className={styles.bank} data-plan-state={planActive ? "active" : "inactive"} aria-labelledby="clubowner-plan-heading">
       <div className={styles.bankHeading}><CalendarDays size={25} aria-hidden="true" /><h2 id="clubowner-plan-heading">{copy.plan}</h2>
         <button type="button" className={`${controls.arena} ${styles.planAction}`} disabled aria-describedby="clubowner-plan-status" title={copy.planActionUnavailable}>
           {planActive ? copy.renewPlan : copy.activatePlan}
@@ -84,10 +90,10 @@ export default function ClubOwnerMarketHeader({ owner, locale, accountId, avatar
       <details className={styles.bankDetails} data-bank-details="true">
         <summary className={styles.bankSummary}>
           <span className={styles.marketPowerLabel}>{copy.marketPower}</span>
-          <span className={styles.marketPowerValue} aria-label={marketPower === null ? copy.marketPowerUnavailable : `${copy.marketPower} ${marketPower} TouchLine Credits`}>
+          <span className={styles.marketPowerValue} data-market-power-unlimited={unlimited || undefined} aria-label={unlimited ? `${copy.marketPower}: ${labels.unlimited}` : marketPower === null ? copy.marketPowerUnavailable : `${copy.marketPower} ${marketPower} TouchLine Credits`}>
             <TouchlineCoinMark size={22} />
-            <strong>{marketPower ?? "—"}</strong>
-            <small>TC</small>
+            <strong>{unlimited ? "∞" : marketPower ?? "—"}</strong>
+            <small>{unlimited ? labels.unlimited : "TC"}</small>
           </span>
         </summary>
         <div className={styles.bankBody}>

@@ -62,6 +62,22 @@ async function scenario(ack: boolean, scoring = false) {
       if (name === 'touchline_claim_fixture_recovery') return { data: null, error: null };
       if (name === 'touchline_fantasy_pending_gameweeks') return { data: [], error: null };
       if (name === 'touchline_fantasy_sync_gameweeks') return { data: null, error: null };
+      if (name === 'touchline_live_presentation_publish_current') {
+        assert.equal(centralCompletions, 2, 'shared Live snapshot is published only after both provider receipts are completed');
+        events.push('publish-live-presentation');
+        return { data: {
+          snapshotId: '10000000-0000-4000-8000-000000000001',
+          contentDigest: 'a'.repeat(32),
+          payload: {
+            version: 1, scopeKey: 'touchline-england', windowStart: at,
+            playerRankingSnapshotId: 'player-v4:season-1:digest', playerRankingFixtureIds: ['19722203'],
+            coachRankingSnapshotId: 'coach-v2:season-1:digest', coachRankingFixtureIds: ['19722203'],
+            liveScoreSnapshotDigest: 'b'.repeat(32),
+            liveScorePayload: { fixtures: [{ provider: 'sportmonks', providerId: '19722203' }], fetchedAt: at, storedAt: Date.parse(at) },
+            fixtures: [{ fixtureId: '19722203', startsAt: kickoff, status: 'FT' }],
+          },
+        }, error: null };
+      }
       if (name === 'publish_touchline_card_ranking_snapshot') {
         assert.equal(args?.requested_league_key, 'touchline-england');
         rankingPublishes++; tables.touchline_card_ranking_active_snapshots = [{ league_key: args?.requested_league_key, snapshot_id: args?.requested_snapshot_id }];
@@ -150,6 +166,8 @@ async function scenario(ack: boolean, scoring = false) {
     assert.equal(snapshot.fixtures[0].homeScore, ack ? 4 : 1);
     if (!ack) assert.ok(result.errors.includes('19722203:write-unconfirmed'));
     if (scoring) {
+      assert.equal(events.filter((event) => event === 'publish-live-presentation').length, 1);
+      assert.ok(events.indexOf('publish-live-presentation') > events.indexOf('touchline_reconcile_coach_fixture_points'));
       assert.equal(tables.football_fixture_events.length, 1);
       assert.equal(tables.football_fixture_events[0].provider_event_id, '9001');
       assert.equal(tables.touchline_player_fixture_score_settlements.length, 11);

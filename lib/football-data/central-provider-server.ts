@@ -15,7 +15,7 @@ type CentralProviderConfig = Readonly<{ enabled?: false }> | Readonly<{
  * environment discovery or unguarded fallback. Existing jobs are migrated only
  * after the central SQL/configuration gates. OFF denies provider HTTP reads. */
 export function createCentralFootballDataProvider(config: CentralProviderConfig = {}, authorityFetch: typeof fetch = fetch) {
-  if (config.enabled !== true) return new SportmonksFootballProvider({ fixtureGuard: undefined });
+  if (config.enabled !== true) return new SportmonksFootballProvider({ fixtureGuard: null });
   const call = createFixtureAuthorityHttpTransport({ url: config.authorityUrl,
     workerToken: config.workerToken, accountScope: config.accountScope, timeoutMs: 2500 }, authorityFetch);
   const guard = createSportmonksFixtureAuthority(config.accountScope, call);

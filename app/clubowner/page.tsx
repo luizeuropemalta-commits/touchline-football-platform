@@ -15,6 +15,7 @@ import { createClubOwnerAvatarContextReader } from "@/lib/touchlineArena/club-ow
 import { touchLineAuthEntryHref } from "@/lib/touchlineArena/auth-i18n";
 import { resolveServerReadWithin } from "@/lib/touchlineArena/server-read-deadline";
 import { loadTouchlineFantasySnapshot } from "@/lib/touchlineFantasy/server";
+import { isTouchlineFantasyMarketAccess } from "@/lib/touchlineFantasy/market-plan-policy";
 import { TOUCHLINE_ENGLAND_CLUBS } from "@/lib/touchlineArena/demo-data";
 import styles from "./market-game.module.css";
 
@@ -80,10 +81,14 @@ async function renderClubOwnerPage({ searchParams }: ClubOwnerPageProps, draftLo
   ]);
   const clubOwner = resolveTouchlineClubOwnerPageIdentity(user, undefined, avatarContext?.avatarUrl);
   const liveTimeZone = normalizeTouchlineMatchCentreTimeZone((await headers()).get("x-vercel-ip-timezone"));
+  const marketAccess = snapshot && isTouchlineFantasyMarketAccess(snapshot.marketAccess) ? snapshot.marketAccess : null;
+  const realUnlimited = snapshot?.entitlementActive === true && marketAccess?.planKey === "vip";
+  const remainingMarketPower = snapshot?.entitlementActive === true && typeof marketAccess?.budgetEur === "number"
+    ? Math.max(0, marketAccess.budgetEur - (snapshot.userGameweek?.totalMarketValueEur ?? 0)) : null;
   return <main className={styles.page} dir={draftLocalesEnabled ? "ltr" : undefined}>
     <TouchlineBrandHeader href={destination} locale={locale} accountLocaleContext={{ mode: "account", accountId: user.id }} draftLocalesEnabled={draftLocalesEnabled} navigation={<TouchlineGlobalNavigation locale={locale} draftLocalesEnabled={draftLocalesEnabled} currentRoute="market" surface="authenticated" showAudioControl={false} />} />
     <div className={styles.content}>
-      <ClubOwnerMarketHeader owner={clubOwner?.isAuthenticatedClubOwner ? clubOwner : null} locale={locale} rankingPoints={clubOwnerRankingPoints(snapshot?.seasonRanking)} rankingPosition={clubOwnerRankingPosition(snapshot?.seasonRanking)} remainingMarketPower={snapshot ? Math.max(0, snapshot.config.budgetEur - (snapshot.userGameweek?.totalMarketValueEur ?? 0)) : null} plan={snapshot?.plan ?? null} planPreview={planPreview} draftLocalesEnabled={draftLocalesEnabled} accountId={user.id} avatarContext={avatarContext} avatarSelectionEnabled={avatarSelectionEnabled} retentionReady={retentionReady} />
+      <ClubOwnerMarketHeader owner={clubOwner?.isAuthenticatedClubOwner ? clubOwner : null} locale={locale} rankingPoints={clubOwnerRankingPoints(snapshot?.seasonRanking)} rankingPosition={clubOwnerRankingPosition(snapshot?.seasonRanking)} remainingMarketPower={remainingMarketPower} realUnlimited={realUnlimited} plan={snapshot?.plan ?? null} planPreview={planPreview} draftLocalesEnabled={draftLocalesEnabled} accountId={user.id} avatarContext={avatarContext} avatarSelectionEnabled={avatarSelectionEnabled} retentionReady={retentionReady} />
       <FantasyGameweekClient initialSnapshot={snapshot} locale={locale} liveTimeZone={liveTimeZone} draftLocalesEnabled={draftLocalesEnabled} embedded marketPage initialPlayerClubTeamId={initialPlayerClubTeamId} clubOwner={clubOwner ? { name: clubOwner.name, avatarUrl: clubOwner.avatarUrl } : undefined} />
     </div>
   </main>;

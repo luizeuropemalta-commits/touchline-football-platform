@@ -5,7 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { isTouchLineSettledFixtureStatus } from "@/lib/football-data/fixture-settlement";
 import { touchlineFixtureState } from "@/lib/touchlineArena/match-centre";
 import { createTouchlineSharedCoalescer } from "@/lib/touchlineArena/live-presentation-coalescer";
-import { readTouchlineLivePresentationInput } from "@/lib/touchlineArena/live-presentation-read-model";
+import { readPublishedTouchlineLivePresentationInput } from "@/lib/touchlineArena/live-presentation-read-model";
 import {
   TOUCHLINE_LIVE_PRESENTATION_STATE_VERSION,
   resolveTouchlineLivePresentationTiming,
@@ -17,6 +17,7 @@ const UNAVAILABLE_STATE: TouchlineLivePresentationState = Object.freeze({
   available: false,
   playerRankingSnapshotId: null,
   coachRankingSnapshotId: null,
+  livePresentationSnapshotId: null,
   mode: "idle",
   pollAfterMs: null,
   resumeAt: null,
@@ -29,8 +30,8 @@ async function readUncachedTouchlineLivePresentationState(): Promise<TouchlineLi
   const admin = createAdminClient();
   if (!admin) return UNAVAILABLE_STATE;
   const now = Date.now();
-  const input = await readTouchlineLivePresentationInput(admin, now);
-  if (!input.fixtures.length) return UNAVAILABLE_STATE;
+  const input = await readPublishedTouchlineLivePresentationInput(admin);
+  if (!input?.fixtures.length) return UNAVAILABLE_STATE;
 
   const timing = resolveTouchlineLivePresentationTiming({
     fixtures: input.fixtures.map((fixture) => ({
@@ -51,6 +52,7 @@ async function readUncachedTouchlineLivePresentationState(): Promise<TouchlineLi
     available: true,
     playerRankingSnapshotId: input.playerRankingSnapshotId,
     coachRankingSnapshotId: input.coachRankingSnapshotId,
+    livePresentationSnapshotId: input.contentDigest,
     ...timing,
   };
 }

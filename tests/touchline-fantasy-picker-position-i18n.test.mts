@@ -43,6 +43,7 @@ function actual(position: string | null | undefined, locale: string, overrides: 
     workflowCopy: getTouchlineFantasyMarketWorkflowCopy(locale), localizedPositionLabel: helper, touchlineCardTierPalette,
     styles: { marketClosedLabel: "marketClosedLabel", myClubMarketResults: "myClubMarketResults" },
     TouchlineGameweekCard: CardBoundary, TouchlineClubPerimeterTrace: TraceBoundary,
+    playerExceedsBudget: () => false, selectedPlayerClubLocked: false,
     selectMyClubPlayer: (value: unknown) => selected.push(value), ...overrides,
   };
   const element = runInNewContext(compiled, context) as Element;

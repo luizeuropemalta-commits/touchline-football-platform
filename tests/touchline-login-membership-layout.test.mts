@@ -7,14 +7,15 @@ test("login plans share the approved live-text artwork without payment, fictiona
   assert.match(gallery, /CLUB_OWNER_PLAN_PREVIEWS\.map/);
   assert.match(gallery, /<ClubOwnerPlanCard/);
   assert.match(gallery, /planActionUnavailable/);
-  assert.match(gallery, /labels\.pricePending/);
+  assert.match(gallery, /labels\.masterPrice/);
+  assert.match(gallery, /labels\.betaPrice/);
   assert.match(gallery, /labels\.invitation/);
   assert.doesNotMatch(gallery, /fetch\(|localStorage|stripe|checkout|\.png|name=/);
   const login = readFileSync(new URL("../app/(auth)/login/page.tsx", import.meta.url), "utf8");
   assert.match(login, /planGallery=\{!protectedReturn/);
 });
 
-if (process.env.TOUCHLINE_LOGIN_BROWSER_URL) test("rendered customer login keeps full-screen video, four plans, and usable auth controls", { timeout: 90_000 }, async () => {
+if (process.env.TOUCHLINE_LOGIN_BROWSER_URL) test("rendered customer login keeps full-screen video, five plans, and usable auth controls", { timeout: 90_000 }, async () => {
   const { webkit, expect } = await import("@playwright/test");
   const browser = await webkit.launch({ headless: true });
   try {
@@ -31,7 +32,7 @@ if (process.env.TOUCHLINE_LOGIN_BROWSER_URL) test("rendered customer login keeps
     await page.emulateMedia({ reducedMotion: "reduce" });
     await expect(page.locator("video.auth-cinematic-video")).toHaveCount(0);
     await expect(page.locator(".ps-career-home")).toHaveCount(0);
-    await expect(page.locator("[data-plan-offer]")).toHaveCount(4);
+    await expect(page.locator("[data-plan-offer]")).toHaveCount(5);
     await expect(page.getByRole("link", { name: "Explore a public club" })).toHaveCount(0);
     for (const width of [1440, 844, 390]) {
       await page.setViewportSize({ width, height: 1000 });
@@ -50,10 +51,11 @@ if (process.env.TOUCHLINE_LOGIN_BROWSER_URL) test("rendered customer login keeps
       if (width === 1440) {
         const introduction = await page.locator(".auth-login-story").boundingBox();
         const form = await page.locator(".stadium-scoreboard").boundingBox();
+        const beta = await page.locator('[data-plan-offer="beta"]').boundingBox();
         const standard = await page.locator('[data-plan-offer="standard"]').boundingBox();
         const vip = await page.locator('[data-plan-offer="vip"]').boundingBox();
         assert.ok(introduction && form && introduction.x + introduction.width <= form.x, "introduction stays left of the form in every language");
-        assert.ok(standard && vip && standard.x < vip.x, "plan order must not reverse in Arabic");
+        assert.ok(beta && standard && vip && beta.x < standard.x && standard.x < vip.x, "Beta comes first and plan order must not reverse in Arabic");
       }
       const background = await page.locator(".auth-cinematic-media").boundingBox();
       // Cover the actual content viewport; WebKit's Arabic scrollbar may occupy its left edge.
@@ -61,7 +63,7 @@ if (process.env.TOUCHLINE_LOGIN_BROWSER_URL) test("rendered customer login keeps
       assert.equal(background?.y, 0); assert.equal(background?.width, await page.evaluate(() => document.documentElement.clientWidth)); assert.equal(background?.height, 1000);
       await expect(page.locator('input[name="email"]')).toBeVisible();
       await expect(page.locator('input[name="password"]')).toBeVisible();
-      for (const tier of ["standard", "pro", "master", "vip"]) {
+      for (const tier of ["beta", "standard", "pro", "master", "vip"]) {
         const offer = page.locator(`article[data-plan-preview="${tier}"]`);
         assert.equal(await offer.locator("[data-plan-offer]").evaluate(el => getComputedStyle(el).direction), "ltr", "artwork, brand and amounts keep the same composition in Arabic");
         assert.equal(await offer.evaluate(el => el.scrollWidth > el.clientWidth + 1), false, `${tier}/${width}`);

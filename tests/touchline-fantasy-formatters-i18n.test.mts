@@ -49,19 +49,19 @@ function fixture(review = false) {
   return { api, dates, numbers, requested };
 }
 
-const values = [0, -1, -1_250_000, 1_250_000, 9_999_999, 10_000_000, 12_345_678, 900_000_000, NaN, Infinity, -Infinity];
+const values = [0, -1, -1_250_000, 1_250_000, 9_999_999, 10_000_000, 12_345_678, 500_000_000, NaN, Infinity, -Infinity];
 // Captured from the unchanged EN/PT functions before the slice. Keep NBSPs
 // explicit: compact EUR formatting is presentation, not a numeric conversion.
 const budgets = {
-  "en-GB": ["€0", "-€1", "-€1.25m", "€1.25m", "€10m", "€10m", "€12.3m", "€900m", "€NaN", "€∞", "-€∞"],
-  "pt-BR": ["€\u00a00", "-€\u00a01", "-€\u00a01,25\u00a0mi", "€\u00a01,25\u00a0mi", "€\u00a010\u00a0mi", "€\u00a010\u00a0mi", "€\u00a012,3\u00a0mi", "€\u00a0900\u00a0mi", "€\u00a0NaN", "€\u00a0∞", "-€\u00a0∞"],
+  "en-GB": ["€0", "-€1", "-€1.25m", "€1.25m", "€10m", "€10m", "€12.3m", "€500m", "€NaN", "€∞", "-€∞"],
+  "pt-BR": ["€\u00a00", "-€\u00a01", "-€\u00a01,25\u00a0mi", "€\u00a01,25\u00a0mi", "€\u00a010\u00a0mi", "€\u00a010\u00a0mi", "€\u00a012,3\u00a0mi", "€\u00a0500\u00a0mi", "€\u00a0NaN", "€\u00a0∞", "-€\u00a0∞"],
 };
 
 test("public EN/PT deadline and EUR compact baselines remain exact, including nonfinite/negative values", () => {
   assert.equal(domain.formatTouchlineFantasyDeadline("2026-08-21T19:55:00.000Z", "en-GB"), "21 Aug 2026, 20:55");
   assert.equal(domain.formatTouchlineFantasyDeadline("2026-08-21T19:55:00.000Z", "pt-BR"), "21 de ago. de 2026, 20:55");
   for (const locale of ["en-GB", "pt-BR"] as const) assert.deepEqual(values.map((value) => domain.formatTouchlineFantasyMarketValue(value, locale)), budgets[locale]);
-  assert.equal(domain.TOUCHLINE_FANTASY_INITIAL_BUDGET_EUR, 900_000_000);
+  assert.equal(domain.TOUCHLINE_FANTASY_INITIAL_BUDGET_EUR, 500_000_000);
   assert.equal(domain.TOUCHLINE_FANTASY_SUBSCRIPTION_CURRENCY, "GBP");
   assert.equal(domain.TOUCHLINE_FANTASY_SUBSCRIPTION_PRICE_MINOR, 2_990);
 });
@@ -71,12 +71,12 @@ test("both formatters delegate the entire locale to the existing gate; six draft
   for (const locale of [...locales, "", "invalid_locale", "en-GB-u-ca-islamic", "pt"]) {
     actual.requested.length = 0;
     const deadline = actual.api.formatTouchlineFantasyDeadline("2026-08-21T19:55:00Z", locale);
-    const budget = actual.api.formatTouchlineFantasyMarketValue(900_000_000, locale);
+    const budget = actual.api.formatTouchlineFantasyMarketValue(500_000_000, locale);
     assert.deepEqual(actual.requested, [locale, locale]);
     assert.equal(deadline, locale === "pt-BR" ? "21 de ago. de 2026, 20:55" : "21 Aug 2026, 20:55");
     assert.equal(budget, budgets[locale === "pt-BR" ? "pt-BR" : "en-GB"][7]);
     assert.equal(domain.formatTouchlineFantasyDeadline("2026-08-21T19:55:00Z", locale), deadline);
-    assert.equal(domain.formatTouchlineFantasyMarketValue(900_000_000, locale), budget);
+    assert.equal(domain.formatTouchlineFantasyMarketValue(500_000_000, locale), budget);
   }
   for (const locale of locales.slice(2)) assert.equal(isTouchLineLocaleComplete(locale), false);
 });
@@ -127,7 +127,7 @@ test("winter/summer, both DST boundaries, midnight and explicit-offset equivalen
 
 test("all eight review budgets preserve EUR, original numbers, compact precision threshold and native error-value presentation", () => {
   const actual = fixture(true);
-  for (const locale of locales) for (const [value, precision] of [[0, 2], [-1_250_000, 2], [9_999_999, 2], [10_000_000, 1], [900_000_000, 1], [NaN, 1], [Infinity, 1], [-Infinity, 2]]) {
+  for (const locale of locales) for (const [value, precision] of [[0, 2], [-1_250_000, 2], [9_999_999, 2], [10_000_000, 1], [500_000_000, 1], [NaN, 1], [Infinity, 1], [-Infinity, 2]]) {
     actual.numbers.length = 0;
     const output = actual.api.formatTouchlineFantasyMarketValue(value, locale);
     const [call] = actual.numbers;
@@ -153,7 +153,7 @@ const clockJavaScript = ts.transpileModule(`${clockNode.getText(clientSource)}\n
 const metricsJavaScript = ts.transpileModule(`export const metrics = (${metricsNode.getText(clientSource)});`, { compilerOptions: options }).outputText;
 function renderConsumers(api: typeof domain, locale: string, remaining: number | null) {
   const exports: Record<string, unknown> = {};
-  const snapshot = { config: { budgetEur: 900_000_000 }, gameweekScore: 0, seasonScore: 12.34 };
+  const snapshot = { config: { budgetEur: 500_000_000 }, gameweekScore: 0, seasonScore: 12.34 };
   const validation = { budgetRemainingEur: remaining };
   const before = JSON.stringify({ snapshot, validation });
   const clock = { number: 1, state: "MARKET_OPEN", marketOpensAt: "2026-08-01T00:00:00Z", locksAt: "2026-08-21T19:55:00Z" };

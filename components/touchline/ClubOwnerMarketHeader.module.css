@@ -11,9 +11,11 @@
 .profile { padding: clamp(20px,2.5vw,34px); }
 .profile[data-cover-preview] { --cover-accent: #e7cf91; --cover-rgb: 190,157,82; background: radial-gradient(ellipse at 100% 0,rgba(var(--cover-rgb),.14),transparent 68%),radial-gradient(ellipse at 0 0,rgba(163,255,18,.07),transparent 58%),linear-gradient(135deg,#111f1a,#060f0c); }
 .header:has(> [data-plan-preview="standard"]) .profile { --cover-accent: #d2dce5; --cover-rgb: 156,178,190; }
+.header:has(> [data-plan-preview="beta"]) .profile { --cover-accent: #61c7ff; --cover-rgb: 97,199,255; }
 .header:has(> [data-plan-preview="master"]) .profile { --cover-accent: #a5e4b6; --cover-rgb: 111,191,143; }
 .header:has(> [data-plan-preview="vip"]) .profile { --cover-accent: #d5b4f6; --cover-rgb: 162,116,206; }
 .profile [data-profile-tier] { display: none; }
+.header:has(> [data-plan-preview="beta"]) [data-profile-tier="beta"],
 .header:has(> [data-plan-preview="standard"]) [data-profile-tier="standard"],
 .header:has(> [data-plan-preview="pro"]) [data-profile-tier="pro"],
 .header:has(> [data-plan-preview="master"]) [data-profile-tier="master"],
@@ -35,6 +37,7 @@
 .details h2 { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 7px 0 16px; color: #f2f9ec; font-size: clamp(22px,2.2vw,30px); line-height: 1.15; overflow-wrap: anywhere; }
 .proBadge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 7px; border: 1px solid rgba(236,202,93,.62); border-radius: 999px; color: #ffeaa0; background: linear-gradient(105deg,rgba(107,65,8,.42) 0%,rgba(236,169,30,.52) 20%,rgba(255,248,201,.54) 42%,rgba(255,205,70,.5) 58%,rgba(125,75,10,.42) 78%,rgba(255,241,169,.5) 100%); background-size: 260% 100%; box-shadow: inset 0 1px rgba(255,255,255,.28),0 0 16px rgba(235,190,58,.22); font-size: 10px; font-weight: 900; letter-spacing: .1em; line-height: 1; white-space: nowrap; animation: clubOwnerGoldSweep 7s linear infinite; }
 .standardBadge { border-color: rgba(210,220,229,.62); color: #f0f4f8; background: linear-gradient(135deg,rgba(119,136,151,.38),rgba(51,62,72,.3)); background-size: auto; box-shadow: inset 0 1px rgba(255,255,255,.24),0 0 16px rgba(207,220,232,.13); animation: none; }
+.betaBadge { border-color: rgba(97,199,255,.62); color: #edf8ff; background: linear-gradient(135deg,rgba(97,199,255,.22),rgba(19,39,52,.4)); background-size: auto; box-shadow: inset 0 1px rgba(255,255,255,.24); animation: none; }
 .facts { display: flex; flex-wrap: wrap; gap: 14px 25px; margin: 0 0 20px; }
 .facts div { min-width: 0; }
 .facts dt { color: #a0b0a5; font-size: 11px; }

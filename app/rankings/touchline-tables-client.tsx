@@ -195,7 +195,7 @@ export default function TouchLineTablesClient({ canEditCardEngine, copy, locale,
               <span>{copy.seasonSelectionRule}</span>
             </div>
 
-            {selection ? <><TouchlinePitchSurface className={styles.pitch} ariaLabel={copy.seasonSelection} surfaceVariant="premium-stadium">
+            {selection ? <><TouchlinePitchSurface className={styles.pitch} ariaLabel={copy.seasonSelection} surfaceVariant="smoked-glass">
               {selection.map(({ slot, card }) => {
                 const point = touchlineTopElevenBroadcastPoint(slot);
                 // An unknown role must not be projected onto a live card and

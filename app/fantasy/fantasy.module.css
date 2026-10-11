@@ -169,6 +169,11 @@
 .clubSelector>button[aria-pressed=true]{border-color:rgba(170,255,62,.72);background:rgba(170,255,62,.11);box-shadow:inset 0 0 0 1px rgba(170,255,62,.08)}
 .clubSelector>button img{display:block;width:34px;height:34px;object-fit:contain;filter:drop-shadow(0 3px 4px rgba(0,0,0,.42))}
 .clubSelector>button>span{font-size:.46rem;font-weight:900}
+.clubSelector>button[data-market-club-locked]{position:relative;cursor:not-allowed}
+.clubSelector>button[data-market-club-locked] img{opacity:.5;filter:grayscale(.6)}
+.clubSelector .clubPlanLock{position:absolute;right:3px;bottom:3px;color:#e1e8e3;background:#07130d;border-radius:4px;padding:2px;box-sizing:content-box}
+.marketPlanNotice{display:flex;grid-column:1/-1;align-items:center;justify-content:center;gap:8px;margin:0;padding:12px;text-align:center;overflow-wrap:anywhere}
+.marketPlanNotice svg{flex:0 0 auto}
 .selectionStage{display:flex;min-height:0;flex:1;flex-direction:column}
 .selectionStage>header{flex:0 0 auto}
 .selectionStage>header>span{color:var(--lime);font-size:.65rem;font-weight:900;letter-spacing:.16em}
@@ -230,6 +235,12 @@
 .actionRail button:disabled{cursor:not-allowed;opacity:.42}
 .actionRail svg{width:17px}
 .feedback{margin:0;padding:11px 14px;border-left:3px solid var(--lime);color:#d9e3de;background:#0b1a14}
+.budgetNotice{display:grid;gap:12px;grid-column:1/-1;min-width:0;padding:16px;border:1px solid rgba(255,202,99,.45);border-radius:14px;background:rgba(65,44,7,.32);color:#ffe7b5}
+.budgetNotice strong{font-size:1rem;line-height:1.4}.budgetNotice p{margin:7px 0 0;font-size:.88rem;line-height:1.6}
+.budgetComparison{min-width:0}.budgetComparison>summary{width:fit-content;max-width:100%;cursor:pointer;list-style:none}.budgetComparison>summary::-webkit-details-marker{display:none}.budgetComparison>summary:focus-visible{outline:2px solid var(--lime);outline-offset:3px}.budgetComparison[open]>p{margin-bottom:14px}
+.myClubMarketResults article[data-market-budget-locked=true],.playerGrid article[data-market-budget-locked=true]{border-color:#987c48;box-shadow:inset 0 0 0 1px rgba(255,202,99,.2),0 8px 20px rgba(0,0,0,.3)}
+.myClubMarketResults article button[aria-disabled=true],.playerGrid article button[aria-disabled=true]{display:inline-flex;align-items:center;justify-content:center;gap:6px;color:#ffe7b5;border-color:#987c48;background:#302916;box-shadow:none;cursor:not-allowed;opacity:1}
+.myClubMarketResults article button[aria-disabled=true]:focus-visible,.playerGrid article button[aria-disabled=true]:focus-visible{outline:2px solid #ffe7b5;outline-offset:3px}
 .alertPanel{display:flex;align-items:flex-start;gap:13px;padding:16px 18px;border:1px solid rgba(255,156,94,.4);border-radius:15px;background:rgba(59,22,12,.72)}
 .alertPanel>svg{color:#ff9c5e}
 .alertPanel p{margin:4px 0 0;color:#dfc8bc}

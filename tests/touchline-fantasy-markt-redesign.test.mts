@@ -19,7 +19,7 @@ test("Market reuses the Gameweek transaction boundary and legacy Fantasy forward
   ]);
   assert.match(market, /<FantasyGameweekClient[^>]*initialSnapshot=\{snapshot\} locale=\{locale\} liveTimeZone=\{liveTimeZone\} draftLocalesEnabled=\{draftLocalesEnabled\} embedded marketPage/);
   assert.match(client, /initialPlayerClubTeamId\?: string \| null/);
-  assert.match(client, /TOUCHLINE_ENGLAND_CLUBS_BY_RANK\.some\(\(club\) => club\.teamId === initialPlayerClubTeamId\)/);
+  assert.match(client, /initialMarketClub\(initialPlayerClubTeamId, initialSnapshot\?\.marketAccess\)/);
   assert.doesNotMatch(market, /standaloneMarket|<ArenaClient/);
   assert.match(alias, /redirect\(`\/clubowner\?lang=\$\{encodeURIComponent\(locale\)\}`\)/);
   assert.match(client, /selectedCoachId/);
@@ -99,7 +99,7 @@ test("the My Club presentation keeps the guided coach-first Gameweek flow", asyn
   assert.match(styles, /@media\(max-width:760px\)\{[\s\S]*?\.guidePanel\{[\s\S]*?max-height:min\(680px,72dvh\)/);
   assert.doesNotMatch(styles, /\.guidePanel\{[\s\S]*?max-height:min\(760px,calc\(100dvh - 32px\)\)/);
   assert.match(styles, /\.pitchCard\{[\s\S]*?width:62px[\s\S]*?aspect-ratio:430 \/ 691/);
-  assert.match(client, /className=\{styles\.myClubTacticalPitch\}[\s\S]*?orientation="horizontal"[\s\S]*?surfaceVariant=\{marketPage \? "smoked-glass" : "premium-stadium"\}/);
+  assert.match(client, /className=\{styles\.myClubTacticalPitch\}[\s\S]*?orientation="horizontal"[\s\S]*?surfaceVariant="smoked-glass"/);
   assert.match(client, /function horizontalMyClubPitchPosition[\s\S]*?left:[\s\S]*?slot\.x/);
   assert.match(styles, /\.myClubTacticalPitch\{[\s\S]*?--pitch-line:rgba\(170,255,62[\s\S]*?aspect-ratio:105\/68/);
   assert.match(styles, /@keyframes myClubPitchTrace/);
@@ -397,26 +397,23 @@ test("the customer owns club choice and every successful save is reloaded from t
   assert.match(rollback, /TL_FANTASY_CLUB_LIMIT_EXCEEDED/);
 });
 
-test("the existing Gameweek transaction owns the canonical €900M budget", async () => {
-  const [domain, server, client, migration, rollback] = await Promise.all([
+test("the Gameweek transaction uses current plan budgets and rejects accounts without a plan", async () => {
+  const [domain, server, client, policy, migration] = await Promise.all([
     source("lib/touchlineFantasy/domain.ts"),
     source("lib/touchlineFantasy/server.ts"),
     source("app/fantasy/FantasyGameweekClient.tsx"),
-    source("supabase/migrations/20260827062243_touchline_fantasy_budget_900m.sql"),
-    source("supabase/qa/033_touchline_qa_fantasy_budget_900m_rollback.sql"),
+    source("lib/touchlineFantasy/market-plan-policy.ts"),
+    source("supabase/migrations/20261011014000_touchline_fantasy_server_owned_plan_budgets.sql"),
   ]);
-  assert.match(domain, /TOUCHLINE_FANTASY_INITIAL_BUDGET_EUR = 900_000_000/);
-  assert.match(server, /budgetEur: number\(config\.budget_eur\) \?\? TOUCHLINE_FANTASY_INITIAL_BUDGET_EUR/);
-  assert.doesNotMatch(server, /budgetEur:[^\n]*350_000_000/);
-  assert.deepEqual([touchlineFantasyLineupErrorCopy("TL_FANTASY_BUDGET_EXCEEDED", "pt-BR"), touchlineFantasyLineupErrorCopy("TL_FANTASY_BUDGET_EXCEEDED", "en-GB")], ["Este time ultrapassa o orçamento de €900M.", "This team exceeds the €900M budget."]);
+  assert.match(domain, /TOUCHLINE_FANTASY_INITIAL_BUDGET_EUR = 500_000_000/);
+  assert.match(server, /resolveTouchlineFantasyMarketAccess\(entitlement\?\.plan_key\)/);
+  assert.match(policy, /planKey === "standard" \? 500_000_000/);
+  assert.match(policy, /planKey === "pro" \? 1_000_000_000/);
+  assert.match(policy, /planKey === "master" \? 2_000_000_000/);
+  assert.deepEqual([touchlineFantasyLineupErrorCopy("TL_FANTASY_BUDGET_EXCEEDED", "pt-BR"), touchlineFantasyLineupErrorCopy("TL_FANTASY_BUDGET_EXCEEDED", "en-GB")], ["Este time ultrapassa o orçamento do seu plano.", "This team exceeds your plan's budget."]);
   assert.match(client, /return touchlineFantasyLineupErrorCopy\(code, locale, draftLocalesEnabled\)/);
   assert.match(client, /if \(!response\.ok\) return setFeedback\(lineupErrorCopy\(String\(payload\?\.error \?\? ""\), locale, draftLocalesEnabled\)\)/);
-  assert.match(client, /orçamento permanece em €900M/);
-  assert.doesNotMatch(client, /€350M/);
-  assert.match(migration, /touchline_assert_qa_fixture_target\('xgxbwqxjssxxuihuwmgy'\)/);
-  assert.match(migration, /set budget_eur = 900000000/);
-  assert.match(migration, /set budget_eur_snapshot = 900000000/);
-  assert.match(migration, /state in \('DRAFT', 'CONFIRMED'\)/);
-  assert.match(rollback, /set budget_eur = 350000000/);
-  assert.match(rollback, /set budget_eur_snapshot = 350000000/);
+  assert.match(migration, /TL_FANTASY_PLAN_INVALID/);
+  assert.doesNotMatch(policy, /900_000_000/);
+  assert.doesNotMatch(policy, /if \(access === undefined\) return true/);
 });

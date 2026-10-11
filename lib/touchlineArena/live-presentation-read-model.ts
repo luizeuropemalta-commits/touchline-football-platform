@@ -26,6 +26,14 @@ export type TouchlineLivePresentationInput = Readonly<{
   }>[];
 }>;
 
+export type TouchlinePublishedLivePresentationInput = TouchlineLivePresentationInput & Readonly<{
+  snapshotId: string;
+  contentDigest: string;
+  publishedAt: string;
+  liveScoreSnapshotDigest: string;
+  liveScorePayload: Readonly<Record<string, unknown>>;
+}>;
+
 function text(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
@@ -161,4 +169,107 @@ export async function readTouchlineLivePresentationInput(
     coachRankingFixtureIds: coach.fixtureIds,
     fixtures,
   };
+}
+
+function snapshotIdentity(value: unknown) {
+  const candidate = text(value);
+  return candidate && /^[0-9a-f]{8}-[0-9a-f-]{27,36}$/i.test(candidate) ? candidate : null;
+}
+
+function parsePublishedPayload(value: unknown): (TouchlineLivePresentationInput & {
+  liveScoreSnapshotDigest: string;
+  liveScorePayload: Readonly<Record<string, unknown>>;
+}) | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const candidate = value as Record<string, unknown>;
+  if (candidate.version !== 1 || candidate.scopeKey !== LEAGUE_KEY
+    || !timestamp(candidate.windowStart)
+    || !Array.isArray(candidate.fixtures) || candidate.fixtures.length > MAX_FIXTURES) return null;
+
+  const fixtures = candidate.fixtures.flatMap((value) => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return [];
+    const row = value as Record<string, unknown>;
+    const fixtureId = officialFixtureId(row.fixtureId);
+    if (!fixtureId || (row.startsAt !== null && !timestamp(row.startsAt))
+      || (row.status !== null && typeof row.status !== "string")) return [];
+    return [{ fixtureId, startsAt: timestamp(row.startsAt), status: text(row.status) }];
+  });
+  if (fixtures.length !== candidate.fixtures.length) return null;
+  const playerRankingSnapshotId = candidate.playerRankingSnapshotId === null
+    ? null
+    : text(candidate.playerRankingSnapshotId);
+  const coachRankingSnapshotId = candidate.coachRankingSnapshotId === null
+    ? null
+    : text(candidate.coachRankingSnapshotId);
+  const liveScoreSnapshotDigest = text(candidate.liveScoreSnapshotDigest);
+  const liveScorePayload = candidate.liveScorePayload;
+  if ((playerRankingSnapshotId && playerRankingSnapshotId.length > 128)
+    || (coachRankingSnapshotId && coachRankingSnapshotId.length > 128)
+    || !liveScoreSnapshotDigest || !/^[0-9a-f]{32}$/.test(liveScoreSnapshotDigest)
+    || !liveScorePayload || typeof liveScorePayload !== "object" || Array.isArray(liveScorePayload)) return null;
+  const score = liveScorePayload as Record<string, unknown>;
+  if (!timestamp(score.fetchedAt) || !Array.isArray(score.fixtures) || score.fixtures.length > MAX_FIXTURES) return null;
+
+  return {
+    playerRankingSnapshotId,
+    playerRankingFixtureIds: ids(candidate.playerRankingFixtureIds),
+    coachRankingSnapshotId,
+    coachRankingFixtureIds: ids(candidate.coachRankingFixtureIds),
+    fixtures,
+    liveScoreSnapshotDigest,
+    liveScorePayload: score,
+  };
+}
+
+/**
+ * Read the atomic pointer first, then its immutable payload. A concurrent
+ * publication cannot mix fixture data with a different ranking revision.
+ * Null means no publication exists yet; unreadable or invalid publications
+ * throw so callers cannot confuse corruption with legacy compatibility.
+ */
+export async function readPublishedTouchlineLivePresentationInput(
+  admin: SupabaseClient,
+): Promise<TouchlinePublishedLivePresentationInput | null> {
+  const { data: pointer, error: pointerError } = await admin
+    .from("touchline_live_presentation_active_snapshots")
+    .select("snapshot_id")
+    .eq("scope_key", LEAGUE_KEY)
+    .maybeSingle();
+  queryFailed(pointerError, "published snapshot pointer");
+  if (!pointer) return null;
+  const snapshotId = snapshotIdentity(pointer?.snapshot_id);
+  if (!snapshotId) throw new Error("TouchLine live presentation published snapshot pointer is invalid.");
+
+  const { data: snapshot, error } = await admin
+    .from("touchline_live_presentation_snapshots")
+    .select("id,scope_key,content_digest,payload,created_at")
+    .eq("id", snapshotId)
+    .eq("scope_key", LEAGUE_KEY)
+    .maybeSingle();
+  queryFailed(error, "published snapshot");
+  if (snapshotIdentity(snapshot?.id) !== snapshotId
+    || snapshot?.scope_key !== LEAGUE_KEY
+    || !/^[0-9a-f]{32}$/.test(text(snapshot?.content_digest) ?? "")) {
+    throw new Error("TouchLine live presentation published snapshot is invalid.");
+  }
+  const input = parsePublishedPayload(snapshot?.payload);
+  const publishedAt = timestamp(snapshot?.created_at);
+  if (!input || !publishedAt) throw new Error("TouchLine live presentation published snapshot payload is invalid.");
+  return { ...input, snapshotId, contentDigest: String(snapshot.content_digest), publishedAt };
+}
+
+/** Called only after the guarded sync path has persisted its canonical writes. */
+export async function publishTouchlineLivePresentationSnapshot(admin: SupabaseClient) {
+  const { data, error } = await admin.rpc("touchline_live_presentation_publish_current");
+  queryFailed(error, "snapshot publication");
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    throw new Error("TouchLine live presentation snapshot publication returned an invalid result.");
+  }
+  const result = data as Record<string, unknown>;
+  if (!snapshotIdentity(result.snapshotId)
+    || !/^[0-9a-f]{32}$/.test(text(result.contentDigest) ?? "")
+    || !parsePublishedPayload(result.payload)) {
+    throw new Error("TouchLine live presentation snapshot publication returned an invalid result.");
+  }
+  return { snapshotId: String(result.snapshotId), contentDigest: String(result.contentDigest) };
 }

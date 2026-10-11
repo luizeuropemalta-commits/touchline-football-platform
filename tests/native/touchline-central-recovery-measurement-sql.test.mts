@@ -41,6 +41,18 @@ test('operator recovery measures once, reconciles safely, preserves failures and
     await db.exec('create role anon; create role authenticated; create role service_role;');
     for (const name of ['20261002152457_touchline_fixture_quota_authority.sql', '20261003233637_touchline_sportmonks_prequery_authority.sql', '20261008120529_touchline_squad_quota_prequery_authority.sql', '20261009110825_touchline_squad_quota_reserve_admission.sql']) await db.exec(sql(`migrations/${name}`));
     for (const name of ['013_touchline_central_quota_ownership.sql', '014_touchline_central_entity_policy.sql', '015_touchline_central_recovery_cases.sql', '016_touchline_central_recovery_prepare.sql', '017_touchline_central_recovery_measurement.sql']) await db.exec(sql(`qa/${name}`));
+    const completeSignature = 'touchline_quota_private.touchline_fixture_quota_complete(text,uuid,text,integer,uuid,jsonb)';
+    await db.exec('create role touchline_quota_test_owner nologin');
+    await db.exec(`alter function ${completeSignature} owner to touchline_quota_test_owner`);
+    await assert.rejects(db.exec(sql('qa/018_touchline_central_recovery_key_order.sql')), /TL_CENTRAL_RECOVERY_KEY_ORDER_PREIMAGE_MISMATCH/, 'do not preserve a drifted SECURITY DEFINER owner');
+    await db.exec('rollback');
+    await db.exec(`alter function ${completeSignature} owner to postgres`);
+    await db.exec('drop role touchline_quota_test_owner');
+    await db.exec(`grant execute on function ${completeSignature} to authenticated`);
+    await assert.rejects(db.exec(sql('qa/018_touchline_central_recovery_key_order.sql')), /TL_CENTRAL_RECOVERY_KEY_ORDER_PREIMAGE_MISMATCH/, 'do not preserve a drifted executable grant');
+    await db.exec('rollback');
+    await db.exec(`revoke execute on function ${completeSignature} from authenticated`);
+    await db.exec(sql('qa/018_touchline_central_recovery_key_order.sql'));
     const happy = await seed('happy', ['team', 'latest']), request = randomUUID();
     for (const role of ['anon', 'authenticated', 'service_role']) {
       await db.exec(`set role ${role}`);

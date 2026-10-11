@@ -6,6 +6,7 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import ts from "typescript";
 import { TOUCHLINE_CLUB_OWNER_MARKET_CATALOGUES as headerCopy, getTouchlineClubOwnerMarketCopy } from "../lib/touchlineArena/club-owner-market-i18n.ts";
+import { getClubOwnerPlanShowcaseCopy } from "../lib/touchlineArena/club-owner-plan-showcase.ts";
 import { TOUCHLINE_FANTASY_MARKET_STATE_CATALOGUES as stateCopy, getTouchlineFantasyMarketStateCopy } from "../lib/touchlineFantasy/market-state-i18n.ts";
 import { isTouchLineLocaleComplete } from "../lib/touchlineArena/i18n.ts";
 
@@ -77,10 +78,12 @@ test("real market-power accessible label retains TouchLine Credits across locale
   const expression = initializer.expression.getText(tree);
   for (const locale of locales) {
     const copy = headerCopy[locale];
+    const labels = getClubOwnerPlanShowcaseCopy(locale);
     for (const marketPower of [0, 121_000_000]) {
-      assert.equal(runInNewContext(expression, { copy, marketPower }), `${copy.marketPower} ${marketPower} TouchLine Credits`);
+      assert.equal(runInNewContext(expression, { copy, labels, marketPower, unlimited: false }), `${copy.marketPower} ${marketPower} TouchLine Credits`);
     }
-    assert.equal(runInNewContext(expression, { copy, marketPower: null }), copy.marketPowerUnavailable);
+    assert.equal(runInNewContext(expression, { copy, labels, marketPower: null, unlimited: false }), copy.marketPowerUnavailable);
+    assert.equal(runInNewContext(expression, { copy, labels, marketPower: null, unlimited: true }), `${copy.marketPower}: ${labels.unlimited}`);
   }
 });
 

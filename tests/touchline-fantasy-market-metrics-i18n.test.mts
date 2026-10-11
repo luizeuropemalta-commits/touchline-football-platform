@@ -91,7 +91,7 @@ function consumer() {
       const element = runInNewContext(javascript, {
         React, styles: { ownerSummary: "ownerSummary" }, formatTouchlineFantasyMarketValue,
         marketPage: true, locale: "en-GB", draftLocalesEnabled: false, pt: false, live: null, validation: null,
-        snapshot: { config: { budgetEur: 900_000_000 }, gameweekScore: 12.34, seasonScore: 98.76 },
+        snapshot: { config: { budgetEur: 500_000_000 }, gameweekScore: 12.34, seasonScore: 98.76 },
         getTouchlineFantasyMarketMetricsCopy: getCopy,
         Link: function LinkBoundary(props: React.ComponentProps<"a">) { return React.createElement("a", props); },
         ...input,
@@ -133,9 +133,9 @@ test("real points metrics preserve live zero, nullish snapshot fallback and igno
   const mod = await load(); const actual = consumer();
   const scenarios = [
     { live: { gameweekScore: 0, seasonScore: 0 }, validation: { budgetRemainingEur: 0 }, expected: [0, 0, 0] },
-    { live: { gameweekScore: null, seasonScore: undefined }, validation: { budgetRemainingEur: null }, expected: [900_000_000, 12.34, 98.76] },
+    { live: { gameweekScore: null, seasonScore: undefined }, validation: { budgetRemainingEur: null }, expected: [500_000_000, 12.34, 98.76] },
     { live: { gameweekScore: -1.25, seasonScore: 234.567 }, validation: { budgetRemainingEur: 123_000_000 }, expected: [123_000_000, -1.25, 234.57] },
-    { live: null, validation: null, expected: [900_000_000, 12.34, 98.76] },
+    { live: null, validation: null, expected: [500_000_000, 12.34, 98.76] },
   ];
   for (const locale of ["en-GB", "pt-BR"] as const) {
     for (const scenario of scenarios) {

@@ -21,7 +21,7 @@ test('one-shot executor sees committed native lease before synthetic HTTP and pe
     assert.notEqual((await operatorDb.query('select pg_backend_pid() pid')).rows[0].pid, (await observerDb.query('select pg_backend_pid() pid')).rows[0].pid);
     await operatorDb.exec('create role anon; create role authenticated; create role service_role;');
     for (const name of ['20261002152457_touchline_fixture_quota_authority.sql', '20261003233637_touchline_sportmonks_prequery_authority.sql', '20261008120529_touchline_squad_quota_prequery_authority.sql', '20261009110825_touchline_squad_quota_reserve_admission.sql']) await operatorDb.exec(source(`migrations/${name}`));
-    for (const name of ['013_touchline_central_quota_ownership.sql', '014_touchline_central_entity_policy.sql', '015_touchline_central_recovery_cases.sql', '016_touchline_central_recovery_prepare.sql', '017_touchline_central_recovery_measurement.sql']) await operatorDb.exec(source(`qa/${name}`));
+    for (const name of ['013_touchline_central_quota_ownership.sql', '014_touchline_central_entity_policy.sql', '015_touchline_central_recovery_cases.sql', '016_touchline_central_recovery_prepare.sql', '017_touchline_central_recovery_measurement.sql', '018_touchline_central_recovery_key_order.sql']) await operatorDb.exec(source(`qa/${name}`));
     for (const mode of ['success', 'throttle', 'lost-admit', 'lost-complete', 'oversized'] as const) {
       const pending = randomUUID(), token = randomUUID();
       await operatorDb.query('insert into public.touchline_fixture_quota_scopes(account_scope,enabled,blocked_unknown,active_token,active_until) values($1,false,true,$2,$3)', [mode, token, past(60)]);

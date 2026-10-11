@@ -26,7 +26,8 @@ test("slot player chooser also uses its published tier without changing selectio
   assert.match(chooser, /data-choice-tier-frame=\{card\.editorialCard\?\.tierKey \?\? "unresolved"\}/);
   assert.match(chooser, /TouchlineClubPerimeterTrace accent=\{card\.editorialCard\?\.tierKey/);
   assert.match(chooser, /displayWidth=\{132\} fitContainer/);
-  assert.match(chooser, /disabled=\{!editable\} onClick=\{\(\) => addPlayer\(card\)\}/);
+  assert.match(chooser, /disabled=\{!editable \|\| saving\} aria-disabled=\{overBudget \|\| undefined\}/);
+  assert.match(chooser, /onClick=\{\(\) => addPlayer\(card\)\}/);
 });
 
 test("canonical market frames reuse tier perimeter without changing selection controls", () => {

@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isOfficialSportmonksFixtureId } from "@/lib/football-data/fixture-schedule-store";
+import { readPublishedTouchlineLivePresentationInput } from "@/lib/touchlineArena/live-presentation-read-model";
 import type { TouchlineFixture } from "@/lib/football-data/types";
 
 const SNAPSHOT_KEY = "touchline-england-live";
@@ -33,15 +34,28 @@ function parseSnapshot(value: unknown): PersistedLiveScoreSnapshot | null {
 export async function readPersistedLiveScoreSnapshot(options: { maxAgeMs?: number; now?: number } = {}) {
   const admin = createAdminClient();
   if (!admin) return null;
+  // Prefer the immutable shared revision so Live fixture scores/events and
+  // its player/coach/fixture pointers are read from one published contract.
+  // Only a verified absence of the first publication permits compatibility
+  // reads. A failed or malformed publication read must not expose newer
+  // mutable input which has not passed the shared publication gate.
+  let payload: unknown = null;
+  try {
+    payload = (await readPublishedTouchlineLivePresentationInput(admin))?.liveScorePayload ?? null;
+  } catch {
+    return null;
+  }
+  if (!payload) {
+    const { data, error } = await admin
+      .from("football_live_snapshots")
+      .select("payload, fetched_at, updated_at")
+      .eq("snapshot_key", SNAPSHOT_KEY)
+      .maybeSingle();
+    if (error || !data) return null;
+    payload = data.payload;
+  }
 
-  const { data, error } = await admin
-    .from("football_live_snapshots")
-    .select("payload, fetched_at, updated_at")
-    .eq("snapshot_key", SNAPSHOT_KEY)
-    .maybeSingle();
-  if (error || !data) return null;
-
-  const parsed = parseSnapshot(data.payload);
+  const parsed = parseSnapshot(payload);
   if (!parsed) return null;
   const now = options.now ?? Date.now();
   const maxAgeMs = options.maxAgeMs ?? 5 * 60 * 1000;

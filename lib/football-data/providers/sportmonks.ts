@@ -170,7 +170,7 @@ export class SportmonksFootballProvider implements FootballDataProvider {
   readonly name = "sportmonks" as const;
   private readonly fixtureGuard: SportmonksFixtureGuard | null | undefined;
 
-  constructor(options?: Readonly<{ fixtureGuard?: SportmonksFixtureGuard }>) {
+  constructor(options?: Readonly<{ fixtureGuard?: SportmonksFixtureGuard | null }>) {
     // undefined is legacy; null records an explicitly invalid binding permanently.
     if (options === undefined || options && !Object.hasOwn(options, "fixtureGuard")) {
       this.fixtureGuard = undefined;

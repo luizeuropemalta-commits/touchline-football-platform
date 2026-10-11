@@ -15,9 +15,9 @@ function row(route: string) {
 }
 
 test("inventories every page, API method, proxy, metadata route, and error boundary", () => {
-  assert.equal(rows.filter((item) => item.kind === "PAGE").length, 71);
+  assert.equal(rows.filter((item) => item.kind === "PAGE").length, 72);
   assert.equal(rows.some((item) => item.route === "/visual-qa/arena-main-field"), false);
-  assert.equal(rows.filter((item) => item.kind === "API").length, 95);
+  assert.equal(rows.filter((item) => item.kind === "API").length, 100);
   assert.equal(rows.filter((item) => item.kind === "BOUNDARY").length, 7);
   assert.equal(rows.filter((item) => item.kind === "METADATA").length, 3);
   assert.equal(rows.filter((item) => item.kind === "PROXY").length, 1);

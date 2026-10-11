@@ -65,3 +65,19 @@ export const TOUCHLINE_FANTASY_MARKET_ACCESS_CATALOGUES = {
 export function getTouchlineFantasyMarketAccessCopy(locale?: string | null, draftLocalesEnabled = false): TouchlineFantasyMarketAccessCopy {
   return TOUCHLINE_FANTASY_MARKET_ACCESS_CATALOGUES[resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled)];
 }
+
+/** Market-only plan restriction. Public club pages and coaches are unrestricted. */
+export const TOUCHLINE_FANTASY_MARKET_PLAN_LOCK_COPY = {
+  "en-GB": "Available on Standard or above",
+  "pt-BR": "Disponível no Standard ou superior",
+  "es-ES": "Disponible con Standard o superior",
+  "it-IT": "Disponibile con Standard o superiore",
+  "fr-FR": "Disponible avec Standard ou une offre supérieure",
+  "ar-SA": "متاح في خطة Standard أو أعلى",
+  "tr-TR": "Standard veya üzeri planda kullanılabilir",
+  "de-DE": "Mit Standard oder höher verfügbar",
+} as const satisfies Readonly<Record<TouchLineLocale, string>>;
+
+export function getTouchlineFantasyMarketPlanLockCopy(locale?: string | null, draftLocalesEnabled = false) {
+  return TOUCHLINE_FANTASY_MARKET_PLAN_LOCK_COPY[resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled)];
+}

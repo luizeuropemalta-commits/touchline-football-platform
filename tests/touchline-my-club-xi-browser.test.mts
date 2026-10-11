@@ -16,6 +16,8 @@ import { touchlineMarketPositionBucket, type TouchlineRosterRole } from "../lib/
 import type { TouchlineCoach } from "../lib/football-data/types.ts";
 import type { TouchlineFantasySnapshot } from "../lib/touchlineFantasy/server.ts";
 import { resolvePlayerAvailabilityBadge } from "../lib/touchlineArena/player-availability-badge.ts";
+import { getTouchlineFantasyMarketBudgetCopy } from "../lib/touchlineFantasy/market-budget-i18n.ts";
+import { isTouchlineFantasyMarketAccess } from "../lib/touchlineFantasy/market-plan-policy.ts";
 
 // Finite, opt-in DOM proof only. No server, credentials, real account, provider,
 // DB, Next build or remote assets. All requests are fulfilled/aborted locally.
@@ -72,10 +74,12 @@ function fixtureSnapshot(locked = false): TouchlineFantasySnapshot {
   const valid = validateTouchlineFantasyLineup({ selections, geometry,
     players: catalogue.map(card => ({ playerId: card.id, clubId: card.clubName, marketValueEur: 1_000_000,
       positionBucket: touchlineMarketPositionBucket(card.position, card.role as TouchlineRosterRole) as Exclude<ReturnType<typeof touchlineMarketPositionBucket>, "outfield"> })),
-    budgetEur: 900_000_000, maxPlayersPerClub: 11, requireComplete: true });
+    budgetEur: 500_000_000, maxPlayersPerClub: 11, requireComplete: true });
   assert.equal(valid.valid, true, "synthetic fixture must satisfy the real eligibility validator before mounting");
-  return { userId: "synthetic-local-owner", entitlementActive: true, subscription: { amountMinor: 2990, currency: "GBP" },
-    config: { budgetEur: 900_000_000, maxPlayersPerClub: 11, lockOffsetMinutes: 0 }, gameweeks: [round], activeGameweek: round,
+  return { userId: "synthetic-local-owner", entitlementActive: true,
+    marketAccess: { planKey: "standard", budgetEur: 500_000_000, allowedClubTeamIds: null },
+    plan: { active: true, expiresAt: null },
+    config: { budgetEur: 500_000_000, maxPlayersPerClub: 11, lockOffsetMinutes: 0 }, gameweeks: [round], activeGameweek: round,
     userGameweek: { id: "xi-fixture-lineup", formationCode: "4-3-3", state: "DRAFT", totalMarketValueEur: 11_000_000, carriedFromPrevious: false, selectedCoachId: coach.id },
     selections, catalogue, coaches: [{ id: coach.id, coach, slot: createTouchlineArenaCoachSlot(coach, null, "radiant-gold"),
       clubId: club.teamId, clubName: club.name, clubLogoUrl: null, countryCode3: "ENG", competition: null }],
@@ -84,6 +88,45 @@ function fixtureSnapshot(locked = false): TouchlineFantasySnapshot {
 }
 
 type Bundle = { script: string; css: string; sources: string[] };
+function exhaustedBetaSnapshot(): TouchlineFantasySnapshot {
+  const snapshot = fixtureSnapshot();
+  const betaClub = findTouchLineClub("22")!;
+  const selectedIds = new Set([...snapshot.selections.slice(0, 4), snapshot.selections.find(selection => selection.slotId === targetSlot.id)!].map(selection => selection.playerId));
+  const catalogue = snapshot.catalogue.map(card => ({ ...card, clubName: betaClub.name,
+    editorialCard: { ...card.editorialCard!, marketValueEur: card.id === "xi-replacement" ? 5_000_000 : 10_000_000 } }));
+  const expensive = catalogue.find(card => card.id === "xi-replacement")!;
+  catalogue.push({ ...expensive, id: "xi-expensive", canonicalPlayerId: "xi-expensive", name: "Synthetic Expensive", shortName: "Expensive",
+    editorialCard: { ...expensive.editorialCard!, marketValueEur: 11_000_000 } });
+  const selections = snapshot.selections.filter(selection => selectedIds.has(selection.playerId));
+  return { ...snapshot, marketAccess: { planKey: "beta", budgetEur: 50_000_000, allowedClubTeamIds: ["22", "117", "116", "52"] },
+    config: { ...snapshot.config, budgetEur: 50_000_000 }, catalogue, selections,
+    userGameweek: { ...snapshot.userGameweek!, totalMarketValueEur: 50_000_000 },
+    coaches: snapshot.coaches.map(entry => ({ ...entry, clubId: betaClub.teamId, clubName: betaClub.name,
+      coach: { ...entry.coach, teamId: betaClub.teamId } })) };
+}
+
+test("XI browser fixtures use recognized Standard 500M and exact Beta five-player 50M budgets", () => {
+  for (const [snapshot, expectedPlan, expectedTotal, expectedRemaining] of [
+    [fixtureSnapshot(), "standard", 11_000_000, 489_000_000],
+    [exhaustedBetaSnapshot(), "beta", 50_000_000, 0],
+  ] as const) {
+    assert.equal(isTouchlineFantasyMarketAccess(snapshot.marketAccess), true);
+    assert.equal(snapshot.marketAccess?.planKey, expectedPlan);
+    assert.equal(snapshot.entitlementActive, true);
+    assert.equal(snapshot.plan.active, true);
+    assert.equal(snapshot.config.budgetEur, snapshot.marketAccess?.budgetEur);
+    const validation = validateTouchlineFantasyLineup({ selections: snapshot.selections, geometry,
+      players: snapshot.catalogue.map(card => ({ playerId: card.canonicalPlayerId ?? card.id, clubId: card.clubName,
+        marketValueEur: card.editorialCard!.marketValueEur,
+        positionBucket: touchlineMarketPositionBucket(card.position, card.role as TouchlineRosterRole) as Exclude<ReturnType<typeof touchlineMarketPositionBucket>, "outfield"> })),
+      budgetEur: snapshot.marketAccess!.budgetEur, maxPlayersPerClub: 11, requireComplete: false });
+    assert.equal(validation.valid, true);
+    assert.equal(validation.totalMarketValueEur, expectedTotal);
+    assert.equal(validation.budgetRemainingEur, expectedRemaining);
+    assert.equal(snapshot.userGameweek?.totalMarketValueEur, expectedTotal);
+  }
+});
+
 function transpileFixtureModule(source: string, fileName: string) {
   return ts.transpileModule(source, { fileName, compilerOptions: {
     module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true,
@@ -241,8 +284,8 @@ function bundleProduct(): Bundle {
 type Mode = { locale: "en-GB" | "pt-BR"; touch: boolean; reduced: boolean };
 const modes: Mode[] = [{ locale: "en-GB", touch: false, reduced: false }, { locale: "pt-BR", touch: true, reduced: true }];
 type SaveRequest = { gameweekId: string; selectedCoachId: string; formationCode: string; selections: Array<{ playerId: string; slotId: string }>; action: string; idempotencyKey: string };
-async function openFixture(browser: Browser, bundle: Bundle, mode: Mode, options: { locked?: boolean; divergent?: boolean; indicators?: boolean } = {}) {
-  const snapshot = fixtureSnapshot(options.locked), initialSelections = JSON.stringify(snapshot.selections);
+async function openFixture(browser: Browser, bundle: Bundle, mode: Mode, options: { locked?: boolean; divergent?: boolean; indicators?: boolean; budgetExhausted?: boolean } = {}) {
+  const snapshot = options.budgetExhausted ? exhaustedBetaSnapshot() : fixtureSnapshot(options.locked), initialSelections = JSON.stringify(snapshot.selections);
   if (options.indicators) {
     const playerId = snapshot.selections[0].playerId;
     const badge = resolvePlayerAvailabilityBadge({ source: "sportmonks", fixtureId: "991", playerId,
@@ -298,7 +341,7 @@ async function openFixture(browser: Browser, bundle: Bundle, mode: Mode, options
     });
     let releaseSave: (() => void) | undefined, committed: SaveRequest | undefined, readsAfterSave = 0;
     const publicRoot = realpathSync(path.join(root, "public"));
-    const props = { initialSnapshot: snapshot, locale: mode.locale, embedded: true, marketPage: true, initialPlayerClubTeamId: club.teamId };
+    const props = { initialSnapshot: snapshot, locale: mode.locale, embedded: true, marketPage: true, initialPlayerClubTeamId: options.budgetExhausted ? "22" : club.teamId };
     const safeScript = (value: string) => value.replace(/<\/script/gi, "<\\/script");
     const html = `<!doctype html><html lang="${mode.locale}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
       *{box-sizing:border-box}body{margin:0;background:#020907;color:#f8fafc;font-family:Arial,sans-serif}button,input,select{font:inherit}#root{max-width:1440px;margin:auto;padding:16px}
@@ -351,9 +394,11 @@ async function openFixture(browser: Browser, bundle: Bundle, mode: Mode, options
     await page.goto(`${origin}/fixture`, { waitUntil: "domcontentloaded" });
     await expect(pitch).toBeVisible();
     await expect(pitch.locator("[data-touchline-pitch-surface]")).toHaveCount(1);
+    await expect(pitch.locator("[data-touchline-pitch-surface]")).toHaveAttribute("data-touchline-pitch-surface", "smoked-glass");
     // The coach now belongs to the pitch section but remains outside its playing
     // surface. Count the actual XI, not every card in the enclosing section.
-    await expect(pitch.locator('[data-touchline-pitch-surface] [data-touchline-card-zoom="trigger"]')).toHaveCount(11);
+    await expect(pitch.locator('[data-touchline-pitch-surface] [data-touchline-card-zoom="trigger"]')).toHaveCount(snapshot.selections.length);
+    if (process.env.TOUCHLINE_XI_CAPTURE_PREFIX) await pitch.screenshot({ path: `${process.env.TOUCHLINE_XI_CAPTURE_PREFIX}-${browser.browserType().name()}-${mode.locale}-${options.budgetExhausted ? "beta-budget" : options.locked ? "locked" : "open"}.png`, animations: "disabled" });
     console.log(`XI_FIXTURE_READY ${JSON.stringify({ engine: browser.browserType().name(), elapsedMs: Math.round(performance.now() - mountStartedAt), scriptBytes: Buffer.byteLength(bundle.script), cssBytes: Buffer.byteLength(bundle.css), mountPhases, resourceTiming })}`);
     return { page, snapshot, writes, errors, unexpected, pitch, list, confirm, removeName,
       setStateUnavailable(value: boolean) { stateUnavailable = value; },
@@ -631,6 +676,77 @@ async function openReplacement(fixture: Awaited<ReturnType<typeof openFixture>>,
   await expect(fixture.list).toBeFocused();
   assert.equal(fixture.writes.length, 0);
 }
+
+test("real Beta budget DOM: five players spend 50M, locks credit replacements and comparison never upgrades", {
+  skip: process.env.TOUCHLINE_XI_BUDGET_PROOF !== "1", timeout: 90_000,
+}, async t => {
+  const engineName = process.env.TOUCHLINE_XI_BUDGET_ENGINE ?? "chromium";
+  assert.ok(engineName === "chromium" || engineName === "webkit", "Unknown budget proof engine");
+  const bundle = bundleProduct();
+  const browser = await (engineName === "webkit" ? webkit : chromium).launch({ headless: true, timeout: 15_000 });
+  const abort = () => { void browser.close().catch(() => {}); };
+  t.signal.addEventListener("abort", abort, { once: true });
+  try {
+    for (const mode of modes) {
+      const h = await openFixture(browser, bundle, mode, { budgetExhausted: true });
+      try {
+        const copy = getTouchlineFantasyMarketBudgetCopy(mode.locale);
+        const notice = h.page.locator('[data-market-budget-notice="exhausted"]');
+        await expect(notice).toContainText(copy.exhausted);
+        await expect(h.pitch.locator("header strong")).toHaveText("5/11 · 4-3-3");
+        const unchangedUrl = h.page.url();
+        const comparison = notice.locator(":scope > details");
+        const comparisonToggle = comparison.locator(":scope > summary");
+        await expect(comparisonToggle).toHaveText(copy.compare);
+        await comparisonToggle.click();
+        await expect(comparison).toHaveAttribute("open", "");
+        await expect(notice.locator('[data-plan-state="inactive"]')).toBeVisible();
+        await expect(notice).toContainText(copy.previewOnly);
+        assert.equal(h.page.url(), unchangedUrl); assert.equal(h.writes.length, 0);
+        await comparisonToggle.click();
+
+        // An empty slot has no outgoing value to credit: even a 10M card locks.
+        const empty = geometry.slots.find(slot => !h.snapshot.selections.some(selection => selection.slotId === slot.id))!;
+        await activate(h.pitch.getByRole("button", { name: `${mode.locale === "pt-BR" ? "Escolher jogador" : "Choose player"} · ${empty.id}`, exact: true }), mode);
+        const emptyArticle = h.page.locator("#my-club-position-results article").filter({ has: h.page.locator("strong", { hasText: new RegExp(`^Synthetic ${empty.id} Player$`) }) });
+        const blocked = emptyArticle.getByRole("button", { name: copy.insufficient, exact: true });
+        await expect(blocked).toHaveAttribute("aria-disabled", "true");
+        await expect(emptyArticle).toHaveAttribute("data-market-budget-locked", "true");
+        // Playwright respects aria-disabled; dispatch a DOM activation to prove
+        // the production handler itself refuses it, not just the test driver.
+        await blocked.dispatchEvent("click");
+        await expect(h.pitch.locator("header strong")).toHaveText("5/11 · 4-3-3");
+        await expect(notice).toBeVisible(); assert.equal(h.writes.length, 0);
+
+        await openReplacement(h, mode);
+        const expensive = h.page.locator("#my-club-position-results article").filter({ has: h.page.locator("strong", { hasText: /^Synthetic Expensive$/ }) });
+        await expect(expensive.getByRole("button", { name: copy.insufficient })).toHaveAttribute("aria-disabled", "true");
+        const cheap = h.page.locator("#my-club-position-results article").filter({ has: h.page.locator("strong", { hasText: /^Synthetic Replacement$/ }) });
+        const cheaperSwap = cheap.getByRole("button", { name: `${mode.locale === "pt-BR" ? "Substituir" : "Replace"} · ${targetSlot.id}`, exact: true });
+        await expect(cheaperSwap).not.toHaveAttribute("aria-disabled", "true");
+        await activate(cheaperSwap, mode);
+        await expect(h.page.locator("[data-market-budget-notice]")).toHaveCount(0);
+        await expect(h.pitch.locator("header strong")).toHaveText("5/11 · 4-3-3");
+        await expect(h.pitch.getByRole("button", { name: /Synthetic Replacement/ })).toHaveCount(1);
+
+        // Removing the cheaper player releases 5M more, enabling the original
+        // 10M player without changing coach or issuing any automatic save.
+        await activate(h.pitch.getByRole("button", { name: /Synthetic Replacement/ }), mode);
+        const dialog = h.page.getByRole("dialog");
+        await expect(dialog.getByRole("button", { name: mode.locale === "pt-BR" ? "Fechar card" : "Close card", exact: true })).toBeFocused();
+        await activate(dialog.getByRole("button", { name: `${mode.locale === "pt-BR" ? "Remover" : "Remove"} · Synthetic Replacement`, exact: true }), mode);
+        await expect(dialog).toHaveCount(0);
+        await expect(h.pitch.locator("header strong")).toHaveText("4/11 · 4-3-3");
+        const original = h.snapshot.catalogue[geometry.slots.indexOf(targetSlot)];
+        const originalArticle = h.page.locator("#my-club-position-results article").filter({ has: h.page.locator("strong", { hasText: new RegExp(`^${original.name}$`) }) });
+        await activate(originalArticle.getByRole("button", { name: `${mode.locale === "pt-BR" ? "Escolher" : "Choose"} · ${targetSlot.id}`, exact: true }), mode);
+        await expect(h.pitch.locator("header strong")).toHaveText("5/11 · 4-3-3");
+        await expect(h.page.locator('[data-market-budget-notice="exhausted"]')).toBeVisible();
+        assert.equal(h.writes.length, 0); await h.assertClean();
+      } finally { await h.close(); }
+    }
+  } finally { t.signal.removeEventListener("abort", abort); await browser.close(); }
+});
 
 test("real XI indicator integration: geometry, tooltip, Arena and failed-read recovery", {
   skip: process.env.TOUCHLINE_XI_INDICATOR_PROOF !== "1", timeout: 55_000,

@@ -81,6 +81,28 @@ test("local Pro preview marks only the rendered sample, not the account entitlem
   assert.match(html, /data-profile-tier="pro"/);
 });
 
+test("real active VIP displays localized unlimited market power; null and inactive never imply VIP", async () => {
+  const copyModule = await loadCopy();
+  for (const { code } of TOUCHLINE_APPROVED_LOCALES) {
+    const labels = planShowcase.getClubOwnerPlanShowcaseCopy(code, true);
+    const real = { realUnlimited: true, remainingMarketPower: null, plan: { active: true, expiresAt: null }, draftLocalesEnabled: true };
+    const html = renderHeader(null, code, copyModule, real);
+    assert.match(html, /data-market-power-unlimited="true"/);
+    assert.ok(html.includes(`<strong>∞</strong><small>${labels.unlimited}</small>`));
+    for (const planPreview of ["standard", "pro"]) {
+      const preview = renderHeader(null, code, copyModule, { ...real, planPreview });
+      assert.match(preview, /data-plan-state="inactive"/);
+      assert.match(preview, /data-current-xi-unlimited="true"/);
+      assert.ok(preview.includes(`>∞ ${labels.unlimited}</dd>`));
+    }
+    for (const patch of [{ realUnlimited: false }, { plan: { active: false, expiresAt: null } }, { plan: null }]) {
+      const unknown = renderHeader(null, code, copyModule, { ...real, ...patch });
+      assert.doesNotMatch(unknown, /data-market-power-unlimited/);
+      assert.match(unknown, /<strong>—<\/strong>/);
+    }
+  }
+});
+
 test("ClubOwner keeps the green sweep on panels and restores the metallic effect on Pro", () => {
   const css = readFileSync(new URL("../components/touchline/ClubOwnerMarketHeader.module.css", import.meta.url), "utf8");
   assert.doesNotMatch(css, /\.proTier \.profile/);
@@ -195,8 +217,8 @@ function renderHeader(owner: Owner | null, locale: string, copyModule: Record<st
     if (name === "@/lib/touchlineArena/club-owner-market-i18n") return copyModule;
     if (name === "@/lib/touchlineArena/club-owner-profile-metrics") return profileMetrics;
     if (name === "@/lib/touchlineArena/club-owner-plan-showcase") return planShowcase;
-    if (name === "./ClubOwnerPlanShowcase") {
-      const source = readFileSync(new URL("../components/touchline/ClubOwnerPlanShowcase.tsx", import.meta.url), "utf8");
+    if (name === "./ClubOwnerPlanShowcase" || name === "./TouchlineClubPerimeterTrace") {
+      const source = readFileSync(new URL(`../components/touchline/${name.slice(2)}.tsx`, import.meta.url), "utf8");
       const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true } }).outputText;
       const showcase = { exports: {} };
       runInNewContext(compiled, { exports: showcase.exports, module: showcase, require: requireView });

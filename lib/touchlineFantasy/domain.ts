@@ -6,9 +6,10 @@ import type { TouchlineMarketPositionBucket } from "../touchlineArena/position-e
 import { resolveTouchlineCatalogueLocale } from "../touchlineArena/catalogue-locale.ts";
 
 export const TOUCHLINE_FANTASY_ENTITLEMENT_KEY = "fantasy_access" as const;
+// Historical monthly GBP contract only; not an offer for new subscriptions.
 export const TOUCHLINE_FANTASY_SUBSCRIPTION_PRICE_MINOR = 2_990 as const;
 export const TOUCHLINE_FANTASY_SUBSCRIPTION_CURRENCY = "GBP" as const;
-export const TOUCHLINE_FANTASY_INITIAL_BUDGET_EUR = 900_000_000 as const;
+export const TOUCHLINE_FANTASY_INITIAL_BUDGET_EUR = 500_000_000 as const;
 export const TOUCHLINE_FANTASY_MAX_PLAYERS_PER_CLUB = 11 as const;
 export const TOUCHLINE_FANTASY_DEFAULT_LOCK_OFFSET_MINUTES = 5 as const;
 export const TOUCHLINE_FANTASY_DEADLINE_TIME_ZONE = "Europe/London" as const;
@@ -145,7 +146,7 @@ export type TouchlineFantasyLineupValidation = Readonly<{
   issues: readonly TouchlineFantasyLineupIssue[];
   selectedCount: number;
   totalMarketValueEur: number;
-  budgetRemainingEur: number;
+  budgetRemainingEur: number | null;
 }>;
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -253,7 +254,7 @@ export function validateTouchlineFantasyLineup(input: Readonly<{
   selections: readonly TouchlineFantasySelection[];
   players: readonly TouchlineFantasyEligiblePlayer[];
   geometry: TouchlineFormationGeometry;
-  budgetEur: number;
+  budgetEur: number | null;
   maxPlayersPerClub: number;
   requireComplete?: boolean;
 }>): TouchlineFantasyLineupValidation {
@@ -288,14 +289,14 @@ export function validateTouchlineFantasyLineup(input: Readonly<{
     totalMarketValueEur += player.marketValueEur;
   }
 
-  if (totalMarketValueEur > input.budgetEur) issues.add("BUDGET_EXCEEDED");
+  if (input.budgetEur !== null && totalMarketValueEur > input.budgetEur) issues.add("BUDGET_EXCEEDED");
 
   return {
     valid: issues.size === 0,
     issues: [...issues],
     selectedCount: input.selections.length,
     totalMarketValueEur,
-    budgetRemainingEur: input.budgetEur - totalMarketValueEur,
+    budgetRemainingEur: input.budgetEur === null ? null : input.budgetEur - totalMarketValueEur,
   };
 }
 

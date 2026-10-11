@@ -43,7 +43,7 @@ test("Market keeps its approved tactical surface without enabling the optional s
     source("components/touchline/pitch/TouchlinePitchSurface.module.css"),
   ]);
 
-  assert.match(myClub, /orientation="horizontal" surfaceVariant=\{marketPage \? "smoked-glass" : "premium-stadium"\}/);
+  assert.match(myClub, /orientation="horizontal" surfaceVariant="smoked-glass"/);
   assert.doesNotMatch(myClub, /<TouchlinePitchSurface boundaryTrace className=\{styles\.myClubTacticalPitch\}/);
   assert.match(pitch, /boundaryTrace\?: boolean/);
   assert.match(pitchCss, /\.boundaryTraceRunner/);

@@ -3,12 +3,13 @@
 import { useId, useRef, useState, type KeyboardEvent } from "react";
 import { ChevronDown, ChevronLeft, ChevronRight, Crown, Diamond, LockKeyhole, Shield, X } from "lucide-react";
 import { getTouchlineClubOwnerMarketCopy } from "@/lib/touchlineArena/club-owner-market-i18n";
-import { CLUB_OWNER_PLAN_PREVIEWS, getClubOwnerPlanShowcaseCopy, type ClubOwnerPlanPreview } from "@/lib/touchlineArena/club-owner-plan-showcase";
+import { CLUB_OWNER_PLAN_PREVIEWS, getClubOwnerPlanShowcaseCopy, getClubOwnerVipPlanName, type ClubOwnerPlanPreview } from "@/lib/touchlineArena/club-owner-plan-showcase";
 import { TouchlineCoinMark } from "./market/TouchlineMarketMarks";
+import TouchlineClubPerimeterTrace from "./TouchlineClubPerimeterTrace";
 import controls from "./TouchlineGlobalNavigation.module.css";
 import styles from "./ClubOwnerPlanShowcase.module.css";
 
-const tierIcons = { standard: Shield, pro: Crown, master: Diamond, vip: LockKeyhole };
+const tierIcons = { beta: Shield, standard: Shield, pro: Crown, master: Diamond, vip: LockKeyhole };
 
 export function ClubOwnerPlanCard({ tier, name, locale, draftLocalesEnabled = false }: Readonly<{
   tier: ClubOwnerPlanPreview; name?: string; locale: string; draftLocalesEnabled?: boolean;
@@ -16,18 +17,19 @@ export function ClubOwnerPlanCard({ tier, name, locale, draftLocalesEnabled = fa
   const plan = CLUB_OWNER_PLAN_PREVIEWS.find(item => item.id === tier)!;
   const copy = getTouchlineClubOwnerMarketCopy(locale, draftLocalesEnabled);
   const labels = getClubOwnerPlanShowcaseCopy(locale, draftLocalesEnabled);
-  const title = tier === "standard" ? copy.planStandard : tier === "pro" ? "Pro" : tier === "master" ? "Master" : "VIP";
+  const title = tier === "beta" ? "Beta" : tier === "standard" ? copy.planStandard : tier === "pro" ? "Pro" : tier === "master" ? "Master" : getClubOwnerVipPlanName(locale, draftLocalesEnabled);
   const TierIcon = tierIcons[tier];
   const budgetLabel = `${labels.planBudget}: ${plan.budget === null ? labels.unlimited : `${plan.budget.toLocaleString(locale)} TouchLine Credits`}`;
   return <div dir="ltr" className={styles.memberCard} data-plan-offer={tier}>
+    <TouchlineClubPerimeterTrace accent="var(--plan-accent)" className={styles.memberNeon} />
     <svg className={styles.cardPattern} viewBox="0 0 360 240" aria-hidden="true" focusable="false">
-      <rect x="12" y="12" width="336" height="216" rx="2" />
-      <path d="M180 12v216M12 60h54v120H12M348 60h-54v120h54M12 93h20v54H12M348 93h-20v54h20" />
-      <circle cx="180" cy="120" r="34" /><circle cx="180" cy="120" r="2" />
+      <path d="M145 -30C40 50 24 156 82 270" />
+      <path d="M213 -30C108 50 92 156 150 270" />
+      <path d="M281 -30C176 50 160 156 218 270" />
     </svg>
     <div className={styles.cardTop}><span className={styles.cardBrand}>TouchLine<small>CLUBOWNER</small></span><span className={styles.cardEdition}>{labels.previewShort}</span></div>
     <div className={styles.cardIdentity}>
-      <div><span className={styles.cardKicker}>{labels.fantasyFootball}</span><h3 data-plan-tier={tier}>{title}</h3></div>
+      <div><span className={styles.cardKicker}>{labels.membership}</span><h3 data-plan-tier={tier}>{title}</h3></div>
       <span className={styles.tierSeal}><TierIcon size={29} aria-hidden="true" /></span>
     </div>
     <div className={styles.cardBottom}>
@@ -39,8 +41,8 @@ export function ClubOwnerPlanCard({ tier, name, locale, draftLocalesEnabled = fa
   </div>;
 }
 
-export default function ClubOwnerPlanShowcase({ initialPlan, name, locale, remainingMarketPower, draftLocalesEnabled = false }: Readonly<{
-  initialPlan: ClubOwnerPlanPreview; name: string; locale: string; remainingMarketPower: string | null; draftLocalesEnabled?: boolean;
+export default function ClubOwnerPlanShowcase({ initialPlan, name, locale, remainingMarketPower, realUnlimited = false, draftLocalesEnabled = false }: Readonly<{
+  initialPlan: ClubOwnerPlanPreview; name: string; locale: string; remainingMarketPower: string | null; realUnlimited?: boolean; draftLocalesEnabled?: boolean;
 }>) {
   const [index, setIndex] = useState(() => Math.max(0, CLUB_OWNER_PLAN_PREVIEWS.findIndex(plan => plan.id === initialPlan)));
   const id = useId();
@@ -51,9 +53,9 @@ export default function ClubOwnerPlanShowcase({ initialPlan, name, locale, remai
   const plan = CLUB_OWNER_PLAN_PREVIEWS[index];
   const copy = getTouchlineClubOwnerMarketCopy(locale, draftLocalesEnabled);
   const labels = getClubOwnerPlanShowcaseCopy(locale, draftLocalesEnabled);
-  const titleFor = (tier: ClubOwnerPlanPreview) => tier === "standard" ? copy.planStandard : tier === "pro" ? "Pro" : tier === "master" ? "Master" : "VIP";
-  const priceFor = (tier: ClubOwnerPlanPreview) => tier === "standard" ? copy.planStandardPrice : tier === "pro" ? copy.planProPrice : tier === "master" ? labels.pricePending : labels.invitation;
-  const benefitFor = (tier: ClubOwnerPlanPreview) => tier === "standard" ? copy.planStandardBenefit : tier === "pro" ? copy.planProBenefit : tier === "master" ? labels.benefitPending : labels.vipBenefit;
+  const titleFor = (tier: ClubOwnerPlanPreview) => tier === "beta" ? "Beta" : tier === "standard" ? copy.planStandard : tier === "pro" ? "Pro" : tier === "master" ? "Master" : getClubOwnerVipPlanName(locale, draftLocalesEnabled);
+  const priceFor = (tier: ClubOwnerPlanPreview) => tier === "beta" ? labels.betaPrice : tier === "standard" ? copy.planStandardPrice : tier === "pro" ? copy.planProPrice : tier === "master" ? labels.masterPrice : labels.invitation;
+  const benefitFor = (tier: ClubOwnerPlanPreview) => tier === "beta" ? labels.betaBenefit : tier === "standard" ? copy.planStandardBenefit : tier === "pro" ? copy.planProBenefit : tier === "master" ? labels.benefitPending : labels.vipBenefit;
   const title = titleFor(plan.id);
   const move = (delta: number) => setIndex(value => (value + delta + CLUB_OWNER_PLAN_PREVIEWS.length) % CLUB_OWNER_PLAN_PREVIEWS.length);
   const select = (next: number, focus = false) => {
@@ -61,7 +63,7 @@ export default function ClubOwnerPlanShowcase({ initialPlan, name, locale, remai
     if (focus) tabs.current[next]?.focus();
   };
   const onTabKey = (event: KeyboardEvent<HTMLButtonElement>, current: number) => {
-    const rtl = event.currentTarget.closest('[dir="rtl"]') !== null;
+    const rtl = event.currentTarget.closest("[dir]")?.getAttribute("dir") === "rtl";
     let next = current;
     if (event.key === "Home") next = 0;
     else if (event.key === "End") next = CLUB_OWNER_PLAN_PREVIEWS.length - 1;
@@ -77,7 +79,7 @@ export default function ClubOwnerPlanShowcase({ initialPlan, name, locale, remai
     dialogTrigger.current?.focus();
   };
 
-  return <section className={styles.planShowcase} data-plan-preview={plan.id} data-plan-state="inactive" aria-labelledby={`${id}-heading`}>
+  return <section dir="ltr" className={styles.planShowcase} data-plan-preview={plan.id} data-plan-state="inactive" aria-labelledby={`${id}-heading`}>
     <div className={styles.showcaseHeading}>
       <div><span className={styles.eyebrow}>TouchLine / {labels.membership}</span><h2 id={`${id}-heading`}>{copy.plan}</h2></div>
       <button ref={dialogTrigger} type="button" className={`${controls.link} ${styles.planAction}`} onClick={() => dialog.current?.showModal()} aria-haspopup="dialog">
@@ -94,16 +96,16 @@ export default function ClubOwnerPlanShowcase({ initialPlan, name, locale, remai
     </div>
     <div role="tabpanel" id={`${id}-panel`} aria-labelledby={`${id}-tab-${plan.id}`} tabIndex={0} className={styles.planPanel}>
       <ClubOwnerPlanCard tier={plan.id} name={name} locale={locale} draftLocalesEnabled={draftLocalesEnabled} />
-      <div className={styles.offerSummary}><div><small>{plan.id === "vip" ? labels.membership : labels.annualPrice}</small><strong data-plan-price={plan.id}>{priceFor(plan.id)}</strong></div><p>{benefitFor(plan.id)}</p></div>
+      <div className={styles.offerSummary}><div><small>{plan.id === "vip" || plan.id === "beta" ? labels.membership : plan.id === "master" ? labels.seasonalPrice : labels.annualPrice}</small><strong data-plan-price={plan.id}>{priceFor(plan.id)}</strong></div><p>{benefitFor(plan.id)}</p></div>
     </div>
     <div className={styles.planBrowse} role="group" aria-label={labels.browse}>
       <button type="button" className={`${controls.link} ${styles.planArrow}`} onClick={() => move(-1)} aria-label={labels.previous} aria-controls={`${id}-panel`}><ChevronLeft size={16} aria-hidden="true" /></button>
-      <span aria-live="polite" aria-atomic="true">{title}<small>0{index + 1} / 04</small></span>
+      <span aria-live="polite" aria-atomic="true">{title}<small>{String(index + 1).padStart(2, "0")} / {String(CLUB_OWNER_PLAN_PREVIEWS.length).padStart(2, "0")}</small></span>
       <button type="button" className={`${controls.link} ${styles.planArrow}`} onClick={() => move(1)} aria-label={labels.next} aria-controls={`${id}-panel`}><ChevronRight size={16} aria-hidden="true" /></button>
     </div>
     <details className={styles.comparison} ref={comparison}>
       <summary>{labels.comparePlans}<ChevronDown size={15} aria-hidden="true" /></summary>
-      <div className={styles.compareTable}><table><caption>{labels.comparePlans}</caption><thead><tr><th scope="col">{labels.plan}</th><th scope="col">TC</th><th scope="col">{labels.annualPrice}</th></tr></thead><tbody>
+      <div className={styles.compareTable}><table><caption>{labels.comparePlans}</caption><thead><tr><th scope="col">{labels.plan}</th><th scope="col">TC</th><th scope="col">{labels.priceLabel}</th></tr></thead><tbody>
         {CLUB_OWNER_PLAN_PREVIEWS.map((item, position) => <tr key={item.id} data-selected={position === index}>
           <th scope="row"><button type="button" className={`${controls.link} ${styles.compareChoice}`} aria-label={`${labels.viewPlan}: ${titleFor(item.id)}`} onClick={() => { select(position, true); if (comparison.current) comparison.current.open = false; }}>{titleFor(item.id)}</button></th>
           <td>{item.amount ?? labels.unlimited}</td><td>{priceFor(item.id)}</td>
@@ -114,7 +116,7 @@ export default function ClubOwnerPlanShowcase({ initialPlan, name, locale, remai
     <dialog ref={dialog} className={styles.planDialog} aria-labelledby={`${id}-dialog-heading`} onCancel={event => { event.preventDefault(); closeDialog(); }}>
       <div className={styles.dialogHeading}><span>{labels.details}</span><button type="button" className={`${controls.link} ${styles.planArrow}`} aria-label={labels.close} onClick={closeDialog}><X size={18} aria-hidden="true" /></button></div>
       <h2 id={`${id}-dialog-heading`}>{title}</h2><strong className={styles.dialogPrice}>{priceFor(plan.id)}</strong><p>{benefitFor(plan.id)}</p>
-      <dl><div><dt>{labels.planBudget}</dt><dd>{plan.amount ?? labels.unlimited} {plan.amount ? "TC" : ""}</dd></div><div><dt>{labels.currentBudget}</dt><dd data-current-xi-budget="true">{remainingMarketPower ?? "—"} TC</dd></div></dl>
+      <dl><div><dt>{labels.planBudget}</dt><dd>{plan.amount ?? labels.unlimited} {plan.amount ? "TC" : ""}</dd></div><div><dt>{labels.currentBudget}</dt><dd data-current-xi-budget="true" data-current-xi-unlimited={realUnlimited || undefined} aria-label={realUnlimited ? `${labels.currentBudget}: ${labels.unlimited}` : remainingMarketPower === null ? copy.marketPowerUnavailable : undefined}>{realUnlimited ? `∞ ${labels.unlimited}` : `${remainingMarketPower ?? "—"} TC`}</dd></div></dl>
       <p className={styles.availability}>{plan.id === "vip" ? labels.vipBenefit : copy.planActionUnavailable}</p><p className={styles.previewNote}>{labels.preview} {copy.virtualBudgetSeparate}</p>
       <button type="button" className={`${controls.arena} ${styles.dialogClose}`} onClick={closeDialog}>{labels.close}</button>
     </dialog>

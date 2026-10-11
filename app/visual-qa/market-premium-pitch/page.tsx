@@ -87,8 +87,8 @@ function visualSnapshot(catalogue: TouchlineFantasySnapshot["catalogue"]): Touch
   userId: "visual-qa-local-only",
   entitlementActive: true,
   plan: { active: true, expiresAt: "2026-12-31T00:00:00.000Z" },
-  subscription: { amountMinor: 2990, currency: "GBP" },
-  config: { budgetEur: 900_000_000, maxPlayersPerClub: 11, lockOffsetMinutes: 0 },
+  marketAccess: { planKey: "standard", budgetEur: 500_000_000, allowedClubTeamIds: null },
+  config: { budgetEur: 500_000_000, maxPlayersPerClub: 11, lockOffsetMinutes: 0 },
   gameweeks: [ACTIVE_GAMEWEEK],
   activeGameweek: ACTIVE_GAMEWEEK,
   userGameweek: {

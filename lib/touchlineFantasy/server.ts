@@ -31,10 +31,13 @@ import {
 } from "@/lib/touchlineArena/live-coaches";
 import {
   rankTouchlineFantasyManagers,
-  TOUCHLINE_FANTASY_INITIAL_BUDGET_EUR,
   type TouchlineFantasyGameweekState,
   type TouchlineFantasyPublicManagerRank,
 } from "./domain";
+import {
+  resolveTouchlineFantasyMarketAccess,
+  type TouchlineFantasyMarketAccess,
+} from "./market-plan-policy";
 
 type Row = Record<string, unknown>;
 
@@ -88,9 +91,11 @@ export type TouchlineFantasySnapshot = Readonly<{
   userId: string;
   entitlementActive: boolean;
   plan: Readonly<{ active: boolean; expiresAt: string | null }>;
-  subscription: Readonly<{ amountMinor: 2990; currency: "GBP" }>;
+  /** Null only for verified no-plan onboarding; never grants gameplay access. */
+  marketAccess?: TouchlineFantasyMarketAccess | null;
+  betaEnrollmentAvailable?: boolean;
   config: Readonly<{
-    budgetEur: number;
+    budgetEur: number | null;
     maxPlayersPerClub: number;
     lockOffsetMinutes: number;
   }>;
@@ -360,7 +365,7 @@ async function loadFantasySnapshotCore(user: User, projection: "full" | "arena",
   if (syncError) return null;
   timing?.mark("config");
   const [{ data: configData, error: configError }, formationRegistry] = await Promise.all([
-    admin.from("touchline_fantasy_configs").select("season_id,budget_eur,max_players_per_club,lock_offset_minutes").eq("competition_key", "england").eq("status", "active").maybeSingle(),
+    admin.from("touchline_fantasy_configs").select("season_id,max_players_per_club,lock_offset_minutes").eq("competition_key", "england").eq("status", "active").maybeSingle(),
     projection === "arena" && providedFormationRegistry !== undefined
       ? Promise.resolve(providedFormationRegistry)
       : readTouchlineFormationGeometryRegistry(),
@@ -401,12 +406,29 @@ async function loadFantasySnapshotCore(user: User, projection: "full" | "arena",
   }
 
   timing?.mark("entitlement");
-  const { data: entitlementData } = await admin.from("touchline_fantasy_entitlements")
-    .select("status,current_period_start,current_period_end")
+  const { data: entitlementData, error: entitlementError } = await admin.from("touchline_fantasy_entitlements")
+    .select("status,current_period_start,current_period_end,plan_key")
     .eq("user_id", user.id)
     .eq("entitlement_key", "fantasy_access")
     .maybeSingle();
+  if (entitlementError) return null;
   const entitlement = entitlementData as Row | null;
+  const marketAccess = resolveTouchlineFantasyMarketAccess(entitlement?.plan_key);
+  if (!marketAccess) {
+    // An absent entitlement is not a failed read or an unrecognised old plan.
+    // Offer explicit self-enrolment without loading a squad or granting a budget.
+    if (entitlementData !== null || projection !== "full") return null;
+    return {
+      userId: user.id, entitlementActive: false,
+      plan: { active: false, expiresAt: null }, marketAccess: null,
+      betaEnrollmentAvailable: true,
+      config: { budgetEur: 0, maxPlayersPerClub: number(config.max_players_per_club) ?? 11, lockOffsetMinutes: number(config.lock_offset_minutes) ?? 5 },
+      gameweeks: [], activeGameweek: null, userGameweek: null,
+      selections: [], catalogue: [], coaches: [], lineupAlerts: [],
+      matchCardIndicators: [], playerAvailabilityIndicators: [], formationRegistry,
+      gameweekScore: 0, seasonScore: 0, matchHistory: [], gameweekRanking: [], seasonRanking: [],
+    };
+  }
   const now = Date.now();
   const entitlementActive = text(entitlement?.status) === "active"
     && (!text(entitlement?.current_period_start) || Date.parse(text(entitlement?.current_period_start)!) <= now)
@@ -534,9 +556,9 @@ async function loadFantasySnapshotCore(user: User, projection: "full" | "arena",
     userId: user.id,
     entitlementActive,
     plan: { active: entitlementActive, expiresAt: planExpiresAt },
-    subscription: { amountMinor: 2990, currency: "GBP" },
+    marketAccess,
     config: {
-      budgetEur: number(config.budget_eur) ?? TOUCHLINE_FANTASY_INITIAL_BUDGET_EUR,
+      budgetEur: marketAccess.budgetEur,
       maxPlayersPerClub: number(config.max_players_per_club) ?? 11,
       lockOffsetMinutes: number(config.lock_offset_minutes) ?? 5,
     },

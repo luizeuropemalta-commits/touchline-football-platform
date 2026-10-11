@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { stripTypeScriptTypes } from "node:module";
 import test from "node:test";
 import { runInNewContext } from "node:vm";
+import { resolveTouchlineFantasyMarketAccess } from "../lib/touchlineFantasy/market-plan-policy.ts";
 
 // Execute the snapshot's real lifecycle up to the independent catalogue reads.
 // Persistence is the boundary fake: preparing a round copies only locked XI,
@@ -54,7 +55,7 @@ function scenario(options: { failure?: string; existingDraft?: boolean; olderLoc
         async maybeSingle() {
           return { data: table === "touchline_fantasy_configs"
             ? { season_id: "season" }
-            : { status: options.entitlement === false ? "inactive" : "active" }, error: null };
+            : { status: options.entitlement === false ? "inactive" : "active", plan_key: "standard" }, error: null };
         },
       };
       return query;
@@ -62,6 +63,7 @@ function scenario(options: { failure?: string; existingDraft?: boolean; olderLoc
   };
   const context = {
     reconcileTouchlineFantasyGameweeks,
+    resolveTouchlineFantasyMarketAccess,
     createAdminClient: () => admin,
     readTouchlineFormationGeometryRegistry: async () => ({}),
     rows: (value: unknown) => value,

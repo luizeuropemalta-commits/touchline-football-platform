@@ -55,7 +55,7 @@ function scenario(options: Options = {}) {
           events.push(key); queries.push({ key, filters });
           const data: Record<string, unknown> = {
             config: { season_id: "season", budget_eur: 100, max_players_per_club: 3, lock_offset_minutes: 5 },
-            rounds: options.noRound ? [] : [week], entitlement: { status: "active" },
+            rounds: options.noRound ? [] : [week], entitlement: { status: "active", plan_key: "standard" },
             userRound: options.noUserRound ? null : { id: "user-round", formation_code: "4-3-3", selected_coach_id: "coach", state: "DRAFT", total_market_value_eur: 10 },
             draft: options.empty ? [] : [{ player_id: "draft-player", slot_id: "ST" }],
             locked: options.empty || options.draftOnly ? [] : [{ player_id: "locked-player", slot_id: "GK" }],
@@ -80,6 +80,9 @@ function scenario(options: Options = {}) {
       availabilityReads.push({ season, round, players: Array.from(players) });
       return [];
     },
+    resolveTouchlineFantasyMarketAccess: (planKey: unknown) => planKey === "standard"
+      ? { planKey: "standard", budgetEur: 500_000_000, allowedClubTeamIds: null }
+      : null,
     TOUCHLINE_FANTASY_INITIAL_BUDGET_EUR: 100,
     fetch: () => assert.fail("network forbidden"),
   };

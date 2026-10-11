@@ -73,12 +73,14 @@ test("field art is a shared component rather than separate page drawings", () =>
   assert.doesNotMatch(clubHubLineup, /styles\.goalBox/);
 });
 
-test("Rank and ClubHub retain premium grass while Market uses its approved smoked-glass field", () => {
-  assert.match(tablesClient, /<TouchlinePitchSurface className=\{styles\.pitch\} ariaLabel=\{copy\.seasonSelection\} surfaceVariant="premium-stadium">/);
-  assert.match(market, /orientation="horizontal" surfaceVariant=\{marketPage \? "smoked-glass" : "premium-stadium"\}/);
-  assert.match(clubHubLineup, /orientation="horizontal"[\s\S]*?surfaceVariant="premium-stadium"/);
-  assert.match(pitchSurfaceCss, /\.surfacePremiumStadium:not\(\.surfaceVertical\)[\s\S]*?touchline-premium-grass-clean-horizontal-v1\.png/);
-  assert.match(pitchSurfaceCss, /\.surfacePremiumStadium:not\(\.surfaceVertical\)[\s\S]*?repeating-linear-gradient\(90deg/);
+test("Rank, ClubHub and ClubOwner share the Market smoked-glass field without changing formation geometry", () => {
+  assert.match(tablesClient, /<TouchlinePitchSurface className=\{styles\.pitch\} ariaLabel=\{copy\.seasonSelection\} surfaceVariant="smoked-glass">/);
+  assert.match(market, /orientation="horizontal" surfaceVariant="smoked-glass"/);
+  assert.match(clubHubLineup, /orientation="horizontal"[\s\S]*?surfaceVariant="smoked-glass"/);
+  for (const source of [tablesClient, market, clubHubLineup]) {
+    assert.doesNotMatch(source, /surfaceVariant="premium-stadium"/);
+  }
+  assert.match(pitchSurfaceCss, /\.surfaceSmokedGlass/);
 });
 
 test("ClubHub formation keeps each card as the single visible player identity surface", () => {

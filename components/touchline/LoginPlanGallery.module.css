@@ -3,7 +3,7 @@
 .heading span { color: #b9cfba; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; }
 .heading h2 { margin: 8px 0 0; color: #f0f7ec; font-size: clamp(26px,3vw,38px); font-weight: 500; letter-spacing: -.04em; }
 .heading p { max-width: 330px; margin: 0; color: #c3cec8; font-size: 12px; line-height: 1.6; text-align: end; }
-.grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 18px; }
+.grid { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 18px; }
 .grid .offer { min-width: 0; padding: 0; border: none; border-radius: 18px; background: transparent; box-shadow: none; }
 .offer > :first-child { min-height: 238px; }
 .price { display: grid; gap: 6px; padding: 18px 4px 10px; }

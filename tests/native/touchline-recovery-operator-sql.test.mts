@@ -24,7 +24,7 @@ test('operator adapter commits on dedicated native clients and confirms visibili
     await admin.ready; await observer.ready; // Runtime proves isolated Unix socket, owner, version, data directory.
     await admin.exec('create role anon; create role authenticated; create role service_role;');
     for (const name of ['20261002152457_touchline_fixture_quota_authority.sql', '20261003233637_touchline_sportmonks_prequery_authority.sql', '20261008120529_touchline_squad_quota_prequery_authority.sql', '20261009110825_touchline_squad_quota_reserve_admission.sql']) await admin.exec(sql(`migrations/${name}`));
-    for (const name of ['013_touchline_central_quota_ownership.sql', '014_touchline_central_entity_policy.sql', '015_touchline_central_recovery_cases.sql', '016_touchline_central_recovery_prepare.sql', '017_touchline_central_recovery_measurement.sql']) await admin.exec(sql(`qa/${name}`));
+    for (const name of ['013_touchline_central_quota_ownership.sql', '014_touchline_central_entity_policy.sql', '015_touchline_central_recovery_cases.sql', '016_touchline_central_recovery_prepare.sql', '017_touchline_central_recovery_measurement.sql', '018_touchline_central_recovery_key_order.sql']) await admin.exec(sql(`qa/${name}`));
     const { host, port, database, user } = admin.client.connectionParameters;
     for (const mode of ['success', 'commit-rejected', 'commit-lost', 'complete-lost', 'wrong-role', 'wrong-scope'] as const) {
       const token = randomUUID(), original = randomUUID();

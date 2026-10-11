@@ -6,6 +6,7 @@ import { runInNewContext } from "node:vm";
 import ts from "typescript";
 import { touchlineMarketPositionBucket } from "../lib/touchlineArena/position-eligibility.ts";
 import { touchlineFantasySlotAcceptsPlayer } from "../lib/touchlineFantasy/domain.ts";
+import { isTouchlineFantasyMarketClubAllowed as canBrowseMarketClub } from "../lib/touchlineFantasy/market-plan-policy.ts";
 
 const source = readFileSync(new URL("../app/fantasy/FantasyGameweekClient.tsx", import.meta.url), "utf8");
 const css = readFileSync(new URL("../app/fantasy/fantasy.module.css", import.meta.url), "utf8");
@@ -129,6 +130,7 @@ test("the Market inline list excludes players ineligible for the removed positio
     touchlineMarketPositionBucket, touchlineFantasySlotAcceptsPlayer,
     snapshot: { catalogue }, marketPage: true, activeSlot: { id: "ST", allowedPositions: ["centre-forward"] },
     selectedPlayerClub: { teamId: "club" }, findTouchLineClub: () => ({ teamId: "club" }), normalizedQuery: "",
+    canBrowseMarketClub, marketPolicy: { planKey: "standard", budgetEur: 500_000_000, allowedClubTeamIds: null },
   });
   assert.deepEqual(Array.from(result), ["striker"]);
 });

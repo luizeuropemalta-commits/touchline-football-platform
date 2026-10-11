@@ -17,6 +17,7 @@ import { inspectTouchlineProductionSyncRuntime } from "@/lib/football-data/produ
 import { touchlineCompetitionCoachAssignments } from "@/lib/touchlineArena/live-coaches";
 import { recordTouchlineLineupAvailableObservation } from "@/lib/football-data/official-team-sheet-readiness";
 import { reconcilePendingTouchlineFantasyGameweeks } from "@/lib/touchlineFantasy/gameweek-lifecycle";
+import { publishTouchlineLivePresentationSnapshot } from "@/lib/touchlineArena/live-presentation-read-model";
 import { resolveTouchlineRecoveryScope, recoveryFixtureMatches, recoveryFeedComplete, claimTouchlineFixtureRecovery,
   finishTouchlineFixtureRecovery, deferTouchlineFixtureRecovery, persistTouchlineRecoveryFeed, BACKLOG_MAX_PER_RUN, BACKLOG_DEADLINE_MS } from "@/lib/football-data/fixture-backlog-recovery";
 
@@ -29,6 +30,7 @@ type Dependencies = {
   readFixtures?: typeof readPublicCompetitionFixtures;
   persistStates?: typeof persistLiveFixtureStates;
   persistSnapshot?: typeof persistLiveScoreSnapshot;
+  publishLivePresentation?: typeof publishTouchlineLivePresentationSnapshot;
   persistFantasyFeed?: typeof persistFantasyFixtureFeed;
   acquireRun?: typeof acquireTouchlineLiveSyncRun;
   recordLineupObservation?: typeof recordTouchlineLineupAvailableObservation;
@@ -239,6 +241,13 @@ export async function syncSportmonksLiveState(
       ? []
       : await refreshFixtureScheduleWhenStale(admin, now, provider);
     result.errors.push(...fixtureScheduleErrors);
+    // These diagnostics describe independent maintenance work. Keep them in
+    // the run outcome without withholding a verified current Live revision.
+    const publicationIndependentErrors = new Set(fixtureScheduleErrors);
+    const recordRecoveryIssue = (message: string) => {
+      result.errors.push(message);
+      publicationIndependentErrors.add(message);
+    };
     const scope = await (dependencies.resolveRecoveryScope ?? resolveTouchlineRecoveryScope)(admin);
     const schedule = await readFixtures({ providedAdmin: admin, seasonId: scope.seasonId,
       through: new Date(now + 24 * 60 * 60 * 1000).toISOString(), now });
@@ -317,7 +326,7 @@ export async function syncSportmonksLiveState(
       excluded.push(claim.providerFixtureId);
       if (/cancelled|canceled|abandoned|awarded|walkover/i.test(claim.status)) {
         await finishRecovery(admin, claim, lease.runId, now, "needs_review", "non_played_terminal");
-        result.errors.push(`${claim.providerFixtureId}:recovery-needs-review`);
+        recordRecoveryIssue(`${claim.providerFixtureId}:recovery-needs-review`);
         continue;
       }
       const response = await provider.getFixtureFantasyFeed(claim.providerFixtureId);
@@ -325,21 +334,21 @@ export async function syncSportmonksLiveState(
         if (response.error.code === "deferred") {
           try {
             await (dependencies.deferRecovery ?? deferTouchlineFixtureRecovery)(admin, claim, lease.runId);
-            result.errors.push(`${claim.providerFixtureId}:recovery-deferred`);
+            recordRecoveryIssue(`${claim.providerFixtureId}:recovery-deferred`);
           } catch {
-            result.errors.push(`${claim.providerFixtureId}:recovery-deferral-unconfirmed`);
+            recordRecoveryIssue(`${claim.providerFixtureId}:recovery-deferral-unconfirmed`);
           }
           // Neither a second claim nor normal finish may consume an uncertain refund.
           break;
         }
         await finishRecovery(admin, claim, lease.runId, now, "pending", response.error.code, response.error.retryAfterSeconds);
-        result.errors.push(`${claim.providerFixtureId}:recovery-${response.error.code}`);
+        recordRecoveryIssue(`${claim.providerFixtureId}:recovery-${response.error.code}`);
         if (response.error.code === "rate_limited") break;
         continue;
       }
       if (!response.data || !recoveryFixtureMatches(response.data.fixture, scope, claim.providerFixtureId)) {
         await finishRecovery(admin, claim, lease.runId, now, "needs_review", "fixture_identity_mismatch");
-        result.errors.push(`${claim.providerFixtureId}:recovery-identity-mismatch`);
+        recordRecoveryIssue(`${claim.providerFixtureId}:recovery-identity-mismatch`);
         continue;
       }
       const persisted = await (dependencies.persistRecoveryFeed ?? persistTouchlineRecoveryFeed)(admin, claim, lease.runId, response.data);
@@ -354,7 +363,7 @@ export async function syncSportmonksLiveState(
         persisted.persisted && recoveryFeedComplete(response.data) ? "needs_review" : "pending",
         persisted.persisted && recoveryFeedComplete(response.data) ? "shirt_reconciliation_pending" : persisted.persisted ? "feed_incomplete" : "persistence_failed", undefined,
         /postponed/i.test(response.data.fixture.status ?? ""));
-      if (!complete) result.errors.push(`${claim.providerFixtureId}:recovery-${claim.attemptCount >= 8 ? "needs-review" : "pending"}`);
+      if (!complete) recordRecoveryIssue(`${claim.providerFixtureId}:recovery-${claim.attemptCount >= 8 ? "needs-review" : "pending"}`);
     }
 
     const fetchedAt = new Date(now).toISOString();
@@ -448,6 +457,20 @@ export async function syncSportmonksLiveState(
     const snapshotResult = await (dependencies.persistSnapshot ?? persistLiveScoreSnapshot)(snapshot, fetchedAt);
     if (!snapshotResult.persisted) result.errors.push(`snapshot:${snapshotResult.reason ?? "failed"}`);
     else result.snapshotFixtures = snapshot.length;
+
+    // Publish a single immutable source revision only after canonical fixture,
+    // ranking and score-snapshot writes have completed. This remains behind
+    // the same guarded provider/quota admission at the start of this run.
+    if (snapshotResult.persisted
+      && playerReconciliation.failedFixtureIds.length === 0
+      && playerReconciliation.missingSettlementFixtureIds.length === 0
+      && result.errors.every((error) => publicationIndependentErrors.has(error))) {
+      try {
+        await (dependencies.publishLivePresentation ?? publishTouchlineLivePresentationSnapshot)(admin);
+      } catch {
+        result.errors.push("live-presentation:publication-failed");
+      }
+    }
 
     // Observe only freshly persisted current feeds after canonical events and
     // ratings have reconciled. Historical recovery never generates this input.

@@ -5,6 +5,7 @@ import { runInNewContext } from "node:vm";
 import React from "react";
 import * as jsx from "react/jsx-runtime";
 import ts from "typescript";
+import * as marketPolicy from "../lib/touchlineFantasy/market-plan-policy.ts";
 
 const siteLocaleEnv: Record<string, string | undefined> = {};
 const siteLocalePolicy: Record<string, unknown> = {};
@@ -48,6 +49,7 @@ function fixture(getUser: () => Promise<unknown>) {
     clearTimeout: (id: number) => timers.delete(id),
   });
   const modules: Record<string, unknown> = {
+    "@/lib/touchlineFantasy/market-plan-policy": marketPolicy,
     "@/lib/touchlineArena/site-locales-release": siteLocalePolicy,
     "react/jsx-runtime": jsx,
     "next/headers": { headers: async () => new Headers({ "x-vercel-ip-timezone": "Europe/Malta" }) },

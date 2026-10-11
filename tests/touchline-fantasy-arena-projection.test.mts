@@ -4,6 +4,7 @@ import { stripTypeScriptTypes } from "node:module";
 import { runInNewContext } from "node:vm";
 import test from "node:test";
 import { buildTouchlineFantasyArenaLineup } from "../lib/touchlineFantasy/arena-lineup.ts";
+import { resolveTouchlineFantasyMarketAccess } from "../lib/touchlineFantasy/market-plan-policy.ts";
 
 const source = readFileSync(new URL("../lib/touchlineFantasy/server.ts", import.meta.url), "utf8");
 test("Arena has a narrow projection without replacing the full API", () => {
@@ -11,7 +12,7 @@ test("Arena has a narrow projection without replacing the full API", () => {
   assert.match(source, /export async function loadTouchlineFantasySnapshot/);
 });
 
-function scenario(input = source, options: { pending?: boolean; state?: string; gameweekState?: string; incomplete?: boolean; failure?: string } = {}) {
+function scenario(input = source, options: { pending?: boolean; state?: string; gameweekState?: string; incomplete?: boolean; failure?: string; entitlement?: Record<string, unknown> | null; entitlementError?: boolean } = {}) {
   const calls: Array<{ name: string; args?: unknown }> = [];
   const queries: string[] = [];
   const ids = Array.from({ length: 11 }, (_, i) => `00000000-0000-4000-8000-${String(i + 1).padStart(12, "0")}`);
@@ -36,11 +37,11 @@ function scenario(input = source, options: { pending?: boolean; state?: string; 
         maybeSingle: () => chain,
         then(resolve: (value: unknown) => unknown) {
           let data: unknown;
-          if (table === "touchline_fantasy_configs") data = { season_id: "season", budget_eur: 100, max_players_per_club: 3, lock_offset_minutes: 5 };
+          if (table === "touchline_fantasy_configs") data = { season_id: "season", max_players_per_club: 11, lock_offset_minutes: 5 };
           else if (table === "touchline_fantasy_gameweeks") data = weeks;
           else if (table === "touchline_fantasy_entitlements") {
             assert.ok(filters.some(([k,v]) => k === "user_id" && v === "customer"));
-            data = { status: "active" };
+            data = options.entitlement === undefined ? { status: "active", plan_key: "standard" } : options.entitlement;
           } else if (table === "touchline_fantasy_user_gameweeks") {
             assert.deepEqual(filters, [["user_id", "customer"], ["gameweek_id", "active"]]);
             data = { id: "ug", formation_code: "4-3-3", selected_coach_id: "draft-coach", locked_coach_id: "locked-coach", state: options.state ?? "LOCKED", total_market_value_eur: 10 };
@@ -49,7 +50,7 @@ function scenario(input = source, options: { pending?: boolean; state?: string; 
             data = table.includes("locked") ? selections.slice(0, options.incomplete ? 10 : 11) : [{ player_id: "wrong-draft", slot_id: "s0" }];
           } else if (["touchline_fantasy_user_gameweek_scores", "touchline_fantasy_lineup_alerts", "touchline_fantasy_player_fixture_scores"].includes(table)) data = [];
           else assert.fail(`Unexpected table ${table}`);
-          return Promise.resolve({ data, error: null }).then(resolve);
+          return Promise.resolve({ data, error: table === "touchline_fantasy_entitlements" && options.entitlementError ? { code: "08006" } : null }).then(resolve);
         },
       };
       return chain;
@@ -64,6 +65,7 @@ function scenario(input = source, options: { pending?: boolean; state?: string; 
     .replace(/^import[^;]*;\s*$/gm, "").replace(/^export /gm, "");
   const core = runInNewContext(`${lifecycle}\n${stripped.slice(start)}\n${name};`, {
     createAdminClient: () => admin,
+    resolveTouchlineFantasyMarketAccess,
     text: (v: unknown) => typeof v === "string" && v.trim() ? v.trim() : null,
     number: (v: unknown) => typeof v === "number" ? v : null,
     rows: (v: unknown) => Array.isArray(v) ? v : [],
@@ -81,14 +83,13 @@ function scenario(input = source, options: { pending?: boolean; state?: string; 
       assert.deepEqual([...ids], (options.incomplete ? selections.slice(0, 10) : selections).map(row => row.player_id));
       queries.push("player-availability"); return [];
     },
-    TOUCHLINE_FANTASY_INITIAL_BUDGET_EUR: 100,
     fetch: () => assert.fail("Network forbidden"),
   });
-  // Golden DTO verified against immutable e7eec8b before extraction; keep this
-  // self-contained so release snapshots need no sibling checkout or Git read.
+  // Explicit current Standard contract, separate from the immutable XI trace.
   const golden = {
-    userId: "customer", entitlementActive: true, subscription: { amountMinor: 2990, currency: "GBP" },
-    config: { budgetEur: 100, maxPlayersPerClub: 3, lockOffsetMinutes: 5 },
+    userId: "customer", entitlementActive: true,
+    marketAccess: resolveTouchlineFantasyMarketAccess("standard"),
+    config: { budgetEur: 500_000_000, maxPlayersPerClub: 11, lockOffsetMinutes: 5 },
     gameweeks: [{ id: "previous", number: 1, state: "FINAL" }, { id: "active", number: 2, state: "MARKET_OPEN" }],
     activeGameweek: { id: "active", number: 2, state: "MARKET_OPEN" },
     userGameweek: { id: "ug", formationCode: "4-3-3", state: "LOCKED", totalMarketValueEur: 10, carriedFromPrevious: false, selectedCoachId: "locked-coach" },
@@ -99,6 +100,38 @@ function scenario(input = source, options: { pending?: boolean; state?: string; 
   return { run: (projection: "arena" | "full", registry?: object) => core({ id: "customer" }, projection, registry), calls, queries, release, golden };
 }
 const plain = (value: unknown) => JSON.parse(JSON.stringify(value));
+
+test("verified no-plan account receives only Beta onboarding, not gameplay or an invented budget", async () => {
+  const s = scenario(source, { entitlement: null });
+  const snapshot = await s.run("full");
+  assert.equal(snapshot.betaEnrollmentAvailable, true);
+  assert.equal(snapshot.entitlementActive, false);
+  assert.equal(snapshot.marketAccess, null);
+  assert.equal(snapshot.config.budgetEur, 0);
+  assert.equal(snapshot.activeGameweek, null);
+  assert.equal(snapshot.userGameweek, null);
+  for (const field of ["selections", "catalogue", "coaches", "gameweeks", "matchHistory", "gameweekRanking", "seasonRanking"]) assert.equal(snapshot[field].length, 0);
+  assert.equal(snapshot.gameweekScore, 0);
+  assert.equal(snapshot.seasonScore, 0);
+  assert.ok(!s.calls.some(call => call.name === "touchline_fantasy_prepare_user_gameweek"));
+  assert.ok(!s.queries.includes("touchline_fantasy_user_gameweeks"));
+  assert.equal(await scenario(source, { entitlement: null }).run("arena"), null);
+});
+
+test("unavailable entitlement read or unrecognised existing plan never offers free replacement", async () => {
+  for (const options of [
+    { entitlement: null, entitlementError: true },
+    { entitlement: { status: "active", plan_key: "unknown" } },
+    { entitlement: { status: "active", plan_key: null } },
+  ]) {
+    const s = scenario(source, options);
+    assert.equal(await s.run("full"), null);
+    assert.ok(!s.calls.some(call => call.name === "touchline_fantasy_prepare_user_gameweek"));
+  }
+  const inactive = await scenario(source, { entitlement: { status: "inactive", plan_key: "standard" } }).run("full");
+  assert.equal(inactive.entitlementActive, false);
+  assert.notEqual(inactive.betaEnrollmentAvailable, true);
+});
 
 test("Arena reuses the supplied geometry reference; omitted registry and full API still read", async () => {
   const arena = scenario();

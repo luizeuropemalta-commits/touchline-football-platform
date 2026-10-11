@@ -208,12 +208,14 @@ function actual(input: Record<string, unknown> = {}, getCopy: (locale: string, d
     activeSlot: slot, browseSlot: slot, browsingPosition: "striker", squadView: "tactical", pitchCardWidth: 74, pitchViewportRef: { current: null }, query: "", feedback: null,
     live: null, currentMatchCards: [], currentAvailability: [], TouchlineMatchCardBadge: icon, TouchlinePlayerAvailabilityBadge: icon, validation: { valid: true }, lineupConfirmed: false, hasUnsavedChanges: false,
     marketOpen: true, marketStatusLabel: "Market open", marketAccessLabel: "View only", marketAccessCopy: getTouchlineFantasyMarketAccessCopy(String(input.locale ?? "en-GB"), draftLocalesEnabled), marketMetricsCopy: getTouchlineFantasyMarketMetricsCopy(String(input.locale ?? "en-GB"), draftLocalesEnabled),
-    getTouchlineFantasyMarketWorkflowCopy: getCopy, touchlineMarketPositionBucketLabel, localizedPositionLabel,
+    getTouchlineFantasyMarketWorkflowCopy: getCopy, getTouchlineBetaEnrollmentCopy: () => ({ review: "Beta review" }), touchlineMarketPositionBucketLabel, localizedPositionLabel,
     statusCopy: touchlineFantasyStatusCopy,
     lineupErrorCopy: touchlineFantasyLineupErrorCopy,
     TOUCHLINE_ENGLAND_CLUBS_BY_RANK: [{ teamId: "club-1", name: "Canonical Club", shortCode: "CAN", logoUrl: null }], TOUCHLINE_FANTASY_BROWSE_POSITIONS: [],
     Link: ({ children, ...props }: React.ComponentProps<"a">) => React.createElement("a", props, children), Image: icon,
-    TouchlineGameweekCard: icon, FantasyCoachZoom: icon, CompactClubIdentity: icon, TouchlineClubPerimeterTrace: icon, MarketWindowClock: icon, TouchlinePitchSurface: child,
+    TouchlineGameweekCard: icon, FantasyCoachZoom: icon, FantasyBudgetNotice: icon, TouchlineBetaEnrollment: icon, CompactClubIdentity: icon, TouchlineClubPerimeterTrace: icon, MarketWindowClock: icon, TouchlinePitchSurface: child,
+    canBrowseMarketClub: () => true, marketPolicy: undefined, marketPlanLockCopy: "Plan locked", selectedPlayerClubLocked: false, findTouchLineClub, marketBudgetEur: 900,
+    playerExceedsBudget: () => false,
     Search: icon, touchlineCardTierPalette: () => ({ accent: "#fff" }),
     scrollToLineupSection: (value: string) => calls.push(["scroll", value]),
     newIdempotencyKey: (action: string) => `fixed-key:${action}`,
@@ -382,7 +384,9 @@ test("real search filter retains catalogue while unmatched query renders a neutr
   const catalogue = [publishedCard];
   const functions = ["canonicalRosterRole", "slotAccepts"].map(name => declarations.get(name)).join("\n");
   const script = ts.transpileModule(`(() => { ${functions} return ${browseInitializer}; })()`, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
-  const context = { ...domain, findTouchLineClub, touchlineMarketPositionBucket, snapshot: { catalogue }, marketPage: true, activeSlot: { ...slot, allowedPositions: ["centre-forward"] }, selectedPlayerClub: club, browsingPosition: "centre-forward" };
+  const context = { ...domain, findTouchLineClub, canBrowseMarketClub: () => true, marketPolicy: undefined,
+    touchlineMarketPositionBucket, snapshot: { catalogue }, marketPage: true,
+    activeSlot: { ...slot, allowedPositions: ["centre-forward"] }, selectedPlayerClub: club, browsingPosition: "centre-forward" };
   const matched = runInNewContext(script, { ...context, normalizedQuery: "canonical" });
   assert.equal(matched.length, 1);
   const unmatched = runInNewContext(script, { ...context, normalizedQuery: "no-such-player" });

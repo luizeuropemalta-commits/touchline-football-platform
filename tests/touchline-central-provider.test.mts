@@ -111,6 +111,8 @@ for (const redirectStatus of [302, 307] as const) test(`central provider blocks 
 test('central worker default OFF cannot use provider HTTP or authority', async () => {
   await scenario(async h => {
     assert.equal((await create({}, h.authorityFetch).getTeamById('19')).ok, false);
+    assert.equal((await create({}, h.authorityFetch).getLiveScores()).ok, false);
+    assert.equal((await create({}, h.authorityFetch).searchPlayers({ query: 'player' })).ok, false);
     assert.deepEqual(h.counts(), { dbCalls: 0, providerCalls: 0 });
   });
 });

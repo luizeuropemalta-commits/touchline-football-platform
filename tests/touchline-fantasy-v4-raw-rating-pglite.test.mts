@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { readProductionRankings } from "./helpers/fantasy-ranking-projection.mts";
 
 // Isolated, in-memory PostgreSQL only. These deterministic identities and
 // ratings are SYNTHETIC TEST DATA, not archived football facts or customer data.
@@ -275,6 +276,123 @@ test("Fantasy raw-rating transition executes atomically against real SQL", {skip
       await install(db);
       assert.deepEqual((await db.query("select to_jsonb(t) as row from public.touchline_fantasy_locked_selections t")).rows,xi);
       assert.equal(Number((await db.query("select gameweek_score from public.touchline_fantasy_user_gameweek_scores")).rows[0].gameweek_score),10);
+    });
+    await scenario("ClubOwner never inherits a card's historical points; locked-round settlement is idempotent", async previousGameweek => {
+      await install(db);
+      const newcomer = ids.draftOwner, late = id(13);
+      await db.exec(`
+        insert into public.users values ('${ids.owner}'), ('${newcomer}'), ('${late}');
+        insert into public.touchline_fantasy_entitlements (user_id,status,source)
+          values ('${ids.owner}','active','qa_grant'), ('${newcomer}','active','qa_grant'), ('${late}','active','qa_grant');
+        insert into public.football_players
+          select ('10000000-0000-4000-8000-'||lpad((100+n)::text,12,'0'))::uuid,'sportmonks',(9000+n)::text
+          from generate_series(4,11) n;
+        insert into public.touchline_fantasy_user_gameweeks
+          (id,user_id,gameweek_id,formation_code,state,budget_eur_snapshot,max_players_per_club_snapshot)
+          values ('${ids.confirmed}','${ids.owner}','${previousGameweek}','4-3-3','FINAL',1000000,11);
+        -- Existing independently settled manager history is deliberately 70,
+        -- while the independently published card history below is 100.
+        insert into public.touchline_fantasy_user_gameweek_scores
+          (user_gameweek_id,gameweek_score,settlement_status,checksum)
+          values ('${ids.confirmed}',70,'FINAL','synthetic-veteran-history');
+        insert into public.touchline_card_ranking_snapshots
+          (snapshot_id,league_key,season_id,round_id,source,status,generated_at,audited_at,published_at,
+           price_table_version,checksum,expected_player_count,actual_player_count,ranking_payload,
+           selection_version,selection_payload,audit_report,scoring_version)
+          values ('synthetic-history-100','england','${ids.season}','${ids.previousRound}',
+            'sportmonks-audited','published',now(),now(),now(),'synthetic','synthetic-history-checksum',1,1,
+            jsonb_build_object('players',jsonb_build_array(jsonb_build_object('playerId','${PLAYER}','totalRating',100))),
+            'synthetic',jsonb_build_object('sourceSnapshotId','synthetic-history-100','complete',true,
+              'players',(select jsonb_agg(jsonb_build_object('playerId',n)) from generate_series(1,11) n)),
+            '{"passed":true}','player_scoring_v4');
+      `);
+      const currentGameweek = (await db.query<{id:string}>(
+        "select id from public.touchline_fantasy_gameweeks where round_id=$1", [ids.nextRound],
+      )).rows[0].id;
+      const ranking = async () => readProductionRankings({
+        touchline_fantasy_user_gameweeks: (await db.query(`select u.id,u.user_id,u.gameweek_id,g.season_id
+          from public.touchline_fantasy_user_gameweeks u join public.touchline_fantasy_gameweeks g on g.id=u.gameweek_id`)).rows,
+        touchline_fantasy_user_gameweek_scores: (await db.query("select * from public.touchline_fantasy_user_gameweek_scores")).rows,
+        users: [{id:ids.owner,full_name:"Veteran"},{id:newcomer,full_name:"New manager"},{id:late,full_name:"Late manager"}],
+      }, currentGameweek, ids.season, newcomer);
+      const historicalCard = (await db.query("select to_jsonb(s) as row from public.touchline_card_ranking_snapshots s")).rows;
+      const managerRounds: string[] = [];
+      for (const user of [ids.owner,newcomer]) {
+        const prepared = (await db.query<{id:string}>(
+          "select public.touchline_fantasy_prepare_user_gameweek($1,$2) as id", [user,currentGameweek],
+        )).rows[0].id;
+        managerRounds.push(prepared);
+        // Canonical confirmed-XI fixture; the actual lock function below must
+        // create all immutable selections before the actual scorer can credit it.
+        await db.query(`insert into public.touchline_fantasy_user_gameweek_selections
+          (user_gameweek_id,slot_id,slot_index,player_id,club_id,formation_role,position_bucket,market_value_eur)
+          select $1,'slot-'||n,n,('10000000-0000-4000-8000-'||lpad((100+n)::text,12,'0'))::uuid,
+            $2,case when n=1 then 'goalkeeper' else 'midfielder' end,
+            case when n=1 then 'goalkeeper' else 'midfield' end,1000 from generate_series(1,11) n`, [prepared,ids.home]);
+        await db.query(`update public.touchline_fantasy_user_gameweeks set state='CONFIRMED',
+          selected_coach_id='307',confirmed_at=clock_timestamp()-interval '2 hours',total_market_value_eur=11000 where id=$1`, [prepared]);
+      }
+      assert.equal((await ranking()).season.find(row=>row.name==="Veteran")?.score,70);
+      assert.equal((await ranking()).season.find(row=>row.isCurrentManager)?.score ?? 0,0);
+      assert.equal((await db.query("select count(*)::int as n from public.touchline_fantasy_locked_selections")).rows[0].n,0);
+
+      await db.query(`update public.football_fixtures set starts_at=clock_timestamp()-interval '1 hour',
+        status='FT',finalized_at=clock_timestamp()-interval '1 minute',source_updated_at=$2 where id=$1`, [ids.nextFixture,SOURCE_TIME]);
+      await db.query(`insert into public.football_fantasy_fixture_feeds
+        (provider,provider_fixture_id,fixture_payload,lineups_payload,formations_payload,sidelined_payload,events_payload,last_synced_at)
+        values ('sportmonks','99002','{"status":"FT"}','[{"playerId":"9001","teamId":"900"}]','[]','[]','[]',$1)`, [SOURCE_TIME]);
+      await db.query(`insert into public.touchline_player_fixture_score_settlements
+        (football_player_id,fixture_id,competition_id,season_id,club_id,scoring_version,appearance_status,
+         minutes_played,rating,touchline_points,statistics_payload,scoring_coverage_status,ranking_coverage_status,settlement_status,source_synced_at)
+        select ('10000000-0000-4000-8000-'||lpad((100+n)::text,12,'0'))::uuid,$1,$2,$3,$4,'player_scoring_v4',
+          case when n=1 then 'started' else 'unused' end,case when n=1 then 90 else 0 end,
+          case when n=1 then 8 else null end,case when n=1 then 8 else null end,'{}',
+          case when n=1 then 'complete' else 'unavailable' end,
+          case when n=1 then 'complete' else 'complete_for_scoring' end,'final',$5
+        from generate_series(1,11) n`, [ids.nextFixture,ids.competition,ids.season,ids.home,SOURCE_TIME]);
+      await db.exec("select public.touchline_fantasy_sync_gameweeks()");
+      const first = await reconcile(db,currentGameweek);
+      assert.equal(first.ok,true);
+      assert.equal(first.userScoresChanged,2);
+      const locked = (await db.query("select to_jsonb(s) as row from public.touchline_fantasy_locked_selections s order by user_gameweek_id,slot_index")).rows;
+      assert.equal(locked.length,22);
+      const settled = (await db.query("select to_jsonb(s) as row from public.touchline_fantasy_user_gameweek_scores s order by user_gameweek_id")).rows;
+      for (const round of managerRounds) assert.equal(Number((await db.query(
+        "select gameweek_score from public.touchline_fantasy_user_gameweek_scores where user_gameweek_id=$1",[round],
+      )).rows[0].gameweek_score),8);
+      const result = await ranking();
+      assert.equal(result.season.find(row=>row.name==="Veteran")?.score,78);
+      assert.equal(result.season.find(row=>row.isCurrentManager)?.score,8);
+      assert.equal(result.gameweek.find(row=>row.isCurrentManager)?.score,8);
+      const replay = await reconcile(db,currentGameweek);
+      assert.equal(replay.userScoresChanged,0);
+      assert.equal(replay.playerFixtureRowsChanged,0);
+      assert.deepEqual((await db.query("select to_jsonb(s) as row from public.touchline_fantasy_user_gameweek_scores s order by user_gameweek_id")).rows,settled);
+      assert.deepEqual((await db.query("select to_jsonb(s) as row from public.touchline_fantasy_locked_selections s order by user_gameweek_id,slot_index")).rows,locked);
+      assert.deepEqual((await db.query("select to_jsonb(s) as row from public.touchline_card_ranking_snapshots s")).rows,historicalCard);
+
+      for (const command of [
+        () => db.query("select public.touchline_fantasy_prepare_user_gameweek($1,$2)",[late,currentGameweek]),
+        () => db.query("select public.touchline_fantasy_save_lineup($1,$2,'307','4-3-3','[]','confirm','late-no-retroactive')",[late,currentGameweek]),
+      ]) {
+        await db.exec("savepoint late_entry");
+        await assert.rejects(command,/TL_FANTASY_GAMEWEEK_LOCKED/);
+        await db.exec("rollback to savepoint late_entry");
+      }
+      assert.equal((await db.query("select count(*)::int as n from public.touchline_fantasy_user_gameweeks where user_id=$1",[late])).rows[0].n,0);
+      // After the closed round, the first permissible participation is a new
+      // empty draft in the next open round, never a backdated locked roster.
+      await db.query("insert into public.football_rounds values ($1,$2,$3,'Gameweek 3')",[id(14),ids.competition,ids.season]);
+      await db.query(`insert into public.football_fixtures
+        (id,round_id,competition_id,season_id,provider,provider_fixture_id,starts_at,status,home_club_id,away_club_id)
+        values ($1,$2,$3,$4,'sportmonks','99003',clock_timestamp()+interval '1 day','NS',$5,$6)`,[id(15),id(14),ids.competition,ids.season,ids.home,ids.away]);
+      await db.exec("select public.touchline_fantasy_sync_gameweeks()");
+      const next = (await db.query<{id:string}>("select id from public.touchline_fantasy_gameweeks where round_id=$1",[id(14)])).rows[0].id;
+      const lateDraft = (await db.query<{id:string}>("select public.touchline_fantasy_prepare_user_gameweek($1,$2) as id",[late,next])).rows[0].id;
+      assert.equal((await db.query("select state from public.touchline_fantasy_user_gameweeks where id=$1",[lateDraft])).rows[0].state,"DRAFT");
+      for (const table of ["touchline_fantasy_user_gameweek_selections","touchline_fantasy_locked_selections","touchline_fantasy_user_gameweek_scores"]) {
+        assert.equal((await db.query(`select count(*)::int as n from public.${table} where user_gameweek_id=$1`,[lateDraft])).rows[0].n,0);
+      }
     });
     await scenario("DNP and missing-rating retain separate zero/null semantics",async()=>{
       await install(db);

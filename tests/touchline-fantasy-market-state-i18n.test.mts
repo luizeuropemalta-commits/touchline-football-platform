@@ -15,13 +15,13 @@ const baseline = {
   'en-GB': {
     states: ['Upcoming', 'Market open', 'Locked', 'Live', 'Final', 'Settled'],
     steps: ['Coach', 'Formation', 'Starting XI', 'Review', 'Arena sync'],
-    errors: ['This team exceeds the €900M budget.', 'The market is closed for this Gameweek.', 'Complete exactly 11 players before confirming.', 'One selected card is no longer eligible. Replace it and save again.', 'Gameweek access is not active for this account.'],
+    errors: ["This team exceeds your plan's budget.", 'The market is closed for this Gameweek.', 'Complete exactly 11 players before confirming.', 'One selected card is no longer eligible. Replace it and save again.', 'Gameweek access is not active for this account.'],
     errorFallback: 'Unable to save your team.', unavailableTitle: 'My Club', unavailableMessage: 'Service temporarily unavailable.',
   },
   'pt-BR': {
     states: ['Em breve', 'Mercado aberto', 'Bloqueada', 'Ao vivo', 'Final', 'Liquidada'],
     steps: ['Treinador', 'Formação', '11 jogadores', 'Revisão', 'Enviar à Arena'],
-    errors: ['Este time ultrapassa o orçamento de €900M.', 'O mercado está fechado para esta rodada.', 'Complete exatamente 11 jogadores antes de confirmar.', 'Um card escolhido não está mais elegível. Troque-o e salve novamente.', 'O acesso à rodada não está ativo nesta conta.'],
+    errors: ['Este time ultrapassa o orçamento do seu plano.', 'O mercado está fechado para esta rodada.', 'Complete exatamente 11 jogadores antes de confirmar.', 'Um card escolhido não está mais elegível. Troque-o e salve novamente.', 'O acesso à rodada não está ativo nesta conta.'],
     errorFallback: 'Não foi possível salvar sua equipe.', unavailableTitle: 'Meu Clube', unavailableMessage: 'Serviço temporariamente indisponível.',
   },
 };
@@ -82,9 +82,8 @@ test('draft phrases preserve current XI requirements without payment or legacy c
   for (const locale of codes) {
     const copy = mod.TOUCHLINE_FANTASY_MARKET_STATE_CATALOGUES[locale];
     assert.match(copy.errors.TL_FANTASY_XI_REQUIRES_11, /11|١١/);
-    // This is the existing game budget, not a purchase price or wallet balance.
-    assert.match(copy.errors.TL_FANTASY_BUDGET_EXCEEDED, /900|٩٠٠/);
-    assert.match(copy.errors.TL_FANTASY_BUDGET_EXCEEDED, /€|يورو/);
+    // The server resolves each plan's budget; error copy must not hard-code a retired amount.
+    assert.doesNotMatch(copy.errors.TL_FANTASY_BUDGET_EXCEEDED, /[0-9]|[٠-٩]|€/);
     assert.doesNotMatch(JSON.stringify(copy), /checkout|stripe|\b0 TC\b|Touch Credits|subscription price|wallet balance/i);
   }
   assert.match(mod.TOUCHLINE_FANTASY_MARKET_STATE_CATALOGUES['ar-SA'].unavailableMessage, /[\u0600-\u06ff]/);
@@ -100,7 +99,7 @@ function consumer(bindings: Record<string, unknown>) {
   const calls: ts.CallExpression[] = [];
   let unavailable: ts.Expression | undefined;
   function visit(node: ts.Node) {
-    if (ts.isIfStatement(node) && node.expression.getText(ast) === '!snapshot' && ts.isReturnStatement(node.thenStatement)) unavailable = node.thenStatement.expression;
+    if (ts.isIfStatement(node) && node.expression.getText(ast) === '!snapshot || !isTouchlineFantasyMarketAccess(marketPolicy)' && ts.isReturnStatement(node.thenStatement)) unavailable = node.thenStatement.expression;
     if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && ['lineupErrorCopy', 'statusCopy', 'stepLabel'].includes(node.expression.text)) calls.push(node);
     ts.forEachChild(node, visit);
   }

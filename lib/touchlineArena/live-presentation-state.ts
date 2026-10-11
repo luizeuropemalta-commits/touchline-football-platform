@@ -4,6 +4,9 @@ export const TOUCHLINE_LIVE_PRESENTATION_STATE_VERSION = 1 as const;
 export const TOUCHLINE_LIVE_PRESENTATION_POLL_MS = 10_000;
 export const TOUCHLINE_PREMATCH_PRESENTATION_POLL_MS = 30_000;
 export const TOUCHLINE_PREMATCH_PRESENTATION_WINDOW_MS = 60 * 60 * 1_000;
+// Match the publisher's recent-fixture window. This is a bounded read-retry
+// horizon, not permission to infer that an unconfirmed fixture is live.
+export const TOUCHLINE_LIVE_PRESENTATION_CATCHUP_WINDOW_MS = 4 * 60 * 60 * 1_000;
 
 export type TouchlineLivePresentationMode = "live" | "prematch" | "settling" | "idle";
 
@@ -12,6 +15,7 @@ export type TouchlineLivePresentationState = Readonly<{
   available: boolean;
   playerRankingSnapshotId: string | null;
   coachRankingSnapshotId: string | null;
+  livePresentationSnapshotId?: string | null;
   mode: TouchlineLivePresentationMode;
   pollAfterMs: number | null;
   resumeAt: string | null;
@@ -52,6 +56,11 @@ export function parseTouchlineLivePresentationState(value: unknown): TouchlineLi
   const coachRankingSnapshotId = candidate.coachRankingSnapshotId === null
     ? null
     : normalizedSnapshotId(candidate.coachRankingSnapshotId);
+  const livePresentationSnapshotId = candidate.livePresentationSnapshotId === undefined
+    ? undefined
+    : candidate.livePresentationSnapshotId === null
+      ? null
+      : normalizedId(candidate.livePresentationSnapshotId);
   const resumeAt = normalizedTimestamp(candidate.resumeAt);
   const mode = candidate.mode;
   const pollAfterMs = candidate.pollAfterMs;
@@ -62,6 +71,8 @@ export function parseTouchlineLivePresentationState(value: unknown): TouchlineLi
     || !["live", "prematch", "settling", "idle"].includes(String(mode))
     || (candidate.playerRankingSnapshotId !== null && !playerRankingSnapshotId)
     || (candidate.coachRankingSnapshotId !== null && !coachRankingSnapshotId)
+    || (candidate.livePresentationSnapshotId !== undefined
+      && candidate.livePresentationSnapshotId !== null && !livePresentationSnapshotId)
     || (candidate.resumeAt !== null && !resumeAt)
     || !(
       pollAfterMs === null
@@ -81,6 +92,7 @@ export function parseTouchlineLivePresentationState(value: unknown): TouchlineLi
     available: candidate.available,
     playerRankingSnapshotId,
     coachRankingSnapshotId,
+    ...(livePresentationSnapshotId !== undefined ? { livePresentationSnapshotId } : {}),
     mode: mode as TouchlineLivePresentationMode,
     pollAfterMs,
     resumeAt,
@@ -111,6 +123,16 @@ export function resolveTouchlineLivePresentationTiming(input: {
     return { mode: "settling" as const, pollAfterMs: TOUCHLINE_LIVE_PRESENTATION_POLL_MS, resumeAt: null };
   }
 
+  const awaitingKickoffStatus = fixtures.some((fixture) => {
+    if (fixture.state !== "upcoming") return false;
+    const startsAt = Date.parse(fixture.startsAt ?? "");
+    return Number.isFinite(startsAt) && startsAt <= now
+      && now - startsAt <= TOUCHLINE_LIVE_PRESENTATION_CATCHUP_WINDOW_MS;
+  });
+  if (awaitingKickoffStatus) {
+    return { mode: "prematch" as const, pollAfterMs: TOUCHLINE_PREMATCH_PRESENTATION_POLL_MS, resumeAt: null };
+  }
+
   const upcomingKickoffs = fixtures
     .filter((fixture) => fixture.state === "upcoming")
     .map((fixture) => Date.parse(fixture.startsAt ?? ""))
@@ -131,16 +153,18 @@ export function resolveTouchlineLivePresentationTiming(input: {
 }
 
 export function touchlineLivePresentationRevisionChanged(
-  current: Pick<TouchlineLivePresentationState, "playerRankingSnapshotId" | "coachRankingSnapshotId">,
-  next: Pick<TouchlineLivePresentationState, "playerRankingSnapshotId" | "coachRankingSnapshotId">,
+  current: Pick<TouchlineLivePresentationState, "playerRankingSnapshotId" | "coachRankingSnapshotId" | "livePresentationSnapshotId">,
+  next: Pick<TouchlineLivePresentationState, "playerRankingSnapshotId" | "coachRankingSnapshotId" | "livePresentationSnapshotId">,
 ) {
   return current.playerRankingSnapshotId !== next.playerRankingSnapshotId
-    || current.coachRankingSnapshotId !== next.coachRankingSnapshotId;
+    || current.coachRankingSnapshotId !== next.coachRankingSnapshotId
+    || (next.livePresentationSnapshotId !== undefined
+      && current.livePresentationSnapshotId !== next.livePresentationSnapshotId);
 }
 
 export function mergeTouchlineLivePresentationRevision(
-  current: Pick<TouchlineLivePresentationState, "playerRankingSnapshotId" | "coachRankingSnapshotId">,
-  next: Pick<TouchlineLivePresentationState, "playerRankingSnapshotId" | "coachRankingSnapshotId">,
+  current: Pick<TouchlineLivePresentationState, "playerRankingSnapshotId" | "coachRankingSnapshotId" | "livePresentationSnapshotId">,
+  next: Pick<TouchlineLivePresentationState, "playerRankingSnapshotId" | "coachRankingSnapshotId" | "livePresentationSnapshotId">,
   watches: { player: boolean; coach: boolean },
 ) {
   return {
@@ -150,5 +174,8 @@ export function mergeTouchlineLivePresentationRevision(
     coachRankingSnapshotId: watches.coach
       ? next.coachRankingSnapshotId ?? current.coachRankingSnapshotId
       : current.coachRankingSnapshotId,
+    ...(next.livePresentationSnapshotId !== undefined || current.livePresentationSnapshotId !== undefined
+      ? { livePresentationSnapshotId: next.livePresentationSnapshotId ?? current.livePresentationSnapshotId }
+      : {}),
   };
 }

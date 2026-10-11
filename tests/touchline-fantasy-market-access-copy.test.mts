@@ -158,7 +158,7 @@ test("actual complete window section preserves calendar vs permission, read-only
 });
 
 test("actual labels and window section consume the catalogue rather than retaining duplicate inline text", () => {
-  assert.match(source, /import \{ getTouchlineFantasyMarketAccessCopy \} from "@\/lib\/touchlineFantasy\/market-access-i18n"/);
+  assert.match(source, /import \{ getTouchlineFantasyMarketAccessCopy, getTouchlineFantasyMarketPlanLockCopy \} from "@\/lib\/touchlineFantasy\/market-access-i18n"/);
   const section = elements.find(node => hasClass(node, "myClubMarketStatus")); assert.ok(section);
   const sentinel = Object.fromEntries(Object.keys(baseline["en-GB"]).map(key => [key, `copy:${key}`]));
   const base = { pt: false, locale: "en-GB", snapshot: { entitlementActive: false }, activeGameweek: { state: "MARKET_OPEN" }, deadlineReached: false,

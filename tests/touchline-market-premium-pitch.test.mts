@@ -12,7 +12,7 @@ test("Market uses its horizontal smoked-glass pitch while shared boundary trace 
 
   const marketPitch = stage.match(/<TouchlinePitchSurface className=\{styles\.myClubTacticalPitch\}[^>]*>/)?.[0] ?? "";
   assert.match(marketPitch, /orientation="horizontal"/);
-  assert.match(marketPitch, /surfaceVariant=\{marketPage \? "smoked-glass" : "premium-stadium"\}/);
+  assert.match(marketPitch, /surfaceVariant="smoked-glass"/);
   assert.doesNotMatch(marketPitch, /boundaryTrace|advertisingCampaign=/);
   assert.match(pitch, /className=\{styles\.boundaryTraceRunner\}/);
 });

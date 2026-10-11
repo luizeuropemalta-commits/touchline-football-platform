@@ -27,7 +27,7 @@ export const TOUCHLINE_FANTASY_MARKET_STATE_CATALOGUES = {
     states: { UPCOMING: "Upcoming", MARKET_OPEN: "Market open", LOCKED: "Locked", LIVE: "Live", FINAL: "Final", SETTLED: "Settled" },
     steps: { coach: "Coach", formation: "Formation", players: "Starting XI", review: "Review", locked: "Arena sync" },
     errors: {
-      TL_FANTASY_BUDGET_EXCEEDED: "This team exceeds the €900M budget.",
+      TL_FANTASY_BUDGET_EXCEEDED: "This team exceeds your plan's budget.",
       TL_FANTASY_GAMEWEEK_LOCKED: "The market is closed for this Gameweek.",
       TL_FANTASY_XI_REQUIRES_11: "Complete exactly 11 players before confirming.",
       TL_FANTASY_SELECTION_INELIGIBLE: "One selected card is no longer eligible. Replace it and save again.",
@@ -39,7 +39,7 @@ export const TOUCHLINE_FANTASY_MARKET_STATE_CATALOGUES = {
     states: { UPCOMING: "Em breve", MARKET_OPEN: "Mercado aberto", LOCKED: "Bloqueada", LIVE: "Ao vivo", FINAL: "Final", SETTLED: "Liquidada" },
     steps: { coach: "Treinador", formation: "Formação", players: "11 jogadores", review: "Revisão", locked: "Enviar à Arena" },
     errors: {
-      TL_FANTASY_BUDGET_EXCEEDED: "Este time ultrapassa o orçamento de €900M.",
+      TL_FANTASY_BUDGET_EXCEEDED: "Este time ultrapassa o orçamento do seu plano.",
       TL_FANTASY_GAMEWEEK_LOCKED: "O mercado está fechado para esta rodada.",
       TL_FANTASY_XI_REQUIRES_11: "Complete exatamente 11 jogadores antes de confirmar.",
       TL_FANTASY_SELECTION_INELIGIBLE: "Um card escolhido não está mais elegível. Troque-o e salve novamente.",
@@ -51,7 +51,7 @@ export const TOUCHLINE_FANTASY_MARKET_STATE_CATALOGUES = {
     states: { UPCOMING: "Próximamente", MARKET_OPEN: "Mercado abierto", LOCKED: "Bloqueada", LIVE: "En directo", FINAL: "Finalizada", SETTLED: "Puntuación consolidada" },
     steps: { coach: "Entrenador", formation: "Formación", players: "Once titular", review: "Revisión", locked: "Sincronizar con la Arena" },
     errors: {
-      TL_FANTASY_BUDGET_EXCEEDED: "Este equipo supera el presupuesto de 900 millones de €.",
+      TL_FANTASY_BUDGET_EXCEEDED: "Este equipo supera el presupuesto de tu plan.",
       TL_FANTASY_GAMEWEEK_LOCKED: "El mercado está cerrado para esta jornada.",
       TL_FANTASY_XI_REQUIRES_11: "Completa exactamente 11 jugadores antes de confirmar.",
       TL_FANTASY_SELECTION_INELIGIBLE: "Una carta seleccionada ya no es elegible. Sustitúyela y vuelve a guardar.",
@@ -63,7 +63,7 @@ export const TOUCHLINE_FANTASY_MARKET_STATE_CATALOGUES = {
     states: { UPCOMING: "In arrivo", MARKET_OPEN: "Mercato aperto", LOCKED: "Bloccata", LIVE: "In diretta", FINAL: "Conclusa", SETTLED: "Punteggio consolidato" },
     steps: { coach: "Allenatore", formation: "Modulo", players: "Undici titolari", review: "Riepilogo", locked: "Sincronizza con l’Arena" },
     errors: {
-      TL_FANTASY_BUDGET_EXCEEDED: "Questa squadra supera il budget di 900 milioni di €.",
+      TL_FANTASY_BUDGET_EXCEEDED: "Questa squadra supera il budget del tuo piano.",
       TL_FANTASY_GAMEWEEK_LOCKED: "Il mercato è chiuso per questa giornata.",
       TL_FANTASY_XI_REQUIRES_11: "Completa la squadra con esattamente 11 giocatori prima di confermare.",
       TL_FANTASY_SELECTION_INELIGIBLE: "Una carta selezionata non è più idonea. Sostituiscila e salva di nuovo.",
@@ -75,7 +75,7 @@ export const TOUCHLINE_FANTASY_MARKET_STATE_CATALOGUES = {
     states: { UPCOMING: "À venir", MARKET_OPEN: "Marché ouvert", LOCKED: "Verrouillée", LIVE: "En direct", FINAL: "Terminée", SETTLED: "Points consolidés" },
     steps: { coach: "Entraîneur", formation: "Formation", players: "Onze de départ", review: "Vérification", locked: "Synchroniser avec l’Arena" },
     errors: {
-      TL_FANTASY_BUDGET_EXCEEDED: "Cette équipe dépasse le budget de 900 millions d’€.",
+      TL_FANTASY_BUDGET_EXCEEDED: "Cette équipe dépasse le budget de votre forfait.",
       TL_FANTASY_GAMEWEEK_LOCKED: "Le marché est fermé pour cette journée.",
       TL_FANTASY_XI_REQUIRES_11: "Sélectionnez exactement 11 joueurs avant de confirmer.",
       TL_FANTASY_SELECTION_INELIGIBLE: "Une carte sélectionnée n’est plus éligible. Remplacez-la et enregistrez à nouveau.",
@@ -87,7 +87,7 @@ export const TOUCHLINE_FANTASY_MARKET_STATE_CATALOGUES = {
     states: { UPCOMING: "قريبًا", MARKET_OPEN: "السوق مفتوح", LOCKED: "مقفلة", LIVE: "مباشر", FINAL: "منتهية", SETTLED: "النقاط معتمدة" },
     steps: { coach: "المدرب", formation: "الخطة", players: "التشكيلة الأساسية", review: "المراجعة", locked: "المزامنة مع Arena" },
     errors: {
-      TL_FANTASY_BUDGET_EXCEEDED: "يتجاوز هذا الفريق ميزانية ٩٠٠ مليون يورو.",
+      TL_FANTASY_BUDGET_EXCEEDED: "يتجاوز هذا الفريق ميزانية خطتك.",
       TL_FANTASY_GAMEWEEK_LOCKED: "السوق مغلق لهذه الجولة.",
       TL_FANTASY_XI_REQUIRES_11: "أكمل التشكيلة بـ١١ لاعبًا بالضبط قبل التأكيد.",
       TL_FANTASY_SELECTION_INELIGIBLE: "إحدى البطاقات المختارة لم تعد مؤهلة. استبدلها واحفظ مجددًا.",
@@ -99,7 +99,7 @@ export const TOUCHLINE_FANTASY_MARKET_STATE_CATALOGUES = {
     states: { UPCOMING: "Yakında", MARKET_OPEN: "Pazar açık", LOCKED: "Kilitli", LIVE: "Canlı", FINAL: "Tamamlandı", SETTLED: "Puanlar kesinleşti" },
     steps: { coach: "Teknik direktör", formation: "Diziliş", players: "İlk 11", review: "Kontrol", locked: "Arena ile eşitle" },
     errors: {
-      TL_FANTASY_BUDGET_EXCEEDED: "Bu takım 900 milyon € bütçesini aşıyor.",
+      TL_FANTASY_BUDGET_EXCEEDED: "Bu takım planınızın bütçesini aşıyor.",
       TL_FANTASY_GAMEWEEK_LOCKED: "Pazar bu hafta için kapalı.",
       TL_FANTASY_XI_REQUIRES_11: "Onaylamadan önce takımı tam 11 oyuncuya tamamlayın.",
       TL_FANTASY_SELECTION_INELIGIBLE: "Seçilen kartlardan biri artık uygun değil. Kartı değiştirip yeniden kaydedin.",
@@ -111,7 +111,7 @@ export const TOUCHLINE_FANTASY_MARKET_STATE_CATALOGUES = {
     states: { UPCOMING: "Demnächst", MARKET_OPEN: "Markt geöffnet", LOCKED: "Gesperrt", LIVE: "Live", FINAL: "Beendet", SETTLED: "Punkte bestätigt" },
     steps: { coach: "Trainer", formation: "Formation", players: "Startelf", review: "Überprüfen", locked: "Mit der Arena synchronisieren" },
     errors: {
-      TL_FANTASY_BUDGET_EXCEEDED: "Dieses Team überschreitet das Budget von 900 Millionen €.",
+      TL_FANTASY_BUDGET_EXCEEDED: "Dieses Team überschreitet das Budget deines Plans.",
       TL_FANTASY_GAMEWEEK_LOCKED: "Der Markt ist für diesen Spieltag geschlossen.",
       TL_FANTASY_XI_REQUIRES_11: "Wähle vor der Bestätigung genau 11 Spieler aus.",
       TL_FANTASY_SELECTION_INELIGIBLE: "Eine ausgewählte Karte ist nicht mehr zugelassen. Ersetze sie und speichere erneut.",

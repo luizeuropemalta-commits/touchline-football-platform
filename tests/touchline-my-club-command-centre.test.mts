@@ -41,7 +41,8 @@ test("Market preserves its ClubOwner photo, name, market power and points", () =
 
   assert.match(market, /resolveTouchlineClubOwnerPageIdentity\(user, undefined, avatarContext\?\.avatarUrl\)/);
   assert.match(market, /<ClubOwnerMarketHeader owner=\{clubOwner\?\.isAuthenticatedClubOwner \? clubOwner : null\}/);
-  assert.match(market, /remainingMarketPower=\{snapshot \? Math\.max\(0, snapshot\.config\.budgetEur - \(snapshot\.userGameweek\?\.totalMarketValueEur \?\? 0\)\) : null\}/);
+  assert.match(market, /remainingMarketPower=\{remainingMarketPower\} realUnlimited=\{realUnlimited\}/);
+  assert.match(market, /Math\.max\(0, marketAccess\.budgetEur - \(snapshot\.userGameweek\?\.totalMarketValueEur \?\? 0\)\)/);
   assert.match(header, /<Image src=\{owner\?\.avatarUrl \|\| "\/icons\/touchline-512\.png"\}/);
   assert.match(header, /owner\?\.name/);
   assert.match(header, /copy\.marketPower/);

@@ -3,12 +3,21 @@ import type { TouchLineLocale } from "./i18n.ts";
 
 /** Product proposal only. Never use these values as wallet balances or entitlements. */
 export const CLUB_OWNER_PLAN_PREVIEWS = [
+  { id: "beta", amount: "50M", budget: 50_000_000 },
   { id: "standard", amount: "500M", budget: 500_000_000 },
   { id: "pro", amount: "1B", budget: 1_000_000_000 },
   { id: "master", amount: "2B", budget: 2_000_000_000 },
   { id: "vip", amount: null, budget: null },
 ] as const;
 export type ClubOwnerPlanPreview = typeof CLUB_OWNER_PLAN_PREVIEWS[number]["id"];
+
+const VIP_PLAN_NAMES: Readonly<Record<TouchLineLocale, string>> = {
+  "en-GB": "Guest VIP", "pt-BR": "VIP Convidado", "es-ES": "VIP Invitado", "it-IT": "VIP Ospite",
+  "fr-FR": "VIP Invité", "ar-SA": "ضيف VIP", "tr-TR": "Konuk VIP", "de-DE": "Gast-VIP",
+};
+export function getClubOwnerVipPlanName(locale: string, draftLocalesEnabled = false): string {
+  return VIP_PLAN_NAMES[resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled)];
+}
 
 const en = {
   browse: "Explore plans", previous: "Previous plan", next: "Next plan", preview: "Plan preview — your subscription is unchanged.",
@@ -37,7 +46,31 @@ export const CLUB_OWNER_PLAN_EXPERIENCE_COPY: Readonly<Record<TouchLineLocale, R
   "tr-TR": { membership: "Üyelik", fantasyFootball: "Fantezi futbol", comparePlans: "Planları karşılaştır", annualPrice: "Yıllık fiyat", details: "Plan ayrıntıları", close: "Kapat", previewShort: "Plan önizlemesi", plan: "Plan", viewPlan: "Planı gör", selected: "Seçili" },
   "de-DE": { membership: "Mitgliedschaft", fantasyFootball: "Fantasy-Fußball", comparePlans: "Pläne vergleichen", annualPrice: "Jahrespreis", details: "Plandetails", close: "Schließen", previewShort: "Planvorschau", plan: "Plan", viewPlan: "Plan ansehen", selected: "Ausgewählt" },
 };
+const BETA_MARKET_BENEFIT: Readonly<Record<TouchLineLocale, string>> = {
+  "en-GB": "50M TC XI budget. Player Market: Hull City, Coventry City, Ipswich Town and Bournemouth. Public browsing and coaches remain open.",
+  "pt-BR": "Orçamento de 50M TC para o XI. Mercado de jogadores: Hull City, Coventry City, Ipswich Town e Bournemouth. Navegação pública e treinadores continuam livres.",
+  "es-ES": "Presupuesto de 50M TC para el once. Mercado de jugadores: Hull City, Coventry City, Ipswich Town y Bournemouth. La navegación pública y los entrenadores siguen abiertos.",
+  "it-IT": "Budget di 50M TC per gli undici. Mercato giocatori: Hull City, Coventry City, Ipswich Town e Bournemouth. La navigazione pubblica e gli allenatori restano accessibili.",
+  "fr-FR": "Budget de 50M TC pour le onze. Marché des joueurs : Hull City, Coventry City, Ipswich Town et Bournemouth. La navigation publique et les entraîneurs restent accessibles.",
+  "ar-SA": "ميزانية 50 مليون TC للتشكيلة الأساسية. سوق اللاعبين: هال سيتي وكوفنتري سيتي وإيبسويتش تاون وبورنموث. يظل التصفح العام والمدربون متاحين.",
+  "tr-TR": "İlk 11 için 50M TC bütçe. Oyuncu Pazarı: Hull City, Coventry City, Ipswich Town ve Bournemouth. Herkese açık gezinme ve teknik direktörler erişilebilir kalır.",
+  "de-DE": "50M TC Startelf-Budget. Spielermarkt: Hull City, Coventry City, Ipswich Town und Bournemouth. Öffentliches Browsen und Trainer bleiben zugänglich.",
+};
+const BETA_PRICE: Readonly<Record<TouchLineLocale, string>> = {
+  "en-GB": "Free", "pt-BR": "Gratuito", "es-ES": "Gratis", "it-IT": "Gratuito",
+  "fr-FR": "Gratuit", "ar-SA": "مجاني", "tr-TR": "Ücretsiz", "de-DE": "Kostenlos",
+};
+const MASTER_PRICE_COPY: Readonly<Record<TouchLineLocale, Readonly<{ masterPrice: string; seasonalPrice: string; priceLabel: string }>>> = {
+  "en-GB": { masterPrice: "€169.90/season", seasonalPrice: "Price per season", priceLabel: "Price" },
+  "pt-BR": { masterPrice: "€169,90/temporada", seasonalPrice: "Preço por temporada", priceLabel: "Preço" },
+  "es-ES": { masterPrice: "169,90 €/temporada", seasonalPrice: "Precio por temporada", priceLabel: "Precio" },
+  "it-IT": { masterPrice: "169,90 €/stagione", seasonalPrice: "Prezzo per stagione", priceLabel: "Prezzo" },
+  "fr-FR": { masterPrice: "169,90 €/saison", seasonalPrice: "Prix par saison", priceLabel: "Prix" },
+  "ar-SA": { masterPrice: "169.90 € لكل موسم", seasonalPrice: "السعر لكل موسم", priceLabel: "السعر" },
+  "tr-TR": { masterPrice: "169,90 €/sezon", seasonalPrice: "Sezon başına fiyat", priceLabel: "Fiyat" },
+  "de-DE": { masterPrice: "169,90 €/Saison", seasonalPrice: "Preis pro Saison", priceLabel: "Preis" },
+};
 export function getClubOwnerPlanShowcaseCopy(locale: string, draftLocalesEnabled = false) {
   const code = resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled);
-  return { ...CLUB_OWNER_PLAN_SHOWCASE_COPY[code], ...CLUB_OWNER_PLAN_EXPERIENCE_COPY[code] };
+  return { ...CLUB_OWNER_PLAN_SHOWCASE_COPY[code], ...CLUB_OWNER_PLAN_EXPERIENCE_COPY[code], betaBenefit: BETA_MARKET_BENEFIT[code], betaPrice: BETA_PRICE[code], ...MASTER_PRICE_COPY[code] };
 }

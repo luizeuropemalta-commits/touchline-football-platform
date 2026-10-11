@@ -59,6 +59,44 @@ function partition(state: TouchlineQuickSubstitutionSessionState) {
   ];
 }
 
+test("exact command retries use the original outgoing player after the slot changed and after restore", () => {
+  const initial = readyState();
+  const firstCommand = command(initial);
+  const first = applyTouchlineQuickSubstitutionSession(initial, firstCommand);
+  assert.equal(first.status, "applied");
+  if (first.status !== "applied") throw new Error("Expected substitution");
+  const replay = applyTouchlineQuickSubstitutionSession(first.state, firstCommand);
+  assert.equal(replay.status, "replayed");
+  if (replay.status !== "replayed") throw new Error("Expected replay");
+  assert.equal(replay.state, first.state);
+  assert.equal(replay.event, first.event);
+  assert.equal(replay.state.revision, 1);
+
+  const second = applyTouchlineQuickSubstitutionSession(first.state, command(first.state));
+  assert.equal(second.status, "applied");
+  if (second.status !== "applied") throw new Error("Expected second substitution");
+  const restored = restoreTouchlineQuickSubstitutionSession(snapshot(), JSON.parse(JSON.stringify(second.state)));
+  assert.equal(restored.status, "ready");
+  if (restored.status !== "ready") throw new Error("Expected restore");
+  const restoredReplay = applyTouchlineQuickSubstitutionSession(restored.state, firstCommand);
+  assert.equal(restoredReplay.status, "replayed");
+  if (restoredReplay.status !== "replayed") throw new Error("Expected restored replay");
+  assert.equal(restoredReplay.state.revision, 2);
+  assert.equal(restoredReplay.state.appliedEvents.length, 2);
+
+  for (const changed of [
+    { outgoingPositionSlotId: initial.activeSlots[1]!.positionSlotId },
+    { incomingInventoryId: initial.availableBenchInventoryIds[1]! },
+    { commandHash: "different-hash" },
+    { expectedRevision: 2 },
+    { occurredAt: "2026-08-10T10:01:00.000Z" },
+  ]) {
+    assert.deepEqual(applyTouchlineQuickSubstitutionSession(restored.state, { ...firstCommand, ...changed }), {
+      status: "rejected", reason: "duplicate_command_conflict",
+    });
+  }
+});
+
 test("the Quick Sub session initializes only with exactly eleven stable slots and nine unique inventory-backed bench players", () => {
   assert.equal(TOUCHLINE_QUICK_SUBSTITUTION_SESSION_RULES.startingXiSize, 11);
   assert.equal(TOUCHLINE_QUICK_SUBSTITUTION_SESSION_RULES.matchdayBenchSize, 9);

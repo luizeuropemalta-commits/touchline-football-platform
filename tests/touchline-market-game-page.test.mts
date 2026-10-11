@@ -24,7 +24,7 @@ test("avatar context captures configuration before auth, retains its error and s
 
 test("Market presentation preserves one XI editor and places the coach outside the pitch", () => {
   const client = source("app/fantasy/FantasyGameweekClient.tsx");
-  assert.match(client, /surfaceVariant=\{marketPage \? "smoked-glass"/);
+  assert.match(client, /surfaceVariant="smoked-glass"/);
   assert.match(client, /className=\{styles\.myClubFieldCoach\} aria-label=\{workflowCopy\.technicalArea\}/);
   assert.match(client, /data-market-starting-xi="true"/);
   assert.match(client, /<TouchlinePitchSurface[^>]*>[\s\S]*selectedCards\.map/);

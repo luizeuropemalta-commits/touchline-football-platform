@@ -233,6 +233,11 @@ function scenario(input: Input = {}) {
       calls.push("snapshot"); snapshots.push(snapshot);
       return { persisted: !input.snapshotError, reason: input.snapshotError };
     },
+    publishLivePresentation: async () => {
+      calls.push("publish-presentation");
+      if (input.snapshotError) throw new Error("publication must not run after a failed score snapshot");
+      return { snapshotId: "snapshot-1", contentDigest: "a".repeat(32) };
+    },
     observeConfirmedEvents: async (value: { fixtureProviderIds: string[]; enabled: boolean; signal: AbortSignal }) => {
       calls.push("observe-events");
       eventObservationInputs.push(value);
@@ -305,6 +310,8 @@ test("confirmed events observe only after successful persisted current feed, rec
   assert.equal(s.calls.filter(call => call === "observe-events").length, 1);
   assert.ok(s.calls.indexOf("observe-events") > s.calls.indexOf("snapshot"));
   assert.ok(s.calls.indexOf("observe-events") > s.calls.indexOf("players"));
+  assert.ok(s.calls.indexOf("publish-presentation") > s.calls.indexOf("snapshot"));
+  assert.ok(s.calls.indexOf("publish-presentation") < s.calls.indexOf("observe-events"));
   const input = s.eventObservationInputs[0] as { fixtureProviderIds: string[]; enabled: boolean; signal: AbortSignal };
   assert.deepEqual(Array.from(input.fixtureProviderIds), [fixture.providerId]);
   assert.equal(input.enabled, true); assert.equal(input.signal.aborted, false);
@@ -313,6 +320,47 @@ test("disabled, failed persistence, scoring or snapshot never advance event obse
   for (const patch of [{ environment: undefined }, { feedPersistenceError: "failed" }, { playerErrors: ["failed"] }, { failedFixtureIds: ["fixture-internal"] }, { missingSettlementFixtureIds: ["fixture-internal"] }, { stateErrors: ["write-failed"] }, { snapshotError: "failed" }, { feedError: "failed" }, { leaseUnavailable: true }, { noIncomingFixtures: true, backlog: true }]) {
     const s = scenario({ environment: pushObservationEnvironment, ...patch });
     await s.run(); assert.equal(s.calls.includes("observe-events"), false);
+  }
+});
+test("the shared immutable Live revision publishes only after a fully successful canonical sync", async () => {
+  const passed = scenario();
+  assert.equal((await passed.run()).status, "success");
+  assert.equal(passed.calls.filter((call) => call === "publish-presentation").length, 1);
+  assert.ok(passed.calls.indexOf("snapshot") < passed.calls.indexOf("publish-presentation"));
+
+  for (const patch of [{ stateErrors: ["write-failed"] }, { playerErrors: ["scoring-failed"] },
+    { coachError: "P0001" }, { snapshotError: "snapshot-failed" }]) {
+    const blocked = scenario(patch);
+    await blocked.run();
+    assert.equal(blocked.calls.includes("publish-presentation"), false,
+      "partial or failed canonical writes must keep the previous shared pointer active");
+  }
+});
+test("independent schedule and backlog failures do not hide verified current Live data", async () => {
+  for (const input of [
+    { scheduleError: "unavailable" },
+    { backlog: true, backlogError: "deferred" },
+    { backlog: true, backlogError: "rate_limited" },
+    { backlog: true, shirtsPending: true },
+  ]) {
+    const current = scenario(input);
+    const result = await current.run();
+    assert.equal(result.status, "partial", "independent failures must remain operationally visible");
+    assert.ok(result.errors.length > 0);
+    assert.equal(current.calls.filter((call) => call === "publish-presentation").length, 1,
+      "verified current data must publish despite unrelated schedule/backlog failures");
+    assert.ok(current.calls.indexOf("publish-presentation") > current.calls.indexOf("snapshot"));
+
+    for (const blocker of [
+      { stateErrors: ["current-write-failed"] }, { playerErrors: ["scoring-failed"] },
+      { coachError: "P0001" }, { failedFixtureIds: ["current-fixture"] },
+      { missingSettlementFixtureIds: ["current-fixture"] },
+    ]) {
+      const failed = scenario({ ...input, ...blocker });
+      await failed.run();
+      assert.equal(failed.calls.includes("publish-presentation"), false,
+        "independent failures must never mask failed current canonical data or scoring");
+    }
   }
 });
 test("event observation failure stays separately visible without invalidating successful provider cadence", async () => {

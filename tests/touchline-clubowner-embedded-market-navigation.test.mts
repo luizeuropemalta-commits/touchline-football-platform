@@ -60,8 +60,9 @@ test('inline Market is a direct unconditional child after the setup/XI branch, n
   const embedded = root.parent.parent.parent;
   assert.ok(ts.isIfStatement(embedded));
   assert.equal(embedded.expression.getText(source), 'embedded');
-  const unavailable = nodes(source, node => ts.isIfStatement(node) && node.expression.getText(source) === '!snapshot')[0];
-  assert.ok(unavailable && unavailable.pos < embedded.pos, 'missing snapshot remains unavailable');
+  const unavailable = nodes(source, node => ts.isIfStatement(node)
+    && node.expression.getText(source).startsWith('!snapshot || !isTouchlineFantasyMarketAccess(marketPolicy)'))[0];
+  assert.ok(unavailable && unavailable.pos < embedded.pos, 'missing snapshot or invalid plan remains unavailable');
   const filter = declaration('browseCards');
   const branch = nodes(filter, node => ts.isConditionalExpression(node) && node.condition.getText(source) === 'marketPage')[0] as ts.ConditionalExpression;
   assert.ok(branch, 'real market filter remains position-led');

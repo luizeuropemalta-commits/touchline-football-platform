@@ -34,10 +34,11 @@ export default function TouchlineLivePresentationRefresh({
   const watchesCoachRanking = initialCoachRankingSnapshotId !== undefined;
   const latestVerifiedRef = useRef<Pick<
     TouchlineLivePresentationState,
-    "playerRankingSnapshotId" | "coachRankingSnapshotId"
+    "playerRankingSnapshotId" | "coachRankingSnapshotId" | "livePresentationSnapshotId"
   >>({
     playerRankingSnapshotId: initialPlayerRankingSnapshotId ?? null,
     coachRankingSnapshotId: initialCoachRankingSnapshotId ?? null,
+    livePresentationSnapshotId: null,
   });
 
   useEffect(() => {
@@ -48,6 +49,7 @@ export default function TouchlineLivePresentationRefresh({
       coachRankingSnapshotId: watchesCoachRanking
         ? initialCoachRankingSnapshotId ?? null
         : latestVerifiedRef.current.coachRankingSnapshotId,
+      livePresentationSnapshotId: latestVerifiedRef.current.livePresentationSnapshotId,
     };
   }, [
     initialCoachRankingSnapshotId,
@@ -124,6 +126,11 @@ export default function TouchlineLivePresentationRefresh({
           state,
           { player: watchesPlayerRanking, coach: watchesCoachRanking },
         );
+        // No shared digest accompanies the SSR seed yet. Its rendered score
+        // may therefore predate even the first known publication. Refresh once
+        // for that publication; retain the acknowledged digest across renders
+        // and effect restarts so router.refresh cannot create a refresh loop.
+        // The merge preserves a known digest when an absent/null one arrives.
         const changed = touchlineLivePresentationRevisionChanged(latestVerifiedRef.current, trackedState);
         latestVerifiedRef.current = trackedState;
         if (changed) startTransition(() => router.refresh());
