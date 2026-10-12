@@ -407,7 +407,8 @@ if (process.env.TOUCHLINE_RUN_PLAN_BROWSER_TESTS === "1") test("premium plans: t
         await previous.click(); await expect(bank).toHaveAttribute("data-plan-preview", "standard");
         await previous.click(); await expect(bank).toHaveAttribute("data-plan-preview", "beta");
         await previous.click(); await expect(bank).toHaveAttribute("data-plan-preview", "vip");
-        const vipTab = bank.getByRole("tab", { name: getClubOwnerVipPlanName(locale), exact: true });
+        const vipTab = bank.locator('[role="tab"][data-tier="vip"]');
+        await expect(vipTab).toHaveAccessibleName(new RegExp(getClubOwnerVipPlanName(locale, true)));
         await vipTab.focus(); await page.keyboard.press("Home");
         await expect(bank.locator('[role="tab"][data-tier="beta"]')).toBeFocused();
         await page.keyboard.press("ArrowRight");

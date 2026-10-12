@@ -1,5 +1,7 @@
 # TouchLine Current State
 
+2026-10-12 05:31 UTC — 🟢 Ensaio visual focal dos planos na candidata local: seletor de teste VIP corrigido para conferir o nome acessível composto, sem alterar a UI; Chromium/WebKit 9/9 PASS, capturas desktop/móvel inspecionadas em `/private/tmp/touchline-plan-exact-fixed-20261012-*`. `pnpm run verify:release` integral e `pnpm run build` pós-correção exit0 (139 páginas); `git diff --check` PASS. 🟡 Nenhum push/deploy; QA remoto autenticado, Sportmonks compartilhado, placares/pontos e avatar ainda não comprovados. 🔴 Disco livre pós-build 4.725.808 KiB (~4,51 GiB); nenhuma nova carga pesada ou limpeza.
+
 2026-10-12 00:30 UTC — 🟢 Consolidação local dos 50 caminhos WIP inventariados/hashes conferidos após suíte 5302PASS/0FAIL, build local PASS e revisão independente sem novo P0/P1/P2. Commit QA local criado; nenhum push ou deploy. 🟡 Safari autenticado, sincronização Sportmonks com quota compartilhada, placares/pontos atuais e avatar remoto seguem sem prova; não habilitar flags nem declarar release pronto.
 
 2026-10-11 22:06 UTC — 🔴 Hosted QA Live read returned partial persisted schedule (5 fixtures, all Not Started/no scores, verification 30 Sep); current scores and points are not active/verified. Preserve shared Sportmonks quota gate before any sync. No provider call made by this read.
