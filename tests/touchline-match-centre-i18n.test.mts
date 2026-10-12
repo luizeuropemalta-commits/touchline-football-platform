@@ -38,6 +38,16 @@ const draftStringOracles = {
   "tr-TR": {"title":"Maç merkezi","metadataTitle":"Canlı | TouchLine England","metadataDescription":"TouchLine England canlı maçları, olayları ve istatistikleri.","live":"CANLI","today":"BUGÜN","upcoming":"YAKLAŞAN","finished":"ARŞİV","currentFixtures":"Bu haftanın maçları","recentResults":"Son sonuçlar","matchweek":"Hafta","roundPending":"Hafta TouchLine onayını bekliyor","competition":"TouchLine England","league":"TouchLine England Ligi","england":"İngiltere","select":"Maçlar","alertsSoon":"Maç bildirimleri yakında","selectedFixture":"Seçilen maç","noFixtures":"Fikstür güncelleniyor","noFixturesCopy":"Resmî maçlar, organizasyon kanonik fikstürü yayımladığında gösterilecek.","venue":"Stadyum","venuePending":"TouchLine stadyum doğrulaması bekleniyor","capacity":"Kapasite","homeOf":"Ev sahibi","photo":"Fotoğraf","countdown":"Başlama vuruşuna","detail":"Maç verileri","dataPending":"Olaylar, kadrolar ve istatistikler TouchLine tarafından doğrulandıktan sonra gösterilir.","recent":"Resmî zaman çizelgesi","form":"Doğrulanmış kadrolar","players":"Maç puanları","archive":"TouchLine arşivi","provider":"TouchLine Verified","timezone":"Yerel saat","versus":"VS","completed":"BİTTİ","liveNow":"CANLI","next":"SIRADAKİ","official":"TouchLine Data","watch":"Maçı aç","liveDataUpdating":"Canlı veriler güncelleniyor","liveDataUpdatingCopy":"Son doğrulanmış anlık görüntü gösteriliyor; skor gecikmeli olabilir.","partialScheduleCopy":"Kaydedilmiş fikstür kullanılabilir, ancak canlı skorlar doğrulanmış bir anlık görüntü bekliyor.","lastVerified":"SON DOĞRULANAN","lastVerifiedAt":"Son doğrulama","events":"resmî olay","scoring":"resmî puan","lineupAvailable":"Kadro hazır","viewLineup":"KADROYU GÖR","lineupPending":"Resmî kadro henüz hazır değil","lineupPendingCopy":"Kadro hazır olup doğrulandığında burada gösterilecek.","starters":"İlk 11","bench":"Yedekler","minutes":"DK","rating":"PUAN","noScoring":"Resmî puan yok","assist":"Asist","substitutedFor":"yerine","dataUnavailable":"—","highlights":"Maçın öne çıkanları","bestCoach":"Kazanan teknik direktör","bestCards":"Maçın en iyi kartları","winnerVerified":"Doğrulanmış galibiyet","calculating":"Değerlendiriliyor","ratingVerified":"Doğrulanmış puan","season":"Sezon","homeFallback":"Ev sahibi","awayFallback":"Deplasman","eventFallback":"Olay","dayUnit":"g","hourUnit":"s","minuteUnit":"dk"},
   "de-DE": {"title":"Spielzentrum","metadataTitle":"Live | TouchLine England","metadataDescription":"Live-Spiele, Ereignisse und Statistiken von TouchLine England.","live":"JETZT LIVE","today":"HEUTE","upcoming":"DEMNÄCHST","finished":"ARCHIV","currentFixtures":"Spiele dieser Woche","recentResults":"Letzte Ergebnisse","matchweek":"Spieltag","roundPending":"Spieltag wartet auf TouchLine-Bestätigung","competition":"TouchLine England","league":"TouchLine England-Liga","england":"England","select":"Spiele","alertsSoon":"Spielbenachrichtigungen demnächst","selectedFixture":"Ausgewähltes Spiel","noFixtures":"Spielplan wird aktualisiert","noFixturesCopy":"Offizielle Spiele erscheinen, sobald der Wettbewerb den kanonischen Spielplan veröffentlicht.","venue":"Stadion","venuePending":"TouchLine-Verifizierung des Stadions ausstehend","capacity":"Kapazität","homeOf":"Heimstätte von","photo":"Foto","countdown":"Anstoß in","detail":"Spieldaten","dataPending":"Ereignisse, Aufstellungen und Statistiken erscheinen, sobald TouchLine sie verifiziert hat.","recent":"Offizieller Spielverlauf","form":"Verifizierte Aufstellungen","players":"Spielbewertungen","archive":"TouchLine-Archiv","provider":"TouchLine Verified","timezone":"Ortszeit","versus":"VS","completed":"BEENDET","liveNow":"LIVE","next":"NÄCHSTES","official":"TouchLine Data","watch":"Spiel öffnen","liveDataUpdating":"Live-Daten werden aktualisiert","liveDataUpdatingCopy":"Der letzte verifizierte Stand wird angezeigt; der Spielstand kann verzögert sein.","partialScheduleCopy":"Der gespeicherte Spielplan ist verfügbar, aber Live-Spielstände warten auf einen verifizierten Stand.","lastVerified":"ZULETZT VERIFIZIERT","lastVerifiedAt":"Letzte Verifizierung","events":"offizielle Ereignisse","scoring":"offizielle Bewertungen","lineupAvailable":"Aufstellung verfügbar","viewLineup":"AUFSTELLUNG ANSEHEN","lineupPending":"Offizielle Aufstellung noch nicht verfügbar","lineupPendingCopy":"Die Aufstellung erscheint hier, sobald sie verfügbar und verifiziert ist.","starters":"Startelf","bench":"Ersatzbank","minutes":"MIN","rating":"BEWERTUNG","noScoring":"Keine offizielle Bewertung","assist":"Vorlage","substitutedFor":"für","dataUnavailable":"—","highlights":"Herausragende Spielbeteiligte","bestCoach":"Siegreicher Trainer","bestCards":"Beste Spielkarten","winnerVerified":"Verifizierter Sieg","calculating":"In Auswertung","ratingVerified":"Verifizierte Bewertung","season":"Saison","homeFallback":"Heim","awayFallback":"Gast","eventFallback":"Ereignis","dayUnit":"T","hourUnit":"h","minuteUnit":"m"},
 } as const;
+const awaitingOfficialUpdateOracles = {
+  "en-GB": "Awaiting official update",
+  "pt-BR": "Aguardando atualização oficial",
+  "es-ES": "A la espera de una actualización oficial",
+  "it-IT": "In attesa di aggiornamenti ufficiali",
+  "fr-FR": "En attente d’une mise à jour officielle",
+  "ar-SA": "بانتظار تحديث رسمي",
+  "tr-TR": "Resmî güncelleme bekleniyor",
+  "de-DE": "Offizielle Aktualisierung ausstehend",
+} as const;
 
 const componentSource = readFileSync(new URL("../components/touchline/match-centre/TouchlineMatchCentre.tsx", import.meta.url), "utf8");
 const escape = (value: string) => renderToStaticMarkup(React.createElement(React.Fragment, null, value));
@@ -58,6 +68,7 @@ test("complete eight catalogues retain every EN/PT byte and protected marks", as
   for (const locale of ["en-GB", "pt-BR"] as const) {
     const copy = mod.getTouchlineMatchCentreCopy(locale);
     for (const [key, value] of Object.entries(baseline[locale])) assert.equal(copy[key as keyof typeof copy], value, key);
+    assert.equal(copy.awaitingOfficialUpdate, awaitingOfficialUpdateOracles[locale]);
     assert.equal(copy.homeFallback, "Home"); assert.equal(copy.awayFallback, "Away"); assert.equal(copy.eventFallback, "Event");
     assert.equal(copy.season, locale === "pt-BR" ? "Temporada" : "Season");
     assert.deepEqual([copy.dayUnit, copy.hourUnit, copy.minuteUnit], ["d", "h", "m"]);
@@ -98,7 +109,7 @@ test("every literal Match Centre key remains authored for each unpublished draft
   const mod = await load();
   for (const [locale, expected] of Object.entries(draftStringOracles) as Array<[keyof typeof draftStringOracles, Record<string, string>]>) {
     const actual = Object.fromEntries(Object.entries(mod.TOUCHLINE_MATCH_CENTRE_CATALOGUES[locale]).filter(([, value]) => typeof value === "string"));
-    assert.deepEqual(actual, expected, locale);
+    assert.deepEqual(actual, { ...expected, awaitingOfficialUpdate: awaitingOfficialUpdateOracles[locale] }, locale);
     assert.equal(i18n.isTouchLineLocaleComplete(locale), false);
     assert.equal(mod.getTouchlineMatchCentreCopy(locale), mod.TOUCHLINE_MATCH_CENTRE_CATALOGUES["en-GB"]);
   }
@@ -126,6 +137,9 @@ async function consumer(future = false) {
       if (name === "@/lib/touchlineArena/live-coaches") return coaches;
       if (name === "@/components/logo") return { Logo: (props: Record<string, unknown>) => {
         captures.push({ kind: name, props }); return React.createElement("span", { "data-child": name });
+      } };
+      if (name === "@/components/touchline/TouchlineBrandHeader") return { default: (props: Record<string, unknown>) => {
+        captures.push({ kind: name, props }); return React.createElement("header", null, props.navigation as React.ReactNode);
       } };
       if (name.startsWith("@/components/") || name === "./TouchlineFixtureAlerts") return { default: (props: Record<string, unknown>) => {
         captures.push({ kind: name, props }); return React.createElement("span", { "data-child": name });

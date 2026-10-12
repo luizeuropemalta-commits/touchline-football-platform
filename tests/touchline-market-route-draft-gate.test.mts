@@ -42,6 +42,7 @@ function fixture(options: { user?: User | null; configured?: boolean; rejectAuth
   const events: string[] = [];
   const authentication = { data: { user }, error: null };
   const avatarContext = Object.freeze({ avatarUrl: "/confirmed-avatar.png" });
+  const railFixtures = Object.freeze([{ id: "sportmonks:101", providerId: "101", status: "Not Started" }]);
   const snapshot = Object.freeze({ sentinel: "canonical-snapshot", entitlementActive: true,
     marketAccess: marketPolicy.resolveTouchlineFantasyMarketAccess("standard"), config: { budgetEur: 500_000_000 }, userGameweek: { totalMarketValueEur: 120_000_000 } });
   // Leaf identities inspect the actual route's props without running browser
@@ -55,6 +56,12 @@ function fixture(options: { user?: User | null; configured?: boolean; rejectAuth
     "react/jsx-runtime": jsxRuntime,
     "next/headers": { headers: async () => ({ get: () => "Europe/Malta" }) },
     "@/lib/touchlineArena/match-centre": { normalizeTouchlineMatchCentreTimeZone },
+    "@/lib/football-data/fixture-schedule-store": { readPublicCompetitionFixtures: async (options: unknown) => {
+      events.push("fixtures");
+      assert.deepEqual(JSON.parse(JSON.stringify(options)), { includeHistorical: true, limit: 240 });
+      return [{ id: "sportmonks:101" }];
+    } },
+    "@/lib/touchlineArena/stadium-catalog": { toTouchlineLiveFixtures: () => railFixtures },
     "@/lib/touchlineArena/club-owner-profile-metrics": profileMetrics,
     "@/lib/touchlineFantasy/market-plan-policy": marketPolicy,
     "next/navigation": {
@@ -112,7 +119,7 @@ function fixture(options: { user?: User | null; configured?: boolean; rejectAuth
     assert.equal(typeof loaded.internalMetadata, "function", "private generateClubOwnerMetadata seam must exist");
     return (loaded.internalMetadata as (props: { searchParams: Promise<Params> }, enabled?: boolean) => Promise<{ title: string; description: string }>)({ searchParams: Promise.resolve(params) }, enabled);
   };
-  return { events, leaves, snapshot, avatarContext, internalRoute, internalMetadata, route: (params: Params) => route({ searchParams: Promise.resolve(params) }), metadata: (params: Params) => metadata({ searchParams: Promise.resolve(params) }) };
+  return { events, leaves, snapshot, avatarContext, railFixtures, internalRoute, internalMetadata, route: (params: Params) => route({ searchParams: Promise.resolve(params) }), metadata: (params: Params) => metadata({ searchParams: Promise.resolve(params) }) };
 }
 
 function descendants(node: React.ReactNode): Element[] {
@@ -150,9 +157,11 @@ test("default route keeps all draft requests in English and passes false to ever
     assert.equal(header.props.avatarContext, h.avatarContext);
     assert.equal((header.props.owner as { name: string }).name, customer.user_metadata.full_name);
     assert.equal(fantasy.props.initialSnapshot, h.snapshot);
+    assert.equal(fantasy.props.initialLiveFixtures, h.railFixtures);
+    assert.ok((fantasy.props.initialLiveNow as number) > 0);
     assert.equal(fantasy.props.embedded, true);
     assert.equal(fantasy.props.marketPage, true);
-    assert.deepEqual(h.events, ["avatarReaderCreated", "createClient", "getUser", "avatarRead", "snapshot"]);
+    assert.deepEqual(h.events, ["avatarReaderCreated", "createClient", "getUser", "avatarRead", "snapshot", "fixtures"]);
   }
 });
 
@@ -244,7 +253,7 @@ test("trusted private render propagates all eight locales without changing ident
     assert.equal(fantasy.props.embedded, true);
     assert.equal(fantasy.props.marketPage, true);
     assert.equal(elements.find(element => element.type === h.leaves.navigation)!.props.showAudioControl, false);
-    assert.deepEqual(h.events, ["avatarReaderCreated", "createClient", "getUser", "avatarRead", "snapshot"]);
+    assert.deepEqual(h.events, ["avatarReaderCreated", "createClient", "getUser", "avatarRead", "snapshot", "fixtures"]);
   }
 });
 

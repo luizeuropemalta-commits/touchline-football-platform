@@ -6,6 +6,7 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import ts from "typescript";
 import * as domain from "../lib/touchlineFantasy/domain.ts";
+import { getTouchlineFantasyStandaloneBuilderCopy, formatTouchlineFantasyStandaloneAlert } from "../lib/touchlineFantasy/standalone-builder-i18n.ts";
 import { resolveTouchlineCatalogueLocale } from "../lib/touchlineArena/catalogue-locale.ts";
 import { getTouchlineFantasyMarketAccessCopy } from "../lib/touchlineFantasy/market-access-i18n.ts";
 import { getTouchlineFantasyMarketMetricsCopy } from "../lib/touchlineFantasy/market-metrics-i18n.ts";
@@ -178,11 +179,14 @@ const baseline = {
 
 const source = readFileSync(new URL("../app/fantasy/FantasyGameweekClient.tsx", import.meta.url), "utf8");
 const ast = ts.createSourceFile("Fantasy.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
-const declarations = new Map<string, string>(); let embedded = ""; let getter = ""; let browseInitializer = "";
+const declarations = new Map<string, string>(); let embedded = ""; let getter = ""; let lockedReasonGetter = ""; let browseInitializer = "";
+let standalone = "";
 function visit(node: ts.Node) {
+  if (ts.isReturnStatement(node) && node.expression && node.expression.getText(ast).startsWith('<div className={styles.shell} data-canonical-step=')) standalone = node.expression.getText(ast);
   if (ts.isFunctionDeclaration(node) && node.name) declarations.set(node.name.text, node.getText(ast));
   if (ts.isIfStatement(node) && node.expression.getText(ast) === "embedded" && ts.isBlock(node.thenStatement)) embedded = node.thenStatement.getText(ast);
   if (ts.isVariableDeclaration(node) && node.name.getText(ast) === "workflowCopy") getter = `const ${node.getText(ast)};`;
+  if (ts.isVariableDeclaration(node) && node.name.getText(ast) === "lockedZoomReason") lockedReasonGetter = `const ${node.getText(ast)};`;
   if (ts.isVariableDeclaration(node) && node.name.getText(ast) === "browseCards") browseInitializer = node.initializer!.getText(ast);
   ts.forEachChild(node, visit);
 }
@@ -197,10 +201,15 @@ const child = ({ children }: { children?: React.ReactNode }) => React.createElem
 
 // Actual embedded JSX and mutation functions; only independent child components,
 // framework assets and I/O are boundaries. No replica of rendering/state rules.
-function actual(input: Record<string, unknown> = {}, getCopy: (locale: string, draftLocalesEnabled?: boolean) => unknown = () => ({}), draftLocalesEnabled = false) {
+function actual(input: Record<string, unknown> = {}, getCopy: (locale: string, draftLocalesEnabled?: boolean) => unknown = () => ({}), draftLocalesEnabled = false, standaloneMode = false) {
   assert.ok(embedded); const calls: Array<[string, unknown]> = [];
   const context: Record<string, unknown> = {
-    React, ArenaView: child, TouchlineMatchCentre: icon, resolveTouchlineCatalogueLocale, liveTimeZone: "UTC", arenaOpen: false, ...domain, locale: "en-GB", draftLocalesEnabled, pt: false, marketPage: true, editable: true, saving: false,
+    builderCopy: getTouchlineFantasyStandaloneBuilderCopy(String(input.locale ?? "en-GB"), draftLocalesEnabled), formatTouchlineFantasyStandaloneAlert,
+    canonicalStep: "coach", visibleStep: "coach", embedded: false, STEPS: ["coach", "formation", "players", "review", "locked"],
+    CalendarClock: icon, ShieldCheck: icon, WalletCards: icon, Crown: icon, Check: icon, ChevronRight: icon, BadgeCheck: icon, Trophy: icon, House: icon, PlaneTakeoff: icon, Send: icon, Save: icon, LockKeyhole: icon, CircleAlert: icon, Users: icon,
+    builderRef: { current: null }, guidePanelRef: { current: null }, currentAlerts: [], filtered: [], persistedUserGameweek: null, RankingTable: icon,
+    stepLabel: (step: string) => step, formatTouchlineFantasyMarketValue: () => "100", formatTouchlineFantasyDeadline: () => "deadline", formatTouchlineFantasyBudgetAmount: () => "100", getTouchlineFantasyMarketBudgetCopy: () => ({ rule: "{budget}" }),
+    React, ArenaView: child, TouchlineMatchCentre: icon, resolveTouchlineCatalogueLocale, liveTimeZone: "UTC", initialLiveFixtures: [], initialLiveNow: 0, arenaOpen: false, ...domain, locale: "en-GB", draftLocalesEnabled, pt: false, marketPage: true, editable: true, saving: false,
     styles: new Proxy({}, { get: (_, key) => String(key) }), gameweeks: [], activeGameweek: { id: "round-7", number: 7, state: "MARKET_OPEN" },
     selectedCoach: coach, selectedCoachId: coach.id, formationCode: "4-3-3", geometry, selections: [], eligiblePlayers: [player],
     catalogueById: new Map([[card.id, card]]), browseCards: [card], filteredCoaches: [coach], selectedPlayerClub: { name: "Canonical Club", teamId: "club-1" }, selectedCoachClub: { teamId: "club-1" },
@@ -227,12 +236,27 @@ function actual(input: Record<string, unknown> = {}, getCopy: (locale: string, d
     context[name] = (value: unknown) => calls.push([name, typeof value === "function" ? value(name === "setArenaOpen" ? context.arenaOpen : context.selections) : value]);
   }
   const functions = ["lineupFingerprint", "horizontalMyClubPitchPosition", "CompactClubSelector", "changeFormation", "addPlayer", "removePlayer", "save"].map(name => declarations.get(name)).join("\n");
-  const js = ts.transpileModule(`(() => { ${getter} ${functions} return { render: () => ${embedded}, save, addPlayer, removePlayer, changeFormation, CompactClubSelector }; })()`, { compilerOptions: { target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.React } }).outputText;
+  const js = ts.transpileModule(`(() => { ${getter} ${lockedReasonGetter} ${functions} return { render: () => ${standaloneMode ? standalone : embedded}, save, addPlayer, removePlayer, changeFormation, CompactClubSelector }; })()`, { compilerOptions: { target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.React } }).outputText;
   const api = runInNewContext(js, context);
   return { api, calls, html: () => renderToStaticMarkup(api.render()) };
 }
 
 type Element = React.ReactElement<Record<string, unknown>>;
+test("standalone real JSX renders all five steps in eight gated locales", async () => {
+  const { getTouchlineFantasyMarketWorkflowCopy: getCopy } = await load();
+  assert.ok(standalone);
+  for (const locale of TOUCHLINE_APPROVED_LOCALES) {
+    for (const visibleStep of ["coach", "formation", "players", "review", "locked"]) {
+      const copy = getTouchlineFantasyStandaloneBuilderCopy(locale, true);
+      const view = actual({ locale, visibleStep, selectedCoach: null, filteredCoaches: [], squadView: "squad", validation: { valid: true, issues: [] } }, getCopy, true, true);
+      const html = view.html();
+      const escaped = renderToStaticMarkup(React.createElement("span", null, copy.heroTitle)).slice(6, -7);
+      assert.ok(html.includes(escaped), `${locale}/${visibleStep}`);
+      assert.ok(html.includes('data-fantasy-context="standalone"'));
+      assert.equal(view.calls.length, 0, "render cannot mutate the lineup");
+    }
+  }
+});
 test("selected XI availability stays separate from match cards in both ClubOwner modes and eight locales", async () => {
   const { getTouchlineFantasyMarketWorkflowCopy: getCopy } = await load();
   const badge = { asset: "/touchlineArena/status-badges/injury-cross.png", width: 48, height: 48, reason: "injury", estimatedReturnDate: null };
@@ -307,19 +331,55 @@ test("Arena opens and closes with incomplete or locked XI without changing or sa
   }
 });
 
-test("pitch replacement action preserves selection and respects edit and saving gates", async () => {
+test("Arena overlay anchors coach outside the pitch and offers only canonical formations without a locked-market mutation", async () => {
+  const { getTouchlineFantasyMarketWorkflowCopy: getCopy } = await load();
+  const css = readFileSync(new URL("../app/fantasy/fantasy.module.css", import.meta.url), "utf8");
+  assert.match(css, /\.arenaCoach \{[^}]*top: -8px; left: 50%; transform: translate\(-50%, -100%\)/);
+  assert.match(css, /\.arenaFormationControl, \.arenaHudRight \{[^}]*bottom: calc\(100% \+ 10px\)/);
+  const alternate = { ...geometry, code: "3-5-2" };
+  for (const locale of ["en-GB", "pt-BR", "es-ES", "it-IT", "fr-FR", "ar-SA", "tr-TR", "de-DE"]) {
+    for (const editable of [true, false]) {
+      const rendered = actual({ locale, arenaOpen: true, editable, marketOpen: editable,
+        marketStatusLabel: editable ? "Market open" : "Market closed",
+        snapshot: { config: { budgetEur: 900, maxPlayersPerClub: 11 }, formationRegistry: { "4-3-3": geometry, "3-5-2": alternate }, coaches: [coach], gameweekScore: 0, seasonScore: 0 },
+      }, getCopy, true);
+      const pitch = elements(rendered.api.render()).find((node) => node.props.className === "myClubTacticalPitch");
+      assert.ok(pitch);
+      const nodes = elements(pitch);
+      const formation = nodes.find((node) => node.props["data-arena-formation"] === "true");
+      const right = nodes.find((node) => node.props.className === "arenaHudRight");
+      const coachNode = nodes.find((node) => node.props.className === "arenaCoach");
+      const points = elements(right).find((node) => node.props["data-arena-round-points"] === "true");
+      const close = elements(right).find((node) => node.type === "button" && node.props.children === getCopy(locale, true).closeArena);
+      assert.ok(formation && right && coachNode && points && close, `${locale}/${editable}`);
+      const select = elements(formation).find((node) => node.type === "select");
+      assert.ok(select);
+      assert.equal(select.props.value, "4-3-3");
+      assert.equal(select.props.disabled, !editable);
+      assert.deepEqual(elements(select).filter((node) => node.type === "option").map((node) => node.props.value), ["4-3-3", "3-5-2"]);
+      assert.ok(renderToStaticMarkup(formation).includes(getCopy(locale, true).chooseFormation));
+      (select.props.onChange as (event: { target: { value: string } }) => void)({ target: { value: "3-5-2" } });
+      assert.equal(rendered.calls.some(([name]) => name === "setFormationCode"), editable);
+      assert.ok(!rendered.calls.some(([name]) => name === "fetch"));
+    }
+  }
+});
+
+test("pitch zoom keeps locked actions visible with truthful market notice and never mutates closed XI", async () => {
   const mod = await load();
   for (const editable of [true, false]) for (const saving of [true, false]) {
-    const rendered = actual({ selections: [{ playerId: card.id, slotId: slot.id }], editable, saving }, mod.getTouchlineFantasyMarketWorkflowCopy);
+    const rendered = actual({ selections: [{ playerId: card.id, slotId: slot.id }], editable, saving, marketOpen: editable, activeGameweek: { id: "round-7", number: 7, state: editable ? "MARKET_OPEN" : "LIVE" } }, mod.getTouchlineFantasyMarketWorkflowCopy);
     const zoom = elements(rendered.api.render()).find((element) => element.props.card === card && element.props.compact);
     assert.ok(zoom);
     const action = zoom.props.replacementAction as { disabled: boolean; onSelect: () => void } | undefined;
-    assert.equal(Boolean(action), editable);
-    if (action) {
-      assert.equal(action.disabled, saving);
-      action.onSelect();
-      assert.equal(rendered.calls.some(([name]) => name === "setActiveSlotId"), !saving);
-    }
+    const removal = zoom.props.removalAction as { disabled: boolean; onSelect: () => void } | undefined;
+    assert.ok(action && removal);
+    assert.equal(action.disabled, !editable || saving);
+    assert.equal(removal.disabled, !editable || saving);
+    assert.equal(zoom.props.lockedReason, editable ? undefined : `${getTouchlineFantasyMarketAccessCopy("en-GB").closed}. ${getTouchlineFantasyMarketAccessCopy("en-GB").windowRule}`);
+    action.onSelect();
+    if (!editable || saving) removal.onSelect();
+    assert.equal(rendered.calls.some(([name]) => name === "setActiveSlotId"), editable && !saving);
     assert.ok(!rendered.calls.some(([name]) => name === "setSelections" || name === "fetch"));
   }
 });

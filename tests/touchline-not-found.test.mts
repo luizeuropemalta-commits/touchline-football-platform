@@ -12,7 +12,7 @@ test("the global not-found boundary uses the TouchLine safe navigation surface",
   assert.match(renderer, /useSearchParams\(\)/);
   assert.match(renderer, /resolveTouchlineCatalogueLocale\(searchParams\.get\("lang"\), draftLocalesEnabled\)/);
   assert.match(renderer, /draftLocalesEnabled = false/);
-  assert.match(renderer, /export default function TouchlineNotFound\(\) \{\s*return <NotFoundContent \/>;/);
+  assert.match(renderer, /export default function TouchlineNotFound\(\) \{\s*const draftLocalesEnabled = useSiteLocaleRelease\(\);\s*return <NotFoundContent draftLocalesEnabled=\{draftLocalesEnabled\} \/>;/);
   assert.match(renderer, /<main dir="ltr"/);
   assert.match(renderer, /TouchlineGlobalNavigation/);
   assert.match(renderer, /currentRoute="notFound"/);

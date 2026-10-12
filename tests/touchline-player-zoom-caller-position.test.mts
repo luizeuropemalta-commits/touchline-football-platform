@@ -70,6 +70,7 @@ function produce(expression: typeof expressions[number], locale: string, positio
     // Optional Gameweek action is absent in this position-only caller fixture.
     replacementAction: undefined,
     removalAction: undefined,
+    lockedReason: undefined,
     fitContainer: false, resolvedDisplayWidth: 132, useLiveCompactAsset: false,
     TouchlineCardZoom: "zoom-boundary", TouchlineEliteExactCard: "artwork-boundary", CompactPlayerCard: "compact-boundary",
   };

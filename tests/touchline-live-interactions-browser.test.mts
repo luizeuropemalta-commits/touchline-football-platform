@@ -139,6 +139,29 @@ test('Live mounted interactions: recovery, disclosure, detail identity and guest
         assert.match(h.page.url(), /fixture=local-1&lang=en-GB&keep=yes#saved$/);
       } finally { await h.close(); }
     });
+    await t.test('initial partial schedule survives 503 and clears its warning only after a verified snapshot', async () => {
+      const h = await harness({ initialReadMetadata: { state: 'partial-persisted-schedule', degraded: true } });
+      try {
+        const warning = h.page.locator('[role="status"][data-state="partial-persisted-schedule"]');
+        await expect(warning).toBeVisible();
+        const rail = h.page.locator('button[aria-pressed]');
+        await expect(rail).toHaveCount(2);
+        await rail.nth(1).click();
+        const failed = await h.take('livescores');
+        const response = h.page.waitForResponse(r => r.url().includes('livescores') && r.status() === 503);
+        await failed.fulfill({ status: 503, json: { ok: false } });
+        await response;
+        await expect(warning).toBeVisible();
+        await expect(rail).toHaveCount(2);
+        await expect(rail.nth(1)).toHaveAttribute('aria-pressed', 'true');
+        await h.page.clock.runFor(45_000);
+        await h.snapshot(4);
+        await expect(warning).toHaveCount(0);
+        await expect(h.page.locator('#touchline-match-panel .score')).toHaveText('4 — 0');
+        await expect(rail.nth(1)).toHaveAttribute('aria-pressed', 'true');
+        assert.ok(h.requests.every(r => r.startsWith('GET ')));
+      } finally { await h.close(); }
+    });
     await t.test('bell loading, signed-out, disabled and error recover without writes or permission prompts', async () => {
       const h = await harness();
       try {

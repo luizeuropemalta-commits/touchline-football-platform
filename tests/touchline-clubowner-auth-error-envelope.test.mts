@@ -18,6 +18,7 @@ import * as identity from "../lib/touchlineArena/club-owner-page-identity.ts";
 import * as authCopy from "../lib/touchlineArena/auth-i18n.ts";
 import * as profileMetrics from "../lib/touchlineArena/club-owner-profile-metrics.ts";
 import { normalizeTouchlineMatchCentreTimeZone } from "../lib/touchlineArena/match-centre.ts";
+import { toTouchlineLiveFixtures } from "../lib/touchlineArena/stadium-catalog.ts";
 import { TOUCHLINE_ENGLAND_CLUBS } from "../lib/touchlineArena/demo-data.ts";
 
 const read = (path: string) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
@@ -54,6 +55,8 @@ function fixture(getUser: () => Promise<unknown>) {
     "react/jsx-runtime": jsx,
     "next/headers": { headers: async () => new Headers({ "x-vercel-ip-timezone": "Europe/Malta" }) },
     "@/lib/touchlineArena/match-centre": { normalizeTouchlineMatchCentreTimeZone },
+    "@/lib/touchlineArena/stadium-catalog": { toTouchlineLiveFixtures },
+    "@/lib/football-data/fixture-schedule-store": { readPublicCompetitionFixtures: async () => { calls.push("public-fixtures"); return []; } },
     "@/lib/touchlineArena/club-owner-profile-metrics": profileMetrics,
     "next/navigation": { redirect: (href: string) => { throw new Navigation(href); }, notFound: () => { throw new Navigation("not-found"); } },
     "@/lib/supabase/server": { createClient: async () => ({ auth: { getUser: () => { calls.push("auth"); return getUser(); } } }) },
@@ -101,7 +104,7 @@ test("ClubOwner preserves verified customer rendering and verified owner exclusi
   const actor = user("customer@example.test");
   const customer = fixture(async () => ({ data: { user: actor }, error: null }));
   const tree = await customer.run();
-  assert.deepEqual(customer.calls, ["auth", "owner-policy", "avatar", "snapshot", "identity"]);
+  assert.deepEqual(customer.calls, ["auth", "owner-policy", "avatar", "snapshot", "public-fixtures", "identity"]);
   const all = nodes(tree);
   const context = all.find(node => node.type === "brand-header")!.props.accountLocaleContext;
   assert.equal(JSON.stringify(context), JSON.stringify({ mode: "account", accountId: actor.id }));

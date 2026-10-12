@@ -23,7 +23,7 @@ function rounds(phase: 'closing' | 'opening' | 'awaiting-final' | 'syncing', sec
 // Actual clock function + JSX, with only React lifecycle/time controlled. The
 // real canonical resolver and London formatter are used; no window algorithm
 // or rendering implementation is copied into the fixture.
-function renderClock(input: { locale: string; gameweeks?: Gameweeks; nowMs?: number | null; marketStatus?: string; bindings?: object }) {
+function renderClock(input: { locale: string; gameweeks?: Gameweeks; nowMs?: number | null; marketStatus?: string; bindings?: object; hideAwaitingFinalHeading?: boolean; draftLocalesEnabled?: boolean }) {
   const source = readFileSync(new URL('../app/fantasy/FantasyGameweekClient.tsx', import.meta.url), 'utf8');
   const ast = ts.createSourceFile('Fantasy.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
   const declarations = ast.statements.filter(node => ts.isFunctionDeclaration(node) && ['MarketWindowClock', 'countdownUnit'].includes(node.name?.text ?? ''));
@@ -45,7 +45,7 @@ function renderClock(input: { locale: string; gameweeks?: Gameweeks; nowMs?: num
     Date: class ClockDate extends Date { static now() { return now; } },
     window: { setInterval(_callback: () => void, delay: number) { intervals.push(delay); return 7; }, clearInterval(id: number) { cleared.push(id); } },
   });
-  const html = renderToStaticMarkup(exports.MarketWindowClock!({ locale: input.locale, gameweeks: input.gameweeks ?? [], marketStatus: input.marketStatus }));
+  const html = renderToStaticMarkup(exports.MarketWindowClock!({ locale: input.locale, gameweeks: input.gameweeks ?? [], marketStatus: input.marketStatus, hideAwaitingFinalHeading: input.hideAwaitingFinalHeading, draftLocalesEnabled: input.draftLocalesEnabled }));
   for (const effect of effects) effect()();
   assert.deepEqual(intervals, [1000]); assert.deepEqual(cleared, [7]); assert.deepEqual(ticks, [now]);
   return html;
@@ -115,6 +115,26 @@ test('real rendered clock preserves EN/PT loading, unavailable, canonical final 
     assert.ok(syncing.includes(pt ? 'Atualizando o Meu Clube' : 'Updating My Club'));
     assert.ok(syncing.includes(pt ? 'Sincronizando a janela canônica' : 'Syncing the canonical window'));
     assert.doesNotMatch(syncing, /<time|clockDigits/);
+  }
+});
+
+test('ClubOwner closed panel keeps the canonical final-whistle reopening rule without a redundant heading or invented time in eight locales', async () => {
+  const bindings = await load();
+  const client = readFileSync(new URL('../app/fantasy/FantasyGameweekClient.tsx', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../app/fantasy/fantasy.module.css', import.meta.url), 'utf8');
+  assert.match(client, /<MarketWindowClock gameweeks=\{gameweeks\} locale=\{locale\} draftLocalesEnabled=\{draftLocalesEnabled\} hideAwaitingFinalHeading \/>/);
+  assert.match(css, /\.myClubMarketHeading\[data-market-heading="status"\] \.marketClock\[data-market-clock-phase="awaiting-final"\] > p \{[^}]*font-size: clamp\(14px, \.9vw, 16px\)/);
+  for (const locale of codes) {
+    const copy = bindings.getTouchlineFantasyMarketClockCopy(locale, true);
+    const html = renderClock({ locale, gameweeks: rounds('awaiting-final'), bindings, hideAwaitingFinalHeading: true, draftLocalesEnabled: true });
+    assert.ok(html.includes(copy.closedStatus), locale);
+    assert.ok(html.includes(copy.awaitingFinal), locale);
+    assert.equal(html.includes(copy.lastWhistle), false, locale);
+    assert.doesNotMatch(html, /class="clockHeading"|clockDigits|<time/);
+    if (locale !== 'en-GB' && locale !== 'pt-BR') {
+      const gated = renderClock({ locale, gameweeks: rounds('awaiting-final'), bindings, hideAwaitingFinalHeading: true });
+      assert.equal(gated, renderClock({ locale: 'en-GB', gameweeks: rounds('awaiting-final'), bindings, hideAwaitingFinalHeading: true }));
+    }
   }
 });
 

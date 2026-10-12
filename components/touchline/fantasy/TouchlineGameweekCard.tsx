@@ -9,7 +9,7 @@ import { touchlinePlayerProfileHref } from "@/lib/touchlineArena/player-links";
 import { getTouchlineExactCardCopy } from "@/lib/touchlineArena/exact-card-i18n";
 import { touchlinePlayerPositionKind } from "@/lib/touchlineArena/position-aware-card-stats";
 
-export default function TouchlineGameweekCard({ card, locale, compact = false, displayWidth, fitContainer = false, draftLocalesEnabled = false, replacementAction, removalAction }: {
+export default function TouchlineGameweekCard({ card, locale, compact = false, displayWidth, fitContainer = false, draftLocalesEnabled = false, replacementAction, removalAction, lockedReason }: {
   card: ClubOwnerSquadCard;
   locale: string;
   draftLocalesEnabled?: boolean;
@@ -19,6 +19,7 @@ export default function TouchlineGameweekCard({ card, locale, compact = false, d
   fitContainer?: boolean;
   replacementAction?: { label: string; onSelect: () => void; disabled?: boolean };
   removalAction?: { label: string; onSelect: () => void; disabled?: boolean };
+  lockedReason?: string;
 }) {
   const copy = getTouchlineExactCardCopy(locale, draftLocalesEnabled);
   const positionKind = touchlinePlayerPositionKind(card.position);
@@ -59,6 +60,7 @@ export default function TouchlineGameweekCard({ card, locale, compact = false, d
   return <TouchlineCardZoom
     replacementAction={replacementAction}
     removalAction={removalAction}
+    lockedReason={lockedReason}
     locale={locale}
     draftLocalesEnabled={draftLocalesEnabled}
     ariaLabel={copy.cardAria.replace("{playerName}", () => card.name)}

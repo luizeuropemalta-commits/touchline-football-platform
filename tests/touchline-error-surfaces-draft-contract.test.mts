@@ -11,7 +11,14 @@ test('public wrappers export no extra Next page helpers and cannot enable intern
     const publicFns=functions.filter(fn=>fn.modifiers?.some(mod=>mod.kind===ts.SyntaxKind.ExportKeyword));
     assert.equal(publicFns.length,1);
     const publicText=publicFns[0].body!.getText(ast);
-    assert.doesNotMatch(publicText,/draftLocalesEnabled|\.\.\.props/);
+    assert.doesNotMatch(publicText,/\.\.\.props|props\.draftLocalesEnabled/);
+    if(path==='app/error.tsx') {
+      assert.match(publicText,/const draftLocalesEnabled = useSiteLocaleRelease\(\)/);
+      assert.match(publicText,/draftLocalesEnabled=\{draftLocalesEnabled\}/);
+    } else if(path==='components/touchline/TouchlineNotFound.tsx') {
+      assert.match(publicText,/const draftLocalesEnabled = useSiteLocaleRelease\(\)/);
+      assert.match(publicText,/draftLocalesEnabled=\{draftLocalesEnabled\}/);
+    } else assert.doesNotMatch(publicText,/draftLocalesEnabled/);
     const internal=functions.find(fn=>!fn.modifiers?.some(mod=>mod.kind===ts.SyntaxKind.ExportKeyword))!;
     assert.match(internal.parameters[0].getText(ast),/draftLocalesEnabled = false/);
     assert.match(source,/getTouchlinePublicErrorCopy\(locale, draftLocalesEnabled\)/);

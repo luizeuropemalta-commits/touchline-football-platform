@@ -37,6 +37,7 @@ function fixture(patch: Record<string, string | undefined> = {}) {
     const exports: Record<string, unknown> = {}; cache.set(path, exports);
     const require = (name: string): unknown => {
       if (name === "server-only") return {};
+      if (name === "@/lib/football-data/fixture-schedule-store") return { readPublicCompetitionFixtures: async () => { calls.push("public-fixtures"); return []; } };
       if (name === "next/headers") return { headers: async () => {
         calls.push("headers"); await state.headersWait;
         return { get: (key: string) => key === "host" ? state.host : key === "x-touchline-isolated-preview" ? state.isolated : null };

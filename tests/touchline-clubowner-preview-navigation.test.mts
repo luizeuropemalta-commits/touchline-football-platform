@@ -20,6 +20,8 @@ function fixture(environment: string, patch: Record<string, unknown> = {}) {
     "next/headers": { headers: async () => ({ get: () => null }) },
     "next/navigation": { redirect: () => assert.fail("Customer must remain signed in"), notFound: () => assert.fail("Customer must remain allowed") },
     "@/lib/touchlineArena/match-centre": { normalizeTouchlineMatchCentreTimeZone: () => "Europe/London" },
+    "@/lib/football-data/fixture-schedule-store": { readPublicCompetitionFixtures: async () => [] },
+    "@/lib/touchlineArena/stadium-catalog": { toTouchlineLiveFixtures: () => [] },
     "@/lib/touchlineArena/site-locales-release": { isTouchLineSiteLocalesEnabled: () => false },
     "@/lib/touchlineArena/club-owner-profile-metrics": { clubOwnerRankingPoints: () => 63.25, clubOwnerRankingPosition: () => 1 },
     "@/lib/supabase/server": { createClient: async () => ({ auth: { getUser: async () => ({ error: null, data: { user } }) } }) },
@@ -60,6 +62,8 @@ test("ClubOwner logo preserves the accepted development preview, locale and club
     assert.equal(first.href, `/clubowner?lang=pt-BR&club=arsenal&planPreview=${selected}`);
     assert.equal(first.header.props.remainingMarketPower, 121_000_000);
     assert.equal(first.header.props.realUnlimited, false);
+    assert.equal(first.header.props.activePlanKey, "standard", "preview never replaces the verified account plan");
+    assert.equal(first.header.props.activePlanBudget, 500_000_000);
     const url = new URL(String(first.href), "http://localhost:3318");
     const next = await h.render(Object.fromEntries(url.searchParams));
     assert.equal(next.header.props.planPreview, selected, "Following the logo must not drop the showcase");
@@ -72,6 +76,8 @@ test("real VIP capability is explicit and independent of preview; missing, inact
     const actual = await fixture("development", { marketAccess: vip, config: { budgetEur: null } }).render({ planPreview });
     assert.equal(actual.header.props.realUnlimited, true);
     assert.equal(actual.header.props.remainingMarketPower, null);
+    assert.equal(actual.header.props.activePlanKey, "vip");
+    assert.equal(actual.header.props.activePlanBudget, null);
     const standard = await fixture("development").render({ planPreview });
     assert.equal(standard.header.props.realUnlimited, false);
     assert.equal(standard.header.props.remainingMarketPower, 121_000_000);
@@ -82,6 +88,7 @@ test("real VIP capability is explicit and independent of preview; missing, inact
     const result = await fixture("production", patch).render({ planPreview: "vip" });
     assert.equal(result.header.props.realUnlimited, false);
     assert.equal(result.header.props.remainingMarketPower, null);
+    assert.equal(result.header.props.activePlanKey, null);
   }
   const authoritative = await fixture("production", { config: { budgetEur: 900_000_000 } }).render({});
   assert.equal(authoritative.header.props.remainingMarketPower, 121_000_000, "config drift cannot replace the recognized plan budget");

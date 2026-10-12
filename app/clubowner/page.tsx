@@ -12,6 +12,8 @@ import { createClient } from "@/lib/supabase/server";
 import { isOwnerEmail } from "@/lib/admin/owner";
 import { resolveTouchlineClubOwnerPageIdentity } from "@/lib/touchlineArena/club-owner-page-identity";
 import { createClubOwnerAvatarContextReader } from "@/lib/touchlineArena/club-owner-avatar-context-server";
+import { readPublicCompetitionFixtures } from "@/lib/football-data/fixture-schedule-store";
+import { toTouchlineLiveFixtures } from "@/lib/touchlineArena/stadium-catalog";
 import { touchLineAuthEntryHref } from "@/lib/touchlineArena/auth-i18n";
 import { resolveServerReadWithin } from "@/lib/touchlineArena/server-read-deadline";
 import { loadTouchlineFantasySnapshot } from "@/lib/touchlineFantasy/server";
@@ -75,21 +77,31 @@ async function renderClubOwnerPage({ searchParams }: ClubOwnerPageProps, draftLo
   if (!user) redirect(touchLineAuthEntryHref("/login", locale, destination, draftLocalesEnabled));
   // Retain the existing customer-only boundary; never borrow a demo identity.
   if (isOwnerEmail(user.email)) notFound();
-  const [avatarContext, snapshot] = await Promise.all([
+  const scheduleNow = Date.now();
+  const [avatarContext, snapshot, persistedFixtures] = await Promise.all([
     readAvatarContext(authentication, user.id),
     resolveServerReadWithin(loadTouchlineFantasySnapshot(user), null, 8_000),
+    resolveServerReadWithin(readPublicCompetitionFixtures({
+      includeHistorical: true, limit: 240,
+      from: new Date(scheduleNow - 7 * 86_400_000).toISOString(),
+      through: new Date(scheduleNow + 14 * 86_400_000).toISOString(),
+    }), [], 8_000),
   ]);
   const clubOwner = resolveTouchlineClubOwnerPageIdentity(user, undefined, avatarContext?.avatarUrl);
   const liveTimeZone = normalizeTouchlineMatchCentreTimeZone((await headers()).get("x-vercel-ip-timezone"));
+  const initialLiveFixtures = toTouchlineLiveFixtures(persistedFixtures);
+  const initialLiveNow = Date.now();
   const marketAccess = snapshot && isTouchlineFantasyMarketAccess(snapshot.marketAccess) ? snapshot.marketAccess : null;
+  const activePlanKey = snapshot?.entitlementActive === true && snapshot?.plan?.active === true
+    ? marketAccess?.planKey ?? null : null;
   const realUnlimited = snapshot?.entitlementActive === true && marketAccess?.planKey === "vip";
   const remainingMarketPower = snapshot?.entitlementActive === true && typeof marketAccess?.budgetEur === "number"
     ? Math.max(0, marketAccess.budgetEur - (snapshot.userGameweek?.totalMarketValueEur ?? 0)) : null;
   return <main className={styles.page} dir={draftLocalesEnabled ? "ltr" : undefined}>
     <TouchlineBrandHeader href={destination} locale={locale} accountLocaleContext={{ mode: "account", accountId: user.id }} draftLocalesEnabled={draftLocalesEnabled} navigation={<TouchlineGlobalNavigation locale={locale} draftLocalesEnabled={draftLocalesEnabled} currentRoute="market" surface="authenticated" showAudioControl={false} />} />
     <div className={styles.content}>
-      <ClubOwnerMarketHeader owner={clubOwner?.isAuthenticatedClubOwner ? clubOwner : null} locale={locale} rankingPoints={clubOwnerRankingPoints(snapshot?.seasonRanking)} rankingPosition={clubOwnerRankingPosition(snapshot?.seasonRanking)} remainingMarketPower={remainingMarketPower} realUnlimited={realUnlimited} plan={snapshot?.plan ?? null} planPreview={planPreview} draftLocalesEnabled={draftLocalesEnabled} accountId={user.id} avatarContext={avatarContext} avatarSelectionEnabled={avatarSelectionEnabled} retentionReady={retentionReady} />
-      <FantasyGameweekClient initialSnapshot={snapshot} locale={locale} liveTimeZone={liveTimeZone} draftLocalesEnabled={draftLocalesEnabled} embedded marketPage initialPlayerClubTeamId={initialPlayerClubTeamId} clubOwner={clubOwner ? { name: clubOwner.name, avatarUrl: clubOwner.avatarUrl } : undefined} />
+      <ClubOwnerMarketHeader owner={clubOwner?.isAuthenticatedClubOwner ? clubOwner : null} locale={locale} rankingPoints={clubOwnerRankingPoints(snapshot?.seasonRanking)} rankingPosition={clubOwnerRankingPosition(snapshot?.seasonRanking)} remainingMarketPower={remainingMarketPower} realUnlimited={realUnlimited} plan={snapshot?.plan ?? null} activePlanKey={activePlanKey} activePlanBudget={activePlanKey ? marketAccess?.budgetEur : undefined} planPreview={planPreview} draftLocalesEnabled={draftLocalesEnabled} accountId={user.id} avatarContext={avatarContext} avatarSelectionEnabled={avatarSelectionEnabled} retentionReady={retentionReady} />
+      <FantasyGameweekClient initialSnapshot={snapshot} locale={locale} liveTimeZone={liveTimeZone} draftLocalesEnabled={draftLocalesEnabled} embedded marketPage initialLiveFixtures={initialLiveFixtures} initialLiveNow={initialLiveNow} initialPlayerClubTeamId={initialPlayerClubTeamId} clubOwner={clubOwner ? { name: clubOwner.name, avatarUrl: clubOwner.avatarUrl } : undefined} />
     </div>
   </main>;
 }

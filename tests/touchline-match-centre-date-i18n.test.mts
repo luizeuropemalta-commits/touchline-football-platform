@@ -185,7 +185,7 @@ test("real JSX keeps dates, labels, original datetime and conditional rows acros
   const probeValue = probe();
   for (const language of locales) {
     const dictionary = probeValue.copy(language, true);
-    const context = { ...probeValue.api, isResultSection: false, language, dictionary, textDirection: language === "ar-SA" ? "rtl" : "ltr", draftLocalesEnabled: true, timeZone: "Europe/Malta", now: Date.parse(instant), fixture: { startsAt: instant },
+    const context = { ...probeValue.api, isResultSection: false, language, dictionary, textDirection: language === "ar-SA" ? "rtl" : "ltr", draftLocalesEnabled: true, timeZone: "Europe/Malta", now: Date.parse(instant), fixture: { startsAt: instant }, selectedDisplayState: "upcoming",
       selected: { name: "Official <&> $&", startsAt: instant, verifiedAt: instant },
       verifiedDetail: { lineupAvailableAt: "2026-08-29T14:05:00+02:00" },
       readMetadata: { degraded: true, state: "stale", fetchedAt: instant } };
@@ -209,6 +209,9 @@ test("real JSX keeps dates, labels, original datetime and conditional rows acros
       }
     }
     assert.equal(JSON.stringify(context), before);
+    const pendingArchive = render(expressions.archive, { ...context, selectedDisplayState: "awaiting-update" });
+    assert.ok(pendingArchive.includes(escaped(dictionary.awaitingOfficialUpdate)));
+    assert.ok(!pendingArchive.includes(escaped(dictionary.provider)), "an overdue schedule is not a verified result");
     assert.equal(render(expressions.notice, { ...context, readMetadata: { degraded: false, fetchedAt: instant } }), "");
     assert.equal(render(expressions.notice, { ...context, readMetadata: null }), "");
     for (const invalid of [undefined, "", "invalid"]) {

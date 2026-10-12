@@ -51,8 +51,10 @@ const positionNames = {
   "defensive-midfield": "Defensive Midfield", midfield: "Central Midfield", attacker: "Winger", "centre-forward": "Centre Forward",
 } as const;
 
-function fixtureSnapshot(locked = false): TouchlineFantasySnapshot {
+function fixtureSnapshot(locked = false, formationCode = "4-3-3"): TouchlineFantasySnapshot {
   assert.ok(club); assert.ok(targetSlot);
+  const lineupGeometry = TOUCHLINE_DEFAULT_FORMATION_GEOMETRY_REGISTRY[formationCode];
+  assert.ok(lineupGeometry, `unknown synthetic fixture formation ${formationCode}`);
   const now = Date.now();
   const round = { id: "xi-fixture-round", number: 7, state: locked ? "LOCKED" as const : "MARKET_OPEN" as const,
     marketOpensAt: new Date(now - 3_600_000).toISOString(), locksAt: new Date(now + 3_600_000).toISOString(),
@@ -61,17 +63,18 @@ function fixtureSnapshot(locked = false): TouchlineFantasySnapshot {
     name: "Synthetic XI Coach", displayName: "Synthetic XI Coach", teamId: club.teamId, nationality: "England",
     source: { provider: "sportmonks", providerId: "synthetic-xi-coach", lastSyncedAt: new Date(now).toISOString() } };
   // Explicitly synthetic football/card data, confined to this intercepted page.
-  const catalogue: ClubOwnerSquadCard[] = geometry.slots.map((slot, index) => ({
+  const catalogue: ClubOwnerSquadCard[] = lineupGeometry.slots.map((slot, index) => ({
     id: `xi-player-${index}`, canonicalPlayerId: `xi-player-${index}`, name: `Synthetic ${slot.id} Player`, shortName: `Fixture ${slot.id}`,
     role: slot.role, position: positionNames[slot.allowedPositions[0]], clubName: club.name, shirtNumber: index + 1,
     countryCode3: "ENG", marketValue: "", marketValueState: "verified", touchlinePoints: 0, seasonTotalRating: null,
     editorialCard: { tierKey: "radiant-gold", marketValueEur: 1_000_000, marketValueState: "verified",
       cardPrice: { amountMinor: 0, currency: "GBP" }, lastReviewedAt: "2026-10-03T00:00:00Z" },
   }));
-  const original = catalogue[geometry.slots.indexOf(targetSlot)];
+  const replacementIndex = Math.max(0, lineupGeometry.slots.findIndex(slot => slot.allowedPositions.includes("centre-forward")));
+  const original = catalogue[replacementIndex];
   catalogue.push({ ...original, id: "xi-replacement", canonicalPlayerId: "xi-replacement", name: "Synthetic Replacement", shortName: "Replacement" });
-  const selections = geometry.slots.map((slot, index) => ({ slotId: slot.id, playerId: `xi-player-${index}` }));
-  const valid = validateTouchlineFantasyLineup({ selections, geometry,
+  const selections = lineupGeometry.slots.map((slot, index) => ({ slotId: slot.id, playerId: `xi-player-${index}` }));
+  const valid = validateTouchlineFantasyLineup({ selections, geometry: lineupGeometry,
     players: catalogue.map(card => ({ playerId: card.id, clubId: card.clubName, marketValueEur: 1_000_000,
       positionBucket: touchlineMarketPositionBucket(card.position, card.role as TouchlineRosterRole) as Exclude<ReturnType<typeof touchlineMarketPositionBucket>, "outfield"> })),
     budgetEur: 500_000_000, maxPlayersPerClub: 11, requireComplete: true });
@@ -80,7 +83,7 @@ function fixtureSnapshot(locked = false): TouchlineFantasySnapshot {
     marketAccess: { planKey: "standard", budgetEur: 500_000_000, allowedClubTeamIds: null },
     plan: { active: true, expiresAt: null },
     config: { budgetEur: 500_000_000, maxPlayersPerClub: 11, lockOffsetMinutes: 0 }, gameweeks: [round], activeGameweek: round,
-    userGameweek: { id: "xi-fixture-lineup", formationCode: "4-3-3", state: "DRAFT", totalMarketValueEur: 11_000_000, carriedFromPrevious: false, selectedCoachId: coach.id },
+    userGameweek: { id: "xi-fixture-lineup", formationCode, state: "DRAFT", totalMarketValueEur: 11_000_000, carriedFromPrevious: false, selectedCoachId: coach.id },
     selections, catalogue, coaches: [{ id: coach.id, coach, slot: createTouchlineArenaCoachSlot(coach, null, "radiant-gold"),
       clubId: club.teamId, clubName: club.name, clubLogoUrl: null, countryCode3: "ENG", competition: null }],
     formationRegistry: TOUCHLINE_DEFAULT_FORMATION_GEOMETRY_REGISTRY, lineupAlerts: [], gameweekScore: 0, seasonScore: 0,
@@ -284,8 +287,8 @@ function bundleProduct(): Bundle {
 type Mode = { locale: "en-GB" | "pt-BR"; touch: boolean; reduced: boolean };
 const modes: Mode[] = [{ locale: "en-GB", touch: false, reduced: false }, { locale: "pt-BR", touch: true, reduced: true }];
 type SaveRequest = { gameweekId: string; selectedCoachId: string; formationCode: string; selections: Array<{ playerId: string; slotId: string }>; action: string; idempotencyKey: string };
-async function openFixture(browser: Browser, bundle: Bundle, mode: Mode, options: { locked?: boolean; divergent?: boolean; indicators?: boolean; budgetExhausted?: boolean } = {}) {
-  const snapshot = options.budgetExhausted ? exhaustedBetaSnapshot() : fixtureSnapshot(options.locked), initialSelections = JSON.stringify(snapshot.selections);
+async function openFixture(browser: Browser, bundle: Bundle, mode: Mode, options: { locked?: boolean; divergent?: boolean; indicators?: boolean; budgetExhausted?: boolean; viewport?: { width: number; height: number }; formationCode?: string } = {}) {
+  const snapshot = options.budgetExhausted ? exhaustedBetaSnapshot() : fixtureSnapshot(options.locked, options.formationCode), initialSelections = JSON.stringify(snapshot.selections);
   if (options.indicators) {
     const playerId = snapshot.selections[0].playerId;
     const badge = resolvePlayerAvailabilityBadge({ source: "sportmonks", fixtureId: "991", playerId,
@@ -295,7 +298,7 @@ async function openFixture(browser: Browser, bundle: Bundle, mode: Mode, options
     snapshot.matchCardIndicators = [{ playerId, fixtureId: "991", eventId: "synthetic-yellow", kind: "yellow" }];
   }
   let stateUnavailable = false, stateReads = 0;
-  const context = await browser.newContext({ viewport: mode.touch ? { width: 844, height: 390 } : { width: 1280, height: 900 },
+  const context = await browser.newContext({ viewport: options.viewport ?? (mode.touch ? { width: 844, height: 390 } : { width: 1280, height: 900 }),
     hasTouch: mode.touch, reducedMotion: mode.reduced ? "reduce" : "no-preference", serviceWorkers: "block" });
   let page: Page | undefined;
   const errors: string[] = [], consoleErrors: string[] = [], unexpected: string[] = [];
@@ -836,6 +839,97 @@ test("real XI indicator integration: geometry, tooltip, Arena and failed-read re
         await fixture.assertClean();
         console.log(`XI_INDICATOR_PROOF ${JSON.stringify({ locale: mode.locale, touch: mode.touch, reads: fixture.stateReads,
           injury: first, yellow: second, tooltip: tip, arenaInjury, arenaYellow, arenaTip, writes: fixture.writes.length })}`);
+      } finally { await fixture.close(); }
+    }
+  } finally { t.signal.removeEventListener("abort", abort); await browser.close(); }
+});
+
+test("Arena overlay keeps its coach off the touchline, canonical formation and all XI slots aligned at desktop and landscape sizes", {
+  skip: process.env.TOUCHLINE_XI_ARENA_LAYOUT_PROOF !== "1", timeout: 120_000,
+}, async t => {
+  const bundle = bundleProduct();
+  const browser = await chromium.launch({ headless: true, timeout: 15_000 });
+  const abort = () => { void browser.close().catch(() => {}); };
+  t.signal.addEventListener("abort", abort, { once: true });
+  try {
+    // Portrait gameplay is intentionally blocked by the established rotation
+    // boundary, so the measured layout matrix contains landscape viewports.
+    const scenarios = [
+      { name: "desktop", mode: modes[0], viewport: { width: 1280, height: 900 }, locked: false },
+      { name: "phone-landscape", mode: modes[1], viewport: { width: 844, height: 390 }, locked: true },
+      { name: "small-phone-landscape", mode: modes[1], viewport: { width: 667, height: 375 }, locked: false },
+      { name: "tablet-landscape", mode: modes[1], viewport: { width: 1024, height: 768 }, locked: false },
+      { name: "tv", mode: modes[0], viewport: { width: 1920, height: 1080 }, locked: false },
+    ];
+    for (const { name, mode, viewport, locked } of scenarios) for (const [formationCode, geometry] of Object.entries(TOUCHLINE_DEFAULT_FORMATION_GEOMETRY_REGISTRY)) {
+      const fixture = await openFixture(browser, bundle, mode, { locked, viewport, formationCode });
+      try {
+        const { page } = fixture;
+        const open = page.getByRole("button", { name: mode.locale === "pt-BR" ? "Modo Arena" : "Arena mode", exact: true });
+        if (mode.touch) await open.click(); else { await open.focus(); await open.press("Enter"); }
+        const dialog = page.getByRole("dialog");
+        const field = dialog.locator('[data-touchline-pitch-surface]');
+        const coach = dialog.locator('[data-arena-coach="true"]');
+        const formation = dialog.locator('[data-arena-formation="true"]');
+        const select = formation.locator("select");
+        const points = dialog.locator('[data-arena-round-points="true"]');
+        const close = dialog.getByRole("button", { name: mode.locale === "pt-BR" ? "Fechar Arena" : "Close Arena", exact: true });
+        await expect(field).toBeVisible(); await expect(coach).toBeVisible();
+        await expect(formation).toBeVisible(); await expect(points).toBeVisible(); await expect(close).toBeVisible();
+        await expect(close).toBeFocused();
+        await expect(select.locator("option")).toHaveCount(Object.keys(TOUCHLINE_DEFAULT_FORMATION_GEOMETRY_REGISTRY).length);
+        assert.deepEqual(await select.locator("option").allTextContents(), Object.keys(TOUCHLINE_DEFAULT_FORMATION_GEOMETRY_REGISTRY));
+        assert.equal(await select.isDisabled(), locked);
+        const [fieldBox, coachBox, formationBox, pointsBox, closeBox] = await Promise.all([field, coach, formation, points, close].map(locator => locator.boundingBox()));
+        assert.ok(fieldBox && coachBox && formationBox && pointsBox && closeBox);
+        for (const [label, box] of [["field", fieldBox], ["coach", coachBox], ["formation", formationBox], ["points", pointsBox], ["close", closeBox]] as const) {
+          assert.ok(box.x >= 0 && box.y >= 0 && box.x + box.width <= viewport.width + 1
+            && box.y + box.height <= viewport.height + 1, `${label} clipped outside ${name} viewport`);
+        }
+        assert.ok(Math.abs(coachBox.x + coachBox.width / 2 - fieldBox.x - fieldBox.width / 2) <= 6,
+          "coach must align to the canonical halfway line");
+        assert.ok(coachBox.y + coachBox.height <= fieldBox.y + 2, "coach must stay outside the grass above its touchline");
+        assert.ok(formationBox.y + formationBox.height <= fieldBox.y + 2, "formation must stay above the grass");
+        assert.ok(pointsBox.y + pointsBox.height <= fieldBox.y + 2, "round score must stay above the grass");
+        assert.ok(closeBox.y + closeBox.height <= pointsBox.y, "Arena control must be above round points");
+        assert.ok(Math.abs(formationBox.y + formationBox.height - pointsBox.y - pointsBox.height) <= 6,
+          "formation selector and round points must share a bottom line");
+        const cardTriggers = dialog.locator('[data-arena-slot] [data-touchline-card-zoom="trigger"]');
+        await expect(cardTriggers).toHaveCount(11);
+        const cardBoxes = await cardTriggers.evaluateAll((nodes) => nodes.map((node) => {
+          const rect = node.getBoundingClientRect();
+          return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+        }));
+        for (let first = 0; first < cardBoxes.length; first++) for (let second = first + 1; second < cardBoxes.length; second++) {
+          const a = cardBoxes[first], b = cardBoxes[second];
+          assert.ok(a.x + a.width <= b.x + 1 || b.x + b.width <= a.x + 1
+            || a.y + a.height <= b.y + 1 || b.y + b.height <= a.y + 1,
+          `cards ${first}/${second} collide in ${name}`);
+        }
+        for (const slot of geometry.slots) {
+          const box = await dialog.locator(`[data-arena-slot="${slot.id}"]`).boundingBox();
+          assert.ok(box, `missing ${slot.id}`);
+          const x = 100 * (box.x + box.width / 2 - fieldBox.x) / fieldBox.width;
+          const y = 100 * (box.y + box.height / 2 - fieldBox.y) / fieldBox.height;
+          assert.ok(Math.abs(x - Math.min(89, Math.max(11, slot.x))) <= 4, `${slot.id} x ${x}`);
+          assert.ok(Math.abs(y - Math.min(86, Math.max(14, slot.y))) <= 4, `${slot.id} y ${y}`);
+        }
+        if (formationCode === "4-3-3" && ["tv", "small-phone-landscape"].includes(name)) {
+          await page.screenshot({ path: `/private/tmp/touchline-arena-resume-${name}-20261011.png` });
+        }
+        if (!locked) {
+          await close.press("Shift+Tab");
+          await expect(select).toBeFocused();
+          // Headless Chromium on macOS does not reliably open the native
+          // select popup from ArrowDown. Exercise its real change event here;
+          // the focus assertions above are the separate keyboard evidence.
+          await select.selectOption("4-4-2");
+          await expect(select).toHaveValue("4-4-2");
+          assert.equal(fixture.writes.length, 0, "changing an editable formation is only a local draft until save");
+        }
+        assert.equal(fixture.writes.length, 0, "viewing Arena cannot write a lineup");
+        console.log(`XI_ARENA_LAYOUT ${JSON.stringify({ name, formationCode, locale: mode.locale, viewport: page.viewportSize(), locked, field: fieldBox, coach: coachBox, formation: formationBox, points: pointsBox, close: closeBox, slots: geometry.slots.length })}`);
+        await fixture.assertClean();
       } finally { await fixture.close(); }
     }
   } finally { t.signal.removeEventListener("abort", abort); await browser.close(); }

@@ -11,23 +11,26 @@ import styles from "./ClubOwnerPlanShowcase.module.css";
 
 const tierIcons = { beta: Shield, standard: Shield, pro: Crown, master: Diamond, vip: LockKeyhole };
 
-export function ClubOwnerPlanCard({ tier, name, locale, draftLocalesEnabled = false }: Readonly<{
-  tier: ClubOwnerPlanPreview; name?: string; locale: string; draftLocalesEnabled?: boolean;
+export function ClubOwnerPlanCard({ tier, name, locale, active = false, activePlanBudget, draftLocalesEnabled = false }: Readonly<{
+  tier: ClubOwnerPlanPreview; name?: string; locale: string; active?: boolean; activePlanBudget?: number | null; draftLocalesEnabled?: boolean;
 }>) {
   const plan = CLUB_OWNER_PLAN_PREVIEWS.find(item => item.id === tier)!;
   const copy = getTouchlineClubOwnerMarketCopy(locale, draftLocalesEnabled);
   const labels = getClubOwnerPlanShowcaseCopy(locale, draftLocalesEnabled);
   const title = tier === "beta" ? "Beta" : tier === "standard" ? copy.planStandard : tier === "pro" ? "Pro" : tier === "master" ? "Master" : getClubOwnerVipPlanName(locale, draftLocalesEnabled);
   const TierIcon = tierIcons[tier];
-  const budgetLabel = `${labels.planBudget}: ${plan.budget === null ? labels.unlimited : `${plan.budget.toLocaleString(locale)} TouchLine Credits`}`;
-  return <div dir="ltr" className={styles.memberCard} data-plan-offer={tier}>
+  const budget = active && activePlanBudget !== undefined ? activePlanBudget : plan.budget;
+  const amount = active && activePlanBudget !== undefined && typeof budget === "number"
+    ? new Intl.NumberFormat(locale, { notation: "compact", maximumFractionDigits: 1 }).format(budget) : plan.amount;
+  const budgetLabel = `${labels.planBudget}: ${budget === null ? labels.unlimited : `${budget.toLocaleString(locale)} TouchLine Credits`}`;
+  return <div dir="ltr" className={styles.memberCard} data-plan-offer={tier} data-current-plan={active || undefined}>
     <TouchlineClubPerimeterTrace accent="var(--plan-accent)" className={styles.memberNeon} />
     <svg className={styles.cardPattern} viewBox="0 0 360 240" aria-hidden="true" focusable="false">
       <path d="M145 -30C40 50 24 156 82 270" />
       <path d="M213 -30C108 50 92 156 150 270" />
       <path d="M281 -30C176 50 160 156 218 270" />
     </svg>
-    <div className={styles.cardTop}><span className={styles.cardBrand}>TouchLine<small>CLUBOWNER</small></span><span className={styles.cardEdition}>{labels.previewShort}</span></div>
+    <div className={styles.cardTop}><span className={styles.cardBrand}>TouchLine<small>CLUBOWNER</small></span><span className={styles.cardEdition}>{active ? copy.planActive : labels.previewShort}</span></div>
     <div className={styles.cardIdentity}>
       <div><span className={styles.cardKicker}>{labels.membership}</span><h3 data-plan-tier={tier}>{title}</h3></div>
       <span className={styles.tierSeal}><TierIcon size={29} aria-hidden="true" /></span>
@@ -35,14 +38,14 @@ export function ClubOwnerPlanCard({ tier, name, locale, draftLocalesEnabled = fa
     <div className={styles.cardBottom}>
       {name ? <span className={styles.cardOwner}><small>ClubOwner</small><strong>{name}</strong></span> : null}
       <span className={styles.cardPower}><small>{labels.planBudget}</small><span className={styles.marketPowerValue} data-plan-budget={tier} role="img" aria-label={budgetLabel}>
-        <span className={styles.coin} aria-hidden="true"><TouchlineCoinMark size={19} /></span><strong>{plan.amount ?? "∞"}</strong><small>{plan.amount ? "TC" : labels.unlimited}</small>
+        <span className={styles.coin} aria-hidden="true"><TouchlineCoinMark size={19} /></span><strong>{amount ?? "∞"}</strong><small>{amount ? "TC" : labels.unlimited}</small>
       </span></span>
     </div>
   </div>;
 }
 
-export default function ClubOwnerPlanShowcase({ initialPlan, name, locale, remainingMarketPower, realUnlimited = false, draftLocalesEnabled = false }: Readonly<{
-  initialPlan: ClubOwnerPlanPreview; name: string; locale: string; remainingMarketPower: string | null; realUnlimited?: boolean; draftLocalesEnabled?: boolean;
+export default function ClubOwnerPlanShowcase({ initialPlan, activePlanKey = null, activePlanBudget, name, locale, remainingMarketPower, realUnlimited = false, draftLocalesEnabled = false }: Readonly<{
+  initialPlan: ClubOwnerPlanPreview; activePlanKey?: ClubOwnerPlanPreview | null; activePlanBudget?: number | null; name: string; locale: string; remainingMarketPower: string | null; realUnlimited?: boolean; draftLocalesEnabled?: boolean;
 }>) {
   const [index, setIndex] = useState(() => Math.max(0, CLUB_OWNER_PLAN_PREVIEWS.findIndex(plan => plan.id === initialPlan)));
   const id = useId();
@@ -79,7 +82,7 @@ export default function ClubOwnerPlanShowcase({ initialPlan, name, locale, remai
     dialogTrigger.current?.focus();
   };
 
-  return <section dir="ltr" className={styles.planShowcase} data-plan-preview={plan.id} data-plan-state="inactive" aria-labelledby={`${id}-heading`}>
+  return <section dir="ltr" className={styles.planShowcase} data-plan-preview={plan.id} data-active-plan={activePlanKey ?? undefined} data-plan-state={activePlanKey ? "active" : "inactive"} aria-labelledby={`${id}-heading`}>
     <div className={styles.showcaseHeading}>
       <div><span className={styles.eyebrow}>TouchLine / {labels.membership}</span><h2 id={`${id}-heading`}>{copy.plan}</h2></div>
       <button ref={dialogTrigger} type="button" className={`${controls.link} ${styles.planAction}`} onClick={() => dialog.current?.showModal()} aria-haspopup="dialog">
@@ -95,7 +98,7 @@ export default function ClubOwnerPlanShowcase({ initialPlan, name, locale, remai
       </button>)}
     </div>
     <div role="tabpanel" id={`${id}-panel`} aria-labelledby={`${id}-tab-${plan.id}`} tabIndex={0} className={styles.planPanel}>
-      <ClubOwnerPlanCard tier={plan.id} name={name} locale={locale} draftLocalesEnabled={draftLocalesEnabled} />
+      <ClubOwnerPlanCard tier={plan.id} name={name} locale={locale} active={activePlanKey === plan.id} activePlanBudget={activePlanKey === plan.id ? activePlanBudget : undefined} draftLocalesEnabled={draftLocalesEnabled} />
       <div className={styles.offerSummary}><div><small>{plan.id === "vip" || plan.id === "beta" ? labels.membership : plan.id === "master" ? labels.seasonalPrice : labels.annualPrice}</small><strong data-plan-price={plan.id}>{priceFor(plan.id)}</strong></div><p>{benefitFor(plan.id)}</p></div>
     </div>
     <div className={styles.planBrowse} role="group" aria-label={labels.browse}>

@@ -7,6 +7,18 @@ import ts from "typescript";
 const source = readFileSync(new URL("../components/touchline/match-centre/TouchlineMatchCentre.tsx", import.meta.url), "utf8");
 const owner = readFileSync(new URL("../app/fantasy/FantasyGameweekClient.tsx", import.meta.url), "utf8");
 const marketCss = readFileSync(new URL("../app/fantasy/fantasy.module.css", import.meta.url), "utf8");
+test("formation handler refuses changes while a previous save is pending", () => {
+  const ast = ts.createSourceFile("owner.tsx", owner, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  let handler: ts.FunctionDeclaration | undefined;
+  const visit = (node: ts.Node) => { if (ts.isFunctionDeclaration(node) && node.name?.text === "changeFormation") handler = node; node.forEachChild(visit); };
+  visit(ast); assert.ok(handler);
+  const code = ts.transpileModule(handler.getText(ast), { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
+  // Mutation dependencies are deliberately absent: reaching any of them must fail.
+  runInNewContext(`${code}; changeFormation("4-4-2");`, {
+    snapshot: { formationRegistry: { "4-4-2": { slots: [] } } }, editable: true, saving: true,
+  });
+  assert.match(owner, /id="arena-formation-select"[^\n]+disabled=\{!editable \|\| saving\}/);
+});
 test("current fixtures show their own weekday while historical and accessible dates remain complete", () => {
   assert.match(source, /isResultSection\s*\? touchlineFixtureRailDateLabel\([\s\S]*?: fixtureDate\(fixture, language, timeZone, \{ weekday: "short" \}, draftLocalesEnabled\)/);
   assert.match(source, /aria-label=\{fixtureDate\(fixture, language, timeZone, \{ weekday: "long", day: "numeric", month: "long", year: "numeric"/);
@@ -30,6 +42,16 @@ test("Arena receives the same server time-zone policy as Live", () => {
   assert.match(page, /liveTimeZone=\{liveTimeZone\}/);
   assert.match(owner, /initialTimeZone=\{liveTimeZone\}/);
 });
+test("authenticated ClubOwner seeds the embedded Live rail from the complete persisted fixture schedule", () => {
+  const page = readFileSync(new URL("../app/clubowner/page.tsx", import.meta.url), "utf8");
+  assert.match(page, /if \(!user\) redirect\([\s\S]*?readPublicCompetitionFixtures\(\{\s*includeHistorical: true, limit: 240/);
+  assert.match(page, /from: new Date\(scheduleNow - 7 \* 86_400_000\)/);
+  assert.match(page, /through: new Date\(scheduleNow \+ 14 \* 86_400_000\)/);
+  assert.match(owner, /state: "partial-persisted-schedule", degraded: true/);
+  assert.match(page, /initialLiveFixtures=\{initialLiveFixtures\} initialLiveNow=\{initialLiveNow\}/);
+  assert.match(owner, /initialFixtures=\{initialLiveFixtures\} initialNow=\{initialLiveNow\}/);
+  assert.doesNotMatch(owner, /<TouchlineMatchCentre railOnly initialFixtures=\{\[\]\}/);
+});
 test("Arena and Live reuse one fixture rail and existing alerts, with detail disabled in Arena", () => {
   assert.equal(source.match(/<TouchlineFixtureAlerts /g)?.length, 1);
   assert.equal(source.match(/className=\{styles.fixtureList\}/g)?.length, 1);
@@ -37,6 +59,12 @@ test("Arena and Live reuse one fixture rail and existing alerts, with detail dis
   assert.match(source, /if \(railOnly \|\| !canReadMatchDetail\) return/);
   assert.match(owner, /\(arenaOpen \|\| marketPage\) \? <div className=\{styles.arenaLiveRail\}>/);
   assert.match(owner, /<TouchlineMatchCentre railOnly/);
+});
+test("ClubOwner rail includes the latest results and explains a degraded persisted score feed", () => {
+  assert.match(source, /\{ id: "results", label: dictionary\.recentResults, fixtures: schedule\.recentResults \}/);
+  assert.doesNotMatch(source, /!railOnly \? <div><dt>\{dictionary\.recentResults\}/);
+  assert.match(source, /railOnly && readMetadata\?\.degraded \? <p className=\{styles\.railFreshness\} role="status"/);
+  assert.match(source, /readMetadata\.state === "partial-persisted-schedule" \? dictionary\.partialScheduleCopy : dictionary\.liveDataUpdatingCopy/);
 });
 test("the normal ClubOwner Live rail sits closer to the technical-area line without resizing the pitch", () => {
   const normalRail = marketCss.match(/\.myClubCommand\[data-fantasy-context="market"\]:not\(\.arenaOverlay\) \.arenaLiveRail \{([^}]+)\}/)?.[1] ?? "";

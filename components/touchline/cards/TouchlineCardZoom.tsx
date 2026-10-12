@@ -17,6 +17,7 @@ import {
   Goal,
   Hand,
   History,
+  LockKeyhole,
   Medal,
   Shield,
   ShieldCheck,
@@ -134,9 +135,11 @@ type TouchlineCardZoomProps = {
   socialProviderId?: string;
   replacementAction?: { label: string; onSelect: () => void; disabled?: boolean };
   removalAction?: { label: string; onSelect: () => void; disabled?: boolean };
+  /** Explain why lineup controls remain visible but unavailable. */
+  lockedReason?: string;
 };
 
-export function TouchlineCardZoomDetailsPanel({ details, locale, draftLocalesEnabled = false, primaryAction }: { details: TouchlineCardZoomDetails; locale?: string; draftLocalesEnabled?: boolean; primaryAction?: ReactNode }) {
+export function TouchlineCardZoomDetailsPanel({ details, locale, draftLocalesEnabled = false, primaryAction, lockedReason }: { details: TouchlineCardZoomDetails; locale?: string; draftLocalesEnabled?: boolean; primaryAction?: ReactNode; lockedReason?: string }) {
   const identityFields = details.fields.filter((field) => field.group !== "performance");
   const performanceFields = details.fields.filter((field) => field.group === "performance");
   const [isFullPerformanceOpen, setIsFullPerformanceOpen] = useState(false);
@@ -253,6 +256,7 @@ export function TouchlineCardZoomDetailsPanel({ details, locale, draftLocalesEna
     {performanceFields.length || primaryAction ? (
       <aside className={`${styles.details} ${styles.performanceDetails}`} aria-label={details.performanceTitle ?? copy.performance}>
         {primaryAction}
+        {lockedReason ? <p className={styles.lineupLockReason} role="status"><LockKeyhole size={18} aria-hidden="true" /><span>{lockedReason}</span></p> : null}
         <header className={styles.detailsHeader}>
           <span>TouchLine Verified</span>
           <h2>{details.performanceTitle ?? copy.performance}</h2>
@@ -325,6 +329,7 @@ export default function TouchlineCardZoom({
   socialProviderId,
   replacementAction,
   removalAction,
+  lockedReason,
 }: TouchlineCardZoomProps) {
   const explicitLocale = locale === undefined ? undefined : resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled);
   const socialPlayerId = details?.profileActionKind === "coach" ? null : resolvePlayerSocialSubject(socialProviderId, details?.profileHref);
@@ -405,12 +410,12 @@ export default function TouchlineCardZoom({
     // Release modal focus/scroll locks before opening the slot selector.
     flushSync(() => setIsOpen(false));
     replacementAction.onSelect();
-  }}><ArrowLeftRight size={24} aria-hidden="true" /><span>{replacementAction.label}</span></button> : null;
+  }}><ArrowLeftRight size={24} aria-hidden="true" /><span>{replacementAction.label}</span>{replacementAction.disabled && lockedReason ? <LockKeyhole size={17} aria-hidden="true" /> : null}</button> : null;
   const removalButton = removalAction ? <button type="button" className={`${styles.contractAction} ${styles.removalAction}`} disabled={removalAction.disabled} onClick={() => {
     if (removalAction.disabled) return;
     flushSync(() => setIsOpen(false));
     removalAction.onSelect();
-  }}><Trash2 size={22} aria-hidden="true" /><span>{removalAction.label}</span></button> : null;
+  }}><Trash2 size={22} aria-hidden="true" /><span>{removalAction.label}</span>{removalAction.disabled && lockedReason ? <LockKeyhole size={17} aria-hidden="true" /> : null}</button> : null;
   const lineupActions = replacementButton || removalButton ? <div className={styles.lineupActions}>{replacementButton}{removalButton}</div> : null;
 
   return (
@@ -477,7 +482,7 @@ export default function TouchlineCardZoom({
                 </a>
               ) : null}
             </div>
-            {detailsContent ? <aside className={styles.details}>{detailsContent}</aside> : details ? <TouchlineCardZoomDetailsPanel details={details} locale={explicitLocale} draftLocalesEnabled={draftLocalesEnabled} primaryAction={lineupActions} /> : null}
+            {detailsContent ? <aside className={styles.details}>{detailsContent}</aside> : details ? <TouchlineCardZoomDetailsPanel details={details} locale={explicitLocale} draftLocalesEnabled={draftLocalesEnabled} primaryAction={lineupActions} lockedReason={lockedReason} /> : null}
           </div>
         </div>,
         document.body,

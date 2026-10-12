@@ -213,6 +213,7 @@ export async function readPublicCompetitionFixtures(options: {
   /** Internal synchronization can reuse this mapper with an explicit season/window. */
   providedAdmin?: FixtureAdminClient;
   seasonId?: string;
+  from?: string;
   through?: string;
   provider?: FootballDataProviderName;
   competitionProviderId?: string;
@@ -246,7 +247,7 @@ export async function readPublicCompetitionFixtures(options: {
     .eq("competition_id", competition.id)
     .order("starts_at", { ascending: true })
     .limit(limit);
-  if (!options.includeHistorical) fixtureQuery = fixtureQuery.gte("starts_at", from);
+  if (options.from || !options.includeHistorical) fixtureQuery = fixtureQuery.gte("starts_at", options.from ?? from);
   if (options.seasonId) fixtureQuery = fixtureQuery.eq("season_id", options.seasonId);
   if (options.through) fixtureQuery = fixtureQuery.lte("starts_at", options.through);
   const { data: fixtureRows, error: fixturesError } = await fixtureQuery;

@@ -73,7 +73,11 @@ test("coach remains a dedicated entity outside every player slot", async () => {
   assert.match(coachCardStyles, /width: clamp\(9px, 16cqw, 28px\)/);
   const pitch = source.match(/<TouchlinePitchSurface className=\{styles\.myClubTacticalPitch\}[\s\S]*?<\/TouchlinePitchSurface>/)?.[0] ?? "";
   assert.match(pitch, /selectedCards\.map/);
-  assert.doesNotMatch(pitch, /FantasyCoachZoom|TouchlineCoachCardZoom/);
+  // Coach now anchors to the pitch container but remains outside the grass;
+  // the rendered browser geometry test proves its bounds at every viewport.
+  assert.match(pitch, /data-arena-coach="true"/);
+  const playerSlots = pitch.slice(pitch.indexOf("selectedCards.map"));
+  assert.doesNotMatch(playerSlots, /FantasyCoachZoom|TouchlineCoachCardZoom/);
   assert.match(source, /<FantasyCoachZoom entry=\{selectedCoach\}/);
   assert.match(source, /profileHref=\{`\/touchline-coaches\//);
   assert.doesNotMatch(source, /starters\.push\([^)]*coach/i);

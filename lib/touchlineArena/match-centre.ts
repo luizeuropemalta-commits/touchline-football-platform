@@ -10,7 +10,7 @@ import { resolveTouchlineCatalogueLocale } from "./catalogue-locale.ts";
 import { getTouchlineMatchCentreCopy } from "./match-centre-i18n.ts";
 
 export type TouchlineMatchState = "live" | "upcoming" | "finished" | "unknown";
-export type TouchlineMatchCentreDisplayState = TouchlineMatchState | "stale";
+export type TouchlineMatchCentreDisplayState = TouchlineMatchState | "stale" | "awaiting-update";
 
 export type TouchlineLiveReadState = "persisted-live-snapshot" | "partial-persisted-schedule";
 
@@ -268,9 +268,10 @@ export function selectTouchlineMatchCentreSchedule<T extends TouchlinePublicFixt
 }
 
 /**
+ * Presentation must not infer an actual match state from the scheduled clock.
+ * An overdue fixture without an official live/final status awaits an update;
+ * this does not mutate the canonical fixture state used by game rules.
  * A stale persisted live snapshot must never retain the visual "LIVE" state.
- * Completed and scheduled fixtures keep their normal classification; the
- * surrounding notice still explains that the shared data is being refreshed.
  */
 export function touchlineMatchCentreDisplayState(
   fixture: TouchlineFixtureStateSource,
@@ -278,7 +279,10 @@ export function touchlineMatchCentreDisplayState(
   now?: number,
 ): TouchlineMatchCentreDisplayState {
   const state = touchlineFixtureState(fixture, now);
-  return metadata?.degraded && state === "live" ? "stale" : state;
+  if (metadata?.degraded && state === "live") return "stale";
+  const startsAt = fixture.startsAt ? Date.parse(fixture.startsAt) : Number.NaN;
+  if (state === "upcoming" && Number.isFinite(startsAt) && startsAt <= (now ?? Date.now())) return "awaiting-update";
+  return state;
 }
 
 export function selectTouchlineMatchCentreFixture<T extends TouchlineFixtureSelectionSource>(fixtures: T[], requestedFixtureId?: string | null, now = Date.now()): T | null {

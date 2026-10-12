@@ -5,10 +5,12 @@ import { useSearchParams } from "next/navigation";
 
 import { resolveTouchlineCatalogueLocale } from "@/lib/touchlineArena/catalogue-locale";
 import { getTouchlinePublicErrorCopy } from "@/lib/touchlineArena/public-error-i18n";
+import { useSiteLocaleRelease } from "./SiteLocaleReleaseContext";
 import TouchlineGlobalNavigation from "./TouchlineGlobalNavigation";
 
 export default function TouchlineNotFound() {
-  return <NotFoundContent />;
+  const draftLocalesEnabled = useSiteLocaleRelease();
+  return <NotFoundContent draftLocalesEnabled={draftLocalesEnabled} />;
 }
 
 function NotFoundContent({ draftLocalesEnabled = false }: { draftLocalesEnabled?: boolean } = {}) {

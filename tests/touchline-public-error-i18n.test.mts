@@ -93,7 +93,7 @@ test("all nine literal error values remain authored for each unpublished draft w
   }
 });
 
-async function fixture(kind: keyof typeof sources, query: string, options: { future?: boolean; sentinel?: boolean; server?: boolean } = {}) {
+async function fixture(kind: keyof typeof sources, query: string, options: { future?: boolean; sentinel?: boolean; server?: boolean; releaseEnabled?: boolean } = {}) {
   const mod = await load();
   const requests: string[] = [], navigation: Record<string, unknown>[] = [];
   let resetCalls = 0, windowReads = 0, subscriptions = 0, notifications = 0;
@@ -108,6 +108,8 @@ async function fixture(kind: keyof typeof sources, query: string, options: { fut
     "next/navigation": { useSearchParams: () => new URLSearchParams(query) },
     "lucide-react": icons,
     "@/lib/touchlineArena/catalogue-locale": catalogueLocale,
+    "@/components/touchline/SiteLocaleReleaseContext": { useSiteLocaleRelease: () => options.releaseEnabled === true },
+    "./SiteLocaleReleaseContext": { useSiteLocaleRelease: () => options.releaseEnabled === true },
     "@/lib/touchlineArena/public-error-i18n": { getTouchlinePublicErrorCopy: (locale: string, draftLocalesEnabled = false) => {
       requests.push(locale);
       if (options.sentinel) return Object.fromEntries(Object.entries(baseline["en-GB"]).map(([group, values]) => [group, Object.fromEntries(Object.keys(values).map(key => [key, `${locale}:${group}:${key}`]))]));
@@ -154,6 +156,18 @@ test("controlled client snapshot preserves first query locale, no-op subscriptio
   }
 });
 
+test("the real error boundary follows the server-owned site release context, never a query-only opt-in", async () => {
+  for (const locale of locales) {
+    const closed = await fixture("error", `?lang=${locale}&siteLocalesEnabled=true&draftLocalesEnabled=true`);
+    const fallback = locale === "pt-BR" ? "pt-BR" : "en-GB";
+    assert.deepEqual(closed.requests, [fallback]);
+    const enabled = await fixture("error", `?lang=${locale}`, { releaseEnabled: true });
+    assert.deepEqual(enabled.requests, [locale]);
+    assert.ok(enabled.html.includes(escape(unpublishedDrafts[locale as keyof typeof unpublishedDrafts]?.error.title ?? baseline[locale as "en-GB" | "pt-BR"].error.title)));
+    assert.ok(enabled.html.includes(`href="/clubowner?lang=${locale}"`));
+  }
+});
+
 test("real 404 consumer preserves public navigation props and query fallback without reading private details", async () => {
   for (const query of ["", "?lang=", "?lang=unknown", "?lang=pt-BR&lang=en-GB", ...locales.map(locale => `?lang=${locale}`)]) {
     const locale = i18n.normalizeTouchLineLocale(new URLSearchParams(query).get("lang"));
@@ -161,6 +175,16 @@ test("real 404 consumer preserves public navigation props and query fallback wit
     for (const text of Object.values(baseline[locale === "pt-BR" ? "pt-BR" : "en-GB"].notFound)) assert.ok(h.html.includes(escape(text)));
     assert.deepEqual(h.requests, [locale]); assert.deepEqual(h.navigation, [{ locale, draftLocalesEnabled: false, currentRoute: "notFound", surface: "public", className: "mt-8" }]);
     assert.equal(h.resetCalls, 0); assert.equal(h.windowReads, 0); assert.equal(h.subscriptions, 0);
+  }
+});
+
+test("the real 404 route follows the server-owned locale release context", async () => {
+  for (const locale of locales) {
+    const closed = await fixture("notFound", `?lang=${locale}&draftLocalesEnabled=true`);
+    assert.deepEqual(closed.requests, [locale === "pt-BR" ? "pt-BR" : "en-GB"]);
+    const enabled = await fixture("notFound", `?lang=${locale}`, { releaseEnabled: true });
+    assert.deepEqual(enabled.requests, [locale]);
+    assert.deepEqual(enabled.navigation, [{ locale, draftLocalesEnabled: true, currentRoute: "notFound", surface: "public", className: "mt-8" }]);
   }
 });
 

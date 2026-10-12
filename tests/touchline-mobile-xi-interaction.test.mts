@@ -83,7 +83,9 @@ test("zoom replaces without a field X; explicit list removal stays local and ope
   assert.match(removal, /removeTouchlineFantasyPlayerFromSlot\(current, removed.slotId\)/);
   assert.doesNotMatch(removal, /fetch|DELETE|save\(|scrollToLineupSection|openTacticalSelector/);
   assert.doesNotMatch(source, /className=\{styles.pitchRemove\}/);
-  assert.match(source, /replacementAction=\{editable && selection \? \{[^\n]*disabled: saving, onSelect: \(\) => replaceMyClubPlayer\(selection.playerId, slot.id\)/);
+  assert.match(source, /replacementAction=\{selection \? \{[^\n]*disabled: !editable \|\| saving, onSelect: \(\) => replaceMyClubPlayer\(selection.playerId, slot.id\)/);
+  assert.match(source, /removalAction=\{selection \? \{[^\n]*disabled: !editable \|\| saving, onSelect: \(\) => removePlayer\(selection.playerId\)/);
+  assert.match(source, /lockedReason=\{selection && !editable \? lockedZoomReason : undefined\}/);
   assert.match(source, /function addPlayer[^]*?if \(saving\) return false/);
   assert.match(source, /: marketOpen \? <button[^\n]*className=\{styles.emptyPosition\}[^\n]*>\+<\/button> : null/);
   assert.doesNotMatch(source, /TouchlinePositionPicker|data-slot-action|aria-haspopup/);

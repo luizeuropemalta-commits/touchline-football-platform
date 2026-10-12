@@ -328,13 +328,15 @@ test("server-rendered header exposes real identity, exact EN/PT labels and disab
     assert.doesNotMatch(html, /href="\/intro/);
     assert.doesNotMatch(page, /brandAccessory=|\/intro\?/);
     assert.ok(html.includes(`aria-label="${baseline[locale].photoAria}"`));
+    assert.ok(html.includes('id="clubowner-photo-status" role="status"'), `${locale}: disabled photo has visible status`);
     assert.match(html, /aria-describedby="clubowner-photo-status"/);
     assert.match(html, /id="clubowner-photo-status"/);
     assert.match(html, /aria-describedby="clubowner-plan-status"/);
     assert.match(html, /id="clubowner-plan-status"/);
     assert.match(html, /data-plan-state="inactive"/);
     assert.equal((html.match(/disabled=""/g) ?? []).length, 2);
-    assert.doesNotMatch(html, /type="file"|£|€|Luiz Lopez/);
+    assert.doesNotMatch(html, /type="file"|Luiz Lopez/);
+    assert.match(html, /data-plan-preview="beta"/, "the read-only plan catalogue is visible outside development");
   }
 });
 
@@ -350,16 +352,30 @@ test("missing owner and empty facts remain honest fallbacks without invented acc
   }
 });
 
-test("actual rendered header takes all plan copy from the catalogue without duplicating copy", () => {
+test("actual rendered header and plan catalogue use the same selected locale", () => {
   const calls: string[] = [];
   const markerCopy = Object.fromEntries(Object.keys(baseline['en-GB']).map(key => [key, `copy-${key}`]));
   const html = renderHeader(null, 'pt-BR', { getTouchlineClubOwnerMarketCopy: (locale: string) => { calls.push(locale); return markerCopy; } });
-  assert.deepEqual(calls, ['pt-BR']);
+  assert.ok(calls.length >= 2);
+  assert.ok(calls.every(locale => locale === 'pt-BR'));
   for (const [key, value] of Object.entries(markerCopy)) if (!["location", "nationality", "memberSince", "watchIntro", "planStandard", "planPro", "planActive", "planInactive", "planUntil", "planActiveNoEnd", "renewPlan", "planStandardPrice", "planStandardBenefit", "planProPrice", "planProBenefit", "proMember", "proAccess", "proPrivileges"].includes(key)) assert.ok(html.includes(value), value);
   for (const key of ["proMember", "proAccess", "proPrivileges"]) assert.ok(!html.includes(markerCopy[key]));
   assert.match(html, /<div class="title"><h1>ClubOwner<\/h1><\/div>/);
   assert.doesNotMatch(html, /<span>TOUCHLINE<\/span>/);
   assert.equal((html.match(/disabled=""/g) ?? []).length, 2);
+});
+
+test("verified active VIP has its real name and amethyst card without opening purchase", async () => {
+  const html = renderHeader({ name: "Customer", avatarUrl: "", city: "", nationality: "", since: "" }, "pt-BR", await loadCopy(), {
+    plan: { active: true, expiresAt: null }, activePlanKey: "vip", activePlanBudget: null, realUnlimited: true,
+  });
+  assert.match(html, /data-profile-active-plan="vip"[^>]*>[^<]*<svg[\s\S]*VIP Convidado<\/span>/);
+  assert.match(html, /data-active-plan="vip"/);
+  assert.match(html, /data-plan-preview="vip"/);
+  assert.match(html, /data-current-plan="true"/);
+  assert.match(html, /data-plan-state="active"/);
+  assert.match(html, /data-market-power-unlimited="true"/);
+  assert.doesNotMatch(html, /checkout|stripe|type="file"/);
 });
 
 test("profile metrics preserve identity and use only the viewer ranking across eight locales", async () => {
@@ -386,7 +402,7 @@ test("profile metrics preserve identity and use only the viewer ranking across e
     assert.ok(facts.indexOf(labels.ranking) > facts.indexOf(labels.points));
     assert.ok(facts.indexOf(labels.followers) > facts.indexOf(labels.ranking));
     assert.doesNotMatch(html, /class="followers"/);
-    assert.match(html, /class="visuallyHidden" id="clubowner-photo-status"/);
+    assert.match(html, /class="photoStatus" id="clubowner-photo-status" role="status"/);
     const expectedRank = { "en-GB": "7th", "pt-BR": "7º", "es-ES": "7.º", "it-IT": "7º", "fr-FR": "7e", "ar-SA": "المركز ٧", "tr-TR": "7.", "de-DE": "7." }[code];
     assert.ok(html.includes(`<dd>${expectedRank}</dd>`));
     assert.ok(!html.includes(`<dt>${labels.following}</dt>`));

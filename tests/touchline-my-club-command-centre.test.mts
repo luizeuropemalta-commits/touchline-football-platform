@@ -100,7 +100,7 @@ test("My Club opens the tactical field by default and keeps eligibility contextu
   assert.match(embedded, /data-pitch-edge=\{slot\.x >= 75 \? "end" : undefined\}/);
   assert.match(embedded, /<TouchlineGameweekCard card=\{card\} locale=\{locale\} draftLocalesEnabled=\{draftLocalesEnabled\} compact displayWidth=\{pitchCardWidth\} replacementAction=/);
   assert.doesNotMatch(embedded, /data-slot-action/);
-  assert.match(embedded, /removalAction=\{editable && selection \? \{ label: `\$\{workflowCopy\.remove\} · \$\{card\.name\}`/);
+  assert.match(embedded, /removalAction=\{selection \? \{ label: `\$\{workflowCopy\.remove\} · \$\{card\.name\}`/);
   assert.match(embedded, /className=\{styles\.emptyPosition\}[^\n]*onClick=\{\(\) => openTacticalSelector\(slot\.id\)\}/);
   assert.match(embedded, /selectMyClubPlayer\(card\)/);
   assert.doesNotMatch(embedded, /browseCards\.slice\(0, 10\)/);

@@ -5,6 +5,35 @@ import vm from "node:vm";
 import ts from "typescript";
 import { sportmonksFixtureInstant } from "../lib/football-data/sportmonks-fixture-instant.ts";
 
+test("ClubOwner date window excludes a large archive before the fixture limit", async () => {
+  const source = await readFile(new URL("../lib/football-data/fixture-schedule-store.ts", import.meta.url), "utf8");
+  const ast = ts.createSourceFile("store.ts", source, ts.ScriptTarget.Latest, true);
+  const fn = ast.statements.find((node): node is ts.FunctionDeclaration => ts.isFunctionDeclaration(node) && node.name?.text === "readPublicCompetitionFixtures");
+  assert.ok(fn?.body);
+  const prefix = fn.body.statements.map((node) => node.getText(ast));
+  const end = prefix.findIndex((statement) => statement.includes("const { data: fixtureRows"));
+  assert.ok(end > 0);
+  const js = ts.transpileModule(prefix.slice(0, end + 1).join("\n"), { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
+  const rows = [...Array.from({ length: 300 }, (_, index) => ({ id: `old-${index}`, starts_at: "2025-01-01T00:00:00.000Z" })),
+    { id: "friday", starts_at: "2026-10-09T12:00:00.000Z" },
+    { id: "today", starts_at: "2026-10-11T12:00:00.000Z" },
+    { id: "future", starts_at: "2027-01-01T12:00:00.000Z" }];
+  let lower = "", upper = "9999", limit = 0;
+  const query = {
+    select() { return this; }, eq() { return this; }, order() { return this; },
+    limit(value: number) { limit = value; return this; },
+    gte(_key: string, value: string) { lower = value; return this; },
+    lte(_key: string, value: string) { upper = value; return this; },
+    maybeSingle: async () => ({ data: { id: "competition" }, error: null }),
+    then(resolve: (value: unknown) => unknown) { return Promise.resolve(resolve({ data: rows.filter((row) => row.starts_at >= lower && row.starts_at <= upper).slice(0, limit), error: null })); },
+  };
+  const result = await vm.runInNewContext(`(async()=>{${js}; return fixtureRows;})()`, {
+    options: { providedAdmin: { from: () => query }, includeHistorical: true, limit: 240, from: "2026-10-04T00:00:00.000Z", through: "2026-10-25T00:00:00.000Z" },
+    DEFAULT_PROVIDER: "sportmonks", DEFAULT_COMPETITION_PROVIDER_ID: "8", DEFAULT_LIMIT: 50, MAX_LIMIT: 500,
+  });
+  assert.deepEqual(result.map((row: { id: string }) => row.id), ["friday", "today"]);
+});
+
 test("actual season lookup loop is serial and retains source order and failed results", async () => {
   const source=await readFile(new URL("../lib/football-data/fixture-schedule-sync.ts",import.meta.url),"utf8");
   const file=ts.createSourceFile("sync.ts",source,ts.ScriptTarget.Latest,true);

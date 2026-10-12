@@ -257,6 +257,47 @@ test("Match Centre never presents a degraded live snapshot as currently live", (
   assert.equal(isTouchlineLiveReadMetadata({ state: "unknown", degraded: true }), false);
 });
 
+test("an overdue unverified fixture awaits an official update without changing its canonical status", () => {
+  const kickoff = "2026-10-10T12:30:00Z";
+  const before = Date.parse("2026-10-10T12:29:59Z");
+  const atKickoff = Date.parse(kickoff);
+  const after = Date.parse("2026-10-11T19:13:00Z");
+  const scheduled = fixture("overdue", kickoff, "Not Started");
+  const freshMetadata = { state: "partial-persisted-schedule", degraded: false } as const;
+  const staleMetadata = { ...freshMetadata, degraded: true };
+
+  assert.equal(touchlineMatchCentreDisplayState(scheduled, freshMetadata, before), "upcoming");
+  assert.equal(touchlineFixtureState(scheduled, after), "upcoming", "presentation never changes the provider-backed game state");
+  assert.equal(touchlineMatchCentreDisplayState(scheduled, freshMetadata, atKickoff), "awaiting-update");
+  assert.equal(touchlineMatchCentreDisplayState(scheduled, freshMetadata, after), "awaiting-update");
+  assert.equal(touchlineMatchCentreDisplayState(scheduled, staleMetadata, after), "awaiting-update");
+  assert.equal(touchlineMatchCentreDisplayState(scheduled, null, after), "awaiting-update", "server schedule is honest before the first client poll");
+  assert.equal(touchlineMatchCentreDisplayState(fixture("live", kickoff, "2nd Half"), freshMetadata, after), "live");
+  assert.equal(touchlineMatchCentreDisplayState(fixture("final", kickoff, "Full Time"), freshMetadata, after), "finished");
+
+  const locales = ["en-GB", "pt-BR", "es-ES", "it-IT", "fr-FR", "ar-SA", "tr-TR", "de-DE"] as const;
+  for (const locale of locales) {
+    const pending = getTouchlineMatchCentreCopy(locale, true).awaitingOfficialUpdate;
+    assert.ok(pending.trim().length > 0, `${locale} needs its own pending copy`);
+    assert.notEqual(pending, getTouchlineMatchCentreCopy(locale, true).completed);
+    assert.notEqual(pending, getTouchlineMatchCentreCopy(locale, true).liveNow);
+  }
+  assert.equal(getTouchlineMatchCentreCopy("en-GB", true).awaitingOfficialUpdate, "Awaiting official update");
+  assert.equal(getTouchlineMatchCentreCopy("pt-BR", true).awaitingOfficialUpdate, "Aguardando atualização oficial");
+});
+
+test("Match Centre surfaces the overdue state instead of a zeroed countdown or open-match claim", () => {
+  const source = readFileSync(
+    new URL("../components/touchline/match-centre/TouchlineMatchCentre.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(source, /if \(target <= now\) return <strong className=\{styles\.countdown\}>\{dictionary\.awaitingOfficialUpdate\}<\/strong>/);
+  assert.match(source, /Math\.ceil\(\(target - now\) \/ 60_000\)/);
+  assert.match(source, /selectedDisplayState === "upcoming" \? <Countdown/);
+  assert.match(source, /selectedDisplayState === "awaiting-update" \? dictionary\.awaitingOfficialUpdate/);
+  assert.match(source, /if \(state === "awaiting-update"\) return getTouchlineMatchCentreCopy\(language, draftLocalesEnabled\)\.awaitingOfficialUpdate/);
+});
+
 test("Match Centre never invents a zero score when only one side is present", () => {
   const source = readFileSync(
     new URL("../components/touchline/match-centre/TouchlineMatchCentre.tsx", import.meta.url),

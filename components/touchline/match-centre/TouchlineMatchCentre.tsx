@@ -8,8 +8,7 @@ import { CalendarDays, Clock3, Crown, Goal, Landmark, ShieldCheck, Sparkles, Tro
 import TouchlineFixtureAlerts from "./TouchlineFixtureAlerts";
 
 import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
-import TouchlinePageControls from "@/components/touchline/TouchlinePageControls";
-import { Logo } from "@/components/logo";
+import TouchlineBrandHeader from "@/components/touchline/TouchlineBrandHeader";
 import type { AccountLocaleContext } from "@/lib/touchlineArena/account-locale-context-server";
 import TouchlineClubPerimeterTrace from "@/components/touchline/TouchlineClubPerimeterTrace";
 import type { TouchlinePublicFixture, TouchlinePublicVenue } from "@/lib/football-data/public-fixture";
@@ -124,6 +123,7 @@ function fixtureRailStatus(
 ) {
   const state = touchlineMatchCentreDisplayState(fixture, metadata, now);
   if (state === "stale") return getTouchlineMatchCentreCopy(language, draftLocalesEnabled).lastVerified;
+  if (state === "awaiting-update") return getTouchlineMatchCentreCopy(language, draftLocalesEnabled).awaitingOfficialUpdate;
   if (state === "live") return fixture.liveMinute !== undefined
     ? `${fixture.liveMinute}′ · ${getTouchlineMatchCentreCopy(language, draftLocalesEnabled).liveNow}`
     : getTouchlineMatchCentreCopy(language, draftLocalesEnabled).liveNow;
@@ -141,6 +141,7 @@ function status(
 ) {
   const state = touchlineMatchCentreDisplayState(fixture, metadata, now);
   if (state === "stale") return getTouchlineMatchCentreCopy(language, draftLocalesEnabled).lastVerified;
+  if (state === "awaiting-update") return getTouchlineMatchCentreCopy(language, draftLocalesEnabled).awaitingOfficialUpdate;
   if (state === "live") return fixture.liveMinute !== undefined
     ? `${fixture.liveMinute}′ · ${touchlineFixtureStatusLabel(fixture.livePeriod, language, draftLocalesEnabled) || getTouchlineMatchCentreCopy(language, draftLocalesEnabled).liveNow}`
     : getTouchlineMatchCentreCopy(language, draftLocalesEnabled).liveNow;
@@ -157,8 +158,10 @@ function Countdown({ startsAt, language, initialNow, draftLocalesEnabled = false
   const dictionary = getTouchlineMatchCentreCopy(language, draftLocalesEnabled);
   const target = startsAt ? Date.parse(startsAt) : Number.NaN;
   if (!Number.isFinite(target)) return null;
-  const difference = Math.max(0, target - now);
-  const minutes = Math.floor(difference / 60_000);
+  // The countdown is its own clock between parent renders; never show a
+  // zeroed timer after kick-off while the provider still says Not Started.
+  if (target <= now) return <strong className={styles.countdown}>{dictionary.awaitingOfficialUpdate}</strong>;
+  const minutes = Math.ceil((target - now) / 60_000);
   const days = Math.floor(minutes / 1_440);
   const hours = Math.floor((minutes % 1_440) / 60);
   const remainingMinutes = minutes % 60;
@@ -450,7 +453,7 @@ export default function TouchlineMatchCentre({
   }, [now, selected]);
   const fixtureSections: Array<{ id: FixtureSection; label: string; fixtures: TouchlinePublicFixture[] }> = [
     { id: "current", label: dictionary.currentFixtures, fixtures: schedule.currentFixtures },
-    ...(!railOnly ? [{ id: "results" as const, label: dictionary.recentResults, fixtures: schedule.recentResults }] : []),
+    { id: "results", label: dictionary.recentResults, fixtures: schedule.recentResults },
   ];
 
   function selectFixture(fixture: TouchlinePublicFixture) {
@@ -479,8 +482,12 @@ export default function TouchlineMatchCentre({
             <span className={styles.railLeague} dir={textDirection}><strong>{dictionary.league}</strong>{seasonLabel ? <small>{seasonLabel}</small> : null}</span>
             <dl className={styles.fixtureCount}>
               <div><dt>{dictionary.currentFixtures}</dt><dd>{schedule.currentFixtures.length}</dd></div>
-              {!railOnly ? <div><dt>{dictionary.recentResults}</dt><dd>{schedule.recentResults.length}</dd></div> : null}
+              <div><dt>{dictionary.recentResults}</dt><dd>{schedule.recentResults.length}</dd></div>
             </dl>
+            {railOnly && readMetadata?.degraded ? <p className={styles.railFreshness} role="status" data-state={readMetadata.state}>
+              <Clock3 size={14} aria-hidden="true" />
+              <span dir={textDirection}><strong>{dictionary.liveDataUpdating}</strong><small>{readMetadata.state === "partial-persisted-schedule" ? dictionary.partialScheduleCopy : dictionary.liveDataUpdatingCopy}</small></span>
+            </p> : null}
           </div>
           <div
             className={styles.fixtureScroller}
@@ -536,16 +543,14 @@ export default function TouchlineMatchCentre({
 
   return (
     <main className={styles.shell} data-testid="touchline-match-centre" lang={language}>
-      <header className={styles.header} dir="ltr">
-        <Logo href={`/live?lang=${encodeURIComponent(language)}${selected ? `&fixture=${encodeURIComponent(selected.id)}` : ""}`} officialArena minimalMark subtitle="TouchLine Futebol Cards" wordmarkClassName="text-[clamp(26px,3.2vw,34px)]" />
-        <div className={styles.headerTitle}><span>{dictionary.official}</span><h1 className={styles.title}>{dictionary.title}</h1></div>
-        <div className={styles.headerControls}>
-          <TouchlinePageControls locale={language} accountLocaleContext={accountLocaleContext} draftLocalesEnabled={draftLocalesEnabled} />
-        </div>
-      </header>
-      <div className={styles.toolbar} dir="ltr">
-        <TouchlineGlobalNavigation locale={language} currentRoute="live" surface="public" draftLocalesEnabled={draftLocalesEnabled} showAudioControl={false} className={styles.toolbarNavigation} />
-      </div>
+      <TouchlineBrandHeader
+        href={`/live?lang=${encodeURIComponent(language)}${selected ? `&fixture=${encodeURIComponent(selected.id)}` : ""}`}
+        locale={language}
+        accountLocaleContext={accountLocaleContext}
+        draftLocalesEnabled={draftLocalesEnabled}
+        navigation={<TouchlineGlobalNavigation locale={language} currentRoute="live" surface="public" draftLocalesEnabled={draftLocalesEnabled} showAudioControl={false} />}
+      />
+      <div className={styles.pageTitle} dir={textDirection}><span>{dictionary.official}</span><h1 className={styles.title}>{dictionary.title}</h1></div>
       <p className={styles.selectionAnnouncement} role="status" aria-live="polite" aria-atomic="true">
         {selected ? `${dictionary.selectedFixture}: ${fixtureLabel(selected, language, draftLocalesEnabled)} · ${status(selected, language, timeZone, readMetadata, now, draftLocalesEnabled)}` : dictionary.noFixtures}
       </p>
@@ -588,7 +593,7 @@ export default function TouchlineMatchCentre({
               <span><CalendarDays size={14} aria-hidden="true" />{fixtureDate(selected, language, timeZone, { weekday: "long", day: "numeric", month: "long", year: "numeric" }, draftLocalesEnabled)}</span>
               <strong><Clock3 size={15} aria-hidden="true" />{fixtureDate(selected, language, timeZone, { hour: "2-digit", minute: "2-digit", hour12: false }, draftLocalesEnabled)}</strong>
             </time>
-            {touchlineFixtureState(selected, now) === "upcoming" ? <Countdown startsAt={selected.startsAt} language={language} initialNow={now} draftLocalesEnabled={draftLocalesEnabled} /> : <strong className={styles.countdown}>{touchlineMatchCentreDisplayState(selected, readMetadata, now) === "stale" ? dictionary.liveDataUpdating : touchlineFixtureStatusLabel(selected.status, language, draftLocalesEnabled) || dictionary.provider}</strong>}
+            {selectedDisplayState === "upcoming" ? <Countdown startsAt={selected.startsAt} language={language} initialNow={now} draftLocalesEnabled={draftLocalesEnabled} /> : <strong className={styles.countdown}>{selectedDisplayState === "awaiting-update" ? dictionary.awaitingOfficialUpdate : selectedDisplayState === "stale" ? dictionary.liveDataUpdating : touchlineFixtureStatusLabel(selected.status, language, draftLocalesEnabled) || dictionary.provider}</strong>}
           </div>
 
           <div className={styles.infoGrid}>
@@ -602,8 +607,8 @@ export default function TouchlineMatchCentre({
                 {selected.venue.photoCredit ? <em>{dictionary.photo}: <a href={selected.venue.photoCredit.sourceUrl} target="_blank" rel="noreferrer">{selected.venue.photoCredit.label}</a> · <a href={selected.venue.photoCredit.licenseUrl} target="_blank" rel="noreferrer">{selected.venue.photoCredit.licenseLabel}</a></em> : null}
               </div>
             </article> : <article dir={textDirection}><span>{dictionary.venue}</span><strong>{dictionary.venuePending}</strong><small>{dictionary.official}</small></article>}
-            <article dir={textDirection}><span>{dictionary.detail}</span><strong>{touchlineMatchCentreDisplayState(selected, readMetadata, now) === "stale" ? dictionary.lastVerified : touchlineFixtureState(selected, now) === "live" ? dictionary.liveNow : touchlineFixtureState(selected, now) === "finished" ? dictionary.completed : dictionary.watch}</strong><small>{dictionary.dataPending}</small></article>
-            <article dir={textDirection}><span>{dictionary.archive}</span><strong>{fixtureLabel(selected, language, draftLocalesEnabled)}</strong><small>{selected.verifiedAt ? `${dictionary.provider} · ${fixtureDate({ startsAt: selected.verifiedAt }, language, timeZone, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }, draftLocalesEnabled)}` : dictionary.provider}</small></article>
+            <article dir={textDirection}><span>{dictionary.detail}</span><strong>{selectedDisplayState === "awaiting-update" ? dictionary.awaitingOfficialUpdate : selectedDisplayState === "stale" ? dictionary.lastVerified : selectedDisplayState === "live" ? dictionary.liveNow : selectedDisplayState === "finished" ? dictionary.completed : dictionary.watch}</strong><small>{dictionary.dataPending}</small></article>
+            <article dir={textDirection}><span>{dictionary.archive}</span><strong>{fixtureLabel(selected, language, draftLocalesEnabled)}</strong><small>{selectedDisplayState === "awaiting-update" ? dictionary.awaitingOfficialUpdate : selected.verifiedAt ? `${dictionary.provider} · ${fixtureDate({ startsAt: selected.verifiedAt }, language, timeZone, { day: "2-digit", month: "short", hour: "2-digit" }, draftLocalesEnabled)}` : dictionary.provider}</small></article>
           </div>
 
           {verifiedDetail ? <section className={styles.verifiedMatchData} data-testid="touchline-verified-match-data">

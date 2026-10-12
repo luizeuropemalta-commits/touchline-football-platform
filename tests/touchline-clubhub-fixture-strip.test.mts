@@ -24,6 +24,14 @@ test("future fixture does not become live and finished stays finished", () => {
   assert.equal(clubHubStripState(fixture, metadata, now - 86_400_000), "upcoming");
   assert.equal(clubHubStripState({ ...fixture, status: "FullTime" }, null, now), "finished");
 });
+test("an overdue schedule awaits an official update instead of implying live play", () => {
+  const scheduled = { ...fixture, status: "Not Started", homeScore: undefined, awayScore: undefined };
+  assert.equal(clubHubStripState(scheduled, metadata, now - 86_400_000), "upcoming");
+  assert.equal(clubHubStripState(scheduled, metadata, now), "awaiting-update");
+  assert.equal(clubHubStripState(scheduled, null, now), "awaiting-update");
+  const source = readFileSync(new URL("../components/touchline/ClubHubFixtureStrip.tsx", import.meta.url), "utf8");
+  assert.match(source, /state === "awaiting-update" \? copy\.awaitingOfficialUpdate/);
+});
 test("live expires on clock advance independently of a new fetch", () => {
   assert.equal(clubHubStripState(fixture, metadata, now), "live");
   assert.equal(clubHubStripState(fixture, metadata, now + 5 * 60_000), "stale");

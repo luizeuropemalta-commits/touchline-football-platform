@@ -16,8 +16,10 @@ import { getTouchlineMatchCentreCopy } from "../lib/touchlineArena/match-centre-
 const source = readFileSync(new URL("../components/touchline/match-centre/TouchlineMatchCentre.tsx", import.meta.url), "utf8");
 const css = readFileSync(new URL("../components/touchline/match-centre/touchline-match-centre.module.css", import.meta.url), "utf8");
 const ast = ts.createSourceFile("live.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
-const nodes: Record<string, ts.JsxElement[]> = { header: [], toolbar: [], fixtureCount: [] };
+const nodes: Record<string, ts.JsxElement[]> = { pageTitle: [], fixtureCount: [] };
+const headers: ts.JsxSelfClosingElement[] = [];
 function visit(node: ts.Node) {
+  if (ts.isJsxSelfClosingElement(node) && node.tagName.getText(ast) === "TouchlineBrandHeader") headers.push(node);
   if (ts.isJsxElement(node)) {
     for (const name of Object.keys(nodes)) {
       if (node.openingElement.attributes.properties.some(attr => ts.isJsxAttribute(attr) && attr.name.getText(ast) === "className" && attr.initializer?.getText(ast) === `{styles.${name}}`)) nodes[name].push(node);
@@ -26,6 +28,7 @@ function visit(node: ts.Node) {
   node.forEachChild(visit);
 }
 visit(ast);
+assert.equal(headers.length, 1);
 for (const list of Object.values(nodes)) assert.equal(list.length, 1);
 const styles = new Proxy({}, { get: (_, key) => String(key) });
 function load(path: string, modules: Record<string, unknown>) {
@@ -57,17 +60,22 @@ const nav = load("../components/touchline/TouchlineGlobalNavigation.tsx", {
   "@/lib/touchlineArena/catalogue-locale": catalogue,
   "@/lib/touchlineArena/navigation-i18n": copy,
 });
+const brandHeader = load("../components/touchline/TouchlineBrandHeader.tsx", {
+  "@/components/logo": { Logo: ({ href, officialArena, minimalMark, subtitle }: Record<string, unknown>) => React.createElement("a", { href: String(href), "data-logo": true, "data-official": String(officialArena), "data-minimal": String(minimalMark) }, String(subtitle)) },
+  "./TouchlinePageControls": { default: controls },
+});
 const exports: { render?: (locale: string, draft?: boolean) => React.ReactNode } = {};
 runInNewContext(ts.transpileModule(`export function render(language, draftLocalesEnabled=false) {
  const dictionary=getTouchlineMatchCentreCopy(language,draftLocalesEnabled);
+ const textDirection=language === "ar-SA" ? "rtl" : "ltr";
  const selected={id:'fixture $&'};
  const railOnly=false;
  const accountLocaleContext={mode:'account',accountId:'trusted-id'};
  const schedule={currentFixtures:[1,2,3],recentResults:[1,2]};
- return <>${nodes.header[0].getText(ast)}${nodes.toolbar[0].getText(ast)}${nodes.fixtureCount[0].getText(ast)}</>;
+ return <>${headers[0].getText(ast)}${nodes.pageTitle[0].getText(ast)}${nodes.fixtureCount[0].getText(ast)}</>;
 }`, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText, {
   exports, styles, getTouchlineMatchCentreCopy,
-  TouchlineGlobalNavigation: nav, TouchlinePageControls: controls,
+  TouchlineGlobalNavigation: nav, TouchlineBrandHeader: brandHeader,
   Logo: ({ href, officialArena, minimalMark, subtitle }: Record<string, unknown>) => React.createElement("a", { href: String(href), "data-logo": true, "data-official": String(officialArena), "data-minimal": String(minimalMark) }, String(subtitle)),
   require(name: string) { assert.equal(name, "react/jsx-runtime"); return jsxRuntime; },
 });
@@ -81,8 +89,11 @@ test("actual Live JSX uses canonical Logo interface and real nav/controls with o
     assert.ok(html.includes('data-context="account"'));
     assert.ok(html.includes('data-official="true" data-minimal="true"'));
     assert.ok(html.includes(`href="/live?lang=${locale}&amp;fixture=fixture%20%24%26"`));
-    assert.match(html, /class="header" dir="ltr"/);
-    assert.match(html, /class="toolbar" dir="ltr"/);
+    assert.match(html, /<header class="frame" dir="ltr" data-centered-navigation="true"/);
+    assert.ok(html.indexOf('class="navigationSlot"') < html.indexOf('</header>'));
+    assert.ok(html.indexOf('</header>') < html.indexOf('class="pageTitle"'));
+    assert.ok(!source.includes('className={styles.toolbarNavigation}'));
+    assert.equal((html.match(/<h1\b/g) ?? []).length, 1);
     assert.deepEqual([...html.matchAll(/<dd>(.*?)<\/dd>/g)].map(match => match[1]), ["3", "2"]);
     assert.ok(!html.includes("headerSignal"));
   }
@@ -95,6 +106,5 @@ test("compact lineup reuses shared button family while retaining touch/focus/des
   assert.match(source, /selectedCanonicalState === "live" \|\| selectedCanonicalState === "finished"/);
   assert.match(css, /\.homeLineupLink\s*\{[^}]*min-height:\s*44px/);
   assert.match(css, /\.homeLineupLink:focus-visible/);
-  assert.match(css, /\.toolbar\s*\{[^}]*flex-wrap:\s*wrap[^}]*direction:\s*ltr/s);
-  assert.match(css, /\.toolbar \.toolbarNavigation\s*\{[^}]*padding:\s*0/s);
+  assert.ok(!css.includes(".toolbarNavigation"), "Live must not override shared navigation button dimensions");
 });

@@ -17,6 +17,8 @@ function harness(path:string,internal:string,locale:string,server=false) {
   const modules:Record<string,unknown>={
     react:{useSyncExternalStore:(_subscribe:unknown,client:()=>unknown,ssr:()=>unknown)=>server?ssr():client(),useEffect:(effect:()=>void)=>effects.push(effect)},
     'react/jsx-runtime':jsx,'@/lib/touchlineArena/catalogue-locale':resolver,'@/lib/touchlineArena/public-error-i18n':copy,
+    '@/components/touchline/SiteLocaleReleaseContext':{useSiteLocaleRelease:()=>false},
+    './SiteLocaleReleaseContext':{useSiteLocaleRelease:()=>false},
     '@sentry/nextjs':{captureException:(error:unknown)=>reports.push(error)},
     'next/error':{default:({title,statusCode}:{title:string;statusCode:number})=>React.createElement('h1',{'data-status':statusCode},title)},
     'next/navigation':{useSearchParams:()=>new URLSearchParams({lang:locale})},
@@ -43,7 +45,7 @@ for(const [path,internal,group] of surfaces) test(`${path}: actual content selec
     const error=Object.assign(Error('PRIVATE_DETAIL_987'),{digest:'PRIVATE_DIGEST_654'});
     const props={error,reset:()=>resets++,draftLocalesEnabled:true};
     const wrapper=h.exports.default(props);
-    assert.equal(wrapper.props.draftLocalesEnabled,undefined,'public boundary must ignore injected draft prop');
+    assert.equal(wrapper.props.draftLocalesEnabled,path==='app/global-error.tsx'?undefined:false,'public boundary must ignore injected draft prop and obey the closed server policy');
     assert.equal(typeof wrapper.type,'function');
     const tree=draft?h.exports.isolated({...props,draftLocalesEnabled:true}):(wrapper.type as Renderer)(wrapper.props);
     const html=renderToStaticMarkup(tree);

@@ -145,7 +145,8 @@ export default function ClubHubFixtureStrip({ locale, draftLocalesEnabled = fals
           const kickoff = fixture.startsAt ? formatTouchlineLocalKickoff(fixture.startsAt, zone, locale, draftLocalesEnabled) : null;
           const value = state === "upcoming" ? kickoff?.time ?? "—" : clubHubStripScore(fixture);
           const label = state === "live" ? `${copy.liveNow}${fixture.liveMinute !== undefined ? ` · ${fixture.liveMinute}′` : ""}`
-            : state === "finished" ? copy.completed : state === "upcoming" ? kickoff ? `${kickoff.date} · ${kickoff.zoneName}` : copy.next : copy.liveDataUpdating;
+            : state === "finished" ? copy.completed : state === "awaiting-update" ? copy.awaitingOfficialUpdate
+            : state === "upcoming" ? kickoff ? `${kickoff.date} · ${kickoff.zoneName}` : copy.next : copy.liveDataUpdating;
           const teams = [fixture.homeTeam, fixture.awayTeam];
           const description = `${fixture.homeTeam?.name} ${copy.versus} ${fixture.awayTeam?.name}: ${value}. ${label}${caution ? `. ${cautionText}` : ""}`;
           return <a key={fixture.providerId} className={styles.fixture} data-state={state}

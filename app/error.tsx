@@ -4,6 +4,7 @@ import { useSyncExternalStore } from "react";
 import type { TouchLineLocale } from "@/lib/touchlineArena/i18n";
 import { resolveTouchlineCatalogueLocale } from "@/lib/touchlineArena/catalogue-locale";
 import { getTouchlinePublicErrorCopy } from "@/lib/touchlineArena/public-error-i18n";
+import { useSiteLocaleRelease } from "@/components/touchline/SiteLocaleReleaseContext";
 
 type TouchlineErrorBoundaryProps = {
   error: Error & { digest?: string };
@@ -11,7 +12,10 @@ type TouchlineErrorBoundaryProps = {
 };
 
 export default function TouchlineErrorBoundary(props: TouchlineErrorBoundaryProps) {
-  return <ErrorBoundaryContent error={props.error} reset={props.reset} />;
+  // The root layout passes the server-owned release decision through context.
+  // A query parameter alone must never unlock an unpublished catalogue.
+  const draftLocalesEnabled = useSiteLocaleRelease();
+  return <ErrorBoundaryContent error={props.error} reset={props.reset} draftLocalesEnabled={draftLocalesEnabled} />;
 }
 
 function ErrorBoundaryContent({ error: _error, reset, draftLocalesEnabled = false }: TouchlineErrorBoundaryProps & { draftLocalesEnabled?: boolean }) {

@@ -663,6 +663,7 @@
 .myClubCommand[data-fantasy-context="market"] .myClubMarketHeading[data-market-heading="status"] .clockDigits span { min-width: 70px; padding: 13px 12px 11px; }
 .myClubCommand[data-fantasy-context="market"] .myClubMarketHeading[data-market-heading="status"] .clockDigits b { font-size: clamp(42px, 4vw, 64px); }
 .myClubCommand[data-fantasy-context="market"] .myClubMarketHeading[data-market-heading="status"] .marketClock > p { text-align: center; }
+.myClubCommand[data-fantasy-context="market"] .myClubMarketHeading[data-market-heading="status"] .marketClock[data-market-clock-phase="awaiting-final"] > p { max-width: 48ch; margin-top: 3px; color: #e9e5d4; font-size: clamp(14px, .9vw, 16px); font-weight: 650; line-height: 1.5; }
 .myClubCommand[data-fantasy-context="market"] .myClubMarketHeading[data-market-heading="status"] > .viewToggle { position: absolute; top: 16px; right: 18px; margin: 0; }
 @media(max-width:700px){.myClubCommand[data-fantasy-context="market"] .myClubMarketHeading[data-market-heading="status"] > .viewToggle { position: static; }}
 @media(prefers-reduced-motion:reduce){.myClubCommand[data-fantasy-context="market"] .myClubMarketHeading[data-market-heading="status"] .clockRule { animation:none; }}
@@ -697,7 +698,7 @@
 .arenaOverlay .arenaBody { display: grid; direction: ltr; grid-template-columns: minmax(0, 1fr) clamp(260px, 27vw, 370px); gap: 12px; flex: 1; min-height: 0; padding: 0 10px 10px; }
 .arenaLiveRail { min-width: 0; min-height: 0; height: 100%; }
 .arenaOverlay .myClubPitchViewport { position: relative; }
-.arenaCoach { position: absolute; top: -30px; left: min(50%, calc((100dvh - 150px) * 105 / 68 / 2)); transform: translateX(-50%); z-index: 5; display: grid; justify-items: center; gap: 2px; background: transparent; border: 0; }
+.arenaCoach { position: absolute; top: -8px; left: 50%; transform: translate(-50%, -100%); z-index: 5; display: grid; justify-items: center; gap: 2px; background: transparent; border: 0; }
 .arenaCoach > span { padding: 2px 6px; border-radius: 6px; color: #fff; background: #020a07; font-family: inherit; font-size: .58rem; font-weight: bold; letter-spacing: normal; text-transform: uppercase; white-space: nowrap; }
 .myClubFieldCoach { position: static; justify-self: center; margin: 0; transform: translateY(18px); z-index: 5; display: grid; justify-items: center; gap: 6px; background: transparent; border: 0; }
 .myClubFieldCoach > span { padding: 2px 6px; border-radius: 6px; color: #fff; background: #020a07; font-family: inherit; font-size: .58rem; font-weight: bold; letter-spacing: normal; text-transform: uppercase; white-space: nowrap; }
@@ -743,7 +744,16 @@
 .arenaCoach > div { width: 52px; }
 .arenaOverlay .myClubSquad > header { flex: 0 0 auto; padding: 6px 10px; border: 0; }
 .arenaOverlay .myClubSquad > header > div { display: flex; align-items: center; gap: 12px; }
-.arenaRoundPoints { position: absolute; right: 5%; bottom: calc(95% + 8px); z-index: 5; display: grid; justify-items: end; gap: 4px; width: max-content; text-align: end; }
+.arenaFormationControl, .arenaHudRight { position: absolute; bottom: calc(100% + 10px); z-index: 6; display: grid; gap: 5px; }
+.arenaFormationControl { left: 0; width: clamp(112px, 12vw, 184px); padding: 9px 12px; border: 1px solid rgba(170,255,62,.43); border-radius: 12px; color: #eaffd3; background: linear-gradient(145deg, rgba(30,48,26,.94), rgba(5,19,12,.96)); box-shadow: 0 8px 24px rgba(0,0,0,.3); box-sizing: border-box; }
+.arenaFormationControl > label { color: #baff72; font-size: .66rem; font-weight: 800; letter-spacing: .06em; }
+.arenaFormationControl > select { width: 100%; min-height: 36px; padding: 5px 8px; border: 1px solid rgba(170,255,62,.58); border-radius: 8px; color: #f8ffe9; background: #0b2115; font: inherit; font-size: 1.1rem; font-weight: 800; cursor: pointer; }
+.arenaFormationControl > select:focus-visible { outline: 2px solid var(--lime); outline-offset: 2px; }
+.arenaFormationControl > select:disabled { border-color: rgba(214,225,193,.25); color: #d8ddcc; cursor: not-allowed; }
+.arenaFormationControl > small { color: #c8d5bd; font-size: .61rem; font-weight: 650; }
+.arenaHudRight { right: 0; justify-items: end; text-align: end; }
+.arenaHudRight > .viewToggle { margin: 0; }
+.arenaRoundPoints { display: grid; justify-items: end; gap: 4px; width: max-content; text-align: end; }
 .arenaRoundPoints > span { color: #b9c8b5; font-size: .64rem; font-weight: 600; letter-spacing: .06em; }
 .arenaRoundPoints > strong { color: #dfff9a; font-size: 1.85rem; line-height: 1.1; font-weight: 800; font-variant-numeric: tabular-nums; }
 @media (max-width: 900px) {
@@ -753,14 +763,19 @@
 }
 .arenaOverlay .myClubPitchViewport { display: grid; place-items: end start; flex: 1; min-height: 0; width: 100%; margin: 0; padding-top: 60px; box-sizing: border-box; aspect-ratio: auto; overflow: visible; }
 .myClubCommand.arenaOverlay[data-fantasy-context="market"] .myClubPitchViewport .myClubTacticalPitch { width: min(100%, calc((100dvh - 150px) * 105 / 68)); height: auto; min-height: 0; max-width: 100%; aspect-ratio: 105 / 68; margin: 0; transform: none; }
-.myClubCommand.arenaOverlay[data-fantasy-context="market"] .arenaCoach {
-  top: clamp(100px, 18dvh, 210px);
-  bottom: auto;
-  transform: translateX(-50%);
+@media (min-width: 901px) {
+  .myClubCommand.arenaOverlay[data-fantasy-context="market"] .myClubPitchViewport .myClubTacticalPitch { width: min(100%, calc((100dvh - 230px) * 105 / 68)); }
 }
 .arenaOverlay .myClubMobileSlotNav { display: none; }
 .myClubCommand.arenaOverlay[data-fantasy-context="market"] .myClubTacticalPitch { border: 0; border-radius: 0; box-shadow: none; background: transparent !important; overflow: visible; }
 .myClubCommand.arenaOverlay[data-fantasy-context="market"] .myClubTacticalPitch::after { content: none; display: none; }
+@media (max-width: 900px) {
+  .arenaFormationControl { width: 112px; padding: 6px 7px; }
+  .arenaFormationControl > label, .arenaFormationControl > small { font-size: .52rem; }
+  .arenaFormationControl > select { min-height: 30px; font-size: .9rem; }
+  .arenaCoach > div { max-width: 66px; }
+  .arenaHudRight > .viewToggle { min-height: 32px; padding: 5px 8px; }
+}
 /* Portals must respect the existing landscape-only gameplay boundary. */
 @media (max-width: 767px) and (orientation: portrait) and (pointer: coarse) {
   .myClubCommand.arenaOverlay[data-fantasy-context="market"] { visibility: hidden; pointer-events: none; }
