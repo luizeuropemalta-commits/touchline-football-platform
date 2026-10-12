@@ -5,7 +5,7 @@ import { getClubOwnerPlanShowcaseCopy, getClubOwnerVipPlanName, type ClubOwnerPl
 import { formatClubOwnerRankingPosition, getClubOwnerProfileMetricsCopy } from "@/lib/touchlineArena/club-owner-profile-metrics";
 import { TouchlineCoinMark } from "./market/TouchlineMarketMarks";
 import ClubOwnerAvatarControl, { type ClubOwnerAvatarUiContext } from "./ClubOwnerAvatarControl";
-import ClubOwnerPlanShowcase from "./ClubOwnerPlanShowcase";
+import ClubOwnerPlanShowcase, { ClubOwnerActivePlanCard } from "./ClubOwnerPlanShowcase";
 import controls from "./TouchlineGlobalNavigation.module.css";
 import styles from "./ClubOwnerMarketHeader.module.css";
 
@@ -90,12 +90,12 @@ export default function ClubOwnerMarketHeader({ owner, locale, accountId, avatar
         </div>
       </div>
     </section>
-    {tier ? <ClubOwnerPlanShowcase key={tier} initialPlan={tier} name={name} locale={locale} remainingMarketPower={marketPower} realUnlimited={unlimited} draftLocalesEnabled={draftLocalesEnabled} /> : <section className={styles.bank} data-plan-state={planActive ? "active" : "inactive"} data-active-plan={currentTier ?? undefined} aria-labelledby="clubowner-plan-heading">
+    {tier ? <ClubOwnerPlanShowcase key={tier} initialPlan={tier} name={name} locale={locale} remainingMarketPower={marketPower} realUnlimited={unlimited} draftLocalesEnabled={draftLocalesEnabled} canChoose={false} /> : <section className={styles.bank} data-plan-state={planActive ? "active" : "inactive"} data-active-plan={currentTier ?? undefined} aria-labelledby="clubowner-plan-heading">
       <div className={styles.bankHeading}><CalendarDays size={25} aria-hidden="true" /><h2 id="clubowner-plan-heading">{copy.plan}{currentTierName ? <span className={styles.currentPlanName}>{currentTierName}</span> : null}</h2>
-        <button type="button" className={`${controls.arena} ${styles.planAction}`} disabled aria-describedby="clubowner-plan-status" title={copy.planActionUnavailable}>
-          {planActive ? copy.renewPlan : copy.activatePlan}
-        </button>
+        {currentTier !== "vip" ? <a className={`${controls.arena} ${styles.planAction}`} href="#clubowner-plan-catalogue">{labels.browse}</a> : null}
       </div>
+      {currentTier ? <div className={styles.activePlanCard}><ClubOwnerActivePlanCard tier={currentTier} name={name} locale={locale} activePlanBudget={activePlanBudget} draftLocalesEnabled={draftLocalesEnabled} /></div> : null}
+      <p id="clubowner-plan-interest" className={styles.planInterest} tabIndex={-1} role="status">{labels.working}</p>
       <details className={styles.bankDetails} data-bank-details="true">
         <summary className={styles.bankSummary}>
           <span className={styles.marketPowerLabel}>{copy.marketPower}</span>
@@ -106,13 +106,13 @@ export default function ClubOwnerMarketHeader({ owner, locale, accountId, avatar
           </span>
         </summary>
         <div className={styles.bankBody}>
-          <p id="clubowner-plan-status">{planActive ? (planDate ? copy.planUntil.replace("{date}", planDate) : copy.planActiveNoEnd) : copy.planInactiveDetail}</p>
+          <p id="clubowner-plan-status">{planActive ? (currentTier === "vip" ? copy.planActiveNoEnd : planDate ? copy.planUntil.replace("{date}", planDate) : copy.planActiveNoEnd) : copy.planInactiveDetail}</p>
           <small>{copy.virtualBudgetSeparate}</small>
         </div>
       </details>
     </section>}
-    {!tier ? <div className={styles.planCatalogue}>
-      <ClubOwnerPlanShowcase initialPlan={currentTier ?? "beta"} activePlanKey={currentTier} activePlanBudget={currentTier ? activePlanBudget : undefined} name={owner?.name ?? ""} locale={locale} remainingMarketPower={marketPower} realUnlimited={unlimited} draftLocalesEnabled={draftLocalesEnabled} />
+    {!tier ? <div id="clubowner-plan-catalogue" className={styles.planCatalogue}>
+      <ClubOwnerPlanShowcase initialPlan={currentTier ?? "beta"} activePlanKey={currentTier} activePlanBudget={currentTier ? activePlanBudget : undefined} name={owner?.name ?? ""} locale={locale} remainingMarketPower={marketPower} realUnlimited={unlimited} draftLocalesEnabled={draftLocalesEnabled} showAllPlans canChoose />
     </div> : null}
   </header>;
 }

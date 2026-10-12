@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ShieldCheck } from "lucide-react";
 import { getClubOwnerPlanShowcaseCopy } from "@/lib/touchlineArena/club-owner-plan-showcase";
@@ -13,17 +13,17 @@ export function isConfirmedBetaEnrollment(value: unknown) {
     && "ok" in value && value.ok === true && "status" in value && value.status === "active";
 }
 
-export default function TouchlineBetaEnrollment({ locale, draftLocalesEnabled = false }: { locale: string; draftLocalesEnabled?: boolean }) {
+export default function TouchlineBetaEnrollment({ locale, draftLocalesEnabled = false, autoStart = false }: { locale: string; draftLocalesEnabled?: boolean; autoStart?: boolean }) {
   const router = useRouter();
   const labels = getTouchlineBetaEnrollmentCopy(locale, draftLocalesEnabled);
   const plan = getClubOwnerPlanShowcaseCopy(locale, draftLocalesEnabled);
   const [phase, setPhase] = useState<"idle" | "saving" | "confirmed" | "retry" | "refresh">("idle");
   const [message, setMessage] = useState<"unavailable" | "preserved" | "review" | "forbidden" | "rejected" | null>(null);
   const busyRef = useRef(false), confirmedRef = useRef(false);
+  const attemptedRef = useRef(false);
   const mounted = useRef(true);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
-
-  async function enroll() {
+  const enroll = useCallback(async () => {
     if (!mounted.current || busyRef.current || confirmedRef.current) return;
     busyRef.current = true; setPhase("saving"); setMessage(null);
     const controller = new AbortController();
@@ -44,7 +44,12 @@ export default function TouchlineBetaEnrollment({ locale, draftLocalesEnabled = 
       else { setMessage("unavailable"); setPhase("retry"); }
     } catch { if (mounted.current) { setMessage("unavailable"); setPhase("retry"); } }
     finally { window.clearTimeout(timer); busyRef.current = false; }
-  }
+  }, [router]);
+  useEffect(() => {
+    if (!autoStart || attemptedRef.current) return;
+    attemptedRef.current = true;
+    void enroll();
+  }, [autoStart, enroll]);
 
   return <section className="grid gap-4 rounded-2xl border border-white/15 bg-black/20 p-5" data-beta-enrollment="true" aria-busy={phase === "saving"}>
     <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-xl font-semibold text-white">Beta</h2><strong className="text-cyan-200">{plan.betaPrice}</strong></div>

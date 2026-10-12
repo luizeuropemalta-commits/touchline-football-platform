@@ -25,17 +25,18 @@ function textOf(value: unknown): string {
   if (typeof value === "string" || typeof value === "number") return String(value);
   return value && typeof value === "object" && "props" in value ? textOf((value as Element).props.children) : "";
 }
-function harness(fetchImpl: (url: string, init: RequestInit) => Promise<unknown>, locale = "en-GB") {
+function harness(fetchImpl: (url: string, init: RequestInit) => Promise<unknown>, locale = "en-GB", autoStart = false) {
   const slots: unknown[] = []; let cursor = 0, refreshes = 0;
   const cleanups: Array<() => void> = [];
-  const compiledModule = { exports: {} as { default: (props: { locale: string; draftLocalesEnabled: boolean }) => Element; isConfirmedBetaEnrollment: (value: unknown) => boolean } };
+  const compiledModule = { exports: {} as { default: (props: { locale: string; draftLocalesEnabled: boolean; autoStart: boolean }) => Element; isConfirmedBetaEnrollment: (value: unknown) => boolean } };
   vm.runInNewContext(ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText, {
     module: compiledModule, exports: compiledModule.exports, fetch: fetchImpl, AbortController, window: { setTimeout: () => 1, clearTimeout() {} },
     require: (id: string) => {
       if (id === "react") return {
         useState(initial: unknown) { const index = cursor++; if (!(index in slots)) slots[index] = initial; return [slots[index], (value: unknown) => { slots[index] = value; }]; },
         useRef(initial: unknown) { const index = cursor++; if (!(index in slots)) slots[index] = { current: initial }; return slots[index]; },
-        useEffect(effect: () => (() => void), _deps: unknown[]) { const index = cursor++; if (!(index in slots)) { slots[index] = true; cleanups.push(effect()); } },
+        useCallback(callback: unknown, _deps: unknown[]) { const index = cursor++; if (!(index in slots)) slots[index] = callback; return slots[index]; },
+        useEffect(effect: () => void | (() => void), _deps: unknown[]) { const index = cursor++; if (!(index in slots)) { slots[index] = true; const cleanup = effect(); if (typeof cleanup === "function") cleanups.push(cleanup); } },
       };
       if (id === "react/jsx-runtime") return require(id);
       if (id === "next/navigation") return { useRouter: () => ({ refresh: () => { refreshes++; } }) };
@@ -47,7 +48,7 @@ function harness(fetchImpl: (url: string, init: RequestInit) => Promise<unknown>
       throw Error(`Unexpected dependency: ${id}`);
     },
   });
-  const render = () => { cursor = 0; return compiledModule.exports.default({ locale, draftLocalesEnabled: true }); };
+  const render = () => { cursor = 0; return compiledModule.exports.default({ locale, draftLocalesEnabled: true, autoStart }); };
   const button = () => elements(render()).find(node => node.type === "button")!;
   return { render, button, click: () => button().props.onClick!(), refreshes: () => refreshes, validate: compiledModule.exports.isConfirmedBetaEnrollment,
     unmount: () => { for (const cleanup of cleanups) cleanup(); } };
@@ -66,6 +67,19 @@ test("eight-language Beta CTA shows free budget, permitted clubs and no monthly 
     assert.match(String(form.button().props.className), /shared-arena/);
   }
   assert.doesNotMatch(source, /stripe|checkout|subscription|localStorage|sessionStorage/i);
+});
+
+test("embedded ClubOwner automatically sends one confirmed Beta enrollment; standalone does not", async () => {
+  const requests: string[] = [];
+  const embedded = harness(async url => { requests.push(url); return response(200, confirmed); }, "pt-BR", true);
+  embedded.render();
+  embedded.render();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(requests, ["/api/touchline-fantasy/beta/enroll"]);
+  assert.equal(embedded.refreshes(), 1);
+  const standalone = harness(async () => { throw Error("Unexpected standalone enrollment"); });
+  standalone.render();
+  assert.equal(standalone.refreshes(), 0);
 });
 
 test("success requires all authoritative Beta fields, not only ok:true", () => {

@@ -1,7 +1,7 @@
 .planShowcase { --plan-accent: #e7cf91; --plan-rgb: 190,157,82; --plan-surface: #14251e; --plan-ink: #f5f1df; min-width: 0; align-self: start; padding: 24px; border: 1px solid rgba(191,222,196,.23); border-radius: 24px; background: linear-gradient(145deg,#132019,#09130f 75%); box-shadow: inset 0 1px rgba(239,255,233,.04),0 16px 40px rgba(0,0,0,.12); color: #eef5ec; container-type: inline-size; }
-.planShowcase[data-plan-preview="standard"] { --plan-accent: #d2dce5; --plan-rgb: 156,178,190; --plan-surface: #25342f; --plan-ink: #f0f5f5; }
+.planShowcase[data-plan-preview="standard"] { --plan-accent: #75bbff; --plan-rgb: 65,139,226; --plan-surface: #142b43; --plan-ink: #edf6ff; }
 /* Existing sapphire/crystal-blue palette; the shared membership artwork stays unchanged. */
-.planShowcase[data-plan-preview="beta"] { --plan-accent: #61c7ff; --plan-rgb: 97,199,255; --plan-surface: #132734; --plan-ink: #edf8ff; }
+.planShowcase[data-plan-preview="beta"] { --plan-accent: #ff888e; --plan-rgb: 203,67,79; --plan-surface: #351a25; --plan-ink: #fff1f1; }
 .planShowcase[data-plan-preview="master"] { --plan-accent: #a5e4b6; --plan-rgb: 111,191,143; --plan-surface: #101c19; --plan-ink: #e6f9ef; }
 .planShowcase[data-plan-preview="vip"] { --plan-accent: #d5b4f6; --plan-rgb: 162,116,206; --plan-surface: #2b1e38; --plan-ink: #f4e8ff; }
 .showcaseHeading { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; }
@@ -9,12 +9,25 @@
 .showcaseHeading h2 { margin: 6px 0 0; color: #f1f8eb; font-size: 22px; font-weight: 500; letter-spacing: -.035em; }
 .planShowcase .planAction { flex: 0 1 auto; width: auto; min-height: 32px; padding: 8px 10px; gap: 5px; font-size: 10px; font-weight: 600; text-align: center; }
 .planTabs { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 6px; margin-bottom: 12px; }
+.allPlans { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,220px),1fr)); gap: 14px; margin: 0 0 22px; }
+.planShowcase .planChoice { display: block; width: 100%; min-width: 0; padding: 0; border: 0; border-radius: 18px; background: transparent; text-align: start; }
+.planChoice[data-selected="true"] .memberCard { outline: 2px solid var(--plan-accent); outline-offset: 3px; }
+.planChoice .memberCard { width: 100%; box-sizing: border-box; min-height: 220px; }
+.planShowcase .planChoice:hover .memberCard, .planShowcase .planChoice:focus-visible .memberCard { box-shadow: inset 0 0 12px rgba(var(--plan-rgb),.2),0 0 22px rgba(var(--plan-rgb),.38),0 15px 28px rgba(0,0,0,.28); }
 .planShowcase .tierTab { display: grid; min-width: 0; min-height: 48px; gap: 4px; padding: 8px 4px; font-size: 11px; font-weight: 600; border-color: transparent; background: transparent; color: #acbbb0; }
 .tierTab small { color: #84988c; font-size: 9px; font-weight: 500; }
 .planShowcase .tierTab[aria-selected="true"] { color: var(--plan-ink); border-color: rgba(var(--plan-rgb),.45); background: rgba(var(--plan-rgb),.1); box-shadow: inset 0 1px rgba(255,255,255,.06); }
 .tierTab[aria-selected="true"] small { color: var(--plan-accent); }
 .planPanel { min-width: 0; outline-offset: 5px; }
+.planShowcase .panelCardButton { display: block; width: 100%; padding: 0; border: 0; border-radius: 18px; background: transparent; text-align: start; }
+.panelCardButton .memberCard { width: 100%; box-sizing: border-box; }
+.planShowcase .choosePlan { display: inline-flex; width: auto; min-height: 42px; margin-top: 16px; padding-inline: 18px; text-decoration: none; }
 .memberCard { position: relative; isolation: isolate; display: grid; align-content: space-between; gap: 14px; min-height: 200px; overflow: hidden; padding: 18px; border: 1px solid rgba(var(--plan-rgb),.9); border-radius: 18px; background: radial-gradient(ellipse at 110% -20%,rgba(var(--plan-rgb),.3),transparent 64%),linear-gradient(128deg,var(--plan-surface),#07110e 88%); box-shadow: inset 0 0 12px rgba(var(--plan-rgb),.14),inset 0 1px rgba(255,255,255,.2),0 0 16px rgba(var(--plan-rgb),.22),0 12px 24px rgba(0,0,0,.22); color: var(--plan-ink); }
+.memberCard[data-plan-offer="beta"] { --plan-accent: #ff888e; --plan-rgb: 203,67,79; --plan-surface: #351a25; --plan-ink: #fff1f1; }
+.memberCard[data-plan-offer="standard"] { --plan-accent: #75bbff; --plan-rgb: 65,139,226; --plan-surface: #142b43; --plan-ink: #edf6ff; }
+.memberCard[data-plan-offer="pro"] { --plan-accent: #e7cf91; --plan-rgb: 190,157,82; --plan-surface: #14251e; --plan-ink: #f5f1df; }
+.memberCard[data-plan-offer="master"] { --plan-accent: #a5e4b6; --plan-rgb: 111,191,143; --plan-surface: #101c19; --plan-ink: #e6f9ef; }
+.memberCard[data-plan-offer="vip"] { --plan-accent: #d5b4f6; --plan-rgb: 162,116,206; --plan-surface: #2b1e38; --plan-ink: #f4e8ff; }
 /* Reuse the shared perimeter engine; only membership opts into this brightness. */
 .memberNeon { --touchline-perimeter-radius: 17px; --touchline-perimeter-base-width: 1.1px; --touchline-perimeter-run-width: 2.4px; --touchline-perimeter-glow: 6px; --touchline-perimeter-speed: 6s; --touchline-decoration-motion: running; }
 @media (min-width: 1101px) {
@@ -78,7 +91,7 @@
 .planShowcase button { cursor: pointer; }
 .planShowcase button::after { display: none; }
 .planShowcase button:hover { transform: none; border-color: var(--plan-accent); box-shadow: none; }
-.planShowcase :is(button,summary,[role="tabpanel"]):focus-visible { outline: 2px solid #b7f079; outline-offset: 3px; }
+.planShowcase :is(button,summary,[role="tabpanel"],a):focus-visible { outline: 2px solid #b7f079; outline-offset: 3px; }
 @container (max-width: 350px) {
   .showcaseHeading { gap: 8px; }
   .showcaseHeading h2 { font-size: 20px; }

@@ -45,7 +45,7 @@ test("the actual account owns the ClubOwner header, while the approved countdown
 
 test("the plan is explicit, uses entitlement state and has no invented payment or balance", () => {
   assert.match(header, /data-plan-state=/);
-  assert.match(header, /disabled aria-describedby="clubowner-plan-status"/);
+  assert.match(header, /href="#clubowner-plan-catalogue"/);
   assert.doesNotMatch(header, /fetch\(|localStorage|checkout|stripe|walletBalance|amountMinor|£|€|\bGBP\b|\bBRL\b/);
 });
 
@@ -117,13 +117,13 @@ test("ClubOwner keeps the green sweep on panels and restores the metallic effect
   assert.match(css, /\.standardBadge \{[^}]+animation: none/);
 });
 
-test("local Standard preview uses the silver companion badge without changing entitlement", async () => {
+test("local Standard preview uses the blue companion badge without changing entitlement", async () => {
   const html = renderHeader({ name: "Real Owner", avatarUrl: "/owner.webp", city: "", nationality: "", since: "" }, "pt-BR", await loadCopy(), { planPreview: "standard" });
   assert.equal((html.match(/data-plan-tier="standard"/g) ?? []).length, 1);
   assert.match(html, /data-profile-tier="standard"/);
   assert.match(html, /Standard/);
   const css = readFileSync(new URL("../components/touchline/ClubOwnerMarketHeader.module.css", import.meta.url), "utf8");
-  assert.match(css, /\.standardBadge \{[^}]+rgba\(210,220,229/);
+  assert.match(css, /\.standardBadge \{[^}]+rgba\(117,187,255/);
 });
 
 test("local Standard preview presents its approved annual offer without enabling payment", async () => {
@@ -307,7 +307,7 @@ test("C3 server header forwards only sanitized recovery props while plan and ide
   assert.equal(props[0].draftLocalesEnabled, false);
   assert.equal(props[0].accountId, accountId); assert.equal(props[0].context, avatarContext); assert.equal(props[0].locale, "pt-BR");
   assert.match(html, /Real Owner &amp; Co/); assert.match(html, /src="\/actual-owner.webp"/); assert.match(html, /data-plan-state="inactive"/);
-  assert.equal((html.match(/disabled=""/g) ?? []).length, 1); assert.doesNotMatch(header, /["']use client["']/);
+  assert.equal((html.match(/disabled=""/g) ?? []).length, 0); assert.doesNotMatch(header, /["']use client["']/);
   for (const change of [{ accountId: "other" }, { avatarContext: { ...avatarContext, uploadAllowed: false } }, { owner: null }]) {
     const off = renderHeader(owner, "pt-BR", copy, { accountId, avatarContext, ...change }); assert.match(off, /disabled=""[^>]*aria-describedby="clubowner-photo-status"/);
   }
@@ -323,7 +323,7 @@ test("server-rendered header exposes real identity, exact EN/PT labels and disab
     assert.match(html, /src="\/actual-owner.webp"/);
     assert.doesNotMatch(html, /Valletta|2024/);
     assert.match(html, locale === "pt-BR" ? />Meu plano<\/h2>/ : />My plan<\/h2>/);
-    for (const [key, value] of Object.entries(baseline[locale])) if (!["nameUnavailable", "location", "nationality", "memberSince", "watchIntro", "planStandard", "planPro", "planActive", "planInactive", "planUntil", "planActiveNoEnd", "renewPlan", "planStandardPrice", "planStandardBenefit", "planProPrice", "planProBenefit", "proMember", "proAccess", "proPrivileges"].includes(key)) assert.ok(html.includes(value), key);
+    for (const [key, value] of Object.entries(baseline[locale])) if (!["nameUnavailable", "location", "nationality", "memberSince", "watchIntro", "planStandard", "planPro", "planActive", "planInactive", "planUntil", "planActiveNoEnd", "activatePlan", "renewPlan", "planStandardPrice", "planStandardBenefit", "planProPrice", "planProBenefit", "proMember", "proAccess", "proPrivileges"].includes(key)) assert.ok(html.includes(value), key);
     for (const key of ["proMember", "proAccess", "proPrivileges"] as const) assert.ok(!html.includes(baseline[locale][key]));
     assert.doesNotMatch(html, /href="\/intro/);
     assert.doesNotMatch(page, /brandAccessory=|\/intro\?/);
@@ -331,10 +331,10 @@ test("server-rendered header exposes real identity, exact EN/PT labels and disab
     assert.ok(html.includes('id="clubowner-photo-status" role="status"'), `${locale}: disabled photo has visible status`);
     assert.match(html, /aria-describedby="clubowner-photo-status"/);
     assert.match(html, /id="clubowner-photo-status"/);
-    assert.match(html, /aria-describedby="clubowner-plan-status"/);
+    assert.match(html, /href="#clubowner-plan-catalogue"/);
     assert.match(html, /id="clubowner-plan-status"/);
     assert.match(html, /data-plan-state="inactive"/);
-    assert.equal((html.match(/disabled=""/g) ?? []).length, 2);
+    assert.equal((html.match(/disabled=""/g) ?? []).length, 1);
     assert.doesNotMatch(html, /type="file"|Luiz Lopez/);
     assert.match(html, /data-plan-preview="beta"/, "the read-only plan catalogue is visible outside development");
   }
@@ -348,7 +348,7 @@ test("missing owner and empty facts remain honest fallbacks without invented acc
     assert.ok(html.includes(`alt="${baseline[locale].nameUnavailable}"`));
     assert.match(html, /src="\/icons\/touchline-512.png"/);
     assert.equal((html.match(/<dd[^>]*>—<\/dd>/g) ?? []).length, 3);
-    assert.equal((html.match(/disabled=""/g) ?? []).length, 2);
+    assert.equal((html.match(/disabled=""/g) ?? []).length, 1);
   }
 });
 
@@ -358,24 +358,35 @@ test("actual rendered header and plan catalogue use the same selected locale", (
   const html = renderHeader(null, 'pt-BR', { getTouchlineClubOwnerMarketCopy: (locale: string) => { calls.push(locale); return markerCopy; } });
   assert.ok(calls.length >= 2);
   assert.ok(calls.every(locale => locale === 'pt-BR'));
-  for (const [key, value] of Object.entries(markerCopy)) if (!["location", "nationality", "memberSince", "watchIntro", "planStandard", "planPro", "planActive", "planInactive", "planUntil", "planActiveNoEnd", "renewPlan", "planStandardPrice", "planStandardBenefit", "planProPrice", "planProBenefit", "proMember", "proAccess", "proPrivileges"].includes(key)) assert.ok(html.includes(value), value);
+  for (const [key, value] of Object.entries(markerCopy)) if (!["location", "nationality", "memberSince", "watchIntro", "planStandard", "planPro", "planActive", "planInactive", "planUntil", "planActiveNoEnd", "activatePlan", "renewPlan", "planStandardPrice", "planStandardBenefit", "planProPrice", "planProBenefit", "proMember", "proAccess", "proPrivileges"].includes(key)) assert.ok(html.includes(value), value);
   for (const key of ["proMember", "proAccess", "proPrivileges"]) assert.ok(!html.includes(markerCopy[key]));
   assert.match(html, /<div class="title"><h1>ClubOwner<\/h1><\/div>/);
   assert.doesNotMatch(html, /<span>TOUCHLINE<\/span>/);
-  assert.equal((html.match(/disabled=""/g) ?? []).length, 2);
+  assert.equal((html.match(/disabled=""/g) ?? []).length, 1);
 });
 
 test("verified active VIP has its real name and amethyst card without opening purchase", async () => {
   const html = renderHeader({ name: "Customer", avatarUrl: "", city: "", nationality: "", since: "" }, "pt-BR", await loadCopy(), {
     plan: { active: true, expiresAt: null }, activePlanKey: "vip", activePlanBudget: null, realUnlimited: true,
   });
-  assert.match(html, /data-profile-active-plan="vip"[^>]*>[^<]*<svg[\s\S]*VIP Convidado<\/span>/);
+  assert.match(html, /data-profile-active-plan="vip"[^>]*>[^<]*<svg[\s\S]*VIP<\/span>/);
   assert.match(html, /data-active-plan="vip"/);
   assert.match(html, /data-plan-preview="vip"/);
   assert.match(html, /data-current-plan="true"/);
   assert.match(html, /data-plan-state="active"/);
   assert.match(html, /data-market-power-unlimited="true"/);
+  assert.doesNotMatch(html, />Renovar<\/button>/);
+  assert.equal((html.match(/data-current-plan="true"/g) ?? []).length, 1);
   assert.doesNotMatch(html, /checkout|stripe|type="file"/);
+});
+
+test("an account without a plan sees all five complete membership previews", async () => {
+  const html = renderHeader(null, "pt-BR", await loadCopy(), { plan: null });
+  for (const tier of ["beta", "standard", "pro", "master", "vip"]) {
+    assert.match(html, new RegExp(`data-plan-offer="${tier}"`));
+  }
+  assert.equal((html.match(/data-plan-choice="/g) ?? []).length, 5);
+  assert.doesNotMatch(html, /data-current-plan="true"/);
 });
 
 test("profile metrics preserve identity and use only the viewer ranking across eight locales", async () => {
@@ -442,7 +453,7 @@ test("header catalogues cover exact8locale vocabulary and preserve EN/PT while s
       for (const key of ['photoUnavailable', 'planInactiveDetail', 'virtualBudgetSeparate'] as const) assert.notEqual(copy[key], baseline['en-GB'][key]);
       const html = renderHeader(null, locale, mod);
       assert.ok(html.includes(baseline['en-GB'].planInactiveDetail));
-      assert.equal((html.match(/disabled=""/g) ?? []).length, 2);
+      assert.equal((html.match(/disabled=""/g) ?? []).length, 1);
     }
   }
   for (const locale of [undefined, null, '', 'invalid']) assert.equal(mod.getTouchlineClubOwnerMarketCopy(locale), mod.TOUCHLINE_CLUB_OWNER_MARKET_CATALOGUES['en-GB']);

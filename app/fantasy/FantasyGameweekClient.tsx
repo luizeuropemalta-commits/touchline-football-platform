@@ -430,7 +430,7 @@ export default function FantasyGameweekClient({
   }, []);
   if (snapshot?.betaEnrollmentAvailable === true && snapshot.entitlementActive === false && marketPolicy === null) {
     return <section data-fantasy-context={embedded ? "my-club" : "standalone"} data-market-onboarding="beta">
-      <TouchlineBetaEnrollment locale={locale} draftLocalesEnabled={draftLocalesEnabled} />
+      <TouchlineBetaEnrollment locale={locale} draftLocalesEnabled={draftLocalesEnabled} autoStart={embedded} />
     </section>;
   }
   if (!snapshot || !isTouchlineFantasyMarketAccess(marketPolicy)) return <section className={styles.unavailable} data-fantasy-context={embedded ? "my-club" : "standalone"}><h1>{getTouchlineFantasyMarketStateCopy(locale, draftLocalesEnabled).unavailableTitle}</h1><p>{getTouchlineFantasyMarketStateCopy(locale, draftLocalesEnabled).unavailableMessage}</p></section>;
@@ -590,7 +590,7 @@ export default function FantasyGameweekClient({
       <div><span>{arenaOpen ? workflowCopy.arenaMode : workflowCopy.startingXI}</span><strong>{selectedCount}/11 · {formationCode}</strong></div>
       <button type="button" className={styles.viewToggle} aria-expanded={arenaOpen} onClick={() => setArenaOpen((current) => !current)}>{arenaOpen ? workflowCopy.closeArena : workflowCopy.arenaMode}</button>
     </header>;
-    return <section className={styles.myClubCommand} data-fantasy-context={marketPage ? "market" : "my-club"} data-market-state={activeGameweek?.state ?? "unknown"} aria-label={marketPage ? (workflowCopy.playAria) : (workflowCopy.commandAria)}>
+    return <section className={styles.myClubCommand} data-fantasy-context={marketPage ? "market" : "my-club"} data-plan-theme={snapshot?.entitlementActive === true ? marketPolicy?.planKey : undefined} data-market-state={activeGameweek?.state ?? "unknown"} aria-label={marketPage ? (workflowCopy.playAria) : (workflowCopy.commandAria)}>
       {!snapshot.entitlementActive ? <p role="status">{getTouchlineBetaEnrollmentCopy(locale, draftLocalesEnabled).review}</p> : null}
       <FantasyBudgetNotice editable={editable} remainingBudget={validation?.budgetRemainingEur ?? null} selectedCount={selections.length} attemptedOverBudget={feedback === workflowCopy.budgetExceeded} locale={locale} draftLocalesEnabled={draftLocalesEnabled} />
       {marketPage ? <dl className={styles.ownerSummary} data-market-owner-metrics="true" aria-label={marketMetricsCopy.summaryAria}>

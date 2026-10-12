@@ -11,12 +11,12 @@
 .profile { padding: clamp(20px,2.5vw,34px); }
 .profile[data-cover-preview] { --cover-accent: #e7cf91; --cover-rgb: 190,157,82; background: radial-gradient(ellipse at 100% 0,rgba(var(--cover-rgb),.14),transparent 68%),radial-gradient(ellipse at 0 0,rgba(163,255,18,.07),transparent 58%),linear-gradient(135deg,#111f1a,#060f0c); }
 .profile[data-active-plan] { --cover-rgb: 190,157,82; background: radial-gradient(ellipse at 100% 0,rgba(var(--cover-rgb),.14),transparent 68%),linear-gradient(135deg,#111f1a,#060f0c); }
-.profile[data-active-plan="beta"] { --cover-rgb: 97,199,255; }
-.profile[data-active-plan="standard"] { --cover-rgb: 156,178,190; }
+.profile[data-active-plan="beta"] { --cover-rgb: 203,67,79; }
+.profile[data-active-plan="standard"] { --cover-rgb: 65,139,226; }
 .profile[data-active-plan="master"] { --cover-rgb: 111,191,143; }
 .profile[data-active-plan="vip"] { --cover-rgb: 162,116,206; }
-.header:has(> [data-plan-preview="standard"]) .profile { --cover-accent: #d2dce5; --cover-rgb: 156,178,190; }
-.header:has(> [data-plan-preview="beta"]) .profile { --cover-accent: #61c7ff; --cover-rgb: 97,199,255; }
+.header:has(> [data-plan-preview="standard"]) .profile { --cover-accent: #75bbff; --cover-rgb: 65,139,226; }
+.header:has(> [data-plan-preview="beta"]) .profile { --cover-accent: #ff888e; --cover-rgb: 203,67,79; }
 .header:has(> [data-plan-preview="master"]) .profile { --cover-accent: #a5e4b6; --cover-rgb: 111,191,143; }
 .header:has(> [data-plan-preview="vip"]) .profile { --cover-accent: #d5b4f6; --cover-rgb: 162,116,206; }
 .profile [data-profile-tier] { display: none; }
@@ -42,8 +42,8 @@
 .details { min-width: 0; }
 .details h2 { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 7px 0 16px; color: #f2f9ec; font-size: clamp(22px,2.2vw,30px); line-height: 1.15; overflow-wrap: anywhere; }
 .proBadge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 7px; border: 1px solid rgba(236,202,93,.62); border-radius: 999px; color: #ffeaa0; background: linear-gradient(105deg,rgba(107,65,8,.42) 0%,rgba(236,169,30,.52) 20%,rgba(255,248,201,.54) 42%,rgba(255,205,70,.5) 58%,rgba(125,75,10,.42) 78%,rgba(255,241,169,.5) 100%); background-size: 260% 100%; box-shadow: inset 0 1px rgba(255,255,255,.28),0 0 16px rgba(235,190,58,.22); font-size: 10px; font-weight: 900; letter-spacing: .1em; line-height: 1; white-space: nowrap; animation: clubOwnerGoldSweep 7s linear infinite; }
-.standardBadge { border-color: rgba(210,220,229,.62); color: #f0f4f8; background: linear-gradient(135deg,rgba(119,136,151,.38),rgba(51,62,72,.3)); background-size: auto; box-shadow: inset 0 1px rgba(255,255,255,.24),0 0 16px rgba(207,220,232,.13); animation: none; }
-.betaBadge { border-color: rgba(97,199,255,.62); color: #edf8ff; background: linear-gradient(135deg,rgba(97,199,255,.22),rgba(19,39,52,.4)); background-size: auto; box-shadow: inset 0 1px rgba(255,255,255,.24); animation: none; }
+.standardBadge { border-color: rgba(117,187,255,.62); color: #edf6ff; background: linear-gradient(135deg,rgba(65,139,226,.35),rgba(20,43,67,.6)); background-size: auto; box-shadow: inset 0 1px rgba(255,255,255,.24),0 0 16px rgba(65,139,226,.2); animation: none; }
+.betaBadge { border-color: rgba(255,136,142,.62); color: #fff1f1; background: linear-gradient(135deg,rgba(203,67,79,.26),rgba(52,20,28,.5)); background-size: auto; box-shadow: inset 0 1px rgba(255,255,255,.24); animation: none; }
 .facts { display: flex; flex-wrap: wrap; gap: 14px 25px; margin: 0 0 20px; }
 .facts div { min-width: 0; }
 .facts dt { color: #a0b0a5; font-size: 11px; }
@@ -52,10 +52,16 @@
 .bankHeading { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; color: #c8e7b1; }
 .bankHeading h2 { display: flex; align-items: center; gap: 8px; margin: 0; color: #edf8e6; font-size: 23px; letter-spacing: -.025em; }
 .currentPlanName { margin-inline-start: 7px; color: #e7cf91; font-size: .55em; font-weight: 700; letter-spacing: .02em; }
-.bank[data-active-plan="beta"] .currentPlanName { color: #61c7ff; }
-.bank[data-active-plan="standard"] .currentPlanName { color: #d2dce5; }
+.bank[data-active-plan="beta"] .currentPlanName { color: #ff888e; }
+.bank[data-active-plan="standard"] .currentPlanName { color: #75bbff; }
 .bank[data-active-plan="master"] .currentPlanName { color: #a5e4b6; }
 .bank[data-active-plan="vip"] .currentPlanName { color: #d5b4f6; }
+.bank[data-active-plan="vip"] { border-color: rgba(213,180,246,.65); background: radial-gradient(ellipse at 100% 0,rgba(162,116,206,.38),transparent 72%),linear-gradient(135deg,#291b36,#120d1b); box-shadow: inset 0 1px rgba(244,232,255,.14),0 18px 48px rgba(66,28,94,.2); }
+.bank[data-active-plan="vip"] .bankHeading { color: #e4c2fa; }
+.bank[data-active-plan="vip"] .bankHeading h2 { color: #f4e8ff; }
+.activePlanCard { min-width: 0; }
+.planInterest { display: none; padding: 12px 14px; border: 1px solid rgba(166,240,103,.3); border-radius: 12px; background: rgba(10,35,20,.65); color: #e7f9db !important; }
+.planInterest:target { display: block; }
 .planCatalogue { grid-column: 1 / -1; min-width: 0; }
 .planProBadge { font-size: 9px; }
 .planAction { min-height: 32px; width: auto; margin-inline-start: auto; padding-inline: 10px; border-color: rgba(236,202,93,.72); color: #fff1b2; background: linear-gradient(105deg,rgba(107,65,8,.56) 0%,rgba(236,169,30,.66) 20%,rgba(255,248,201,.68) 42%,rgba(255,205,70,.62) 58%,rgba(125,75,10,.56) 78%,rgba(255,241,169,.64) 100%); background-size: 260% 100%; box-shadow: inset 0 1px rgba(255,255,255,.28),0 0 16px rgba(235,190,58,.22); font-size: 9px; animation: clubOwnerGoldSweep 7s linear infinite; }
@@ -120,6 +126,16 @@
 .bank[data-plan-preview="master"]::before { filter: saturate(.45); }
 .bank[data-plan-preview="vip"] .proPassIdentity small, .bank[data-plan-preview="vip"] .proPassIdentity em, .bank[data-plan-preview="vip"] .marketPowerLabel { color: #e4c2fa; }
 .bank[data-plan-preview="vip"] .marketPowerValue .unlimitedValue { font-size: clamp(20px,2vw,28px); letter-spacing: -.035em; }
+.header:has([data-plan-preview="beta"]) { --clubowner-rgb: 203,67,79; --clubowner-ink: #ff888e; }
+.header:has([data-plan-preview="standard"]) { --clubowner-rgb: 65,139,226; --clubowner-ink: #75bbff; }
+.header:has([data-plan-preview="pro"]) { --clubowner-rgb: 190,157,82; --clubowner-ink: #e7cf91; }
+.header:has([data-plan-preview="master"]) { --clubowner-rgb: 111,191,143; --clubowner-ink: #a5e4b6; }
+.header:has([data-plan-preview="vip"]) { --clubowner-rgb: 162,116,206; --clubowner-ink: #d5b4f6; }
+/* The outside rim stays TouchLine green; the inner line and light follow only the viewed plan. */
+.header:has([data-plan-preview]) :is(.profile,.bank) { border: 2px solid #91d56f; background: radial-gradient(ellipse at 85% 10%,rgba(var(--clubowner-rgb),.3),transparent 62%),radial-gradient(ellipse at 4% 94%,rgba(163,255,18,.075),transparent 54%),linear-gradient(135deg,#101d18,#080f0d); background-size: 150% 150%,100% 100%,100% 100%; box-shadow: inset 0 0 0 3px #0b1710,inset 0 0 0 5px rgba(var(--clubowner-rgb),.8),0 18px 48px rgba(0,0,0,.2); animation: clubOwnerInnerGlow 13s ease-in-out infinite alternate; }
+.header:has([data-plan-preview]) .profile { --cover-rgb: var(--clubowner-rgb); --cover-accent: var(--clubowner-ink); }
+.header:has([data-plan-preview]) .currentPlanName { color: var(--clubowner-ink); }
+@keyframes clubOwnerInnerGlow { to { background-position: 30% 80%,0 0,0 0; } }
 .vipBadge { border-color: #cc96ef; color: #f4ddff; background: linear-gradient(120deg,#5a207a,#a568bd,#491461); box-shadow: inset 0 1px rgba(255,255,255,.2); animation: none; }
 .inviteOnly { display: inline-flex; align-items: center; gap: 5px; margin-inline-start: auto; max-width: 45%; color: #e9caff; font-size: 10px; line-height: 1.4; }
 .inviteOnly svg { flex: 0 0 auto; }
@@ -139,4 +155,4 @@
 }
 @media (max-width: 1000px) { .header { grid-template-columns: minmax(0,1.4fr) minmax(260px,1fr); gap: 12px; } .identity { grid-template-columns: 112px minmax(0,1fr); gap: 16px; } .photoButton { width: 104px; height: 104px; } .photoButton img { width: 100px; height: 100px; } }
 @media (max-width: 720px) { .header { grid-template-columns: minmax(0,1fr); } .identity { gap: 15px; } .profile,.bank { border-radius: 18px; padding: 18px; } }
-@media (prefers-reduced-motion: reduce) { .profile::after, .bank::after, .proBadge, .planAction { animation: none; background-position: 44% 0; } }
+@media (prefers-reduced-motion: reduce) { .profile::after, .bank::after, .proBadge, .planAction, .header:has([data-plan-preview]) :is(.profile,.bank) { animation: none; background-position: 44% 0; } }

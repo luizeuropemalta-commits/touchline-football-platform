@@ -39,7 +39,7 @@ test("showcase copy covers eight languages and preserves the public draft gate",
     assert.notEqual(getClubOwnerVipPlanName(locale, true), copy.betaPrice);
     if (!locales.slice(0, 2).includes(locale)) assert.deepEqual(getClubOwnerPlanShowcaseCopy(locale), getClubOwnerPlanShowcaseCopy("en-GB"));
   }
-  assert.equal(getClubOwnerVipPlanName("pt-BR"), "VIP Convidado");
+  assert.equal(getClubOwnerVipPlanName("pt-BR"), "VIP");
 });
 
 test("actual showcase keeps the real unlimited capability separate from all five preview choices", () => {
@@ -65,6 +65,7 @@ test("actual showcase keeps the real unlimited capability separate from all five
         assert.ok(current.endsWith(`>${expected}</dd>`));
         assert.equal(current.includes('data-current-xi-unlimited="true"'), realUnlimited);
         assert.match(html, /data-plan-state="inactive"/);
+        assert.doesNotMatch(html, /href="#clubowner-plan-interest"/, "standalone previews cannot offer a plan change without a destination");
       }
     }
   }
@@ -159,7 +160,7 @@ test("membership neon opts into the shared constant-speed perimeter without chan
   assert.match(traceCss, /@keyframes touchlineClubEdgeTravel\s*\{\s*to\s*\{\s*stroke-dashoffset:\s*-100/);
   assert.match(traceCss, /@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{\s*\.run\s*\{\s*animation:\s*none/);
   assert.match(css, /@media\s*\(prefers-reduced-motion:\s*reduce\)[^}]+animation:\s*none !important/);
-  for (const [tier, color] of [["beta", "#61c7ff"], ["standard", "#d2dce5"], ["master", "#a5e4b6"], ["vip", "#d5b4f6"]]) {
+  for (const [tier, color] of [["beta", "#ff888e"], ["standard", "#75bbff"], ["master", "#a5e4b6"], ["vip", "#d5b4f6"]]) {
     assert.ok(css.includes(`[data-plan-preview="${tier}"] { --plan-accent: ${color};`));
   }
   assert.match(css, /\.planShowcase\s*\{\s*--plan-accent:\s*#e7cf91/);
@@ -205,12 +206,12 @@ function harness(locale: string, initialPlan = "pro", panelWidth = 600, gallery 
     });
     return path;
   }
-  const entry = bundle(join(root, `components/touchline/${surface === "cover" ? "ClubOwnerMarketHeader" : surface === "login" ? "LoginPlanGallery" : "ClubOwnerPlanShowcase"}.tsx`));
-  const css = ["TouchlineGlobalNavigation.module.css", "TouchlineClubPerimeterTrace.module.css", "ClubOwnerPlanShowcase.module.css", ...(surface === "cover" ? ["ClubOwnerMarketHeader.module.css"] : surface === "login" ? ["LoginPlanGallery.module.css"] : [])].map(file => readFileSync(join(root, "components/touchline", file), "utf8")).join("\n").replace(/:global\(([^)]+)\)/g, "$1");
+  const entry = bundle(join(root, `components/touchline/${surface === "cover" || surface === "active" ? "ClubOwnerMarketHeader" : surface === "login" ? "LoginPlanGallery" : "ClubOwnerPlanShowcase"}.tsx`));
+  const css = ["TouchlineGlobalNavigation.module.css", "TouchlineClubPerimeterTrace.module.css", "ClubOwnerPlanShowcase.module.css", ...(surface === "cover" || surface === "active" ? ["ClubOwnerMarketHeader.module.css"] : surface === "login" ? ["LoginPlanGallery.module.css"] : [])].map(file => readFileSync(join(root, "components/touchline", file), "utf8")).join("\n").replace(/:global\(([^)]+)\)/g, "$1");
   const defs = Object.entries(modules).map(([id, code]) => `${JSON.stringify(id)}:function(module,exports,require){${code}\n}`).join(",");
   return `<!doctype html><html dir="${locale === "ar-SA" ? "rtl" : "ltr"}"><meta charset="utf-8"><style>*{box-sizing:border-box}body{margin:0;background:#08100c;color:white;padding:24px;font-family:Arial,sans-serif}#root{max-width:${gallery ? 1680 : panelWidth}px;margin:auto;${gallery ? "display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:16px" : ""}}${css}</style><div id="root"></div><script>
   const process={env:{NODE_ENV:'development'}},modules={${defs}},cache={};function require(id){if(cache[id])return cache[id].exports;const m={exports:{}};cache[id]=m;modules[id](m,m.exports,require);return m.exports;}
-  const React=require('react');require('react-dom/client').createRoot(document.getElementById('root')).render(${JSON.stringify(gallery ? CLUB_OWNER_PLAN_PREVIEWS.map(plan => plan.id) : [initialPlan])}.map(tier => React.createElement(require(${JSON.stringify(entry)}).default,{key:tier,initialPlan:tier,planPreview:tier,owner:{name:'ClubOwner',avatarUrl:'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg"/%3E',city:'',nationality:'',since:''},name:'ClubOwner',locale:${JSON.stringify(locale)},remainingMarketPower:${surface === "cover" ? "121000000" : "'121M'"},rankingPoints:63.25,rankingPosition:1,draftLocalesEnabled:true})));
+  const React=require('react');require('react-dom/client').createRoot(document.getElementById('root')).render(${JSON.stringify(gallery ? CLUB_OWNER_PLAN_PREVIEWS.map(plan => plan.id) : [initialPlan])}.map(tier => React.createElement(require(${JSON.stringify(entry)}).default,{key:tier,initialPlan:tier,planPreview:${surface === "active" ? "null" : "tier"},plan:${surface === "active" ? "{active:true,expiresAt:null}" : "null"},activePlanKey:${surface === "active" ? "'vip'" : "null"},activePlanBudget:${surface === "active" ? "null" : "undefined"},realUnlimited:${surface === "active"},owner:{name:'ClubOwner',avatarUrl:'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg"/%3E',city:'',nationality:'',since:''},name:'ClubOwner',locale:${JSON.stringify(locale)},remainingMarketPower:${surface === "cover" || surface === "active" ? "121000000" : "'121M'"},rankingPoints:63.25,rankingPosition:1,draftLocalesEnabled:true})));
   </script></html>`;
 }
 
@@ -303,7 +304,7 @@ if (process.env.TOUCHLINE_RUN_PLAN_BROWSER_TESTS === "1") test("membership cover
           const cover = page.locator('[data-cover-preview="true"]');
           await expect(cover).toBeVisible();
           await expect(cover.locator(".coverPattern")).toHaveAttribute("aria-hidden", "true");
-          for (const [tier, color] of [["pro", "#e7cf91"], ["master", "#a5e4b6"], ["vip", "#d5b4f6"], ["beta", "#61c7ff"], ["standard", "#d2dce5"]]) {
+          for (const [tier, color] of [["pro", "#e7cf91"], ["master", "#a5e4b6"], ["vip", "#d5b4f6"], ["beta", "#ff888e"], ["standard", "#75bbff"]]) {
             await expect(cover.locator(`[data-profile-tier="${tier}"]`)).toBeVisible();
             assert.equal(await cover.locator("[data-profile-tier]:visible").count(), 1);
             assert.equal(await cover.evaluate(el => getComputedStyle(el).getPropertyValue("--cover-accent").trim()), color);
@@ -332,6 +333,39 @@ if (process.env.TOUCHLINE_RUN_PLAN_BROWSER_TESTS === "1") test("membership cover
       }
     } finally { await browser.close(); }
   }
+});
+
+if (process.env.TOUCHLINE_RUN_PLAN_BROWSER_TESTS === "1") test("active VIP keeps two green-framed panels with a purple inner line and compact catalogue", { timeout: 60_000 }, async () => {
+  const { chromium, expect } = await import("@playwright/test");
+  const browser = await chromium.launch({ headless: true });
+  try {
+    for (const width of [1440, 390]) {
+      const page = await browser.newPage({ viewport: { width, height: 900 }, reducedMotion: "reduce" });
+      await page.setContent(harness("pt-BR", "vip", 1500, false, "active"));
+      const header = page.locator('[data-clubowner-header="true"]');
+      await expect(header.locator(".profile")).toBeVisible();
+      await expect(header.locator(".bank")).toBeVisible();
+      await expect(header.locator('[data-current-plan="true"]')).toHaveCount(1);
+      await expect(header.locator("[data-plan-choice]")).toHaveCount(5);
+      assert.equal(await header.evaluate(element => getComputedStyle(element).getPropertyValue("--clubowner-ink").trim()), "#d5b4f6");
+      await header.locator('[data-current-plan="true"]').click();
+      await expect(header.getByRole("dialog")).toBeVisible();
+      await expect(header.getByRole("dialog").locator("h2")).toHaveText("VIP");
+      await page.keyboard.press("Escape");
+      await expect(header.getByRole("dialog")).not.toBeVisible();
+      const comparison = header.locator(".comparison");
+      await comparison.locator("summary").click();
+      await comparison.getByRole("button", { name: "Ver plano: Master" }).click();
+      await expect(comparison).not.toHaveAttribute("open");
+      await expect(header.locator('[data-plan-choice="master"]')).toBeFocused();
+      assert.equal(await header.evaluate(element => getComputedStyle(element).getPropertyValue("--clubowner-ink").trim()), "#a5e4b6");
+      await expect(header.locator('[data-current-plan="true"]')).toHaveAttribute("data-plan-offer", "vip");
+      assert.equal(await header.locator(".profile").evaluate(element => getComputedStyle(element).borderTopColor), "rgb(145, 213, 111)");
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+      if (process.env.TOUCHLINE_PLAN_CAPTURE_PREFIX) await page.screenshot({ path: `${process.env.TOUCHLINE_PLAN_CAPTURE_PREFIX}-active-vip-${width}.png`, fullPage: true });
+      await page.close();
+    }
+  } finally { await browser.close(); }
 });
 
 if (process.env.TOUCHLINE_RUN_PLAN_BROWSER_TESTS === "1") test("premium plans: tabs, arrows, comparison and details work without changing the account", { timeout: 120_000 }, async () => {

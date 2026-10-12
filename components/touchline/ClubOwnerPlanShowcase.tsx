@@ -44,12 +44,23 @@ export function ClubOwnerPlanCard({ tier, name, locale, active = false, activePl
   </div>;
 }
 
-export default function ClubOwnerPlanShowcase({ initialPlan, activePlanKey = null, activePlanBudget, name, locale, remainingMarketPower, realUnlimited = false, draftLocalesEnabled = false }: Readonly<{
-  initialPlan: ClubOwnerPlanPreview; activePlanKey?: ClubOwnerPlanPreview | null; activePlanBudget?: number | null; name: string; locale: string; remainingMarketPower: string | null; realUnlimited?: boolean; draftLocalesEnabled?: boolean;
+export function ClubOwnerActivePlanCard({ tier, name, locale, activePlanBudget, draftLocalesEnabled = false }: Readonly<{
+  tier: ClubOwnerPlanPreview; name: string; locale: string; activePlanBudget?: number | null; draftLocalesEnabled?: boolean;
+}>) {
+  const labels = getClubOwnerPlanShowcaseCopy(locale, draftLocalesEnabled);
+  return <button type="button" className={`${controls.link} ${styles.panelCardButton}`} aria-label={`${labels.viewPlan}: ${tier}`}
+    onClick={() => document.querySelector<HTMLButtonElement>(`#clubowner-plan-catalogue [data-plan-choice="${tier}"]`)?.click()}>
+    <ClubOwnerPlanCard tier={tier} name={name} locale={locale} active activePlanBudget={activePlanBudget} draftLocalesEnabled={draftLocalesEnabled} />
+  </button>;
+}
+
+export default function ClubOwnerPlanShowcase({ initialPlan, activePlanKey = null, activePlanBudget, name, locale, remainingMarketPower, realUnlimited = false, draftLocalesEnabled = false, showAllPlans = false, canChoose = false }: Readonly<{
+  initialPlan: ClubOwnerPlanPreview; activePlanKey?: ClubOwnerPlanPreview | null; activePlanBudget?: number | null; name: string; locale: string; remainingMarketPower: string | null; realUnlimited?: boolean; draftLocalesEnabled?: boolean; showAllPlans?: boolean; canChoose?: boolean;
 }>) {
   const [index, setIndex] = useState(() => Math.max(0, CLUB_OWNER_PLAN_PREVIEWS.findIndex(plan => plan.id === initialPlan)));
   const id = useId();
   const tabs = useRef<(HTMLButtonElement | null)[]>([]);
+  const choices = useRef<(HTMLButtonElement | null)[]>([]);
   const dialog = useRef<HTMLDialogElement>(null);
   const dialogTrigger = useRef<HTMLButtonElement>(null);
   const comparison = useRef<HTMLDetailsElement>(null);
@@ -63,7 +74,7 @@ export default function ClubOwnerPlanShowcase({ initialPlan, activePlanKey = nul
   const move = (delta: number) => setIndex(value => (value + delta + CLUB_OWNER_PLAN_PREVIEWS.length) % CLUB_OWNER_PLAN_PREVIEWS.length);
   const select = (next: number, focus = false) => {
     setIndex(next);
-    if (focus) tabs.current[next]?.focus();
+    if (focus) (showAllPlans ? choices.current[next] : tabs.current[next])?.focus();
   };
   const onTabKey = (event: KeyboardEvent<HTMLButtonElement>, current: number) => {
     const rtl = event.currentTarget.closest("[dir]")?.getAttribute("dir") === "rtl";
@@ -81,7 +92,6 @@ export default function ClubOwnerPlanShowcase({ initialPlan, activePlanKey = nul
     dialog.current?.close();
     dialogTrigger.current?.focus();
   };
-
   return <section dir="ltr" className={styles.planShowcase} data-plan-preview={plan.id} data-active-plan={activePlanKey ?? undefined} data-plan-state={activePlanKey ? "active" : "inactive"} aria-labelledby={`${id}-heading`}>
     <div className={styles.showcaseHeading}>
       <div><span className={styles.eyebrow}>TouchLine / {labels.membership}</span><h2 id={`${id}-heading`}>{copy.plan}</h2></div>
@@ -89,23 +99,31 @@ export default function ClubOwnerPlanShowcase({ initialPlan, activePlanKey = nul
         {plan.id === "vip" ? <LockKeyhole size={13} aria-hidden="true" /> : null}{plan.id === "vip" ? labels.invitation : labels.details}<ChevronRight size={13} aria-hidden="true" />
       </button>
     </div>
-    <div role="tablist" aria-label={labels.browse} className={styles.planTabs}>
+    {showAllPlans ? <div className={styles.allPlans} aria-label={labels.browse}>
+      {CLUB_OWNER_PLAN_PREVIEWS.map((item, position) => <button key={item.id} type="button" ref={element => { choices.current[position] = element; }} className={`${controls.link} ${styles.planChoice}`} data-plan-choice={item.id} data-selected={position === index} aria-label={`${labels.viewPlan}: ${titleFor(item.id)}`} aria-pressed={position === index} onClick={() => { select(position); dialog.current?.showModal(); }}>
+        <ClubOwnerPlanCard tier={item.id} locale={locale} draftLocalesEnabled={draftLocalesEnabled} />
+      </button>)}
+    </div> : null}
+    {!showAllPlans ? <div role="tablist" aria-label={labels.browse} className={styles.planTabs}>
       {CLUB_OWNER_PLAN_PREVIEWS.map((item, position) => <button key={item.id} type="button" role="tab" id={`${id}-tab-${item.id}`}
         aria-controls={`${id}-panel`} aria-selected={position === index} tabIndex={position === index ? 0 : -1}
         ref={element => { tabs.current[position] = element; }} onClick={() => select(position)} onKeyDown={event => onTabKey(event, position)}
         className={`${controls.link} ${styles.tierTab}`} data-tier={item.id}>
         {titleFor(item.id)}<small>{item.amount ?? "∞"}</small>
       </button>)}
-    </div>
-    <div role="tabpanel" id={`${id}-panel`} aria-labelledby={`${id}-tab-${plan.id}`} tabIndex={0} className={styles.planPanel}>
-      <ClubOwnerPlanCard tier={plan.id} name={name} locale={locale} active={activePlanKey === plan.id} activePlanBudget={activePlanKey === plan.id ? activePlanBudget : undefined} draftLocalesEnabled={draftLocalesEnabled} />
+    </div> : null}
+    {!showAllPlans ? <div role="tabpanel" id={`${id}-panel`} aria-labelledby={`${id}-tab-${plan.id}`} tabIndex={0} className={styles.planPanel}>
+      <button type="button" className={`${controls.link} ${styles.panelCardButton}`} aria-label={`${labels.viewPlan}: ${title}`} onClick={() => dialog.current?.showModal()}>
+        <ClubOwnerPlanCard tier={plan.id} name={name} locale={locale} active={activePlanKey === plan.id} activePlanBudget={activePlanKey === plan.id ? activePlanBudget : undefined} draftLocalesEnabled={draftLocalesEnabled} />
+      </button>
       <div className={styles.offerSummary}><div><small>{plan.id === "vip" || plan.id === "beta" ? labels.membership : plan.id === "master" ? labels.seasonalPrice : labels.annualPrice}</small><strong data-plan-price={plan.id}>{priceFor(plan.id)}</strong></div><p>{benefitFor(plan.id)}</p></div>
-    </div>
-    <div className={styles.planBrowse} role="group" aria-label={labels.browse}>
+      {canChoose && activePlanKey !== "vip" && activePlanKey !== plan.id ? <a className={`${controls.arena} ${styles.choosePlan}`} href="#clubowner-plan-interest" onClick={() => dialog.current?.close()}>{plan.id === "vip" ? labels.invitation : labels.choosePlan}</a> : null}
+    </div> : null}
+    {!showAllPlans ? <div className={styles.planBrowse} role="group" aria-label={labels.browse}>
       <button type="button" className={`${controls.link} ${styles.planArrow}`} onClick={() => move(-1)} aria-label={labels.previous} aria-controls={`${id}-panel`}><ChevronLeft size={16} aria-hidden="true" /></button>
       <span aria-live="polite" aria-atomic="true">{title}<small>{String(index + 1).padStart(2, "0")} / {String(CLUB_OWNER_PLAN_PREVIEWS.length).padStart(2, "0")}</small></span>
       <button type="button" className={`${controls.link} ${styles.planArrow}`} onClick={() => move(1)} aria-label={labels.next} aria-controls={`${id}-panel`}><ChevronRight size={16} aria-hidden="true" /></button>
-    </div>
+    </div> : null}
     <details className={styles.comparison} ref={comparison}>
       <summary>{labels.comparePlans}<ChevronDown size={15} aria-hidden="true" /></summary>
       <div className={styles.compareTable}><table><caption>{labels.comparePlans}</caption><thead><tr><th scope="col">{labels.plan}</th><th scope="col">TC</th><th scope="col">{labels.priceLabel}</th></tr></thead><tbody>
@@ -121,6 +139,7 @@ export default function ClubOwnerPlanShowcase({ initialPlan, activePlanKey = nul
       <h2 id={`${id}-dialog-heading`}>{title}</h2><strong className={styles.dialogPrice}>{priceFor(plan.id)}</strong><p>{benefitFor(plan.id)}</p>
       <dl><div><dt>{labels.planBudget}</dt><dd>{plan.amount ?? labels.unlimited} {plan.amount ? "TC" : ""}</dd></div><div><dt>{labels.currentBudget}</dt><dd data-current-xi-budget="true" data-current-xi-unlimited={realUnlimited || undefined} aria-label={realUnlimited ? `${labels.currentBudget}: ${labels.unlimited}` : remainingMarketPower === null ? copy.marketPowerUnavailable : undefined}>{realUnlimited ? `∞ ${labels.unlimited}` : `${remainingMarketPower ?? "—"} TC`}</dd></div></dl>
       <p className={styles.availability}>{plan.id === "vip" ? labels.vipBenefit : copy.planActionUnavailable}</p><p className={styles.previewNote}>{labels.preview} {copy.virtualBudgetSeparate}</p>
+      {canChoose && activePlanKey !== "vip" && activePlanKey !== plan.id ? <a className={`${controls.arena} ${styles.choosePlan}`} href="#clubowner-plan-interest" onClick={() => dialog.current?.close()}>{plan.id === "vip" ? labels.invitation : labels.choosePlan}</a> : null}
       <button type="button" className={`${controls.arena} ${styles.dialogClose}`} onClick={closeDialog}>{labels.close}</button>
     </dialog>
   </section>;

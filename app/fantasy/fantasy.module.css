@@ -542,6 +542,12 @@
 
 /* The field remains in place while the position catalogue drops over it. */
 .myClubCommand[data-fantasy-context="market"] { --market-border: #7ebf2a; border-color: var(--market-border); }
+.myClubCommand[data-fantasy-context="market"][data-plan-theme] { box-shadow: inset 0 0 0 5px rgba(var(--market-plan-rgb),.09), inset 0 0 0 6px rgba(var(--market-plan-rgb),.64), 0 30px 80px rgba(0,0,0,.34); }
+.myClubCommand[data-plan-theme="beta"] { --market-plan-rgb: 203,67,79; }
+.myClubCommand[data-plan-theme="standard"] { --market-plan-rgb: 65,139,226; }
+.myClubCommand[data-plan-theme="pro"] { --market-plan-rgb: 190,157,82; }
+.myClubCommand[data-plan-theme="master"] { --market-plan-rgb: 111,191,143; }
+.myClubCommand[data-plan-theme="vip"] { --market-plan-rgb: 162,116,206; }
 .myClubCommand[data-fantasy-context="market"] :is(.myClubSquad, .myClubMarketStatus, .myClubGameweekFooter, .technicalArea, .myClubSetup, .myClubMarket) { border-color: var(--market-border); }
 .myClubCommand[data-fantasy-context="market"]:not(.arenaOverlay) {
   border: 0;
