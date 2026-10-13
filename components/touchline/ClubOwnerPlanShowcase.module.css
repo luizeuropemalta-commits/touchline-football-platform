@@ -1,4 +1,9 @@
 .planShowcase { --plan-accent: #e7cf91; --plan-rgb: 190,157,82; --plan-surface: #14251e; --plan-ink: #f5f1df; min-width: 0; align-self: start; padding: 24px; border: 1px solid rgba(191,222,196,.23); border-radius: 24px; background: linear-gradient(145deg,#132019,#09130f 75%); box-shadow: inset 0 1px rgba(239,255,233,.04),0 16px 40px rgba(0,0,0,.12); color: #eef5ec; container-type: inline-size; }
+.planShowcase[data-embedded] { padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.planShowcase[data-embedded] .memberCard { min-height: 200px; padding: 18px; }
+.planShowcase[data-embedded] .offerSummary { margin-top: 12px; }
+.planShowcase[data-embedded] .offerSummary p { display: none; }
+.planShowcase[data-embedded] .showcaseHeading { margin-bottom: 4px; }
 .planShowcase[data-plan-preview="standard"] { --plan-accent: #75bbff; --plan-rgb: 65,139,226; --plan-surface: #142b43; --plan-ink: #edf6ff; }
 /* Existing sapphire/crystal-blue palette; the shared membership artwork stays unchanged. */
 .planShowcase[data-plan-preview="beta"] { --plan-accent: #ff888e; --plan-rgb: 203,67,79; --plan-surface: #351a25; --plan-ink: #fff1f1; }

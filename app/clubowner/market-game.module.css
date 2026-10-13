@@ -1,2 +1,8 @@
 .page { min-height: 100dvh; color: #f3f8f1; background: linear-gradient(135deg, #07100e, #101c1b 55%, #070e0d); }
+/* The viewed plan belongs to this page only; sibling Market panels inherit it. */
+.page:has([data-clubowner-header="true"][data-plan-preview="beta"]) { --clubowner-rgb: 203,67,79; }
+.page:has([data-clubowner-header="true"][data-plan-preview="standard"]) { --clubowner-rgb: 65,139,226; }
+.page:has([data-clubowner-header="true"][data-plan-preview="pro"]) { --clubowner-rgb: 190,157,82; }
+.page:has([data-clubowner-header="true"][data-plan-preview="master"]) { --clubowner-rgb: 111,191,143; }
+.page:has([data-clubowner-header="true"][data-plan-preview="vip"]) { --clubowner-rgb: 162,116,206; }
 .content { width: 100%; margin-inline: auto; padding: clamp(8px, 1.4vw, 24px); }

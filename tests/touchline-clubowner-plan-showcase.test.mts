@@ -19,7 +19,7 @@ test("plan catalogue keeps the approved proposals separate from the real XI budg
   ]);
   const view = readFileSync(join(root, "components/touchline/ClubOwnerPlanShowcase.tsx"), "utf8");
   assert.doesNotMatch(view, /fetch\(|localStorage|sessionStorage|router\.|useEffect|checkout|stripe/);
-  assert.match(view, /setIndex\(value =>/);
+  assert.match(view, /const move = \(delta: number\) =>/);
   assert.match(view, /data-current-xi-budget/);
   assert.match(view, /plan\.id === "vip" \? labels\.invitation/);
   assert.match(view, /aria-haspopup="dialog"/);
@@ -180,6 +180,35 @@ test("approved prices are Beta free and Master 169.90 EUR per season in all eigh
   }
 });
 
+const fixtureCssModules = new Map<string, { css: string; classes: Record<string, string> }>();
+
+function fixtureCssModule(path: string) {
+  const cached = fixtureCssModules.get(path);
+  if (cached) return cached;
+  // Use the installed Next webpack CSS Modules pipeline, including its actual
+  // local-name generator, rather than merging unscoped component class names.
+  const nextRequire = createRequire(require.resolve("next/package.json"));
+  const postcss = nextRequire("postcss");
+  const { getModulesPlugins } = nextRequire("next/dist/build/webpack/loaders/css-loader/src/utils");
+  const { getCssModuleLocalIdent } = nextRequire("next/dist/build/webpack/config/blocks/css/loaders/getCssModuleLocalIdent");
+  const { extractICSS } = nextRequire("next/dist/compiled/icss-utils");
+  const context = { rootContext: root, resourcePath: path, emitError: (error: Error) => { throw error; } };
+  const plugins = getModulesPlugins({ modules: {
+    mode: "pure", getLocalIdent: getCssModuleLocalIdent,
+    localIdentName: "[hash:base64]", localIdentContext: root,
+    localIdentHashPrefix: "", exportGlobals: false,
+  } }, context);
+  const result = postcss(plugins).process(readFileSync(path, "utf8"), { from: path, map: false }).sync();
+  const { icssImports, icssExports } = extractICSS(result.root);
+  assert.deepEqual(icssImports, {}, "fixture CSS must not omit a composed/imported module");
+  const compiled = { css: result.root.toString(), classes: icssExports as Record<string, string> };
+  fixtureCssModules.set(path, compiled);
+  return compiled;
+}
+
+// A real-component browser fixture, not a full Next page, authenticated session
+// or hosted QA proof. Plain class-name aliases are retained solely for readable
+// test selectors: all stylesheet rules and keyframes use Next's scoped names.
 function harness(locale: string, initialPlan = "pro", panelWidth = 600, gallery = false, surface = "showcase") {
   const react = dirname(require.resolve("react")), dom = dirname(require.resolve("react-dom/client"));
   const scheduler = dirname(createRequire(require.resolve("react-dom/client")).resolve("scheduler"));
@@ -193,9 +222,16 @@ function harness(locale: string, initialPlan = "pro", panelWidth = 600, gallery 
     "next/image": "exports.default=({unoptimized,...props})=>require('react').createElement('img',props);",
     [join(root, "components/touchline/ClubOwnerAvatarControl.tsx")]: "exports.default=()=>{throw Error('No avatar interaction in membership fixture')};",
   };
+  const stylesheets = new Map<string, string>();
   function bundle(path: string): string {
     if (modules[path]) return path;
-    if (path.endsWith(".css")) { modules[path] = 'exports.default=new Proxy({},{get:(_,key)=>String(key)});'; return path; }
+    if (path.endsWith(".css")) {
+      const compiled = fixtureCssModule(path);
+      stylesheets.set(path, compiled.css);
+      const aliases = Object.fromEntries(Object.entries(compiled.classes).map(([name, scoped]) => [name, `${scoped} ${name}`]));
+      modules[path] = `exports.default=${JSON.stringify(aliases)};`;
+      return path;
+    }
     modules[path] = "";
     const code = ts.transpileModule(readFileSync(path, "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText;
     modules[path] = code.replace(/require\("([^"]+)"\)/g, (all, id: string) => {
@@ -207,7 +243,7 @@ function harness(locale: string, initialPlan = "pro", panelWidth = 600, gallery 
     return path;
   }
   const entry = bundle(join(root, `components/touchline/${surface === "cover" || surface === "active" ? "ClubOwnerMarketHeader" : surface === "login" ? "LoginPlanGallery" : "ClubOwnerPlanShowcase"}.tsx`));
-  const css = ["TouchlineGlobalNavigation.module.css", "TouchlineClubPerimeterTrace.module.css", "ClubOwnerPlanShowcase.module.css", ...(surface === "cover" || surface === "active" ? ["ClubOwnerMarketHeader.module.css"] : surface === "login" ? ["LoginPlanGallery.module.css"] : [])].map(file => readFileSync(join(root, "components/touchline", file), "utf8")).join("\n").replace(/:global\(([^)]+)\)/g, "$1");
+  const css = [...stylesheets.values()].join("\n");
   const defs = Object.entries(modules).map(([id, code]) => `${JSON.stringify(id)}:function(module,exports,require){${code}\n}`).join(",");
   return `<!doctype html><html dir="${locale === "ar-SA" ? "rtl" : "ltr"}"><meta charset="utf-8"><style>*{box-sizing:border-box}body{margin:0;background:#08100c;color:white;padding:24px;font-family:Arial,sans-serif}#root{max-width:${gallery ? 1680 : panelWidth}px;margin:auto;${gallery ? "display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:16px" : ""}}${css}</style><div id="root"></div><script>
   const process={env:{NODE_ENV:'development'}},modules={${defs}},cache={};function require(id){if(cache[id])return cache[id].exports;const m={exports:{}};cache[id]=m;modules[id](m,m.exports,require);return m.exports;}
@@ -304,15 +340,21 @@ if (process.env.TOUCHLINE_RUN_PLAN_BROWSER_TESTS === "1") test("membership cover
           const cover = page.locator('[data-cover-preview="true"]');
           await expect(cover).toBeVisible();
           await expect(cover.locator(".coverPattern")).toHaveAttribute("aria-hidden", "true");
-          for (const [tier, color] of [["pro", "#e7cf91"], ["master", "#a5e4b6"], ["vip", "#d5b4f6"], ["beta", "#ff888e"], ["standard", "#75bbff"]]) {
+          for (const [tier, color, rgb] of [["pro", "#e7cf91", "190, 157, 82"], ["master", "#a5e4b6", "111, 191, 143"], ["vip", "#d5b4f6", "162, 116, 206"], ["beta", "#ff888e", "203, 67, 79"], ["standard", "#75bbff", "65, 139, 226"]]) {
             await expect(cover.locator(`[data-profile-tier="${tier}"]`)).toBeVisible();
             assert.equal(await cover.locator("[data-profile-tier]:visible").count(), 1);
             assert.equal(await cover.evaluate(el => getComputedStyle(el).getPropertyValue("--cover-accent").trim()), color);
+            await expect.poll(() => page.locator('[data-clubowner-header="true"]').evaluate(element =>
+              Array.from(element.querySelectorAll(".profile, .bank"), panel => getComputedStyle(panel, "::before").borderTopColor)
+            )).toEqual([`rgba(${rgb}, 0.72)`, `rgba(${rgb}, 0.72)`]);
             await expect(cover.locator(".facts")).toContainText((63.25).toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
             await expect(page.locator("[data-current-xi-budget]")).toContainText(new Intl.NumberFormat(locale, { notation: "compact", maximumFractionDigits: 1 }).format(121_000_000));
             await page.getByRole("button", { name: labels.next }).click();
           }
           await expect(cover.locator('[data-profile-tier="pro"]')).toBeVisible();
+          await expect.poll(() => page.locator('[data-clubowner-header="true"]').evaluate(element =>
+            Array.from(element.querySelectorAll(".profile, .bank"), panel => getComputedStyle(panel, "::before").borderTopColor)
+          )).toEqual(["rgba(190, 157, 82, 0.72)", "rgba(190, 157, 82, 0.72)"]);
         } else {
           await expect(page.locator("[data-plan-offer]")).toHaveCount(5);
           for (const tier of ["beta", "standard", "pro", "master", "vip"]) {
@@ -339,14 +381,14 @@ if (process.env.TOUCHLINE_RUN_PLAN_BROWSER_TESTS === "1") test("active VIP keeps
   const { chromium, expect } = await import("@playwright/test");
   const browser = await chromium.launch({ headless: true });
   try {
-    for (const width of [1440, 390]) {
+    for (const width of [1440, 768, 390]) {
       const page = await browser.newPage({ viewport: { width, height: 900 }, reducedMotion: "reduce" });
       await page.setContent(harness("pt-BR", "vip", 1500, false, "active"));
       const header = page.locator('[data-clubowner-header="true"]');
       await expect(header.locator(".profile")).toBeVisible();
       await expect(header.locator(".bank")).toBeVisible();
       await expect(header.locator('[data-current-plan="true"]')).toHaveCount(1);
-      await expect(header.locator("[data-plan-choice]")).toHaveCount(5);
+      await expect(header.locator('[role="tab"]')).toHaveCount(5);
       assert.equal(await header.evaluate(element => getComputedStyle(element).getPropertyValue("--clubowner-ink").trim()), "#d5b4f6");
       await header.locator('[data-current-plan="true"]').click();
       await expect(header.getByRole("dialog")).toBeVisible();
@@ -357,10 +399,20 @@ if (process.env.TOUCHLINE_RUN_PLAN_BROWSER_TESTS === "1") test("active VIP keeps
       await comparison.locator("summary").click();
       await comparison.getByRole("button", { name: "Ver plano: Master" }).click();
       await expect(comparison).not.toHaveAttribute("open");
-      await expect(header.locator('[data-plan-choice="master"]')).toBeFocused();
+      await expect(header.locator('[role="tab"][data-tier="master"]')).toBeFocused();
       assert.equal(await header.evaluate(element => getComputedStyle(element).getPropertyValue("--clubowner-ink").trim()), "#a5e4b6");
-      await expect(header.locator('[data-current-plan="true"]')).toHaveAttribute("data-plan-offer", "vip");
+      await expect(header.locator('.bank')).toHaveAttribute("data-active-plan", "vip");
+      await expect(header.locator('[data-profile-active-plan="vip"]')).toBeVisible();
+      await expect(header.locator('[data-account-market-power="true"]')).toBeVisible();
+      await expect(header.locator('[data-account-market-power="true"]')).toContainText("∞");
+      await expect(header.locator('[data-profile-tier]')).toHaveCount(0);
+      await expect(header.locator('[data-plan-offer="master"]')).toHaveCount(1);
       assert.equal(await header.locator(".profile").evaluate(element => getComputedStyle(element).borderTopColor), "rgb(145, 213, 111)");
+      // Wait for the real pseudo-element transition, not only React's theme
+      // attribute: an immediate capture can retain the previous VIP purple.
+      await expect.poll(() => header.evaluate(element =>
+        Array.from(element.querySelectorAll(".profile, .bank"), panel => getComputedStyle(panel, "::before").borderTopColor)
+      )).toEqual(["rgba(111, 191, 143, 0.72)", "rgba(111, 191, 143, 0.72)"]);
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
       if (process.env.TOUCHLINE_PLAN_CAPTURE_PREFIX) await page.screenshot({ path: `${process.env.TOUCHLINE_PLAN_CAPTURE_PREFIX}-active-vip-${width}.png`, fullPage: true });
       await page.close();

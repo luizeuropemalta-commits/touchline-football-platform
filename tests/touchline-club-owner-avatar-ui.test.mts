@@ -34,6 +34,8 @@ function copyModule(_drafts = false) { return catalogue; }
 
 test("real header forwards separate dormant selection capabilities without changing recovery identity", () => {
   const header = compile("components/touchline/ClubOwnerMarketHeader.tsx", {
+    // This fixture inspects capability forwarding, not preview interaction.
+    react: { useState: (initial: unknown) => [typeof initial === "function" ? initial() : initial, () => {}] },
     "react/jsx-runtime": jsx, "next/image": { default: "img" }, "next/link": { default: "a" },
     "lucide-react": { CalendarDays: "calendar", Camera: "camera", Crown: "crown", Diamond: "diamond", LockKeyhole: "lock", Shield: "shield" },
     "@/lib/touchlineArena/club-owner-market-i18n": { getTouchlineClubOwnerMarketCopy: () => ({ nameUnavailable: "Unavailable" }) },

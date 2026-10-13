@@ -44,18 +44,8 @@ export function ClubOwnerPlanCard({ tier, name, locale, active = false, activePl
   </div>;
 }
 
-export function ClubOwnerActivePlanCard({ tier, name, locale, activePlanBudget, draftLocalesEnabled = false }: Readonly<{
-  tier: ClubOwnerPlanPreview; name: string; locale: string; activePlanBudget?: number | null; draftLocalesEnabled?: boolean;
-}>) {
-  const labels = getClubOwnerPlanShowcaseCopy(locale, draftLocalesEnabled);
-  return <button type="button" className={`${controls.link} ${styles.panelCardButton}`} aria-label={`${labels.viewPlan}: ${tier}`}
-    onClick={() => document.querySelector<HTMLButtonElement>(`#clubowner-plan-catalogue [data-plan-choice="${tier}"]`)?.click()}>
-    <ClubOwnerPlanCard tier={tier} name={name} locale={locale} active activePlanBudget={activePlanBudget} draftLocalesEnabled={draftLocalesEnabled} />
-  </button>;
-}
-
-export default function ClubOwnerPlanShowcase({ initialPlan, activePlanKey = null, activePlanBudget, name, locale, remainingMarketPower, realUnlimited = false, draftLocalesEnabled = false, showAllPlans = false, canChoose = false }: Readonly<{
-  initialPlan: ClubOwnerPlanPreview; activePlanKey?: ClubOwnerPlanPreview | null; activePlanBudget?: number | null; name: string; locale: string; remainingMarketPower: string | null; realUnlimited?: boolean; draftLocalesEnabled?: boolean; showAllPlans?: boolean; canChoose?: boolean;
+export default function ClubOwnerPlanShowcase({ initialPlan, activePlanKey = null, activePlanBudget, name, locale, remainingMarketPower, realUnlimited = false, draftLocalesEnabled = false, showAllPlans = false, canChoose = false, embedded = false, onPreviewChange }: Readonly<{
+  initialPlan: ClubOwnerPlanPreview; activePlanKey?: ClubOwnerPlanPreview | null; activePlanBudget?: number | null; name: string; locale: string; remainingMarketPower: string | null; realUnlimited?: boolean; draftLocalesEnabled?: boolean; showAllPlans?: boolean; canChoose?: boolean; embedded?: boolean; onPreviewChange?: (tier: ClubOwnerPlanPreview) => void;
 }>) {
   const [index, setIndex] = useState(() => Math.max(0, CLUB_OWNER_PLAN_PREVIEWS.findIndex(plan => plan.id === initialPlan)));
   const id = useId();
@@ -63,6 +53,7 @@ export default function ClubOwnerPlanShowcase({ initialPlan, activePlanKey = nul
   const choices = useRef<(HTMLButtonElement | null)[]>([]);
   const dialog = useRef<HTMLDialogElement>(null);
   const dialogTrigger = useRef<HTMLButtonElement>(null);
+  const returnFocus = useRef<HTMLButtonElement | null>(null);
   const comparison = useRef<HTMLDetailsElement>(null);
   const plan = CLUB_OWNER_PLAN_PREVIEWS[index];
   const copy = getTouchlineClubOwnerMarketCopy(locale, draftLocalesEnabled);
@@ -71,9 +62,14 @@ export default function ClubOwnerPlanShowcase({ initialPlan, activePlanKey = nul
   const priceFor = (tier: ClubOwnerPlanPreview) => tier === "beta" ? labels.betaPrice : tier === "standard" ? copy.planStandardPrice : tier === "pro" ? copy.planProPrice : tier === "master" ? labels.masterPrice : labels.invitation;
   const benefitFor = (tier: ClubOwnerPlanPreview) => tier === "beta" ? labels.betaBenefit : tier === "standard" ? copy.planStandardBenefit : tier === "pro" ? copy.planProBenefit : tier === "master" ? labels.benefitPending : labels.vipBenefit;
   const title = titleFor(plan.id);
-  const move = (delta: number) => setIndex(value => (value + delta + CLUB_OWNER_PLAN_PREVIEWS.length) % CLUB_OWNER_PLAN_PREVIEWS.length);
+  const move = (delta: number) => {
+    const next = (index + delta + CLUB_OWNER_PLAN_PREVIEWS.length) % CLUB_OWNER_PLAN_PREVIEWS.length;
+    setIndex(next);
+    onPreviewChange?.(CLUB_OWNER_PLAN_PREVIEWS[next].id);
+  };
   const select = (next: number, focus = false) => {
     setIndex(next);
+    onPreviewChange?.(CLUB_OWNER_PLAN_PREVIEWS[next].id);
     if (focus) (showAllPlans ? choices.current[next] : tabs.current[next])?.focus();
   };
   const onTabKey = (event: KeyboardEvent<HTMLButtonElement>, current: number) => {
@@ -90,13 +86,14 @@ export default function ClubOwnerPlanShowcase({ initialPlan, activePlanKey = nul
   };
   const closeDialog = () => {
     dialog.current?.close();
-    dialogTrigger.current?.focus();
+    (returnFocus.current ?? dialogTrigger.current)?.focus();
   };
-  return <section dir="ltr" className={styles.planShowcase} data-plan-preview={plan.id} data-active-plan={activePlanKey ?? undefined} data-plan-state={activePlanKey ? "active" : "inactive"} aria-labelledby={`${id}-heading`}>
+  const openDialog = (trigger: HTMLButtonElement) => { returnFocus.current = trigger; dialog.current?.showModal(); };
+  return <section dir="ltr" className={styles.planShowcase} data-embedded={embedded || undefined} data-plan-preview={plan.id} data-active-plan={activePlanKey ?? undefined} data-plan-state={activePlanKey ? "active" : "inactive"} aria-labelledby={`${id}-heading`}>
     <div className={styles.showcaseHeading}>
-      <div><span className={styles.eyebrow}>TouchLine / {labels.membership}</span><h2 id={`${id}-heading`}>{copy.plan}</h2></div>
-      <button ref={dialogTrigger} type="button" className={`${controls.link} ${styles.planAction}`} onClick={() => dialog.current?.showModal()} aria-haspopup="dialog">
-        {plan.id === "vip" ? <LockKeyhole size={13} aria-hidden="true" /> : null}{plan.id === "vip" ? labels.invitation : labels.details}<ChevronRight size={13} aria-hidden="true" />
+      <div>{embedded ? <span className={styles.eyebrow} id={`${id}-heading`}>{labels.browse}</span> : <><span className={styles.eyebrow}>TouchLine / {labels.membership}</span><h2 id={`${id}-heading`}>{copy.plan}</h2></>}</div>
+      <button ref={dialogTrigger} type="button" className={`${controls.link} ${styles.planAction}`} onClick={event => openDialog(event.currentTarget)} aria-haspopup="dialog">
+        {plan.id === "vip" ? <LockKeyhole size={13} aria-hidden="true" /> : null}{plan.id === "vip" && activePlanKey !== "vip" ? labels.invitation : labels.details}<ChevronRight size={13} aria-hidden="true" />
       </button>
     </div>
     {showAllPlans ? <div className={styles.allPlans} aria-label={labels.browse}>
@@ -113,7 +110,7 @@ export default function ClubOwnerPlanShowcase({ initialPlan, activePlanKey = nul
       </button>)}
     </div> : null}
     {!showAllPlans ? <div role="tabpanel" id={`${id}-panel`} aria-labelledby={`${id}-tab-${plan.id}`} tabIndex={0} className={styles.planPanel}>
-      <button type="button" className={`${controls.link} ${styles.panelCardButton}`} aria-label={`${labels.viewPlan}: ${title}`} onClick={() => dialog.current?.showModal()}>
+      <button type="button" className={`${controls.link} ${styles.panelCardButton}`} aria-label={`${labels.viewPlan}: ${title}`} onClick={event => openDialog(event.currentTarget)} aria-haspopup="dialog">
         <ClubOwnerPlanCard tier={plan.id} name={name} locale={locale} active={activePlanKey === plan.id} activePlanBudget={activePlanKey === plan.id ? activePlanBudget : undefined} draftLocalesEnabled={draftLocalesEnabled} />
       </button>
       <div className={styles.offerSummary}><div><small>{plan.id === "vip" || plan.id === "beta" ? labels.membership : plan.id === "master" ? labels.seasonalPrice : labels.annualPrice}</small><strong data-plan-price={plan.id}>{priceFor(plan.id)}</strong></div><p>{benefitFor(plan.id)}</p></div>

@@ -549,6 +549,15 @@
 .myClubCommand[data-plan-theme="master"] { --market-plan-rgb: 111,191,143; }
 .myClubCommand[data-plan-theme="vip"] { --market-plan-rgb: 162,116,206; }
 .myClubCommand[data-fantasy-context="market"] :is(.myClubSquad, .myClubMarketStatus, .myClubGameweekFooter, .technicalArea, .myClubSetup, .myClubMarket) { border-color: var(--market-border); }
+/* Plan browsing changes the secondary rim on page panels, never card tiers,
+   pitch artwork, currency or the TouchLine green outer border. */
+.myClubCommand[data-fantasy-context="market"] :is(.myClubGameweekFooter, .technicalArea, .myClubSetup, .myClubMarket) {
+  box-shadow: inset 0 0 0 4px rgba(var(--clubowner-rgb, var(--market-plan-rgb, 170,255,62)),.06), inset 0 0 0 5px rgba(var(--clubowner-rgb, var(--market-plan-rgb, 170,255,62)),.64), 0 16px 38px rgba(0,0,0,.18);
+  transition: box-shadow .25s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .myClubCommand[data-fantasy-context="market"] :is(.myClubGameweekFooter, .technicalArea, .myClubSetup, .myClubMarket) { transition: none; }
+}
 .myClubCommand[data-fantasy-context="market"]:not(.arenaOverlay) {
   border: 0;
   border-radius: 0;

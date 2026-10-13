@@ -1,11 +1,14 @@
+"use client";
+
 import Image from "next/image";
+import { useState } from "react";
 import { CalendarDays, Camera, Crown, Diamond, LockKeyhole, Shield } from "lucide-react";
 import { getTouchlineClubOwnerMarketCopy } from "@/lib/touchlineArena/club-owner-market-i18n";
 import { getClubOwnerPlanShowcaseCopy, getClubOwnerVipPlanName, type ClubOwnerPlanPreview } from "@/lib/touchlineArena/club-owner-plan-showcase";
 import { formatClubOwnerRankingPosition, getClubOwnerProfileMetricsCopy } from "@/lib/touchlineArena/club-owner-profile-metrics";
-import { TouchlineCoinMark } from "./market/TouchlineMarketMarks";
 import ClubOwnerAvatarControl, { type ClubOwnerAvatarUiContext } from "./ClubOwnerAvatarControl";
-import ClubOwnerPlanShowcase, { ClubOwnerActivePlanCard } from "./ClubOwnerPlanShowcase";
+import ClubOwnerPlanShowcase from "./ClubOwnerPlanShowcase";
+import { TouchlineCoinMark } from "./market/TouchlineMarketMarks";
 import controls from "./TouchlineGlobalNavigation.module.css";
 import styles from "./ClubOwnerMarketHeader.module.css";
 
@@ -46,11 +49,16 @@ export default function ClubOwnerMarketHeader({ owner, locale, accountId, avatar
   const currentTierName = currentTier === "beta" ? "Beta" : currentTier === "standard" ? copy.planStandard
     : currentTier === "pro" ? copy.planPro : currentTier === "master" ? "Master"
     : currentTier === "vip" ? getClubOwnerVipPlanName(locale, draftLocalesEnabled) : null;
-  const planDate = planActive && typeof plan?.expiresAt === "string" && Number.isFinite(Date.parse(plan.expiresAt))
-    ? new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeZone: "UTC" }).format(new Date(plan.expiresAt)) : null;
-  return <header className={styles.header} data-clubowner-header="true">
-    <section className={styles.profile} data-cover-preview={tier ? "true" : undefined} data-active-plan={currentTier ?? undefined} aria-labelledby="clubowner-heading">
-      {tier ? <svg className={styles.coverPattern} viewBox="0 0 600 340" aria-hidden="true" focusable="false">
+  // Choosing a card is deliberately visual-only: it changes the ClubOwner
+  // cover treatment, never the profile photo, entitlement, or XI budget.
+  const [visualTier, setVisualTier] = useState<ClubOwnerPlanPreview>(() => tier ?? currentTier ?? "beta");
+  const displayedTier = visualTier;
+  const expiry = plan?.expiresAt ? new Date(plan.expiresAt) : null;
+  const validity = currentTier !== "vip" && planActive && expiry && Number.isFinite(expiry.getTime())
+    ? copy.planUntil.replace("{date}", new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeZone: "UTC" }).format(expiry)) : null;
+  return <header className={styles.header} data-clubowner-header="true" data-plan-preview={displayedTier}>
+    <section className={styles.profile} data-cover-preview="true" data-active-plan={currentTier ?? undefined} aria-labelledby="clubowner-heading">
+      {displayedTier ? <svg className={styles.coverPattern} viewBox="0 0 600 340" aria-hidden="true" focusable="false">
         <rect x="20" y="20" width="560" height="300" rx="2" />
         <path d="M300 20v300M20 95h78v150H20M580 95h-78v150h78M20 133h30v74H20M580 133h-30v74h30" />
         <circle cx="300" cy="170" r="53" /><circle cx="300" cy="170" r="2" />
@@ -90,29 +98,16 @@ export default function ClubOwnerMarketHeader({ owner, locale, accountId, avatar
         </div>
       </div>
     </section>
-    {tier ? <ClubOwnerPlanShowcase key={tier} initialPlan={tier} name={name} locale={locale} remainingMarketPower={marketPower} realUnlimited={unlimited} draftLocalesEnabled={draftLocalesEnabled} canChoose={false} /> : <section className={styles.bank} data-plan-state={planActive ? "active" : "inactive"} data-active-plan={currentTier ?? undefined} aria-labelledby="clubowner-plan-heading">
-      <div className={styles.bankHeading}><CalendarDays size={25} aria-hidden="true" /><h2 id="clubowner-plan-heading">{copy.plan}{currentTierName ? <span className={styles.currentPlanName}>{currentTierName}</span> : null}</h2>
-        {currentTier !== "vip" ? <a className={`${controls.arena} ${styles.planAction}`} href="#clubowner-plan-catalogue">{labels.browse}</a> : null}
-      </div>
-      {currentTier ? <div className={styles.activePlanCard}><ClubOwnerActivePlanCard tier={currentTier} name={name} locale={locale} activePlanBudget={activePlanBudget} draftLocalesEnabled={draftLocalesEnabled} /></div> : null}
+    <section className={styles.bank} data-plan-state={planActive ? "active" : "inactive"} data-active-plan={currentTier ?? undefined} aria-labelledby="clubowner-plan-heading">
+      <div className={styles.bankHeading}><CalendarDays size={25} aria-hidden="true" /><h2 id="clubowner-plan-heading">{copy.plan}{currentTierName ? <span className={styles.currentPlanName}>{currentTierName}</span> : null}</h2></div>
+      <ClubOwnerPlanShowcase embedded initialPlan={tier ?? currentTier ?? "beta"} activePlanKey={currentTier} activePlanBudget={currentTier ? activePlanBudget : undefined} name={name} locale={locale} remainingMarketPower={marketPower} realUnlimited={unlimited} draftLocalesEnabled={draftLocalesEnabled} canChoose={tier === null && currentTier !== "vip"} onPreviewChange={setVisualTier} />
+      <dl className={styles.currentBudget} aria-label={copy.plan}>
+        <div><dt>{labels.currentBudget}</dt><dd data-account-market-power="true" aria-label={unlimited ? `${copy.marketPower}: ${labels.unlimited}` : marketPower === null ? copy.marketPowerUnavailable : `${copy.marketPower} ${marketPower} TouchLine Credits`}>
+          <span className={styles.marketPowerValue}><TouchlineCoinMark size={19} /><strong>{unlimited ? "∞" : marketPower ?? "—"}</strong><small>{unlimited ? labels.unlimited : "TC"}</small></span>
+        </dd></div>
+      </dl>
+      {validity ? <p className={styles.validity} data-plan-validity="true">{validity}</p> : null}
       <p id="clubowner-plan-interest" className={styles.planInterest} tabIndex={-1} role="status">{labels.working}</p>
-      <details className={styles.bankDetails} data-bank-details="true">
-        <summary className={styles.bankSummary}>
-          <span className={styles.marketPowerLabel}>{copy.marketPower}</span>
-          <span className={styles.marketPowerValue} data-market-power-unlimited={unlimited || undefined} aria-label={unlimited ? `${copy.marketPower}: ${labels.unlimited}` : marketPower === null ? copy.marketPowerUnavailable : `${copy.marketPower} ${marketPower} TouchLine Credits`}>
-            <TouchlineCoinMark size={22} />
-            <strong>{unlimited ? "∞" : marketPower ?? "—"}</strong>
-            <small>{unlimited ? labels.unlimited : "TC"}</small>
-          </span>
-        </summary>
-        <div className={styles.bankBody}>
-          <p id="clubowner-plan-status">{planActive ? (currentTier === "vip" ? copy.planActiveNoEnd : planDate ? copy.planUntil.replace("{date}", planDate) : copy.planActiveNoEnd) : copy.planInactiveDetail}</p>
-          <small>{copy.virtualBudgetSeparate}</small>
-        </div>
-      </details>
-    </section>}
-    {!tier ? <div id="clubowner-plan-catalogue" className={styles.planCatalogue}>
-      <ClubOwnerPlanShowcase initialPlan={currentTier ?? "beta"} activePlanKey={currentTier} activePlanBudget={currentTier ? activePlanBudget : undefined} name={owner?.name ?? ""} locale={locale} remainingMarketPower={marketPower} realUnlimited={unlimited} draftLocalesEnabled={draftLocalesEnabled} showAllPlans canChoose />
-    </div> : null}
+    </section>
   </header>;
 }
