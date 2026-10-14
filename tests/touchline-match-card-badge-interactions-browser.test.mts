@@ -69,7 +69,11 @@ test("hydrated match-card tooltip stays in viewport, supports touch/keyboard and
         const page = await context.newPage();
         page.setDefaultTimeout(3000);
         const errors: string[] = []; page.on("pageerror", error => errors.push(error.message));
-        await page.setContent(harness());
+        // The complete hydrated harness can take longer than the interaction
+        // timeout on a cold WebKit process. Keep the 3s limit for every
+        // interaction assertion, but give initial document parsing its own
+        // deterministic budget.
+        await page.setContent(harness(), { waitUntil: "domcontentloaded", timeout: 15_000 });
         await page.evaluate(() => (window as unknown as {show:(locale:string,side:string)=>void}).show("en-GB", "center"));
         await page.locator(".trigger").hover(); await expect(page.getByRole("tooltip")).toBeVisible();
         assert.equal(await page.locator(".trigger").evaluate(node => document.activeElement === node), false);

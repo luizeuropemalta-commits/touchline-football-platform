@@ -4,8 +4,10 @@ type Environment = Readonly<Record<string, string | undefined>>;
 type Timing<L extends string> = { label: L; durationMs: number; status: "fulfilled" | "rejected" };
 
 function enabled(env: Environment) {
-  if (env.TOUCHLINE_QA_RANKING_TIMINGS !== "true" || env.VERCEL_ENV !== "preview"
-    || env.VERCEL_GIT_COMMIT_REF !== "qa") return false;
+  const hostedQa = env.TOUCHLINE_QA_RANKING_TIMINGS === "true" && env.VERCEL_ENV === "preview"
+    && env.VERCEL_GIT_COMMIT_REF === "qa";
+  const localQa = env.TOUCHLINE_LOCAL_RANKING_TIMINGS === "true" && env.NODE_ENV === "development";
+  if (!hostedQa && !localQa) return false;
   try {
     const url = new URL(env.NEXT_PUBLIC_SUPABASE_URL ?? "");
     return url.protocol === "https:" && url.hostname === "xgxbwqxjssxxuihuwmgy.supabase.co"

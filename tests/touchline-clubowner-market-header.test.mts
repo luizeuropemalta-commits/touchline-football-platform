@@ -68,58 +68,44 @@ test("market power stays inside the compact right-hand selector", async () => {
   assert.equal((html.match(/data-plan-offer=/g) ?? []).length, 1);
 });
 
-test("local Pro preview marks only the rendered sample, not the account entitlement", async () => {
+test("local Pro preview marks only the rendered sample, not the account identity or entitlement", async () => {
   const html = renderHeader({ name: "Real Owner", avatarUrl: "/owner.webp", city: "", nationality: "", since: "" }, "pt-BR", await loadCopy(), { planPreview: "pro" });
   assert.match(html, /data-plan-tier="pro"/);
   assert.match(html, /class="header"/);
   assert.match(html, /Meu plano/);
   assert.match(html, /Real Owner/);
   assert.equal((html.match(/data-plan-tier="pro"/g) ?? []).length, 1);
-  assert.match(html, /data-profile-tier="pro"/);
+  assert.doesNotMatch(html, /data-profile-tier=|data-profile-active-plan=/);
 });
 
-test("real active VIP displays localized unlimited market power; null and inactive never imply VIP", async () => {
+test("VIP never exposes a legacy unlimited market-power path", async () => {
   const copyModule = await loadCopy();
   for (const { code } of TOUCHLINE_APPROVED_LOCALES) {
-    const labels = planShowcase.getClubOwnerPlanShowcaseCopy(code, true);
-    const real = { realUnlimited: true, remainingMarketPower: null, plan: { active: true, expiresAt: null }, draftLocalesEnabled: true };
-    const html = renderHeader(null, code, copyModule, real);
-    assert.match(html, /data-current-xi-unlimited="true"/);
-    assert.ok(html.includes(`>∞ ${labels.unlimited}</dd>`));
-    for (const planPreview of ["standard", "pro"]) {
-      const preview = renderHeader(null, code, copyModule, { ...real, planPreview });
-      assert.match(preview, /data-plan-state="inactive"/);
-      assert.match(preview, /data-current-xi-unlimited="true"/);
-      assert.ok(preview.includes(`>∞ ${labels.unlimited}</dd>`));
-    }
-    for (const patch of [{ realUnlimited: false }, { plan: { active: false, expiresAt: null } }, { plan: null }]) {
-      const unknown = renderHeader(null, code, copyModule, { ...real, ...patch });
-      assert.doesNotMatch(unknown, /data-current-xi-unlimited="true"/);
-      assert.doesNotMatch(unknown, /data-current-xi-unlimited="true"/);
-    }
+    const html = renderHeader(null, code, copyModule, { remainingMarketPower: null, plan: { active: true, expiresAt: null }, activePlanKey: "vip", draftLocalesEnabled: true });
+    assert.doesNotMatch(html, /data-current-xi-unlimited|>∞|Ilimitado|Unlimited/);
+    assert.match(html, /data-plan-budget="vip"[\s\S]*>1B<\/strong>/);
   }
 });
 
-test("ClubOwner keeps the green sweep on panels and restores the metallic effect on Pro", () => {
+test("ClubOwner keeps the green sweep on panels without a duplicated profile plan badge", () => {
   const css = readFileSync(new URL("../components/touchline/ClubOwnerMarketHeader.module.css", import.meta.url), "utf8");
   assert.doesNotMatch(css, /\.proTier \.profile/);
   assert.match(css, /\.profile::after, \.bank::after/);
   assert.match(css, /animation: clubOwnerGreenSweep 9s linear infinite/);
-  assert.match(css, /\.proBadge \{[^}]+animation: clubOwnerGoldSweep 7s linear infinite/);
+  assert.doesNotMatch(css, /\.proBadge|\.standardBadge|\.betaBadge|\.vipBadge/);
   const marketPower = css.match(/\.marketPowerValue strong, \.marketPowerValue small \{([^}]+)\}/)?.[1] ?? "";
   assert.ok(marketPower.includes("color: #f0b631"));
   assert.ok(marketPower.includes("animation: none"));
   assert.match(css, /prefers-reduced-motion/);
-  assert.match(css, /\.standardBadge \{[^}]+animation: none/);
 });
 
-test("local Standard preview uses the blue companion badge without changing entitlement", async () => {
+test("local Standard preview uses the blue plan surface without changing account identity", async () => {
   const html = renderHeader({ name: "Real Owner", avatarUrl: "/owner.webp", city: "", nationality: "", since: "" }, "pt-BR", await loadCopy(), { planPreview: "standard" });
   assert.equal((html.match(/data-plan-tier="standard"/g) ?? []).length, 1);
-  assert.match(html, /data-profile-tier="standard"/);
+  assert.doesNotMatch(html, /data-profile-tier=|data-profile-active-plan=/);
   assert.match(html, /Standard/);
   const css = readFileSync(new URL("../components/touchline/ClubOwnerMarketHeader.module.css", import.meta.url), "utf8");
-  assert.match(css, /\.standardBadge \{[^}]+rgba\(117,187,255/);
+  assert.match(css, /\.header\[data-plan-preview="standard"\].+--plan-preview-rgb: 65,139,226/);
 });
 
 test("local Standard preview presents its approved annual offer without enabling payment", async () => {
@@ -146,7 +132,8 @@ test("local Pro preview presents its approved annual offer without enabling paym
 test("local Pro preview renders a member pass without changing the account entitlement", async () => {
   const html = renderHeader({ name: "Real Owner", avatarUrl: "/owner.webp", city: "", nationality: "", since: "" }, "pt-BR", await loadCopy(), { planPreview: "pro" });
   assert.match(html, /data-plan-offer="pro"/);
-  assert.match(html, /Assinatura/);
+  assert.match(html, /data-compact="true"/);
+  assert.doesNotMatch(html, /class="cardOwner"|class="cardKicker"/);
   assert.match(html, /Real Owner/);
   assert.match(html, /role="tablist"/);
   assert.match(html, /Comparar planos/);
@@ -325,7 +312,8 @@ test("server-rendered header exposes real identity, exact EN/PT labels and disab
     for (const [key, value] of Object.entries(baseline[locale])) if (!["nameUnavailable", "location", "nationality", "memberSince", "watchIntro", "planStandard", "planPro", "planActive", "planInactive", "planUntil", "planActiveNoEnd", "planInactiveDetail", "activatePlan", "renewPlan", "planStandardPrice", "planStandardBenefit", "planProPrice", "planProBenefit", "proMember", "proAccess", "proPrivileges"].includes(key)) assert.ok(html.includes(value), key);
     for (const key of ["proMember", "proAccess", "proPrivileges"] as const) assert.ok(!html.includes(baseline[locale][key]));
     assert.doesNotMatch(html, /href="\/intro/);
-    assert.doesNotMatch(page, /brandAccessory=|\/intro\?/);
+    assert.doesNotMatch(page, /\/intro\?/);
+    assert.match(page, /brandAccessory=\{<TouchlineSignOutButton locale=\{locale\} draftLocalesEnabled=\{draftLocalesEnabled\} \/>\}/);
     assert.ok(html.includes(`aria-label="${baseline[locale].photoAria}"`));
     assert.ok(html.includes('id="clubowner-photo-status" role="status"'), `${locale}: disabled photo has visible status`);
     assert.match(html, /aria-describedby="clubowner-photo-status"/);
@@ -345,7 +333,7 @@ test("missing owner and empty facts remain honest fallbacks without invented acc
     assert.match(html, new RegExp(`<h2 id="clubowner-heading">${baseline[locale].nameUnavailable}`));
     assert.ok(html.includes(`alt="${baseline[locale].nameUnavailable}"`));
     assert.match(html, /src="\/icons\/touchline-512.png"/);
-    assert.equal((html.match(/<dd[^>]*>—<\/dd>/g) ?? []).length, 3);
+    assert.equal((html.match(/<dd[^>]*>—<\/dd>/g) ?? []).length, 2);
     assert.equal((html.match(/disabled=""/g) ?? []).length, 1);
   }
 });
@@ -363,16 +351,17 @@ test("actual rendered header and plan catalogue use the same selected locale", (
   assert.equal((html.match(/disabled=""/g) ?? []).length, 1);
 });
 
-test("verified active VIP has its real name and amethyst card without opening purchase", async () => {
+test("verified active VIP has its real name and finite amethyst card without opening purchase", async () => {
   const html = renderHeader({ name: "Customer", avatarUrl: "", city: "", nationality: "", since: "" }, "pt-BR", await loadCopy(), {
-    plan: { active: true, expiresAt: null }, activePlanKey: "vip", activePlanBudget: null, realUnlimited: true,
+    plan: { active: true, expiresAt: null }, activePlanKey: "vip", activePlanBudget: 1_000_000_000, remainingMarketPower: 621_000_000,
   });
-  assert.match(html, /data-profile-active-plan="vip"[\s\S]*VIP<\/span>/);
   assert.match(html, /data-active-plan="vip"/);
   assert.match(html, /data-plan-preview="vip"/);
   assert.match(html, /data-current-plan="true"/);
   assert.match(html, /data-plan-state="active"/);
-  assert.match(html, /data-current-xi-unlimited="true"/);
+  assert.match(html, /data-plan-budget="vip"[\s\S]*1\.000\.000\.000 TouchLine Credits/);
+  assert.match(html, /<td>1B<\/td>/);
+  assert.doesNotMatch(html, /data-current-xi-unlimited|>∞|Ilimitado/);
   assert.doesNotMatch(html, />Renovar<\/button>/);
   assert.equal((html.match(/data-current-plan="true"/g) ?? []).length, 1);
   assert.doesNotMatch(html, /checkout|stripe|type="file"/);
@@ -400,38 +389,31 @@ test("an account without a plan sees one compact Beta preview and five selector 
   assert.doesNotMatch(html, /data-current-plan="true"/);
 });
 
-test("profile metrics preserve identity and use only the viewer ranking across eight locales", async () => {
+test("profile preserves identity with ranking and followers only across eight locales", async () => {
   assert.equal(profileMetrics.getClubOwnerProfileMetricsCopy("pt-BR").ranking, "Ranking");
   assert.equal(profileMetrics.getClubOwnerProfileMetricsCopy("en-GB").ranking, "Ranking");
   const owner = { name: "Real Owner", avatarUrl: "/actual-owner.webp", city: "Old city", nationality: "Old nation", since: "1900" };
-  const score = profileMetrics.clubOwnerRankingPoints([{ isCurrentManager: false, score: 999 }, { isCurrentManager: true, score: 63.25 }]);
-  assert.equal(score, 63.25);
   assert.equal(profileMetrics.clubOwnerRankingPosition([{ isCurrentManager: false, rank: 1 }, { isCurrentManager: true, rank: 7 }]), 7);
   for (const rank of [0, -1, 1.2, NaN]) assert.equal(profileMetrics.clubOwnerRankingPosition([{ isCurrentManager: true, rank }]), null);
   assert.equal(profileMetrics.clubOwnerRankingPosition([]), null);
-  assert.equal(profileMetrics.clubOwnerRankingPoints([]), null);
-  assert.equal(profileMetrics.clubOwnerRankingPoints([{ isCurrentManager: true, score: NaN }]), null);
-  assert.equal(profileMetrics.clubOwnerRankingPoints([{ isCurrentManager: true, score: 0 }]), 0);
-  assert.equal(profileMetrics.clubOwnerRankingPoints([{ isCurrentManager: true, score: 1 }, { isCurrentManager: true, score: 2 }]), null);
-  assert.match(page, /rankingPoints=\{clubOwnerRankingPoints\(snapshot\?\.seasonRanking\)\}/);
+  assert.doesNotMatch(page, /clubOwnerRankingPoints|rankingPoints=/);
   assert.match(page, /rankingPosition=\{clubOwnerRankingPosition\(snapshot\?\.seasonRanking\)\}/);
   for (const { code } of TOUCHLINE_APPROVED_LOCALES) {
     const labels = profileMetrics.getClubOwnerProfileMetricsCopy(code, true);
-    const html = renderHeader(owner, code, await loadCopy(), { rankingPoints: score, rankingPosition: 7, draftLocalesEnabled: true });
-    for (const label of [labels.points, labels.followers, labels.ranking]) assert.ok(html.includes(label));
+    const html = renderHeader(owner, code, await loadCopy(), { rankingPosition: 7, draftLocalesEnabled: true });
+    for (const label of [labels.followers, labels.ranking]) assert.ok(html.includes(label));
+    assert.doesNotMatch(html, new RegExp(labels.points.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
     const facts = html.match(/<dl class="facts">([\s\S]*?)<\/dl>/)?.[1] ?? "";
-    assert.ok(facts.indexOf(labels.points) >= 0);
-    assert.ok(facts.indexOf(labels.ranking) > facts.indexOf(labels.points));
+    assert.ok(facts.indexOf(labels.ranking) >= 0);
     assert.ok(facts.indexOf(labels.followers) > facts.indexOf(labels.ranking));
     assert.doesNotMatch(html, /class="followers"/);
     assert.match(html, /class="photoStatus" id="clubowner-photo-status" role="status"/);
     const expectedRank = { "en-GB": "7th", "pt-BR": "7º", "es-ES": "7.º", "it-IT": "7º", "fr-FR": "7e", "ar-SA": "المركز ٧", "tr-TR": "7.", "de-DE": "7." }[code];
     assert.ok(html.includes(`<dd>${expectedRank}</dd>`));
     assert.ok(!html.includes(`<dt>${labels.following}</dt>`));
-    assert.ok(html.includes((63.25).toLocaleString(code, { minimumFractionDigits: 2, maximumFractionDigits: 2 })));
     assert.match(html, /Real Owner/);
     assert.doesNotMatch(html, /Old city|Old nation|1900|999/);
-    assert.equal((html.match(/<dd[^>]*>—<\/dd>/g) ?? []).length, 1, "unknown social counts are not fabricated zeros");
+    assert.equal((html.match(/<dd[^>]*>—<\/dd>/g) ?? []).length, 1, "unknown followers are not fabricated zeros");
   }
 });
 

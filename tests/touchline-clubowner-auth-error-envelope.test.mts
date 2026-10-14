@@ -67,7 +67,13 @@ function fixture(getUser: () => Promise<unknown>) {
     "@/lib/touchlineFantasy/market-workflow-i18n": workflow,
     "@/lib/touchlineArena/demo-data": { TOUCHLINE_ENGLAND_CLUBS },
     "@/lib/touchlineArena/club-owner-avatar-context-server": { createClubOwnerAvatarContextReader: () => async () => { calls.push("avatar"); return null; } },
-    "@/lib/touchlineFantasy/server": { loadTouchlineFantasySnapshot: async (actor: unknown) => { calls.push("snapshot"); return { actor, config: { budgetEur: 500_000_000 } }; } },
+    "@/lib/touchlineFantasy/server": {
+      // ClubOwner deliberately uses the read-only snapshot: customer page
+      // loads must not schedule lifecycle writers.  Keep this VM fixture on
+      // the same public contract as the real module.
+      loadTouchlineFantasySnapshot: async (actor: unknown) => { calls.push("snapshot"); return { actor, config: { budgetEur: 500_000_000 } }; },
+      loadTouchlineFantasyReadSnapshot: async (actor: unknown) => { calls.push("snapshot"); return { actor, config: { budgetEur: 500_000_000 } }; },
+    },
     "@/lib/touchlineArena/club-owner-page-identity": { resolveTouchlineClubOwnerPageIdentity: (...args: Parameters<typeof identity.resolveTouchlineClubOwnerPageIdentity>) => { calls.push("identity"); return identity.resolveTouchlineClubOwnerPageIdentity(...args); } },
     "./market-game.module.css": { default: { page: "page", content: "content" } },
   };
@@ -76,6 +82,7 @@ function fixture(getUser: () => Promise<unknown>) {
     ["@/components/touchline/TouchlineBrandHeader", "brand-header"],
     ["@/app/fantasy/FantasyGameweekClient", "fantasy-client"],
     ["@/components/touchline/TouchlineGlobalNavigation", "navigation"],
+    ["@/components/touchline/TouchlineSignOutButton", "sign-out"],
   ]) modules[path] = { default: name };
   const exports: { default?: (props: object) => Promise<React.ReactElement> } = {};
   runInNewContext(page, { exports, process: { env: {} }, require: (name: string) => { assert.ok(Object.hasOwn(modules, name), name); return modules[name]; } });

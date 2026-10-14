@@ -156,6 +156,54 @@ async function seedLockedXi(db: Db, userId: string, userGameweekId: string, game
   }
 }
 
+test("finite approved budgets enforce purchases in real SQL without rewriting historical locks", { skip: !modulePath }, async () => {
+  const db = await makeDatabase();
+  try {
+    await db.exec(await sql("20261011015000_touchline_fantasy_confirmed_plan_lock_guard"));
+    await db.exec(await sql("20261013173813_touchline_fantasy_finite_plan_budgets"));
+    await db.exec("begin");
+    const { next } = await seed(db);
+    const before = (await db.query("select to_jsonb(t) as row from public.touchline_fantasy_locked_selections t order by user_gameweek_id,slot_index")).rows;
+    for (const [userId, budget] of [[ids.standard,400_000_000],[ids.pro,650_000_000],[ids.master,850_000_000],[ids.vip,1_000_000_000]] as const) {
+      const result = await db.query("select public.touchline_fantasy_prepare_user_gameweek($1,$2) as id", [userId,next]);
+      const snapshot = (await db.query("select budget_eur_snapshot from public.touchline_fantasy_user_gameweeks where id=$1", [result.rows[0].id])).rows[0];
+      assert.equal(Number(snapshot.budget_eur_snapshot),budget);
+      await db.query("update public.football_player_market_values set market_value_eur=$1", [Math.ceil(budget / 11)]);
+      await rejected(db, () => save(db,userId,next,selections(),"confirm",`over-${budget}`), /TL_FANTASY_BUDGET_EXCEEDED/);
+      await db.query("update public.football_player_market_values set market_value_eur=$1", [Math.floor(budget / 11)]);
+      const saved = (await save(db,userId,next,selections(),"confirm",`within-${budget}`)).rows[0].result;
+      assert.equal(Number(saved.budgetRemainingEur),budget - Math.floor(budget / 11)*11);
+    }
+    assert.deepEqual((await db.query("select to_jsonb(t) as row from public.touchline_fantasy_locked_selections t order by user_gameweek_id,slot_index")).rows,before);
+    await db.query("update public.football_fixtures set starts_at=clock_timestamp()-interval '1 minute' where id=$1",[ids.nextFixture]);
+    await db.query("update public.touchline_fantasy_gameweeks set locks_at=clock_timestamp()-interval '1 minute' where id=$1",[next]);
+    // Even a forged over-budget VIP confirmation cannot bypass the locking gate.
+    await db.query("update public.touchline_fantasy_entitlements set plan_key='vip' where user_id=$1",[ids.pro]);
+    await db.query("update public.touchline_fantasy_user_gameweeks set market_plan_key_snapshot='vip',budget_eur_snapshot=1000000000 where user_id=$1 and gameweek_id=$2",[ids.pro,next]);
+    await db.query("update public.touchline_fantasy_user_gameweek_selections set market_value_eur=100000000 where user_gameweek_id in (select id from public.touchline_fantasy_user_gameweeks where user_id=$1 and gameweek_id=$2)",[ids.pro,next]);
+    const lock = (await db.query("select public.touchline_fantasy_lock_gameweek($1) as result",[next])).rows[0].result as Row;
+    assert.equal(lock.ok,true);
+    const vipState = (await db.query("select state from public.touchline_fantasy_user_gameweeks where user_id=$1 and gameweek_id=$2",[ids.vip,next])).rows[0];
+    assert.equal(vipState.state,"LOCKED");
+    assert.equal((await db.query("select state from public.touchline_fantasy_user_gameweeks where user_id=$1 and gameweek_id=$2",[ids.pro,next])).rows[0].state,"DRAFT");
+  } finally { await db.exec("rollback"); await db.close(); }
+});
+
+test("finite-budget migration refuses existing confirmations without partial policy changes", { skip: !modulePath }, async () => {
+  const db = await makeDatabase();
+  try {
+    await db.exec(await sql("20261011015000_touchline_fantasy_confirmed_plan_lock_guard"));
+    const { next } = await seed(db);
+    await save(db,ids.vip,next,selections(),"confirm","old-vip-confirmed");
+    const query = "select pg_get_functiondef('public.touchline_fantasy_save_lineup(uuid,uuid,text,text,jsonb,text,text)'::regprocedure) as body";
+    const before = (await db.query(query)).rows;
+    await assert.rejects(db.exec(await sql("20261013173813_touchline_fantasy_finite_plan_budgets")), /TL_FINITE_BUDGET_CONFIRMED_TRANSITION_REQUIRED/);
+    await db.exec("rollback");
+    assert.deepEqual((await db.query(query)).rows,before);
+    assert.equal((await db.query("select state from public.touchline_fantasy_user_gameweeks where user_id=$1 and gameweek_id=$2",[ids.vip,next])).rows[0].state,"CONFIRMED");
+  } finally { await db.close(); }
+});
+
 test("market-plan 10000 enforces Beta atomically through the real save/prepare SQL", { skip: !modulePath }, async () => {
   const db = await makeDatabase();
   try {

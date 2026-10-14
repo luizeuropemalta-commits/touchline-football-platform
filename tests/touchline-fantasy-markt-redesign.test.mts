@@ -407,9 +407,10 @@ test("the Gameweek transaction uses current plan budgets and rejects accounts wi
   ]);
   assert.match(domain, /TOUCHLINE_FANTASY_INITIAL_BUDGET_EUR = 500_000_000/);
   assert.match(server, /resolveTouchlineFantasyMarketAccess\(entitlement\?\.plan_key\)/);
-  assert.match(policy, /planKey === "standard" \? 500_000_000/);
-  assert.match(policy, /planKey === "pro" \? 1_000_000_000/);
-  assert.match(policy, /planKey === "master" \? 2_000_000_000/);
+  assert.match(policy, /standard: 400_000_000/);
+  assert.match(policy, /pro: 650_000_000/);
+  assert.match(policy, /master: 850_000_000/);
+  assert.match(policy, /vip: 1_000_000_000/);
   assert.deepEqual([touchlineFantasyLineupErrorCopy("TL_FANTASY_BUDGET_EXCEEDED", "pt-BR"), touchlineFantasyLineupErrorCopy("TL_FANTASY_BUDGET_EXCEEDED", "en-GB")], ["Este time ultrapassa o orçamento do seu plano.", "This team exceeds your plan's budget."]);
   assert.match(client, /return touchlineFantasyLineupErrorCopy\(code, locale, draftLocalesEnabled\)/);
   assert.match(client, /if \(!response\.ok\) return setFeedback\(lineupErrorCopy\(String\(payload\?\.error \?\? ""\), locale, draftLocalesEnabled\)\)/);

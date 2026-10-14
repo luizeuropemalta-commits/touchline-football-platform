@@ -132,7 +132,7 @@ test("the Market inline list excludes players ineligible for the removed positio
     touchlineMarketPositionBucket, touchlineFantasySlotAcceptsPlayer,
     snapshot: { catalogue }, marketPage: true, activeSlot: { id: "ST", allowedPositions: ["centre-forward"] },
     selectedPlayerClub: { teamId: "club" }, findTouchLineClub: () => ({ teamId: "club" }), normalizedQuery: "",
-    canBrowseMarketClub, marketPolicy: { planKey: "standard", budgetEur: 500_000_000, allowedClubTeamIds: null },
+    canBrowseMarketClub, marketPolicy: { planKey: "standard", budgetEur: 400_000_000, allowedClubTeamIds: null },
   });
   assert.deepEqual(Array.from(result), ["striker"]);
 });

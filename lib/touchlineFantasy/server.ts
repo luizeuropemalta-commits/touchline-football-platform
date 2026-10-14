@@ -247,6 +247,9 @@ async function loadRankings(
   const { data: userGameweekData, error: userGameweekError } = await admin
     .from("touchline_fantasy_user_gameweeks")
     .select("id,user_id,gameweek_id,touchline_fantasy_gameweeks!inner(season_id)")
+    // Rank only points earned under a competitive plan. A later upgrade must
+    // not turn historical Beta practice points into title points.
+    .in("market_plan_key_snapshot", ["standard", "pro", "master", "vip"])
     .eq("touchline_fantasy_gameweeks.season_id", seasonId);
   if (userGameweekError) return { gameweek: [], season: [] };
   const userGameweeks = rows(userGameweekData);
@@ -347,6 +350,17 @@ export async function loadTouchlineFantasySnapshot(user: User): Promise<Touchlin
   return loadFantasySnapshotCore(user, "full");
 }
 
+/**
+ * A customer page is a read path.  Lifecycle work belongs to the controlled
+ * data pipeline, not to page loads or client refreshes: otherwise a handful
+ * of open tabs can queue the same database writers and make every product
+ * surface appear stalled.  Keep the historical default for internal callers
+ * that explicitly need the lifecycle reconciliation.
+ */
+export async function loadTouchlineFantasyReadSnapshot(user: User): Promise<TouchlineFantasySnapshot | null> {
+  return loadFantasySnapshotCore(user, "full", undefined, undefined, false);
+}
+
 export type TouchlineFantasyArenaSnapshot = Pick<TouchlineFantasySnapshot,
   "activeGameweek" | "userGameweek" | "selections" | "catalogue" | "formationRegistry" | "playerAvailabilityIndicators">;
 
@@ -355,14 +369,16 @@ export async function loadTouchlineFantasyArenaSnapshot(user: User, formationReg
   finally { timing?.finish(); }
 }
 
-function loadFantasySnapshotCore(user: User, projection: "full"): Promise<TouchlineFantasySnapshot | null>;
-function loadFantasySnapshotCore(user: User, projection: "arena", providedFormationRegistry?: TouchlineFormationGeometryRegistry, timing?: ArenaPhaseTiming): Promise<TouchlineFantasyArenaSnapshot | null>;
-async function loadFantasySnapshotCore(user: User, projection: "full" | "arena", providedFormationRegistry?: TouchlineFormationGeometryRegistry, timing?: ArenaPhaseTiming): Promise<TouchlineFantasySnapshot | TouchlineFantasyArenaSnapshot | null> {
+function loadFantasySnapshotCore(user: User, projection: "full", providedFormationRegistry?: undefined, timing?: undefined, reconcileLifecycle?: boolean): Promise<TouchlineFantasySnapshot | null>;
+function loadFantasySnapshotCore(user: User, projection: "arena", providedFormationRegistry?: TouchlineFormationGeometryRegistry, timing?: ArenaPhaseTiming, reconcileLifecycle?: boolean): Promise<TouchlineFantasyArenaSnapshot | null>;
+async function loadFantasySnapshotCore(user: User, projection: "full" | "arena", providedFormationRegistry?: TouchlineFormationGeometryRegistry, timing?: ArenaPhaseTiming, reconcileLifecycle = true): Promise<TouchlineFantasySnapshot | TouchlineFantasyArenaSnapshot | null> {
   const admin = createAdminClient();
   if (!admin) return null;
-  timing?.mark("sync");
-  const { error: syncError } = await admin.rpc("touchline_fantasy_sync_gameweeks");
-  if (syncError) return null;
+  if (reconcileLifecycle) {
+    timing?.mark("sync");
+    const { error: syncError } = await admin.rpc("touchline_fantasy_sync_gameweeks");
+    if (syncError) return null;
+  }
   timing?.mark("config");
   const [{ data: configData, error: configError }, formationRegistry] = await Promise.all([
     admin.from("touchline_fantasy_configs").select("season_id,max_players_per_club,lock_offset_minutes").eq("competition_key", "england").eq("status", "active").maybeSingle(),
@@ -392,8 +408,10 @@ async function loadFantasySnapshotCore(user: User, projection: "full" | "arena",
   const lifecycleGameweek = activeGameweek?.state === "MARKET_OPEN"
     ? gameweeks.filter((entry) => entry.number < activeGameweek!.number).at(-1)
     : activeGameweek;
-  timing?.mark("lifecycle");
-  const lifecycle = await reconcileTouchlineFantasyGameweeks(admin, lifecycleGameweek ? [lifecycleGameweek] : [], true);
+  const lifecycle = reconcileLifecycle
+    ? await reconcileTouchlineFantasyGameweeks(admin, lifecycleGameweek ? [lifecycleGameweek] : [], true)
+    : { error: null, reconciled: 0 };
+  if (reconcileLifecycle) timing?.mark("lifecycle");
   if (lifecycle.error) return null;
   if (lifecycle.reconciled > 0) {
     const { data: refreshed, error: refreshError } = await admin.from("touchline_fantasy_gameweeks")
@@ -436,7 +454,7 @@ async function loadFantasySnapshotCore(user: User, projection: "full" | "arena",
   const entitlementPeriodEnd = text(entitlement?.current_period_end);
   const planExpiresAt = entitlementActive && entitlementPeriodEnd && Number.isFinite(Date.parse(entitlementPeriodEnd))
     ? entitlementPeriodEnd : null;
-  if (entitlementActive && activeGameweek?.state === "MARKET_OPEN") {
+  if (reconcileLifecycle && entitlementActive && activeGameweek?.state === "MARKET_OPEN") {
     timing?.mark("prepare");
     const { error: preparationError } = await admin.rpc("touchline_fantasy_prepare_user_gameweek", { p_user_id: user.id, p_gameweek_id: activeGameweek.id });
     if (preparationError) return null;
@@ -459,7 +477,7 @@ async function loadFantasySnapshotCore(user: User, projection: "full" | "arena",
   if (userGameweekResponse.error) return null;
   const userGameweekRow = userGameweekResponse.data as Row | null;
   const userGameweekId = text(userGameweekRow?.id);
-  if (activeGameweek && userGameweekId) {
+  if (reconcileLifecycle && activeGameweek && userGameweekId) {
     timing?.mark("alerts");
     await admin.rpc("touchline_fantasy_reconcile_lineup_alerts", { p_gameweek_id: activeGameweek.id });
   }

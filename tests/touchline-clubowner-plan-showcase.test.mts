@@ -15,13 +15,14 @@ const root = resolve(import.meta.dirname, "..");
 
 test("plan catalogue keeps the approved proposals separate from the real XI budget", () => {
   assert.deepEqual(CLUB_OWNER_PLAN_PREVIEWS.map(({ id, budget }) => [id, budget]), [
-    ["beta", 50_000_000], ["standard", 500_000_000], ["pro", 1_000_000_000], ["master", 2_000_000_000], ["vip", null],
+    ["beta", 50_000_000], ["standard", 400_000_000], ["pro", 650_000_000], ["master", 850_000_000], ["vip", 1_000_000_000],
   ]);
   const view = readFileSync(join(root, "components/touchline/ClubOwnerPlanShowcase.tsx"), "utf8");
   assert.doesNotMatch(view, /fetch\(|localStorage|sessionStorage|router\.|useEffect|checkout|stripe/);
   assert.match(view, /const move = \(delta: number\) =>/);
   assert.match(view, /data-current-xi-budget/);
-  assert.match(view, /plan\.id === "vip" \? labels\.invitation/);
+  assert.doesNotMatch(view, /labels\.invitation|labels\.vipBenefit/);
+  assert.match(view, /labels\.pricePending/);
   assert.match(view, /aria-haspopup="dialog"/);
   const route = readFileSync(join(root, "app/clubowner/page.tsx"), "utf8");
   assert.match(route, /process\.env\.NODE_ENV === "development"/);
@@ -42,7 +43,7 @@ test("showcase copy covers eight languages and preserves the public draft gate",
   assert.equal(getClubOwnerVipPlanName("pt-BR"), "VIP");
 });
 
-test("actual showcase keeps the real unlimited capability separate from all five preview choices", () => {
+test("actual showcase keeps every plan and XI balance finite or unavailable", () => {
   const source = readFileSync(join(root, "components/touchline/ClubOwnerPlanShowcase.tsx"), "utf8");
   const tree = ts.createSourceFile("showcase.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
   const component = tree.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === "ClubOwnerPlanShowcase");
@@ -55,15 +56,14 @@ test("actual showcase keeps the real unlimited capability separate from all five
     useId: () => "fixture-showcase", useRef: () => ({ current: null }), styles, controls: styles,
     ChevronDown: "svg", ChevronLeft: "svg", ChevronRight: "svg", LockKeyhole: "svg", X: "svg", ClubOwnerPlanCard: () => null });
   for (const locale of Object.keys(CLUB_OWNER_PLAN_SHOWCASE_COPY)) {
-    const labels = getClubOwnerPlanShowcaseCopy(locale, true);
     for (const { id: initialPlan } of CLUB_OWNER_PLAN_PREVIEWS) {
-      for (const [realUnlimited, amount, expected] of [[true, null, `∞ ${labels.unlimited}`], [false, null, "— TC"], [false, "121M", "121M TC"]] as const) {
+      for (const [amount, expected] of [[null, "— TC"], ["121M", "121M TC"]] as const) {
         const html = renderToStaticMarkup(React.createElement(Showcase, { initialPlan, name: "", locale,
-          draftLocalesEnabled: true, realUnlimited, remainingMarketPower: amount }));
+          draftLocalesEnabled: true, remainingMarketPower: amount }));
         const current = html.match(/<dd data-current-xi-budget="true"[^>]*>([^<]+)<\/dd>/)?.[0];
         assert.ok(current, "real current-budget element exists");
         assert.ok(current.endsWith(`>${expected}</dd>`));
-        assert.equal(current.includes('data-current-xi-unlimited="true"'), realUnlimited);
+        assert.doesNotMatch(current, /data-current-xi-unlimited|∞/);
         assert.match(html, /data-plan-state="inactive"/);
         assert.doesNotMatch(html, /href="#clubowner-plan-interest"/, "standalone previews cannot offer a plan change without a destination");
       }
@@ -109,7 +109,7 @@ test("actual Beta card and login gallery reuse the artwork with 50M TC, free acc
     assert.equal(priceFor("master"), labels.masterPrice);
     assert.equal(priceFor("standard"), copy.planStandardPrice);
     assert.equal(priceFor("pro"), copy.planProPrice);
-    assert.equal(priceFor("vip"), labels.invitation);
+    assert.equal(priceFor("vip"), labels.pricePending);
     const beta = renderToStaticMarkup(React.createElement(Card, { tier: "beta", locale, draftLocalesEnabled: true }));
     const standard = renderToStaticMarkup(React.createElement(Card, { tier: "standard", locale, draftLocalesEnabled: true }));
     assert.ok(beta.includes('<strong>50M</strong><small>TC</small>'));
@@ -247,7 +247,7 @@ function harness(locale: string, initialPlan = "pro", panelWidth = 600, gallery 
   const defs = Object.entries(modules).map(([id, code]) => `${JSON.stringify(id)}:function(module,exports,require){${code}\n}`).join(",");
   return `<!doctype html><html dir="${locale === "ar-SA" ? "rtl" : "ltr"}"><meta charset="utf-8"><style>*{box-sizing:border-box}body{margin:0;background:#08100c;color:white;padding:24px;font-family:Arial,sans-serif}#root{max-width:${gallery ? 1680 : panelWidth}px;margin:auto;${gallery ? "display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:16px" : ""}}${css}</style><div id="root"></div><script>
   const process={env:{NODE_ENV:'development'}},modules={${defs}},cache={};function require(id){if(cache[id])return cache[id].exports;const m={exports:{}};cache[id]=m;modules[id](m,m.exports,require);return m.exports;}
-  const React=require('react');require('react-dom/client').createRoot(document.getElementById('root')).render(${JSON.stringify(gallery ? CLUB_OWNER_PLAN_PREVIEWS.map(plan => plan.id) : [initialPlan])}.map(tier => React.createElement(require(${JSON.stringify(entry)}).default,{key:tier,initialPlan:tier,planPreview:${surface === "active" ? "null" : "tier"},plan:${surface === "active" ? "{active:true,expiresAt:null}" : "null"},activePlanKey:${surface === "active" ? "'vip'" : "null"},activePlanBudget:${surface === "active" ? "null" : "undefined"},realUnlimited:${surface === "active"},owner:{name:'ClubOwner',avatarUrl:'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg"/%3E',city:'',nationality:'',since:''},name:'ClubOwner',locale:${JSON.stringify(locale)},remainingMarketPower:${surface === "cover" || surface === "active" ? "121000000" : "'121M'"},rankingPoints:63.25,rankingPosition:1,draftLocalesEnabled:true})));
+  const React=require('react');require('react-dom/client').createRoot(document.getElementById('root')).render(${JSON.stringify(gallery ? CLUB_OWNER_PLAN_PREVIEWS.map(plan => plan.id) : [initialPlan])}.map(tier => React.createElement(require(${JSON.stringify(entry)}).default,{key:tier,initialPlan:tier,planPreview:${surface === "active" ? "null" : "tier"},plan:${surface === "active" ? "{active:true,expiresAt:null}" : "null"},activePlanKey:${surface === "active" ? "'vip'" : "null"},activePlanBudget:${surface === "active" ? "1000000000" : "undefined"},owner:{name:'ClubOwner',avatarUrl:'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg"/%3E',city:'',nationality:'',since:''},name:'ClubOwner',locale:${JSON.stringify(locale)},remainingMarketPower:${surface === "cover" || surface === "active" ? "121000000" : "'121M'"},rankingPosition:1,draftLocalesEnabled:true})));
   </script></html>`;
 }
 
@@ -340,18 +340,15 @@ if (process.env.TOUCHLINE_RUN_PLAN_BROWSER_TESTS === "1") test("membership cover
           const cover = page.locator('[data-cover-preview="true"]');
           await expect(cover).toBeVisible();
           await expect(cover.locator(".coverPattern")).toHaveAttribute("aria-hidden", "true");
-          for (const [tier, color, rgb] of [["pro", "#e7cf91", "190, 157, 82"], ["master", "#a5e4b6", "111, 191, 143"], ["vip", "#d5b4f6", "162, 116, 206"], ["beta", "#ff888e", "203, 67, 79"], ["standard", "#75bbff", "65, 139, 226"]]) {
-            await expect(cover.locator(`[data-profile-tier="${tier}"]`)).toBeVisible();
-            assert.equal(await cover.locator("[data-profile-tier]:visible").count(), 1);
+          for (const [, color, rgb] of [["pro", "#e7cf91", "190, 157, 82"], ["master", "#a5e4b6", "111, 191, 143"], ["vip", "#d5b4f6", "162, 116, 206"], ["beta", "#ff888e", "203, 67, 79"], ["standard", "#75bbff", "65, 139, 226"]]) {
             assert.equal(await cover.evaluate(el => getComputedStyle(el).getPropertyValue("--cover-accent").trim()), color);
             await expect.poll(() => page.locator('[data-clubowner-header="true"]').evaluate(element =>
               Array.from(element.querySelectorAll(".profile, .bank"), panel => getComputedStyle(panel, "::before").borderTopColor)
             )).toEqual([`rgba(${rgb}, 0.72)`, `rgba(${rgb}, 0.72)`]);
-            await expect(cover.locator(".facts")).toContainText((63.25).toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+            await expect(cover.locator(".facts")).not.toContainText("TouchLine Points");
             await expect(page.locator("[data-current-xi-budget]")).toContainText(new Intl.NumberFormat(locale, { notation: "compact", maximumFractionDigits: 1 }).format(121_000_000));
             await page.getByRole("button", { name: labels.next }).click();
           }
-          await expect(cover.locator('[data-profile-tier="pro"]')).toBeVisible();
           await expect.poll(() => page.locator('[data-clubowner-header="true"]').evaluate(element =>
             Array.from(element.querySelectorAll(".profile, .bank"), panel => getComputedStyle(panel, "::before").borderTopColor)
           )).toEqual(["rgba(190, 157, 82, 0.72)", "rgba(190, 157, 82, 0.72)"]);
@@ -402,10 +399,10 @@ if (process.env.TOUCHLINE_RUN_PLAN_BROWSER_TESTS === "1") test("active VIP keeps
       await expect(header.locator('[role="tab"][data-tier="master"]')).toBeFocused();
       assert.equal(await header.evaluate(element => getComputedStyle(element).getPropertyValue("--clubowner-ink").trim()), "#a5e4b6");
       await expect(header.locator('.bank')).toHaveAttribute("data-active-plan", "vip");
-      await expect(header.locator('[data-profile-active-plan="vip"]')).toBeVisible();
       await expect(header.locator('[data-account-market-power="true"]')).toBeVisible();
-      await expect(header.locator('[data-account-market-power="true"]')).toContainText("∞");
-      await expect(header.locator('[data-profile-tier]')).toHaveCount(0);
+      await expect(header.locator('[data-account-market-power="true"]')).toContainText("121");
+      await expect(header.locator('[data-account-market-power="true"]')).not.toContainText("∞");
+      await expect(header.locator('[data-profile-tier],[data-profile-active-plan]')).toHaveCount(0);
       await expect(header.locator('[data-plan-offer="master"]')).toHaveCount(1);
       assert.equal(await header.locator(".profile").evaluate(element => getComputedStyle(element).borderTopColor), "rgb(145, 213, 111)");
       // Wait for the real pseudo-element transition, not only React's theme
@@ -451,7 +448,7 @@ if (process.env.TOUCHLINE_RUN_PLAN_BROWSER_TESTS === "1") test("premium plans: t
         assert.equal(await bank.locator(".planAction").evaluate(el => getComputedStyle(el).minHeight), "32px");
         assert.equal(await bank.locator(".planAction").evaluate(el => getComputedStyle(el).animationName), "none");
         await next.focus();
-        for (const [id, amount] of [["master", "2B"], ["vip", "∞"], ["beta", "50M"], ["standard", "500M"], ["pro", "1B"]]) {
+        for (const [id, amount] of [["master", "850M"], ["vip", "1B"], ["beta", "50M"], ["standard", "400M"], ["pro", "650M"]]) {
           await page.keyboard.press("Enter");
           await expect(bank).toHaveAttribute("data-plan-preview", id);
           await expect(bank.locator(".marketPowerValue strong")).toHaveText(amount);
@@ -474,8 +471,8 @@ if (process.env.TOUCHLINE_RUN_PLAN_BROWSER_TESTS === "1") test("premium plans: t
           assert.deepEqual(layout, { clipped: false, titleFits: true, separated: true }, `${engine.name()}/${width}/${panelWidth}/${locale}/${id} card content`);
           if (id === "master") await expect(bank.locator("[data-plan-price]")).toHaveText(labels.masterPrice);
           if (id === "vip") {
-            await expect(bank.locator(".planAction")).toHaveText(labels.invitation);
-            await expect(bank.locator(".marketPowerValue small")).toHaveText(labels.unlimited);
+            await expect(bank.locator(".planAction")).toHaveText(labels.details);
+            await expect(bank.locator(".marketPowerValue small")).toHaveText("TC");
             assert.equal(await bank.evaluate(el => getComputedStyle(el).getPropertyValue("--plan-surface").trim()), "#2b1e38");
           }
           if (process.env.TOUCHLINE_PLAN_CAPTURE_PREFIX && engine === chromium && (width === 1280 || (width === 390 && locale === "pt-BR"))) await page.screenshot({ path: `${process.env.TOUCHLINE_PLAN_CAPTURE_PREFIX}-${id}-${width}-${locale}.png`, fullPage: true });

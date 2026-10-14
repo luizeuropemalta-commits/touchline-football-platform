@@ -77,12 +77,12 @@ function fixtureSnapshot(locked = false, formationCode = "4-3-3"): TouchlineFant
   const valid = validateTouchlineFantasyLineup({ selections, geometry: lineupGeometry,
     players: catalogue.map(card => ({ playerId: card.id, clubId: card.clubName, marketValueEur: 1_000_000,
       positionBucket: touchlineMarketPositionBucket(card.position, card.role as TouchlineRosterRole) as Exclude<ReturnType<typeof touchlineMarketPositionBucket>, "outfield"> })),
-    budgetEur: 500_000_000, maxPlayersPerClub: 11, requireComplete: true });
+    budgetEur: 400_000_000, maxPlayersPerClub: 11, requireComplete: true });
   assert.equal(valid.valid, true, "synthetic fixture must satisfy the real eligibility validator before mounting");
   return { userId: "synthetic-local-owner", entitlementActive: true,
-    marketAccess: { planKey: "standard", budgetEur: 500_000_000, allowedClubTeamIds: null },
+    marketAccess: { planKey: "standard", budgetEur: 400_000_000, allowedClubTeamIds: null },
     plan: { active: true, expiresAt: null },
-    config: { budgetEur: 500_000_000, maxPlayersPerClub: 11, lockOffsetMinutes: 0 }, gameweeks: [round], activeGameweek: round,
+    config: { budgetEur: 400_000_000, maxPlayersPerClub: 11, lockOffsetMinutes: 0 }, gameweeks: [round], activeGameweek: round,
     userGameweek: { id: "xi-fixture-lineup", formationCode, state: "DRAFT", totalMarketValueEur: 11_000_000, carriedFromPrevious: false, selectedCoachId: coach.id },
     selections, catalogue, coaches: [{ id: coach.id, coach, slot: createTouchlineArenaCoachSlot(coach, null, "radiant-gold"),
       clubId: club.teamId, clubName: club.name, clubLogoUrl: null, countryCode3: "ENG", competition: null }],
@@ -108,9 +108,9 @@ function exhaustedBetaSnapshot(): TouchlineFantasySnapshot {
       coach: { ...entry.coach, teamId: betaClub.teamId } })) };
 }
 
-test("XI browser fixtures use recognized Standard 500M and exact Beta five-player 50M budgets", () => {
+test("XI browser fixtures use recognized Standard 400M and exact Beta five-player 50M budgets", () => {
   for (const [snapshot, expectedPlan, expectedTotal, expectedRemaining] of [
-    [fixtureSnapshot(), "standard", 11_000_000, 489_000_000],
+    [fixtureSnapshot(), "standard", 11_000_000, 389_000_000],
     [exhaustedBetaSnapshot(), "beta", 50_000_000, 0],
   ] as const) {
     assert.equal(isTouchlineFantasyMarketAccess(snapshot.marketAccess), true);

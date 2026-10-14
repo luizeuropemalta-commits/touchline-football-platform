@@ -13,7 +13,7 @@ test("Market server auth is bounded and fails closed before loading or rendering
   assert.match(source, /if \(isOwnerEmail\(user\.email\)\) notFound\(\)/);
   const authGate = source.indexOf("if (!user) redirect(");
   const ownerGate = source.indexOf("if (isOwnerEmail(user.email)) notFound()");
-  const snapshotRead = source.indexOf("resolveServerReadWithin(loadTouchlineFantasySnapshot(user)");
+  const snapshotRead = source.indexOf("resolveServerReadWithin(loadTouchlineFantasyReadSnapshot(user)");
   const render = source.indexOf("<FantasyGameweekClient");
   assert.ok(authGate >= 0 && ownerGate > authGate && snapshotRead > ownerGate && render > snapshotRead);
   assert.doesNotMatch(source, /canEditCardEngine|demoLineup|initialQaVisualEditor/);

@@ -37,6 +37,17 @@ function fixture(patch: Record<string, string | undefined> = {}) {
     const exports: Record<string, unknown> = {}; cache.set(path, exports);
     const require = (name: string): unknown => {
       if (name === "server-only") return {};
+      if (name === "@/lib/touchlineArena/match-centre") return { normalizeTouchlineMatchCentreTimeZone: () => "UTC" };
+      if (name === "@/lib/touchlineArena/site-locales-release") return { isTouchLineSiteLocalesEnabled: () => false };
+      if (name === "@/lib/touchlineArena/club-owner-profile-metrics") return { clubOwnerRankingPosition: () => null };
+      if (name === "@/lib/touchlineArena/stadium-catalog") return { toTouchlineLiveFixtures: () => [] };
+      if (name === "@/lib/touchlineArena/club-owner-page-identity") return { resolveTouchlineClubOwnerPageIdentity: (user: { id: string; user_metadata: { full_name: string; avatar_url?: string } }, _profile: unknown, avatarUrl: string | null) => ({
+        isAuthenticatedClubOwner: true, id: actor, name: "Real Customer", avatarUrl: avatarUrl ?? user.user_metadata.avatar_url ?? null,
+      }) };
+      if (name === "@/lib/touchlineArena/auth-i18n") return { touchLineAuthEntryHref: (_route: string, locale: string, destination: string) => `/login?lang=${locale}&returnTo=${encodeURIComponent(destination)}` };
+      if (name === "@/lib/touchlineArena/server-read-deadline") return { resolveServerReadWithin: async <T>(value: Promise<T>, fallback: T) => { try { return await value; } catch { return fallback; } } };
+      if (name === "@/lib/touchlineFantasy/market-plan-policy") return { isTouchlineFantasyMarketAccess: () => false };
+      if (name === "@/lib/touchlineFantasy/market-workflow-i18n") return { getTouchlineFantasyMarketWorkflowCopy: () => ({ metadataDescription: "fixture" }) };
       if (name === "@/lib/football-data/fixture-schedule-store") return { readPublicCompetitionFixtures: async () => { calls.push("public-fixtures"); return []; } };
       if (name === "next/headers") return { headers: async () => {
         calls.push("headers"); await state.headersWait;
@@ -48,6 +59,10 @@ function fixture(patch: Record<string, string | undefined> = {}) {
           return state.authentication;
         } } };
       } };
+      if (name === "@/lib/supabase/server") return { createClient: async () => ({ auth: { getUser: async () => {
+        calls.push("getUser"); if (state.authDrift) environment.SUPABASE_URL = "https://changed.invalid";
+        return state.authentication;
+      } } }) };
       if (name === "@supabase/supabase-js") return { ...sdk, createClient: (url: string, key: string) => {
         calls.push("privileged"); assert.equal(url, database); assert.equal(key, "synthetic-service-key-not-a-credential");
         return { rpc: (name: string, args: Record<string, string>) => {
@@ -66,11 +81,14 @@ function fixture(patch: Record<string, string | undefined> = {}) {
       if (name === "next/navigation") return { redirect: (url: string) => { throw Error(`REDIRECT:${url}`); }, notFound: () => { throw Error("NOT_FOUND"); } };
       if (name === "@/components/touchline/ClubOwnerMarketHeader") return { default: (props: Record<string, unknown>) => { headerProps.push(props); return null; }, __esModule: true };
       if (name === "@/app/fantasy/FantasyGameweekClient") return { default: (props: Record<string, unknown>) => { fantasyProps.push(props); return null; }, __esModule: true };
+      // This suite owns the server identity/avatar contract; brand-frame rendering
+      // is covered by its dedicated UI tests and must not keep this VM fixture alive.
+      if (name === "@/components/touchline/TouchlineBrandHeader") return { default: () => null, __esModule: true };
       if (name === "@/components/touchline/TouchlineGlobalNavigation" || name === "@/components/touchline/notifications/TouchlineMarketNotifications") return { default: () => null, __esModule: true };
       // Keep the real new brand frame; audio/auth client controls are outside
       // this server identity/context contract, like the existing UI leaves.
       if (name === "./TouchlinePageControls") return { default: () => null, __esModule: true };
-      if (name === "@/lib/touchlineFantasy/server") return { loadTouchlineFantasySnapshot: async () => { calls.push("fantasy"); return { marker: "unchanged-real-account-snapshot-boundary", config: { budgetEur: 500_000_000 } }; } };
+      if (name === "@/lib/touchlineFantasy/server") return { loadTouchlineFantasyReadSnapshot: async () => { calls.push("fantasy"); return { marker: "unchanged-real-account-snapshot-boundary", config: { budgetEur: 400_000_000 } }; } };
       if (name === "@/lib/touchlineArena/demo-data") return { TOUCHLINE_ENGLAND_CLUBS: [] };
       if (name.endsWith(".css")) return {};
       if (name.startsWith("@/") || name.startsWith(".")) {

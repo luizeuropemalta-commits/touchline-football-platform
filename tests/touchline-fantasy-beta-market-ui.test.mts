@@ -64,7 +64,7 @@ test("Beta renders all 20 club buttons with 16 locks, without selecting a locked
 });
 
 test("the selector allows every club only for a recognized unrestricted plan", () => {
-  for (const marketAccess of [{ planKey: "standard", budgetEur: 500_000_000, allowedClubTeamIds: null }]) {
+  for (const marketAccess of [{ planKey: "standard", budgetEur: 400_000_000, allowedClubTeamIds: null }]) {
     let selected = 0;
     const selector = actualFunction("CompactClubSelector");
     const rendered = selector({ selectedTeamId: "19", locale: "en-GB", marketAccess, onSelect: () => selected++ });

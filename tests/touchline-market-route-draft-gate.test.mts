@@ -93,7 +93,7 @@ function fixture(options: { user?: User | null; configured?: boolean; rejectAuth
     } },
     "@/lib/touchlineArena/auth-i18n": { touchLineAuthEntryHref },
     "@/lib/touchlineArena/server-read-deadline": { resolveServerReadWithin },
-    "@/lib/touchlineFantasy/server": { loadTouchlineFantasySnapshot: async (received: unknown) => {
+    "@/lib/touchlineFantasy/server": { loadTouchlineFantasyReadSnapshot: async (received: unknown) => {
       events.push("snapshot");
       assert.equal(received, user);
       if (options.rejectSnapshot) throw new Error("snapshot unavailable");
@@ -101,6 +101,7 @@ function fixture(options: { user?: User | null; configured?: boolean; rejectAuth
     } },
     "@/lib/touchlineArena/demo-data": { TOUCHLINE_ENGLAND_CLUBS },
     "./market-game.module.css": { default: { page: "page", content: "content" } },
+    "@/components/touchline/TouchlineSignOutButton": { default: () => null },
     "@/lib/touchlineArena/catalogue-locale": { resolveTouchlineCatalogueLocale },
     "@/lib/touchlineFantasy/market-workflow-i18n": { getTouchlineFantasyMarketWorkflowCopy },
   };
@@ -152,7 +153,7 @@ test("default route keeps all draft requests in English and passes false to ever
     assert.equal(elements.find(element => element.type === h.leaves.navigation)!.props.showAudioControl, false);
     const fantasy = elements.find(element => element.type === h.leaves.fantasy)!;
     assert.equal(header.props.accountId, customer.id);
-    assert.equal(header.props.remainingMarketPower, 380_000_000);
+    assert.equal(header.props.remainingMarketPower, 280_000_000);
     assert.equal(fantasy.props.liveTimeZone, "Europe/Malta");
     assert.equal(header.props.avatarContext, h.avatarContext);
     assert.equal((header.props.owner as { name: string }).name, customer.user_metadata.full_name);

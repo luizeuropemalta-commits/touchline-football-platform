@@ -31,7 +31,7 @@ test("Arena measures the pitch rather than the coach when sizing players", () =>
   assert.doesNotMatch(client, /pitchViewportRef\.current\?\.firstElementChild/);
 });
 
-test("Market preserves its ClubOwner photo, name, market power and points", () => {
+test("Market preserves its ClubOwner photo, name and finite market power", () => {
   const market = readFileSync(new URL("../app/clubowner/page.tsx", import.meta.url), "utf8");
   const header = readFileSync(new URL("../components/touchline/ClubOwnerMarketHeader.tsx", import.meta.url), "utf8");
   const start = client.indexOf('data-market-owner-metrics="true"');
@@ -41,7 +41,7 @@ test("Market preserves its ClubOwner photo, name, market power and points", () =
 
   assert.match(market, /resolveTouchlineClubOwnerPageIdentity\(user, undefined, avatarContext\?\.avatarUrl\)/);
   assert.match(market, /<ClubOwnerMarketHeader owner=\{clubOwner\?\.isAuthenticatedClubOwner \? clubOwner : null\}/);
-  assert.match(market, /remainingMarketPower=\{remainingMarketPower\} realUnlimited=\{realUnlimited\}/);
+  assert.match(market, /remainingMarketPower=\{remainingMarketPower\} plan=\{snapshot\?\.plan \?\? null\}/);
   assert.match(market, /Math\.max\(0, marketAccess\.budgetEur - \(snapshot\.userGameweek\?\.totalMarketValueEur \?\? 0\)\)/);
   assert.match(header, /<Image src=\{owner\?\.avatarUrl \|\| "\/icons\/touchline-512\.png"\}/);
   assert.match(header, /owner\?\.name/);

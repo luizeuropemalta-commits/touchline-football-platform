@@ -161,7 +161,7 @@ test("the proxy exposes the Arena entrance and protects account-backed operation
 test("Market owns the authenticated Gameweek builder without the retired Arena", () => {
   assert.match(marketPageSource, /if \(!user\) redirect\(touchLineAuthEntryHref\("\/login", locale, destination, draftLocalesEnabled\)\)/);
   assert.match(marketPageSource, /if \(isOwnerEmail\(user\.email\)\) notFound\(\)/);
-  assert.match(marketPageSource, /loadTouchlineFantasySnapshot\(user\)/);
+  assert.match(marketPageSource, /loadTouchlineFantasyReadSnapshot\(user\)/);
   assert.match(marketPageSource, /<FantasyGameweekClient[^>]*embedded marketPage/);
   assert.doesNotMatch(marketPageSource, /standaloneMarket|<ArenaClient/);
   assert.equal(fs.existsSync(new URL("../app/arena/ArenaClient.tsx", import.meta.url)), false);

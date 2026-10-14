@@ -23,21 +23,21 @@ function fixture(environment: string, patch: Record<string, unknown> = {}) {
     "@/lib/football-data/fixture-schedule-store": { readPublicCompetitionFixtures: async () => [] },
     "@/lib/touchlineArena/stadium-catalog": { toTouchlineLiveFixtures: () => [] },
     "@/lib/touchlineArena/site-locales-release": { isTouchLineSiteLocalesEnabled: () => false },
-    "@/lib/touchlineArena/club-owner-profile-metrics": { clubOwnerRankingPoints: () => 63.25, clubOwnerRankingPosition: () => 1 },
+    "@/lib/touchlineArena/club-owner-profile-metrics": { clubOwnerRankingPosition: () => 1 },
     "@/lib/supabase/server": { createClient: async () => ({ auth: { getUser: async () => ({ error: null, data: { user } }) } }) },
     "@/lib/admin/owner": { isOwnerEmail: () => false },
     "@/lib/touchlineArena/club-owner-page-identity": { resolveTouchlineClubOwnerPageIdentity: () => ({ isAuthenticatedClubOwner: true, name: "Customer", avatarUrl: "" }) },
     "@/lib/touchlineArena/club-owner-avatar-context-server": { createClubOwnerAvatarContextReader: () => async () => null },
     "@/lib/touchlineArena/auth-i18n": { touchLineAuthEntryHref: () => assert.fail("No login navigation expected") },
     "@/lib/touchlineArena/server-read-deadline": { resolveServerReadWithin: (read: unknown) => read },
-    "@/lib/touchlineFantasy/server": { loadTouchlineFantasySnapshot: async () => snapshot },
+    "@/lib/touchlineFantasy/server": { loadTouchlineFantasyReadSnapshot: async () => snapshot },
     "@/lib/touchlineFantasy/market-plan-policy": marketPolicy,
     "@/lib/touchlineArena/demo-data": { TOUCHLINE_ENGLAND_CLUBS: [{ slug: "arsenal", teamId: 19 }] },
     "@/lib/touchlineArena/catalogue-locale": { resolveTouchlineCatalogueLocale: (locale: string) => locale === "pt-BR" ? locale : "en-GB" },
     "@/lib/touchlineFantasy/market-workflow-i18n": { getTouchlineFantasyMarketWorkflowCopy: () => ({ metadataDescription: "ClubOwner" }) },
     "./market-game.module.css": { default: { page: "page", content: "content" } },
   };
-  for (const name of ["@/components/touchline/ClubOwnerMarketHeader", "@/components/touchline/TouchlineBrandHeader", "@/components/touchline/TouchlineGlobalNavigation", "@/app/fantasy/FantasyGameweekClient"]) {
+  for (const name of ["@/components/touchline/ClubOwnerMarketHeader", "@/components/touchline/TouchlineBrandHeader", "@/components/touchline/TouchlineGlobalNavigation", "@/components/touchline/TouchlineSignOutButton", "@/app/fantasy/FantasyGameweekClient"]) {
     dependencies[name] = { default: () => null };
   }
   const exports: { default?: (props: { searchParams: Promise<Params> }) => Promise<Element> } = {};
@@ -60,10 +60,9 @@ test("ClubOwner logo preserves the accepted development preview, locale and club
     const h = fixture("development");
     const first = await h.render({ lang: "pt-BR", club: "arsenal", planPreview: selected });
     assert.equal(first.href, `/clubowner?lang=pt-BR&club=arsenal&planPreview=${selected}`);
-    assert.equal(first.header.props.remainingMarketPower, 121_000_000);
-    assert.equal(first.header.props.realUnlimited, false);
+    assert.equal(first.header.props.remainingMarketPower, 21_000_000);
     assert.equal(first.header.props.activePlanKey, "standard", "preview never replaces the verified account plan");
-    assert.equal(first.header.props.activePlanBudget, 500_000_000);
+    assert.equal(first.header.props.activePlanBudget, 400_000_000);
     const url = new URL(String(first.href), "http://localhost:3318");
     const next = await h.render(Object.fromEntries(url.searchParams));
     assert.equal(next.header.props.planPreview, selected, "Following the logo must not drop the showcase");
@@ -74,24 +73,21 @@ test("real VIP capability is explicit and independent of preview; missing, inact
   const vip = marketPolicy.resolveTouchlineFantasyMarketAccess("vip");
   for (const planPreview of [undefined, "pro", "standard", "vip"]) {
     const actual = await fixture("development", { marketAccess: vip, config: { budgetEur: null } }).render({ planPreview });
-    assert.equal(actual.header.props.realUnlimited, true);
-    assert.equal(actual.header.props.remainingMarketPower, null);
+    assert.equal(actual.header.props.remainingMarketPower, 621_000_000);
     assert.equal(actual.header.props.activePlanKey, "vip");
-    assert.equal(actual.header.props.activePlanBudget, null);
+    assert.equal(actual.header.props.activePlanBudget, 1_000_000_000);
     const standard = await fixture("development").render({ planPreview });
-    assert.equal(standard.header.props.realUnlimited, false);
-    assert.equal(standard.header.props.remainingMarketPower, 121_000_000);
+    assert.equal(standard.header.props.remainingMarketPower, 21_000_000);
   }
   for (const patch of [{ marketAccess: undefined }, { marketAccess: null },
     { marketAccess: { planKey: "vip", budgetEur: 900_000_000, allowedClubTeamIds: null } },
     { marketAccess: vip, entitlementActive: false }]) {
     const result = await fixture("production", patch).render({ planPreview: "vip" });
-    assert.equal(result.header.props.realUnlimited, false);
     assert.equal(result.header.props.remainingMarketPower, null);
     assert.equal(result.header.props.activePlanKey, null);
   }
   const authoritative = await fixture("production", { config: { budgetEur: 900_000_000 } }).render({});
-  assert.equal(authoritative.header.props.remainingMarketPower, 121_000_000, "config drift cannot replace the recognized plan budget");
+  assert.equal(authoritative.header.props.remainingMarketPower, 21_000_000, "config drift cannot replace the recognized plan budget");
 });
 
 test("normal and production navigation cannot promote an arbitrary preview into a real plan", async () => {

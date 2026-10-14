@@ -6,10 +6,10 @@ import { readProductionRankings, type RankingTables } from "./helpers/fantasy-ra
 
 const tables = (): RankingTables => ({
   touchline_fantasy_user_gameweeks: [
-    { id: "veteran-old", user_id: "veteran", gameweek_id: "old", season_id: "season" },
-    { id: "veteran-now", user_id: "veteran", gameweek_id: "now", season_id: "season" },
-    { id: "new-now", user_id: "new", gameweek_id: "now", season_id: "season" },
-    { id: "new-other-season", user_id: "new", gameweek_id: "old-other-season", season_id: "other-season" },
+    { id: "veteran-old", user_id: "veteran", gameweek_id: "old", season_id: "season", market_plan_key_snapshot: "standard" },
+    { id: "veteran-now", user_id: "veteran", gameweek_id: "now", season_id: "season", market_plan_key_snapshot: "standard" },
+    { id: "new-now", user_id: "new", gameweek_id: "now", season_id: "season", market_plan_key_snapshot: "standard" },
+    { id: "new-other-season", user_id: "new", gameweek_id: "old-other-season", season_id: "other-season", market_plan_key_snapshot: "standard" },
   ],
   touchline_fantasy_user_gameweek_scores: [
     { user_gameweek_id: "veteran-old", gameweek_score: "70", settlement_status: "FINAL" },

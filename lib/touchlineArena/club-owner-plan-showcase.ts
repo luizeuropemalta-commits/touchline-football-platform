@@ -1,13 +1,14 @@
 import { resolveTouchlineCatalogueLocale } from "./catalogue-locale.ts";
 import type { TouchLineLocale } from "./i18n.ts";
+import { TOUCHLINE_FANTASY_PLAN_BUDGETS as planBudgets } from "../touchlineFantasy/market-plan-policy.ts";
 
 /** Product proposal only. Never use these values as wallet balances or entitlements. */
 export const CLUB_OWNER_PLAN_PREVIEWS = [
-  { id: "beta", amount: "50M", budget: 50_000_000 },
-  { id: "standard", amount: "500M", budget: 500_000_000 },
-  { id: "pro", amount: "1B", budget: 1_000_000_000 },
-  { id: "master", amount: "2B", budget: 2_000_000_000 },
-  { id: "vip", amount: null, budget: null },
+  { id: "beta", amount: "50M", budget: planBudgets.beta },
+  { id: "standard", amount: "400M", budget: planBudgets.standard },
+  { id: "pro", amount: "650M", budget: planBudgets.pro },
+  { id: "master", amount: "850M", budget: planBudgets.master },
+  { id: "vip", amount: "1B", budget: planBudgets.vip },
 ] as const;
 export type ClubOwnerPlanPreview = typeof CLUB_OWNER_PLAN_PREVIEWS[number]["id"];
 

@@ -310,7 +310,8 @@ test("Fantasy raw-rating transition executes atomically against real SQL", {skip
         "select id from public.touchline_fantasy_gameweeks where round_id=$1", [ids.nextRound],
       )).rows[0].id;
       const ranking = async () => readProductionRankings({
-        touchline_fantasy_user_gameweeks: (await db.query(`select u.id,u.user_id,u.gameweek_id,g.season_id
+        touchline_fantasy_user_gameweeks: (await db.query(`select u.id,u.user_id,u.gameweek_id,g.season_id,
+          'standard'::text as market_plan_key_snapshot
           from public.touchline_fantasy_user_gameweeks u join public.touchline_fantasy_gameweeks g on g.id=u.gameweek_id`)).rows,
         touchline_fantasy_user_gameweek_scores: (await db.query("select * from public.touchline_fantasy_user_gameweek_scores")).rows,
         users: [{id:ids.owner,full_name:"Veteran"},{id:newcomer,full_name:"New manager"},{id:late,full_name:"Late manager"}],

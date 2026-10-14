@@ -1,6 +1,39 @@
 .planShowcase { --plan-accent: #e7cf91; --plan-rgb: 190,157,82; --plan-surface: #14251e; --plan-ink: #f5f1df; min-width: 0; align-self: start; padding: 24px; border: 1px solid rgba(191,222,196,.23); border-radius: 24px; background: linear-gradient(145deg,#132019,#09130f 75%); box-shadow: inset 0 1px rgba(239,255,233,.04),0 16px 40px rgba(0,0,0,.12); color: #eef5ec; container-type: inline-size; }
 .planShowcase[data-embedded] { padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
-.planShowcase[data-embedded] .memberCard { min-height: 200px; padding: 18px; }
+.planShowcase[data-embedded] .memberCard[data-compact] { min-height: 112px; padding: 12px 16px; gap: 4px; }
+.planShowcase[data-embedded] > .planTabs,
+.planShowcase[data-embedded] > .comparison,
+.planShowcase[data-embedded] > .previewNote,
+.planShowcase[data-embedded] > .planPanel > .offerSummary,
+.planShowcase[data-embedded] > .planPanel > .choosePlan { display: none; }
+.planShowcase[data-embedded] .memberCard[data-compact] .cardTop { display: none; }
+.planShowcase[data-embedded] .planBrowse { padding: 4px 0 0; }
+.memberCard[data-compact] .cardTop { justify-content: flex-end; }
+.memberCard[data-compact] .cardIdentity h3 { font-size: clamp(28px,8cqi,38px); margin: 0; }
+.memberCard[data-compact] .tierSeal { width: 40px; height: 40px; }
+.memberCard[data-compact] .tierSeal svg { width: 22px; height: 22px; }
+.memberCard[data-compact] .cardBottom { justify-content: flex-end; }
+.memberCard[data-compact] .cardPower { display: flex; align-items: center; gap: 12px; text-align: start; }
+.memberCard[data-compact] .cardPower > small { max-width: 110px; }
+.memberCard[data-compact] .marketPowerValue { margin-top: 0; }
+.memberCard[data-compact] .marketPowerValue strong { font-size: 28px; }
+.planShowcase[data-embedded] .tierTab { min-height: 44px; gap: 0; }
+.planShowcase[data-embedded] .offerSummary { grid-template-columns: 1fr; padding-top: 0; }
+.planShowcase[data-embedded] .offerSummary > div { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.planShowcase[data-embedded] .planDialog { width: min(460px,calc(100vw - 32px)); background: radial-gradient(ellipse at 100% 0,rgba(var(--plan-rgb),.18),transparent 65%),rgba(9,17,15,.88); -webkit-backdrop-filter: blur(18px) saturate(120%); backdrop-filter: blur(18px) saturate(120%); border-color: rgba(var(--plan-rgb),.65); box-shadow: inset 0 1px rgba(255,255,255,.15),inset 0 0 0 5px rgba(var(--plan-rgb),.045),0 0 30px rgba(var(--plan-rgb),.2),0 24px 100px rgba(0,0,0,.6); }
+.planShowcase[data-embedded] .planDialog::backdrop { background: rgba(2,7,5,.65); -webkit-backdrop-filter: blur(5px); backdrop-filter: blur(5px); }
+@supports not (backdrop-filter: blur(1px)) { .planShowcase[data-embedded] .planDialog { background-color: #0b1511; } }
+.zoomCard { margin-top: 16px; }
+.planShowcase .zoomCard .memberCard { min-height: 205px; }
+.visuallyHidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.dialogDetails { min-width: 0; }
+.dialogDetails > strong { display: block; margin-top: 18px; font-size: 18px; }
+.dialogDetails > p { font-size: 12px; line-height: 1.7; }
+@media (min-width: 760px) {
+  .planShowcase[data-embedded] .planDialog { width: 720px; max-width: calc(100vw - 48px); }
+  .zoomLayout { display: grid; grid-template-columns: minmax(0,1.1fr) minmax(0,1fr); align-items: start; gap: 24px; }
+  .planShowcase .zoomCard .memberCard { min-height: 250px; }
+}
 .planShowcase[data-embedded] .offerSummary { margin-top: 12px; }
 .planShowcase[data-embedded] .offerSummary p { display: none; }
 .planShowcase[data-embedded] .showcaseHeading { margin-bottom: 4px; }

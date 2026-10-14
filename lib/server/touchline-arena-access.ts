@@ -56,9 +56,11 @@ export async function ensureTouchlineArenaAccess(
   user: User,
   providedAdmin?: ArenaAdminClient,
 ): Promise<TouchlineArenaAccessResult> {
+  // This flag comes from the authenticated user's server-controlled app metadata.
+  // Existing access needs no privileged provisioning client or metadata write.
+  if (hasTouchLineArenaAccess(user)) return { accessReady: true, amountTc: 0 };
   const admin = providedAdmin ?? createAdminClient();
   if (!admin) throw new Error("TouchLine Arena access is not configured.");
-  if (hasTouchLineArenaAccess(user)) return { accessReady: true, amountTc: 0 };
 
   // The platform owner stays administration-only. This preserves the existing
   // owner boundary without granting a ClubOwner gameplay wallet.

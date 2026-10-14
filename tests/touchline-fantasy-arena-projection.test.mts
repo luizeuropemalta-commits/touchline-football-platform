@@ -89,7 +89,7 @@ function scenario(input = source, options: { pending?: boolean; state?: string; 
   const golden = {
     userId: "customer", entitlementActive: true,
     marketAccess: resolveTouchlineFantasyMarketAccess("standard"),
-    config: { budgetEur: 500_000_000, maxPlayersPerClub: 11, lockOffsetMinutes: 5 },
+    config: { budgetEur: 400_000_000, maxPlayersPerClub: 11, lockOffsetMinutes: 5 },
     gameweeks: [{ id: "previous", number: 1, state: "FINAL" }, { id: "active", number: 2, state: "MARKET_OPEN" }],
     activeGameweek: { id: "active", number: 2, state: "MARKET_OPEN" },
     userGameweek: { id: "ug", formationCode: "4-3-3", state: "LOCKED", totalMarketValueEur: 10, carriedFromPrevious: false, selectedCoachId: "locked-coach" },
@@ -97,7 +97,7 @@ function scenario(input = source, options: { pending?: boolean; state?: string; 
     catalogue, coaches: [], lineupAlerts: [], matchCardIndicators: [], playerAvailabilityIndicators: [], formationRegistry: geometry,
     gameweekScore: 0, seasonScore: 0, matchHistory: [], gameweekRanking: [], seasonRanking: [],
   };
-  return { run: (projection: "arena" | "full", registry?: object) => core({ id: "customer" }, projection, registry), calls, queries, release, golden };
+  return { run: (projection: "arena" | "full", registry?: object, reconcileLifecycle = true) => core({ id: "customer" }, projection, registry, undefined, reconcileLifecycle), calls, queries, release, golden };
 }
 const plain = (value: unknown) => JSON.parse(JSON.stringify(value));
 
@@ -169,6 +169,14 @@ test("full projection retains immutable gameplay baseline plus plan presentation
   assert.ok(arena.queries.includes("player-availability"));
   assert.ok(!arena.queries.some(q => q === "coaches" || q === "rankings" || q.includes("scores") || q.includes("alerts")));
   assert.ok(!arena.queries.includes("match-cards"));
+});
+
+test("customer read projection never queues lifecycle writers", async () => {
+  const read = scenario();
+  const snapshot = await read.run("full", undefined, false);
+  assert.equal(snapshot?.userGameweek?.state, "LOCKED");
+  assert.deepEqual(plain(read.calls), []);
+  assert.ok(read.queries.includes("touchline_fantasy_user_gameweeks"));
 });
 
 test("live round alone reads persisted match cards in the full projection", async () => {

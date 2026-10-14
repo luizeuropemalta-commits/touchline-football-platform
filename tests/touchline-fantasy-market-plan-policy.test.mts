@@ -25,13 +25,23 @@ test("the server resolver requires a persisted plan and never grants the retired
   });
   assert.deepEqual(resolveTouchlineFantasyMarketAccess("standard"), {
     planKey: "standard",
-    budgetEur: 500_000_000,
+    budgetEur: 400_000_000,
     allowedClubTeamIds: null,
   });
-  assert.deepEqual(resolveTouchlineFantasyMarketAccess("pro"), { planKey: "pro", budgetEur: 1_000_000_000, allowedClubTeamIds: null });
-  assert.deepEqual(resolveTouchlineFantasyMarketAccess("master"), { planKey: "master", budgetEur: 2_000_000_000, allowedClubTeamIds: null });
-  assert.deepEqual(resolveTouchlineFantasyMarketAccess("vip"), { planKey: "vip", budgetEur: null, allowedClubTeamIds: null });
+  assert.deepEqual(resolveTouchlineFantasyMarketAccess("pro"), { planKey: "pro", budgetEur: 650_000_000, allowedClubTeamIds: null });
+  assert.deepEqual(resolveTouchlineFantasyMarketAccess("master"), { planKey: "master", budgetEur: 850_000_000, allowedClubTeamIds: null });
+  assert.deepEqual(resolveTouchlineFantasyMarketAccess("vip"), { planKey: "vip", budgetEur: 1_000_000_000, allowedClubTeamIds: null });
   assert.equal(resolveTouchlineFantasyMarketAccess("preview"), null);
+});
+
+test("all tiers enforce their exact budget and VIP cannot remain unlimited", () => {
+  for (const plan of ["beta", "standard", "pro", "master", "vip"]) {
+    const access = resolveTouchlineFantasyMarketAccess(plan)!;
+    assert.equal(isTouchlineFantasyMarketAccess(access), true);
+    for (const budgetEur of [null, 0, Infinity, access.budgetEur! + 1, access.budgetEur! - 1]) {
+      assert.equal(isTouchlineFantasyMarketAccess({ ...access, budgetEur }), false);
+    }
+  }
 });
 
 test("market access rejects a malformed or unrestricted Beta payload and fails club checks closed", () => {
@@ -81,4 +91,10 @@ test("snapshot queries plan_key server-side and fails closed when that read or p
   assert.match(server, /if \(entitlementData !== null \|\| projection !== "full"\) return null;/);
   assert.match(server, /marketAccess,/);
   assert.match(server, /budgetEur: marketAccess\.budgetEur/);
+});
+
+test("competitive rankings exclude Beta and unknown snapshots before loading scores", () => {
+  const rankingSource = server.slice(server.indexOf("async function loadRankings("),server.indexOf("async function loadCoaches("));
+  assert.match(rankingSource, /\.in\("market_plan_key_snapshot", \["standard", "pro", "master", "vip"\]\)/);
+  assert.ok(rankingSource.indexOf('"market_plan_key_snapshot"') < rankingSource.indexOf('"touchline_fantasy_user_gameweek_scores"'));
 });

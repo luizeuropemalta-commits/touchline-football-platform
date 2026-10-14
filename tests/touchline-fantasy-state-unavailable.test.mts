@@ -9,7 +9,7 @@ const code = stripTypeScriptTypes(source.slice(source.indexOf("export async func
 function handler(user: object | null, load: () => Promise<unknown>) {
   return runInNewContext(code, {
     createClient: async () => ({ auth: { getUser: async () => ({ data: { user } }) } }),
-    loadTouchlineFantasySnapshot: load,
+    loadTouchlineFantasyReadSnapshot: load,
     NextResponse: { json: (body: unknown, options?: unknown) => ({ body, options }) },
   }) as () => Promise<{ body: { ok: boolean; error?: string }; options: { status?: number; headers?: Record<string, string> } }>;
 }

@@ -39,6 +39,17 @@ test("disabled and forged environments are silent without clock work", async () 
     d.seal();
   }
 });
+test("explicit local QA timing is allowed only in development", async () => {
+  const local = { TOUCHLINE_LOCAL_RANKING_TIMINGS: "true", NODE_ENV: "development", NEXT_PUBLIC_SUPABASE_URL: env.NEXT_PUBLIC_SUPABASE_URL };
+  let emitted = 0;
+  const d = createRankingLoadDiagnostics(local, () => 1, () => { emitted++; });
+  await Promise.all(labels.map(label => d.measure(label, () => Promise.resolve(1))));
+  d.seal();
+  assert.equal(emitted, 1);
+  const productionLike = createRankingLoadDiagnostics({ ...local, NODE_ENV: "production" }, () => assert.fail("clock"), () => assert.fail("log"));
+  await productionLike.measure("auth", () => Promise.resolve(1));
+  productionLike.seal();
+});
 test("request state is isolated and logging failure never rejects observed work", async () => {
   let calls = 0;
   const first = createRankingLoadDiagnostics(env, () => 0, () => { calls++; throw new Error("sink"); });

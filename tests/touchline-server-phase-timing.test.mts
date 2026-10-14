@@ -56,6 +56,6 @@ test("retained timed loader finishes its request-local timer and preserves share
   assert.match(server, /try \{ return await loadFantasySnapshotCore\(user, "arena", formationRegistry, timing\); \}\s*finally \{ timing\?\.finish\(\); \}/);
   assert.match(server, /loadTouchlineFantasySnapshot\(user: User\)[\s\S]*?return loadFantasySnapshotCore\(user, "full"\)/);
   assert.match(server, /timing\?\.mark\("lifecycle"\)/);
-  assert.match(server, /const lifecycle = await reconcileTouchlineFantasyGameweeks\(admin, lifecycleGameweek \? \[lifecycleGameweek\] : \[\], true\);\s*if \(lifecycle\.error\) return null;/);
-  assert.ok(server.indexOf('timing?.mark("lifecycle")') < server.indexOf("const lifecycle = await reconcileTouchlineFantasyGameweeks("));
+  assert.match(server, /const lifecycle = reconcileLifecycle\s*\? await reconcileTouchlineFantasyGameweeks\(admin, lifecycleGameweek \? \[lifecycleGameweek\] : \[\], true\)\s*:\s*\{ error: null, reconciled: 0 \}/);
+  assert.match(server, /if \(reconcileLifecycle\) timing\?\.mark\("lifecycle"\)/);
 });

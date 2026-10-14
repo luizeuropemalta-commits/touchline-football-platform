@@ -41,7 +41,10 @@ export async function readProductionRankings(tables: RankingTables, gameweek: st
           return chain;
         },
         in(key: string, values: unknown[]) {
-          assert.equal(key, table === "users" ? "id" : "user_gameweek_id");
+          const expectedKey = table === "users" ? "id"
+            : table === "touchline_fantasy_user_gameweeks" ? "market_plan_key_snapshot"
+              : "user_gameweek_id";
+          assert.equal(key, expectedKey);
           data = data.filter(row => values.includes(row[key]));
           return chain;
         },

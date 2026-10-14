@@ -2,9 +2,9 @@
 
 import Image from "next/image";
 import { useState } from "react";
-import { CalendarDays, Camera, Crown, Diamond, LockKeyhole, Shield } from "lucide-react";
+import { CalendarDays, Camera } from "lucide-react";
 import { getTouchlineClubOwnerMarketCopy } from "@/lib/touchlineArena/club-owner-market-i18n";
-import { getClubOwnerPlanShowcaseCopy, getClubOwnerVipPlanName, type ClubOwnerPlanPreview } from "@/lib/touchlineArena/club-owner-plan-showcase";
+import { getClubOwnerPlanShowcaseCopy, type ClubOwnerPlanPreview } from "@/lib/touchlineArena/club-owner-plan-showcase";
 import { formatClubOwnerRankingPosition, getClubOwnerProfileMetricsCopy } from "@/lib/touchlineArena/club-owner-profile-metrics";
 import ClubOwnerAvatarControl, { type ClubOwnerAvatarUiContext } from "./ClubOwnerAvatarControl";
 import ClubOwnerPlanShowcase from "./ClubOwnerPlanShowcase";
@@ -14,7 +14,7 @@ import styles from "./ClubOwnerMarketHeader.module.css";
 
 type Owner = Readonly<{ name: string; avatarUrl: string; city: string; nationality: string; since: string }>;
 
-export default function ClubOwnerMarketHeader({ owner, locale, accountId, avatarContext, rankingPoints = null, rankingPosition = null, remainingMarketPower = null, realUnlimited = false, plan = null, activePlanKey = null, activePlanBudget, planPreview = null, draftLocalesEnabled = false, avatarSelectionEnabled = false, retentionReady = false }: Readonly<{
+export default function ClubOwnerMarketHeader({ owner, locale, accountId, avatarContext, rankingPosition = null, remainingMarketPower = null, plan = null, activePlanKey = null, activePlanBudget, planPreview = null, draftLocalesEnabled = false, avatarSelectionEnabled = false, retentionReady = false }: Readonly<{
   owner: Owner | null; locale: string; accountId?: string; avatarContext?: ClubOwnerAvatarUiContext | null;
   plan?: Readonly<{ active: boolean; expiresAt: string | null }> | null;
   /** Validated server entitlement only; never derived from a preview or URL. */
@@ -23,32 +23,23 @@ export default function ClubOwnerMarketHeader({ owner, locale, accountId, avatar
   planPreview?: "standard" | "pro" | null;
   draftLocalesEnabled?: boolean;
   avatarSelectionEnabled?: boolean; retentionReady?: boolean;
-  rankingPoints?: number | null;
   rankingPosition?: number | null;
   remainingMarketPower?: number | null;
-  /** Explicit server-derived capability; a null amount or preview never grants it. */
-  realUnlimited?: boolean;
 }>) {
   const copy = getTouchlineClubOwnerMarketCopy(locale, draftLocalesEnabled);
   const labels = getClubOwnerPlanShowcaseCopy(locale, draftLocalesEnabled);
   const metricsCopy = getClubOwnerProfileMetricsCopy(locale, draftLocalesEnabled);
-  const points = owner && typeof rankingPoints === "number" && Number.isFinite(rankingPoints)
-    ? rankingPoints.toLocaleString(metricsCopy.locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : null;
   const name = owner?.name || copy.nameUnavailable;
   const rank = owner && typeof rankingPosition === "number" && Number.isSafeInteger(rankingPosition) && rankingPosition > 0
     ? formatClubOwnerRankingPosition(rankingPosition, locale, draftLocalesEnabled) : null;
   const marketPower = typeof remainingMarketPower === "number" && Number.isFinite(remainingMarketPower)
     ? new Intl.NumberFormat(locale, { notation: "compact", maximumFractionDigits: 1 }).format(Math.max(0, remainingMarketPower))
     : null;
-  const unlimited = realUnlimited === true && plan?.active === true;
   const tier = planPreview;
   // The tier samples are development-only product copy. They intentionally
   // render the acquisition state without changing the viewer's entitlement.
   const planActive = tier ? false : plan?.active === true;
   const currentTier = planActive ? activePlanKey : null;
-  const currentTierName = currentTier === "beta" ? "Beta" : currentTier === "standard" ? copy.planStandard
-    : currentTier === "pro" ? copy.planPro : currentTier === "master" ? "Master"
-    : currentTier === "vip" ? getClubOwnerVipPlanName(locale, draftLocalesEnabled) : null;
   // Choosing a card is deliberately visual-only: it changes the ClubOwner
   // cover treatment, never the profile photo, entitlement, or XI budget.
   const [visualTier, setVisualTier] = useState<ClubOwnerPlanPreview>(() => tier ?? currentTier ?? "beta");
@@ -81,17 +72,8 @@ export default function ClubOwnerMarketHeader({ owner, locale, accountId, avatar
         </div>
         <div className={styles.details}>
           <span className={styles.eyebrow}>{copy.yourProfile}</span>
-          <h2 id="clubowner-heading">{name}{tier ? <>
-            <span className={`${styles.proBadge} ${styles.betaBadge}`} data-profile-tier="beta"><Shield size={14} aria-hidden="true" />Beta</span>
-            <span className={`${styles.proBadge} ${styles.standardBadge}`} data-profile-tier="standard"><Shield size={14} aria-hidden="true" />{copy.planStandard}</span>
-            <span className={styles.proBadge} data-profile-tier="pro"><Crown size={14} aria-hidden="true" />{copy.planPro}</span>
-            <span className={`${styles.proBadge} ${styles.masterBadge}`} data-profile-tier="master"><Diamond size={14} aria-hidden="true" />Master</span>
-            <span className={`${styles.proBadge} ${styles.vipBadge}`} data-profile-tier="vip"><LockKeyhole size={14} aria-hidden="true" />VIP</span>
-          </> : currentTierName ? <span className={`${styles.proBadge} ${currentTier === "beta" ? styles.betaBadge : currentTier === "standard" ? styles.standardBadge : currentTier === "master" ? styles.masterBadge : currentTier === "vip" ? styles.vipBadge : ""}`} data-profile-active-plan={currentTier}>
-            {currentTier === "vip" ? <LockKeyhole size={14} aria-hidden="true" /> : currentTier === "master" ? <Diamond size={14} aria-hidden="true" /> : currentTier === "pro" ? <Crown size={14} aria-hidden="true" /> : <Shield size={14} aria-hidden="true" />}{currentTierName}
-          </span> : null}</h2>
+          <h2 id="clubowner-heading">{name}</h2>
           <dl className={styles.facts}>
-            <div><dt>{metricsCopy.points}</dt><dd aria-label={points === null ? metricsCopy.unavailable : undefined}>{points ?? "—"}</dd></div>
             <div><dt>{metricsCopy.ranking}</dt><dd aria-label={rank === null ? metricsCopy.unavailable : undefined}>{rank ?? "—"}</dd></div>
             <div><dt>{metricsCopy.followers}</dt><dd aria-label={metricsCopy.unavailable}>—</dd></div>
           </dl>
@@ -99,11 +81,11 @@ export default function ClubOwnerMarketHeader({ owner, locale, accountId, avatar
       </div>
     </section>
     <section className={styles.bank} data-plan-state={planActive ? "active" : "inactive"} data-active-plan={currentTier ?? undefined} aria-labelledby="clubowner-plan-heading">
-      <div className={styles.bankHeading}><CalendarDays size={25} aria-hidden="true" /><h2 id="clubowner-plan-heading">{copy.plan}{currentTierName ? <span className={styles.currentPlanName}>{currentTierName}</span> : null}</h2></div>
-      <ClubOwnerPlanShowcase embedded initialPlan={tier ?? currentTier ?? "beta"} activePlanKey={currentTier} activePlanBudget={currentTier ? activePlanBudget : undefined} name={name} locale={locale} remainingMarketPower={marketPower} realUnlimited={unlimited} draftLocalesEnabled={draftLocalesEnabled} canChoose={tier === null && currentTier !== "vip"} onPreviewChange={setVisualTier} />
+      <div className={styles.bankHeading}><CalendarDays size={25} aria-hidden="true" /><h2 id="clubowner-plan-heading">{copy.plan}</h2></div>
+      <ClubOwnerPlanShowcase embedded initialPlan={tier ?? currentTier ?? "beta"} activePlanKey={currentTier} activePlanBudget={currentTier ? activePlanBudget : undefined} name={name} locale={locale} remainingMarketPower={marketPower} draftLocalesEnabled={draftLocalesEnabled} canChoose={tier === null} onPreviewChange={setVisualTier} />
       <dl className={styles.currentBudget} aria-label={copy.plan}>
-        <div><dt>{labels.currentBudget}</dt><dd data-account-market-power="true" aria-label={unlimited ? `${copy.marketPower}: ${labels.unlimited}` : marketPower === null ? copy.marketPowerUnavailable : `${copy.marketPower} ${marketPower} TouchLine Credits`}>
-          <span className={styles.marketPowerValue}><TouchlineCoinMark size={19} /><strong>{unlimited ? "∞" : marketPower ?? "—"}</strong><small>{unlimited ? labels.unlimited : "TC"}</small></span>
+        <div><dt>{labels.currentBudget}</dt><dd data-account-market-power="true" aria-label={marketPower === null ? copy.marketPowerUnavailable : `${copy.marketPower} ${marketPower} TouchLine Credits`}>
+          <span className={styles.marketPowerValue}><TouchlineCoinMark size={19} /><strong>{marketPower ?? "—"}</strong><small>TC</small></span>
         </dd></div>
       </dl>
       {validity ? <p className={styles.validity} data-plan-validity="true">{validity}</p> : null}

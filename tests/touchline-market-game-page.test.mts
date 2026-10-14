@@ -8,7 +8,7 @@ test("Market is the authenticated game page, not a redirect to ClubOwner", () =>
   const page = source("app/clubowner/page.tsx");
   assert.match(page, /auth\.getUser\(/);
   assert.match(page, /isOwnerEmail\(user\.email\)/);
-  assert.match(page, /loadTouchlineFantasySnapshot\(user\)/);
+  assert.match(page, /loadTouchlineFantasyReadSnapshot\(user\)/);
   assert.match(page, /<FantasyGameweekClient[\s\S]*embedded[\s\S]*marketPage/);
   assert.doesNotMatch(page, /ClubOwnerProfileRenderer|redirect\(`\/my-club|ArenaClient/);
 });
