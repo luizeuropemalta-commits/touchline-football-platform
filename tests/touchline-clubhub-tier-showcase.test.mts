@@ -4,10 +4,13 @@ import test from "node:test";
 import {
   TOUCHLINE_CLUBHUB_TIER_ORDER,
   selectTouchlineCoachTierRepresentatives,
+  selectTouchlineCoachTierRepresentativesFromRanking,
   selectTouchlinePlayerTierRepresentatives,
 } from "../lib/touchlineArena/clubhub-tier-showcase.ts";
 import type { TouchlineCardTierKey } from "../lib/touchlineArena/card-rules.ts";
 import type { ClubOwnerSquadCard } from "../lib/touchlineArena/demo-data.ts";
+import { TOUCHLINE_LIVE_COACHES } from "../lib/touchlineArena/live-coaches.ts";
+import type { TouchLineCoachRankingState } from "../lib/touchlineArena/coach-ranking-server.ts";
 
 function publishedCard(
   name: string,
@@ -77,4 +80,23 @@ test("coach border representatives preserve the same immutable tier as their pro
   for (const item of representatives) {
     if (item.snapshot) assert.equal(item.tierKey, item.classification?.tierKey);
   }
+});
+
+test("a complete persisted coach table fills every gallery border from its current rank", () => {
+  assert.equal(TOUCHLINE_LIVE_COACHES.length, 20);
+  const ranking: TouchLineCoachRankingState = {
+    phase: "ranked", snapshotId: "snapshot-current", seasonId: "2026-27", scoringVersion: "coach_scoring_v2",
+    fixtureIds: ["fixture-current"], generatedAt: "2026-10-14T00:00:00.000Z",
+    rows: TOUCHLINE_LIVE_COACHES.map((snapshot, index) => ({
+      rank: index + 1, coachProviderId: snapshot.coach.providerId, coachName: snapshot.coach.displayName,
+      clubName: snapshot.clubName, touchlinePoints: 20 - index, wins: 0, draws: 0, losses: 0, awayWins: 0,
+      home: { wins: 0, draws: 0, losses: 0, touchlinePoints: 0 },
+      away: { wins: 0, draws: 0, losses: 0, touchlinePoints: 0 },
+    })),
+  };
+  const representatives = selectTouchlineCoachTierRepresentativesFromRanking(ranking);
+  assert.equal(representatives.length, 7);
+  assert.equal(representatives.every((item) => item.snapshot && item.rankingRow), true);
+  assert.equal(representatives.at(-1)?.tierKey, "ruby-red");
+  assert.equal(representatives.at(-1)?.rankingRow?.rank, 18);
 });

@@ -10,7 +10,9 @@ test("Top 11 never turns a simulated preseason ranking into an official selectio
   assert.match(page, /loadTouchLinePublishedTopEleven/);
   assert.doesNotMatch(page, /source:\s*"simulation"/);
   assert.match(projection, /resolveTouchlinePublishedGameweekBest\(\{ selection: publishedTopEleven/);
-  assert.match(page, /complete\.then\(\(\[, selection, cards\]\) => projectTouchlineRankingsHighlights\(cards, selection\)\)/);
+  assert.match(page, /complete\.then\(\(\[ranking, selection, cards\]\)/);
+  assert.match(page, /projectTouchlineRankingsHighlights\(cards, selection,/);
+  assert.match(page, /cardGoalsLeaderIds\(ranking\.cardGoals, ranking\.snapshotId\)/);
   assert.match(page, /highlights=\{highlights\}/);
   assert.match(client, /gameweekBest\.phase === "ready"/);
   assert.match(client, /seasonSelectionPending/);

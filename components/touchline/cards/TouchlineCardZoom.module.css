@@ -128,7 +128,7 @@
 
 /* Preserve the safe fallback in browsers without :has(), but do not reserve
    an absent crown above ordinary cards in supporting browsers. */
-.cardColumn:not(:has([data-card-leadership-crown="true"], [data-coach-ranking-leader="true"])) {
+.cardColumn:not(:has([data-card-golden-ball="true"], [data-coach-ranking-leader="true"])) {
   padding-top: 0;
 }
 
@@ -141,7 +141,7 @@
 
 /* The modal card column already owns an explicit crown-safe stage. Avoid
    applying the normal-surface envelope twice in the zoom presentation. */
-.expandedCard > [data-card-leadership-crown="true"],
+.expandedCard > [data-card-golden-ball="true"],
 .expandedCard > [data-coach-ranking-leader="true"] {
   margin-top: 0 !important;
 }

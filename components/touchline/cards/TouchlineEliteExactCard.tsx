@@ -46,9 +46,9 @@ import {
   type TouchlineCardStatIcon,
 } from "@/lib/touchlineArena/card-stat-presentation";
 import {
-  TOUCHLINE_PLAYER_LEADER_CROWN_ASSET,
-  touchlinePlayerLeaderCrownStyle,
-} from "@/lib/touchlineArena/player-leader-crown-presentation";
+  TOUCHLINE_PLAYER_LEADER_GOLDEN_BALL_ASSET,
+  touchlinePlayerLeaderGoldenBallStyle,
+} from "@/lib/touchlineArena/player-leader-golden-ball-presentation";
 import publicPresentationStyles from "./TouchlinePublicCardPresentation.module.css";
 import { getTouchlineExactCardCopy } from "@/lib/touchlineArena/exact-card-i18n";
 import { resolveTouchlineCatalogueLocale } from "@/lib/touchlineArena/catalogue-locale";
@@ -322,7 +322,7 @@ type Props = {
   runtimeLocaleOverride?: string | null;
   draftLocalesEnabled?: boolean;
   subscribeToRanking?: boolean;
-  /** Explicit published input for the exact crown QA fixture, never inherited authority. */
+  /** Explicit published input for the exact award QA fixture, never inherited authority. */
   explicitQaPlayerRanking?: unknown;
   enableInteractiveNeon?: boolean;
   showCardActions?: boolean;
@@ -958,24 +958,24 @@ export function TouchlineEliteExactCard({
   const calibrationPresentation = tierCalibrationPresentation
     ?? (optimizeForLiveCompact ? "compact" : "normal");
   const tierComponentCalibration = resolveTouchlineCardTierComponentCalibration(marketTier?.key);
-  const isCanonicalPlayerLeader = touchlinePlayerCrownEligibility({
+  const hasGoldenBall = touchlinePlayerCrownEligibility({
     state: activeRanking,
     playerId: player.canonicalPlayerId,
   });
-  const playerLeaderCrownStyle = touchlinePlayerLeaderCrownStyle(scale);
+  const playerLeaderGoldenBallStyle = touchlinePlayerLeaderGoldenBallStyle(scale);
   // Static canvases may be resized by the zoom host without updating React's
   // initial scale. The sibling crown must consume that same live CSS scale.
-  const basePlayerLeaderCrownStyle = touchlinePlayerLeaderCrownStyle(1);
-  const crownRenderScale = `var(--touchline-card-static-scale, ${scale})`;
+  const basePlayerLeaderGoldenBallStyle = touchlinePlayerLeaderGoldenBallStyle(1);
+  const goldenBallRenderScale = `var(--touchline-card-static-scale, ${scale})`;
   const headAwardScale = "var(--touchline-head-award-scale, 1)";
-  // The crown intentionally lives above the official card art. Its host must
-  // reserve that exact visual envelope in normal surfaces, otherwise a grid,
-  // carousel or small-screen viewport can cut the crown at its own boundary.
+  // The Golden Ball intentionally lives above the official card art. Its host
+  // reserves that exact visual envelope so grids, carousels and small screens
+  // cannot cut the award at their boundary.
   // Zoom and profile stages already reserve this space and override the
-  // margin locally (without changing card or crown calibration).
-  const hasHeadAward = isCanonicalPlayerLeader || hasGoldenBoot;
-  const leadershipCrownEnvelope = hasHeadAward
-    ? Math.max(0, -playerLeaderCrownStyle.top)
+  // margin locally without changing card or award calibration.
+  const hasHeadAward = hasGoldenBall || hasGoldenBoot;
+  const leadershipAwardEnvelope = hasHeadAward
+    ? Math.max(0, -playerLeaderGoldenBallStyle.top)
     : 0;
   // The selected artwork is only used by a published card. An asset cannot
   // turn an unpublished football player into a game card.
@@ -1397,7 +1397,7 @@ export function TouchlineEliteExactCard({
       data-card-editorial-state={reviewRequired ? "review_required" : publicationPending ? "publication_pending" : editorialCard ? "published" : "unpublished"}
       data-card-motion={isEditable ? "false" : "true"}
       data-card-neon="permanent-tier-art"
-      data-card-leadership-crown={isCanonicalPlayerLeader ? "true" : "false"}
+      data-card-golden-ball={hasGoldenBall ? "true" : "false"}
       data-card-golden-boot={hasGoldenBoot ? "true" : "false"}
       data-neon-active={forceNeonActive || isNeonActive ? "true" : "false"}
       onClick={(event) => {
@@ -1419,8 +1419,8 @@ export function TouchlineEliteExactCard({
         position: "relative",
         margin: hasHeadAward
           ? hasStaticRenderScale
-            ? `calc(${-basePlayerLeaderCrownStyle.top}px * ${crownRenderScale} * ${headAwardScale}) auto 0`
-            : `calc(${leadershipCrownEnvelope}px * ${headAwardScale}) auto 0`
+            ? `calc(${-basePlayerLeaderGoldenBallStyle.top}px * ${goldenBallRenderScale} * ${headAwardScale}) auto 0`
+            : `calc(${leadershipAwardEnvelope}px * ${headAwardScale}) auto 0`
           : "0 auto",
         maxWidth: "100%",
         overflow: "visible",
@@ -1429,10 +1429,10 @@ export function TouchlineEliteExactCard({
         "--touchline-club-crest-color": resolvedClub?.accent ?? cardTraceColor,
       } as React.CSSProperties}
     >
-      {isCanonicalPlayerLeader ? (
+      {hasGoldenBall ? (
         <img
-          data-touchline-player-leader-crown="true"
-          src={TOUCHLINE_PLAYER_LEADER_CROWN_ASSET}
+          data-touchline-player-golden-ball="true"
+          src={TOUCHLINE_PLAYER_LEADER_GOLDEN_BALL_ASSET}
           alt=""
           aria-hidden="true"
           draggable={false}
@@ -1442,14 +1442,14 @@ export function TouchlineEliteExactCard({
             position: "absolute",
             left: "50%",
             top: hasStaticRenderScale
-              ? `calc(${basePlayerLeaderCrownStyle.top}px * ${crownRenderScale} * ${headAwardScale})`
-              : `calc(${playerLeaderCrownStyle.top}px * ${headAwardScale})`,
+              ? `calc(${basePlayerLeaderGoldenBallStyle.top}px * ${goldenBallRenderScale} * ${headAwardScale})`
+              : `calc(${playerLeaderGoldenBallStyle.top}px * ${headAwardScale})`,
             width: hasStaticRenderScale
-              ? `calc(${basePlayerLeaderCrownStyle.width}px * ${crownRenderScale} * ${headAwardScale})`
-              : `calc(${playerLeaderCrownStyle.width}px * ${headAwardScale})`,
+              ? `calc(${basePlayerLeaderGoldenBallStyle.width}px * ${goldenBallRenderScale} * ${headAwardScale})`
+              : `calc(${playerLeaderGoldenBallStyle.width}px * ${headAwardScale})`,
             height: "auto",
             zIndex: 90,
-            transform: hasGoldenBoot ? "translateX(-104%)" : "translateX(-50%)",
+            transform: hasGoldenBoot ? "translateX(-108%)" : "translateX(-50%)",
             transformOrigin: "bottom center",
             pointerEvents: "none",
             userSelect: "none",
@@ -1460,15 +1460,15 @@ export function TouchlineEliteExactCard({
         label={exactCopy.goldenBootLabel}
         style={{ position: "absolute", left: "50%",
           top: hasStaticRenderScale
-            ? `calc(${basePlayerLeaderCrownStyle.top}px * ${crownRenderScale} * ${headAwardScale})`
-            : `calc(${playerLeaderCrownStyle.top}px * ${headAwardScale})`,
+            ? `calc(${basePlayerLeaderGoldenBallStyle.top}px * ${goldenBallRenderScale} * ${headAwardScale})`
+            : `calc(${playerLeaderGoldenBallStyle.top}px * ${headAwardScale})`,
           width: hasStaticRenderScale
-            ? `calc(${basePlayerLeaderCrownStyle.width}px * ${crownRenderScale} * ${headAwardScale})`
-            : `calc(${playerLeaderCrownStyle.width}px * ${headAwardScale})`,
+            ? `calc(${basePlayerLeaderGoldenBallStyle.width}px * ${goldenBallRenderScale} * ${headAwardScale})`
+            : `calc(${playerLeaderGoldenBallStyle.width}px * ${headAwardScale})`,
           height: hasStaticRenderScale
-            ? `calc(${-basePlayerLeaderCrownStyle.top - 8}px * ${crownRenderScale} * ${headAwardScale})`
-            : `calc(${Math.max(0, -playerLeaderCrownStyle.top - 8 * scale)}px * ${headAwardScale})`,
-          transform: isCanonicalPlayerLeader ? "translateX(4%)" : "translateX(-50%)",
+            ? `calc(${-basePlayerLeaderGoldenBallStyle.top - 8}px * ${goldenBallRenderScale} * ${headAwardScale})`
+            : `calc(${Math.max(0, -playerLeaderGoldenBallStyle.top - 8 * scale)}px * ${headAwardScale})`,
+          transform: hasGoldenBall ? "translateX(7%)" : "translateX(-50%)",
           transformOrigin: "bottom center" }}
       /> : null}
       <TouchlineCardPerimeterTrace tier={marketTier?.key ?? "neutral"} />

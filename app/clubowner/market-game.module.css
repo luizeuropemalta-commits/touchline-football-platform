@@ -1,8 +1,30 @@
-.page { min-height: 100dvh; color: #f3f8f1; background: linear-gradient(135deg, #07100e, #101c1b 55%, #070e0d); }
+.page {
+  --clubowner-rgb: 163,255,18;
+  --clubowner-secondary-rgb: 98,164,62;
+  min-height: 100dvh;
+  color: #f3f8f1;
+  position: relative;
+  isolation: isolate;
+  background: #020707;
+}
+.page::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  /* Use the same two-light canvas as ClubHub. A preview changes only the
+     visual atmosphere, never the account plan, balance, cards or game data. */
+  background:
+    radial-gradient(circle at 16% 18%, rgba(var(--clubowner-rgb), .28), transparent 26%),
+    radial-gradient(circle at 84% 14%, rgba(var(--clubowner-secondary-rgb), .18), transparent 22%),
+    linear-gradient(135deg, #020707 0%, #06110d 44%, #030503 100%);
+  transition: background 320ms ease;
+}
 /* The viewed plan belongs to this page only; sibling Market panels inherit it. */
-.page:has([data-clubowner-header="true"][data-plan-preview="beta"]) { --clubowner-rgb: 203,67,79; }
-.page:has([data-clubowner-header="true"][data-plan-preview="standard"]) { --clubowner-rgb: 65,139,226; }
-.page:has([data-clubowner-header="true"][data-plan-preview="pro"]) { --clubowner-rgb: 190,157,82; }
-.page:has([data-clubowner-header="true"][data-plan-preview="master"]) { --clubowner-rgb: 111,191,143; }
-.page:has([data-clubowner-header="true"][data-plan-preview="vip"]) { --clubowner-rgb: 162,116,206; }
+.page:has([data-clubowner-header="true"][data-plan-preview="beta"]) { --clubowner-rgb: 203,67,79; --clubowner-secondary-rgb: 132,38,48; }
+.page:has([data-clubowner-header="true"][data-plan-preview="standard"]) { --clubowner-rgb: 65,139,226; --clubowner-secondary-rgb: 36,89,163; }
+.page:has([data-clubowner-header="true"][data-plan-preview="pro"]) { --clubowner-rgb: 190,157,82; --clubowner-secondary-rgb: 125,91,37; }
+.page:has([data-clubowner-header="true"][data-plan-preview="master"]) { --clubowner-rgb: 111,191,143; --clubowner-secondary-rgb: 54,126,78; }
+.page:has([data-clubowner-header="true"][data-plan-preview="vip"]) { --clubowner-rgb: 162,116,206; --clubowner-secondary-rgb: 103,64,146; }
 .content { width: 100%; margin-inline: auto; padding: clamp(8px, 1.4vw, 24px); }

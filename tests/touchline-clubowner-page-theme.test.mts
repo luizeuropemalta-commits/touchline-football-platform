@@ -58,9 +58,38 @@ test("ClubOwner plan themes reach sibling Market panels without recoloring cards
           assert.deepEqual(await unchanged(), before, `${tier}: protected artwork and other route stay unchanged`);
           assert.equal(await page.locator("#customer-market").getAttribute("data-plan-theme"), "vip", "preview leaves the server entitlement attribute intact");
         }
+        await page.locator("main.page").evaluate(element => { (element as HTMLElement).style.minHeight = "3000px"; });
+        for (const scrollY of [1200, 600, 0]) {
+          await page.evaluate(y => window.scrollTo(0, y), scrollY);
+          const canvas = await page.locator("main.page").evaluate(element => {
+            const style = getComputedStyle(element, "::before");
+            return { position: style.position, top: style.top, bottom: style.bottom, pointerEvents: style.pointerEvents, background: style.backgroundImage };
+          });
+          assert.equal(canvas.position, "fixed");
+          assert.equal(canvas.top, "0px");
+          assert.equal(canvas.bottom, "0px");
+          assert.equal(canvas.pointerEvents, "none");
+          assert.ok(canvas.background.includes("radial-gradient"));
+        }
         assert.deepEqual(errors, []);
         await page.close();
       }
     } finally { await browser.close(); }
+  }
+});
+
+test("ClubOwner uses the same two-light page canvas composition as ClubHub", () => {
+  const clubHub = readFileSync(new URL("../app/touchline-clubs/[club]/page.tsx", import.meta.url), "utf8");
+  const clubOwner = readFileSync(new URL("../app/clubowner/market-game.module.css", import.meta.url), "utf8");
+  assert.match(clubHub, /radial-gradient\(circle at 16% 18%/);
+  assert.match(clubHub, /radial-gradient\(circle at 84% 14%/);
+  assert.match(clubHub, /linear-gradient\(135deg, #020707 0%, #06110d 44%, #030503 100%\)/);
+  assert.match(clubOwner, /radial-gradient\(circle at 16% 18%, rgba\(var\(--clubowner-rgb\), \.28\), transparent 26%\)/);
+  assert.match(clubOwner, /radial-gradient\(circle at 84% 14%, rgba\(var\(--clubowner-secondary-rgb\), \.18\), transparent 22%\)/);
+  assert.match(clubOwner, /linear-gradient\(135deg, #020707 0%, #06110d 44%, #030503 100%\)/);
+  assert.match(clubOwner, /\.page::before\s*\{[^}]*position: fixed;[^}]*inset: 0;[^}]*pointer-events: none;/);
+  assert.doesNotMatch(clubOwner, /background-attachment: fixed/);
+  for (const tier of ["beta", "standard", "pro", "master", "vip"]) {
+    assert.match(clubOwner, new RegExp(`data-plan-preview="${tier}"\\]\\) \\{ --clubowner-rgb: [^;]+; --clubowner-secondary-rgb:`));
   }
 });

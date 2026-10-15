@@ -7,13 +7,13 @@ function source(relativePath: string) {
   return readFileSync(path.join(process.cwd(), relativePath), "utf8");
 }
 
-test("ordinary zoom cards do not reserve an absent player or coach crown", () => {
+test("ordinary zoom cards do not reserve an absent player award or coach crown", () => {
   const css = source("components/touchline/cards/TouchlineCardZoom.module.css");
-  assert.match(css, /\.cardColumn:not\(:has\(\[data-card-leadership-crown="true"\], \[data-coach-ranking-leader="true"\]\)\) \{\s*padding-top: 0;/);
+  assert.match(css, /\.cardColumn:not\(:has\(\[data-card-golden-ball="true"\], \[data-coach-ranking-leader="true"\]\)\) \{\s*padding-top: 0;/);
   assert.match(css, /\.cardColumn \{[^}]*padding-top: var\(--touchline-card-zoom-crown-safe-top\)/);
 });
 
-test("the shared card zoom reserves a leader-crown safe zone without changing crown art", () => {
+test("the shared card zoom reserves a Golden Ball or coach-crown safe zone", () => {
   const zoomCss = source("components/touchline/cards/TouchlineCardZoom.module.css");
   const playerCard = source("components/touchline/cards/TouchlineEliteExactCard.tsx");
   const coachCard = source("components/touchline/cards/TouchlineCoachCard.tsx");
@@ -22,22 +22,22 @@ test("the shared card zoom reserves a leader-crown safe zone without changing cr
   assert.match(zoomCss, /\.cardColumn \{[\s\S]*?padding-top: var\(--touchline-card-zoom-crown-safe-top\)/);
   assert.match(zoomCss, /\.cardColumn \{[\s\S]*?overflow: visible/);
   assert.match(zoomCss, /\.trigger \{[\s\S]*?display: flow-root[\s\S]*?overflow: visible/);
-  assert.match(zoomCss, /\.expandedCard > \[data-card-leadership-crown="true"\],[\s\S]*?margin-top: 0 !important/);
+  assert.match(zoomCss, /\.expandedCard > \[data-card-golden-ball="true"\],[\s\S]*?margin-top: 0 !important/);
   assert.match(zoomCss, /100dvh - 72px - var\(--touchline-card-zoom-crown-safe-top\)/);
   assert.match(zoomCss, /--touchline-card-zoom-crown-safe-top: clamp\(82px, 21vw, 98px\)/);
   assert.match(zoomCss, /--touchline-card-zoom-crown-safe-top: calc\(var\(--touchline-card-zoom-width\) \* \.30\)/);
   assert.match(zoomCss, /100dvh - 64px - var\(--touchline-card-zoom-crown-safe-top\)/);
-  assert.match(playerCard, /src=\{TOUCHLINE_PLAYER_LEADER_CROWN_ASSET\}/);
+  assert.match(playerCard, /src=\{TOUCHLINE_PLAYER_LEADER_GOLDEN_BALL_ASSET\}/);
   assert.match(coachCard, /src=\{TOUCHLINE_PLAYER_LEADER_CROWN_ASSET\}/);
 });
 
-test("player and coach profiles reserve the same uncropped leader-crown envelope", () => {
+test("player and coach profiles reserve the same uncropped leader award envelope", () => {
   const playerProfile = source("app/touchline-players/[player]/player-profile.module.css");
   const coachProfile = source("app/touchline-coaches/[coach]/page.tsx");
 
   assert.match(playerProfile, /\.identityBand \{[\s\S]*?overflow: visible/);
   assert.match(playerProfile, /\.cardFrame \{[\s\S]*?padding-top: clamp\(98px, 16vw, 128px\)/);
-  assert.match(playerProfile, /\.cardFrame > \[data-card-leadership-crown="true"\] \{[\s\S]*?margin-top: 0 !important/);
+  assert.match(playerProfile, /\.cardFrame > \[data-card-golden-ball="true"\] \{[\s\S]*?margin-top: 0 !important/);
   assert.match(playerProfile, /width: 310px;[\s\S]*?padding-top: clamp\(82px, 21vw, 98px\)/);
   assert.match(coachProfile, /\.coach-profile-card \{ width:min\(100%,300px\); justify-self:center; padding-top:0; box-sizing:border-box; overflow:visible; \}/);
   assert.match(coachProfile, /\.coach-profile-card:has\(> \[data-coach-ranking-leader="true"\]\) \{ padding-top:96px; \}/);

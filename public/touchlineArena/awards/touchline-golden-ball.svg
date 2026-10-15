@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-labelledby="title desc">
+  <title id="title">TouchLine Golden Ball</title>
+  <desc id="desc">A premium golden football award on a dark faceted base.</desc>
+  <defs>
+    <linearGradient id="goldenBallBody" x1="29" y1="22" x2="126" y2="137" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fff8bc"/>
+      <stop offset=".2" stop-color="#ffd95a"/>
+      <stop offset=".53" stop-color="#d79918"/>
+      <stop offset=".77" stop-color="#ffed8a"/>
+      <stop offset="1" stop-color="#9a5706"/>
+    </linearGradient>
+    <radialGradient id="goldenBallGlow" cx="0" cy="0" r="1" gradientTransform="matrix(54 0 0 54 75 71)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fffde0" stop-opacity=".9"/>
+      <stop offset=".52" stop-color="#ffc928" stop-opacity=".22"/>
+      <stop offset="1" stop-color="#ffc928" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="goldenBallFacet" x1="49" y1="42" x2="106" y2="116" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fff4aa"/>
+      <stop offset=".45" stop-color="#d8870e"/>
+      <stop offset="1" stop-color="#6d3500"/>
+    </linearGradient>
+    <linearGradient id="goldenBallBase" x1="45" y1="113" x2="119" y2="145" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#344955"/>
+      <stop offset=".42" stop-color="#0d1a21"/>
+      <stop offset=".72" stop-color="#263b47"/>
+      <stop offset="1" stop-color="#050b10"/>
+    </linearGradient>
+    <filter id="goldenBallShadow" x="-40%" y="-40%" width="180%" height="190%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#000" flood-opacity=".72"/>
+      <feDropShadow dx="0" dy="0" stdDeviation="5" flood-color="#ffcf36" flood-opacity=".28"/>
+    </filter>
+    <filter id="goldenBallSpark" x="-200%" y="-200%" width="500%" height="500%">
+      <feGaussianBlur stdDeviation="1.2"/>
+    </filter>
+  </defs>
+  <g filter="url(#goldenBallShadow)">
+    <ellipse cx="80" cy="134" rx="53" ry="10" fill="#000" fill-opacity=".52"/>
+    <path d="m54 112 12-13h28l13 13-7 25H61l-7-25Z" fill="url(#goldenBallBase)" stroke="#6c8794" stroke-opacity=".74" stroke-width="2"/>
+    <path d="m54 112 26 8 27-8M61 137l19-17 20 17M66 99l14 21 14-21" fill="none" stroke="#9bb7c3" stroke-opacity=".38" stroke-width="1.5"/>
+    <path d="m63 108h34l-4 11H67l-4-11Z" fill="#ffc52f" fill-opacity=".65"/>
+    <circle cx="80" cy="69" r="49" fill="url(#goldenBallBody)" stroke="#fff3a4" stroke-opacity=".8" stroke-width="2"/>
+    <circle cx="80" cy="69" r="47" fill="url(#goldenBallGlow)"/>
+    <path d="m80 40 17 12-6 20H69l-6-20 17-12Z" fill="url(#goldenBallFacet)" stroke="#8b4d05" stroke-opacity=".58" stroke-width="1.5"/>
+    <path d="m48 61 15-9 6 20-12 14-14-8 5-17ZM112 61l-15-9-6 20 12 14 14-8-5-17ZM57 86l12-14 11 12-5 19-18-3v-14ZM103 86 91 72 80 84l5 19 18-3V86Z" fill="#bd7109" fill-opacity=".9" stroke="#8b4d05" stroke-opacity=".38" stroke-width="1.5"/>
+    <path d="m80 84 11-12 12 14v14l-18 3-5-19ZM69 72l11 12-5 19-18-3V86l12-14Z" fill="#efac20" fill-opacity=".78"/>
+    <path d="M56 44c9-12 23-18 36-16" fill="none" stroke="#fffbd5" stroke-linecap="round" stroke-opacity=".72" stroke-width="5"/>
+    <circle cx="56" cy="45" r="3.4" fill="#fffce0"/>
+    <path d="m124 36 1.5 5 5 1.5-5 1.5-1.5 5-1.5-5-5-1.5 5-1.5 1.5-5Z" fill="#fffbd4" filter="url(#goldenBallSpark)"/>
+    <path d="m40 84 1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3Z" fill="#fff5aa"/>
+  </g>
+</svg>

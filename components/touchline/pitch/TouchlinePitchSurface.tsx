@@ -15,7 +15,7 @@ type TouchlinePitchSurfaceProps = Readonly<{
   children?: ReactNode;
   className?: string;
   orientation?: "horizontal" | "vertical";
-  surfaceVariant?: "canonical" | "premium-stadium" | "smoked-glass";
+  surfaceVariant?: "canonical" | "premium-stadium" | "smoked-glass" | "presentation";
 }>;
 
 export const TOUCHLINE_MARKET_HOUSE_CAMPAIGN: TouchlinePitchAdvertisingCampaign = {
@@ -57,6 +57,7 @@ export default function TouchlinePitchSurface({
         orientation === "vertical" ? styles.surfaceVertical : null,
         surfaceVariant === "premium-stadium" ? styles.surfacePremiumStadium : null,
         surfaceVariant === "smoked-glass" ? styles.surfaceSmokedGlass : null,
+        surfaceVariant === "presentation" ? styles.surfacePresentation : null,
         className,
       ].filter(Boolean).join(" ")}
       data-touchline-advertising-campaign-id={advertisingCampaign?.campaignId}

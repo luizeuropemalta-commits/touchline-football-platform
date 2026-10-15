@@ -2,7 +2,7 @@ import TouchlineEliteExactCard, { type TouchlineEliteExactPlayer } from "@/compo
 import { notFound } from "next/navigation";
 import { inspectTouchlineIsolatedPreviewEnvironment } from "@/lib/touchlinePreview/isolation";
 import TouchlineGoldenBootPresentation from "@/components/touchline/cards/TouchlineGoldenBootPresentation";
-import { TOUCHLINE_PLAYER_LEADER_CROWN_ASSET, touchlinePlayerLeaderCrownStyle } from "@/lib/touchlineArena/player-leader-crown-presentation";
+import { TOUCHLINE_PLAYER_LEADER_GOLDEN_BALL_ASSET, touchlinePlayerLeaderGoldenBallStyle } from "@/lib/touchlineArena/player-leader-golden-ball-presentation";
 
 export const metadata = { title: "Golden Boot · isolated visual fixture", robots: { index: false, follow: false } };
 const player: TouchlineEliteExactPlayer = {
@@ -27,16 +27,16 @@ export default function GoldenBootPreview() {
   if (!localDevelopment && !validatedQa) notFound();
   return <main lang="en-GB" data-golden-boot-fixture="synthetic-no-award-authority" style={{ padding: 24, background: "#080d16", color: "white", minHeight: "100dvh" }}>
     <h1>Golden Boot — visual fixture only</h1>
-    <p>No current scorer or leadership is asserted. The crown below is a presentation sample, not a ranking decision.</p>
+    <p>No current scorer or leadership is asserted. The Golden Ball below is a presentation sample, not a ranking decision.</p>
     <div style={{ display: "flex", flexWrap: "wrap", gap: 32, alignItems: "start" }}>
-      {[64, 100, 300].flatMap((width) => [false, true].map((crown) => {
-        const crownStyle = touchlinePlayerLeaderCrownStyle(width / 430);
-        return <section key={`${width}-${crown}`} data-fixture-width={width} data-fixture-crown={String(crown)}>
-          <h2 style={{ fontSize: 12 }}>{width}px · {crown ? "both" : "boot"}</h2>
-          <div style={{ paddingTop: crown ? -crownStyle.top : 0 }}>
+      {[64, 100, 300].flatMap((width) => [false, true].map((goldenBall) => {
+        const goldenBallStyle = touchlinePlayerLeaderGoldenBallStyle(width / 430);
+        return <section key={`${width}-${goldenBall}`} data-fixture-width={width} data-fixture-golden-ball={String(goldenBall)}>
+          <h2 style={{ fontSize: 12 }}>{width}px · {goldenBall ? "both" : "boot"}</h2>
+          <div style={{ paddingTop: goldenBall ? -goldenBallStyle.top : 0 }}>
             <TouchlineGoldenBootPresentation cardWidth={width} label="Golden Boot — demonstration only">
-              {crown ? <img src={TOUCHLINE_PLAYER_LEADER_CROWN_ASSET} alt="Crown — demonstration only" data-fixture-crown-image="true"
-                style={{ position: "absolute", width: crownStyle.width, height: "auto", top: crownStyle.top, left: "50%", transform: "translateX(-50%)", pointerEvents: "none" }} /> : null}
+              {goldenBall ? <img src={TOUCHLINE_PLAYER_LEADER_GOLDEN_BALL_ASSET} alt="Golden Ball — demonstration only" data-fixture-golden-ball-image="true"
+                style={{ position: "absolute", width: goldenBallStyle.width, height: "auto", top: goldenBallStyle.top, left: "50%", transform: "translateX(-50%)", pointerEvents: "none" }} /> : null}
               <TouchlineEliteExactCard player={player} isEditable={false} persistLayoutToMaster={false}
                 ignoreStoredLayout startUnlocked={false} isRemovalMarkerEnabled={false}
                 staticRenderScale={width / 430} runtimeLocaleOverride="en-GB" subscribeToRanking={false}

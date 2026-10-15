@@ -26,21 +26,21 @@ const baseline = {
     playerEyebrow: "TouchLine player borders", playerTitle: "Seven official player-card borders",
     playerDescription: "Ordered from the highest-value border to the entry border. Each card is a real published representative with the highest verified market value in its tier; Erling Haaland leads Golden Diamond.",
     coachEyebrow: "TouchLine coach borders", coachTitle: "Seven official coach-card borders",
-    coachDescription: "Each representative keeps the same border as their official profile. Within each tier, approved previous-season results determine the representative. Borders without an eligible coach remain pending.",
+    coachDescription: "A complete verified current ranking selects the representative for each border. If that ranking is unavailable, the last verified representative remains visible rather than guessing a colour.",
     verifiedValue: "Verified market value", previousFinish: "Previous-season finish", promotedChampion: "Promoted champion", promotedPlayoff: "Promoted through play-offs", approvedFallback: "Approved promotion fallback",
     representativePending: "Representative pending", representativePendingDescription: "No current coach has approved evidence for this border. TouchLine will not borrow another coach’s position.",
     playerPending: "Published representative pending", playerPendingDescription: "No published card currently owns this border.",
-    openPlayer: "Open player profile", openCoach: "Open coach profile", sourceNote: "Only published player cards and immutable coach classifications appear here. Missing evidence remains explicit.",
+    openPlayer: "Open player profile", openCoach: "Open coach profile", sourceNote: "Only published player cards and verified coach-ranking snapshots appear here. Missing evidence remains explicit.",
   },
   "pt-BR": {
     playerEyebrow: "Bordas de jogadores TouchLine", playerTitle: "As sete bordas oficiais dos cards de jogadores",
     playerDescription: "Ordem da borda de maior valor até a borda de entrada. Cada card é um representante real publicado com o maior valor de mercado verificado do seu tier; Erling Haaland lidera o Diamante Dourado.",
     coachEyebrow: "Bordas de treinadores TouchLine", coachTitle: "As sete bordas oficiais dos cards de treinadores",
-    coachDescription: "Cada representante mantém a mesma borda do seu perfil oficial. Dentro de cada tier, os resultados aprovados da temporada anterior definem o representante. Bordas sem treinador elegível permanecem pendentes.",
+    coachDescription: "Um ranking atual completo e verificado seleciona o representante de cada borda. Se esse ranking não estiver disponível, o último representante verificado permanece visível sem adivinhar uma cor.",
     verifiedValue: "Valor de mercado verificado", previousFinish: "Posição na temporada anterior", promotedChampion: "Campeão promovido", promotedPlayoff: "Promovido pelos play-offs", approvedFallback: "Fallback de promoção aprovado",
     representativePending: "Representante pendente", representativePendingDescription: "Nenhum treinador atual possui evidência aprovada para esta borda. A TouchLine não empresta a posição de outro treinador.",
     playerPending: "Representante publicado pendente", playerPendingDescription: "Nenhum card publicado ocupa esta borda no momento.",
-    openPlayer: "Abrir perfil do jogador", openCoach: "Abrir perfil do treinador", sourceNote: "Somente cards de jogadores publicados e classificações imutáveis de treinadores aparecem aqui. Evidência ausente permanece explícita.",
+    openPlayer: "Abrir perfil do jogador", openCoach: "Abrir perfil do treinador", sourceNote: "Somente cards de jogadores publicados e snapshots verificados do ranking de treinadores aparecem aqui. Evidência ausente permanece explícita.",
   },
 };
 type Copy = Record<keyof typeof baseline["en-GB"], string>;
@@ -96,7 +96,7 @@ async function fixture(future = false, sentinels = false, tierSentinel?: string,
     } },
     "@/lib/touchlineArena/coach-tier-gallery": gallery, "@/lib/touchlineArena/coach-card": coach,
     "@/lib/touchlineArena/coach-competition-projection": competition, "@/lib/touchlineArena/clubhub-tier-showcase": representatives
-      ? { ...selection, selectTouchlineCoachTierRepresentatives: () => representatives } : selection,
+      ? { ...selection, selectTouchlineCoachTierRepresentativesFromRanking: () => representatives.map((row) => ({ ...row, rankingRow: null })) } : selection,
     "@/lib/touchlineArena/demo-data": demo,
     "@/lib/touchlineArena/player-links": links, "@/lib/touchlineArena/card-rules": { ...rules, touchlineCardTierName: tierName },
     "./TouchlineCoachCategoryShowcase.module.css": { default: new Proxy({}, { get: (_, key) => String(key) }) },
@@ -237,7 +237,7 @@ test("real JSX renders promotion and position evidence with synthetic records on
 });
 
 test("showcase JSX, tier styling and evidence logic retain the admitted preimage except approved locale, value and pending-state changes", () => {
-  const expected: Record<string, string> = { tierStyle: "9a8dfb2be2686c166f3cf1b0016a95addb3b8fd40434a314f11e2e26c314a8eb", coachEvidenceLabel: "25f8f180c73eafb7a25d092a68fbb6d6fb3ea1434790fd6e76d3b85e24e9449c" };
+  const expected: Record<string, string> = { tierStyle: "9a8dfb2be2686c166f3cf1b0016a95addb3b8fd40434a314f11e2e26c314a8eb", coachEvidenceLabel: "dfadad058ffafad7a157dc1a1600e7b7a35cc408013cd3d5bb84ec5584478d4f" };
   for (const node of ast.statements) if (ts.isFunctionDeclaration(node)) {
     if (node.name?.text === "TouchlineCoachCategoryShowcase") {
       let preimage = node.body!.statements.find(ts.isReturnStatement)!.getText(ast);
@@ -254,7 +254,7 @@ test("showcase JSX, tier styling and evidence logic retain the admitted preimage
       }
       // The explicit pending-state placeholder replaces headless coach artwork;
       // the evidence selector and all populated coach-card branches stay fixed.
-      assert.equal(hash(preimage), "dcdd5f99ec0a8055cda9f193c86828709b85257d7fec851968a8bc50b4930399");
+      assert.equal(hash(preimage), "2cc102d7c3d13796c026aa6f42f738a7223c63894f3daa1e379c45de2e3ea234");
     }
     else assert.equal(hash(node.getText(ast)), expected[node.name!.text]);
   }

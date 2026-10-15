@@ -15,6 +15,7 @@ import * as tablesCopy from "../lib/touchlineArena/tables-presentation-i18n.ts";
 import * as performanceCopy from "../lib/touchlineArena/player-performance-i18n.ts";
 import * as catalogueLocale from "../lib/touchlineArena/catalogue-locale.ts";
 import { AuthSessionMissingError } from "@supabase/supabase-js";
+import { cardGoalsLeaderIds } from "../lib/touchlineArena/card-goals-leadership.ts";
 
 const require = createRequire(import.meta.url);
 function loadPage(path: string, modules: Record<string, unknown>, exportName = "default") {
@@ -32,6 +33,7 @@ function loadPage(path: string, modules: Record<string, unknown>, exportName = "
     if (name === "@/lib/touchlineArena/player-performance-i18n") return performanceCopy;
     if (name === "@/lib/touchlineArena/ranking-load-diagnostics") return { createRankingLoadDiagnostics: () => createRankingLoadDiagnostics({}) };
     if (name === "@/lib/touchlineArena/rankings-highlight-projection") return { projectTouchlineRankingsHighlights };
+    if (name === "@/lib/touchlineArena/card-goals-leadership") return { cardGoalsLeaderIds };
     if (name === "react" || name === "react/jsx-runtime") return require(name);
     if (name.endsWith(".css")) return { default: {} };
     return new Proxy({}, { get: () => () => null });
@@ -96,6 +98,26 @@ test("navigation label reflects only the current Link pending state and recovers
   assert.equal(Label(props).props["aria-busy"], false);
 });
 
+test("ranking highlights use the same snapshot-bound goals authority as shared cards", async () => {
+  const publishedId = "11111111-1111-4111-8111-111111111111";
+  const source = readFileSync(new URL("../app/rankings/page.tsx", import.meta.url), "utf8");
+  const tempExports: Record<string, unknown> = {};
+  vm.runInNewContext(ts.transpileModule(`${source}\nexports.readSportingData = readSportingData;`, {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX },
+  }).outputText, { exports: tempExports, require(name: string) {
+    if (name === "react" || name === "react/jsx-runtime") return require(name);
+    if (name === "@/lib/touchlineArena/card-goals-leadership") return { cardGoalsLeaderIds };
+    if (name === "@/lib/touchlineArena/rankings-highlight-projection") return { projectTouchlineRankingsHighlights: (_cards: unknown, _xi: unknown, ids: string[]) => ids };
+    return new Proxy({}, { get: () => async () => null });
+  } });
+  const read = tempExports.readSportingData as (ranking: Promise<unknown>, diagnostics: object) => { highlights: Promise<string[]> };
+  const cardGoals = { source: "published-card-goals-v1", snapshotId: "current", rows: [{ playerId: publishedId, goals: 3 }] };
+  for (const snapshotId of ["current", "different-season-snapshot"]) {
+    const data = read(Promise.resolve({ phase: "ranked", snapshotId, cardGoals }), { measure: (_key: string, fn: () => unknown) => fn() });
+    assert.deepEqual(Array.from(await data.highlights), snapshotId === "current" ? [publishedId] : []);
+  }
+});
+
 test("ClubHub returns club links before deferred catalogue is requested", async () => {
   let reads = 0;
   const page = loadPage("../app/touchline-clubs/page.tsx", {
@@ -152,12 +174,12 @@ test("Rankings starts independent reads while authentication is pending and shar
   const frameElement = sportingBoundary.props.children;
   const frame = await frameElement.type(frameElement.props);
   assert.equal(frame.props.children[0].props.initialPlayerRankingSnapshotId, ranking.snapshotId);
-  const sporting = frame.props.children[2].props.children.props.children[0].props.children;
+  const sporting = frame.props.children[2].props.children.props.children.props.children;
   let sportingReady = false;
   const complete = sporting.type(sporting.props).then((tree: { props: { rosterCards?: unknown[]; highlights?: TouchlineRankingsHighlights; totalRankedCards?: number } }) => { sportingReady = true; return tree; });
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(sportingReady, false, "Catalogue pending must not block the authenticated shell");
-  const allCards = Array.from({ length: 5 }, (_, index) => ({ id: `published-${index}`, editorialCard: {}, seasonTotalRating: index }));
+  const allCards = Array.from({ length: 5 }, (_, index) => ({ id: `published-${index}`, name: `Synthetic player ${index}`, editorialCard: {}, seasonTotalRating: index }));
   releaseCatalogue(allCards);
   const loaded = await complete;
   assert.equal(loaded.props.rosterCards, undefined);
@@ -221,7 +243,7 @@ test("real React stream publishes the coach table before deferred catalogue and 
     "@/components/touchline/cards/TouchlineCardLeadershipProvider": { TouchlineCardLeadershipProvider: ({ children }: { children: ReactNode }) => children },
     "./touchline-tables-client": {
       default: ({ highlights }: { highlights: unknown }) => { passedHighlights.push(highlights); return createElement("div", { "data-loaded-section": "overview" }, "Published player content"); },
-      TouchlineRankingPodium: ({ highlights }: { highlights: unknown }) => { passedHighlights.push(highlights); return createElement("div", { "data-loaded-section": "podium" }); },
+      TouchlineRankingPodium: ({ highlights, coachRanking }: { highlights: unknown; coachRanking: unknown }) => { passedHighlights.push(highlights); featuredRenders++; assert.equal(coachRanking, h.coaches); return createElement("div", { "data-loaded-section": "podium", "data-featured-coach": true }, "Published featured coach"); },
       TouchlineRankingEnding: () => createElement("div", { "data-loaded-section": "ending" }),
       TouchlineCoachRankingTable: CoachTable,
       TouchlineRankingPodiumPending: PodiumPending,
@@ -244,8 +266,8 @@ test("real React stream publishes the coach table before deferred catalogue and 
     for (let i = 0; i < 10; i++) await turn();
     assert.match(html, /Verified coach 6/, "Real coach rows must stream while catalogue remains pending");
     assert.doesNotMatch(html, /Published player content/);
-    assert.match(html, /Published featured coach/);
-    assert.equal(featuredRenders, 1);
+    assert.doesNotMatch(html, /Published featured coach/);
+    assert.equal(featuredRenders, 0, "Coach award shares the three-award boundary; the coach table streams independently");
     h.catalogue.resolve([]); h.fixtures.resolve([]);
     await new Promise<void>(resolve => sink.on("end", resolve));
     assert.equal((html.match(/id="coach-rankings"/g) ?? []).length, 1);
@@ -264,7 +286,7 @@ test("real React stream publishes the coach table before deferred catalogue and 
 test("podium loading reserves real card envelopes without fabricated sporting data", () => {
   const Pending = loadPage("../app/rankings/touchline-tables-client.tsx", {}, "TouchlineRankingPodiumPending");
   const html = renderToStaticMarkup(createElement(Pending, { locale: "en-GB" }));
-  assert.match(html, /Season Top 3 Cards/);
+  assert.match(html, /Season Awards/);
   assert.match(html, /aria-busy="true"/);
   assert.match(html, /aria-hidden="true"/);
   assert.match(html, /Loading rankings/);
@@ -298,7 +320,7 @@ test("Ranking content resolves while only its round badge awaits the unchanged s
   const badge = shell.props.children[0].props.children.props.children;
   const frameElement = shell.props.children[1].props.children;
   const frame = await frameElement.type(frameElement.props);
-  const sporting = frame.props.children[2].props.children.props.children[0].props.children;
+  const sporting = frame.props.children[2].props.children.props.children.props.children;
   let badgeReady = false;
   let sportingReady = false;
   const badgeResult = badge.type(badge.props).then((value: unknown) => { badgeReady = true; return value; });
@@ -318,7 +340,7 @@ test("Ranking content resolves while only its round badge awaits the unchanged s
   const client = loaded.props;
   assert.equal(client.rosterCards, undefined);
   assert.deepEqual(client.highlights.gameweekBest, { phase: "unavailable", reason: "incomplete-card-catalogue" });
-  assert.equal(frame.props.children[2].props.children.props.children[1].props.coachRanking, h.coaches);
+  assert.equal(frame.props.children[3].props.children[1].props.coachRanking, h.coaches);
   const heroElement = frame.props.children[1].props.children;
   const hero = await heroElement.type(heroElement.props);
   assert.equal(hero.props.totalPublishedCards, 17);
@@ -340,7 +362,7 @@ for (const timing of ["before auth", "after content"] as const) {
     const shell = contentShell(await result);
     const frameElement = shell.props.children[1].props.children;
     const frame = await frameElement.type(frameElement.props);
-    const sporting = frame.props.children[2].props.children.props.children[0].props.children;
+    const sporting = frame.props.children[2].props.children.props.children.props.children;
     let ready = false;
     const content = sporting.type(sporting.props).then(() => { ready = true; }, (reason: unknown) => reason);
     await turn();
@@ -359,7 +381,7 @@ test("Ranking still propagates catalogue rejection while schedule is pending", a
   const shell = contentShell(await result);
   const frameElement = shell.props.children[1].props.children;
   const frame = await frameElement.type(frameElement.props);
-  const sporting = frame.props.children[2].props.children.props.children[0].props.children;
+  const sporting = frame.props.children[2].props.children.props.children.props.children;
   const error = new Error("catalogue unavailable");
   const rejected = assert.rejects(sporting.type(sporting.props), (reason: unknown) => reason === error);
   h.catalogue.reject(error);

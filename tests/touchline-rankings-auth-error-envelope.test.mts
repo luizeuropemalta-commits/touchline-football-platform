@@ -61,6 +61,7 @@ async function render(receipt: unknown, options: { authFailure?: Error; probe?: 
     '@/lib/touchlineArena/coach-ranking-server': { loadTouchLineCoachRanking: async () => ({ snapshotId: 'coach-snapshot' }) },
     '@/lib/football-data/fixture-schedule-store': { readPublicCompetitionFixtures: async () => [] },
     '@/lib/touchlineArena/rankings-highlight-projection': { projectTouchlineRankingsHighlights: () => ({}) },
+    '@/lib/touchlineArena/card-goals-leadership': { cardGoalsLeaderIds: () => [] },
     '@/lib/touchlineArena/arena-fixture-round': { selectArenaFixtureRound: () => [] },
     '@/lib/touchlineArena/card-leadership-authority': { buildTouchlineCardLeadershipValue: () => ({}) },
     '@/components/touchline/cards/TouchlineCardLeadershipProvider': { TouchlineCardLeadershipProvider: leaf },

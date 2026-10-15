@@ -24,7 +24,7 @@
 .heroCard { padding-top: 75px; transform: translateY(var(--live-float)); }
 .cardFrame { flex: 0 0 auto; position: relative; width: calc(430px * var(--card-scale)); height: calc(691px * var(--card-scale)); }
 .cardFrame > :global(.touchline-card-surface) { position: absolute!important; top: 0; left: 0; width: 430px!important; max-width: none!important; height: 691px!important; margin: 0!important; transform: scale(var(--card-scale)); transform-origin: top left; }
-.crown { position: absolute; left: 50%; transform: translateX(-50%); height: auto; z-index: 6; }
+.goldenBall { position: absolute; left: 50%; transform: translateX(-50%); height: auto; z-index: 6; }
 .coachFrame { flex: 0 0 auto; width: calc(430px * var(--card-scale)); height: calc(691px * var(--card-scale)); position: relative; }
 .coachFrame > * { position: absolute!important; top: 0; left: 0; width: 430px!important; max-width: none!important; transform: scale(var(--card-scale)); transform-origin: top left; }
 .coachRecord { margin-top: 25px; font-size: 15px; color: #b6ff4f; font-weight: 900; }

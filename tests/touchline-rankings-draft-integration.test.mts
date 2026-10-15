@@ -19,6 +19,7 @@ import * as presentation from "../lib/touchlineArena/tables-presentation-i18n.ts
 import * as catalogue from "../lib/touchlineArena/catalogue-locale.ts";
 import * as i18n from "../lib/touchlineArena/i18n.ts";
 import * as fixtureRound from "../lib/touchlineArena/arena-fixture-round.ts";
+import * as positionLabels from "../lib/touchlineArena/position-labels.ts";
 
 type Element = React.ReactElement<Record<string, unknown>>;
 const route = readFileSync(new URL("../app/rankings/page.tsx", import.meta.url), "utf8");
@@ -39,6 +40,7 @@ function compile(source: string, modules: Record<string, unknown> = {}) {
       if (name === "@/lib/touchlineArena/tables-presentation-i18n") return presentation;
       if (name === "@/lib/touchlineArena/catalogue-locale") return catalogue;
       if (name === "@/lib/touchlineArena/i18n") return i18n;
+      if (name === "@/lib/touchlineArena/position-labels") return positionLabels;
       if (name.startsWith("@/components/")) return { default: (props: { children?: React.ReactNode }) => React.createElement("div", null, props.children) };
       return new Proxy({}, { get: () => () => assert.fail(`Unexpected collaborator ${name}`) });
     },
@@ -135,6 +137,7 @@ function internalFixture() {
     "@/lib/touchlineArena/card-ranking-server": { loadTouchLineActiveRanking: async () => active, loadTouchLinePublishedTopEleven: async () => null },
     "@/lib/touchlineArena/ranked-card-catalog-server": { loadTouchLineRankedCardCatalog: async () => cards },
     "@/lib/touchlineArena/coach-ranking-server": { loadTouchLineCoachRanking: async () => coach },
+    "@/lib/touchlineArena/card-goals-leadership": { cardGoalsLeaderIds: () => [] },
     "@/lib/touchlineArena/card-publication-read-model": { countTouchlinePublishedPlayerCards: async () => 7 },
     "@/lib/football-data/fixture-schedule-store": { readPublicCompetitionFixtures: async () => [] },
     "@/lib/touchlineArena/rankings-highlight-projection": { projectTouchlineRankingsHighlights: () => highlights },
@@ -214,7 +217,7 @@ test("private Rankings defaults and public wrapper remain closed despite forged 
     if (name === "RoundBadge") assert.ok(renderToStaticMarkup(result).includes("Matchweek awaiting provider"));
     if (name === "BestXiPending") assert.ok(renderToStaticMarkup(result).includes("Loading rankings…"));
     if (name === "SportingContent") assert.equal(result.props.draftLocalesEnabled, false);
-    if (name === "SportingFrame") assert.equal(nodes(result).find(node => node.type === h.leaves.TouchlineFeaturedCoach)!.props.draftLocalesEnabled, false);
+    if (name === "SportingFrame") assert.ok(nodes(result).some(node => node.props.className === "rankingHighlights"));
   }
 });
 

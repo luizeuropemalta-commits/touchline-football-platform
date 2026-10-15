@@ -21,7 +21,7 @@ test("fixture denies hosted production and permits only local development or val
     const loaded = { exports: {} as { default?: () => unknown } };
     const requireFixture = (id: string) => id === "next/navigation" ? { notFound: () => { throw denied; } }
       : id.endsWith("/isolation") ? { inspectTouchlineIsolatedPreviewEnvironment: () => ({ status }) }
-      : id.endsWith("/player-leader-crown-presentation") ? { touchlinePlayerLeaderCrownStyle: () => ({ top: -10, width: 20 }) }
+      : id.endsWith("/player-leader-golden-ball-presentation") ? { touchlinePlayerLeaderGoldenBallStyle: () => ({ top: -10, width: 20 }) }
       : { default: () => null };
     new Function("require", "module", "exports", "React", "process", output)(requireFixture, loaded, loaded.exports, React, { env });
     if (allowed) assert.doesNotThrow(() => loaded.exports.default!());
@@ -37,7 +37,7 @@ const compiledModule = { exports: {} as { default?: React.ComponentType<{cardWid
 new Function("require", "module", "exports", "React", compiled)(() => ({ default: { frame: "frame", card: "card", award: "award" } }), compiledModule, compiledModule.exports, React);
 const Presentation = compiledModule.exports.default!;
 
-test("production boot shares the crown head geometry without covering card statistics", () => {
+test("production boot shares the player-award head geometry without covering card statistics", () => {
   const Head = compiledModule.exports.TouchlineGoldenBootHead;
   const html = renderToStaticMarkup(React.createElement(Head, {label:"Golden Boot — league top scorer",
     style: { position:"absolute", top:-130, width:122, height:122, left:"50%" }}));
@@ -60,10 +60,10 @@ test("shared card places awards above the art and keeps eligibility independent"
   assert.match(card,/goldenBootPlayers\.includes\(player\.canonicalPlayerId\.toLowerCase\(\)\)/);
   assert.match(card,/hasGoldenBoot \? <TouchlineGoldenBootHead/);
   assert.doesNotMatch(card,/TouchlineGoldenBootFoot/);
-  assert.match(card,/const hasHeadAward = isCanonicalPlayerLeader \|\| hasGoldenBoot/);
-  assert.match(card,/translateX\(-104%\)/);
-  assert.match(card,/translateX\(4%\)/);
-  assert.match(card,/data-card-leadership-crown=\{isCanonicalPlayerLeader \? "true" : "false"\}/);
+  assert.match(card,/const hasHeadAward = hasGoldenBall \|\| hasGoldenBoot/);
+  assert.match(card,/translateX\(-108%\)/);
+  assert.match(card,/translateX\(7%\)/);
+  assert.match(card,/data-card-golden-ball=\{hasGoldenBall \? "true" : "false"\}/);
 });
 
 test("all preview widths reserve a separate award row without changing the card", () => {

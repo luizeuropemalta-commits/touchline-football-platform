@@ -14,9 +14,9 @@ test("full player profile fits readable identity beside a compact portrait witho
   assert.match(css, /width: clamp\(96px, 9vw, 128px\)/);
 });
 
-test("full player profile retains calibrated crown reserve only where the crown exists", () => {
+test("full player profile retains calibrated Golden Ball reserve only where the award exists", () => {
   assert.match(css, /\.cardFrame \{[^}]*width: 300px;[^}]*--touchline-card-static-scale: \.6976744186;/);
-  assert.match(css, /\.cardFrame:not\(:has\(> \[data-card-leadership-crown="true"\]\)\) \{\s*padding-top: 0;/);
+  assert.match(css, /\.cardFrame:not\(:has\(> \[data-card-golden-ball="true"\]\)\) \{\s*padding-top: 0;/);
   assert.match(css, /padding-top: clamp\(98px, 16vw, 128px\)/);
-  assert.match(css, /\.cardFrame > \[data-card-leadership-crown="true"\] \{\s*margin-top: 0 !important;/);
+  assert.match(css, /\.cardFrame > \[data-card-golden-ball="true"\] \{\s*margin-top: 0 !important;/);
 });

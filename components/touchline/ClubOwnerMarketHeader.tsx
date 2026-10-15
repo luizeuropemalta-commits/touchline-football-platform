@@ -47,7 +47,7 @@ export default function ClubOwnerMarketHeader({ owner, locale, accountId, avatar
   const expiry = plan?.expiresAt ? new Date(plan.expiresAt) : null;
   const validity = currentTier !== "vip" && planActive && expiry && Number.isFinite(expiry.getTime())
     ? copy.planUntil.replace("{date}", new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeZone: "UTC" }).format(expiry)) : null;
-  return <header className={styles.header} data-clubowner-header="true" data-plan-preview={displayedTier}>
+  return <header className={styles.header} data-clubowner-header="true" data-plan-preview={displayedTier} tabIndex={-1}>
     <section className={styles.profile} data-cover-preview="true" data-active-plan={currentTier ?? undefined} aria-labelledby="clubowner-heading">
       {displayedTier ? <svg className={styles.coverPattern} viewBox="0 0 600 340" aria-hidden="true" focusable="false">
         <rect x="20" y="20" width="560" height="300" rx="2" />

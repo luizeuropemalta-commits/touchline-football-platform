@@ -52,7 +52,7 @@ test("ClubHub exposes the seven canonical player and coach borders with real rep
   assert.match(component, /alt=""/);
   assert.equal((component.match(/<ul className=\{styles\.grid\}/g) ?? []).length, 2);
   assert.match(component, /selectTouchlinePlayerTierRepresentatives\(playerCards\)/);
-  assert.match(component, /selectTouchlineCoachTierRepresentatives\(\)/);
+  assert.match(component, /selectTouchlineCoachTierRepresentativesFromRanking\(coachRanking\)/);
   assert.match(component, /TouchlineEliteExactCard/);
   assert.match(component, /TouchlineCoachCard/);
   assert.match(component, /assetLoading="eager"/);

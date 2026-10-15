@@ -40,9 +40,11 @@ test("actual notice persists for an incomplete zero-budget XI; comparison is inf
   assert.match(html, /O orçamento do seu XI acabou/);
   assert.match(html, /Escolha jogadores mais baratos/);
   assert.match(html, /<summary class="canonical-link">Conhecer e comparar planos<\/summary>/);
+  assert.match(html, />Revisar e trocar jogadores<\/button>/);
+  assert.match(html, />Mudar de plano<\/button>/);
   assert.match(html, /não muda seu plano nem faz uma cobrança/);
   assert.match(html, /data-comparison-preview="true"/);
-  assert.doesNotMatch(html, /<form|<a |<button|checkout|subscribe/);
+  assert.doesNotMatch(html, /<form|<a |checkout|subscribe/);
   for (const changes of [{ editable: false }, { remainingBudget: null }, { remainingBudget: 1 }, { selectedCount: 11 }])
     assert.equal(notice({ ...base, ...changes }), null);
   assert.match(renderToStaticMarkup(notice({ ...base, remainingBudget: 2, attemptedOverBudget: true })), /data-market-budget-notice="exceeded"/);

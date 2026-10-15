@@ -5,7 +5,7 @@ import TouchlineCoachCard from "@/components/touchline/cards/TouchlineCoachCard"
 import { squadCardToExactPlayer, TOUCHLINE_ENGLAND_CLUBS } from "@/lib/touchlineArena/demo-data";
 import { touchlineCoachClassificationForProviderId, touchlineLiveCoachForProviderId } from "@/lib/touchlineArena/live-coaches";
 import { createTouchlineArenaCoachSlot } from "@/lib/touchlineArena/coach-card";
-import { TOUCHLINE_PLAYER_LEADER_CROWN_ASSET, touchlinePlayerLeaderCrownStyle } from "@/lib/touchlineArena/player-leader-crown-presentation";
+import { TOUCHLINE_PLAYER_LEADER_GOLDEN_BALL_ASSET, touchlinePlayerLeaderGoldenBallStyle } from "@/lib/touchlineArena/player-leader-golden-ball-presentation";
 import { leadershipCrownEligibility } from "@/lib/touchlineArena/leadership-decision";
 import { TOUCHLINE_SOCIAL_RANKING_FUME_CSS_VARIABLES } from "@/lib/touchlineArena/social-ranking-visual-tokens";
 import { RANKINGS_LIVE_LOOP_MS, type RankingsLiveArtId } from "@/lib/social-rankings-live-contract";
@@ -33,21 +33,21 @@ export default function TouchlineSocialRankingsLive({ input, artId, placement, f
   const month = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"][asOf.getUTCMonth()];
   const sourceLabel = `${String(asOf.getUTCDate()).padStart(2, "0")} ${month} · ${asOf.toISOString().slice(11, 16)} UTC`;
   const style = { ...TOUCHLINE_SOCIAL_RANKING_FUME_CSS_VARIABLES, "--live-height": placement === "STORY" ? "1920px" : "1350px", "--live-glow": .16 + pulse * .045, "--live-float": `${pulse * 4}px` } as CSSProperties;
-  function playerCard(player: TouchlineRankedPlayer, scale: number, crowned = false) {
+  function playerCard(player: TouchlineRankedPlayer, scale: number, leader = false) {
     const card = input.cards[player.playerId];
     if (!card?.editorialCard) throw new Error(`MISSING_FROZEN_PUBLISHED_CARD:${player.playerId}`);
     // Private replay only: weekly cards and their labels use the same weekly
     // snapshot; preserve the published editorial tier/price, never reprice.
     const scopedCard = { ...card, seasonTotalRating: player.totalRating, publishedRanking: undefined };
-    const crown = crowned && leadershipCrownEligibility(data.leadership, { subjectType: "player", subjectId: player.playerId }, { rankingId: "touchline-player-overall", snapshotId: data.seasonRanking.snapshot.snapshotId });
-    if (crowned && !crown) throw new Error("RANKINGS_ART_LEADERSHIP_MISMATCH");
-    const crownStyle = touchlinePlayerLeaderCrownStyle(scale);
+    const goldenBall = leader && leadershipCrownEligibility(data.leadership, { subjectType: "player", subjectId: player.playerId }, { rankingId: "touchline-player-overall", snapshotId: data.seasonRanking.snapshot.snapshotId });
+    if (leader && !goldenBall) throw new Error("RANKINGS_ART_LEADERSHIP_MISMATCH");
+    const goldenBallStyle = touchlinePlayerLeaderGoldenBallStyle(scale);
     return <div className={styles.cardFrame} style={{ "--card-scale": scale } as CSSProperties} data-player-id={player.playerId}>
-      {crown ? <Image unoptimized src={TOUCHLINE_PLAYER_LEADER_CROWN_ASSET} alt="Líder geral" width={122} height={122} className={styles.crown} style={crownStyle} /> : null}
+      {goldenBall ? <Image unoptimized src={TOUCHLINE_PLAYER_LEADER_GOLDEN_BALL_ASSET} alt="Bola de Ouro" width={108} height={112} className={styles.goldenBall} style={goldenBallStyle} /> : null}
       <TouchlineEliteExactCard player={squadCardToExactPlayer(scopedCard, { useSuppliedTier: true })} staticRenderScale={1} ensureStaticNameFit runtimeLocaleOverride="pt-BR" subscribeToRanking={false} enableInteractiveNeon={false} showCardActions={false} showProfileAction={false} showSocialMetrics={false} rankingMode="preview" forceNeonActive imageLoading="eager" />
     </div>;
   }
-  function coachCard(scale: number) {
+  function coachCard(scale: number, leader = false) {
     const row = selectedCoach;
     const identity = touchlineLiveCoachForProviderId(row.coachProviderId);
     const club = TOUCHLINE_ENGLAND_CLUBS.find((c) => c.teamId === row.clubProviderId);
@@ -55,7 +55,7 @@ export default function TouchlineSocialRankingsLive({ input, artId, placement, f
     const tier = touchlineCoachClassificationForProviderId(row.coachProviderId);
     if (!tier) throw new Error("COACH_CLASSIFICATION_MISSING");
     const slot = { ...createTouchlineArenaCoachSlot(identity.coach, null, tier.tierKey), touchlinePoints: row.touchlinePoints, status: "audited" as const, scoreEvidence: { provider: "sportmonks" as const, providerEventIds: data.provenance.fixtureIds, scoringVersion: "coach_scoring_v2" } };
-    return <div className={styles.coachFrame} style={{ "--card-scale": scale } as CSSProperties}><TouchlineCoachCard coach={identity.coach} slot={slot} clubName={row.clubName} clubLogoUrl={club.logoUrl} clubAccent={club.accent} countryCode3={identity.countryCode3} locale="pt-BR" forceNeonActive enableInteractiveNeon={false} assetLoading="eager" frameLoading="eager" publishedTouchlinePoints={row.touchlinePoints} showLeadershipCrown={false} /></div>;
+    return <div className={styles.coachFrame} style={{ "--card-scale": scale } as CSSProperties}><TouchlineCoachCard coach={identity.coach} slot={slot} clubName={row.clubName} clubLogoUrl={club.logoUrl} clubAccent={club.accent} countryCode3={identity.countryCode3} locale="pt-BR" forceNeonActive enableInteractiveNeon={false} assetLoading="eager" frameLoading="eager" publishedTouchlinePoints={row.touchlinePoints} showLeadershipCrown={leader} /></div>;
   }
   return <main className={`${styles.canvas} ${placement === "STORY" ? styles.story : ""}`} style={style} data-rankings-live-art={artId} data-rankings-live-review="non-publishable" data-motion-loop-ms={RANKINGS_LIVE_LOOP_MS} data-source-revision={data.provenance.revision} data-factual-gate={artId === "GOLDEN_BOOT" ? data.goldenBoot.state : "LOCAL_CANONICAL_REPLAY"}>
     <div className={styles.arena} /><div className={styles.atmosphere} />
@@ -66,7 +66,7 @@ export default function TouchlineSocialRankingsLive({ input, artId, placement, f
     {artId === "GAMEWEEK_TOP_CARD" ? <section className={styles.spotlight}><div className={styles.heroCopy}><span>MAIOR RATING · RODADA {data.round.name}</span><h2>{data.weeklyOverall.name}</h2><p>{data.weeklyOverall.clubName}</p><strong>{rating(data.weeklyOverall.totalRating)}</strong><small>TOTAL RATING · SOMENTE A RODADA</small></div><div className={styles.heroCard}>{playerCard(data.weeklyOverall, .94)}</div></section> : null}
     {artId === "GAMEWEEK_HERO" ? <section className={styles.weekly}>{data.weeklyLeaders.map((p) => <article key={p.playerId}><span>{POSITIONS[p.positionGroup]}</span>{playerCard(p, placement === "STORY" ? .45 : .36)}<h2>{p.name}</h2><p>{p.clubName}</p><strong>{rating(p.totalRating)} <small>RATING · R{data.round.name}</small></strong></article>)}</section> : null}
     {artId === "SEASON_XI_COACH" || artId === "GAMEWEEK_XI_COACH" ? <section className={styles.selection}><div className={styles.pitch}><div className={styles.pitchLine} />{selectedXI.players.map((slot) => <article key={slot.id} className={styles.pitchPlayer} style={{ left: `${slot.x}%`, top: `${slot.y}%` }}>{playerCard(slot.player, placement === "STORY" ? .25 : .20)}<span>{slot.label} · {rating(slot.player.totalRating)}</span><strong>{slot.player.name}</strong></article>)}</div><aside className={styles.coachStrip}>{coachCard(placement === "STORY" ? .19 : .15)}<div><span>TREINADOR · {selectedXI.formation}{weeklyMode && weeklyCoachTieCount > 1 ? " · DESEMPATE CANÔNICO" : ""}</span><h2>{selectedCoach.name}</h2><p>{selectedCoach.clubName}</p></div><strong>{selectedCoach.touchlinePoints}<small>TL POINTS · {weeklyMode ? `R${data.round.name}` : "TEMPORADA"}</small></strong></aside></section> : null}
-    {artId === "TOP_COACH" ? <section className={styles.spotlight}><div className={styles.heroCopy}><span>LÍDER DOS TREINADORES</span><h2>{data.coaches[0]!.name}</h2><p>{data.coaches[0]!.clubName}</p><strong>{data.coaches[0]!.touchlinePoints}</strong><small>TL POINTS · TEMPORADA</small><div className={styles.coachRecord}>{data.coaches[0]!.wins} VITÓRIAS · {data.coaches[0]!.awayWins} FORA</div></div>{coachCard(1)}</section> : null}
+    {artId === "TOP_COACH" ? <section className={styles.spotlight}><div className={styles.heroCopy}><span>LÍDER DOS TREINADORES</span><h2>{data.coaches[0]!.name}</h2><p>{data.coaches[0]!.clubName}</p><strong>{data.coaches[0]!.touchlinePoints}</strong><small>TL POINTS · TEMPORADA</small><div className={styles.coachRecord}>{data.coaches[0]!.wins} VITÓRIAS · {data.coaches[0]!.awayWins} FORA</div></div>{coachCard(1, true)}</section> : null}
     {tableMode ? <section className={styles.tablePanel}><table><thead><tr><th>POS</th><th>CLUBE</th><th>J</th><th>V</th><th>E</th><th>D</th><th>SG</th><th>PTS</th></tr></thead><tbody>{data.table.rows.map((row) => <tr key={row.team.providerTeamId}><td>{row.sportsRank}{row.isTied ? "=" : ""}</td><th scope="row"><span>{row.team.logoUrl ? <Image src={row.team.logoUrl} alt="" width={34} height={34} unoptimized /> : null}{row.team.name}</span></th><td>{row.played}</td><td>{row.won}</td><td>{row.drawn}</td><td>{row.lost}</td><td>{row.goalDifference > 0 ? "+" : ""}{row.goalDifference}</td><td>{row.points}</td></tr>)}</tbody></table></section> : null}
     {artId === "GOLDEN_BOOT" ? goldenLeader && goldenPlayer ? <section className={styles.spotlight}><div className={styles.heroCopy}><span>LÍDER DA ARTILHARIA</span><h2>{goldenPlayer.name}</h2><p>{goldenPlayer.clubName}</p><strong>{goldenLeader.goals}</strong><small>GOLS · PREMIER LEAGUE 2026/27</small></div><div className={styles.heroCard}>{playerCard(goldenPlayer, .94)}</div></section> : <section className={styles.pending}><span>ARTILHARIA EM CONFERÊNCIA</span><h2>A disputa merece<br />números certos.</h2><p>Aguardando a consolidação dos gols oficiais da temporada.</p></section> : null}
     <footer className={styles.footer}><span>Dados até {sourceLabel}</span><strong>MONTE SEU XI NA TOUCHLINE <i>↗</i></strong></footer>

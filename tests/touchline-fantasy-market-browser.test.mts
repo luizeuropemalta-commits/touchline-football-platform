@@ -4,7 +4,7 @@ import { TOUCHLINE_CALIBRATED_FORMATION_CODES, resolveTouchlineFormationGeometry
 import { TOUCHLINE_FANTASY_BROWSE_POSITIONS, resolveTouchlineFantasyBrowseSlot, touchlineFantasyPitchCardWidth } from "../lib/touchlineFantasy/market-browser.ts";
 
 test("browsing exposes every classified football position, without the retired contract quotas", () => {
-  assert.deepEqual(TOUCHLINE_FANTASY_BROWSE_POSITIONS.map((entry) => entry.code), ["GK", "RB", "CB", "LB", "CDM", "MID", "ATT", "ST"]);
+  assert.deepEqual(TOUCHLINE_FANTASY_BROWSE_POSITIONS.map((entry) => entry.code), ["GK", "CB", "RB", "LB", "CDM", "MID", "ATT", "ST"]);
   assert.equal(new Set(TOUCHLINE_FANTASY_BROWSE_POSITIONS.map((entry) => entry.bucket)).size, 8);
 });
 

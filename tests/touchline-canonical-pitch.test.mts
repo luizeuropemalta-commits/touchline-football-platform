@@ -73,8 +73,8 @@ test("field art is a shared component rather than separate page drawings", () =>
   assert.doesNotMatch(clubHubLineup, /styles\.goalBox/);
 });
 
-test("Rank, ClubHub and ClubOwner share the Market smoked-glass field without changing formation geometry", () => {
-  assert.match(tablesClient, /<TouchlinePitchSurface className=\{styles\.pitch\} ariaLabel=\{copy\.seasonSelection\} surfaceVariant="smoked-glass">/);
+test("Rank uses the transparent presentation while ClubHub and ClubOwner retain the smoked-glass field", () => {
+  assert.match(tablesClient, /<TouchlinePitchSurface className=\{styles\.pitch\} ariaLabel=\{copy\.seasonSelection\} surfaceVariant="presentation">/);
   assert.match(market, /orientation="horizontal" surfaceVariant="smoked-glass"/);
   assert.match(clubHubLineup, /orientation="horizontal"[\s\S]*?surfaceVariant="smoked-glass"/);
   for (const source of [tablesClient, market, clubHubLineup]) {

@@ -16,6 +16,7 @@ import * as tiers from "../lib/touchlineArena/card-rules.ts";
 import * as round from "../lib/touchlineArena/arena-fixture-round.ts";
 import * as pitch from "../lib/touchlineArena/top-eleven-broadcast-layout.ts";
 import * as rankingPoints from "../lib/touchlineArena/ranking-points-i18n.ts";
+import * as positionLabels from "../lib/touchlineArena/position-labels.ts";
 import { getTouchLineRankingsCopy } from "../lib/touchlineArena/rankings-i18n.ts";
 import { getTouchlineTablesPresentationCopy } from "../lib/touchlineArena/tables-presentation-i18n.ts";
 import { resolveTouchlineCatalogueLocale } from "../lib/touchlineArena/catalogue-locale.ts";
@@ -39,7 +40,8 @@ const en = {
   topCoachEyebrow: "NO. 1 COACH", bestCoach: "Best coach", topCoachDescription: "Current leader from official season results.", seasonLeader: "SEASON LEADER",
   coachRankingEyebrow: "SEASON RANKING", bestCoaches: "Best coaches", coachRankingDescription: "Top 7 by canonical points. Ties use wins, away wins and canonical identity.", coachStandings: "Coach standings",
   wins: "Wins", winsShort: "W", draws: "Draws", drawsShort: "D", losses: "Losses", lossesShort: "L",
-  podiumEyebrow: "OVERALL PODIUM", podiumTitle: "Season Top 3 Cards", podiumDescription: "The three highest accumulated Ratings, updated automatically.",
+  podiumEyebrow: "OVERALL PODIUM", podiumTitle: "Season Awards", podiumDescription: "Best Player, Golden Boot and Best Coach. Every award uses its own published authority.",
+  bestPlayerEyebrow: "GOLDEN BALL", bestPlayer: "Best player", goldenBootEyebrow: "GOLDEN BOOT", goldenBoot: "Top scorer", goldenBootPreview: "GOLDEN BOOT PREVIEW", goldenBootPreviewDescription: "QA placeholder until verified goals are published", goldenBootPending: "The Golden Boot will appear after its goals authority is published.",
   loadingRankings: "Loading rankings…", positionHeading: "POS", clubHeading: "CLUB", pointsHeading: "POINTS",
   matchweek: "Matchweek", matchweekPending: "Matchweek awaiting provider", seasonHighlights: "Season highlights", loadingMatchweek: "Loading matchweek…",
 };
@@ -48,7 +50,8 @@ const pt = {
   topCoachEyebrow: "TREINADOR Nº 1", bestCoach: "Melhor treinador", topCoachDescription: "Líder atual pelos resultados oficiais da temporada.", seasonLeader: "LÍDER DA TEMPORADA",
   coachRankingEyebrow: "RANKING DA TEMPORADA", bestCoaches: "Melhores treinadores", coachRankingDescription: "Top 7 pelos pontos canônicos. Empates seguem vitórias, vitórias fora e identidade canônica.", coachStandings: "Classificação dos treinadores",
   wins: "Vitórias", winsShort: "V", draws: "Empates", drawsShort: "E", losses: "Derrotas", lossesShort: "D",
-  podiumEyebrow: "PÓDIO GERAL", podiumTitle: "Top 3 Cards da Temporada", podiumDescription: "Os três maiores Ratings acumulados, atualizados automaticamente.",
+  podiumEyebrow: "PÓDIO GERAL", podiumTitle: "Prêmios da Temporada", podiumDescription: "Melhor Jogador, Artilheiro e Melhor Treinador. Cada prêmio usa sua própria autoridade publicada.",
+  bestPlayerEyebrow: "BOLA DE OURO", bestPlayer: "Melhor jogador", goldenBootEyebrow: "CHUTEIRA DE OURO", goldenBoot: "Artilheiro", goldenBootPreview: "PRÉVIA DA CHUTEIRA DE OURO", goldenBootPreviewDescription: "Referência de QA até a publicação dos gols verificados", goldenBootPending: "A Chuteira de Ouro aparecerá após a autoridade de gols ser publicada.",
   loadingRankings: "Carregando classificações…", positionHeading: "POS", clubHeading: "CLUBE", pointsHeading: "PONTOS",
   matchweek: "Rodada", matchweekPending: "Rodada aguardando provider", seasonHighlights: "Destaques da temporada", loadingMatchweek: "Carregando rodada…",
 };
@@ -111,6 +114,7 @@ async function harness(locale: Locale = "en-GB", draftLocalesEnabled = false, se
     "@/lib/touchlineArena/coach-ranking-club": { touchlineCoachRankingClubLogo: () => null },
     "@/lib/touchlineArena/top-eleven-broadcast-layout": pitch,
     "@/lib/touchlineArena/ranking-points-i18n": rankingPoints,
+    "@/lib/touchlineArena/position-labels": positionLabels,
   };
   const client = compile(clientSource, shared);
   const empty = { phase: "unavailable", rows: [], snapshotId: null, seasonId: null, scoringVersion: null, fixtureIds: [] };
@@ -125,6 +129,20 @@ async function harness(locale: Locale = "en-GB", draftLocalesEnabled = false, se
   });
   return { client, page, calls, effective, copy, empty, ranked, render };
 }
+
+test("podium preserves coach and scorer when the best-player catalogue is unavailable", async () => {
+  const h = await harness("pt-BR", true);
+  const output = html(h.render("TouchlineRankingPodium", {
+    coachRanking: h.ranked,
+    highlights: { bestPlayerCard: null, topPlayerCards: [], goldenBootCard: {
+      id: "published-scorer", shortName: "Published scorer", clubName: "Club", position: "ST",
+    }, goldenBootState: "published" },
+  }));
+  assert.match(output, /data-ranking-award="best-player"/);
+  assert.match(output, /data-ranking-award="golden-boot"/);
+  assert.match(output, /data-card-id="published-scorer"/);
+  assert.match(output, /Official \$&amp;&lt;Coach0&gt;/);
+});
 
 test("tables new getter is consumed by the actual podium pending component", async () => {
   const h = await harness("pt-BR", false, true);
@@ -150,9 +168,9 @@ test("tables keeps logical properties inside a fixed physical LTR page without m
   assert.doesNotMatch(stylesSource, /\.clubOwnerTableHeader span:last-child \{ text-align: right;/);
 });
 
-test("tables 26-key catalogue keeps exact EN/PT and six unpublished drafts", async () => {
+test("tables award catalogue keeps exact EN/PT and six unpublished drafts", async () => {
   const mod = await load();
-  assert.equal(Object.keys(en).length, 26);
+  assert.equal(Object.keys(en).length, 33);
   assert.deepEqual(mod.TOUCHLINE_TABLES_PRESENTATION_CATALOGUES["en-GB"], en);
   assert.deepEqual(mod.TOUCHLINE_TABLES_PRESENTATION_CATALOGUES["pt-BR"], pt);
   assert.deepEqual(Object.keys(mod.TOUCHLINE_TABLES_PRESENTATION_CATALOGUES), locales);
@@ -161,7 +179,7 @@ test("tables 26-key catalogue keeps exact EN/PT and six unpublished drafts", asy
     const text = mod.TOUCHLINE_TABLES_PRESENTATION_CATALOGUES[locale];
     assert.deepEqual(Object.keys(text).sort(), Object.keys(en).sort());
     Object.values(text).forEach(value => assert.ok(value.trim()));
-    assert.match(text.incompleteSelection, /11/); assert.match(text.coachRankingDescription, /7/); assert.match(text.podiumTitle, /3/);
+    assert.match(text.incompleteSelection, /11/); assert.match(text.coachRankingDescription, /7/); assert.ok(text.podiumTitle.length > 3);
     assert.deepEqual(mod.getTouchlineTablesPresentationCopy(locale), locale === "pt-BR" ? pt : en);
     assert.deepEqual(mod.getTouchlineTablesPresentationCopy(locale, true), text);
     if (locale !== "en-GB" && locale !== "pt-BR") {
@@ -180,6 +198,8 @@ test("tables actual exported panels consume every presentation key with safe sen
     const h = await harness(locale, true, true);
     const panels = [h.render("default", { highlights: { gameweekBest: { phase: "unavailable", reason: "incomplete-card-catalogue" } } }),
       h.render("TouchlineFeaturedCoach", { coachRanking: h.ranked }), h.render("TouchlineCoachRankingTable", { coachRanking: h.ranked }),
+      h.render("TouchlineRankingPodium", { coachRanking: h.ranked, highlights: { topPlayerCards: [{ id: "uuid", canonicalPlayerId: "canonical", shortName: "Official player", clubName: "Official club", position: "GK", editorialCard: null }] } }),
+      h.render("TouchlineRankingPodium", { coachRanking: h.ranked, highlights: { topPlayerCards: [{ id: "uuid-preview", canonicalPlayerId: "canonical-preview", shortName: "Preview player", clubName: "Official club", position: "ST", editorialCard: null }], goldenBootCard: { id: "uuid-preview", canonicalPlayerId: "canonical-preview", shortName: "Preview player", clubName: "Official club", position: "ST", editorialCard: null }, goldenBootState: "preview" } }),
       h.render("TouchlineRankingPodiumPending"), h.render("TouchlineRankingEnding", { touchLineEnglandTable: [] })];
     let output = panels.map(html).join("");
     const Badge = h.page.RoundBadge as (props: object) => Promise<Element>;
@@ -193,7 +213,7 @@ test("tables actual exported panels consume every presentation key with safe sen
     assert.equal((coachElement.props.competition as { seasonLabel: string }).seasonLabel, "currentSeason:$&<>");
     assert.ok(output.includes("Official $&amp;&lt;Coach0&gt;")); assert.ok(!output.includes("<Coach0>")); assert.ok(output.includes("positionHeading:$&amp;&lt;&gt;")); assert.ok(output.includes("CLUBOWNER"));
   }
-  assert.equal(consumed.size, 25, "loadingMatchweek belongs to the real async page test");
+  assert.equal(consumed.size, 32, "loadingMatchweek belongs to the real async page test");
 });
 
 test("tables panels consume explicitly opted-in copy, preserving top7 order, zero and absent data", async () => {
@@ -221,7 +241,7 @@ test("tables panels consume explicitly opted-in copy, preserving top7 order, zer
     const ordinary = html(h.render("default", { highlights: { gameweekBest: { phase: "unavailable", reason: "no-published-selection" } } }));
     assert.ok(!ordinary.includes(escape(copy.incompleteSelection)));
     const podium = html(h.render("TouchlineRankingPodium", { highlights: { topPlayerCards: [{ id: "uuid", canonicalPlayerId: "canonical", shortName: "$&<Player>", clubName: "Official club", position: "GK", editorialCard: null }] } }));
-    assert.ok(podium.includes('data-player-podium-rank="1"')); assert.ok(podium.includes("$&amp;&lt;Player&gt;"));
+    assert.ok(podium.includes('data-ranking-award="best-player"')); assert.ok(podium.includes("$&amp;&lt;Player&gt;"));
     assert.ok(html(h.render("TouchlineRankingPodium", { highlights: { topPlayerCards: [] } })).includes('role="status"'));
   }
 });

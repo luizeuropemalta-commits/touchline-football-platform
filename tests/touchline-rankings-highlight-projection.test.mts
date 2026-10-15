@@ -22,6 +22,9 @@ function assertParity(cards: ClubOwnerSquadCard[], xi: TouchlinePublishedTopElev
   const expected = {
     gameweekBest: resolveTouchlinePublishedGameweekBest({ selection: xi, cards: published }),
     topPlayerCards: published.filter(value => value.seasonTotalRating != null).sort(compareTouchLineRankedCards).slice(0, 3),
+    bestPlayerCard: published.filter(value => value.seasonTotalRating != null).sort(compareTouchLineRankedCards)[0] ?? null,
+    goldenBootCard: null,
+    goldenBootState: "pending",
   };
   const actual = projectTouchlineRankingsHighlights(cards, xi);
   assert.deepEqual(actual, expected, "same selection as the former client computation");
@@ -34,6 +37,7 @@ test("385-card catalogue projects at most fourteen complete cards and preserves 
   assert.equal(projected.gameweekBest.phase, "ready");
   if (projected.gameweekBest.phase !== "ready") return;
   assert.deepEqual(projected.topPlayerCards.map(value => value.id), ["card-384", "card-383", "card-382"]);
+  assert.equal(projected.bestPlayerCard?.id, "card-384", "Golden Ball stays with the published season-rating leader");
   assert.equal(projected.gameweekBest.slots.length + projected.topPlayerCards.length, 14);
   projected.gameweekBest.slots.forEach((entry, n) => {
     assert.equal(entry.slot, selection.slots[n]);

@@ -87,7 +87,7 @@ test("zoom replaces without a field X; explicit list removal stays local and ope
   assert.match(source, /removalAction=\{selection \? \{[^\n]*disabled: !editable \|\| saving, onSelect: \(\) => removePlayer\(selection.playerId\)/);
   assert.match(source, /lockedReason=\{selection && !editable \? lockedZoomReason : undefined\}/);
   assert.match(source, /function addPlayer[^]*?if \(saving\) return false/);
-  assert.match(source, /: marketOpen \? <button[^\n]*className=\{styles.emptyPosition\}[^\n]*>\+<\/button> : null/);
+  assert.match(source, /: marketOpen \? budgetExhausted \? <button[^\n]*className=\{styles.emptyPosition\} disabled[^\n]*<LockKeyhole[^\n]*: <button[^\n]*className=\{styles.emptyPosition\}[^\n]*>\+<\/button> : null/);
   assert.doesNotMatch(source, /TouchlinePositionPicker|data-slot-action|aria-haspopup/);
   assert.match(css, /\.pitchRemove[^}]*width: 44px; height: 44px; min-height: 44px/);
   assert.match(css, /@media \(hover: hover\) and \(pointer: fine\)/);

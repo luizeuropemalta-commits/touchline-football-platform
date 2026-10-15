@@ -5,6 +5,7 @@ import { touchlineCoachRankingGem } from "@/lib/touchlineArena/coach-ranking-gem
 import { type CSSProperties } from "react";
 import {
   Crown,
+  Footprints,
   Trophy,
 } from "lucide-react";
 import TouchlineEliteExactCard from "@/components/touchline/cards/TouchlineEliteExactCard";
@@ -13,6 +14,7 @@ import { getTouchlineCardZoomCopy } from "@/lib/touchlineArena/card-zoom-i18n";
 import { getTouchlineExactCardCopy } from "@/lib/touchlineArena/exact-card-i18n";
 import { touchlineRankingPointsLabel } from "@/lib/touchlineArena/ranking-points-i18n";
 import { touchlinePlayerPositionKind } from "@/lib/touchlineArena/position-aware-card-stats";
+import { localizedPositionLabel } from "@/lib/touchlineArena/position-labels";
 import TouchlineCoachCardZoom from "@/components/touchline/cards/TouchlineCoachCardZoom";
 import TouchlinePitchSurface from "@/components/touchline/pitch/TouchlinePitchSurface";
 import TouchlineClubPerimeterTrace from "@/components/touchline/TouchlineClubPerimeterTrace";
@@ -195,7 +197,7 @@ export default function TouchLineTablesClient({ canEditCardEngine, copy, locale,
               <span>{copy.seasonSelectionRule}</span>
             </div>
 
-            {selection ? <><TouchlinePitchSurface className={styles.pitch} ariaLabel={copy.seasonSelection} surfaceVariant="smoked-glass">
+            {selection ? <><TouchlinePitchSurface className={styles.pitch} ariaLabel={copy.seasonSelection} surfaceVariant="presentation">
               {selection.map(({ slot, card }) => {
                 const point = touchlineTopElevenBroadcastPoint(slot);
                 // An unknown role must not be projected onto a live card and
@@ -245,7 +247,7 @@ export function TouchlineRankingsHero({ copy, rankMode, totalPublishedCards, tot
       </section>);
 }
 
-export function TouchlineFeaturedCoach({ coachRanking, copy, locale, draftLocalesEnabled = false }: Pick<TouchLineTablesClientProps, "coachRanking" | "copy" | "draftLocalesEnabled" | "locale">) {
+function TopCoachAward({ coachRanking, copy, locale, draftLocalesEnabled = false }: Pick<TouchLineTablesClientProps, "coachRanking" | "copy" | "draftLocalesEnabled" | "locale">) {
   const topSevenCoaches = coachRanking.phase === "ranked" ? coachRanking.rows.slice(0, 7) : [];
   const topCoachRow = topSevenCoaches[0] ?? null;
   const topCoachIdentity = topCoachRow
@@ -285,22 +287,21 @@ export function TouchlineFeaturedCoach({ coachRanking, copy, locale, draftLocale
       }
     : null;
 
- return (          <aside className={styles.topCoachPanel} data-top-coach-card aria-labelledby="top-coach-title"
+ return (          <div className={styles.awardEntry} data-ranking-award="best-coach" data-top-coach-card aria-labelledby="top-coach-title"
             data-coach-tier-frame={topCoachSlot?.cardTier ?? "unresolved"}
             style={{ "--tier-accent": topCoachSlot ? touchlineCardTierPalette(topCoachSlot.cardTier).accent : undefined } as CSSProperties}>
             <TouchlineClubPerimeterTrace accent={topCoachSlot ? touchlineCardTierPalette(topCoachSlot.cardTier).accent : undefined} />
-            <header>
+            <header className={styles.awardHeader} aria-label={presentationCopy.topCoachDescription}>
               <span><Crown aria-hidden="true" /> {presentationCopy.topCoachEyebrow}</span>
-              <h2 id="top-coach-title">{presentationCopy.bestCoach}</h2>
-              <p>{presentationCopy.topCoachDescription}</p>
+              <h3 id="top-coach-title">{presentationCopy.bestCoach}</h3>
             </header>
             {topCoachIdentity && topCoachClub && topCoachSlot && topCoachRow ? (
-              <div className={styles.topCoachBody}>
+              <div className={styles.awardBody}>
                 <div
-                  className={styles.topCoachCardLink}
+                  className={styles.awardCoachCardLink}
                 >
                   <TouchlineCoachCardZoom draftLocalesEnabled={draftLocalesEnabled}
-                    cardClassName={styles.topCoachCard}
+                    cardClassName={styles.awardCoachCard}
                     coach={topCoachIdentity.coach}
                     slot={topCoachSlot}
                     clubName={topCoachClub.name}
@@ -318,7 +319,7 @@ export function TouchlineFeaturedCoach({ coachRanking, copy, locale, draftLocale
                     showLeadershipCrown={topCoachRow.rank === 1}
                   />
                 </div>
-                <div className={styles.topCoachIdentity}>
+                <div className={styles.awardIdentity}>
                   <span>{presentationCopy.seasonLeader}</span>
                   <strong>{topCoachRow.coachName}</strong>
                   <small>{topCoachRow.clubName}</small>
@@ -326,7 +327,13 @@ export function TouchlineFeaturedCoach({ coachRanking, copy, locale, draftLocale
                 </div>
               </div>
             ) : <RankingPending copy={copy} />}
-          </aside>);
+          </div>);
+}
+
+/** Kept as an exported rendering seam for verified ranking consumers. The
+ * full-width page now renders this compact award inside the three-award row. */
+export function TouchlineFeaturedCoach(props: Pick<TouchLineTablesClientProps, "coachRanking" | "copy" | "draftLocalesEnabled" | "locale">) {
+  return TopCoachAward(props);
 }
 
 export function TouchlineCoachRankingTable({ coachRanking, copy, locale, draftLocalesEnabled = false }: Pick<TouchLineTablesClientProps, "coachRanking" | "copy" | "draftLocalesEnabled" | "locale">) {
@@ -388,13 +395,9 @@ function PodiumHeading({ locale, draftLocalesEnabled = false }: { locale: TouchL
           </div>;
 }
 
-/** Only layout geometry: no sporting identities, ranks, tiers or scores. */
-function PodiumEnvelope() {
-  return <div className={styles.playerPodium} aria-hidden="true">
-    {[0, 1, 2].map(slot => <div className={styles.podiumPlaceholder} key={slot}>
-      <div className={styles.podiumCard}><div className={styles.podiumCardPlaceholder} /></div>
-      <div className={styles.podiumIdentity}><strong>&nbsp;</strong><span>&nbsp;</span></div>
-    </div>)}
+function AwardEnvelope() {
+  return <div className={styles.awardPodium} aria-hidden="true">
+    {["best-player", "golden-boot", "best-coach"].map((award) => <div className={styles.awardPlaceholder} key={award} />)}
   </div>;
 }
 
@@ -402,37 +405,46 @@ export function TouchlineRankingPodiumPending({ locale, draftLocalesEnabled = fa
   const presentationCopy = getTouchlineTablesPresentationCopy(locale, draftLocalesEnabled);
   return <div className={styles.podiumPanel} aria-busy="true">
     <PodiumHeading draftLocalesEnabled={draftLocalesEnabled} locale={locale} />
-    <div className={styles.podiumReserve}><PodiumEnvelope /><p className={styles.podiumLoading} role="status">{presentationCopy.loadingRankings}</p></div>
+    <div className={styles.podiumReserve}><AwardEnvelope /><p className={styles.podiumLoading} role="status">{presentationCopy.loadingRankings}</p></div>
   </div>;
 }
 
-export function TouchlineRankingPodium({ highlights, copy, locale, canEditCardEngine, draftLocalesEnabled = false }: Pick<TouchLineTablesClientProps, "highlights" | "copy" | "draftLocalesEnabled" | "locale" | "canEditCardEngine">) {
-  const { topPlayerCards } = highlights;
+export function TouchlineRankingPodium({ highlights, coachRanking, copy, locale, canEditCardEngine, draftLocalesEnabled = false }: Pick<TouchLineTablesClientProps, "highlights" | "coachRanking" | "copy" | "draftLocalesEnabled" | "locale" | "canEditCardEngine">) {
+  const bestPlayerCard = highlights.bestPlayerCard ?? highlights.topPlayerCards[0] ?? null;
+  const goldenBootCard = highlights.goldenBootCard ?? null;
+  const goldenBootState = highlights.goldenBootState ?? "pending";
+  const resolvedCoachRanking = coachRanking ?? { phase: "unavailable" } as TouchLineCoachRankingState;
+  const presentationCopy = getTouchlineTablesPresentationCopy(locale, draftLocalesEnabled);
   return (
         <div className={styles.podiumPanel} id="top-player-cards">
           <PodiumHeading draftLocalesEnabled={draftLocalesEnabled} locale={locale} />
-          {topPlayerCards.length ? (
-            <ol className={styles.playerPodium}>
-              {topPlayerCards.map((card, index) => {
-                const tierKey = card.editorialCard?.tierKey;
-                const palette = tierKey ? touchlineCardTierPalette(tierKey) : null;
-                return (
-                <li key={card.canonicalPlayerId} data-player-podium-rank={index + 1}
-                  style={{ "--tier-accent": palette?.accent } as CSSProperties}>
-                  <TouchlineClubPerimeterTrace accent={palette?.accent} />
-                  <span className={styles.podiumRank}>{String(index + 1).padStart(2, "0")}</span>
-                  <div className={styles.podiumCard}>
-                    <TablePlayerCardZoom draftLocalesEnabled={draftLocalesEnabled} card={card} locale={locale} canEditCardEngine={canEditCardEngine} />
+            <ol className={styles.awardPodium}>
+              <li className={styles.awardEntry} data-ranking-award="best-player">
+                <header className={styles.awardHeader}>
+                  <img className={styles.goldenBallIcon} src="/touchlineArena/awards/touchline-golden-ball-trophy-v2.png" alt="" width={34} height={34} />
+                  <div><span>{presentationCopy.bestPlayerEyebrow}</span><h3>{presentationCopy.bestPlayer}</h3></div>
+                </header>
+                {bestPlayerCard ? <div className={styles.awardBody}>
+                  <div className={styles.awardPlayerCard}>
+                    <TablePlayerCardZoom draftLocalesEnabled={draftLocalesEnabled} card={bestPlayerCard} locale={locale} canEditCardEngine={canEditCardEngine} />
                   </div>
-                  <div className={styles.podiumIdentity}>
-                    <strong>{card.shortName}</strong>
-                    <span>{card.clubName} · {card.position}</span>
+                  <div className={styles.awardIdentity}><strong>{bestPlayerCard.shortName}</strong><small>{bestPlayerCard.clubName} · {localizedPositionLabel(bestPlayerCard.position, locale, draftLocalesEnabled)}</small></div>
+                </div> : <div className={styles.awardPending}><RankingPending copy={copy} /></div>}
+              </li>
+              <li className={styles.awardEntry} data-ranking-award="golden-boot">
+                <header className={styles.awardHeader}>
+                  <Footprints aria-hidden="true" />
+                  <div><span>{goldenBootState === "preview" ? presentationCopy.goldenBootPreview : presentationCopy.goldenBootEyebrow}</span><h3>{presentationCopy.goldenBoot}</h3></div>
+                </header>
+                {goldenBootCard ? <div className={styles.awardBody}>
+                  <div className={styles.awardPlayerCard}>
+                    <TablePlayerCardZoom draftLocalesEnabled={draftLocalesEnabled} card={goldenBootCard} locale={locale} canEditCardEngine={canEditCardEngine} />
                   </div>
-                </li>
-                );
-              })}
+                  <div className={styles.awardIdentity}><strong>{goldenBootCard.shortName}</strong><small>{goldenBootState === "preview" ? presentationCopy.goldenBootPreviewDescription : `${goldenBootCard.clubName} · ${localizedPositionLabel(goldenBootCard.position, locale, draftLocalesEnabled)}`}</small></div>
+                </div> : <p className={styles.awardPending}>{presentationCopy.goldenBootPending}</p>}
+              </li>
+              <li className={styles.awardCoachSlot}><TopCoachAward draftLocalesEnabled={draftLocalesEnabled} coachRanking={resolvedCoachRanking} copy={copy} locale={locale} /></li>
             </ol>
-          ) : <div className={styles.podiumReserve}><PodiumEnvelope /><RankingPending copy={copy} /></div>}
         </div>
   );
 }

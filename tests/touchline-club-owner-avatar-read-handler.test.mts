@@ -147,9 +147,11 @@ test("abort/stalled read and expiry at settlement are 503 without another sessio
   const { handleClubOwnerAvatarRead } = await load(); const controller = new AbortController(); controller.abort();
   const early = fixture(); const aborted = await handleClubOwnerAvatarRead(request(undefined, {}, controller.signal), early.deps, settings);
   assert.equal(aborted.status, 503); headers(aborted); assert.deepEqual(early.calls, []);
+  // Keep setup independent of CPU scheduling; the real timer still aborts the
+  // stalled read. The next scenario advances this clock to cover settlement expiry.
+  let clock = 0, reads = 0; t.mock.method(performance, "now", () => clock);
   const stalled = fixture(); const timeout = await handleClubOwnerAvatarRead(request(), { ...stalled.deps, readImmutable: async () => new Promise(() => {}) }, { ...settings, timeoutMs: 5 });
   assert.equal(timeout.status, 503); headers(timeout); assert.deepEqual(stalled.calls, ["actor", "current"]);
-  let clock = 0, reads = 0; t.mock.method(performance, "now", () => clock);
   const late = fixture(); const expired = await handleClubOwnerAvatarRead(request(), { ...late.deps, readCurrent: async () => {
     if (++reads === 2) queueMicrotask(() => queueMicrotask(() => queueMicrotask(() => { clock = 30_001; })));
     return published;

@@ -352,13 +352,15 @@ test("Arena overlay anchors coach outside the pitch and offers only canonical fo
       const points = elements(right).find((node) => node.props["data-arena-round-points"] === "true");
       const close = elements(right).find((node) => node.type === "button" && node.props.children === getCopy(locale, true).closeArena);
       assert.ok(formation && right && coachNode && points && close, `${locale}/${editable}`);
-      const select = elements(formation).find((node) => node.type === "select");
-      assert.ok(select);
-      assert.equal(select.props.value, "4-3-3");
-      assert.equal(select.props.disabled, !editable);
-      assert.deepEqual(elements(select).filter((node) => node.type === "option").map((node) => node.props.value), ["4-3-3", "3-5-2"]);
+      const choices = elements(formation).find((node) => node.props.className === "formationChoices");
+      assert.ok(choices);
+      const buttons = elements(choices).filter((node) => node.type === "button");
+      assert.equal(buttons.length, 2);
+      assert.equal(buttons[0].props["aria-pressed"], true);
+      assert.ok(buttons.every((button) => button.props.disabled === !editable));
+      assert.deepEqual(buttons.map((button) => elements(button).find(node => node.type === "b")?.props.children), ["4-3-3", "3-5-2"]);
       assert.ok(renderToStaticMarkup(formation).includes(getCopy(locale, true).chooseFormation));
-      (select.props.onChange as (event: { target: { value: string } }) => void)({ target: { value: "3-5-2" } });
+      (buttons[1].props.onClick as () => void)();
       assert.equal(rendered.calls.some(([name]) => name === "setFormationCode"), editable);
       assert.ok(!rendered.calls.some(([name]) => name === "fetch"));
     }
@@ -527,9 +529,9 @@ test("explicit opt-in reaches actual embedded setup, empty states, feedback and 
     }
     const empty = actual({ ...base, selectedCoach: null, filteredCoaches: [], browseCards: [] }, mod.getTouchlineFantasyMarketWorkflowCopy, true);
     for (const label of [copy.noCoach, copy.noCards]) assert.ok(empty.html().includes(text(label)), `${locale}: empty ${label}`);
+    formation.api.changeFormation("4-3-3");
+    assert.ok(formation.calls.some(([key, value]) => key === "setFeedback" && value === copy.formationUpdated));
     const view = actual(base, mod.getTouchlineFantasyMarketWorkflowCopy, true);
-    view.api.changeFormation("4-3-3");
-    assert.ok(view.calls.some(([key, value]) => key === "setFeedback" && value === copy.formationUpdated));
     await view.api.save("confirm");
     assert.ok(view.calls.some(([key, value]) => key === "setFeedback" && value === copy.confirmVerified));
     const composed = [...elements(setup.api.render()), ...elements(view.api.render())];
@@ -593,7 +595,7 @@ test("all workflow catalogue keys are consumed by actual branches, events or fee
   const setup = actual({ selectedCoach: null }, getCopy);
   const button = elements(setup.api.render()).find(node => node.type === "button" && node.props.children === copy.chooseCoach); assert.ok(button);
   (button.props.onClick as () => void)();
-  const changed = actual({}, getCopy); changed.api.changeFormation("4-3-3");
+  const changed = actual({ formationCode: null }, getCopy); changed.api.changeFormation("4-3-3");
   actual({ selections: [{ playerId: card.id, slotId: "ST" }] }, getCopy).api.removePlayer(card.id);
   for (const input of [
     { eligiblePlayers: [] }, { eligiblePlayers: [{ ...player, positionBucket: "goalkeeper" }] },
@@ -725,7 +727,9 @@ test("real add/remove/formation handlers keep canonical eligibility and identifi
     const removed = actual({ ...base, selections: [{ playerId: player.playerId, slotId: "ST" }] }, getCopy); removed.api.removePlayer(player.playerId);
     assert.equal(JSON.stringify(removed.calls.find(([key]) => key === "setSelections")?.[1]), "[]");
     assert.ok(removed.calls.some(([key, value]) => key === "setFeedback" && value === getCopy(locale).changeNotSaved));
-    const changed = actual(base, getCopy); changed.api.changeFormation("4-3-3");
+    const unchanged = actual(base, getCopy); unchanged.api.changeFormation("4-3-3");
+    assert.deepEqual(unchanged.calls, [], "current formation must preserve every existing slot");
+    const changed = actual({ ...base, formationCode: null }, getCopy); changed.api.changeFormation("4-3-3");
     assert.ok(changed.calls.some(([key, value]) => key === "setFormationCode" && value === "4-3-3"));
     assert.ok(changed.calls.some(([key, value]) => key === "setFeedback" && value === getCopy(locale).formationUpdated));
   }

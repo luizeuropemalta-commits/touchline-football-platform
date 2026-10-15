@@ -7,6 +7,13 @@ import ts from "typescript";
 const source = readFileSync(new URL("../components/touchline/match-centre/TouchlineMatchCentre.tsx", import.meta.url), "utf8");
 const owner = readFileSync(new URL("../app/fantasy/FantasyGameweekClient.tsx", import.meta.url), "utf8");
 const marketCss = readFileSync(new URL("../app/fantasy/fantasy.module.css", import.meta.url), "utf8");
+test("formation selection keeps the large coach beside options and preserves canonical zoom", () => {
+  const picker = owner.slice(owner.indexOf("const formationPicker ="), owner.indexOf("return <section", owner.indexOf("const formationPicker =")));
+  assert.match(picker, /className=\{styles\.formationCoachPreview\}[\s\S]*?<FantasyCoachZoom entry=\{selectedCoach\}/);
+  assert.match(picker, /className=\{styles\.formationChoices\}/);
+  assert.match(marketCss, /\.formationSelectionPanel \{[^}]*grid-template-columns: clamp\(120px, 18vw, 230px\) minmax\(0, 1fr\)/);
+  assert.match(marketCss, /:has\(\.formationPicker\[open\]\) > \.technicalCoachCard \{ display: none; \}/);
+});
 test("formation handler refuses changes while a previous save is pending", () => {
   const ast = ts.createSourceFile("owner.tsx", owner, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
   let handler: ts.FunctionDeclaration | undefined;
@@ -17,7 +24,13 @@ test("formation handler refuses changes while a previous save is pending", () =>
   runInNewContext(`${code}; changeFormation("4-4-2");`, {
     snapshot: { formationRegistry: { "4-4-2": { slots: [] } } }, editable: true, saving: true,
   });
-  assert.match(owner, /id="arena-formation-select"[^\n]+disabled=\{!editable \|\| saving\}/);
+  // Selecting the current formation must return before any slot remapping or
+  // state setter, even when editing is otherwise allowed.
+  runInNewContext(`${code}; changeFormation("4-4-2");`, {
+    snapshot: { formationRegistry: { "4-4-2": { slots: [] } } }, editable: true, saving: false, formationCode: "4-4-2",
+  });
+  assert.match(owner, /key=\{code\} disabled=\{!editable \|\| saving\} aria-pressed=\{formationCode === code\}/);
+  assert.doesNotMatch(owner, /id="arena-formation-select"/);
 });
 test("current fixtures show their own weekday while historical and accessible dates remain complete", () => {
   assert.match(source, /isResultSection\s*\? touchlineFixtureRailDateLabel\([\s\S]*?: fixtureDate\(fixture, language, timeZone, \{ weekday: "short" \}, draftLocalesEnabled\)/);

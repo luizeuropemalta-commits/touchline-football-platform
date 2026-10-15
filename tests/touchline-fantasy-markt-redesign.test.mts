@@ -69,7 +69,7 @@ test("the My Club presentation keeps the guided coach-first Gameweek flow", asyn
   assert.match(client, /className=\{styles\.selectedCoachSummary\}[\s\S]*?<FantasyCoachZoom[\s\S]*?builderCopy\.selectedCoachKicker/);
   const playerChooser = client.match(/<div className=\{styles\.playerGrid\}>[\s\S]*?filtered\.length === 0/)?.[0] ?? "";
   assert.match(playerChooser, /<div className=\{styles\.marketCard\}>[\s\S]*?<div className=\{styles\.playerIdentity\}>\s*<b>\{card\.name\}<\/b>/);
-  assert.match(playerChooser, /<CompactClubIdentity clubName=\{card\.clubName\} clubLogoUrl=\{findTouchLineClub\(card\.clubName\)\?\.logoUrl \?\? null\} detail=\{card\.position\}/);
+  assert.match(playerChooser, /<CompactClubIdentity clubName=\{card\.clubName\} clubLogoUrl=\{findTouchLineClub\(card\.clubName\)\?\.logoUrl \?\? null\} detail=\{localizedPositionLabel\(card\.position, locale, draftLocalesEnabled\) \?\? undefined\}/);
   assert.doesNotMatch(playerChooser, /card\.marketValue|VALOR DE MERCADO|MARKET VALUE/);
   assert.match(card, /TouchlineEliteExactCard/);
   assert.match(card, /TouchlineCardZoom/);

@@ -9,6 +9,8 @@ import {
   type TouchlineCardTierKey,
 } from "./card-rules.ts";
 import type { TouchlineCoachClassification } from "./coach-classification.ts";
+import type { TouchLineCoachRankingRow, TouchLineCoachRankingState } from "./coach-ranking-server.ts";
+import { touchlineCoachTierForRankingPosition } from "./coach-card.ts";
 
 /** Commercial order is canonical: most valuable border first. */
 export const TOUCHLINE_CLUBHUB_TIER_ORDER: readonly TouchlineCardTierKey[] =
@@ -22,6 +24,17 @@ export type TouchlinePlayerTierRepresentative = Readonly<{
 export type TouchlineCoachTierRepresentative = Readonly<{
   tierKey: TouchlineCardTierKey;
   snapshot: TouchlineLiveCoachSnapshot | null;
+  classification: TouchlineCoachClassification | null;
+}>;
+
+/** A present-tense gallery projection. It changes only the public gallery
+ * representative; the coach's stored profile tier, contract and market rules
+ * remain untouched. A complete verified table is required so no colour is
+ * inferred from a partial live update. */
+export type TouchlineRankedCoachTierRepresentative = Readonly<{
+  tierKey: TouchlineCardTierKey;
+  snapshot: TouchlineLiveCoachSnapshot | null;
+  rankingRow: TouchLineCoachRankingRow | null;
   classification: TouchlineCoachClassification | null;
 }>;
 
@@ -118,5 +131,27 @@ export function selectTouchlineCoachTierRepresentatives(): readonly TouchlineCoa
       snapshot: representative?.snapshot ?? null,
       classification: representative?.classification ?? null,
     };
+  });
+}
+
+export function selectTouchlineCoachTierRepresentativesFromRanking(
+  ranking: TouchLineCoachRankingState,
+): readonly TouchlineRankedCoachTierRepresentative[] {
+  if (ranking.phase !== "ranked" || ranking.rows.length !== 20) {
+    return selectTouchlineCoachTierRepresentatives().map(({ tierKey, snapshot, classification }) => ({
+      tierKey,
+      snapshot,
+      rankingRow: null,
+      classification,
+    }));
+  }
+
+  const snapshotsByProviderId = new Map(
+    TOUCHLINE_LIVE_COACHES.map((snapshot) => [snapshot.coach.providerId, snapshot]),
+  );
+  return TOUCHLINE_CLUBHUB_TIER_ORDER.map((tierKey) => {
+    const rankingRow = ranking.rows.find((row) => touchlineCoachTierForRankingPosition(row.rank) === tierKey) ?? null;
+    const snapshot = rankingRow ? snapshotsByProviderId.get(rankingRow.coachProviderId) ?? null : null;
+    return { tierKey, snapshot, rankingRow: snapshot ? rankingRow : null, classification: null };
   });
 }

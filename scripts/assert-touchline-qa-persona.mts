@@ -12,7 +12,11 @@ import { hasTouchLineArenaAccess } from "../lib/touchlineArena/auth-access.ts";
 function requiredEnvironment(
   name: "SUPABASE_URL" | "SUPABASE_SERVICE_ROLE_KEY" | "TOUCHLINE_QA_BASE_URL",
 ) {
-  const value = process.env[name];
+  // Next.js local configuration may expose the public URL under this canonical
+  // alias. The origin is still checked before accessing the server credential.
+  const value = name === "SUPABASE_URL"
+    ? process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL
+    : process.env[name];
   if (!value) throw new Error("QA persona preflight requires " + name + ".");
   return value;
 }

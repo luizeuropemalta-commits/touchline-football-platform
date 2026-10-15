@@ -117,7 +117,7 @@
 
 .rankStage {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(310px, 380px);
+  grid-template-columns: minmax(0, 1fr);
   gap: clamp(16px, 2vw, 28px);
   align-items: stretch;
 }
@@ -226,6 +226,60 @@
 
 .topCoachPanel,
 .coachRankingPanel { display: grid; grid-template-rows: auto minmax(0, 1fr); min-height: 0; }
+
+/* Awards replace the former oversized coach rail. Every prize now sits in one
+   balanced, compact row under the XI: Best Player, Golden Boot and Best Coach. */
+.awardPodium {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(10px, 1.4vw, 18px);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.awardEntry,
+.awardPlaceholder {
+  --touchline-perimeter-radius: 20px;
+  position: relative;
+  display: grid;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--tier-accent, #b8ff46) 38%, rgba(255, 255, 255, .15));
+  border-radius: 20px;
+  background: radial-gradient(circle at 50% 0, color-mix(in srgb, var(--tier-accent, #b8ff46) 15%, transparent), transparent 46%), linear-gradient(155deg, rgba(10, 25, 21, .96), rgba(2, 10, 9, .97));
+  box-shadow: inset 0 1px rgba(255, 255, 255, .05), 0 14px 32px rgba(0, 0, 0, .22);
+}
+.awardPlaceholder { min-height: 240px; }
+.awardHeader {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 62px;
+  padding: 12px 14px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, .09);
+  background: rgba(255, 255, 255, .025);
+}
+.awardHeader > svg { width: 25px; color: var(--gold); filter: drop-shadow(0 0 9px rgba(243, 216, 107, .38)); }
+.awardHeader > img { width: 32px; height: 32px; filter: drop-shadow(0 0 10px rgba(243, 216, 107, .35)); }
+.goldenBallIcon { object-fit: contain; }
+.awardHeader > div { display: grid; gap: 2px; min-width: 0; }
+.awardHeader span { color: var(--gold); font-size: 8px; font-weight: 950; letter-spacing: .13em; }
+.awardHeader h3 { margin: 0; color: #f5f8f5; font-size: clamp(14px, 1.5vw, 18px); line-height: 1.08; letter-spacing: -.025em; }
+.awardBody { display: grid; justify-items: center; align-content: start; min-height: 0; padding: 13px 12px 14px; }
+.awardPlayerCard,
+.awardCoachCardLink { display: block; width: min(126px, 68%); color: inherit; }
+.awardPlayerCard { padding-top: 10px; }
+.awardCoachCardLink { padding-top: 4px; transition: filter 180ms ease, transform 180ms ease; }
+.awardCoachCardLink:hover { filter: drop-shadow(0 14px 20px color-mix(in srgb, var(--tier-accent, #b8ff46) 22%, transparent)); transform: translateY(-3px) scale(1.025); }
+.awardCoachCardLink:focus-visible { border-radius: 12px; outline: 2px solid var(--gold); outline-offset: 4px; }
+.awardCoachCard { width: 100% !important; max-width: none !important; }
+.awardIdentity { display: grid; justify-items: center; min-width: 0; gap: 3px; margin-top: 4px; text-align: center; }
+.awardIdentity > span { color: var(--lime); font-size: 8px; font-weight: 950; letter-spacing: .12em; }
+.awardIdentity strong { max-width: 100%; overflow: hidden; color: #f4f8ee; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.awardIdentity small { max-width: 100%; overflow: hidden; color: rgba(245, 248, 245, .5); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.awardIdentity b { margin-top: 2px; color: var(--gold); font-size: 15px; }
+.awardPending { align-self: center; margin: 0; padding: 22px 18px; color: rgba(245, 248, 245, .63); font-size: 11px; line-height: 1.5; text-align: center; }
+.awardCoachSlot { min-width: 0; list-style: none; }
 .topCoachPanel {
   --touchline-perimeter-radius: 26px;
   align-self: start;
@@ -309,7 +363,7 @@
   padding-top: 44px;
   box-sizing: content-box;
 }
-.podiumCard :global([data-card-leadership-crown="true"]) {
+.podiumCard :global([data-card-golden-ball="true"]) {
   margin-top: 0 !important;
 }
 .podiumIdentity { display: grid; justify-items: center; min-width: 0; gap: 3px; margin-top: -2px; text-align: center; }

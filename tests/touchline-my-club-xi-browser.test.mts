@@ -659,6 +659,8 @@ async function replacePlayer(fixture: Awaited<ReturnType<typeof openFixture>>, m
       await assertCalibratedKeyboardReachability(page, pitch, target, keyboardKey);
       const arena = pitch.getByRole("button", { name: "Arena mode", exact: true });
       await page.keyboard.press(keyboardKey);
+      await expect(pitch.locator("summary")).toBeFocused();
+      await page.keyboard.press(keyboardKey);
       await expect(arena).toBeFocused();
       await expect(arena).toBeEnabled();
     }
@@ -708,19 +710,21 @@ test("real Beta budget DOM: five players spend 50M, locks credit replacements an
         assert.equal(h.page.url(), unchangedUrl); assert.equal(h.writes.length, 0);
         await comparisonToggle.click();
 
-        // An empty slot has no outgoing value to credit: even a 10M card locks.
-        const empty = geometry.slots.find(slot => !h.snapshot.selections.some(selection => selection.slotId === slot.id))!;
-        await activate(h.pitch.getByRole("button", { name: `${mode.locale === "pt-BR" ? "Escolher jogador" : "Choose player"} · ${empty.id}`, exact: true }), mode);
-        const emptyArticle = h.page.locator("#my-club-position-results article").filter({ has: h.page.locator("strong", { hasText: new RegExp(`^Synthetic ${empty.id} Player$`) }) });
-        const blocked = emptyArticle.getByRole("button", { name: copy.insufficient, exact: true });
-        await expect(blocked).toHaveAttribute("aria-disabled", "true");
-        await expect(emptyArticle).toHaveAttribute("data-market-budget-locked", "true");
-        // Playwright respects aria-disabled; dispatch a DOM activation to prove
-        // the production handler itself refuses it, not just the test driver.
-        await blocked.dispatchEvent("click");
-        await expect(h.pitch.locator("header strong")).toHaveText("5/11 · 4-3-3");
-        await expect(notice).toBeVisible(); assert.equal(h.writes.length, 0);
+        await expect(notice.getByRole("button", { name: copy.reviewXI, exact: true })).toBeVisible();
+        await expect(notice.getByRole("button", { name: copy.upgrade, exact: true })).toBeVisible();
 
+        // An empty slot has no outgoing value to credit. When the budget is
+        // exhausted, the pitch itself makes this explicit before the market is
+        // opened, while the recovery controls remain non-mutating.
+        const empty = geometry.slots.find(slot => !h.snapshot.selections.some(selection => selection.slotId === slot.id))!;
+        const lockedSlot = h.pitch.getByRole("button", { name: `${copy.exhausted} · ${empty.id}`, exact: true });
+        await expect(lockedSlot).toBeDisabled();
+        await activate(notice.getByRole("button", { name: copy.reviewXI, exact: true }), mode);
+        await expect(h.pitch.locator("header strong")).toHaveText("5/11 · 4-3-3");
+        assert.equal(h.writes.length, 0);
+
+        // A selected player still credits the outgoing value, so replacement
+        // remains available even while an empty slot stays budget-locked.
         await openReplacement(h, mode);
         const expensive = h.page.locator("#my-club-position-results article").filter({ has: h.page.locator("strong", { hasText: /^Synthetic Expensive$/ }) });
         await expect(expensive.getByRole("button", { name: copy.insufficient })).toHaveAttribute("aria-disabled", "true");
@@ -845,7 +849,9 @@ test("real XI indicator integration: geometry, tooltip, Arena and failed-read re
 });
 
 test("Arena overlay keeps its coach off the touchline, canonical formation and all XI slots aligned at desktop and landscape sizes", {
-  skip: process.env.TOUCHLINE_XI_ARENA_LAYOUT_PROOF !== "1", timeout: 120_000,
+  // 55 separate mounts cover every canonical formation at five device sizes.
+  // This is the matrix budget, not a relaxed per-page interaction deadline.
+  skip: process.env.TOUCHLINE_XI_ARENA_LAYOUT_PROOF !== "1", timeout: 300_000,
 }, async t => {
   const bundle = bundleProduct();
   const browser = await chromium.launch({ headless: true, timeout: 15_000 });
@@ -871,15 +877,15 @@ test("Arena overlay keeps its coach off the touchline, canonical formation and a
         const field = dialog.locator('[data-touchline-pitch-surface]');
         const coach = dialog.locator('[data-arena-coach="true"]');
         const formation = dialog.locator('[data-arena-formation="true"]');
-        const select = formation.locator("select");
+        const summary = formation.locator("summary");
+        const choices = formation.locator("button[aria-pressed]");
         const points = dialog.locator('[data-arena-round-points="true"]');
         const close = dialog.getByRole("button", { name: mode.locale === "pt-BR" ? "Fechar Arena" : "Close Arena", exact: true });
         await expect(field).toBeVisible(); await expect(coach).toBeVisible();
         await expect(formation).toBeVisible(); await expect(points).toBeVisible(); await expect(close).toBeVisible();
         await expect(close).toBeFocused();
-        await expect(select.locator("option")).toHaveCount(Object.keys(TOUCHLINE_DEFAULT_FORMATION_GEOMETRY_REGISTRY).length);
-        assert.deepEqual(await select.locator("option").allTextContents(), Object.keys(TOUCHLINE_DEFAULT_FORMATION_GEOMETRY_REGISTRY));
-        assert.equal(await select.isDisabled(), locked);
+        await expect(choices).toHaveCount(Object.keys(TOUCHLINE_DEFAULT_FORMATION_GEOMETRY_REGISTRY).length);
+        for (const choice of await choices.all()) assert.equal(await choice.isDisabled(), locked);
         const [fieldBox, coachBox, formationBox, pointsBox, closeBox] = await Promise.all([field, coach, formation, points, close].map(locator => locator.boundingBox()));
         assert.ok(fieldBox && coachBox && formationBox && pointsBox && closeBox);
         for (const [label, box] of [["field", fieldBox], ["coach", coachBox], ["formation", formationBox], ["points", pointsBox], ["close", closeBox]] as const) {
@@ -918,16 +924,19 @@ test("Arena overlay keeps its coach off the touchline, canonical formation and a
           await page.screenshot({ path: `/private/tmp/touchline-arena-resume-${name}-20261011.png` });
         }
         if (!locked) {
-          await close.press("Shift+Tab");
-          await expect(select).toBeFocused();
-          // Headless Chromium on macOS does not reliably open the native
-          // select popup from ArrowDown. Exercise its real change event here;
-          // the focus assertions above are the separate keyboard evidence.
-          await select.selectOption("4-4-2");
-          await expect(select).toHaveValue("4-4-2");
+          await summary.focus();
+          await expect(summary).toBeFocused();
+          await summary.press("Enter");
+          const next = choices.filter({ hasText: "4-4-2" });
+          await expect(next).toBeVisible();
+          await next.click();
+          await expect(next).toHaveAttribute("aria-pressed", "true");
           assert.equal(fixture.writes.length, 0, "changing an editable formation is only a local draft until save");
         }
         assert.equal(fixture.writes.length, 0, "viewing Arena cannot write a lineup");
+        await close.click();
+        await expect(dialog).toHaveCount(0);
+        await expect(open).toBeFocused();
         console.log(`XI_ARENA_LAYOUT ${JSON.stringify({ name, formationCode, locale: mode.locale, viewport: page.viewportSize(), locked, field: fieldBox, coach: coachBox, formation: formationBox, points: pointsBox, close: closeBox, slots: geometry.slots.length })}`);
         await fixture.assertClean();
       } finally { await fixture.close(); }

@@ -9,7 +9,7 @@ import { createTouchlineArenaCoachSlot } from "@/lib/touchlineArena/coach-card";
 import { coachCompetitionFromRanking } from "@/lib/touchlineArena/coach-competition-projection";
 import type { TouchLineCoachRankingState } from "@/lib/touchlineArena/coach-ranking-server";
 import {
-  selectTouchlineCoachTierRepresentatives,
+  selectTouchlineCoachTierRepresentativesFromRanking,
   selectTouchlinePlayerTierRepresentatives,
 } from "@/lib/touchlineArena/clubhub-tier-showcase";
 import {
@@ -44,15 +44,17 @@ function tierStyle(tierKey: TouchlineCardTierKey) {
 }
 
 type ShowcaseDictionary = ReturnType<typeof getTouchlineClubHubShowcaseCopy>;
-type CoachRepresentative = ReturnType<typeof selectTouchlineCoachTierRepresentatives>[number];
+type CoachRepresentative = ReturnType<typeof selectTouchlineCoachTierRepresentativesFromRanking>[number];
 
 function coachEvidenceLabel(
-  classification: NonNullable<CoachRepresentative["classification"]>,
+  classification: CoachRepresentative["classification"],
   dictionary: ShowcaseDictionary,
 ) {
-  if (classification.finalPosition) return `${dictionary.previousFinish}: ${classification.finalPosition}`;
-  if (classification.promotionType === "champions") return `${dictionary.promotedChampion} · ${dictionary.approvedFallback}`;
-  if (classification.promotionType === "playoff-winners") return `${dictionary.promotedPlayoff} · ${dictionary.approvedFallback}`;
+  // A gallery with an unavailable or incomplete saved ranking keeps the
+  // existing verified profile representative rather than guessing a colour.
+  if (classification?.finalPosition) return `${dictionary.previousFinish}: ${classification.finalPosition}`;
+  if (classification?.promotionType === "champions") return `${dictionary.promotedChampion} · ${dictionary.approvedFallback}`;
+  if (classification?.promotionType === "playoff-winners") return `${dictionary.promotedPlayoff} · ${dictionary.approvedFallback}`;
   return dictionary.approvedFallback;
 }
 
@@ -60,7 +62,7 @@ export default function TouchlineCoachCategoryShowcase({ locale, playerCards, co
   const effectiveLocale = resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled);
   const dictionary = getTouchlineClubHubShowcaseCopy(effectiveLocale, draftLocalesEnabled);
   const playerRepresentatives = selectTouchlinePlayerTierRepresentatives(playerCards);
-  const coachRepresentatives = selectTouchlineCoachTierRepresentatives();
+  const coachRepresentatives = selectTouchlineCoachTierRepresentativesFromRanking(coachRanking);
 
   return (
     <div className={styles.showcases}>
@@ -127,7 +129,8 @@ export default function TouchlineCoachCategoryShowcase({ locale, playerCards, co
         </header>
 
         <ul className={styles.grid} data-touchline-tier-order="highest-to-entry">
-          {coachRepresentatives.map(({ tierKey, snapshot, classification }) => {
+          {coachRepresentatives.map((representative) => {
+            const { tierKey, snapshot, rankingRow } = representative;
             const tierLabel = touchlineCardTierName(tierKey, effectiveLocale, draftLocalesEnabled);
             const club = snapshot
               ? TOUCHLINE_ENGLAND_CLUBS.find((candidate) => candidate.teamId === snapshot.coach.teamId)
@@ -136,20 +139,24 @@ export default function TouchlineCoachCategoryShowcase({ locale, playerCards, co
               ? `/touchline-coaches/${encodeURIComponent(snapshot.coach.providerId)}?lang=${encodeURIComponent(effectiveLocale)}`
               : null;
             const cardSlot = snapshot
-              ? createTouchlineArenaCoachSlot(snapshot.coach, classification?.finalPosition ?? null, classification?.tierKey ?? tierKey)
+              ? createTouchlineArenaCoachSlot(
+                snapshot.coach,
+                rankingRow?.rank ?? representative.classification?.finalPosition ?? null,
+                rankingRow ? tierKey : representative.classification?.tierKey ?? tierKey,
+              )
               : null;
             const competition = snapshot ? coachCompetitionFromRanking(coachRanking, snapshot.coach.providerId) : null;
 
             return (
               <li key={tierKey} className={styles.card} style={tierStyle(tierKey)} data-tier={tierKey}>
                 <TouchlineClubPerimeterTrace accent={touchlineCardTierPalette(tierKey).accent} />
-                {snapshot && classification && coachHref && cardSlot ? (
+                {snapshot && coachHref && cardSlot ? (
                   <div className={styles.cardLink}>
                     <span className={styles.coachCardVisual}>
                       <TouchlineCoachCardZoom draftLocalesEnabled={draftLocalesEnabled}
                         coach={snapshot.coach}
                         slot={cardSlot}
-                        clubName={club?.name ?? classification.sourceClub ?? "TouchLine England"}
+                        clubName={club?.name ?? "TouchLine England"}
                         clubLogoUrl={club?.logoUrl}
                         clubAccent={club?.accent}
                         countryCode3={snapshot.countryCode3}
@@ -166,8 +173,8 @@ export default function TouchlineCoachCategoryShowcase({ locale, playerCards, co
                     <Link className={styles.identity} href={coachHref} aria-label={`${dictionary.openCoach}: ${snapshot.coach.displayName}`}>
                       <small>{tierLabel}</small>
                       <strong>{snapshot.coach.displayName}</strong>
-                      <span>{club?.name ?? classification.sourceClub ?? "TouchLine England"}</span>
-                      <em>{coachEvidenceLabel(classification, dictionary)}</em>
+                      <span>{club?.name ?? "TouchLine England"}</span>
+                      <em>{rankingRow ? `#${rankingRow.rank}` : coachEvidenceLabel(representative.classification, dictionary)}</em>
                     </Link>
                   </div>
                 ) : (

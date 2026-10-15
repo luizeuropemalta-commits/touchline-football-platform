@@ -336,12 +336,20 @@ test("readback is incrementally capped even with missing/lying length; wrong byt
   }
 });
 
-test("abort/timeout never retry a started create or start later requests; late responses are cancelled", async () => {
+test("abort never retries a started create or starts later requests; late responses are cancelled", async () => {
   const input = await upload(); const aborted = new AbortController(); aborted.abort(); const f = await fixture(input);
   await assert.rejects(f.create().createImmutable(input, aborted.signal), errorIs("rejected")); assert.equal(f.calls.length, 0);
   let resolve!: (response: Response) => void, cancelled = false;
-  const late = await fixture(input, call => call.init.method === "POST" ? new Promise<Response>(done => { resolve = done; }) : undefined);
-  await assert.rejects(late.create(20).createImmutable(input, signal()), errorIs("unknown")); assert.equal(late.calls.length, 2);
+  let postStarted!: () => void;
+  const enteredPost = new Promise<void>(done => { postStarted = done; });
+  const controller = new AbortController();
+  const late = await fixture(input, call => call.init.method === "POST" ? new Promise<Response>(done => { resolve = done; postStarted(); }) : undefined);
+  // Abort only after dispatch is observed; native validation need not finish
+  // within an arbitrary 20ms wall-clock budget on a busy test runner.
+  const pending = late.create().createImmutable(input, controller.signal);
+  await Promise.race([enteredPost, pending.then(() => { throw Error("CREATE_SETTLED_BEFORE_POST_BARRIER"); })]);
+  controller.abort();
+  await assert.rejects(pending, errorIs("unknown")); assert.equal(late.calls.length, 2);
   resolve(new Response(new ReadableStream({ cancel() { cancelled = true; } })));
   await new Promise(done => setImmediate(done)); assert.equal(cancelled, true); assert.equal(late.calls.length, 2);
 });

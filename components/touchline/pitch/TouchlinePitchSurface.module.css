@@ -36,6 +36,17 @@
 .surfaceSmokedGlass .box,
 .surfaceSmokedGlass .sixYardBox { box-shadow: 0 0 3px rgba(163, 255, 18, .25); }
 
+/* Ranking presentation keeps regulation geometry but deliberately removes the
+   grass/stadium image so compact award cards remain the visual focus. */
+.surfacePresentation {
+  --pitch-line: rgba(184, 255, 70, .42);
+  --pitch-line-soft: rgba(184, 255, 70, .26);
+  border-color: rgba(184, 255, 70, .26);
+  background: linear-gradient(145deg, rgba(11, 26, 23, .92), rgba(2, 10, 9, .94));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .035), inset 0 0 44px rgba(0, 0, 0, .35), 0 18px 42px rgba(0, 0, 0, .22);
+}
+.surfacePresentation::before { display: none; }
+
 .surface::before {
   content: "";
   position: absolute;

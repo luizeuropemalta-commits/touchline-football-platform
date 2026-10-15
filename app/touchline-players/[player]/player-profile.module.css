@@ -140,12 +140,12 @@
 /* .cardFrame already reserves the complete leader-crown stage at every
    breakpoint. The shared card's normal-surface safety margin is therefore
    intentionally neutralised here instead of doubling the profile spacing. */
-.cardFrame > [data-card-leadership-crown="true"] {
+.cardFrame > [data-card-golden-ball="true"] {
   margin-top: 0 !important;
 }
 
 /* Only a published leader needs the existing calibrated crown envelope. */
-.cardFrame:not(:has(> [data-card-leadership-crown="true"])) {
+.cardFrame:not(:has(> [data-card-golden-ball="true"])) {
   padding-top: 0;
 }
 

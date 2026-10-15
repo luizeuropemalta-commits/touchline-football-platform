@@ -40,7 +40,7 @@ test("Spanish card terminology agrees across ranking and podium copy", () => {
   assert.equal(copy.publishedCards, "Cartas publicadas");
   assert.ok(Object.values(copy).every(value => !/\btarjetas?\b/i.test(value)));
   const presentation = getTouchlineTablesPresentationCopy("es-ES", true);
-  assert.equal(presentation.podiumTitle, "Las 3 mejores cartas de la temporada");
+  assert.equal(presentation.podiumTitle, "Premios de la temporada");
   assert.equal(presentation.incompleteSelection, "La selección publicada aún no incluye las 11 cartas canónicas; no se muestra un XI parcial.");
 });
 

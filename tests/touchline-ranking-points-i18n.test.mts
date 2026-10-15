@@ -57,7 +57,7 @@ function descendants(scope: ts.Node, predicate: (node: ts.Node) => boolean): ts.
 }
 
 for (const [consumer, row] of [
-  ["TouchlineFeaturedCoach", "topCoachRow"],
+  ["TopCoachAward", "topCoachRow"],
   ["TouchlineCoachRankingTable", "coach"],
   ["TouchlineRankingEnding", "owner"],
 ] as const) {

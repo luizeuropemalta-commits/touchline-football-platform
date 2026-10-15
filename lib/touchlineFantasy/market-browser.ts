@@ -7,8 +7,8 @@ type BrowsePosition = Exclude<TouchlineMarketPositionBucket, "outfield">;
 // Presentation categories only. This does not revive the retired 35-card quotas.
 export const TOUCHLINE_FANTASY_BROWSE_POSITIONS = [
   { code: "GK", bucket: "goalkeeper" },
-  { code: "RB", bucket: "right-back" },
   { code: "CB", bucket: "centre-back" },
+  { code: "RB", bucket: "right-back" },
   { code: "LB", bucket: "left-back" },
   { code: "CDM", bucket: "defensive-midfield" },
   { code: "MID", bucket: "midfield" },
