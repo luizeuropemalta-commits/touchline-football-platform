@@ -132,6 +132,8 @@ type TouchlineCardZoomProps = {
   tierLabel?: string;
   details?: TouchlineCardZoomDetails;
   detailsContent?: ReactNode;
+  /** Optional, contextual content rendered inside the existing details panel. */
+  detailsSupplement?: ReactNode;
   socialProviderId?: string;
   replacementAction?: { label: string; onSelect: () => void; disabled?: boolean };
   removalAction?: { label: string; onSelect: () => void; disabled?: boolean };
@@ -139,7 +141,7 @@ type TouchlineCardZoomProps = {
   lockedReason?: string;
 };
 
-export function TouchlineCardZoomDetailsPanel({ details, locale, draftLocalesEnabled = false, primaryAction, lockedReason }: { details: TouchlineCardZoomDetails; locale?: string; draftLocalesEnabled?: boolean; primaryAction?: ReactNode; lockedReason?: string }) {
+export function TouchlineCardZoomDetailsPanel({ details, locale, draftLocalesEnabled = false, primaryAction, lockedReason, supplement }: { details: TouchlineCardZoomDetails; locale?: string; draftLocalesEnabled?: boolean; primaryAction?: ReactNode; lockedReason?: string; supplement?: ReactNode }) {
   const identityFields = details.fields.filter((field) => field.group !== "performance");
   const performanceFields = details.fields.filter((field) => field.group === "performance");
   const [isFullPerformanceOpen, setIsFullPerformanceOpen] = useState(false);
@@ -307,6 +309,7 @@ export function TouchlineCardZoomDetailsPanel({ details, locale, draftLocalesEna
             {history.slice(0, 3).map((field) => <p key={`${field.label}-${field.value}`}><span>{field.historyDisplayLabel ?? field.label.replace(/^(Match history|Histórico da partida)\s*·\s*/i, "")}</span>{field.value}</p>)}
           </div>
         ) : null}
+        {supplement ? <div className={styles.detailsSupplement}>{supplement}</div> : null}
       </aside>
     ) : null}
     </>
@@ -326,6 +329,7 @@ export default function TouchlineCardZoom({
   tierLabel,
   details,
   detailsContent,
+  detailsSupplement,
   socialProviderId,
   replacementAction,
   removalAction,
@@ -482,7 +486,7 @@ export default function TouchlineCardZoom({
                 </a>
               ) : null}
             </div>
-            {detailsContent ? <aside className={styles.details}>{detailsContent}</aside> : details ? <TouchlineCardZoomDetailsPanel details={details} locale={explicitLocale} draftLocalesEnabled={draftLocalesEnabled} primaryAction={lineupActions} lockedReason={lockedReason} /> : null}
+            {detailsContent ? <aside className={styles.details}>{detailsContent}</aside> : details ? <TouchlineCardZoomDetailsPanel details={details} locale={explicitLocale} draftLocalesEnabled={draftLocalesEnabled} primaryAction={lineupActions} lockedReason={lockedReason} supplement={detailsSupplement} /> : null}
           </div>
         </div>,
         document.body,

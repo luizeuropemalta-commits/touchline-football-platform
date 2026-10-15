@@ -16,6 +16,8 @@ import ClubHubCrestTrace from "@/components/touchline/ClubHubCrestTrace";
 import ClubHubLiveFixtureScore from "@/components/touchline/ClubHubLiveFixtureScore";
 import ClubHubLocalKickoff from "@/components/touchline/ClubHubLocalKickoff";
 import TouchlineClubPerimeterTrace from "@/components/touchline/TouchlineClubPerimeterTrace";
+import ClubHubOfficialChannel from "@/components/touchline/ClubHubOfficialChannel";
+import type { TouchlineClubOfficialChannels } from "@/lib/touchlineArena/club-official-channels";
 import type { TouchlinePublicFixture } from "@/lib/football-data/public-fixture";
 import type { TouchlineFantasySidelinedPlayer } from "@/lib/football-data/types";
 import { availabilityBadgeForPlayer } from "@/lib/touchlineArena/player-availability-badge";
@@ -43,6 +45,7 @@ type ClubHubOfficialLineupProps = {
   sidelined?: TouchlineFantasySidelinedPlayer[];
   sidelinedFixtureId?: string | null;
   locale: string;
+  officialChannels?: TouchlineClubOfficialChannels;
   draftLocalesEnabled?: boolean;
   /** Isolates the static local visual fixture from card-ranking activity. */
   staticVisualQa?: boolean;
@@ -76,6 +79,7 @@ export default function ClubHubOfficialLineup({
   sidelined = [],
   sidelinedFixtureId = null,
   locale,
+  officialChannels = {},
   draftLocalesEnabled = false,
   staticVisualQa = false,
   labels,
@@ -261,6 +265,7 @@ export default function ClubHubOfficialLineup({
                     contractTermLabel={undefined}
                     tierAccent={tierAccent}
                     tierLabel={tierLabel}
+                    detailsSupplement={<ClubHubOfficialChannel channels={officialChannels} kind="playerCollection" locale={locale} draftLocalesEnabled={draftLocalesEnabled} />}
                     details={buildTouchlinePlayerCardZoomDetails({
                       locale,
                   draftLocalesEnabled,

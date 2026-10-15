@@ -100,7 +100,7 @@ test("ClubHub places identity and honours before the field and fixture rail", ()
   assert.match(hero, /<ClubTrophyCarousel/);
   assert.doesNotMatch(hero, /<ClubHubHeroNextMatch/);
   assert.doesNotMatch(hero, /ClubHubLiveFixtureScore/);
-  assert.match(lineupSection, /matchup=\{\{/);
+  assert.match(lineupSection, /matchup=\{lineupMatchup\}/);
   assert.match(lineupSection, /fixtureId: matchSnapshot\.previewFixtureId/);
   assert.ok(heroStart < officialLeagueStart);
   assert.ok(heroStart < lineupStart);

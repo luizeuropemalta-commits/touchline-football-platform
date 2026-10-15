@@ -24,7 +24,7 @@ test("ClubHub preserves natural crest silhouettes without decorative circles", (
   assert.doesNotMatch(traceHost, /fetch\(|create(?:Admin)?Client|supabase|providers\/sportmonks|process\.env|mask|clip-path|filter:/i);
 
   assert.match(profile, /<ClubHubCrestTrace[\s\S]*?accent=\{club\.accent\}[\s\S]*?className="club-hub-logo"/);
-  assert.match(profile, /<ClubHubOfficialLineup[\s\S]*?matchup=\{\{/);
+  assert.match(profile, /<ClubHubOfficialLineup[\s\S]*?matchup=\{lineupMatchup\}/);
   assert.match(lineup, /matchup\.home\.logoUrl && matchup\.home\.accent/);
   assert.match(lineup, /matchup\.away\.logoUrl && matchup\.away\.accent/);
   assert.match(lineup, /className=\{styles\.matchupCrest\}/);

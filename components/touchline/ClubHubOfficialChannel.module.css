@@ -1,0 +1,100 @@
+.channel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  border: 1px solid color-mix(in srgb, var(--club-accent, #a3ff12) 42%, rgba(255, 255, 255, .16));
+  border-radius: 16px;
+  padding: 14px;
+  color: #f8fff4;
+  background:
+    radial-gradient(circle at 8% 0%, color-mix(in srgb, var(--club-accent, #a3ff12) 18%, transparent), transparent 52%),
+    linear-gradient(135deg, rgba(5, 16, 12, .93), rgba(2, 8, 8, .84));
+  box-shadow: inset 0 1px rgba(255,255,255,.07), 0 18px 36px rgba(0,0,0,.22);
+}
+
+.copy { display: flex; align-items: center; min-width: 0; gap: 10px; }
+.icon {
+  display: grid;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--club-accent, #a3ff12) 54%, rgba(255,255,255,.22));
+  border-radius: 11px;
+  color: color-mix(in srgb, var(--club-accent, #a3ff12) 70%, #fff);
+  background: color-mix(in srgb, var(--club-accent, #a3ff12) 10%, rgba(0,0,0,.28));
+  box-shadow: 0 0 18px color-mix(in srgb, var(--club-accent, #a3ff12) 15%, transparent);
+}
+.icon svg { width: 18px; height: 18px; }
+.copy h2 { margin: 0; color: #f6fff1; font-size: 13px; line-height: 1.2; font-weight: 950; letter-spacing: .01em; }
+.copy p { margin: 3px 0 0; color: rgba(244,255,238,.63); font-size: 10px; font-weight: 740; line-height: 1.35; }
+.channel a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 36px;
+  border: 1px solid color-mix(in srgb, var(--club-accent, #a3ff12) 56%, rgba(255,255,255,.16));
+  border-radius: 999px;
+  padding: 0 12px;
+  color: #f3ffe7;
+  background: color-mix(in srgb, var(--club-accent, #a3ff12) 13%, rgba(3,11,8,.86));
+  box-shadow: inset 0 1px rgba(255,255,255,.09), 0 8px 20px rgba(0,0,0,.2);
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: .035em;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: transform .18s ease, background .18s ease, box-shadow .18s ease;
+}
+.channel a svg { width: 15px; height: 15px; }
+.channel a:hover { transform: translateY(-1px); background: color-mix(in srgb, var(--club-accent, #a3ff12) 24%, rgba(3,11,8,.9)); }
+.channel a:focus-visible { outline: 2px solid #fff; outline-offset: 3px; box-shadow: 0 0 0 5px color-mix(in srgb, var(--club-accent, #a3ff12) 38%, transparent); }
+.compact { grid-template-columns: minmax(0, 1fr) auto; border-radius: 13px; padding: 12px; }
+.compact .copy h2 { font-size: 12px; }
+.compact .icon { width: 30px; height: 30px; border-radius: 9px; }
+.compact .icon svg { width: 16px; height: 16px; }
+.compact a { min-height: 34px; padding: 0 11px; font-size: 9px; }
+.hero {
+  position: relative;
+  isolation: isolate;
+  min-height: 176px;
+  overflow: hidden;
+  align-items: end;
+  padding: 18px;
+  background:
+    radial-gradient(circle at 72% 12%, color-mix(in srgb, var(--club-secondary, #64c7ff) 26%, transparent), transparent 56%),
+    linear-gradient(120deg, rgba(3, 12, 15, .56) 0%, rgba(4, 19, 21, .38) 52%, rgba(4, 18, 22, .12) 100%);
+  backdrop-filter: blur(1.5px);
+}
+.heroImage {
+  z-index: -2;
+  object-fit: contain;
+  object-position: right bottom;
+  opacity: .96;
+}
+.heroScrim {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(2, 10, 11, .68) 0%, rgba(2, 10, 11, .4) 43%, rgba(2, 10, 11, .03) 100%),
+    linear-gradient(0deg, rgba(2, 10, 11, .25), transparent 62%);
+  pointer-events: none;
+}
+.hero .copy { align-items: flex-start; max-width: min(100%, 210px); }
+.hero .copy h2 { font-size: 19px; line-height: 1.02; letter-spacing: -.03em; }
+.hero .copy p { max-width: 180px; margin-top: 7px; font-size: 10px; }
+.hero a { position: relative; z-index: 1; min-height: 40px; padding-inline: 14px; }
+
+@media (max-width: 560px) {
+  .channel { grid-template-columns: minmax(0, 1fr); gap: 11px; padding: 13px; }
+  .channel a { width: 100%; min-height: 40px; }
+  .compact { grid-template-columns: minmax(0, 1fr); }
+  .hero { min-height: 205px; }
+  .hero .copy { max-width: 220px; }
+}
+
+@media (prefers-reduced-motion: reduce) { .channel a { transition: none; } }

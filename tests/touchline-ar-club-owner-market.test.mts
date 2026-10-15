@@ -13,7 +13,7 @@ const ar = {
   yourProfile: "ملفك الشخصي", location: "الموقع", nationality: "الجنسية", memberSince: "عضو منذ", watchIntro: "مشاهدة المقدمة",
   plan: "خطتي", planStandard: "قياسي", planPro: "PRO", planActive: "نشط", planInactive: "غير نشط", marketPower: "قوة السوق", marketPowerUnavailable: "قوة السوق غير متاحة", activatePlan: "تفعيل الخطة", renewPlan: "تجديد",
   proMember: "عضو PRO", proAccess: "وصول PRO", proPrivileges: "مزايا العضو الحصرية",
-  planUntil: "صالح حتى {date}", planActiveNoEnd: "خطتك نشطة.", planInactiveDetail: "فعّل خطة لإدارة تشكيلتك الأساسية.", planStandardPrice: "49.90 € سنويًا", planStandardBenefit: "وصول كامل إلى اللعبة والترتيب.", planProPrice: "89.90 € سنويًا", planProBenefit: "مظهر مميز وسجل وتقارير وتنبيهات.",
+  planUntil: "صالح حتى {date}", planActiveNoEnd: "خطتك نشطة.", planInactiveDetail: "فعّل خطة لإدارة تشكيلتك الأساسية.", planStandardPrice: "49.90 € لكل موسم", planStandardBenefit: "وصول كامل إلى اللعبة والترتيب.", planProPrice: "89.90 € لكل موسم", planProBenefit: "مظهر مميز وسجل وتقارير وتنبيهات.",
   planActionUnavailable: "تفعيل الخطة وتجديدها غير متاحين بعد.", virtualBudgetSeparate: "تبقى ميزانية تشكيلتك الأساسية منفصلة عن خطتك.",
 } as const;
 

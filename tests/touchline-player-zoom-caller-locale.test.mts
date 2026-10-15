@@ -58,7 +58,7 @@ function evaluate(expression: typeof expressions[number], locale: string, perfor
     exports, require: (name: string) => { assert.equal(name, "react/jsx-runtime"); return jsxRuntime; },
     locale, draftLocalesEnabled: false, hideMarketValuePanel: false, getTouchlineClubHubContractLabel, pt, isPortuguese: pt, portuguese: pt, card, exactPlayer: card, cardReview: undefined,
     zoomCopy: getTouchlineCardZoomCopy(locale), exactCopy: getTouchlineExactCardCopy(locale), matchFactLabels: getTouchlineCardMatchFactLabels(locale),
-    profileHref, canEditCardEngine: false, currentUser: null,
+    profileHref, canEditCardEngine: false, currentUser: null, officialChannels: {},
     labels, cardLabels: labels, tierKey: null, tierAccent: "#b8ff46", tierLabel: "CANONICAL_TIER",
     tierPalette: { accent: "#b8ff46" }, tierDisplayName: "CANONICAL_TIER",
     touchlineCardTierPalette, touchlineCardTierName, buildTouchlinePlayerCardZoomDetails, buildTouchlineVerifiedMatchFactFields,
@@ -70,7 +70,7 @@ function evaluate(expression: typeof expressions[number], locale: string, perfor
     zoom: { details: zoomDetails, tierAccent: "#b8ff46", tierLabel: "CANONICAL_TIER", activeContractPrice: undefined },
     styles: new Proxy({}, { get: (_, key) => String(key) }), cardRenderScale: 0.5, staticVisualQa: false,
     TOUCHLINE_CARD_STUDIO_LAYOUT_KEY: "PRESERVED_LAYOUT_KEY",
-    TouchlineCardZoom: "zoom-boundary", TouchlineEliteExactCard: "exact-card-boundary", CompactPlayerCard: "compact-card-boundary",
+    TouchlineCardZoom: "zoom-boundary", TouchlineEliteExactCard: "exact-card-boundary", CompactPlayerCard: "compact-card-boundary", ClubHubOfficialChannel: "official-channel-boundary",
   });
   return exports.element.props;
 }

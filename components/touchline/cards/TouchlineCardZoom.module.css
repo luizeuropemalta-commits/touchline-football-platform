@@ -311,6 +311,11 @@
   text-align: start;
 }
 
+.detailsSupplement {
+  width: 100%;
+  margin-top: 4px;
+}
+
 .identityDetails::after {
   width: 72px;
   height: 1px;

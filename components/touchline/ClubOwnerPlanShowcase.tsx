@@ -115,7 +115,7 @@ export default function ClubOwnerPlanShowcase({ initialPlan, activePlanKey = nul
       {embedded ? <ClubOwnerPlanCard compact tier={plan.id} name={name} locale={locale} active={activePlanKey === plan.id} activePlanBudget={activePlanKey === plan.id ? activePlanBudget : undefined} draftLocalesEnabled={draftLocalesEnabled} /> : <button type="button" className={`${controls.link} ${styles.panelCardButton}`} aria-label={`${labels.viewPlan}: ${title}`} onClick={event => openDialog(event.currentTarget)} aria-haspopup="dialog">
         <ClubOwnerPlanCard compact={embedded} tier={plan.id} name={name} locale={locale} active={activePlanKey === plan.id} activePlanBudget={activePlanKey === plan.id ? activePlanBudget : undefined} draftLocalesEnabled={draftLocalesEnabled} />
       </button>}
-      <div className={styles.offerSummary}><div><small>{plan.id === "vip" || plan.id === "beta" ? labels.membership : plan.id === "master" ? labels.seasonalPrice : labels.annualPrice}</small><strong data-plan-price={plan.id}>{priceFor(plan.id)}</strong></div><p>{benefitFor(plan.id)}</p></div>
+      <div className={styles.offerSummary}><div><small>{labels.seasonalPrice}</small><strong data-plan-price={plan.id}>{priceFor(plan.id)}</strong></div><p>{benefitFor(plan.id)}</p></div>
       {canChoose && activePlanKey !== plan.id ? <a className={`${controls.arena} ${styles.choosePlan}`} href="#clubowner-plan-interest" onClick={() => dialog.current?.close()}>{labels.choosePlan}</a> : null}
     </div> : null}
     {!showAllPlans ? <div className={styles.planBrowse} role="group" aria-label={labels.browse}>

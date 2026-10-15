@@ -78,7 +78,7 @@ function contextFor(path: Path, locale: string, value: number | null, sentinel =
     hideMarketValuePanel: false, getTouchlineClubHubContractLabel,
     locale, pt: locale === "pt-BR", isPortuguese: locale === "pt-BR", portuguese: locale === "pt-BR", card, exactPlayer: card, cardReview: undefined,
     getTouchlineCardZoomCopy: zoomGetter, getTouchlineExactCardCopy: exactGetter, getTouchlineCardMatchFactLabels: factGetter, touchlinePlayerAppearanceLabel,
-    profileHref: "/canonical-profile?keep=1#anchor", canEditCardEngine: false, currentUser: null,
+    profileHref: "/canonical-profile?keep=1#anchor", canEditCardEngine: false, currentUser: null, officialChannels: {},
     labels: { totalRating: "PRESERVED_ARTWORK_OVERRIDE" }, cardLabels: { totalRating: "PRESERVED_ARTWORK_OVERRIDE" },
     tierKey: null, tierAccent: "#b8ff46", tierLabel: undefined, tierPalette: { accent: "#b8ff46" }, tierDisplayName: undefined,
     touchlineCardTierPalette, touchlineCardTierName, TOUCHLINE_NEUTRAL_CARD_ACCENT: "#b8ff46",
@@ -90,7 +90,7 @@ function contextFor(path: Path, locale: string, value: number | null, sentinel =
     copy: { en: { totalRating: "LEGACY_TOTAL", unavailable: "Unavailable", minutes: "Minutes" }, pt: { totalRating: "LEGACY_TOTAL", unavailable: "Indisponível", minutes: "Minutos" } },
     zoomMatchHistoryFields: [], ariaLabel: "PRESERVED_ARIA_OVERRIDE", hasActiveContractOffer: false, marketHref: "/unchanged-market", previewTier: false,
     styles: new Proxy({}, { get: (_, key) => String(key) }), cardRenderScale: 0.5, staticVisualQa: false,
-    TOUCHLINE_CARD_STUDIO_LAYOUT_KEY: "PRESERVED_LAYOUT_KEY", TouchlineCardZoom: "zoom-boundary", TouchlineEliteExactCard: "exact-boundary", CompactPlayerCard: "compact-boundary",
+    TOUCHLINE_CARD_STUDIO_LAYOUT_KEY: "PRESERVED_LAYOUT_KEY", TouchlineCardZoom: "zoom-boundary", TouchlineEliteExactCard: "exact-boundary", CompactPlayerCard: "compact-boundary", ClubHubOfficialChannel: "official-channel-boundary",
   };
   for (const name of ["zoomCopy", "exactCopy"]) context[name] = requireBindings ? evaluate(initializer(path, name), context) : name === "zoomCopy" ? zoomGetter(locale) : exactGetter(locale);
   if (path.includes("[player]")) {

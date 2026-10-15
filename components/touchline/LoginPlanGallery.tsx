@@ -14,7 +14,7 @@ export default function LoginPlanGallery({ locale, draftLocalesEnabled = false }
     <div className={styles.grid}>
       {CLUB_OWNER_PLAN_PREVIEWS.map(plan => <article key={plan.id} className={`${cardStyles.planShowcase} ${styles.offer}`} data-plan-preview={plan.id}>
         <ClubOwnerPlanCard tier={plan.id} locale={locale} draftLocalesEnabled={draftLocalesEnabled} />
-        <div className={styles.price}><small>{plan.id === "vip" || plan.id === "beta" ? labels.membership : plan.id === "master" ? labels.seasonalPrice : labels.annualPrice}</small><strong>{plan.id === "beta" ? labels.betaPrice : plan.id === "standard" ? copy.planStandardPrice : plan.id === "pro" ? copy.planProPrice : plan.id === "vip" ? labels.invitation : labels.masterPrice}</strong></div>
+        <div className={styles.price}><small>{labels.seasonalPrice}</small><strong>{plan.id === "beta" ? labels.betaPrice : plan.id === "standard" ? copy.planStandardPrice : plan.id === "pro" ? copy.planProPrice : plan.id === "vip" ? labels.invitation : labels.masterPrice}</strong></div>
         <details className={styles.details}>
           <summary>{labels.details}<ChevronDown size={15} aria-hidden="true" /></summary>
           <p>{plan.id === "beta" ? labels.betaBenefit : plan.id === "standard" ? copy.planStandardBenefit : plan.id === "pro" ? copy.planProBenefit : plan.id === "vip" ? labels.vipBenefit : labels.benefitPending}</p>

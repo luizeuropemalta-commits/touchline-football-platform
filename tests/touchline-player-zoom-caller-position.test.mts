@@ -61,7 +61,7 @@ function produce(expression: typeof expressions[number], locale: string, positio
     buildTouchlinePlayerCardZoomDetails, buildTouchlineVerifiedMatchFactFields, touchlinePlayerPositionKind,
     squadCardToExactPlayer: (value: unknown) => value, touchlinePlayerProfileHref: () => profileHref,
     touchlineCardTierName, touchlineCardTierPalette, TOUCHLINE_NEUTRAL_CARD_ACCENT: "#b8ff46",
-    profileHref, canEditCardEngine: false, cardReview: undefined, currentUser: null,
+    profileHref, canEditCardEngine: false, cardReview: undefined, currentUser: null, officialChannels: {},
     tierKey: null, tierAccent: "#b8ff46", tierLabel: undefined, palette: { accent: "#b8ff46" },
     labels: {}, cardLabels: {}, styles: new Proxy({}, { get: (_, key) => String(key) }),
     TOUCHLINE_CARD_STUDIO_LAYOUT_KEY: "preserved-layout", staticVisualQa: false, cardRenderScale: 0.5,
@@ -72,7 +72,7 @@ function produce(expression: typeof expressions[number], locale: string, positio
     removalAction: undefined,
     lockedReason: undefined,
     fitContainer: false, resolvedDisplayWidth: 132, useLiveCompactAsset: false,
-    TouchlineCardZoom: "zoom-boundary", TouchlineEliteExactCard: "artwork-boundary", CompactPlayerCard: "compact-boundary",
+    TouchlineCardZoom: "zoom-boundary", TouchlineEliteExactCard: "artwork-boundary", CompactPlayerCard: "compact-boundary", ClubHubOfficialChannel: "official-channel-boundary",
   };
   // Absence is intentional in the RED fixture: old callers do not provide
   // positionKind, so the assertion fails on behavior, not a harness reference.

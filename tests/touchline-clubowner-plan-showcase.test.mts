@@ -128,10 +128,9 @@ test("actual Beta card and login gallery reuse the artwork with 50M TC, free acc
     assert.ok(offers[0].includes(labels.betaPrice));
     assert.ok(offers[0].includes(labels.betaBenefit.replaceAll("&", "&amp;").replaceAll("'", "&#x27;")));
     assert.ok(!offers[0].includes(labels.pricePending));
-    assert.ok(!offers[0].includes(labels.annualPrice));
+    assert.ok(offers[0].includes(labels.seasonalPrice));
     assert.ok(offers[3].includes(labels.masterPrice));
     assert.ok(offers[3].includes(labels.seasonalPrice));
-    assert.ok(!offers[3].includes(labels.annualPrice));
     assert.ok(offers[1].includes(copy.planStandardPrice));
     assert.ok(offers[2].includes(copy.planProPrice));
     for (const offer of offers) {
@@ -176,7 +175,7 @@ test("approved prices are Beta free and Master 169.90 EUR per season in all eigh
   for (const [locale, prices] of Object.entries(expected)) {
     const labels = getClubOwnerPlanShowcaseCopy(locale, true);
     assert.deepEqual([labels.betaPrice, labels.masterPrice], prices);
-    assert.notEqual(labels.seasonalPrice, labels.annualPrice);
+    assert.ok(labels.seasonalPrice.length > 0);
   }
 });
 

@@ -18,14 +18,14 @@ const baseline = {
     nameUnavailable: "Name unavailable", photoAria: "Change profile photo — unavailable", photoUnavailable: "Photo updates are not available yet",
     yourProfile: "YOUR PROFILE", location: "Location", nationality: "Nationality", memberSince: "Member since", watchIntro: "Watch intro",
     plan: "My plan", planStandard: "Standard", planPro: "PRO", planActive: "ACTIVE", planInactive: "NOT ACTIVE", marketPower: "Market power", marketPowerUnavailable: "Market power unavailable", activatePlan: "Activate plan", renewPlan: "Renew", proMember: "PRO MEMBER", proAccess: "PRO ACCESS", proPrivileges: "Exclusive member benefits",
-    planUntil: "Valid until {date}", planActiveNoEnd: "Your plan is active.", planInactiveDetail: "Activate a plan to manage your XI.", planStandardPrice: "€49.90/year", planStandardBenefit: "Full access to the game and rankings.", planProPrice: "€89.90/year", planProBenefit: "Premium visual, history, reports and alerts.",
+    planUntil: "Valid until {date}", planActiveNoEnd: "Your plan is active.", planInactiveDetail: "Activate a plan to manage your XI.", planStandardPrice: "€49.90/season", planStandardBenefit: "Full access to the game and rankings.", planProPrice: "€89.90/season", planProBenefit: "Premium visual, history, reports and alerts.",
     planActionUnavailable: "Plan activation and renewal are not available yet.", virtualBudgetSeparate: "Your XI budget remains separate from your plan.",
   },
   "pt-BR": {
     nameUnavailable: "Nome não disponível", photoAria: "Alterar foto do perfil — indisponível", photoUnavailable: "Alteração de foto ainda indisponível",
     yourProfile: "SEU PERFIL", location: "Localização", nationality: "Nacionalidade", memberSince: "Membro desde", watchIntro: "Ver intro",
     plan: "Meu plano", planStandard: "Standard", planPro: "PRO", planActive: "ATIVO", planInactive: "NÃO ATIVO", marketPower: "Poder de mercado", marketPowerUnavailable: "Poder de mercado indisponível", activatePlan: "Ativar plano", renewPlan: "Renovar", proMember: "MEMBRO PRO", proAccess: "ACESSO PRO", proPrivileges: "Benefícios exclusivos do membro",
-    planUntil: "Válido até {date}", planActiveNoEnd: "Seu plano está ativo.", planInactiveDetail: "Ative um plano para gerenciar seu XI.", planStandardPrice: "€49,90/ano", planStandardBenefit: "Acesso completo ao jogo e ao ranking.", planProPrice: "€89,90/ano", planProBenefit: "Visual premium, histórico, relatórios e alertas.",
+    planUntil: "Válido até {date}", planActiveNoEnd: "Seu plano está ativo.", planInactiveDetail: "Ative um plano para gerenciar seu XI.", planStandardPrice: "€49,90/temporada", planStandardBenefit: "Acesso completo ao jogo e ao ranking.", planProPrice: "€89,90/temporada", planProBenefit: "Visual premium, histórico, relatórios e alertas.",
     planActionUnavailable: "A ativação e a renovação do plano ainda não estão disponíveis.", virtualBudgetSeparate: "O orçamento do seu XI continua separado do seu plano.",
   },
 };
@@ -108,22 +108,22 @@ test("local Standard preview uses the blue plan surface without changing account
   assert.match(css, /\.header\[data-plan-preview="standard"\].+--plan-preview-rgb: 65,139,226/);
 });
 
-test("local Standard preview presents its approved annual offer without enabling payment", async () => {
+test("local Standard preview presents its approved seasonal offer without enabling payment", async () => {
   const html = renderHeader({ name: "Real Owner", avatarUrl: "/owner.webp", city: "", nationality: "", since: "" }, "pt-BR", await loadCopy(), { plan: { active: true, expiresAt: "2026-11-08T00:00:00.000Z" }, planPreview: "standard" });
   assert.match(html, /data-plan-offer="standard"/);
   assert.match(html, /data-plan-state="inactive"/);
-  assert.match(html, /€49,90\/ano/);
+  assert.match(html, /€49,90\/temporada/);
   assert.match(html, /Acesso completo ao jogo e ao ranking\./);
   assert.match(html, /Detalhes do plano/);
   assert.match(html, /Prévia do plano — sua assinatura não foi alterada\./);
   assert.doesNotMatch(html, /checkout|stripe|walletBalance|amountMinor/);
 });
 
-test("local Pro preview presents its approved annual offer without enabling payment", async () => {
+test("local Pro preview presents its approved seasonal offer without enabling payment", async () => {
   const html = renderHeader({ name: "Real Owner", avatarUrl: "/owner.webp", city: "", nationality: "", since: "" }, "pt-BR", await loadCopy(), { plan: { active: true, expiresAt: "2026-11-08T00:00:00.000Z" }, planPreview: "pro" });
   assert.match(html, /data-plan-offer="pro"/);
   assert.match(html, /data-plan-state="inactive"/);
-  assert.match(html, /€89,90\/ano/);
+  assert.match(html, /€89,90\/temporada/);
   assert.match(html, /Visual premium, histórico, relatórios e alertas\./);
   assert.match(html, /Detalhes do plano/);
   assert.doesNotMatch(html, /checkout|stripe|walletBalance|amountMinor/);
