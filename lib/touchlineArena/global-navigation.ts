@@ -83,6 +83,19 @@ export function touchlineGlobalNavigationArenaHref(locale: string, draftLocalesE
   return `/clubowner?lang=${encodeURIComponent(resolveTouchLinePresentationLocale(locale, draftLocalesEnabled))}`;
 }
 
+/** Public pages cannot infer a role. Resolve their account destination on the
+ * server instead of sending an administrator into the customer-only game. */
+export function touchlineGlobalNavigationEntryHref(
+  locale: string,
+  surface: TouchlineGlobalNavigationSurface,
+  draftLocalesEnabled = false,
+) {
+  const language = encodeURIComponent(resolveTouchLinePresentationLocale(locale, draftLocalesEnabled));
+  if (surface === "auth") return `/admin?lang=${locale === "pt-BR" ? "pt-BR" : "en-GB"}`;
+  if (surface === "authenticated") return touchlineGlobalNavigationArenaHref(locale, draftLocalesEnabled);
+  return `/account?lang=${language}`;
+}
+
 export function isTouchlineGlobalNavigationCurrent(
   currentRoute: TouchlineGlobalNavigationRoute,
   key: TouchlineGlobalNavigationItemKey,

@@ -13,7 +13,7 @@ import { TOUCHLINE_APPROVED_LOCALES, isTouchLineLocaleComplete, type TouchLineLo
 
 const require = createRequire(import.meta.url);
 const catalogueUrl = new URL("../lib/touchlineArena/navigation-i18n.ts", import.meta.url);
-const keys = ["ariaLabel", "backToArena", "clubHub", "allClubs", "live", "rankings", "fantasy", "myClub", "more", "currentClub", "opening"] as const;
+const keys = ["ariaLabel", "backToArena", "account", "admin", "clubHub", "allClubs", "live", "rankings", "fantasy", "myClub", "more", "currentClub", "opening"] as const;
 type Copy = Record<(typeof keys)[number], string>;
 type CatalogueModule = {
   TOUCHLINE_NAVIGATION_CATALOGUES: Record<TouchLineLocale, Copy>;
@@ -21,35 +21,43 @@ type CatalogueModule = {
 };
 
 const english: Copy = {
+  account: "My account", admin: "Admin",
   ariaLabel: "TouchLine navigation", backToArena: "Club Owner", clubHub: "ClubHub", allClubs: "All clubs",
   live: "Live", rankings: "Rankings", fantasy: "Fantasy", myClub: "My Club", more: "More", currentClub: "Current club", opening: "Opening",
 };
 const portuguese: Copy = {
+  account: "Minha conta", admin: "Admin",
   ariaLabel: "Navegação TouchLine", backToArena: "Club Owner", clubHub: "ClubHub", allClubs: "Todos os clubes",
   live: "Ao vivo", rankings: "Rankings", fantasy: "Fantasy", myClub: "Meu Clube", more: "Mais", currentClub: "Clube atual", opening: "Abrindo",
 };
 const unpublishedDrafts = {
   "es-ES": {
+    account: "Mi cuenta", admin: "Admin",
     ariaLabel: "Navegación de TouchLine", backToArena: "Club Owner", clubHub: "ClubHub", allClubs: "Todos los clubes",
     live: "En directo", rankings: "Clasificaciones", fantasy: "Fantasy", myClub: "Mi club", more: "Más", currentClub: "Club actual", opening: "Abriendo",
   },
   "it-IT": {
+    account: "Il mio account", admin: "Admin",
     ariaLabel: "Navigazione TouchLine", backToArena: "Club Owner", clubHub: "ClubHub", allClubs: "Tutti i club",
     live: "In diretta", rankings: "Classifiche", fantasy: "Fantasy", myClub: "Il mio club", more: "Altro", currentClub: "Club attuale", opening: "Apertura in corso",
   },
   "fr-FR": {
+    account: "Mon compte", admin: "Admin",
     ariaLabel: "Navigation TouchLine", backToArena: "Club Owner", clubHub: "ClubHub", allClubs: "Tous les clubs",
     live: "En direct", rankings: "Classements", fantasy: "Fantasy", myClub: "Mon club", more: "Plus", currentClub: "Club actuel", opening: "Ouverture en cours",
   },
   "ar-SA": {
+    account: "حسابي", admin: "Admin",
     ariaLabel: "التنقل في TouchLine", backToArena: "Club Owner", clubHub: "ClubHub", allClubs: "جميع الأندية",
     live: "مباشر", rankings: "الترتيبات", fantasy: "Fantasy", myClub: "ناديي", more: "المزيد", currentClub: "النادي الحالي", opening: "جارٍ الفتح",
   },
   "tr-TR": {
+    account: "Hesabım", admin: "Admin",
     ariaLabel: "TouchLine gezinme menüsü", backToArena: "Club Owner", clubHub: "ClubHub", allClubs: "Tüm kulüpler",
     live: "Canlı", rankings: "Sıralamalar", fantasy: "Fantasy", myClub: "Kulübüm", more: "Daha fazla", currentClub: "Geçerli kulüp", opening: "Açılıyor",
   },
   "de-DE": {
+    account: "Mein Konto", admin: "Admin",
     ariaLabel: "TouchLine-Navigation", backToArena: "Club Owner", clubHub: "ClubHub", allClubs: "Alle Vereine",
     live: "Live", rankings: "Ranglisten", fantasy: "Fantasy", myClub: "Mein Verein", more: "Mehr", currentClub: "Aktueller Verein", opening: "Wird geöffnet",
   },
@@ -69,7 +77,7 @@ function compile(relativePath: string) {
 const navigationCode = compile("../components/touchline/TouchlineGlobalNavigation.tsx");
 const labelCode = compile("../components/touchline/TouchlineNavigationLabel.tsx");
 
-function renderNavigation(locale: string, options: { pending?: boolean; club?: string; dictionary?: Copy } = {}) {
+function renderNavigation(locale: string, options: { pending?: boolean; club?: string; dictionary?: Copy; surface?: "public" | "auth" | "authenticated" } = {}) {
   const jsxRuntime: unknown = require("react/jsx-runtime");
   const nextLink = {
     default: ({ href, children, ...rest }: { href: string; children: React.ReactNode }) => React.createElement("a", { href, ...rest }, children),
@@ -105,16 +113,27 @@ function renderNavigation(locale: string, options: { pending?: boolean; club?: s
   } });
   assert.ok(exports.default);
   return renderToStaticMarkup(React.createElement(exports.default, {
-    locale, currentRoute: "live", surface: "public",
+    locale, currentRoute: "live", surface: options.surface ?? "public",
     ...(options.club ? { trustedContext: { club: { teamId: "synthetic-club", slug: "synthetic-club", name: options.club } } } : {}),
   }));
 }
 
+test("actual role-aware navigation keeps admin away from customer game and preserves customer entry", () => {
+  const admin=renderNavigation("pt-BR",{surface:"auth"});
+  assert.match(admin,/href="\/admin\?lang=pt-BR"/);
+  assert.ok(admin.includes(">Admin<"));
+  assert.doesNotMatch(admin,/href="\/clubowner|>Club Owner</);
+  const customer=renderNavigation("pt-BR",{surface:"authenticated"});
+  assert.match(customer,/href="\/clubowner\?lang=pt-BR"/);
+  assert.ok(customer.includes(">Club Owner<"));
+  assert.doesNotMatch(customer,/href="\/admin/);
+});
+
 test("current English navigation preserves visible labels, current state and canonical destinations", () => {
   const html = renderNavigation("en-GB");
   assert.match(html, /aria-label="TouchLine navigation"/);
-  for (const label of ["Club Owner", "ClubHub", "Live", "Rankings", "More"]) assert.ok(html.includes(`>${label}<`), label);
-  for (const path of ["/clubowner?lang=en-GB", "/touchline-clubs?lang=en-GB", "/live?lang=en-GB", "/rankings?lang=en-GB"]) {
+  for (const label of ["My account", "ClubHub", "Live", "Rankings", "More"]) assert.ok(html.includes(`>${label}<`), label);
+  for (const path of ["/account?lang=en-GB", "/touchline-clubs?lang=en-GB", "/live?lang=en-GB", "/rankings?lang=en-GB"]) {
     assert.ok(html.includes(`href="${path}"`), path);
   }
   assert.match(html, /aria-current="page" data-touchline-navigation-key="live"/);
@@ -125,7 +144,7 @@ test("current Portuguese navigation preserves the original copy and trusted club
   const html = renderNavigation("pt-BR", { club: "Bodø/Glimt" });
   assert.match(html, /aria-label="Navegação TouchLine"/);
   assert.match(html, /aria-label="Clube atual: Bodø\/Glimt"/);
-  for (const label of ["Club Owner", "Todos os clubes", "Ao vivo", "Rankings", "Mais", "Bodø/Glimt"]) {
+  for (const label of ["Minha conta", "Todos os clubes", "Ao vivo", "Rankings", "Mais", "Bodø/Glimt"]) {
     assert.ok(html.includes(`>${label}<`), label);
   }
   assert.ok(html.includes('href="/touchline-clubs?lang=pt-BR"'));
@@ -154,7 +173,7 @@ test("new navigation catalogue preserves existing EN/PT copy and uses the owner-
   assert.deepEqual(catalogue.getTouchlineNavigationCopy("pt-BR"), portuguese);
 });
 
-test("all eight approved navigation catalogues have exactly the eleven shared keys and brand names", async () => {
+test("all eight approved navigation catalogues have exactly the thirteen shared keys and brand names", async () => {
   const { TOUCHLINE_NAVIGATION_CATALOGUES: catalogues } = await loadCatalogue();
   assert.deepEqual(Object.keys(catalogues).sort(), TOUCHLINE_APPROVED_LOCALES.map((locale) => locale.code).sort());
   for (const { code } of TOUCHLINE_APPROVED_LOCALES) {
@@ -187,7 +206,7 @@ test("Italian and French pending link labels use progressive feedback wording", 
   assert.equal(catalogues["fr-FR"].opening, "Ouverture en cours");
 });
 
-test("all eleven literal labels remain authored for each unpublished navigation draft without opening its gate", async () => {
+test("all thirteen literal labels remain authored for each unpublished navigation draft without opening its gate", async () => {
   const { TOUCHLINE_NAVIGATION_CATALOGUES: catalogues, getTouchlineNavigationCopy } = await loadCatalogue();
 
   for (const [locale, expected] of Object.entries(unpublishedDrafts) as Array<[keyof typeof unpublishedDrafts, Copy]>) {
@@ -206,7 +225,7 @@ test("unpublished catalogues never activate the public navigation getter or link
     assert.equal(isTouchLineLocaleComplete(locale), false);
     const html = renderNavigation(locale);
     assert.match(html, /aria-label="TouchLine navigation"/);
-    assert.ok(html.includes('href="/clubowner?lang=en-GB"'));
+    assert.ok(html.includes('href="/account?lang=en-GB"'));
     assert.doesNotMatch(html, /dir="rtl"/);
   }
   assert.deepEqual(getTouchlineNavigationCopy(undefined), english);

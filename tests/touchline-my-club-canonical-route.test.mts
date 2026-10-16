@@ -18,7 +18,7 @@ test("Market is the game destination and the legacy My Club link redirects witho
   );
   assert.match(source("app/my-club/page.tsx"), /redirect\(`\/clubowner\?\$\{forwarded\.toString\(\)\}`\)/);
   assert.match(source("app/clubowner/page.tsx"), /auth\.getUser\(/);
-  assert.match(source("app/clubowner/page.tsx"), /if \(isOwnerEmail\(user\.email\)\) notFound\(\)/);
+  assert.match(source("app/clubowner/page.tsx"), /if \(isOwnerEmail\(user\.email\)\) redirect\(touchLineAuthEntryHref\("\/admin", locale\)\)/);
   assert.match(source("proxy.ts"), /const isRetiredClubOwnerRoute = matchesRoute\(pathname, "\/club-owner"\)/);
   assert.match(source("proxy.ts"), /function retiredClubOwnerRedirect[\s\S]*?new URL\("\/clubowner", request\.url\)/);
   assert.match(source("proxy.ts"), /const isMyClubRoute = pathname === "\/my-club"/);

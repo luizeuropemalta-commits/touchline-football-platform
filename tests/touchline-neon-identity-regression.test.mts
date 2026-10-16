@@ -245,7 +245,7 @@ test("profile surfaces use the shared compact global navigation", () => {
 
   assert.match(globalNavigation, /resolveTouchlineGlobalNavigationItems/);
   assert.match(globalNavigation, /aria-current=\{isCurrent \? "page" : undefined\}/);
-  assert.match(globalNavigation, /touchlineGlobalNavigationArenaHref/);
+  assert.match(globalNavigation, /touchlineGlobalNavigationEntryHref/);
   assert.match(athleteProfileCss, /@media \(min-width: 761px\) and \(max-width: 880px\)[\s\S]*?\.identityHeading \{[\s\S]*?flex-direction: column/);
   assert.match(athleteProfileCss, /@media \(max-width: 760px\)[\s\S]*?\.identityHeading \{[\s\S]*?grid-template-columns: minmax\(0, 1fr\) 104px/);
   assert.match(athleteProfileCss, /\.statusGrid article \{[\s\S]*?min-width: 0/);

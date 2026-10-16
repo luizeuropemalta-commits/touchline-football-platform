@@ -4,6 +4,8 @@ import { resolveTouchlineCatalogueLocale } from "./catalogue-locale.ts";
 export type TouchlineNavigationCopy = Readonly<{
   ariaLabel: string;
   backToArena: string;
+  account: string;
+  admin: string;
   clubHub: string;
   allClubs: string;
   live: string;
@@ -22,6 +24,8 @@ export type TouchlineNavigationCopy = Readonly<{
 export const TOUCHLINE_NAVIGATION_CATALOGUES = {
   "en-GB": {
     ariaLabel: "TouchLine navigation",
+    account: "My account",
+    admin: "Admin",
     backToArena: "Club Owner",
     clubHub: "ClubHub",
     allClubs: "All clubs",
@@ -35,6 +39,8 @@ export const TOUCHLINE_NAVIGATION_CATALOGUES = {
   },
   "pt-BR": {
     ariaLabel: "Navegação TouchLine",
+    account: "Minha conta",
+    admin: "Admin",
     backToArena: "Club Owner",
     clubHub: "ClubHub",
     allClubs: "Todos os clubes",
@@ -48,6 +54,8 @@ export const TOUCHLINE_NAVIGATION_CATALOGUES = {
   },
   "es-ES": {
     ariaLabel: "Navegación de TouchLine",
+    account: "Mi cuenta",
+    admin: "Admin",
     backToArena: "Club Owner",
     clubHub: "ClubHub",
     allClubs: "Todos los clubes",
@@ -61,6 +69,8 @@ export const TOUCHLINE_NAVIGATION_CATALOGUES = {
   },
   "it-IT": {
     ariaLabel: "Navigazione TouchLine",
+    account: "Il mio account",
+    admin: "Admin",
     backToArena: "Club Owner",
     clubHub: "ClubHub",
     allClubs: "Tutti i club",
@@ -74,6 +84,8 @@ export const TOUCHLINE_NAVIGATION_CATALOGUES = {
   },
   "fr-FR": {
     ariaLabel: "Navigation TouchLine",
+    account: "Mon compte",
+    admin: "Admin",
     backToArena: "Club Owner",
     clubHub: "ClubHub",
     allClubs: "Tous les clubs",
@@ -87,6 +99,8 @@ export const TOUCHLINE_NAVIGATION_CATALOGUES = {
   },
   "ar-SA": {
     ariaLabel: "التنقل في TouchLine",
+    account: "حسابي",
+    admin: "Admin",
     backToArena: "Club Owner",
     clubHub: "ClubHub",
     allClubs: "جميع الأندية",
@@ -100,6 +114,8 @@ export const TOUCHLINE_NAVIGATION_CATALOGUES = {
   },
   "tr-TR": {
     ariaLabel: "TouchLine gezinme menüsü",
+    account: "Hesabım",
+    admin: "Admin",
     backToArena: "Club Owner",
     clubHub: "ClubHub",
     allClubs: "Tüm kulüpler",
@@ -113,6 +129,8 @@ export const TOUCHLINE_NAVIGATION_CATALOGUES = {
   },
   "de-DE": {
     ariaLabel: "TouchLine-Navigation",
+    account: "Mein Konto",
+    admin: "Admin",
     backToArena: "Club Owner",
     clubHub: "ClubHub",
     allClubs: "Alle Vereine",

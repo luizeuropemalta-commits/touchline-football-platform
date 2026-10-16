@@ -14,7 +14,7 @@ import {
 import {
   isTouchlineGlobalNavigationCurrent,
   resolveTouchlineGlobalNavigationItems,
-  touchlineGlobalNavigationArenaHref,
+  touchlineGlobalNavigationEntryHref,
   type TouchlineGlobalNavigationItemKey,
   type TouchlineGlobalNavigationRoute,
   type TouchlineGlobalNavigationSurface,
@@ -120,9 +120,9 @@ export default function TouchlineGlobalNavigation({
       data-touchline-navigation-surface={surface}
       data-touchline-navigation-context={hasTrustedClubContext ? "club" : "none"}
     >
-      <Link className={styles.arena} href={touchlineGlobalNavigationArenaHref(effectiveLocale, draftLocalesEnabled)}>
+      <Link className={styles.arena} href={touchlineGlobalNavigationEntryHref(effectiveLocale, surface, draftLocalesEnabled)}>
         <Goal aria-hidden="true" />
-        <TouchlineNavigationLabel label={dictionary.backToArena} pendingLabel={`${dictionary.opening}…`} />
+        <TouchlineNavigationLabel label={surface === "auth" ? dictionary.admin : surface === "authenticated" ? dictionary.backToArena : dictionary.account} pendingLabel={`${dictionary.opening}…`} />
       </Link>
 
       {trustedContext?.club ? (

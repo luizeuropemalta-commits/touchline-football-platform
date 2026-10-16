@@ -44,7 +44,7 @@ function fixture(patch: Record<string, string | undefined> = {}) {
       if (name === "@/lib/touchlineArena/club-owner-page-identity") return { resolveTouchlineClubOwnerPageIdentity: (user: { id: string; user_metadata: { full_name: string; avatar_url?: string } }, _profile: unknown, avatarUrl: string | null) => ({
         isAuthenticatedClubOwner: true, id: actor, name: "Real Customer", avatarUrl: avatarUrl ?? user.user_metadata.avatar_url ?? null,
       }) };
-      if (name === "@/lib/touchlineArena/auth-i18n") return { touchLineAuthEntryHref: (_route: string, locale: string, destination: string) => `/login?lang=${locale}&returnTo=${encodeURIComponent(destination)}` };
+      if (name === "@/lib/touchlineArena/auth-i18n") return { touchLineAuthEntryHref: (route: string, locale: string, destination?: string) => `${route}?lang=${locale}${destination ? `&returnTo=${encodeURIComponent(destination)}` : ""}` };
       if (name === "@/lib/touchlineArena/server-read-deadline") return { resolveServerReadWithin: async <T>(value: Promise<T>, fallback: T) => { try { return await value; } catch { return fallback; } } };
       if (name === "@/lib/touchlineFantasy/market-plan-policy") return { isTouchlineFantasyMarketAccess: () => false };
       if (name === "@/lib/touchlineFantasy/market-workflow-i18n") return { getTouchlineFantasyMarketWorkflowCopy: () => ({ metadataDescription: "fixture" }) };
@@ -270,9 +270,10 @@ test("real page degrades schema/config failures to same-account metadata after v
   }
 });
 
-test("real page keeps original unauthenticated redirect and admin not-found boundaries", async () => {
+test("real page keeps unauthenticated redirect and returns admin before any customer state", async () => {
   const guest = fixture(); guest.state.authentication = { data: { user: null }, error: null };
   await assert.rejects(guest.page(), /REDIRECT:.*login/); assert.ok(!guest.calls.includes("privileged")); assert.equal(guest.fantasyProps.length, 0);
   const admin = fixture(); admin.state.authentication = { data: { user: { ...auth().data.user, email: "admin@example.invalid" } }, error: null };
-  await assert.rejects(admin.page(), /NOT_FOUND/); assert.ok(!admin.calls.includes("privileged")); assert.equal(admin.fantasyProps.length, 0);
+  await assert.rejects(admin.page(), /REDIRECT:\/admin\?lang=en-GB/); assert.ok(!admin.calls.includes("privileged")); assert.equal(admin.fantasyProps.length, 0);
+  assert.ok(!admin.calls.includes("fantasy"), "administrator never loads a customer squad snapshot");
 });

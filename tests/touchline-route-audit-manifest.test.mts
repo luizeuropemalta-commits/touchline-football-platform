@@ -15,7 +15,8 @@ function row(route: string) {
 }
 
 test("inventories every page, API method, proxy, metadata route, and error boundary", () => {
-  assert.equal(rows.filter((item) => item.kind === "PAGE").length, 72);
+  assert.equal(rows.filter((item) => item.kind === "PAGE").length, 73);
+  assert.equal(row("/account").data, "VERIFIED_AUTH_ROLE_REDIRECT_ONLY_NO_TEAM_WRITES");
   assert.equal(rows.some((item) => item.route === "/visual-qa/arena-main-field"), false);
   assert.equal(rows.filter((item) => item.kind === "API").length, 100);
   assert.equal(rows.filter((item) => item.kind === "BOUNDARY").length, 7);

@@ -191,14 +191,15 @@ test("missing auth, missing configuration and rejected auth redirect before prot
   }
 });
 
-test("configured owner and admin identities are denied before snapshot or avatar reads", async () => {
+test("configured owner and admin identities return to admin before snapshot or avatar reads", async () => {
   for (const email of ["owner@example.test", " ADMIN@EXAMPLE.TEST "]) {
     const h = fixture({ user: { ...customer, email } });
     await assert.rejects(h.route({ lang: "pt-BR" }), (error: unknown) => {
-      assert.equal((error as { kind?: string }).kind, "notFound");
+      assert.equal((error as { kind?: string }).kind, "redirect");
+      assert.equal((error as { href?: string }).href, "/admin?lang=pt-BR");
       return true;
     });
-    assert.deepEqual(h.events, ["avatarReaderCreated", "createClient", "getUser", "notFound"]);
+    assert.deepEqual(h.events, ["avatarReaderCreated", "createClient", "getUser", "redirect"]);
   }
 });
 
@@ -330,10 +331,11 @@ test("trusted draft presentation does not bypass auth, owner denial or failed sn
   }
   const owner = fixture({ user: { ...customer, email: "owner@example.test" } });
   await assert.rejects(owner.internalRoute({ lang: "ar-SA" }, true), (error: unknown) => {
-    assert.equal((error as { kind?: string }).kind, "notFound");
+    assert.equal((error as { kind?: string }).kind, "redirect");
+    assert.equal((error as { href?: string }).href, "/admin?lang=en-GB");
     return true;
   });
-  assert.deepEqual(owner.events, ["avatarReaderCreated", "createClient", "getUser", "notFound"]);
+  assert.deepEqual(owner.events, ["avatarReaderCreated", "createClient", "getUser", "redirect"]);
   const failed = fixture({ rejectSnapshot: true });
   const root = await failed.internalRoute({ lang: "ar-SA" }, true);
   const fantasy = descendants(root).find(element => element.type === failed.leaves.fantasy)!;

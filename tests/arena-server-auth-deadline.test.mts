@@ -10,9 +10,9 @@ test("Market server auth is bounded and fails closed before loading or rendering
 
   assert.match(source, /resolveServerReadWithin\(\s*supabase\.auth\.getUser\(\),\s*null,\s*8_000/);
   assert.match(source, /if \(!user\) redirect\(touchLineAuthEntryHref\("\/login", locale, destination, draftLocalesEnabled\)\)/);
-  assert.match(source, /if \(isOwnerEmail\(user\.email\)\) notFound\(\)/);
+  assert.match(source, /if \(isOwnerEmail\(user\.email\)\) redirect\(touchLineAuthEntryHref\("\/admin", locale\)\)/);
   const authGate = source.indexOf("if (!user) redirect(");
-  const ownerGate = source.indexOf("if (isOwnerEmail(user.email)) notFound()");
+  const ownerGate = source.indexOf('if (isOwnerEmail(user.email)) redirect(touchLineAuthEntryHref("/admin", locale))');
   const snapshotRead = source.indexOf("resolveServerReadWithin(loadTouchlineFantasyReadSnapshot(user)");
   const render = source.indexOf("<FantasyGameweekClient");
   assert.ok(authGate >= 0 && ownerGate > authGate && snapshotRead > ownerGate && render > snapshotRead);

@@ -117,7 +117,7 @@ test("ClubOwner preserves verified customer rendering and verified owner exclusi
   assert.equal(JSON.stringify(context), JSON.stringify({ mode: "account", accountId: actor.id }));
   assert.equal(all.find(node => node.type === "navigation")!.props.surface, "authenticated");
   const owner = fixture(async () => ({ data: { user: user("owner@example.test") }, error: null }));
-  await assert.rejects(owner.run(), error => error instanceof Navigation && error.destination === "not-found");
+  await assert.rejects(owner.run(), error => error instanceof Navigation && error.destination === "/admin?lang=pt-BR");
   assert.deepEqual(owner.calls, ["auth", "owner-policy"]);
 });
 

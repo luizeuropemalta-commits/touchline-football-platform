@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { normalizeTouchlineMatchCentreTimeZone } from "@/lib/touchlineArena/match-centre";
 import { isTouchLineSiteLocalesEnabled } from "@/lib/touchlineArena/site-locales-release";
-import { notFound, redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import ClubOwnerMarketHeader from "@/components/touchline/ClubOwnerMarketHeader";
 import { clubOwnerRankingPosition } from "@/lib/touchlineArena/club-owner-profile-metrics";
 import TouchlineBrandHeader from "@/components/touchline/TouchlineBrandHeader";
@@ -77,7 +77,7 @@ async function renderClubOwnerPage({ searchParams }: ClubOwnerPageProps, draftLo
   const user = authentication?.error === null ? authentication.data?.user ?? null : null;
   if (!user) redirect(touchLineAuthEntryHref("/login", locale, destination, draftLocalesEnabled));
   // Retain the existing customer-only boundary; never borrow a demo identity.
-  if (isOwnerEmail(user.email)) notFound();
+  if (isOwnerEmail(user.email)) redirect(touchLineAuthEntryHref("/admin", locale));
   const scheduleNow = Date.now();
   const [avatarContext, snapshot, persistedFixtures] = await Promise.all([
     readAvatarContext(authentication, user.id),

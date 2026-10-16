@@ -51,7 +51,7 @@ test("public card pages derive Card Engine visibility from the authenticated ser
 test("Market keeps customer authentication and denies owner/admin shortcuts", () => {
   const marketRoute = source("app/clubowner/page.tsx");
 
-  assert.match(marketRoute, /if \(isOwnerEmail\(user\.email\)\) notFound\(\)/);
+  assert.match(marketRoute, /if \(isOwnerEmail\(user\.email\)\) redirect\(touchLineAuthEntryHref\("\/admin", locale\)\)/);
   assert.doesNotMatch(marketRoute, /(?:redirect\(|href=)[^\n]*\/admin\//);
   assert.match(marketRoute, /if \(!user\) redirect\(touchLineAuthEntryHref\("\/login", locale, destination, draftLocalesEnabled\)\)/);
   assert.match(marketRoute, /const destination = `\/clubowner\?lang=/);
