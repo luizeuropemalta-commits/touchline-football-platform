@@ -6,6 +6,7 @@ import React from "react";
 import * as jsxRuntime from "react/jsx-runtime";
 import { renderToStaticMarkup } from "react-dom/server";
 import ts from "typescript";
+import { chromium, webkit } from "@playwright/test";
 import * as navigation from "../lib/touchlineArena/global-navigation.ts";
 import * as rootLocale from "../lib/touchlineArena/root-locale.ts";
 import * as catalogue from "../lib/touchlineArena/catalogue-locale.ts";
@@ -107,4 +108,30 @@ test("compact lineup reuses shared button family while retaining touch/focus/des
   assert.match(css, /\.homeLineupLink\s*\{[^}]*min-height:\s*44px/);
   assert.match(css, /\.homeLineupLink:focus-visible/);
   assert.ok(!css.includes(".toolbarNavigation"), "Live must not override shared navigation button dimensions");
+});
+
+test("narrow shared header separates navigation from brand and a long locale error", async () => {
+  const headerCss = readFileSync(new URL("../components/touchline/TouchlineBrandHeader.module.css", import.meta.url), "utf8");
+  for (const engine of [chromium, webkit]) {
+    const browser = await engine.launch();
+    try {
+      const page = await browser.newPage({ viewport: { width: 844, height: 390 } });
+      await page.setContent(`<style>body{margin:0}*{box-sizing:border-box}[data-logo]{display:block;width:242px;height:72px}.controls{width:200px}.controls p{white-space:normal}nav{display:flex;gap:8px;flex-wrap:wrap}nav a{display:block;padding:12px}${headerCss}</style>${renderToStaticMarkup(exports.render!("pt-BR"))}`);
+      await page.locator(".controls").evaluate(node => {
+        const error = document.createElement("p");
+        error.textContent = "Não foi possível confirmar o idioma. Recarregue a página para tentar novamente.";
+        node.append(error);
+      });
+      const boxes = await page.locator("header").evaluate(node => {
+        const brand = node.querySelector("[data-logo]")!.getBoundingClientRect();
+        const controls = node.querySelector(".controls")!.getBoundingClientRect();
+        const nav = node.querySelector(".navigationSlot")!.getBoundingClientRect();
+        return { brandRight: brand.right, controlsLeft: controls.left, upperBottom: Math.max(brand.bottom, controls.bottom), navTop: nav.top, navRight: nav.right, width: innerWidth, overflow: document.documentElement.scrollWidth > innerWidth };
+      });
+      assert.ok(boxes.brandRight <= boxes.controlsLeft, engine.name());
+      assert.ok(boxes.navTop >= boxes.upperBottom + 11, engine.name());
+      assert.ok(boxes.navRight <= boxes.width, engine.name());
+      assert.equal(boxes.overflow, false, engine.name());
+    } finally { await browser.close(); }
+  }
 });

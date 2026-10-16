@@ -86,7 +86,7 @@ const rows = {
   choosePlayerPremiumCard: ["Elige una carta de jugador para ver sus detalles y ficharlo.", "Scegli una carta giocatore per vedere i dettagli e ingaggiarlo.", "Choisissez une carte de joueur pour voir ses détails et le recruter.", "اختر بطاقة لاعب لعرض التفاصيل والتعاقد معه.", "Ayrıntıları görmek ve transfer yapmak için bir oyuncu kartı seçin.", "Wähle eine Spielerkarte, um Details anzusehen und den Spieler zu verpflichten."],
   clubHub: ["ClubHub", "ClubHub", "ClubHub", "ClubHub", "ClubHub", "ClubHub"],
   quickSubstitution: ["Sustitución rápida", "Sostituzione rapida", "Remplacement rapide", "تبديل سريع", "Hızlı oyuncu değişikliği", "Schneller Wechsel"],
-  playerProfile: ["Perfil del jugador", "PlayerProfile", "PlayerProfile", "PlayerProfile", "PlayerProfile", "PlayerProfile"],
+  playerProfile: ["Perfil del jugador", "Profilo del giocatore", "Profil du joueur", "ملف اللاعب", "Oyuncu profili", "Spielerprofil"],
   clubProfile: ["Perfil del club", "Profilo del club", "Profil du club", "ملف النادي", "Kulüp profili", "Vereinsprofil"],
   closePreview: ["Cerrar vista previa", "Chiudi l’anteprima", "Fermer l’aperçu", "إغلاق المعاينة", "Önizlemeyi kapat", "Vorschau schließen"],
   marketCardPreview: ["Detalles de la carta de jugador", "Dettagli della carta giocatore", "Détails de la carte de joueur", "تفاصيل بطاقة اللاعب", "Oyuncu kartı ayrıntıları", "Spielerkartendetails"],

@@ -20,6 +20,15 @@ test("Italian signals refer to the contracted service without asserting a data l
   assert.doesNotMatch(touchlineCoreDrafts["it-IT"].signalsDescription, /licenz/i);
 });
 
+test("all six draft profile labels use their authored language without opening locale gates", () => {
+  const expected = { "es-ES": "Perfil del jugador", "it-IT": "Profilo del giocatore", "fr-FR": "Profil du joueur", "ar-SA": "ملف اللاعب", "tr-TR": "Oyuncu profili", "de-DE": "Spielerprofil" } as const;
+  for (const [locale, label] of Object.entries(expected)) {
+    assert.equal(touchLineT(locale, "playerProfile", true), label);
+    assert.equal(touchLineT(locale, "playerProfile", false), "PlayerProfile");
+    assert.equal(isTouchLineLocaleComplete(locale), false);
+  }
+});
+
 test("editorial corrections preserve literal EN/PT references and keep draft selection opt-in", () => {
   const references = [
     ["en-GB", "Club Squad", "Game bench", "When contracted data provides news, lineups, absences, suspensions, live events or reliable availability signals, they will appear here without being presented as facts before the data supports them."],
@@ -29,7 +38,8 @@ test("editorial corrections preserve literal EN/PT references and keep draft sel
     for (const enabled of [undefined, false, true]) {
       assert.equal(touchLineT(locale, "bench", enabled), bench);
       assert.equal(touchLineT(locale, "gameBench", enabled), gameBench);
-      assert.equal(touchLineT(locale, "playerProfile", enabled), "PlayerProfile");
+      assert.equal(touchLineT(locale, "playerProfile", enabled), locale === "pt-BR" ? "Perfil do jogador" : "PlayerProfile");
+      assert.equal(touchLineT(locale, "clubProfile", enabled), locale === "pt-BR" ? "Perfil do clube" : "Club Profile");
       assert.equal(touchLineT(locale, "signalsDescription", enabled), signals);
     }
   }

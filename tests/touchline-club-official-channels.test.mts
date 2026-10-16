@@ -22,6 +22,10 @@ test("official ClubHub channel allow-list uses HTTPS and never falls back for an
   assert.deepEqual(getTouchlineOfficialClubChannels("not-verified"), {});
   assert.equal(getTouchlineOfficialClubChannels("hull-city").tickets?.url, "https://www.wearehullcity.co.uk/tickets/");
   assert.equal(getTouchlineOfficialClubChannels("hull-city").store, undefined);
+  assert.equal(getTouchlineOfficialClubChannels("coventry-city").membership?.url, "https://www.ccfc.co.uk/memberships");
+  assert.equal(getTouchlineOfficialClubChannels("bournemouth").membership?.url, "https://www.afcb.co.uk/tickets/memberships");
+  assert.equal(getTouchlineOfficialClubChannels("hull-city").membership?.url, "https://www.wearehullcity.co.uk/tickets/memberships");
+  assert.equal(Object.values(TOUCHLINE_OFFICIAL_CLUB_CHANNELS).filter(channels => channels.membership).length, 20);
   assert.equal(getTouchlineOfficialClubChannels("manchester-city").membershipHeroImage, "/touchline/club-channels/manchester-city-membership-cutout-v3.png");
 });
 

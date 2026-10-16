@@ -29,7 +29,7 @@ test("de-DE preserves protected product tokens and interpolation contracts", () 
   assert.equal(copy.touchlineMarketTransfer, "TouchLine Market Transfer");
   assert.equal(copy.touchlineArenaOnline, "TouchLine Arena Online");
   assert.equal(copy.clubHub, "ClubHub");
-  assert.equal(copy.playerProfile, "PlayerProfile");
+  assert.equal(copy.playerProfile, "Spielerprofil");
   assert.deepEqual(placeholders(copy.contractTerminationWarning), ["incoming", "outgoing"]);
   assert.deepEqual(placeholders(copy.checkoutCompleted), ["count", "total"]);
   assert.deepEqual(placeholders(copy.cartCapacityError), ["count"]);

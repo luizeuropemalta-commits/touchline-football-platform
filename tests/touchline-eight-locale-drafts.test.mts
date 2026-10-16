@@ -108,7 +108,8 @@ for (const locale of TOUCHLINE_DRAFT_LOCALES) {
     assert.equal(core.marketTransfer, "Market Transfer");
     assert.equal(core.touchlineMarketTransfer, "TouchLine Market Transfer");
     assert.equal(core.clubHub, "ClubHub");
-    assert.equal(core.playerProfile, locale === "es-ES" ? "Perfil del jugador" : "PlayerProfile");
+    const profileLabels = { "es-ES": "Perfil del jugador", "it-IT": "Profilo del giocatore", "fr-FR": "Profil du joueur", "ar-SA": "ملف اللاعب", "tr-TR": "Oyuncu profili", "de-DE": "Spielerprofil" };
+    assert.equal(core.playerProfile, profileLabels[locale]);
     const cinematicTitle = `${auth.layout.cinematicTitleTop} ${auth.layout.cinematicTitleBottom}`;
     assert.equal(cinematicTitle.match(/TouchLine/g)?.length, 1);
     if (locale === "tr-TR") assert.equal(cinematicTitle, "TouchLine’a giriş yapın");

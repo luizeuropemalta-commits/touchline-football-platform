@@ -17,7 +17,16 @@ export function isAllowedLoginPost(request: NextRequest) {
   if (!origin) return fetchSite === "same-origin";
 
   try {
-    return new URL(origin).origin === request.nextUrl.origin;
+    const browserOrigin = new URL(origin);
+    if (browserOrigin.origin === request.nextUrl.origin) return true;
+    // NextURL canonicalizes numeric loopback addresses to localhost. Preserve
+    // exact browser provenance using Host only for that normalization case;
+    // never trust forwarded hosts or broaden deployed-origin acceptance.
+    return request.nextUrl.hostname === "localhost"
+      && ["127.0.0.1", "[::1]"].includes(browserOrigin.hostname)
+      && browserOrigin.protocol === request.nextUrl.protocol
+      && browserOrigin.port === request.nextUrl.port
+      && request.headers.get("host") === browserOrigin.host;
   } catch {
     return false;
   }

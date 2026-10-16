@@ -5,7 +5,13 @@ export function observeVisibleDecorationMotion(root: Document = document) {
   const nodes = new Map<Decoration, boolean>();
   let disposed = false;
   const paint = (node: Decoration, visible: boolean) => {
-    node.style.setProperty('--touchline-decoration-motion', visible && !root.hidden ? 'running' : 'paused');
+    // Control animation objects without changing React-owned server markup.
+    // Inline style writes here can race streamed hydration and reset the page.
+    for (const animation of node.getAnimations({ subtree: true })) {
+      if (!('animationName' in animation) || !/touchlineClubEdgeTravel|touchlinePitchBoundaryTrace|touchlineLedMarquee|touchline-card-perimeter-trace|club-owner-portrait-perimeter-trace|club-hub-stadium-breathe|club-hub-border-sweep/.test(String(animation.animationName))) continue;
+      if (visible && !root.hidden) animation.play();
+      else animation.pause();
+    }
   };
   const observer = new IntersectionObserver((entries) => {
     if (disposed) return;
@@ -34,7 +40,7 @@ export function observeVisibleDecorationMotion(root: Document = document) {
     for (const node of nodes.keys()) {
       if (node.isConnected) continue;
       observer.unobserve(node);
-      node.style.removeProperty('--touchline-decoration-motion');
+      paint(node, false);
       nodes.delete(node);
     }
   });
@@ -47,7 +53,7 @@ export function observeVisibleDecorationMotion(root: Document = document) {
     observer.disconnect();
     mutations.disconnect();
     root.removeEventListener('visibilitychange', visibility);
-    for (const node of nodes.keys()) node.style.removeProperty('--touchline-decoration-motion');
+    for (const node of nodes.keys()) paint(node, false);
     nodes.clear();
   };
 }

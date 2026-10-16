@@ -10,6 +10,7 @@ import { touchlineFixtureRailDateLabel } from "../lib/touchlineArena/match-centr
 import * as rounds from "../lib/touchlineArena/arena-fixture-round.ts";
 import * as i18n from "../lib/touchlineArena/i18n.ts";
 import * as copy from "../lib/touchlineArena/match-centre-i18n.ts";
+import * as arabicDate from "../lib/touchlineArena/arabic-fixture-date.ts";
 
 const locales = ["en-GB", "pt-BR", "es-ES", "it-IT", "fr-FR", "ar-SA", "tr-TR", "de-DE"] as const;
 const fixture = { startsAt: "2026-08-29T12:00:00Z" };
@@ -35,6 +36,7 @@ function isolated(future: boolean) {
     require: (name: string) => {
       if (name === "./catalogue-locale.ts") return { resolveTouchlineCatalogueLocale };
       if (name === "./arena-fixture-round.ts") return rounds;
+      if (name === "./arabic-fixture-date.ts") return arabicDate;
       if (name === "./match-centre-i18n.ts") return { getTouchlineMatchCentreCopy: (locale: string, enabled = false) => { seen.push(locale); return (catalogueModule.getTouchlineMatchCentreCopy as typeof copy.getTouchlineMatchCentreCopy)(locale, enabled); } };
       throw new Error(`Unexpected import ${name}`);
     },
@@ -63,12 +65,15 @@ test("shared today getter receives full draft locale and Gregorian date parts re
     assert.ok(probe.calls.filter(call => call.options.year).every(call => call.options.calendar === "gregory"));
     probe.calls.length = 0;
     const label = probe.label(fixture, locale, "UTC", before);
+    if (locale === "ar-SA") {
+      assert.equal(label, "السبت ٢٩ أغسطس");
+      continue;
+    }
     const formatted = probe.calls.find(call => call.options.weekday);
     assert.equal(formatted?.locale, locale);
     assert.equal(formatted?.options.calendar, "gregory");
     assert.equal(formatted?.options.timeZone, "UTC");
     assert.ok(label.length > 0); assert.doesNotMatch(label, /[.,]/);
-    if (locale === "ar-SA") assert.match(label, /أغسطس/, "Arabic must describe August, not the default Islamic calendar month");
     if (locale === "tr-TR") assert.equal(label, "CMT 29 AĞU");
   }
 });

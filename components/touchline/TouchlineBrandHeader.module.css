@@ -35,8 +35,10 @@
 .brandAccessory a:hover { text-decoration: underline; }
 .brandAccessory a:focus-visible { outline: 2px solid #a3ff12; outline-offset: 3px; }
 @media (max-width: 1000px) {
-  .frame[data-centered-navigation="true"] .row { gap: 8px; grid-template-columns: auto minmax(0, 1fr) auto; }
-  .navigationSlot { max-width: none; }
+  .frame[data-centered-navigation="true"] .row { gap: 12px; grid-template-columns: minmax(0, 1fr) auto; }
+  .frame[data-centered-navigation="true"] .row > :first-child { grid-column: 1; grid-row: 1; }
+  .frame[data-centered-navigation="true"] .row > :last-child { grid-column: 2; grid-row: 1; min-width: 0; max-width: min(200px, 45vw); }
+  .navigationSlot { max-width: none; grid-column: 1 / -1; grid-row: 2; justify-self: stretch; }
   .navigationSlot > nav { justify-content: center; }
 }
 

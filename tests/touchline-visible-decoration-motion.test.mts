@@ -9,8 +9,12 @@ const source = readFileSync(new URL('../lib/touchlineArena/visible-decoration-mo
 test('shared decorative motion pauses offscreen/hidden, resumes, discovers streamed cards and cleans up', () => {
   class Element {
     isConnected = true;
-    values = new Map<string, string>();
-    style = { setProperty: (k: string, v: string) => this.values.set(k, v), removeProperty: (k: string) => this.values.delete(k) };
+    state = 'paused';
+    style = { setProperty: () => { throw new Error('React-owned markup must not be mutated'); }, removeProperty: () => { throw new Error('React-owned markup must not be mutated'); } };
+    getAnimations() { return [
+      { animationName: 'touchline-card-perimeter-trace', play: () => { this.state = 'running'; }, pause: () => { this.state = 'paused'; } },
+      { animationName: 'page-in', play: () => { throw new Error('Content animation must remain untouched'); }, pause: () => { throw new Error('Content animation must remain untouched'); } },
+    ]; }
     querySelectorAll() { return []; }
     matches() { return true; }
   }
@@ -41,7 +45,7 @@ test('shared decorative motion pauses offscreen/hidden, resumes, discovers strea
       disconnect() { disconnected++; }
     },
   });
-  const state = (node: Element) => node.values.get('--touchline-decoration-motion');
+  const state = (node: Element) => node.state;
   assert.equal(state(first), 'paused');
   intersect([{ target: first, isIntersecting: true }]);
   assert.equal(state(first), 'running', 'positive control: visible animation must run');
@@ -51,10 +55,10 @@ test('shared decorative motion pauses offscreen/hidden, resumes, discovers strea
   mutate([{ addedNodes: [later] }]); assert.ok(observed.has(later)); assert.equal(state(later), 'paused');
   intersect([{ target: later, isIntersecting: true }]); assert.equal(state(later), 'running');
   first.isConnected = false; mutate([{ addedNodes: [] }]);
-  assert.ok(!observed.has(first)); assert.equal(state(first), undefined);
-  cleanup(); assert.equal(disconnected, 2); assert.equal(visibility, undefined); assert.equal(state(later), undefined);
+  assert.ok(!observed.has(first)); assert.equal(state(first), 'paused');
+  cleanup(); assert.equal(disconnected, 2); assert.equal(visibility, undefined); assert.equal(state(later), 'paused');
   intersect([{ target: later, isIntersecting: true }]); mutate([{ addedNodes: [later] }]);
-  assert.equal(observed.size, 0); assert.equal(state(later), undefined);
+  assert.equal(observed.size, 0); assert.equal(state(later), 'paused');
 });
 
 test('all shared decorations including pitch consume the motion gate; reduced-motion rules remain', () => {

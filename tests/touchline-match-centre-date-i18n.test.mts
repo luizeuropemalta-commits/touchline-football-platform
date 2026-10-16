@@ -9,6 +9,8 @@ import * as i18n from "../lib/touchlineArena/i18n.ts";
 import * as copy from "../lib/touchlineArena/match-centre-i18n.ts";
 import { resolveTouchlineCatalogueLocale } from "../lib/touchlineArena/catalogue-locale.ts";
 import { normalizeTouchlineMatchCentreTimeZone, touchlineFixtureRailDateLabel } from "../lib/touchlineArena/match-centre.ts";
+import { verifiedTimestampLabel } from "../lib/touchlineArena/verified-timestamp-label.ts";
+import { arabicFixtureDate } from "../lib/touchlineArena/arabic-fixture-date.ts";
 
 const source = readFileSync(new URL("../components/touchline/match-centre/TouchlineMatchCentre.tsx", import.meta.url), "utf8");
 const ast = ts.createSourceFile("consumer.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
@@ -31,7 +33,7 @@ function probe() {
     const formatter = new Intl.DateTimeFormat(locale, options);
     calls.push({ locale, options, resolved: formatter.resolvedOptions() }); return formatter;
   }
-  const context = { React, Intl: { DateTimeFormat }, resolveTouchlineCatalogueLocale,
+  const context = { React, Intl: { DateTimeFormat }, resolveTouchlineCatalogueLocale, arabicFixtureDate,
     getTouchlineMatchCentreCopy: copy.getTouchlineMatchCentreCopy };
   const compiled = ts.transpileModule(helpers.map(node => node.getText(ast)).join("\n") + "\n({fixtureDate, verificationLabel});", {
     compilerOptions: { target: ts.ScriptTarget.ES2017 },
@@ -131,6 +133,12 @@ test("isolated eight-locale dates are Gregorian while archive and lineup retain 
     calls.length = 0;
     const text = api.fixtureDate({ startsAt: instant }, locale, "Europe/Malta", longDate, true);
     assert.ok(text.includes(months[index]), `${locale}: ${text}`);
+    if (locale === "ar-SA") {
+      assert.equal(text, "السبت، ٢٩ أغسطس ٢٠٢٦");
+      assert.equal(api.fixtureDate({ startsAt: instant }, locale, "UTC", shortDate, true), "٢٩ أغسطس، ١٢:٠٥ م");
+      assert.ok(api.verificationLabel({ fetchedAt: instant }, locale, "Europe/Malta", true)?.endsWith("٢٩ أغسطس، ١٤:٠٥"));
+      continue;
+    }
     assert.equal(calls[0].locale, locale); assert.equal(calls[0].resolved.calendar, "gregory");
     assert.equal(calls[0].options.calendar, "gregory");
     assert.equal(calls[0].options.timeZone, "Europe/Malta");
@@ -138,7 +146,6 @@ test("isolated eight-locale dates are Gregorian while archive and lineup retain 
     api.verificationLabel({ fetchedAt: instant }, locale, "UTC", true);
     assert.equal(calls[1].options.hour12, undefined); assert.equal(calls[1].options.hourCycle, undefined);
     assert.equal(calls[2].options.hour12, false); assert.equal(calls[2].options.hourCycle, undefined);
-    if (locale === "ar-SA") assert.equal(calls[1].resolved.hour12, true, "do not silently change archive/lineup to a 24-hour policy");
   }
   for (const locale of locales.slice(2)) assert.equal(i18n.isTouchLineLocaleComplete(locale), false);
 });
@@ -178,7 +185,7 @@ function render(expression: string, context: Record<string, unknown>) {
   const code = ts.transpileModule(`const element = (${expression}); element;`, { compilerOptions: { jsx: ts.JsxEmit.React, target: ts.ScriptTarget.ES2017 } }).outputText;
   const icon = () => React.createElement("i");
   return renderToStaticMarkup(runInNewContext(code, { React, Clock3: icon, CalendarDays: icon, UsersRound: icon,
-    styles: { freshnessNotice: "notice" }, fixtureLabel: (fixture: { name: string }) => fixture.name, touchlineFixtureRailDateLabel, ...context }));
+    styles: { freshnessNotice: "notice" }, fixtureLabel: (fixture: { name: string }) => fixture.name, touchlineFixtureRailDateLabel, verifiedTimestampLabel, ...context }));
 }
 
 test("real JSX keeps dates, labels, original datetime and conditional rows across all eight isolated locales", () => {
@@ -194,16 +201,19 @@ test("real JSX keeps dates, labels, original datetime and conditional rows acros
     for (const key of ["selectedDate", "selectedTime", "archive", "lineup", "notice", "hero", "rail"] as const) {
       probeValue.calls.length = 0;
       const html = render(expressions[key], context);
-      assert.ok(probeValue.calls.length > 0, `${key} calls real helper`);
+      if (key === "archive") assert.ok(html.includes("2026-08-29 14:05"), "archive uses cross-engine stable numeric timestamp");
+      else if (language === "ar-SA") assert.match(html, /[\u0600-\u06ff]/, `${key} uses canonical Arabic date presentation`);
+      else assert.ok(probeValue.calls.length > 0, `${key} calls real helper`);
       assert.ok(probeValue.calls.every(call => call.locale === language && call.options.calendar === "gregory" && call.options.timeZone === "Europe/Malta"));
       if (key === "selectedTime") assert.ok(html.includes("14:05") || language === "ar-SA");
       if (key === "archive") { assert.ok(html.includes(`dir="${context.textDirection}"`)); assert.ok(html.includes("Official &lt;&amp;&gt; $&")); assert.ok(html.includes(escaped(dictionary.provider))); }
-      if (key === "lineup") { assert.ok(html.includes('dateTime="2026-08-29T14:05:00+02:00"')); assert.ok(html.includes(escaped(dictionary.lineupAvailable))); assert.equal(probeValue.calls[0].options.hour12, undefined); }
-      if (key === "notice") { assert.ok(html.includes(escaped(dictionary.lastVerifiedAt))); assert.equal(probeValue.calls[0].options.hour12, false); }
+      if (key === "lineup") { assert.ok(html.includes('dateTime="2026-08-29T14:05:00+02:00"')); assert.ok(html.includes(escaped(dictionary.lineupAvailable))); if (language !== "ar-SA") assert.equal(probeValue.calls[0].options.hour12, undefined); else assert.ok(html.includes("٠٢:٠٥ م")); }
+      if (key === "notice") { assert.ok(html.includes(escaped(dictionary.lastVerifiedAt))); if (language !== "ar-SA") assert.equal(probeValue.calls[0].options.hour12, false); else assert.ok(html.includes("١٤:٠٥")); }
       if (key === "hero" || key === "rail") assert.ok(html.includes(`dateTime="${instant}"`));
       if (key === "rail") {
-        assert.ok(html.includes("aria-label=")); assert.equal(probeValue.calls[0].options.hour12, false);
-        assert.equal(probeValue.calls[0].options.year, "numeric");
+        assert.ok(html.includes("aria-label="));
+        if (language !== "ar-SA") { assert.equal(probeValue.calls[0].options.hour12, false); assert.equal(probeValue.calls[0].options.year, "numeric"); }
+        else assert.ok(html.includes('aria-label="السبت، ٢٩ أغسطس ٢٠٢٦ في ١٤:٠٥"'));
         if (language === "en-GB") assert.ok(html.includes('aria-label="Saturday, 29 August 2026 at 14:05"'));
         if (language === "pt-BR") assert.ok(html.includes('aria-label="sábado, 29 de agosto de 2026 às 14:05"'));
       }

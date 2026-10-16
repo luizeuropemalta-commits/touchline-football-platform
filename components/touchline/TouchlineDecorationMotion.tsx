@@ -8,11 +8,9 @@ export default function TouchlineDecorationMotion() {
     let stop: (() => void) | undefined;
     let frame = 0;
 
-    // This observer writes an inline CSS custom property. Starting it while
-    // Next is still hydrating streamed route content can mutate server markup
-    // before React has claimed it, causing a hydration mismatch and a visible
-    // flash. Decorative motion is never required for content, so initialise it
-    // only after the document load boundary and one paint.
+    // Begin after load and one paint so styles and their animation objects
+    // exist. The observer controls animation objects without mutating the
+    // server markup that React may still be hydrating.
     const start = () => {
       frame = window.requestAnimationFrame(() => {
         stop = observeVisibleDecorationMotion();

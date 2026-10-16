@@ -1081,7 +1081,7 @@ async function renderClubHubPage({ params, searchParams }: ClubHubPageProps, dra
             </div>
           </div>
           <div className="club-hub-hero-channels">
-            <ClubHubOfficialChannel channels={officialChannels} kind="membership" variant="hero" locale={locale} draftLocalesEnabled={draftLocalesEnabled} />
+            <ClubHubOfficialChannel channels={officialChannels} kind="membership" variant="hero" locale={locale} draftLocalesEnabled={draftLocalesEnabled} clubIdentity={{ name: club.name, crestUrl: club.logoUrl }} />
             <ClubHubOfficialChannel channels={officialChannels} kind="store" locale={locale} draftLocalesEnabled={draftLocalesEnabled} />
           </div>
           <div className="club-hub-hero-footer">

@@ -13,6 +13,8 @@ import * as coaches from "../lib/touchlineArena/live-coaches.ts";
 import * as catalogueLocale from "../lib/touchlineArena/catalogue-locale.ts";
 import * as matchEvents from "../lib/touchlineArena/match-event-i18n.ts";
 import * as positions from "../lib/touchlineArena/position-labels.ts";
+import * as verifiedTimestamp from "../lib/touchlineArena/verified-timestamp-label.ts";
+import * as arabicDate from "../lib/touchlineArena/arabic-fixture-date.ts";
 
 const load = () => import("../lib/touchlineArena/match-centre-i18n.ts");
 const locales = ["en-GB", "pt-BR", "es-ES", "it-IT", "fr-FR", "ar-SA", "tr-TR", "de-DE"] as const;
@@ -133,6 +135,8 @@ async function consumer(future = false) {
       if (name === "@/lib/touchlineArena/position-labels") return positions;
       if (name === "@/lib/touchlineArena/match-centre-i18n") return catalogue;
       if (name === "@/lib/touchlineArena/match-centre") return match;
+      if (name === "@/lib/touchlineArena/verified-timestamp-label") return verifiedTimestamp;
+      if (name === "@/lib/touchlineArena/arabic-fixture-date") return arabicDate;
       if (name === "@/lib/touchlineArena/demo-data") return clubs;
       if (name === "@/lib/touchlineArena/live-coaches") return coaches;
       if (name === "@/components/logo") return { Logo: (props: Record<string, unknown>) => {

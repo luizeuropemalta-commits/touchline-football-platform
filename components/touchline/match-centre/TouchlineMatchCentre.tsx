@@ -4,6 +4,8 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent } from "react";
+import { verifiedTimestampLabel } from "@/lib/touchlineArena/verified-timestamp-label";
+import { arabicFixtureDate } from "@/lib/touchlineArena/arabic-fixture-date";
 import { CalendarDays, Clock3, Crown, Goal, Landmark, ShieldCheck, Sparkles, Trophy, UsersRound } from "lucide-react";
 import TouchlineFixtureAlerts from "./TouchlineFixtureAlerts";
 
@@ -89,6 +91,7 @@ function fixtureDate(
   draftLocalesEnabled = false,
 ) {
   if (!fixture.startsAt || Number.isNaN(Date.parse(fixture.startsAt))) return "—";
+  if (resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled) === "ar-SA") return arabicFixtureDate(fixture.startsAt, timeZone, options);
   return new Intl.DateTimeFormat(resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled), { ...options, calendar: "gregory", timeZone }).format(new Date(fixture.startsAt));
 }
 
@@ -608,7 +611,7 @@ export default function TouchlineMatchCentre({
               </div>
             </article> : <article dir={textDirection}><span>{dictionary.venue}</span><strong>{dictionary.venuePending}</strong><small>{dictionary.official}</small></article>}
             <article dir={textDirection}><span>{dictionary.detail}</span><strong>{selectedDisplayState === "awaiting-update" ? dictionary.awaitingOfficialUpdate : selectedDisplayState === "stale" ? dictionary.lastVerified : selectedDisplayState === "live" ? dictionary.liveNow : selectedDisplayState === "finished" ? dictionary.completed : dictionary.watch}</strong><small>{dictionary.dataPending}</small></article>
-            <article dir={textDirection}><span>{dictionary.archive}</span><strong>{fixtureLabel(selected, language, draftLocalesEnabled)}</strong><small>{selectedDisplayState === "awaiting-update" ? dictionary.awaitingOfficialUpdate : selected.verifiedAt ? `${dictionary.provider} · ${fixtureDate({ startsAt: selected.verifiedAt }, language, timeZone, { day: "2-digit", month: "short", hour: "2-digit" }, draftLocalesEnabled)}` : dictionary.provider}</small></article>
+            <article dir={textDirection}><span>{dictionary.archive}</span><strong>{fixtureLabel(selected, language, draftLocalesEnabled)}</strong><small>{selectedDisplayState === "awaiting-update" ? dictionary.awaitingOfficialUpdate : selected.verifiedAt ? `${dictionary.provider} · ${verifiedTimestampLabel(selected.verifiedAt, timeZone)}` : dictionary.provider}</small></article>
           </div>
 
           {verifiedDetail ? <section className={styles.verifiedMatchData} data-testid="touchline-verified-match-data">

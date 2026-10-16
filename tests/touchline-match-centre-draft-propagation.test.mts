@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { arabicFixtureDate } from "../lib/touchlineArena/arabic-fixture-date.ts";
 import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import test from "node:test";
@@ -21,7 +22,7 @@ const exports: Record<string, unknown> = {};
 runInNewContext(ts.transpileModule(`${helpers.map(node => node.getText(ast)).join("\n")}\nexport { ${names.join(", ")} };`, {
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX },
 }).outputText, {
-  exports, resolveTouchlineCatalogueLocale, getTouchlineMatchCentreCopy, localizedPositionLabel,
+  exports, resolveTouchlineCatalogueLocale, getTouchlineMatchCentreCopy, localizedPositionLabel, arabicFixtureDate,
   touchlineFixtureStatusLabel, touchlineMatchCentreDisplayState,
   useState: (initial: unknown) => [typeof initial === "function" ? initial() : initial, () => assert.fail("render must not update state")],
   useEffect: () => undefined,

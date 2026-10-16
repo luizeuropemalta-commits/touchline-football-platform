@@ -21,6 +21,22 @@ test("login request provenance fails closed for missing and cross-site browser m
   assert.equal(isAllowedLoginPost(loginRequest()), false);
 });
 
+test("numeric loopback normalization preserves exact local Host, scheme and port", () => {
+  for (const host of ["127.0.0.1", "[::1]"]) {
+    const origin = `http://${host}:3318`;
+    const request = (headers: HeadersInit) => new NextRequest(`${origin}/api/auth/login`, { method: "POST", headers });
+    const headers = { origin, host: `${host}:3318`, "sec-fetch-site": "same-origin" };
+    assert.equal(isAllowedLoginPost(request(headers)), true);
+    for (const override of [{ host: "evil.example" }, { host: "localhost:3318" },
+      { origin: `http://${host}:3319` }, { origin: `https://${host}:3318` },
+      { "sec-fetch-site": "cross-site" }]) {
+      assert.equal(isAllowedLoginPost(request({ ...headers, ...override })), false);
+    }
+    assert.equal(isAllowedLoginPost(request({ origin, "sec-fetch-site": "same-origin" })), false);
+  }
+  assert.equal(isAllowedLoginPost(loginRequest({ origin: "http://127.0.0.1:3318", host: "127.0.0.1:3318", "sec-fetch-site": "same-origin" })), false);
+});
+
 test("login returns only a local path and preserves a safe hash", () => {
   const request = loginRequest({ origin: "https://qa.touchline.example", "sec-fetch-site": "same-origin" });
   assert.equal(safeReturnTo(request, "/my-club?lang=pt-BR#squad"), "/my-club?lang=pt-BR#squad");

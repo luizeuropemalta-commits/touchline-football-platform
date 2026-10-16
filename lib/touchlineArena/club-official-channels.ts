@@ -40,8 +40,60 @@ export const TOUCHLINE_OFFICIAL_CLUB_CHANNELS: Readonly<Record<string, Touchline
     tickets: destination("https://www.arsenal.com/tickets?field_arsenal_team_target_id=1&home_away=home", "https://www.arsenal.com/tickets?field_arsenal_team_target_id=1&home_away=home"),
     membership: destination("https://www.arsenal.com/membership", "https://www.arsenal.com/membership"),
   }),
+  "aston-villa": Object.freeze({
+    membership: destination("https://membership.avfc.co.uk/", "https://membership.avfc.co.uk/"),
+  }),
+  bournemouth: Object.freeze({
+    membership: destination("https://www.afcb.co.uk/tickets/memberships", "https://www.afcb.co.uk/tickets/memberships"),
+  }),
+  brighton: Object.freeze({
+    membership: destination("https://www.brightonandhovealbion.com/myalbion-plus", "https://www.brightonandhovealbion.com/myalbion-plus"),
+  }),
+  brentford: Object.freeze({
+    membership: destination("https://www.brentfordfc.com/en/memberships-2026-27", "https://www.brentfordfc.com/en/memberships-2026-27"),
+  }),
+  chelsea: Object.freeze({
+    membership: destination("https://memberships.chelseafc.com/en", "https://memberships.chelseafc.com/en"),
+  }),
+  "coventry-city": Object.freeze({
+    membership: destination("https://www.ccfc.co.uk/memberships", "https://www.ccfc.co.uk/"),
+  }),
+  "crystal-palace": Object.freeze({
+    membership: destination("https://www.cpfc.co.uk/memberships/", "https://www.cpfc.co.uk/supporters/palace-tv-plus/"),
+  }),
+  everton: Object.freeze({
+    membership: destination("https://www.evertonfc.com/ForeverBlue", "https://www.evertonfc.com/ForeverBlue"),
+  }),
+  fulham: Object.freeze({
+    membership: destination("https://www.fulhamfc.com/news/2026/july/09/2026-27-memberships-now-on-sale/", "https://www.fulhamfc.com/news/2026/july/09/2026-27-memberships-now-on-sale/"),
+  }),
   "hull-city": Object.freeze({
     tickets: destination("https://www.wearehullcity.co.uk/tickets/", "https://www.wearehullcity.co.uk/tickets/"),
+    membership: destination("https://www.wearehullcity.co.uk/tickets/memberships", "https://www.wearehullcity.co.uk/tickets/"),
+  }),
+  "ipswich-town": Object.freeze({
+    membership: destination("https://www.itfc.co.uk/news/2026/july/10/memberships-launched-for-26-27/", "https://www.itfc.co.uk/news/2026/july/10/memberships-launched-for-26-27/"),
+  }),
+  "leeds-united": Object.freeze({
+    membership: destination("https://www.leedsunited.com/en/news/my-leeds-membership-update", "https://www.leedsunited.com/en/news/my-leeds-membership-update"),
+  }),
+  liverpool: Object.freeze({
+    membership: destination("https://www.liverpoolfc.com/allred", "https://www.liverpoolfc.com/news/all-red-lfc-launches-new-membership-experience-ultimate-access"),
+  }),
+  "manchester-united": Object.freeze({
+    membership: destination("https://tickets.manutd.com/memberships", "https://www.manutd.com/en/help/faqs/official-membership"),
+  }),
+  "newcastle-united": Object.freeze({
+    membership: destination("https://www.newcastleunited.com/en/tickets/membership", "https://www.newcastleunited.com/en/tickets/membership"),
+  }),
+  "nottingham-forest": Object.freeze({
+    membership: destination("https://www.nottinghamforest.co.uk/memberships/", "https://www.nottinghamforest.co.uk/memberships/"),
+  }),
+  sunderland: Object.freeze({
+    membership: destination("https://www.safc.com/memberships/membership-hub", "https://www.safc.com/memberships/membership-hub"),
+  }),
+  "tottenham-hotspur": Object.freeze({
+    membership: destination("https://www.tottenhamhotspur.com/membership", "https://www.tottenhamhotspur.com/membership"),
   }),
   "manchester-city": Object.freeze({
     store: destination("https://shop.mancity.com/gb/en/home/", "https://www.mancity.com/tickets"),

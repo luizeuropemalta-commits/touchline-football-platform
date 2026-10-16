@@ -8,6 +8,7 @@ import { selectArenaFixtureRound } from "./arena-fixture-round.ts";
 import { type TouchLineLocale } from "./i18n.ts";
 import { resolveTouchlineCatalogueLocale } from "./catalogue-locale.ts";
 import { getTouchlineMatchCentreCopy } from "./match-centre-i18n.ts";
+import { arabicFixtureDate } from "./arabic-fixture-date.ts";
 
 export type TouchlineMatchState = "live" | "upcoming" | "finished" | "unknown";
 export type TouchlineMatchCentreDisplayState = TouchlineMatchState | "stale" | "awaiting-update";
@@ -112,6 +113,9 @@ export function touchlineFixtureRailDateLabel(
     return getTouchlineMatchCentreCopy(language, draftLocalesEnabled).today;
   }
 
+  if (language === "ar-SA") return arabicFixtureDate(fixture.startsAt!, normalizedTimeZone, {
+    weekday: "short", day: "2-digit", month: "short",
+  }).replace("،", "");
   const parts = new Intl.DateTimeFormat(language, {
     calendar: "gregory",
     day: "2-digit",

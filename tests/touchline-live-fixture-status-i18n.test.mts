@@ -10,6 +10,7 @@ import * as round from "../lib/touchlineArena/arena-fixture-round.ts";
 import * as i18n from "../lib/touchlineArena/i18n.ts";
 import * as catalogueLocale from "../lib/touchlineArena/catalogue-locale.ts";
 import * as matchCopy from "../lib/touchlineArena/match-centre-i18n.ts";
+import * as arabicDate from "../lib/touchlineArena/arabic-fixture-date.ts";
 import type { TouchlinePublicFixture } from "../lib/football-data/public-fixture.ts";
 
 const locales = ["en-GB", "pt-BR", "es-ES", "it-IT", "fr-FR", "ar-SA", "tr-TR", "de-DE"] as const;
@@ -35,6 +36,7 @@ function futureHelper(_unused?: undefined, inheritedProbe = false) {
       if (name === "./arena-fixture-round.ts") return round;
       if (name === "./catalogue-locale.ts") return catalogueLocale;
       if (name === "./match-centre-i18n.ts") return matchCopy;
+      if (name === "./arabic-fixture-date.ts") return arabicDate;
       assert.fail(`Unexpected helper dependency: ${name}`);
     } });
   return (value: Parameters<typeof matchCentre.touchlineFixtureStatusLabel>[0], locale: i18n.TouchLineLocale) => exports.touchlineFixtureStatusLabel!(value, locale, true);
