@@ -130,3 +130,6 @@
 .frame:global(.club-hub-card)::before {
   content: none;
 }
+.grid {
+  --touchline-card-reserve-head-award: 1;
+}

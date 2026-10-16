@@ -75,6 +75,7 @@ import {
   TOUCHLINE_NEUTRAL_CARD_SECONDARY,
 } from "@/lib/touchlineArena/public-card-presentation";
 import { loadTouchlinePublishedCardPresentations } from "@/lib/touchlineArena/card-publication-read-model";
+import { loadTouchlineCardEditorialOverrides } from "@/lib/touchlineArena/card-editorial-overrides";
 import {
   formatTouchlineMarketValueEur,
   formatTouchlinePublicShirtNumber,
@@ -845,7 +846,7 @@ async function renderPlayerProfilePage({
   const canonicalPlayerId = canonicalResolution?.canonicalPlayerId
     ?? (canonicalIdentity ? publicProjection?.identity.value?.playerId : null);
   exactPlayer.canonicalPlayerId = canonicalPlayerId;
-  const [playerStatistics, publishedCards] = await Promise.all([
+  const [playerStatistics, publishedCards, editorialOverrides] = await Promise.all([
     loadTouchLinePlayerStatisticsReadModel({
       providerPlayerId: canonicalProviderPlayerId,
       selectedFixtureId: Array.isArray(query.fixture) ? query.fixture[0] : query.fixture,
@@ -854,6 +855,7 @@ async function renderPlayerProfilePage({
     canonicalResolution ? null : canonicalPlayerId
       ? loadTouchlinePublishedCardPresentations({ playerIds: [canonicalPlayerId] })
       : new Map(),
+    loadTouchlineCardEditorialOverrides(canonicalPlayerId ? [canonicalPlayerId] : []),
   ]);
   const rankingResult = await activeRankingPromise;
   if (!rankingResult.ok) throw rankingResult.error;
@@ -1018,8 +1020,14 @@ async function renderPlayerProfilePage({
     ?? (officialNationality && officialNationality.length <= 3
       ? normalizeTouchlineCountryCode3(officialNationality)
       : null);
-  const profileCountryCode3 = officialCountryCode3
-    ?? normalizeTouchlineCountryCode3(exactPlayer.countryCode3 || card.countryCode3);
+  // Match ClubHub's approved presentation without rewriting provider nationality.
+  const approvedCountryCode3 = normalizeTouchlineCountryCode3(
+    canonicalPlayerId ? editorialOverrides.get(canonicalPlayerId.toLowerCase())?.countryCode3 : null,
+  );
+  const profileCountryCode3 = approvedCountryCode3 !== "N/A"
+    ? approvedCountryCode3
+    : officialCountryCode3 ?? normalizeTouchlineCountryCode3(exactPlayer.countryCode3 || card.countryCode3);
+  exactPlayer.countryCode3 = profileCountryCode3;
   const profileFlagUrl = touchlineCountryFlagUrl(profileCountryCode3);
   const clubHref = club
     ? `/touchline-clubs/${club.slug}${languageQuery(locale)}`

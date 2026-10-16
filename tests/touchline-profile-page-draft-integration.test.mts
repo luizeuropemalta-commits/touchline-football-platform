@@ -172,6 +172,7 @@ test("real player route SSR keeps gate and single auth receipt boundaries", asyn
       "@/lib/touchlineArena/canonical-public-player-profile-server": { resolveTouchlineCanonicalPublicPlayerProfile: async () => assert.fail("No canonical lookup for provider-only test") },
       "@/lib/touchlineArena/card-ranking-server": { loadTouchLineActiveRanking: async () => ({ phase: "preseason", players: [], fixtureIds: [], expectedFixtureIds: [], snapshotId: null }) },
       "@/lib/touchlineArena/card-publication-read-model": { loadTouchlinePublishedCardPresentations: async () => new Map() },
+      "@/lib/touchlineArena/card-editorial-overrides": { loadTouchlineCardEditorialOverrides: async () => new Map() },
       "@/lib/touchlineArena/player-season-statistics-server": { loadTouchLinePlayerStatisticsReadModel: async () => ({ touchlinePlayerId: null, providerPlayerId: "999", mappingStatus: "unavailable", previousCompletedSeason: emptyTouchLinePlayerSeasonStatistics(), currentSeason: emptyTouchLinePlayerSeasonStatistics(), matchHistory: [], lastFiveMatches: [], currentOrSelectedFixture: null }) },
     });
     h.setReleaseFlag(!presentation.internal && presentation.enabled ? "true" : undefined);

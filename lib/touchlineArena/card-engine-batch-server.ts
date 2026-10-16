@@ -1,10 +1,15 @@
 import "server-only";
 
 import { createHash } from "node:crypto";
+import { revalidateTag } from "next/cache";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { CardEngineResolvedRow } from "./card-engine-editorial-import";
+import {
+  TOUCHLINE_ENGLAND_COMPETITION_PROVIDER_ID,
+  TOUCHLINE_ENGLAND_EFFECTIVE_SEASON,
+} from "./public-player-projection";
 
 export type TouchlineCardEngineBatchSourceType = "paste" | "csv" | "single_edit" | "qa_fixture";
 export type TouchlineCardEngineBatchAction = "approve" | "publish" | "rollback";
@@ -73,5 +78,17 @@ export async function transitionTouchlineCardEngineBatch(admin: SupabaseClient, 
     p_actor_id: input.actorId,
   });
   if (error || !data?.[0]) throw new Error(error?.message ?? "Card Engine command returned no result.");
+  if (input.action === "publish" || input.action === "rollback") {
+    try {
+      revalidateTag(
+        `touchline-public-projection:${TOUCHLINE_ENGLAND_COMPETITION_PROVIDER_ID}:${TOUCHLINE_ENGLAND_EFFECTIVE_SEASON}`,
+        { expire: 0 },
+      );
+    } catch {
+      // The transaction already committed: never report a failed publication
+      // or invite a duplicate write merely because cache expiration failed.
+      console.error("TouchLine Card Engine projection cache expiration failed", { batchId: input.batchId });
+    }
+  }
   return data[0];
 }

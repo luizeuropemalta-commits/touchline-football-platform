@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { recoverMissingLineupIdentities } from "./player-identity-recovery";
 
 import { isTouchLineSettledFixtureStatus } from "@/lib/football-data/fixture-settlement";
 import { buildTouchLinePlayerSeasonAggregate } from "@/lib/football-data/player-season-statistics-sync";
@@ -277,6 +278,19 @@ export async function syncTouchLinePlayerSeasonStatistics(admin: SupabaseClient,
   if (playerRowsError || clubRowsError || !Array.isArray(playerRows) || !Array.isArray(clubRows)) {
     result.errors.push(playerRowsError?.message ?? clubRowsError?.message ?? "lineup-identity-mapping-unavailable");
     return result;
+  }
+  const missingIdentities = lineupFacts.filter(({member}) => !playerRows.some(
+    (row) => String(row.provider_player_id) === String(member.playerId),
+  )).map(({member, fixture}) => ({providerPlayerId: String(member.playerId), fixtureId: fixture.id}));
+  if (missingIdentities.length) {
+    await recoverMissingLineupIdentities(admin, missingIdentities);
+    const refreshed = await readCompleteStatisticsInput(admin, "football_players",
+      "id,provider,provider_player_id,provider_position,position", {column: "provider_player_id", values: providerPlayerIds});
+    if (refreshed.error || !Array.isArray(refreshed.data)) {
+      result.errors.push("lineup-identity-recovery-read-unavailable");
+      return result;
+    }
+    playerRows.splice(0, playerRows.length, ...refreshed.data);
   }
   const playerIdByProviderId = new Map(playerRows.map((row) => [String(row.provider_player_id), String(row.id)]));
   const clubIdByProviderId = new Map(clubRows.map((row) => [String(row.provider_team_id), String(row.id)]));

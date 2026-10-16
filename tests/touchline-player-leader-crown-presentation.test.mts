@@ -46,10 +46,10 @@ test("only the canonical player leadership decision may render the Golden Ball",
   assert.match(cardSource, /data-touchline-player-golden-ball="true"/);
   assert.match(cardSource, /data-card-golden-ball=\{hasGoldenBall \? "true" : "false"\}/);
   assert.match(cardSource, /const hasHeadAward = hasGoldenBall \|\| hasGoldenBoot/);
-  assert.match(cardSource, /const leadershipAwardEnvelope = hasHeadAward[\s\S]*?Math\.max\(0, -playerLeaderGoldenBallStyle\.top\)/);
-  assert.match(cardSource, /margin: hasHeadAward\s*\? hasStaticRenderScale/);
-  assert.ok(cardSource.includes('`calc(${-basePlayerLeaderGoldenBallStyle.top}px * ${goldenBallRenderScale} * ${headAwardScale}) auto 0`'));
-  assert.ok(cardSource.includes('`calc(${leadershipAwardEnvelope}px * ${headAwardScale}) auto 0`'));
+  assert.match(cardSource, /margin: hasStaticRenderScale/);
+  assert.ok(cardSource.includes('max(${hasHeadAward ? 1 : 0}, var(--touchline-card-reserve-head-award, 0))'));
+  assert.ok(cardSource.includes('${-basePlayerLeaderGoldenBallStyle.top}px * ${goldenBallRenderScale}'));
+  assert.ok(cardSource.includes('${-playerLeaderGoldenBallStyle.top}px * ${headAwardScale}'));
   assert.match(cardSource, /pointerEvents:\s*"none"/);
   assert.match(cardSource, /:\s*`calc\(\$\{playerLeaderGoldenBallStyle\.top\}px \* \$\{headAwardScale\}\)`/);
   assert.match(cardSource, /src=\{TOUCHLINE_PLAYER_LEADER_GOLDEN_BALL_ASSET\}/);

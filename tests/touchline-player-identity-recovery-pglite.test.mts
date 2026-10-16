@@ -1,0 +1,42 @@
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import test from 'node:test';
+const runtime=process.env.TOUCHLINE_FANTASY_PGLITE_MODULE;
+const fixture='10000000-0000-4000-8000-000000000001';
+test('identity recovery SQL preserves identity, audit and bounded retries',{skip:!runtime},async()=>{
+  const {PGlite}=await import(runtime!);const db=new PGlite();
+  try {
+    await db.exec(`create role anon;create role authenticated;create role service_role;
+      create table football_players(id uuid primary key default gen_random_uuid(),provider text,provider_player_id text,name text,display_name text,current_club_id uuid,nationality text,provider_position text,provider_position_id text,position text,position_id text,detailed_position text,detailed_position_id text,source_updated_at timestamptz,unique(provider,provider_player_id));
+      create table football_clubs(id uuid primary key,provider_team_id text);
+      create table football_fixtures(id uuid primary key,provider text,provider_fixture_id text,home_club_id uuid,away_club_id uuid);
+      create table football_fantasy_fixture_feeds(provider text,provider_fixture_id text,lineups_payload jsonb);
+      create table football_data_sync_runs(id uuid primary key default gen_random_uuid(),provider text,sync_type text,status text,source_payload jsonb,started_at timestamptz default now(),completed_at timestamptz,records_created int,error_message text);
+      insert into football_clubs values('${fixture}','3');
+      insert into football_fixtures values('${fixture}','sportmonks','19722144','${fixture}',null);
+      insert into football_fantasy_fixture_feeds values('sportmonks','19722144','[{"provider":"sportmonks","fixtureId":"19722144","playerId":"37761771","teamId":"3"}]');`);
+    await db.exec(await readFile(new URL('../supabase/migrations/20261016110913_touchline_guarded_player_identity_recovery.sql',import.meta.url),'utf8'));
+    const claim=()=>db.query('select touchline_claim_player_identity_recovery($1,$2) as id',['37761771',fixture]);
+    const id=(await claim()).rows[0].id;
+    assert.ok(id);
+    assert.equal((await claim()).rows[0].id,null);
+    await db.query("update football_data_sync_runs set started_at=now()-interval '16 minutes' where id=$1",[id]);
+    const replacement=(await claim()).rows[0].id;
+    assert.ok(replacement);
+    assert.notEqual(replacement,id);
+    assert.equal((await db.query('select error_message from football_data_sync_runs where id=$1',[id])).rows[0].error_message,'identity-recovery-lease-expired');
+    const activeId=replacement;
+    await assert.rejects(db.query('select touchline_complete_player_identity_recovery($1,$2)',[activeId,{provider:'sportmonks',providerId:'wrong',name:'Official'}]),/Exact official identity/);
+    await assert.rejects(db.query('select touchline_complete_player_identity_recovery($1,$2)',[activeId,{provider:'sportmonks',providerId:'37761771',name:'Official',current_club_id:fixture}]),/Unexpected identity/);
+    const result=await db.query('select touchline_complete_player_identity_recovery($1,$2) as id',[activeId,{provider:'sportmonks',providerId:'37761771',name:'Official identity'}]);
+    assert.ok(result.rows[0].id);
+    const player=(await db.query('select * from football_players')).rows[0];
+    assert.equal(player.current_club_id,null);
+    assert.equal(player.name,'Official identity');
+    assert.equal((await claim()).rows[0].id,null);
+    assert.equal((await db.query('select status,records_created from football_data_sync_runs where id=$1',[activeId])).rows[0].status,'success');
+    await db.exec('set role authenticated');
+    await assert.rejects(claim(),/permission denied/);
+    await db.exec('reset role');
+  } finally {await db.close();}
+});

@@ -268,6 +268,33 @@ export async function GET(request: NextRequest) {
   }
 
   const scope = text(request.nextUrl.searchParams.get("scope"));
+  if (scope === "player") {
+    if (process.env.VERCEL_ENV === "production"
+      || inspectTouchlineIsolatedPreviewEnvironment().status !== "qa"
+      || process.env.TOUCHLINE_QA_SUPABASE_PROJECT_REF !== "xgxbwqxjssxxuihuwmgy") {
+      return NextResponse.json({ ok: false, error: "Dedicated QA runtime required." }, { status: 403, headers: { "Cache-Control": "no-store" } });
+    }
+    const playerId = identifier(request.nextUrl.searchParams.get("playerId"));
+    if (!playerId || !/^[1-9]/.test(playerId)) {
+      return NextResponse.json({ ok: false, error: "A positive numeric playerId is required." }, { status: 400, headers: { "Cache-Control": "no-store" } });
+    }
+    try {
+      // The factory binds the existing central quota authority; no new grant,
+      // direct HTTP fallback, persistence or historical club inference here.
+      const result = await createFootballDataProvider("sportmonks").getPlayerById(playerId);
+      if (!result.ok || !result.data || result.data.provider !== PROVIDER || result.data.providerId !== playerId) {
+        return NextResponse.json({ ok: false, error: "Exact provider identity unavailable." }, { status: 502, headers: { "Cache-Control": "no-store" } });
+      }
+      const player = result.data;
+      return NextResponse.json({ ok: true, source: "sportmonks-guarded-identity-read", player: {
+        provider: player.provider, providerPlayerId: player.providerId,
+        name: player.name, displayName: player.displayName,
+        position: player.position, nationality: player.nationality,
+      }, persisted: false }, { headers: { "Cache-Control": "no-store" } });
+    } catch {
+      return NextResponse.json({ ok: false, error: "Guarded player diagnostic unavailable." }, { status: 502, headers: { "Cache-Control": "no-store" } });
+    }
+  }
   if (scope === "fixture") {
     if (process.env.VERCEL_ENV === "production"
       || inspectTouchlineIsolatedPreviewEnvironment().status !== "qa"

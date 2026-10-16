@@ -24,6 +24,15 @@ const candidates = [{
   provider: { displayName: "Ada Lovelace", jerseyNumber: 8, sourceUpdatedAt: "2026-08-18T00:00:00Z" },
 }] as const;
 
+test("published or reverted batches expire the public projection only after a successful transaction", () => {
+  const transition = batchServer.slice(batchServer.indexOf("export async function transitionTouchlineCardEngineBatch"));
+  assert.ok(transition.indexOf("if (error || !data?.[0]) throw") < transition.indexOf("revalidateTag("));
+  assert.match(transition, /input\.action === "publish" \|\| input\.action === "rollback"/);
+  assert.match(transition, /touchline-public-projection:\$\{TOUCHLINE_ENGLAND_COMPETITION_PROVIDER_ID\}:\$\{TOUCHLINE_ENGLAND_EFFECTIVE_SEASON\}/);
+  assert.match(transition, /\{ expire: 0 \}/);
+  assert.match(transition, /catch \{[\s\S]*console\.error\([\s\S]*return data\[0\]/);
+});
+
 test("Card Engine resolves provider id first and makes name plus club manual-review-only", () => {
   const provider = resolveCardEngineImportRows([{ providerPlayerId: "101", displayName: "A. Lovelace" }], candidates);
   assert.equal(provider[0]?.matchStatus, "matched"); assert.equal(provider[0]?.matchStrategy, "provider_player_id");

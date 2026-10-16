@@ -14,11 +14,11 @@ test("leader cards reserve their award before a host can clip it", () => {
   const rankingPage = source("app/touchline-player-card-rankings/page.tsx");
 
   assert.match(playerCard, /data-card-golden-ball=\{hasGoldenBall \? "true" : "false"\}/);
-  assert.match(playerCard, /leadershipAwardEnvelope/);
   assert.match(playerCard, /const hasHeadAward = hasGoldenBall \|\| hasGoldenBoot/);
-  assert.match(playerCard, /margin: hasHeadAward\s*\? hasStaticRenderScale/);
-  assert.ok(playerCard.includes('`calc(${-basePlayerLeaderGoldenBallStyle.top}px * ${goldenBallRenderScale} * ${headAwardScale}) auto 0`'));
-  assert.ok(playerCard.includes('`calc(${leadershipAwardEnvelope}px * ${headAwardScale}) auto 0`'));
+  assert.match(playerCard, /margin: hasStaticRenderScale/);
+  assert.ok(playerCard.includes('max(${hasHeadAward ? 1 : 0}, var(--touchline-card-reserve-head-award, 0))'));
+  assert.ok(playerCard.includes('${-basePlayerLeaderGoldenBallStyle.top}px * ${goldenBallRenderScale} * ${headAwardScale}'));
+  assert.ok(playerCard.includes('${-playerLeaderGoldenBallStyle.top}px * ${headAwardScale}'));
   assert.match(coachCard, /marginTop: showLeadershipCrown \? "29\.55%" : undefined/);
   assert.match(coachCard, /data-coach-ranking-leader=\{showLeadershipCrown \? "true" : "false"\}/);
   assert.match(coachPanel, /showLeadershipCrown=\{coachRankingRow\?\.rank === 1\}/);

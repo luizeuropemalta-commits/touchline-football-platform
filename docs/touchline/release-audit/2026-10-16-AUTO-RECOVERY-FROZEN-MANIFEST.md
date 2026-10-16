@@ -1,0 +1,48 @@
+# QA automatic recovery — frozen file manifest
+
+Base: 509b9efe84a2dd319b153c8b5babc70848449f11 / branch qa.
+Authorization: current owner request to resolve points and automation; QA only.
+One new Git-triggered QA build maximum. No CLI deployment or duplicate redeploy.
+Local verify:release 5313 PASS / 0 FAIL / 14 SKIP; build exit0; product hashes match isolated built source.
+Migration remote version20261016111752 maps to source20261016110913; applied only QA.
+Independent review cleared prior P2 findings after corrections.
+Rollback: retain all data; return QA alias to verified509b9efe deployment dpl_Gv5WgQTBpeZWaH47sVyubNs1TDsQ; disable new function access only if recovery is implicated, without deleting identities or audits.
+Excluded: tsconfig.tsbuildinfo, all env/secrets/generated artifacts, existing untracked membership images/maintenance page, roster-bootstrap SQL and bulk audit directories.
+
+SHA256 before commit (this manifest self-hash excluded):
+
+```text
+14512c2a9e8f45141f9d5d23b2f7fe01d76565e1a2d3687e7bc17e7659afef29  CURRENT_EXECUTION_LEDGER.md
+e942dc0c79191d089db617ac8635c3b82eead19c8360c02d67f1bc4f05519766  CURRENT_STATE.md
+65efcc10d123468cbe3350ce82c8bf7d8c62e788c3547ba8f230ef3582277127  app/api/football-data/provider-diagnostic/route.ts
+fbf88783abb3437e9058014eac21f0d76bbab3ee312549a038d37a48f4134f86  app/rankings/touchline-tables.module.css
+a27ea5e735eed41f62c427746bdd56bc11ba7017434cfc864efeb0c9b08dac22  app/touchline-players/[player]/page.tsx
+631bfba15c1c72741ea67bf783c8cb75c1094d13beb7820885dc950e0f15a501  components/touchline/ClubHubOfficialLineup.module.css
+88f86c1b6f8d65e2509de2fe6188adf950f982c0dedf9a5f7b13079a7565ee84  components/touchline/ClubHubSquadGrid.module.css
+995893306da0760bb3654fb48765214776a145c412338099c27580aca347e12e  components/touchline/cards/TouchlineEliteExactCard.tsx
+7ed406aa48a956855f7e71f095480fd8d953007a7d74c6888c35efe2ce01950b  lib/football-data/player-identity-recovery.ts
+c59e16115a6c6ef3d37d66c7974132ca4f322f23d42a9fadae75b2c733c18c38  lib/football-data/player-season-statistics-store.ts
+7a4af1f3b8894a0d7a7490a3f48b866502d346a7c720837fd3abc7befd8b3481  lib/touchlineArena/card-engine-batch-server.ts
+00345be0ea5d780f5d7df4bb50a8c72f03f3ba18d44b806adf11470b8b326144  supabase/migrations/20261016110913_touchline_guarded_player_identity_recovery.sql
+3d31dddafdecb190617adb8a59f327ed4fbb4a64454c1cf74a15c222ea048bd3  tests/touchline-card-crown-surface-envelope.test.mts
+11b5a7891d4684a2ed4eaf7a4916d299747c5dbeef947c69422658f0198c44a2  tests/touchline-card-engine-editorial-control-plane.test.mts
+5daa4b2c51a9fe78269a529132f643eafd1284b6170dd3d20662cbf7bde2261c  tests/touchline-player-leader-crown-presentation.test.mts
+42df2be2d24652458ca5b5e9c592b277a313d43475c9837393395d41546b5a13  tests/touchline-player-profile-auth-concurrency.test.mts
+e38b33bf090697cf6d38bfb0397898e6a903a891bf443052b1d76d18709e303c  tests/touchline-player-profile-ranking-concurrency.test.mts
+dc892e4fc718193d582b8286455cc514dd9465ccedf2dd093637351734059335  tests/touchline-player-season-statistics-pagination.test.mts
+95d0152541b3dc6f914a150f4f3c5cf6928c1b6140a4eee3a2654cc8c0ee52f4  tests/touchline-profile-page-draft-integration.test.mts
+aea679d859e8ee84a20ab7c7069d63f5c98e0b06c598ec66aa735c297cbd876c  tests/touchline-card-award-gallery-alignment.test.mts
+7b304e1686845d1cc2601fa53bb8ad4ed0abd89c75ffdc895962c591a126a662  tests/touchline-card-engine-cache-transition.test.mts
+aaeb59e9011122413d7aed6339bcb16be838b1a2283457cdc97cb9784f780e28  tests/touchline-player-identity-diagnostic-runtime.test.mts
+b873fb8ac4d52bab858c73a6ac350e91ea0aaf00e993493846b3b7d04d6fa849  tests/touchline-player-identity-diagnostic.test.mts
+6a6e8a29643a5f1020104cf5c4f75f169d6dc97034ec64494339ab9e3ab0a39b  tests/touchline-player-identity-recovery-pglite.test.mts
+cfcf4cab56745633cbb9c9111ddd6882f900b44846557ecebd585fda471e8c89  tests/touchline-player-identity-recovery.test.mts
+bed2a94584149912286dbd224008ed19c79be279a9fa66f67aeab057e94a1169  tests/touchline-player-profile-approved-country.test.mts
+2eddd3ad094f4c6b9630db1401bb4f6011ebf22075b0bf0a3f6778725565b375  tests/touchline-ranking-award-track-alignment.test.mts
+0c2046830cffb1578f136c3d1aae06adc3f9907a9abb2aa7fe067dda88e8da27  docs/touchline/release-audit/2026-10-16-AUTOMATIC-IDENTITY-RECOVERY-QA.md
+0f2ab3b6281686f2788ba38dafdbb7fe47c1f70bb6aa74ab17c6eea33a94119e  docs/touchline/release-audit/2026-10-16-AWARD-CARD-ALIGNMENT-WIP.md
+bb88b2e5cd793eb27882b69870c934d567181806b947e65bb6937baa5908aed9  docs/touchline/release-audit/2026-10-16-CARD-FOLLOWUP-MANIFEST-DRAFT.md
+b771d373689ccfd0b55d5544816cceb7341999ab3115037802fb68407f8a0a82  docs/touchline/release-audit/2026-10-16-MISSING-IDENTITY-RECOVERY-DRAFT.md
+7b06800121174c7c969c4878c10ae030abe73e65cb83c0faeb0e6a8394b0f7fc  docs/touchline/release-audit/2026-10-16-SCORING-COVERAGE-READONLY.md
+153a41b78d38f4fe732164e5a42157b4fa47503a7990b979336961e66dbd833e  docs/touchline/release-audit/2026-10-16-SCORING-RECONCILIATION-READONLY.sql
+```

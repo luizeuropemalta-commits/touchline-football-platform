@@ -974,9 +974,6 @@ export function TouchlineEliteExactCard({
   // Zoom and profile stages already reserve this space and override the
   // margin locally without changing card or award calibration.
   const hasHeadAward = hasGoldenBall || hasGoldenBoot;
-  const leadershipAwardEnvelope = hasHeadAward
-    ? Math.max(0, -playerLeaderGoldenBallStyle.top)
-    : 0;
   // The selected artwork is only used by a published card. An asset cannot
   // turn an unpublished football player into a game card.
   const assignedVisualTemplateUrl = cleanCardTemplateUrl(player.cardTemplateUrl);
@@ -1417,11 +1414,11 @@ export function TouchlineEliteExactCard({
         aspectRatio: shellExtraHeight ? undefined : CARD_ASPECT_RATIO,
         height: shellExtraHeight ? CARD_H * scale + shellExtraHeight : undefined,
         position: "relative",
-        margin: hasHeadAward
-          ? hasStaticRenderScale
-            ? `calc(${-basePlayerLeaderGoldenBallStyle.top}px * ${goldenBallRenderScale} * ${headAwardScale}) auto 0`
-            : `calc(${leadershipAwardEnvelope}px * ${headAwardScale}) auto 0`
-          : "0 auto",
+        // A gallery can reserve the same headroom on every sibling, so an
+        // awarded card never pushes its artwork/frame below its neighbours.
+        margin: hasStaticRenderScale
+          ? `calc(${-basePlayerLeaderGoldenBallStyle.top}px * ${goldenBallRenderScale} * ${headAwardScale} * max(${hasHeadAward ? 1 : 0}, var(--touchline-card-reserve-head-award, 0))) auto 0`
+          : `calc(${-playerLeaderGoldenBallStyle.top}px * ${headAwardScale} * max(${hasHeadAward ? 1 : 0}, var(--touchline-card-reserve-head-award, 0))) auto 0`,
         maxWidth: "100%",
         overflow: "visible",
         contain: shellExtraHeight ? undefined : "layout size",

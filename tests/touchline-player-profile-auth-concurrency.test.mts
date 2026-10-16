@@ -36,6 +36,7 @@ function fixture(auth: Promise<unknown>, statistics?: Promise<unknown>) {
     resolveTouchLineUnavailableOfficialProfile: () => ({ card: {}, exactPlayer: {}, club: null, isLocalCard: false }),
     loadTouchLinePlayerStatisticsReadModel: async () => { statsStarted.resolve(true); return statistics ?? "statistics"; },
     loadTouchlinePublishedCardPresentations: async () => new Map(),
+    loadTouchlineCardEditorialOverrides: async () => new Map(),
   };
   const run = new Function(...Object.keys(dependencies), `${compiled}; return run;`)(...Object.values(dependencies));
   return { run, statsStarted };

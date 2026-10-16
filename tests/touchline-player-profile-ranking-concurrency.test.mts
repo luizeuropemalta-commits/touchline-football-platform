@@ -54,6 +54,7 @@ function fixture(options: {
     isOwnerEmail: (email: string) => email === "owner@example.test",
     loadTouchLinePlayerStatisticsReadModel: () => { calls.push("statistics"); return options.statistics ?? Promise.resolve(statisticsValue); },
     loadTouchlinePublishedCardPresentations: async () => { calls.push("presentation"); return presentationsValue; },
+    loadTouchlineCardEditorialOverrides: async () => new Map(),
   };
   const run = new Function(...Object.keys(dependencies), `${compiled}; return run;`)(...Object.values(dependencies)) as () => Promise<{
     activeRanking: unknown; playerStatistics: unknown; publishedCards: unknown; canonicalPlayerId: string; navigationSurface: unknown;

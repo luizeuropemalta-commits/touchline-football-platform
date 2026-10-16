@@ -242,6 +242,7 @@
   --touchline-perimeter-radius: 20px;
   position: relative;
   display: grid;
+  grid-template-rows: max-content 1fr;
   min-width: 0;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--tier-accent, #b8ff46) 38%, rgba(255, 255, 255, .15));
@@ -268,8 +269,17 @@
 .awardBody { display: grid; justify-items: center; align-content: start; min-height: 0; padding: 13px 12px 14px; }
 .awardPlayerCard,
 .awardCoachCardLink { display: block; width: min(126px, 68%); color: inherit; }
-.awardPlayerCard { padding-top: 10px; }
-.awardCoachCardLink { padding-top: 4px; transition: filter 180ms ease, transform 180ms ease; }
+.awardPlayerCard,
+.awardCoachCardLink {
+  /* Width is min(126px, 68%); reserve 40% of that width for every award. */
+  padding-top: min(50.4px, 27.2%);
+}
+.awardPlayerCard :global(.touchline-card-surface),
+.awardCoachCardLink :global(.touchline-card-surface) {
+  /* The host owns this common envelope; keep each original card canvas. */
+  margin-top: 0 !important;
+}
+.awardCoachCardLink { transition: filter 180ms ease, transform 180ms ease; }
 .awardCoachCardLink:hover { filter: drop-shadow(0 14px 20px color-mix(in srgb, var(--tier-accent, #b8ff46) 22%, transparent)); transform: translateY(-3px) scale(1.025); }
 .awardCoachCardLink:focus-visible { border-radius: 12px; outline: 2px solid var(--gold); outline-offset: 4px; }
 .awardCoachCard { width: 100% !important; max-width: none !important; }
@@ -478,6 +488,7 @@
 }
 
 @media (max-width: 680px) {
+  .awardPodium { grid-template-columns: minmax(0, 1fr); }
   .status { display: none; }
   .summary { grid-template-columns: 1fr; }
   .summary div + div { border-top: 1px solid rgba(255, 255, 255, .1); border-inline-start: 0; }

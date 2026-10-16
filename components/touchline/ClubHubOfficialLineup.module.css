@@ -282,6 +282,8 @@
    The former host clipped the bottom of the real artwork with overflow:hidden.
  */
 .positionLeaders > [data-clubhub-card-spotlight^="position-"] {
+  --touchline-card-reserve-head-award: 1;
+  align-self: stretch;
   min-width: 0;
   min-height: 0;
   align-content: start;
