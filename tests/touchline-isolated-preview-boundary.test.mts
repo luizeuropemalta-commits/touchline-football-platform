@@ -57,6 +57,20 @@ test("QA admits the exact server-side site locale gate without widening isolated
   }
 });
 
+test("QA collection activation and locales coexist without admitting release or isolated-preview writes", () => {
+  const key = "TOUCHLINE_CLUB_COLLECTION_ENABLED";
+  for (const value of ["true", "false"]) {
+    const environment = qaEnvironment({ [key]: value, TOUCHLINE_SITE_LOCALES_ENABLED: "true" });
+    assert.deepEqual(inspectTouchlineIsolatedPreviewEnvironment(environment), { status: "qa", reasons: [] });
+    assert.deepEqual(resolveTouchlineIsolatedPreviewRoutePolicy("/clubowner", environment), { status: "inactive" });
+    assert.equal(inspectTouchlineIsolatedPreviewEnvironment(isolatedEnvironment({ [key]: value })).status, "invalid");
+    assert.equal(inspectTouchlineIsolatedPreviewEnvironment({ ...environment, SUPABASE_URL: "https://different.supabase.co" }).status, "invalid");
+  }
+  for (const forbidden of [`NEXT_PUBLIC_${key}`, `${key}_OTHER`, "TOUCHLINE_CLUB_RELEASE_ENABLED"]) {
+    assert.equal(inspectTouchlineIsolatedPreviewEnvironment(qaEnvironment({ [forbidden]: "true" })).status, "invalid");
+  }
+});
+
 test("Fixture account scope admits only its exact private name in the complete QA envelope", () => {
   const key = "TOUCHLINE_SPORTMONKS_FIXTURE_ACCOUNT_SCOPE";
   const environment: Readonly<Record<string, string | undefined>> = Object.freeze(qaEnvironment({

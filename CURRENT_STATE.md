@@ -1,5 +1,9 @@
 # TouchLine Current State
 
+## QA allowlist correction — 2026-10-22
+
+Previous candidate 62dad4d3 passed CI39729240586 (5863 PASS, 0 FAIL, 34 SKIP) but deployment dpl_9rDnDgEozuSMxNHCnqWaR7FLHR3V failed before publication: forbidden-qa-environment-key:TOUCHLINE_CLUB_COLLECTION_ENABLED. Exact private name is now admitted in functional QA only; isolated Preview, public aliases, wrong database origin and release/termination remain rejected. Focused tests29/29, TypeScript, focused ESLint and diff check passed; independent review found no blocker. Owner explicitly authorized one additional QA build ('sim rapido'), continuing the remote full-validation/build exception without a local build. Budget1, consumed0 before push. No Production, database, credentials or additional environment changes. Previous published f58cc312 remains the technical rollback reference, not accepted roster proof. Hosted roster, all-language coverage and persistence remain unverified; no complete QA claim.
+
 ## QA collection/locales corrective work — 2026-10-22
 
 Owner requested restoration of the persisted team and eight-language availability retained across QA releases. Preview branch qa now has TOUCHLINE_CLUB_COLLECTION_ENABLED and TOUCHLINE_SITE_LOCALES_ENABLED explicitly enabled; existing deployment f58cc312 does not acquire those settings retroactively. Release/termination remains OFF; no Production or data mutation. Collection activation also permits guarded signing/initialization/allocation routes, not merely display; no transactional test is authorized here.

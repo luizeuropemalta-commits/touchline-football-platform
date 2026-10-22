@@ -82,6 +82,10 @@ export const TOUCHLINE_QA_PREVIEW_ALLOWED_APPLICATION_ENVIRONMENT_KEYS = [
   // Exact server-only public locale release gate; no client override and no
   // admission in the separate inert isolated-preview environment.
   "TOUCHLINE_SITE_LOCALES_ENABLED",
+  // Owner-approved collection activation in functional QA only. Admission of
+  // this private name does not bypass collection auth/entitlement or enable
+  // termination; the separate release flag remains deliberately excluded.
+  "TOUCHLINE_CLUB_COLLECTION_ENABLED",
   // Server-only social gate. Runtime policy remains fail-closed in its route.
   "TOUCHLINE_PLAYER_SOCIAL_ENABLED",
   // Exact server-only award switches and worker bearer. Route gates and
