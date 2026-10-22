@@ -7,6 +7,7 @@ const repository = { full_name: `${QA_CI.owner}/${QA_CI.repo}`, name: QA_CI.repo
 const environment = {
   VERCEL: "1", VERCEL_ENV: "preview", VERCEL_GIT_COMMIT_REF: "qa",
   VERCEL_GIT_REPO_OWNER: QA_CI.owner, VERCEL_GIT_REPO_SLUG: QA_CI.repo, VERCEL_GIT_COMMIT_SHA: SHA,
+  TOUCHLINE_SITE_LOCALES_ENABLED: "true",
 };
 
 function run(overrides: Record<string, unknown> = {}) {
@@ -44,6 +45,13 @@ test("only exact Vercel QA context may consume CI and malformed identities fail 
   for (const sha of [undefined, "", "a".repeat(39), "a".repeat(41), "g".repeat(40), `${SHA}\n`]) {
     assert.throws(() => qaReleaseSha({ ...environment, VERCEL_GIT_COMMIT_SHA: sha }), /INVALID_SHA/);
   }
+});
+
+test("QA refuses to publish with the eight-language baseline disabled or missing", () => {
+  for (const value of [undefined, "false", "TRUE", "1", " true", "true "]) {
+    assert.throws(() => qaReleaseSha({ ...environment, TOUCHLINE_SITE_LOCALES_ENABLED: value }), /QA_SITE_LOCALES_REQUIRED/);
+  }
+  assert.equal(qaReleaseSha({ ...environment, VERCEL_ENV: "production", TOUCHLINE_SITE_LOCALES_ENABLED: undefined }), null);
 });
 
 test("exact completed CI success uses scoped public API without credentials or redirects", async () => {

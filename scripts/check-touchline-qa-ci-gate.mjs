@@ -29,6 +29,11 @@ export function qaReleaseSha(env) {
     throw new Error("QA_CI_REPOSITORY_MISMATCH");
   }
   assertSha(env.VERCEL_GIT_COMMIT_SHA);
+  // Owner-approved QA baseline: never silently publish the two-language fallback.
+  // This check changes no configuration and never applies to Production.
+  if (env.TOUCHLINE_SITE_LOCALES_ENABLED !== "true") {
+    throw new Error("QA_SITE_LOCALES_REQUIRED");
+  }
   return env.VERCEL_GIT_COMMIT_SHA;
 }
 

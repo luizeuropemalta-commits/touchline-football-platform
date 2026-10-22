@@ -1,5 +1,11 @@
 # TouchLine Current State
 
+## QA collection/locales corrective work — 2026-10-22
+
+Owner requested restoration of the persisted team and eight-language availability retained across QA releases. Preview branch qa now has TOUCHLINE_CLUB_COLLECTION_ENABLED and TOUCHLINE_SITE_LOCALES_ENABLED explicitly enabled; existing deployment f58cc312 does not acquire those settings retroactively. Release/termination remains OFF; no Production or data mutation. Collection activation also permits guarded signing/initialization/allocation routes, not merely display; no transactional test is authorized here.
+
+Local corrective candidate preserves all eight released locales through /coming-soon and rejects a canonical QA build if the site-locale flag is missing/disabled. Focused regression 20/20 PASS; independent review found no blocker. Full verification/build and a single new QA publication remain pending. No all-page language acceptance: admin/visual-qa and protected auth exclusions, isolated preview copy, and authenticated roster/language persistence remain open. Preserve the original running candidate and WIP; no schema reapplication or credential change.
+
 ## QA release checkpoint — 2026-10-22
 
 This checkpoint supersedes the historical entries below. Selected source: base1791ed5818bcf590533effa0cb9fc26b43e90c8c plus the reviewed366-path release manifest. Private operational audit deltas are preserved outside Git in the coordinator workspace, outputs/auditoria-mestre-20261021 (INDEX, qa-gates-and-final-batch-manifest, post-restart-execution). Do not treat historical account or deployment statements below as current.

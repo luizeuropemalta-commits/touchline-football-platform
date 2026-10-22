@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { resolveTouchLineRootLocale } from "@/lib/touchlineArena/root-locale";
+import { isTouchLineSiteLocalesEnabled } from "@/lib/touchlineArena/site-locales-release";
 
 type TouchLineComingSoonPageProps = {
   searchParams: Promise<{
@@ -9,6 +10,6 @@ type TouchLineComingSoonPageProps = {
 
 export default async function TouchLineComingSoonPage({ searchParams }: TouchLineComingSoonPageProps) {
   const params = await searchParams;
-  const locale = resolveTouchLineRootLocale(params.lang);
+  const locale = resolveTouchLineRootLocale(params.lang, isTouchLineSiteLocalesEnabled("/coming-soon"));
   redirect(`/intro?lang=${encodeURIComponent(locale)}`);
 }

@@ -135,7 +135,7 @@ test("client locale sync keeps the server locale when the URL has no explicit la
 });
 
 test("the retired Coming Soon route preserves locale and redirects into the intro", () => {
-  assert.match(comingSoon, /resolveTouchLineRootLocale\(params\.lang\)/);
+  assert.match(comingSoon, /resolveTouchLineRootLocale\(params\.lang, isTouchLineSiteLocalesEnabled\("\/coming-soon"\)\)/);
   assert.match(comingSoon, /redirect\(`\/intro\?lang=\$\{encodeURIComponent\(locale\)\}`\)/);
   assert.doesNotMatch(comingSoon, /Coming soon|Em breve|TouchlineComingSoonLanding/);
 });
