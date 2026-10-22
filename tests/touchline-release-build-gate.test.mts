@@ -28,7 +28,7 @@ test("release runner bounds workers and preserves timeout, selection and exit st
   assert.doesNotMatch(runner, /"touchline-social-events-live\.test\.mts"/, "hermetic events contract tests must run in the remote gate too");
 });
 
-test("QA workflow provisions Ubuntu browsers and executes the complete suite independently of Vercel", async () => {
+test("QA workflow uses pinned preinstalled Ubuntu browsers and executes the complete suite independently of Vercel", async () => {
   const workflow = await readFile(new URL("../.github/workflows/touchline-qa-release.yml", import.meta.url), "utf8");
   assert.match(workflow, /on:\n  push:\n    branches: \[qa\]/);
   assert.match(workflow, /permissions:\n  contents: read/);
@@ -38,7 +38,13 @@ test("QA workflow provisions Ubuntu browsers and executes the complete suite ind
   assert.match(workflow, /node-version: 24/);
   assert.match(workflow, /version: 11\.9\.0/);
   assert.match(workflow, /run: pnpm install --frozen-lockfile/);
-  assert.match(workflow, /run: pnpm exec playwright install --with-deps chromium webkit/);
+  const lockfile = await readFile(new URL("../pnpm-lock.yaml", import.meta.url), "utf8");
+  const playwrightVersion = lockfile.match(/'@playwright\/test':\n\s+specifier: [^\n]+\n\s+version: ([\d.]+)/)?.[1];
+  assert.ok(playwrightVersion, "Playwright version must resolve from the frozen lockfile");
+  assert.match(workflow, /container:\n\s+image: mcr\.microsoft\.com\/playwright:v[\d.]+-noble@sha256:[a-f0-9]{64}/);
+  assert.ok(workflow.includes(`mcr.microsoft.com/playwright:v${playwrightVersion}-noble@sha256:`), "container browser revision must match the locked Playwright package");
+  assert.ok(workflow.includes("-noble@sha256:dcc5531e97840b9b5e794f2814476b21571c5124a3fca2267d73041f56e7580e"), "release image must retain the reviewed immutable digest");
+  assert.doesNotMatch(workflow, /playwright install|apt-get|apt install/, "browser OS setup must not depend on runner package mirrors");
   assert.match(workflow, /run: pnpm run verify:release/);
   assert.match(workflow, /git diff --check/);
   assert.match(workflow, /git status --porcelain/);

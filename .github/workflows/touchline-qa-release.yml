@@ -14,6 +14,9 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-24.04
+    # Browser binaries and OS libraries are preinstalled; avoid runner apt mirrors.
+    container:
+      image: mcr.microsoft.com/playwright:v1.62.1-noble@sha256:dcc5531e97840b9b5e794f2814476b21571c5124a3fca2267d73041f56e7580e
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -28,8 +31,6 @@ jobs:
           run_install: false
       - name: Frozen install
         run: pnpm install --frozen-lockfile
-      - name: Install release browsers and operating-system libraries
-        run: pnpm exec playwright install --with-deps chromium webkit
       - name: Complete release verification
         run: pnpm run verify:release
       - name: Diff and generated-artifact safety
