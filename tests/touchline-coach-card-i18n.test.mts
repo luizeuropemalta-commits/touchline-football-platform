@@ -12,6 +12,7 @@ import { isTouchLineLocaleComplete } from "../lib/touchlineArena/i18n.ts";
 import { createTouchlineArenaCoachSlot } from "../lib/touchlineArena/coach-card.ts";
 import { TOUCHLINE_COACH_CARD_DEFAULT_LAYOUT } from "../lib/touchlineArena/coach-card-layout.ts";
 import type { TouchlineCoach } from "../lib/football-data/types.ts";
+import { resolveCoachSigningPricePresentation } from "../lib/touchlineArena/coach-signing-price-i18n.ts";
 
 type CopyModule = typeof import("../lib/touchlineArena/coach-card-i18n.ts");
 const root = fileURLToPath(new URL("../", import.meta.url));
@@ -61,6 +62,35 @@ function fixture(copy?: Partial<CopyModule>) {
     coach, slot, clubName: "Canonical Club & Co", clubLogoUrl: "/canonical-crest.png", countryCode3: "ENG", locale, ...props,
   }));
 }
+
+test("game-only signing footer preserves points and rejects invalid prices", () => {
+  const render = fixture();
+  const html = render("en-GB", { acquisitionPrice: { label: "Signing value", valueTc: 10_000_000 }, publishedTouchlinePoints: 27 });
+  assert.match(html, /data-coach-signing-value="10000000"/);
+  assert.match(html, /Signing value/);
+  assert.match(html, /10m TC/);
+  assert.match(html, /TL PTS/);
+  assert.match(html, />27</);
+  assert.doesNotMatch(render("en-GB"), /data-coach-signing-value/);
+  for (const valueTc of [-1, NaN, Infinity, 1.5]) {
+    assert.doesNotMatch(render("en-GB", { acquisitionPrice: { label: "Signing value", valueTc } }), /data-coach-signing-value/);
+  }
+});
+
+test("signing footer copy and number formatting obey draft locale gates together", () => {
+  const render = fixture();
+  for (const locale of locales) {
+    for (const draftLocalesEnabled of [false, true]) {
+      const presentation = resolveCoachSigningPricePresentation(locale, draftLocalesEnabled);
+      const expectedLocale = draftLocalesEnabled || locale === "pt-BR" ? locale : "en-GB";
+      assert.equal(presentation.locale, expectedLocale);
+      assert.ok(presentation.label.length > 0);
+      const html = render(locale, { draftLocalesEnabled, acquisitionPrice: { label: presentation.label, valueTc: 10_000_000 } });
+      assert.ok(html.includes(presentation.label));
+      assert.ok(html.includes(`${new Intl.NumberFormat(expectedLocale, { notation: "compact", maximumFractionDigits: 1 }).format(10_000_000)} TC`));
+    }
+  }
+});
 
 test("real coach card corrects three Portuguese ARIA and keeps the English baseline and canonical names", () => {
   const render = fixture();

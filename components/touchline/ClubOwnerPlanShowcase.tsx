@@ -3,7 +3,8 @@
 import { useId, useRef, useState, type KeyboardEvent } from "react";
 import { ChevronDown, ChevronLeft, ChevronRight, Crown, Diamond, LockKeyhole, Shield, X } from "lucide-react";
 import { getTouchlineClubOwnerMarketCopy } from "@/lib/touchlineArena/club-owner-market-i18n";
-import { CLUB_OWNER_PLAN_PREVIEWS, getClubOwnerPlanShowcaseCopy, getClubOwnerVipPlanName, type ClubOwnerPlanPreview } from "@/lib/touchlineArena/club-owner-plan-showcase";
+import { getClubCollectionBudgetCopy } from "@/lib/touchlineFantasy/market-budget-i18n";
+import { CLUB_OWNER_PLAN_PREVIEWS, getClubOwnerPlanBenefits, getClubOwnerPlanBenefitTerms, getClubOwnerPlanShowcaseCopy, getClubOwnerVipPlanName, type ClubOwnerPlanPreview } from "@/lib/touchlineArena/club-owner-plan-showcase";
 import { TouchlineCoinMark } from "./market/TouchlineMarketMarks";
 import TouchlineClubPerimeterTrace from "./TouchlineClubPerimeterTrace";
 import controls from "./TouchlineGlobalNavigation.module.css";
@@ -14,13 +15,14 @@ const tierIcons = { beta: Shield, standard: Shield, pro: Crown, master: Diamond,
 export function ClubOwnerPlanCard({ tier, name, locale, active = false, activePlanBudget, draftLocalesEnabled = false, compact = false }: Readonly<{
   tier: ClubOwnerPlanPreview; name?: string; locale: string; active?: boolean; activePlanBudget?: number | null; draftLocalesEnabled?: boolean; compact?: boolean;
 }>) {
-  const plan = CLUB_OWNER_PLAN_PREVIEWS.find(item => item.id === tier)!;
+  const plan = tier === "pro" ? { id: "pro", amount: "650M", budget: 650_000_000 } : CLUB_OWNER_PLAN_PREVIEWS.find(item => item.id === tier)!;
   const copy = getTouchlineClubOwnerMarketCopy(locale, draftLocalesEnabled);
   const labels = getClubOwnerPlanShowcaseCopy(locale, draftLocalesEnabled);
   const title = tier === "beta" ? "Beta" : tier === "standard" ? copy.planStandard : tier === "pro" ? "Pro" : tier === "master" ? "Master" : getClubOwnerVipPlanName(locale, draftLocalesEnabled);
   const TierIcon = tierIcons[tier];
-  const budget = active && activePlanBudget !== undefined ? activePlanBudget : plan.budget;
-  const amount = active && activePlanBudget !== undefined && typeof budget === "number"
+  // The cover describes the offer, never the account's credited wallet.
+  const budget = tier === "pro" && active && activePlanBudget !== undefined ? activePlanBudget : plan.budget;
+  const amount = tier === "pro" && active && activePlanBudget !== undefined && typeof budget === "number"
     ? new Intl.NumberFormat(locale, { notation: "compact", maximumFractionDigits: 1 }).format(budget) : plan.amount;
   const budgetLabel = `${labels.planBudget}: ${budget === null ? labels.unlimited : `${budget.toLocaleString(locale)} TouchLine Credits`}`;
   return <div dir="ltr" className={styles.memberCard} data-compact={compact || undefined} data-plan-offer={tier} data-current-plan={active || undefined}>
@@ -44,8 +46,9 @@ export function ClubOwnerPlanCard({ tier, name, locale, active = false, activePl
   </div>;
 }
 
-export default function ClubOwnerPlanShowcase({ initialPlan, activePlanKey = null, activePlanBudget, name, locale, remainingMarketPower, draftLocalesEnabled = false, showAllPlans = false, canChoose = false, embedded = false, onPreviewChange }: Readonly<{
-  initialPlan: ClubOwnerPlanPreview; activePlanKey?: ClubOwnerPlanPreview | null; activePlanBudget?: number | null; name: string; locale: string; remainingMarketPower: string | null; draftLocalesEnabled?: boolean; showAllPlans?: boolean; canChoose?: boolean; embedded?: boolean; onPreviewChange?: (tier: ClubOwnerPlanPreview) => void;
+export default function ClubOwnerPlanShowcase({ initialPlan, activePlanKey = null, activePlanBudget, name, locale, remainingMarketPower, collectionEnabled = false, verificationStatus = "confirmed", draftLocalesEnabled = false, showAllPlans = false, canChoose = false, embedded = false, onPreviewChange, onOpenDetails }: Readonly<{
+  initialPlan: ClubOwnerPlanPreview; activePlanKey?: ClubOwnerPlanPreview | null; activePlanBudget?: number | null; name: string; locale: string; remainingMarketPower: string | null; draftLocalesEnabled?: boolean; showAllPlans?: boolean; canChoose?: boolean; embedded?: boolean; onPreviewChange?: (tier: ClubOwnerPlanPreview) => void; onOpenDetails?: () => void;
+  collectionEnabled?: boolean; verificationStatus?: "pending" | "confirmed" | "unavailable";
 }>) {
   const [index, setIndex] = useState(() => Math.max(0, CLUB_OWNER_PLAN_PREVIEWS.findIndex(plan => plan.id === initialPlan)));
   const [zoomOpen, setZoomOpen] = useState(() => false);
@@ -59,8 +62,13 @@ export default function ClubOwnerPlanShowcase({ initialPlan, activePlanKey = nul
   const plan = CLUB_OWNER_PLAN_PREVIEWS[index];
   const copy = getTouchlineClubOwnerMarketCopy(locale, draftLocalesEnabled);
   const labels = getClubOwnerPlanShowcaseCopy(locale, draftLocalesEnabled);
+  const collectionBudgetCopy = getClubCollectionBudgetCopy(locale, draftLocalesEnabled);
+  const balanceLabel = collectionEnabled ? (verificationStatus !== "confirmed" && remainingMarketPower !== null
+    ? collectionBudgetCopy.lastConfirmedBalance : collectionBudgetCopy.signingBudget) : labels.currentBudget;
+  const balanceStatus = collectionEnabled && verificationStatus !== "confirmed"
+    ? collectionBudgetCopy[verificationStatus === "unavailable" ? "unavailable" : "pending"] : null;
   const titleFor = (tier: ClubOwnerPlanPreview) => tier === "beta" ? "Beta" : tier === "standard" ? copy.planStandard : tier === "pro" ? "Pro" : tier === "master" ? "Master" : getClubOwnerVipPlanName(locale, draftLocalesEnabled);
-  const priceFor = (tier: ClubOwnerPlanPreview) => tier === "beta" ? labels.betaPrice : tier === "standard" ? copy.planStandardPrice : tier === "pro" ? copy.planProPrice : tier === "master" ? labels.masterPrice : labels.pricePending;
+  const priceFor = (tier: ClubOwnerPlanPreview) => tier === "beta" ? labels.betaPrice : tier === "standard" ? copy.planStandardPrice : tier === "pro" ? copy.planProPrice : tier === "master" ? labels.masterPrice : labels.vipPrice;
   const benefitFor = (tier: ClubOwnerPlanPreview) => tier === "beta" ? labels.betaBenefit : tier === "pro" ? copy.planProBenefit : copy.planStandardBenefit;
   const title = titleFor(plan.id);
   const move = (delta: number) => {
@@ -90,7 +98,7 @@ export default function ClubOwnerPlanShowcase({ initialPlan, activePlanKey = nul
     setZoomOpen(false);
     (returnFocus.current ?? dialogTrigger.current)?.focus();
   };
-  const openDialog = (trigger: HTMLButtonElement) => { returnFocus.current = trigger; setZoomOpen(true); dialog.current?.showModal(); };
+  const openDialog = (trigger: HTMLButtonElement) => { if (onOpenDetails) { onOpenDetails(); return; } returnFocus.current = trigger; setZoomOpen(true); dialog.current?.showModal(); };
   return <section dir="ltr" className={styles.planShowcase} data-embedded={embedded || undefined} data-plan-preview={plan.id} data-active-plan={activePlanKey ?? undefined} data-plan-state={activePlanKey ? "active" : "inactive"} aria-labelledby={`${id}-heading`}>
     <div className={styles.showcaseHeading}>
       <div>{embedded ? <span className={styles.eyebrow} id={`${id}-heading`}>{labels.browse}</span> : <><span className={styles.eyebrow}>TouchLine / {labels.membership}</span><h2 id={`${id}-heading`}>{copy.plan}</h2></>}</div>
@@ -99,7 +107,7 @@ export default function ClubOwnerPlanShowcase({ initialPlan, activePlanKey = nul
       </button>
     </div>
     {showAllPlans ? <div className={styles.allPlans} aria-label={labels.browse}>
-      {CLUB_OWNER_PLAN_PREVIEWS.map((item, position) => <button key={item.id} type="button" ref={element => { choices.current[position] = element; }} className={`${controls.link} ${styles.planChoice}`} data-plan-choice={item.id} data-selected={position === index} aria-label={`${labels.viewPlan}: ${titleFor(item.id)}`} aria-pressed={position === index} onClick={() => { select(position); dialog.current?.showModal(); }}>
+      {CLUB_OWNER_PLAN_PREVIEWS.map((item, position) => <button key={item.id} type="button" ref={element => { choices.current[position] = element; }} className={`${controls.link} ${styles.planChoice}`} data-plan-choice={item.id} data-selected={position === index} aria-label={`${labels.viewPlan}: ${titleFor(item.id)}`} aria-pressed={position === index} onClick={event => { select(position); openDialog(event.currentTarget); }}>
         <ClubOwnerPlanCard tier={item.id} locale={locale} draftLocalesEnabled={draftLocalesEnabled} />
       </button>)}
     </div> : null}
@@ -112,9 +120,9 @@ export default function ClubOwnerPlanShowcase({ initialPlan, activePlanKey = nul
       </button>)}
     </div> : null}
     {!showAllPlans ? <div role={embedded ? "group" : "tabpanel"} id={`${id}-panel`} aria-label={embedded ? `${labels.previewShort}: ${title}` : undefined} aria-labelledby={embedded ? undefined : `${id}-tab-${plan.id}`} tabIndex={0} className={styles.planPanel}>
-      {embedded ? <ClubOwnerPlanCard compact tier={plan.id} name={name} locale={locale} active={activePlanKey === plan.id} activePlanBudget={activePlanKey === plan.id ? activePlanBudget : undefined} draftLocalesEnabled={draftLocalesEnabled} /> : <button type="button" className={`${controls.link} ${styles.panelCardButton}`} aria-label={`${labels.viewPlan}: ${title}`} onClick={event => openDialog(event.currentTarget)} aria-haspopup="dialog">
+      <button type="button" className={`${controls.link} ${styles.panelCardButton}`} aria-label={`${labels.viewPlan}: ${title}`} onClick={event => openDialog(event.currentTarget)} aria-haspopup="dialog">
         <ClubOwnerPlanCard compact={embedded} tier={plan.id} name={name} locale={locale} active={activePlanKey === plan.id} activePlanBudget={activePlanKey === plan.id ? activePlanBudget : undefined} draftLocalesEnabled={draftLocalesEnabled} />
-      </button>}
+      </button>
       <div className={styles.offerSummary}><div><small>{labels.seasonalPrice}</small><strong data-plan-price={plan.id}>{priceFor(plan.id)}</strong></div><p>{benefitFor(plan.id)}</p></div>
       {canChoose && activePlanKey !== plan.id ? <a className={`${controls.arena} ${styles.choosePlan}`} href="#clubowner-plan-interest" onClick={() => dialog.current?.close()}>{labels.choosePlan}</a> : null}
     </div> : null}
@@ -135,12 +143,17 @@ export default function ClubOwnerPlanShowcase({ initialPlan, activePlanKey = nul
     <p className={styles.previewNote}>{labels.preview}</p>
     <dialog ref={dialog} className={styles.planDialog} aria-labelledby={`${id}-dialog-heading`} onClose={() => setZoomOpen(false)} onCancel={event => { event.preventDefault(); closeDialog(); }}>
       <div className={styles.dialogHeading}><span>{labels.details}</span><button type="button" className={`${controls.link} ${styles.planArrow}`} aria-label={labels.close} onClick={closeDialog}><X size={18} aria-hidden="true" /></button></div>
-      <div className={embedded ? styles.zoomLayout : undefined}>
-        {embedded && zoomOpen ? <div className={styles.zoomCard} aria-hidden="true"><ClubOwnerPlanCard tier={plan.id} locale={locale} draftLocalesEnabled={draftLocalesEnabled} active={activePlanKey === plan.id} activePlanBudget={activePlanKey === plan.id ? activePlanBudget : undefined} /></div> : null}
+      <div className={styles.zoomLayout}>
+        {zoomOpen ? <div className={styles.zoomCard} aria-hidden="true"><ClubOwnerPlanCard tier={plan.id} locale={locale} draftLocalesEnabled={draftLocalesEnabled} active={activePlanKey === plan.id} activePlanBudget={activePlanKey === plan.id ? activePlanBudget : undefined} /></div> : null}
         <div className={styles.dialogDetails}>
       <h2 className={embedded ? styles.visuallyHidden : undefined} id={`${id}-dialog-heading`}>{title}</h2><strong className={styles.dialogPrice}>{priceFor(plan.id)}</strong><p>{benefitFor(plan.id)}</p>
-      <dl><div className={embedded ? styles.visuallyHidden : undefined}><dt>{labels.planBudget}</dt><dd>{plan.amount} TC</dd></div><div><dt>{labels.currentBudget}</dt><dd data-current-xi-budget="true" aria-label={remainingMarketPower === null ? copy.marketPowerUnavailable : undefined}>{`${remainingMarketPower ?? "—"} TC`}</dd></div></dl>
-      <p className={styles.availability}>{copy.planActionUnavailable}</p><p className={styles.previewNote}>{labels.preview} {copy.virtualBudgetSeparate}</p>
+      {plan.id !== "beta" ? <dl className={styles.benefitGrid} data-plan-benefits={plan.id}>
+        {getClubOwnerPlanBenefits(plan.id, locale, draftLocalesEnabled).map(item => <div key={item.label}><dt>{item.label}</dt><dd>{item.value}</dd></div>)}
+      </dl> : null}
+      {plan.id !== "beta" ? <p className={styles.benefitTerms}>{getClubOwnerPlanBenefitTerms(locale, draftLocalesEnabled)}</p> : null}
+      <dl><div className={embedded ? styles.visuallyHidden : undefined}><dt>{labels.planBudget}</dt><dd>{plan.amount} TC</dd></div><div><dt>{balanceLabel}</dt><dd data-current-xi-budget={!collectionEnabled || undefined} data-current-squad-budget={collectionEnabled || undefined} aria-describedby={balanceStatus ? `${id}-balance-status` : undefined} aria-label={remainingMarketPower === null ? copy.marketPowerUnavailable : undefined}>{`${remainingMarketPower ?? "—"} TC`}</dd></div></dl>
+      {balanceStatus ? <p className={styles.previewNote} id={`${id}-balance-status`} role="status">{balanceStatus}</p> : null}
+      <p className={styles.availability}>{copy.planActionUnavailable}</p><p className={styles.previewNote}>{labels.preview} {collectionEnabled ? collectionBudgetCopy.virtualBudgetSeparate : copy.virtualBudgetSeparate}</p>
       {embedded ? <details className={styles.comparison}>
         <summary>{labels.comparePlans}<ChevronDown size={15} aria-hidden="true" /></summary>
         <div className={styles.compareTable}><table><caption>{labels.comparePlans}</caption>

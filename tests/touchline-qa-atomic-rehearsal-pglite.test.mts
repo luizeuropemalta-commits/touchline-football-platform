@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
-import { createRequire } from "node:module";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import { PGlite } from "@electric-sql/pglite";
+import { createLocalRehearsalRuntime } from "./helpers/local-rehearsal-runtime.ts";
 
 import {
   TOUCHLINE_QA_20261011_PREIMAGE_DRAFT,
@@ -16,17 +16,7 @@ import { TOUCHLINE_QA_MIGRATION_BATCH_20261011 } from "../scripts/qa/verify-touc
 type Row = Record<string, unknown>;
 type Db = { exec(sql: string): Promise<unknown>; query<T extends Row = Row>(sql: string, args?: unknown[]): Promise<{ rows: T[] }>; close(): Promise<void> };
 async function createRehearsalDb(): Promise<Db> {
-  const nativeUrl = process.env.TOUCHLINE_QA_NATIVE_REHEARSAL_URL;
-  if (!nativeUrl) return new PGlite();
-  const require = createRequire(new URL("../tools/quota-recovery/package.json", import.meta.url));
-  const { Client } = require("pg");
-  const client = new Client({ connectionString: nativeUrl, application_name: "touchline_qa_native_rehearsal" });
-  await client.connect();
-  return {
-    exec: (sql) => client.query(sql),
-    query: (sql, args) => client.query(sql, args),
-    close: () => client.end(),
-  };
+  return createLocalRehearsalRuntime(process.env.TOUCHLINE_QA_NATIVE_REHEARSAL_URL, () => new PGlite());
 }
 const migration = (name: string) => readFile(new URL(`../supabase/migrations/${name}.sql`, import.meta.url), "utf8");
 const id = (value: number) => `10000000-0000-4000-8000-${String(value).padStart(12, "0")}`;

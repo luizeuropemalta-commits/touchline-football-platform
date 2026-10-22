@@ -8,6 +8,7 @@ import * as jsxRuntime from "react/jsx-runtime";
 import { renderToStaticMarkup } from "react-dom/server";
 import ts from "typescript";
 import * as domain from "../lib/touchlineFantasy/domain.ts";
+import * as primaryPositionPolicy from "../lib/touchlineFantasy/club-primary-position-policy.ts";
 import { isTouchLineLocaleComplete, normalizeTouchLineLocale } from "../lib/touchlineArena/i18n.ts";
 import { getTouchlineFantasyMarketClockCopy, formatTouchlineFantasyClockUnit } from "../lib/touchlineFantasy/market-clock-i18n.ts";
 import { getTouchlineFantasyMarketMetricsCopy } from "../lib/touchlineFantasy/market-metrics-i18n.ts";
@@ -28,6 +29,7 @@ function fixture(review = false) {
   runInNewContext(javascript, {
     exports,
     require: (name: string) => {
+      if (name === "./club-primary-position-policy.ts") return primaryPositionPolicy;
       assert.equal(name, "../touchlineArena/catalogue-locale.ts");
       return { resolveTouchlineCatalogueLocale: (locale: string, enabled = false) => { requested.push(locale); return resolveTouchlineCatalogueLocale(locale, enabled); } };
     },

@@ -59,6 +59,7 @@ async function render(receipt: unknown, options: { authFailure?: Error; probe?: 
     '@/lib/touchlineArena/ranked-card-catalog-server': { loadTouchLineRankedCardCatalog: async () => [] },
     '@/lib/touchlineArena/card-publication-read-model': { countTouchlinePublishedPlayerCards: async () => 0 },
     '@/lib/touchlineArena/coach-ranking-server': { loadTouchLineCoachRanking: async () => ({ snapshotId: 'coach-snapshot' }) },
+    '@/lib/touchlineArena/club-owner-standings-server': { loadClubOwnerStandings: async () => ({ status: 'ready', rows: [] }) },
     '@/lib/football-data/fixture-schedule-store': { readPublicCompetitionFixtures: async () => [] },
     '@/lib/touchlineArena/rankings-highlight-projection': { projectTouchlineRankingsHighlights: () => ({}) },
     '@/lib/touchlineArena/card-goals-leadership': { cardGoalsLeaderIds: () => [] },

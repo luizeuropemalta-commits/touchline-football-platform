@@ -18,6 +18,7 @@ import {
   Hand,
   History,
   LockKeyhole,
+  LogOut,
   Medal,
   Shield,
   ShieldCheck,
@@ -116,6 +117,11 @@ export type TouchlineCardZoomDetails = {
   cardEngineLabel?: string;
 };
 
+export type TouchlineSigningActions = {
+  select: { label: string; onSelect: () => void; disabled: boolean };
+  confirm?: { label: string; onSelect: () => void; disabled: boolean };
+  status?: string | null;
+};
 type TouchlineCardZoomProps = {
   ariaLabel: string;
   /** Explicit page context wins; omission preserves the legacy fallbacks. */
@@ -137,6 +143,8 @@ type TouchlineCardZoomProps = {
   socialProviderId?: string;
   replacementAction?: { label: string; onSelect: () => void; disabled?: boolean };
   removalAction?: { label: string; onSelect: () => void; disabled?: boolean };
+  releaseAction?: { label: string; onSelect: () => void; disabled?: boolean };
+  signingActions?: TouchlineSigningActions;
   /** Explain why lineup controls remain visible but unavailable. */
   lockedReason?: string;
 };
@@ -333,6 +341,8 @@ export default function TouchlineCardZoom({
   socialProviderId,
   replacementAction,
   removalAction,
+  releaseAction,
+  signingActions,
   lockedReason,
 }: TouchlineCardZoomProps) {
   const explicitLocale = locale === undefined ? undefined : resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled);
@@ -413,14 +423,28 @@ export default function TouchlineCardZoom({
     if (replacementAction.disabled) return;
     // Release modal focus/scroll locks before opening the slot selector.
     flushSync(() => setIsOpen(false));
+    // The next dialog must capture the persistent card, not the removed zoom action.
+    triggerRef.current?.focus({ preventScroll: true });
     replacementAction.onSelect();
   }}><ArrowLeftRight size={24} aria-hidden="true" /><span>{replacementAction.label}</span>{replacementAction.disabled && lockedReason ? <LockKeyhole size={17} aria-hidden="true" /> : null}</button> : null;
   const removalButton = removalAction ? <button type="button" className={`${styles.contractAction} ${styles.removalAction}`} disabled={removalAction.disabled} onClick={() => {
     if (removalAction.disabled) return;
     flushSync(() => setIsOpen(false));
+    triggerRef.current?.focus({ preventScroll: true });
     removalAction.onSelect();
   }}><Trash2 size={22} aria-hidden="true" /><span>{removalAction.label}</span>{removalAction.disabled && lockedReason ? <LockKeyhole size={17} aria-hidden="true" /> : null}</button> : null;
-  const lineupActions = replacementButton || removalButton ? <div className={styles.lineupActions}>{replacementButton}{removalButton}</div> : null;
+  const releaseButton = releaseAction ? <button type="button" className={`${styles.contractAction} ${styles.removalAction}`} disabled={releaseAction.disabled} onClick={() => {
+    if (releaseAction.disabled) return;
+    flushSync(() => setIsOpen(false));
+    triggerRef.current?.focus({ preventScroll: true });
+    releaseAction.onSelect();
+  }}><LogOut size={22} aria-hidden="true" /><span>{releaseAction.label}</span></button> : null;
+  const signingButtons = signingActions ? <div className={styles.lineupActions} data-zoom-signing-actions="true">
+    <button type="button" className={styles.contractAction} disabled={signingActions.select.disabled} onClick={() => { if (!signingActions.select.disabled) signingActions.select.onSelect(); }}>{signingActions.select.label}</button>
+    {signingActions.confirm ? <button type="button" className={styles.contractAction} disabled={signingActions.confirm.disabled} onClick={() => { if (!signingActions.confirm?.disabled) signingActions.confirm?.onSelect(); }}>{signingActions.confirm.label}</button> : null}
+    {signingActions.status ? <p role="status">{signingActions.status}</p> : null}
+  </div> : null;
+  const lineupActions = replacementButton || removalButton || releaseButton || signingButtons ? <div className={styles.lineupActions}>{replacementButton}{removalButton}{releaseButton}{signingButtons}</div> : null;
 
   return (
     <>

@@ -20,6 +20,8 @@ import * as catalogue from "../lib/touchlineArena/catalogue-locale.ts";
 import * as i18n from "../lib/touchlineArena/i18n.ts";
 import * as fixtureRound from "../lib/touchlineArena/arena-fixture-round.ts";
 import * as positionLabels from "../lib/touchlineArena/position-labels.ts";
+import * as profileMetrics from "../lib/touchlineArena/club-owner-profile-metrics.ts";
+import * as ownerStandings from "../lib/touchlineArena/club-owner-standings.ts";
 
 type Element = React.ReactElement<Record<string, unknown>>;
 const route = readFileSync(new URL("../app/rankings/page.tsx", import.meta.url), "utf8");
@@ -30,6 +32,9 @@ function compile(source: string, modules: Record<string, unknown> = {}) {
   runInNewContext(ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText, {
     exports,
     require: (name: string) => {
+      if (name === "@/lib/touchlineArena/club-owner-standings") return ownerStandings;
+      if (name === "@/lib/touchlineArena/club-owner-profile-metrics") return profileMetrics;
+      if (name === "@/lib/touchlineArena/club-owner-standings-server") return { loadClubOwnerStandings: async () => ({status:"ready",rows:[]}) };
       if (name === "@/lib/touchlineArena/site-locales-release") return siteLocalePolicy;
       if (Object.hasOwn(modules, name)) return modules[name];
       if (name === "react") return React;

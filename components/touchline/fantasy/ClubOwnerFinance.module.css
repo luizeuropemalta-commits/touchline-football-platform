@@ -1,0 +1,35 @@
+.panel {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: 0;
+  margin: 12px 0 18px;
+  border: 1px solid rgba(var(--market-plan-rgb, 177, 205, 191), .3);
+  border-radius: 16px;
+  background: linear-gradient(120deg, #10231e, #091712);
+  color: #edf5ef;
+  overflow: hidden;
+}
+.budget, .valuation { min-width: 0; padding: 18px 20px; }
+.valuation { border-inline-start: 1px solid rgba(177, 205, 191, .14); }
+.metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 0; }
+.budget .metrics { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1.3fr) minmax(0, .7fr); }
+.metrics > div { min-width: 0; }
+.metrics dt { font-size: 11px; font-weight: 600; letter-spacing: .045em; line-height: 1.5; color: #b6c8bd; }
+.metrics dd { margin: 6px 0 0; font-size: clamp(16px, 1.5vw, 22px); font-weight: 650; line-height: 1.35; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.metrics .primary dd { color: #edf5ef; }
+.metrics dd small { font-size: 10px; font-weight: 500; color: #b6c8bd; white-space: nowrap; }
+.panel .note { margin: 12px 0 0; font-size: 11px; line-height: 1.5; color: #aabdb1; }
+.panel .status { margin: 0; font-size: 12px; line-height: 1.5; color: #d5dfd8; }
+.valuation .status { margin-top: 10px; }
+.unavailable { font-size: 13px; font-weight: 500; color: #bac9bf; }
+@media (max-width: 1100px) {
+  .panel { grid-template-columns: minmax(0, 1fr); }
+  .valuation { border-inline-start: 0; border-top: 1px solid rgba(177, 205, 191, .14); }
+}
+@media (max-width: 540px) {
+  .budget, .valuation { padding: 14px; }
+  .budget .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+  .budget .primary { grid-column: 1 / -1; }
+  .metrics dd { font-size: 20px; }
+}

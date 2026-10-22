@@ -1,0 +1,14 @@
+import { resolveTouchlineCatalogueLocale } from "../touchlineArena/catalogue-locale.ts";
+const copy = {
+  "en-GB": { title: "Loading your saved team", busy: "Checking your XI for this round. Your previous results are preserved.", unavailable: "Your team has not been confirmed for this round yet. No new team was selected. Check the saved lineup before making changes.", verify: "Check saved lineup" },
+  "pt-BR": { title: "Carregando seu time salvo", busy: "Conferindo seu XI nesta rodada. Seus resultados anteriores estão preservados.", unavailable: "Seu time ainda não foi confirmado nesta rodada. Nenhum novo time foi escolhido. Confira a escalação salva antes de fazer alterações.", verify: "Verificar escalação salva" },
+  "es-ES": { title: "Cargando tu equipo guardado", busy: "Comprobando tu once para esta jornada. Tus resultados anteriores se conservan.", unavailable: "Tu equipo aún no se ha confirmado para esta jornada. No se ha elegido otro equipo. Comprueba la alineación guardada antes de cambiarla.", verify: "Comprobar alineación guardada" },
+  "it-IT": { title: "Caricamento della squadra salvata", busy: "Verifica degli undici per questa giornata. I risultati precedenti sono conservati.", unavailable: "La squadra non è ancora confermata per questa giornata. Non è stata scelta una nuova squadra. Controlla la formazione salvata prima di modificarla.", verify: "Verifica formazione salvata" },
+  "fr-FR": { title: "Chargement de votre équipe enregistrée", busy: "Vérification de votre onze pour cette journée. Vos résultats précédents sont conservés.", unavailable: "Votre équipe n’est pas encore confirmée pour cette journée. Aucune nouvelle équipe n’a été choisie. Vérifiez la composition enregistrée avant toute modification.", verify: "Vérifier la composition enregistrée" },
+  "ar-SA": { title: "جارٍ تحميل فريقك المحفوظ", busy: "جارٍ التحقق من تشكيلتك لهذه الجولة. نتائجك السابقة محفوظة.", unavailable: "لم يتم تأكيد فريقك لهذه الجولة بعد. لم يتم اختيار فريق جديد. تحقق من التشكيلة المحفوظة قبل إجراء تغييرات.", verify: "التحقق من التشكيلة المحفوظة" },
+  "tr-TR": { title: "Kayıtlı takımınız yükleniyor", busy: "Bu haftanın ilk on biri kontrol ediliyor. Önceki sonuçlarınız korunuyor.", unavailable: "Takımınız bu hafta için henüz doğrulanmadı. Yeni bir takım seçilmedi. Değişiklik yapmadan önce kayıtlı kadroyu kontrol edin.", verify: "Kayıtlı kadroyu kontrol et" },
+  "de-DE": { title: "Gespeichertes Team wird geladen", busy: "Deine Startelf für diesen Spieltag wird geprüft. Bisherige Ergebnisse bleiben erhalten.", unavailable: "Dein Team wurde für diesen Spieltag noch nicht bestätigt. Kein neues Team wurde gewählt. Prüfe die gespeicherte Aufstellung vor Änderungen.", verify: "Gespeicherte Aufstellung prüfen" },
+} as const;
+export function getFantasyContinuityCopy(locale: string, draftLocalesEnabled = false) {
+  return copy[resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled)];
+}

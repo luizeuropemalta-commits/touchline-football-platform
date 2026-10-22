@@ -2,19 +2,25 @@
 
 import Image from "next/image";
 import { useState } from "react";
-import { CalendarDays, Camera } from "lucide-react";
+import { useConfirmedClubCollection } from "./fantasy/ClubCollectionContext";
+import { CLUB_ACQUISITION_BUDGETS } from "@/lib/touchlineFantasy/club-acquisition";
+import { getClubCollectionBudgetCopy } from "@/lib/touchlineFantasy/market-budget-i18n";
+import { CalendarDays, Camera, ChevronRight } from "lucide-react";
 import { getTouchlineClubOwnerMarketCopy } from "@/lib/touchlineArena/club-owner-market-i18n";
 import { getClubOwnerPlanShowcaseCopy, type ClubOwnerPlanPreview } from "@/lib/touchlineArena/club-owner-plan-showcase";
+import { resolveTouchlineCatalogueLocale } from "@/lib/touchlineArena/catalogue-locale";
 import { formatClubOwnerRankingPosition, getClubOwnerProfileMetricsCopy } from "@/lib/touchlineArena/club-owner-profile-metrics";
 import ClubOwnerAvatarControl, { type ClubOwnerAvatarUiContext } from "./ClubOwnerAvatarControl";
-import ClubOwnerPlanShowcase from "./ClubOwnerPlanShowcase";
+import { ClubOwnerPlanCard } from "./ClubOwnerPlanShowcase";
+import ClubOwnerPlanOnboarding from "./ClubOwnerPlanOnboarding";
 import { TouchlineCoinMark } from "./market/TouchlineMarketMarks";
 import controls from "./TouchlineGlobalNavigation.module.css";
 import styles from "./ClubOwnerMarketHeader.module.css";
+import planStyles from "./ClubOwnerPlanShowcase.module.css";
 
 type Owner = Readonly<{ name: string; avatarUrl: string; city: string; nationality: string; since: string }>;
 
-export default function ClubOwnerMarketHeader({ owner, locale, accountId, avatarContext, rankingPosition = null, remainingMarketPower = null, plan = null, activePlanKey = null, activePlanBudget, planPreview = null, draftLocalesEnabled = false, avatarSelectionEnabled = false, retentionReady = false }: Readonly<{
+export default function ClubOwnerMarketHeader({ owner, locale, accountId, avatarContext, rankingPosition = null, remainingMarketPower = null, plan = null, activePlanKey = null, activePlanBudget, draftLocalesEnabled = false, avatarSelectionEnabled = false, retentionReady = false, identityOnly = false, collectionEnabled = false }: Readonly<{
   owner: Owner | null; locale: string; accountId?: string; avatarContext?: ClubOwnerAvatarUiContext | null;
   plan?: Readonly<{ active: boolean; expiresAt: string | null }> | null;
   /** Validated server entitlement only; never derived from a preview or URL. */
@@ -25,25 +31,40 @@ export default function ClubOwnerMarketHeader({ owner, locale, accountId, avatar
   avatarSelectionEnabled?: boolean; retentionReady?: boolean;
   rankingPosition?: number | null;
   remainingMarketPower?: number | null;
+  /** Reuse the canonical cover in a composition that owns its plan summary. */
+  identityOnly?: boolean;
+  collectionEnabled?: boolean;
 }>) {
+  const { state: confirmedCollection, initialBudget, verificationStatus = "pending" } = useConfirmedClubCollection();
+  const confirmedBalance = collectionEnabled ? confirmedCollection?.balanceEur ?? initialBudget?.balanceEur ?? null : remainingMarketPower;
+  const confirmedBudget = collectionEnabled
+    ? confirmedCollection ? CLUB_ACQUISITION_BUDGETS[confirmedCollection.plan] : initialBudget?.balanceEur ?? activePlanBudget
+    : activePlanBudget;
   const copy = getTouchlineClubOwnerMarketCopy(locale, draftLocalesEnabled);
   const labels = getClubOwnerPlanShowcaseCopy(locale, draftLocalesEnabled);
+  const viewPlansLabel = {
+    "en-GB": "View plans", "pt-BR": "Ver planos", "es-ES": "Ver planes",
+    "it-IT": "Vedi piani", "fr-FR": "Voir les offres", "ar-SA": "عرض الخطط",
+    "tr-TR": "Planları gör", "de-DE": "Pläne ansehen",
+  }[resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled)];
   const metricsCopy = getClubOwnerProfileMetricsCopy(locale, draftLocalesEnabled);
   const name = owner?.name || copy.nameUnavailable;
   const rank = owner && typeof rankingPosition === "number" && Number.isSafeInteger(rankingPosition) && rankingPosition > 0
     ? formatClubOwnerRankingPosition(rankingPosition, locale, draftLocalesEnabled) : null;
-  const marketPower = typeof remainingMarketPower === "number" && Number.isFinite(remainingMarketPower)
-    ? new Intl.NumberFormat(locale, { notation: "compact", maximumFractionDigits: 1 }).format(Math.max(0, remainingMarketPower))
+  const marketPower = typeof confirmedBalance === "number" && Number.isFinite(confirmedBalance)
+    ? new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(Math.max(0, confirmedBalance))
     : null;
-  const tier = planPreview;
-  // The tier samples are development-only product copy. They intentionally
-  // render the acquisition state without changing the viewer's entitlement.
-  const planActive = tier ? false : plan?.active === true;
+  const collectionBudgetCopy = getClubCollectionBudgetCopy(locale, draftLocalesEnabled);
+  const balanceLabel = collectionEnabled ? (verificationStatus !== "confirmed" && marketPower !== null
+    ? collectionBudgetCopy.lastConfirmedBalance : collectionBudgetCopy.signingBudget) : labels.currentBudget;
+  const balanceStatus = collectionEnabled && verificationStatus !== "confirmed"
+    ? collectionBudgetCopy[verificationStatus === "unavailable" ? "unavailable" : "pending"] : null;
+  // Only the current server entitlement controls the account cover.
+  // Exploring offers (or a development URL) must never recolour this account.
+  const planActive = plan?.active === true;
   const currentTier = planActive ? activePlanKey : null;
-  // Choosing a card is deliberately visual-only: it changes the ClubOwner
-  // cover treatment, never the profile photo, entitlement, or XI budget.
-  const [visualTier, setVisualTier] = useState<ClubOwnerPlanPreview>(() => tier ?? currentTier ?? "beta");
-  const displayedTier = visualTier;
+  const [plansOpen, setPlansOpen] = useState(false);
+  const displayedTier = currentTier ?? undefined;
   const expiry = plan?.expiresAt ? new Date(plan.expiresAt) : null;
   const validity = currentTier !== "vip" && planActive && expiry && Number.isFinite(expiry.getTime())
     ? copy.planUntil.replace("{date}", new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeZone: "UTC" }).format(expiry)) : null;
@@ -80,16 +101,22 @@ export default function ClubOwnerMarketHeader({ owner, locale, accountId, avatar
         </div>
       </div>
     </section>
-    <section className={styles.bank} data-plan-state={planActive ? "active" : "inactive"} data-active-plan={currentTier ?? undefined} aria-labelledby="clubowner-plan-heading">
-      <div className={styles.bankHeading}><CalendarDays size={25} aria-hidden="true" /><h2 id="clubowner-plan-heading">{copy.plan}</h2></div>
-      <ClubOwnerPlanShowcase embedded initialPlan={tier ?? currentTier ?? "beta"} activePlanKey={currentTier} activePlanBudget={currentTier ? activePlanBudget : undefined} name={name} locale={locale} remainingMarketPower={marketPower} draftLocalesEnabled={draftLocalesEnabled} canChoose={tier === null} onPreviewChange={setVisualTier} />
+    {!identityOnly ? <section className={styles.bank} data-plan-state={planActive ? "active" : "inactive"} data-active-plan={currentTier ?? undefined} aria-labelledby="clubowner-plan-heading">
+      <div className={styles.bankHeading}><CalendarDays size={25} aria-hidden="true" /><h2 id="clubowner-plan-heading">{copy.plan}</h2>
+        <button type="button" className={`${controls.link} ${styles.viewPlans}`} onClick={() => setPlansOpen(true)} aria-haspopup="dialog">{viewPlansLabel}<ChevronRight size={13} aria-hidden="true" /></button>
+      </div>
+      {currentTier ? <div className={planStyles.planShowcase} data-embedded="true" data-plan-preview={currentTier} data-account-plan-card="true">
+        <ClubOwnerPlanCard compact tier={currentTier} active activePlanBudget={confirmedBudget} name={name} locale={locale} draftLocalesEnabled={draftLocalesEnabled} />
+      </div> : <p className={styles.validity} role="status">{copy.planActionUnavailable}</p>}
+      <ClubOwnerPlanOnboarding open={plansOpen} locale={locale} activePlanKey={currentTier} draftLocalesEnabled={draftLocalesEnabled} onDismiss={() => setPlansOpen(false)} />
       <dl className={styles.currentBudget} aria-label={copy.plan}>
-        <div><dt>{labels.currentBudget}</dt><dd data-account-market-power="true" aria-label={marketPower === null ? copy.marketPowerUnavailable : `${copy.marketPower} ${marketPower} TouchLine Credits`}>
+        <div><dt>{balanceLabel}</dt><dd data-account-market-power="true" aria-describedby={balanceStatus ? "clubowner-balance-status" : undefined} aria-label={marketPower === null ? copy.marketPowerUnavailable : `${collectionEnabled ? balanceLabel : copy.marketPower} ${marketPower} TouchLine Credits`}>
           <span className={styles.marketPowerValue}><TouchlineCoinMark size={19} /><strong>{marketPower ?? "—"}</strong><small>TC</small></span>
         </dd></div>
       </dl>
+      {balanceStatus ? <p id="clubowner-balance-status" className={styles.validity} role="status" data-balance-verification={verificationStatus}>{balanceStatus}</p> : null}
       {validity ? <p className={styles.validity} data-plan-validity="true">{validity}</p> : null}
       <p id="clubowner-plan-interest" className={styles.planInterest} tabIndex={-1} role="status">{labels.working}</p>
-    </section>
+    </section> : null}
   </header>;
 }

@@ -77,10 +77,10 @@ function isVisible(element: HTMLElement) {
   return element.getClientRects().length > 0 && !element.hasAttribute("hidden");
 }
 
-function focusElement(element: HTMLElement | null | undefined) {
+function focusElement(element: HTMLElement | null | undefined, preventScroll = true) {
   if (!element || !element.isConnected || !isVisible(element)) return false;
   try {
-    element.focus({ preventScroll: true });
+    element.focus({ preventScroll });
   } catch {
     element.focus();
   }
@@ -203,13 +203,18 @@ export function useTouchlineDialog<T extends HTMLElement = HTMLElement>({
     const first = focusable[0];
     const last = focusable[focusable.length - 1];
     const active = document.activeElement;
+    // Initial focus may belong to a heading or the dialog itself (tabIndex=-1).
+    // Those anchors are inside the dialog but outside its sequential tab order.
+    const activeIsTabStop = active instanceof HTMLElement && focusable.includes(active);
 
-    if (event.shiftKey && (active === first || !dialog.contains(active))) {
+    if (event.shiftKey && (active === first || !activeIsTabStop)) {
       event.preventDefault();
-      focusElement(last);
-    } else if (!event.shiftKey && (active === last || !dialog.contains(active))) {
+      // Keyboard traversal must reveal an offscreen control in a long dialog.
+      // Initial focus and restoration keep the default no-scroll behaviour.
+      focusElement(last, false);
+    } else if (!event.shiftKey && (active === last || !activeIsTabStop)) {
       event.preventDefault();
-      focusElement(first);
+      focusElement(first, false);
     }
   }, []);
 

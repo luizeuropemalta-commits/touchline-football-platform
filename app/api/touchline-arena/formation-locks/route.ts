@@ -60,11 +60,14 @@ function sanitizeRoleLayout(input: unknown) {
 }
 
 async function readLocks() {
+  let bytes: string;
   try {
-    return JSON.parse(await fs.readFile(FORMATION_LOCKS_PATH, "utf8")) as Record<string, unknown>;
-  } catch {
-    return {};
+    bytes = await fs.readFile(FORMATION_LOCKS_PATH, "utf8");
+  } catch (error) {
+    if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") return {};
+    throw error;
   }
+  return JSON.parse(bytes) as Record<string, unknown>;
 }
 
 export async function POST(request: NextRequest) {
@@ -78,7 +81,12 @@ export async function POST(request: NextRequest) {
   const layout = sanitizeLayout(body?.layout);
   if (!layout) return NextResponse.json({ error: "Invalid formation layout." }, { status: 400 });
 
-  const locks = await readLocks();
+  let locks: Record<string, unknown>;
+  try {
+    locks = await readLocks();
+  } catch {
+    return NextResponse.json({ error: "Unable to read formation locks. No changes saved." }, { status: 500 });
+  }
   locks[formationKey] = layout;
   await fs.mkdir(path.dirname(FORMATION_LOCKS_PATH), { recursive: true });
   await fs.writeFile(FORMATION_LOCKS_PATH, `${JSON.stringify(locks, null, 2)}\n`, "utf8");

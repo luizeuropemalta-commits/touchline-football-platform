@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   buildTouchlineRouteAuditManifest,
   renderTouchlineRouteAuditMarkdown,
+  routeMethodsFromSource,
 } from "../scripts/qa/build-touchline-route-audit-manifest.mts";
 
 const rows = buildTouchlineRouteAuditManifest();
@@ -18,11 +19,65 @@ test("inventories every page, API method, proxy, metadata route, and error bound
   assert.equal(rows.filter((item) => item.kind === "PAGE").length, 73);
   assert.equal(row("/account").data, "VERIFIED_AUTH_ROLE_REDIRECT_ONLY_NO_TEAM_WRITES");
   assert.equal(rows.some((item) => item.route === "/visual-qa/arena-main-field"), false);
-  assert.equal(rows.filter((item) => item.kind === "API").length, 100);
+  assert.equal(rows.filter((item) => item.kind === "API").length, 107);
   assert.equal(rows.filter((item) => item.kind === "BOUNDARY").length, 7);
   assert.equal(rows.filter((item) => item.kind === "METADATA").length, 3);
   assert.equal(rows.filter((item) => item.kind === "PROXY").length, 1);
   assert.equal(new Set(rows.map((item) => item.route)).size, rows.length);
+});
+
+test("method inventory includes named reexports and aliases alongside local handlers", () => {
+  assert.deepEqual(routeMethodsFromSource(`
+    export { GET } from "./read-handler";
+    export { handler as POST, HEAD as metadata } from "./write-handler";
+    export async function PUT() {}
+    export const DELETE = () => {}, OPTIONS = () => {};
+  `, "route.ts"), ["GET", "POST", "PUT", "DELETE", "OPTIONS"]);
+});
+
+test("method inventory ignores comments, strings, default exports and type-only declarations", () => {
+  assert.deepEqual(routeMethodsFromSource(`
+    // export async function GET() {}
+    const example = 'export const POST = () => {}';
+    export type { PATCH } from "./types";
+    export { type DELETE } from "./types";
+    export default function PUT() {}
+    export declare function HEAD(): void;
+    export { handler as GET } from "./handler";
+  `, "route.ts"), ["GET"]);
+});
+
+test("wildcard exports remain unresolved even alongside a known method", () => {
+  assert.throws(() => routeMethodsFromSource('export const GET = () => {}; export * from "./handler";', "route.ts"),
+    /TL_ROUTE_AUDIT_METHOD_UNRESOLVED:route.ts:WILDCARD_EXPORT/);
+});
+
+test("split collection read remains a private pending read contract without mutation approval", () => {
+  const read = row("GET /api/touchline-fantasy/collection/read");
+  assert.equal(read.auth, "VERIFIED_SESSION_COLLECTION_FLAG_GATED");
+  assert.equal(read.role, "AUTHENTICATED_OWNER_SELF");
+  assert.equal(read.data, "PRIVATE_UNCACHED_COLLECTION_AND_INITIAL_BUDGET_READ_ONLY");
+  assert.equal(read.status, "PENDING_AUTHENTICATED_READ_AND_CUSTOMER_QA");
+  assert.equal(rows.some(item => item.route === "POST /api/touchline-fantasy/collection/read"), false);
+  assert.ok(row("GET /api/touchline-fantasy/collection"));
+  assert.ok(row("POST /api/touchline-fantasy/collection"));
+});
+
+test("new collection routes are private contracts, never browser or deployment approval", () => {
+  for (const route of ["GET /api/touchline-fantasy/collection", "POST /api/touchline-fantasy/collection",
+    "POST /api/touchline-fantasy/collection/initialize", "POST /api/touchline-fantasy/collection/allocation"]) {
+    assert.match(row(route).auth, /^AUTHENTICATED/);
+    assert.equal(row(route).status, "HTTP_CONTRACT_PENDING");
+  }
+});
+
+test("contract release is inventoried separately from allocation with activation and transaction gates still pending", () => {
+  const release = row("POST /api/touchline-fantasy/collection/release");
+  assert.equal(release.auth, "DEFAULT_OFF_AUTHENTICATED_SAME_ORIGIN");
+  assert.equal(release.role, "FANTASY_SUBSCRIBER_SELF");
+  assert.equal(release.data, "CLUB_CONTRACT_RELEASE_ATOMIC_REFUND_ORIGINAL_PAID_90_PERCENT");
+  assert.equal(release.browser, "EXPLICIT_RELEASE_CONFIRMATION_REQUIRED");
+  assert.equal(release.status, "PENDING_MIGRATION_CONCURRENCY_RECOVERY_AND_CUSTOMER_QA");
 });
 
 test("central quota authority is an OFF-default worker boundary, not a public or browser API approval", () => {

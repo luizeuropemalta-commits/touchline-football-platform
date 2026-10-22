@@ -71,6 +71,7 @@ const factKeys = {
   "shots-on-target": "shotsOnTarget", "shots-off-target": "shotsOffTarget", "clean-sheets": "cleanSheets",
 } as const;
 const ptOverrides = {
+  "ball-recovery": "Recuperações de bola",
   "shots-on-target": "Finalizações no gol", "shots-off-target": "Finalizações para fora", "clean-sheets": "Jogos sem sofrer gol",
 } as const;
 

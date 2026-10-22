@@ -49,6 +49,7 @@ type Input = {
   missingSettlementFixtureIds?: string[];
   coachError?: string;
   liveError?: string;
+  liveHttpStatus?: number;
   feedError?: string;
   feedPersistenceError?: string;
   lineupError?: string;
@@ -207,7 +208,7 @@ function scenario(input: Input = {}) {
     provider: input.providerInitializationFailure ? undefined : {
       async getLiveScores() {
         calls.push("provider-live");
-        return input.liveError ? { ok: false, error: { code: input.liveError } } : { ok: true, data: input.noIncomingFixtures ? []
+        return input.liveError ? { ok: false, error: { code: input.liveError, status: input.liveHttpStatus, message: "secret-provider-payload" } } : { ok: true, data: input.noIncomingFixtures ? []
           : input.secondUnwrittenFixture ? [incomingFixture, secondIncoming] : [incomingFixture] };
       },
       async getFixtureFantasyFeed(providerId: string) {
@@ -662,6 +663,18 @@ test("provider failure without any incoming fixture finalizes error without reco
   assert.equal(result.ok, false); assert.equal(result.status, "error");
   assert.equal(s.calls.includes("players"), false); assert.equal(s.snapshots.length, 0);
   assertCompletion(s, result);
+});
+
+test("provider HTTP diagnostic preserves status without provider messages", async () => {
+  for (const status of [401, 403, 429, 500, 0, 600, NaN, 401.5]) {
+    const s = scenario({ liveError: "provider_error", liveHttpStatus: status, feedError: "unavailable" });
+    const result = await s.run();
+    const valid = Number.isInteger(status) && status >= 100 && status <= 599;
+    assert.ok(result.errors.includes(`live-scores:provider_error${valid ? `:http_${status}` : ""}`));
+    assert.ok(s.writes[0].error_message?.includes(`live-scores:provider_error${valid ? `:http_${status}` : ""}`));
+    assert.equal(JSON.stringify(s.writes).includes("secret-provider-payload"), false);
+    assert.equal(result.status, "error");
+  }
 });
 
 test("a normal cadence no-op stays successful without postponing real work", async () => {

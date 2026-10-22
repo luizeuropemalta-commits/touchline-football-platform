@@ -3,6 +3,7 @@
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import ts from "typescript";
 
 export const TOUCHLINE_ROUTE_AUDIT_DATE = "2026-08-15";
 
@@ -75,6 +76,12 @@ const PAGE_POLICIES: Record<string, Partial<RoutePolicy>> = {
 };
 
 const API_POLICIES: Record<string, RoutePolicy> = {
+  "POST /api/touchline-fantasy/collection/release": {
+    auth: "DEFAULT_OFF_AUTHENTICATED_SAME_ORIGIN", role: "FANTASY_SUBSCRIBER_SELF",
+    data: "CLUB_CONTRACT_RELEASE_ATOMIC_REFUND_ORIGINAL_PAID_90_PERCENT",
+    browser: "EXPLICIT_RELEASE_CONFIRMATION_REQUIRED",
+    status: "PENDING_MIGRATION_CONCURRENCY_RECOVERY_AND_CUSTOMER_QA",
+  },
   "GET /api/account/avatar": {
     auth: "DEFAULT_OFF_EXACT_QA_CUSTOMER_SESSION", role: "CLUBOWNER_SELF",
     data: "PRIVATE_CURRENT_AVATAR_ONLY_NO_WRITES", browser: "PRIVATE_COOKIE_HTTP_CONTRACT",
@@ -147,6 +154,12 @@ const API_POLICIES: Record<string, RoutePolicy> = {
   "POST /api/touchline-analytics": { auth: "AUTHENTICATED", role: "ARENA_USER", data: "SUPABASE_ANALYTICS_EVENT", browser: "HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
   "GET /api/touchline-social/share-art/[postId]": { auth: "PUBLIC", role: "ANY", data: "CURRENT_APPROVED_SOCIAL_ARTWORK_PROXY", browser: "MEDIA_HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
   "POST /api/touchline-fantasy/lineup": { auth: "AUTHENTICATED_SAME_ORIGIN", role: "FANTASY_SUBSCRIBER", data: "SUPABASE_FANTASY_LINEUP_TRANSACTION", browser: "HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
+  "GET /api/touchline-fantasy/collection": { auth: "AUTHENTICATED", role: "FANTASY_SUBSCRIBER", data: "SUPABASE_PRIVATE_CLUB_COLLECTION", browser: "HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
+  "GET /api/touchline-fantasy/collection/read": { auth: "VERIFIED_SESSION_COLLECTION_FLAG_GATED", role: "AUTHENTICATED_OWNER_SELF", data: "PRIVATE_UNCACHED_COLLECTION_AND_INITIAL_BUDGET_READ_ONLY", browser: "HTTP_CONTRACT", status: "PENDING_AUTHENTICATED_READ_AND_CUSTOMER_QA" },
+  "POST /api/touchline-fantasy/collection": { auth: "AUTHENTICATED_SAME_ORIGIN", role: "FANTASY_SUBSCRIBER", data: "SUPABASE_CLUB_ACQUISITION_TRANSACTION", browser: "HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
+  "POST /api/touchline-fantasy/collection/initialize": { auth: "AUTHENTICATED_SAME_ORIGIN", role: "FANTASY_SUBSCRIBER", data: "SUPABASE_CLUB_INITIALIZATION_TRANSACTION", browser: "HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
+  "POST /api/touchline-fantasy/collection/allocation": { auth: "AUTHENTICATED_SAME_ORIGIN", role: "FANTASY_SUBSCRIBER", data: "SUPABASE_CLUB_ALLOCATION_TRANSACTION", browser: "HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
+  "POST /api/touchline-fantasy/prepare": { auth: "AUTHENTICATED_SAME_ORIGIN", role: "FANTASY_SUBSCRIBER", data: "SUPABASE_FANTASY_ROUND_PREPARATION", browser: "HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
   "POST /api/touchline-fantasy/beta/enroll": { auth: "VERIFIED_USER_SAME_ORIGIN", role: "NON_OWNER_ARENA_USER_WITHOUT_PLAN", data: "SUPABASE_BETA_ENTITLEMENT_IDEMPOTENT", browser: "HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
   "GET /api/touchline-fantasy/state": { auth: "AUTHENTICATED", role: "FANTASY_SUBSCRIBER", data: "SUPABASE_FANTASY_GAMEWEEK_STATE", browser: "HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
   "POST /api/touchline-fantasy/subscription": { auth: "AUTHENTICATED_SAME_ORIGIN", role: "ARENA_USER", data: "STRIPE_TEST_FANTASY_CHECKOUT", browser: "HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
@@ -203,11 +216,6 @@ const API_POLICIES: Record<string, RoutePolicy> = {
   "GET /visual-qa/social-rankings-live/input": { auth: "ADMIN", role: "OWNER_ADMIN", data: "PRIVATE_UNPUBLISHED_REPLAY_RENDER_INPUT", browser: "LOCAL_HTTP_CONTRACT", status: "LOCAL_ONLY" },
 };
 
-const ROUTE_METHOD_OVERRIDES: Record<string, string[]> = {
-  "app/(auth)/login/submit/route.ts": ["POST"],
-  "app/api/auth/login/submit/route.ts": ["POST"],
-};
-
 const BOUNDARY_FILES = [
   "app/(app)/loading.tsx",
   "app/club-owner/[owner]/substitution/loading.tsx",
@@ -258,11 +266,40 @@ function pagePolicy(route: string): RoutePolicy {
   return { ...PENDING_PAGE, ...PAGE_POLICIES[route] };
 }
 
+export function routeMethodsFromSource(source: string, sourceFile: string) {
+  // Parse declarations only: never import or execute a server handler to inventory it.
+  const parsed = ts.createSourceFile(sourceFile, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  const methods = new Set<string>();
+  const add = (name: string) => {
+    if (/^(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)$/.test(name)) methods.add(name);
+  };
+  for (const statement of parsed.statements) {
+    if (ts.isExportDeclaration(statement)) {
+      if (statement.isTypeOnly) continue;
+      if (!statement.exportClause) throw new Error(`TL_ROUTE_AUDIT_METHOD_UNRESOLVED:${sourceFile}:WILDCARD_EXPORT`);
+      if (ts.isNamedExports(statement.exportClause)) {
+        for (const element of statement.exportClause.elements) {
+          if (!element.isTypeOnly) add(element.name.text);
+        }
+      }
+      continue;
+    }
+    if (!ts.canHaveModifiers(statement)) continue;
+    const modifiers = ts.getModifiers(statement) ?? [];
+    if (!modifiers.some(modifier => modifier.kind === ts.SyntaxKind.ExportKeyword)
+      || modifiers.some(modifier => modifier.kind === ts.SyntaxKind.DefaultKeyword || modifier.kind === ts.SyntaxKind.DeclareKeyword)) continue;
+    if (ts.isFunctionDeclaration(statement) && statement.name && statement.body) add(statement.name.text);
+    if (ts.isVariableStatement(statement)) {
+      for (const declaration of statement.declarationList.declarations) {
+        if (ts.isIdentifier(declaration.name) && declaration.initializer) add(declaration.name.text);
+      }
+    }
+  }
+  return [...methods];
+}
+
 function methodsForHandler(root: string, file: string) {
-  const sourceFile = relative(root, file).replaceAll("\\", "/");
-  if (ROUTE_METHOD_OVERRIDES[sourceFile]) return ROUTE_METHOD_OVERRIDES[sourceFile];
-  const source = readFileSync(file, "utf8");
-  return [...source.matchAll(/export\s+(?:(?:async\s+)?function|const)\s+(GET|POST|PUT|PATCH|DELETE)\b/g)].map((match) => match[1]);
+  return routeMethodsFromSource(readFileSync(file, "utf8"), relative(root, file).replaceAll("\\", "/"));
 }
 
 export function buildTouchlineRouteAuditManifest(root = process.cwd()) {

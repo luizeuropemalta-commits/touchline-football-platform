@@ -13,7 +13,7 @@ type TestNode = { type: unknown; props: { children: TestNode[]; onClick: () => P
 function mount(client: unknown) {
   const states: unknown[] = []; let cursor = 0;
   const ref = { current: false }; const destinations: string[] = [];
-  const exports = {} as { default: (props: { locale: string; draftLocalesEnabled: boolean }) => TestNode };
+  const exports = {} as { default: (props: { locale: string; draftLocalesEnabled: boolean; compact: boolean }) => TestNode };
   const jsx = (type: unknown, props: TestNode["props"]) => ({ type, props });
   const modules: Record<string, unknown> = {
     react: { useRef: () => ref, useState: (initial: unknown) => {
@@ -29,13 +29,21 @@ function mount(client: unknown) {
   };
   runInNewContext(ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText,
     { exports, require: (name: string) => { assert.ok(name in modules, name); return modules[name]; }, window: { location: { replace: (url: string) => destinations.push(url) } } });
-  return { destinations, render: (locale = "pt-BR") => { cursor = 0; return exports.default({ locale, draftLocalesEnabled: true }); } };
+  return { destinations, render: (locale = "pt-BR", compact = false) => { cursor = 0; return exports.default({ locale, draftLocalesEnabled: true, compact }); } };
 }
 
 test("customer header mounts the canonical local-session sign-out control", () => {
   const page = readFileSync(new URL("../app/clubowner/page.tsx", import.meta.url), "utf8");
-  assert.match(page, /brandAccessory=\{<TouchlineSignOutButton/);
+  assert.match(page, /navigationAccessory=\{<TouchlineSignOutButton compact/);
   assert.doesNotMatch(source, /localStorage\.clear|document\.cookie|scope: "global"/);
+});
+
+test("compact Portuguese sign-out shortens the label without changing the default", () => {
+  const instance = mount(null);
+  assert.equal(instance.render("pt-BR", true).props.children[0].props.children[1], "Sair");
+  assert.equal(instance.render("pt-BR").props.children[0].props.children[1], "Sair da conta");
+  const css = readFileSync(new URL("../components/touchline/TouchlineGlobalNavigation.module.css", import.meta.url), "utf8");
+  assert.match(css, /\.link\.compactAction\s*\{[^}]*min-height:\s*44px/);
 });
 
 test("sign-out revokes only the local session, blocks double-clicks and redirects to login", async () => {

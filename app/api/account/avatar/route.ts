@@ -1,4 +1,5 @@
 import "server-only";
+import { allowsClubOwnerAvatarLocalEnvironment } from "@/lib/touchlineArena/club-owner-avatar-local-admission";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isOwnerEmail, ownerEmails } from "@/lib/admin/owner";
@@ -25,9 +26,10 @@ export async function GET(request: Request) {
     const environment = { ...process.env };
     const expires = performance.now() + AVATAR_UPLOAD_TOTAL_TIMEOUT_MS;
     const target = new URL(request.url);
+    const local = allowsClubOwnerAvatarLocalEnvironment(environment, target.origin);
     if (environment.TOUCHLINE_CLUB_OWNER_AVATAR_READ_ENABLED !== "true"
-      || inspectTouchlineQaVercelEnvironment({ environment, requestHostname: target.hostname }).status !== "PASS"
-      || target.origin !== TOUCHLINE_QA_ORIGIN || resolveTouchlineDataSource(environment) !== "direct"
+      || (!local && inspectTouchlineQaVercelEnvironment({ environment, requestHostname: target.hostname }).status !== "PASS")
+      || (!local && target.origin !== TOUCHLINE_QA_ORIGIN) || resolveTouchlineDataSource(environment) !== "direct"
       || ownerEmails().length === 0) return unavailable();
     const assertSnapshot = () => {
       if (Object.keys(environment).length !== Object.keys(process.env).length
@@ -35,9 +37,9 @@ export async function GET(request: Request) {
     };
     const supabaseOrigin = new URL(environment.SUPABASE_URL!).origin;
     const serve = createClubOwnerAvatarReadServer({
-      enabled: true, requestOrigin: TOUCHLINE_QA_ORIGIN, supabaseOrigin,
+      enabled: true, requestOrigin: local ? target.origin : TOUCHLINE_QA_ORIGIN, supabaseOrigin,
       publicSupabaseOrigin: new URL(environment.NEXT_PUBLIC_SUPABASE_URL!).origin,
-      serviceRoleKey: environment.SUPABASE_SERVICE_ROLE_KEY, dataSource: "direct", environment: "qa",
+      serviceRoleKey: environment.SUPABASE_SERVICE_ROLE_KEY, dataSource: "direct", environment: local ? "local" : "qa",
       deploymentMode: environment.TOUCHLINE_DEPLOYMENT_MODE, publicDeploymentMode: environment.NEXT_PUBLIC_TOUCHLINE_DEPLOYMENT_MODE,
     }, {
       async createSessionClient(config, signal) {
@@ -76,6 +78,7 @@ export async function POST(request: Request) {
     const environment = { ...process.env };
     const expires = performance.now() + AVATAR_UPLOAD_TOTAL_TIMEOUT_MS;
     const target = new URL(request.url);
+    const local = allowsClubOwnerAvatarLocalEnvironment(environment, target.origin);
     const configuredAccount = environment.TOUCHLINE_CLUB_OWNER_AVATAR_UPLOAD_ACCOUNT_ID;
     if (environment.TOUCHLINE_CLUB_OWNER_AVATAR_READ_ENABLED !== "true"
       || environment.TOUCHLINE_CLUB_OWNER_AVATAR_UPLOAD_ENABLED !== "true"
@@ -84,8 +87,8 @@ export async function POST(request: Request) {
       || environment.TOUCHLINE_CLUB_OWNER_AVATAR_SELECTION_ENABLED !== "true"
       || environment.TOUCHLINE_CLUB_OWNER_AVATAR_RETENTION_READY !== "true"
       || !isAvatarAccountId(configuredAccount)
-      || inspectTouchlineQaVercelEnvironment({ environment, requestHostname: target.hostname }).status !== "PASS"
-      || target.origin !== TOUCHLINE_QA_ORIGIN || resolveTouchlineDataSource(environment) !== "direct"
+      || (!local && inspectTouchlineQaVercelEnvironment({ environment, requestHostname: target.hostname }).status !== "PASS")
+      || (!local && target.origin !== TOUCHLINE_QA_ORIGIN) || resolveTouchlineDataSource(environment) !== "direct"
       || ownerEmails().length === 0) return reply();
     const expectedAccount = request.headers.get("x-touchline-expected-account");
     if (!isAvatarAccountId(expectedAccount)) return reply(400, "INVALID_ACCOUNT_OR_OPERATION");
@@ -97,9 +100,9 @@ export async function POST(request: Request) {
     assertSnapshot();
     const supabaseOrigin = new URL(environment.SUPABASE_URL!).origin;
     const serve = createClubOwnerAvatarServer({
-      enabled: true, requestOrigin: TOUCHLINE_QA_ORIGIN, supabaseOrigin,
+      enabled: true, requestOrigin: local ? target.origin : TOUCHLINE_QA_ORIGIN, supabaseOrigin,
       publicSupabaseOrigin: new URL(environment.NEXT_PUBLIC_SUPABASE_URL!).origin,
-      serviceRoleKey: environment.SUPABASE_SERVICE_ROLE_KEY, dataSource: "direct", environment: "qa",
+      serviceRoleKey: environment.SUPABASE_SERVICE_ROLE_KEY, dataSource: "direct", environment: local ? "local" : "qa",
       deploymentMode: environment.TOUCHLINE_DEPLOYMENT_MODE, publicDeploymentMode: environment.NEXT_PUBLIC_TOUCHLINE_DEPLOYMENT_MODE,
     }, {
       assertEnvironment: assertSnapshot,

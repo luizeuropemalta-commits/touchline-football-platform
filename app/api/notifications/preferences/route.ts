@@ -265,7 +265,7 @@ export async function PUT(request: NextRequest) {
     .select("settings, channels, frequency, quiet_hours, explicit_consent_at, updated_at")
     .single();
 
-  if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ ok: false, error: "Notification preferences could not be saved." }, { status: 500 });
 
   return NextResponse.json({
     ok: true,

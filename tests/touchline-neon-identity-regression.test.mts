@@ -167,9 +167,27 @@ test("card controls stay inside the master safe zone and contracting stays outsi
   visit(tree);
   const withClass = (name: string) => elements.filter(node => node.openingElement.attributes.properties.some(attribute =>
     ts.isJsxAttribute(attribute) && attribute.name.getText(tree) === "className" && attribute.initializer?.getText(tree) === `{styles.${name}}`));
-  const expanded = withClass("expandedCard"), contract = withClass("contractAction");
+  const expanded = withClass("expandedCard"), contract = withClass("contractAction").filter(node =>
+    node.openingElement.tagName.getText(tree) === "a" && node.openingElement.attributes.properties.some(attribute =>
+      ts.isJsxAttribute(attribute) && attribute.name.getText(tree) === "href" && attribute.initializer?.getText(tree) === "{contractHref}"));
   assert.equal(expanded.length, 1); assert.equal(contract.length, 1);
   assert.ok(contract[0].pos > expanded[0].end, "contract action must render after and outside the card artwork");
+  const signing = elements.filter(node => node.openingElement.attributes.properties.some(attribute =>
+    ts.isJsxAttribute(attribute) && attribute.name.getText(tree) === "data-zoom-signing-actions"));
+  assert.equal(signing.length, 1);
+  const signingMarkup = signing[0].getText(tree);
+  assert.match(signingMarkup, /disabled=\{signingActions.select.disabled\}/);
+  assert.match(signingMarkup, /if \(!signingActions.select.disabled\) signingActions.select.onSelect\(\)/);
+  assert.match(signingMarkup, /signingActions.confirm \? <button/);
+  assert.match(signingMarkup, /disabled=\{signingActions.confirm.disabled\}/);
+  assert.match(signingMarkup, /if \(!signingActions.confirm\?\.disabled\) signingActions.confirm\?\.onSelect\(\)/);
+  assert.doesNotMatch(expanded[0].getText(tree), /lineupActions|signingButtons/);
+  const cardColumn = expanded[0].parent;
+  assert.ok(ts.isJsxElement(cardColumn));
+  const actions = cardColumn.children.filter(node => ts.isJsxExpression(node) && node.getText(tree).includes("lineupActions"));
+  assert.equal(actions.length, 1);
+  assert.ok(actions[0].pos >= expanded[0].end, "staged signing actions must be siblings after the artwork");
+  assert.match(zoom, /const lineupActions = [^;]+\{signingButtons\}/);
   assert.match(zoomCss, /\.contractAction \{/);
   assert.match(zoomCss, /\.expandedMeta \{/);
   assert.doesNotMatch(zoom, /className=\{styles\.tierLabel\}/);

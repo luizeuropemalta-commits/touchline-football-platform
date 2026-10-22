@@ -27,6 +27,7 @@ import styles from "./touchline-tables.module.css";
 import { createRankingLoadDiagnostics } from "@/lib/touchlineArena/ranking-load-diagnostics";
 import { projectTouchlineRankingsHighlights } from "@/lib/touchlineArena/rankings-highlight-projection";
 import { cardGoalsLeaderIds } from "@/lib/touchlineArena/card-goals-leadership";
+import { loadClubOwnerStandings } from "@/lib/touchlineArena/club-owner-standings-server";
 
 export async function generateMetadata(props: RankingsPageProps) {
   return generateRankingsMetadata(props, isTouchLineSiteLocalesEnabled("/rankings"));
@@ -41,6 +42,7 @@ async function generateRankingsMetadata({ searchParams }: RankingsPageProps, dra
 }
 
 function readSportingData(rankingPromise: ReturnType<typeof loadTouchLineActiveRanking>, diagnostics: ReturnType<typeof createRankingLoadDiagnostics>) {
+  const owners = loadClubOwnerStandings();
   const topXI = diagnostics.measure("topXI", () => rankingPromise.then((activeRanking) => loadTouchLinePublishedTopEleven(activeRanking)));
   const catalog = diagnostics.measure("catalog", () => rankingPromise.then((activeRanking) => loadTouchLineRankedCardCatalog(activeRanking)));
   const coach = diagnostics.measure("coach", () => loadTouchLineCoachRanking());
@@ -58,7 +60,7 @@ function readSportingData(rankingPromise: ReturnType<typeof loadTouchLineActiveR
         ? cardGoalsLeaderIds(ranking.cardGoals, ranking.snapshotId) : []);
   });
   void highlights.catch(() => undefined);
-  return { complete, leadership, highlights };
+  return { complete, leadership, highlights, owners };
 }
 
 async function RoundBadge({ fixtures, locale, draftLocalesEnabled = false }: { fixtures: ReturnType<typeof readPublicCompetitionFixtures>; locale: string; draftLocalesEnabled?: boolean }) {
@@ -77,12 +79,12 @@ async function SportingContent({ data, locale, user, section, draftLocalesEnable
   section: "overview" | "hero" | "podium" | "ending";
   draftLocalesEnabled?: boolean;
 }) {
-  const [activeRanking, , rankedCards, , publishedCardCount] = await data.complete;
-  // No fabricated ClubOwner table may be presented as a published competition
-  // ranking. It remains empty until its audited sporting snapshot is available.
-  const touchLineEnglandTable: never[] = [];
   const copy = getTouchLineRankingsCopy(locale, draftLocalesEnabled);
-  if (section === "ending") return <TouchlineRankingEnding draftLocalesEnabled={draftLocalesEnabled} copy={copy} locale={locale} touchLineEnglandTable={touchLineEnglandTable} />;
+  if (section === "ending") {
+    const standings = await data.owners;
+    return <TouchlineRankingEnding draftLocalesEnabled={draftLocalesEnabled} copy={copy} locale={locale} touchLineEnglandTable={standings.rows} ownerTableUnavailable={standings.status === "unavailable"} />;
+  }
+  const [activeRanking, , rankedCards, , publishedCardCount] = await data.complete;
   if (section === "hero") return <TouchlineRankingsHero copy={copy} rankMode={activeRanking.phase === "ranked" ? copy.pointsMode : copy.marketMode} totalPublishedCards={publishedCardCount} totalRankedCards={rankedCards.length} />;
   const highlights = await data.highlights;
   if (section === "podium") return <TouchlineRankingPodium draftLocalesEnabled={draftLocalesEnabled} copy={copy} locale={locale} highlights={highlights} coachRanking={(await data.leadership)[1]} canEditCardEngine={Boolean(user && isOwnerEmail(user.email))} />;

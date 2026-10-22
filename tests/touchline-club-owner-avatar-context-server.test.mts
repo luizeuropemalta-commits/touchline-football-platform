@@ -79,6 +79,7 @@ function fixture(patch: Record<string, string | undefined> = {}) {
         } };
       } };
       if (name === "next/navigation") return { redirect: (url: string) => { throw Error(`REDIRECT:${url}`); }, notFound: () => { throw Error("NOT_FOUND"); } };
+      if (name === "@/components/touchline/fantasy/ClubCollectionContext") return { ClubCollectionProvider: ({children}: {children: unknown}) => children };
       if (name === "@/components/touchline/ClubOwnerMarketHeader") return { default: (props: Record<string, unknown>) => { headerProps.push(props); return null; }, __esModule: true };
       if (name === "@/app/fantasy/FantasyGameweekClient") return { default: (props: Record<string, unknown>) => { fantasyProps.push(props); return null; }, __esModule: true };
       // This suite owns the server identity/avatar contract; brand-frame rendering
@@ -276,4 +277,20 @@ test("real page keeps unauthenticated redirect and returns admin before any cust
   const admin = fixture(); admin.state.authentication = { data: { user: { ...auth().data.user, email: "admin@example.invalid" } }, error: null };
   await assert.rejects(admin.page(), /REDIRECT:\/admin\?lang=en-GB/); assert.ok(!admin.calls.includes("privileged")); assert.equal(admin.fantasyProps.length, 0);
   assert.ok(!admin.calls.includes("fantasy"), "administrator never loads a customer squad snapshot");
+});
+const localSettings = { NODE_ENV: "development", TOUCHLINE_CLUB_OWNER_AVATAR_LOCAL_ENABLED: "true",
+ VERCEL_ENV: undefined, VERCEL_GIT_COMMIT_REF: undefined, VERCEL_BRANCH_URL: undefined, VERCEL_URL: undefined };
+
+test("local page avatar context preserves actor and exact QA destination admission", async () => {
+ const f = fixture(localSettings); f.state.host = "localhost:3319";
+ assert.ok(await f.create()(auth(), actor));
+ await f.page(); assert.ok(f.headerProps[0].avatarContext);
+ for (const host of ["localhost:3320", "127.0.0.1:3319"]) {
+  const g = fixture(localSettings); g.state.host = host;
+  assert.equal(await g.create()(auth(), actor), null); assert.ok(!g.calls.includes("privileged"));
+ }
+ const g = fixture({ ...localSettings, SUPABASE_URL: "https://other.invalid" }); g.state.host = "localhost:3319";
+ assert.equal(await g.create()(auth(), actor), null);
+ const h = fixture(localSettings); h.state.host = "localhost:3319";
+ assert.equal(await h.create()(auth(), "123e4567-e89b-42d3-a456-426614174099"), null);
 });

@@ -225,7 +225,7 @@
 .pitchHint { margin: 11px auto 0; color: rgba(245, 248, 245, .5); font-size: 11px; line-height: 1.5; text-align: center; }
 
 .topCoachPanel,
-.coachRankingPanel { display: grid; grid-template-rows: auto minmax(0, 1fr); min-height: 0; }
+.coachRankingPanel { display: grid; grid-template-rows: auto auto; min-height: 0; align-self: start; }
 
 /* Awards replace the former oversized coach rail. Every prize now sits in one
    balanced, compact row under the XI: Best Player, Golden Boot and Best Coach. */
@@ -397,11 +397,11 @@
 .gameweekCoachCardLink { display:block; width:min(126px, 42vw); margin-top:8px; overflow:visible; border-radius:12px; outline-offset:4px; }
 .gameweekCoachCardLink:focus-visible { outline:2px solid var(--lime); }
 .gameweekCoachPublished > b { color:var(--gold); font-size:12px; }
-.coachRankingPanel { max-height: 590px; container: coach-ranking / inline-size; }
+.coachRankingPanel { max-height: none; container: coach-ranking / inline-size; }
 
 .coachList,
 .ownerTableList { display: grid; gap: 1px; margin: 0; padding: 0; list-style: none; background: rgba(255, 255, 255, .09); }
-.coachList { overflow: auto; overscroll-behavior: contain; scrollbar-color: rgba(184, 255, 70, .45) rgba(0, 0, 0, .16); scrollbar-gutter: stable; }
+.coachList { overflow: visible; }
 .coachList:focus-visible { outline: 2px solid var(--lime); outline-offset: -3px; }
 .coachList li { display: grid; grid-template-columns: 30px 38px minmax(0, 1fr) 84px auto; align-items: center; gap: 9px; min-height: 64px; padding: 8px 12px; background: rgba(3, 15, 13, .96); }
 .coachList li:first-child { background: linear-gradient(90deg, rgba(243, 216, 107, .12), rgba(4, 17, 15, .96)); box-shadow: inset 3px 0 var(--gold); }
@@ -496,7 +496,7 @@
   .topCoachCardLink { width: min(220px, 65%); }
   .rankingHighlights { grid-template-columns: 1fr; }
   .playerPodium { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .coachRankingPanel { max-height: 540px; }
+  .coachRankingPanel { max-height: none; }
   .clubOwnerTableHeader { grid-template-columns: 44px 1fr 90px; }
   .clubOwnerTableHeader span:nth-child(3) { display: none; }
 }

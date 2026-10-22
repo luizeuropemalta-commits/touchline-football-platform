@@ -239,7 +239,13 @@ test("the complete layout baseline differs only by the admitted import and label
   // Admit only the shared, content-free motion leaf; retain the historical hash
   // for every other layout byte. Its effects have separate lifecycle/browser tests.
   assert.equal(source.split('<TouchlineDecorationMotion />').length - 1, 1);
+  // Admit only the independently inventoried white-crest SVG. Pin every byte
+  // of that leaf, then retain the original whole-layout oracle below.
+  const crestLeaves = source.match(/        <svg width="0"[\s\S]*?        <\/svg>\n/g) ?? [];
+  assert.equal(crestLeaves.length, 1);
+  assert.equal(createHash("sha256").update(crestLeaves[0]).digest("hex"), "27fd8deea1b163a081d5a7f0d3cff82468a335cb6dbba3bc2cb7f01c97700eb9");
   const preCoordinated = source
+    .replace(crestLeaves[0], '')
     .replace('import TouchlineDecorationMotion from "@/components/touchline/TouchlineDecorationMotion";\n', '')
     .replace('        <TouchlineDecorationMotion />\n', '')
     .replace('import { isTouchLineSiteLocalesEnabled } from "@/lib/touchlineArena/site-locales-release";\n', '')

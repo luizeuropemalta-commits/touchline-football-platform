@@ -22,8 +22,8 @@ export default async function AdminVipAccessPage({ searchParams }: {
   if (!createAdminClient()) return <GamePanel className="p-8"><h1 className="text-2xl text-white">VIP</h1><p className="mt-3 text-sm text-slate-300">{pt ? "A configuração protegida está indisponível. Nenhuma concessão pode ser enviada." : "Protected configuration is unavailable. No grant can be submitted."}</p></GamePanel>;
   return <GamePanel className="mx-auto max-w-4xl p-6 sm:p-8">
     <LivePill>{pt ? "Somente proprietário" : "Owner only"}</LivePill>
-    <h1 className="mb-4 mt-5 text-3xl font-bold text-white">{pt ? "VIP Convidado" : "Guest VIP"}</h1>
-    <p className="mb-6 max-w-2xl text-sm leading-6 text-slate-300">{pt ? "Conceda VIP a uma conta já cadastrada e com e-mail confirmado. A concessão só será exibida como concluída após a confirmação persistida do servidor." : "Grant VIP to an existing account with a verified email. Completion is shown only after the server confirms the persisted grant."}</p>
+    <h1 className="mb-4 mt-5 text-3xl font-bold text-white">{pt ? "Convidados" : "Guest access"}</h1>
+    <p className="mb-6 max-w-2xl text-sm leading-6 text-slate-300">{pt ? "Escolha Standard, Master ou VIP para uma conta cadastrada e com e-mail confirmado. A concessão gratuita mantém as regras e o orçamento normais do plano; só aparece concluída após confirmação do servidor." : "Choose Standard, Master or VIP for an existing account with a verified email. Complimentary access keeps the plan's normal rules and budget; completion requires server confirmation."}</p>
     <AdminVipAccess locale={locale} />
   </GamePanel>;
 }

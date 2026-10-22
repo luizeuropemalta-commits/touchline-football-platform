@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { clubCollectionPresentationEnabled } from "../lib/touchlineFantasy/club-collection-presentation.ts";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { runInNewContext } from "node:vm";
@@ -45,11 +46,18 @@ function fixture(getUser: () => Promise<unknown>) {
   runInNewContext(ts.transpileModule(read("lib/touchlineArena/server-read-deadline.ts"), { compilerOptions: options }).outputText, {
     exports: deadline,
     setTimeout: (callback: () => void, ms: number) => {
-      assert.equal(ms, 8_000); const id = ++sequence; timers.set(id, callback); return id;
+      assert.ok(ms === 8_000 || ms === 30_000); const id = ++sequence; timers.set(id, callback); return id;
     },
     clearTimeout: (id: number) => timers.delete(id),
   });
   const modules: Record<string, unknown> = {
+    "@/lib/touchlineFantasy/club-collection-server": { clubCollectionEnabled: () => false },
+    "@/lib/touchlineFantasy/club-collection-read-server": { readClubCollectionServer: async (accountId: string) => {
+      assert.equal(accountId, user("customer@example.test").id);
+      calls.push("collection-read");
+      return { status: "unavailable", error: "CLUB_COLLECTION_UNAVAILABLE", httpStatus: 503 };
+    } },
+    "@/lib/touchlineFantasy/club-collection-presentation": { clubCollectionPresentationEnabled },
     "@/lib/touchlineFantasy/market-plan-policy": marketPolicy,
     "@/lib/touchlineArena/site-locales-release": siteLocalePolicy,
     "react/jsx-runtime": jsx,
@@ -77,6 +85,7 @@ function fixture(getUser: () => Promise<unknown>) {
     "@/lib/touchlineArena/club-owner-page-identity": { resolveTouchlineClubOwnerPageIdentity: (...args: Parameters<typeof identity.resolveTouchlineClubOwnerPageIdentity>) => { calls.push("identity"); return identity.resolveTouchlineClubOwnerPageIdentity(...args); } },
     "./market-game.module.css": { default: { page: "page", content: "content" } },
   };
+  modules["@/components/touchline/fantasy/ClubCollectionContext"] = { ClubCollectionProvider: "collection-provider" };
   for (const [path, name] of [
     ["@/components/touchline/ClubOwnerMarketHeader", "owner-header"],
     ["@/components/touchline/TouchlineBrandHeader", "brand-header"],
@@ -111,7 +120,7 @@ test("ClubOwner preserves verified customer rendering and verified owner exclusi
   const actor = user("customer@example.test");
   const customer = fixture(async () => ({ data: { user: actor }, error: null }));
   const tree = await customer.run();
-  assert.deepEqual(customer.calls, ["auth", "owner-policy", "avatar", "snapshot", "public-fixtures", "identity"]);
+  assert.deepEqual(customer.calls, ["auth", "owner-policy", "avatar", "snapshot", "public-fixtures", "collection-read", "identity"]);
   const all = nodes(tree);
   const context = all.find(node => node.type === "brand-header")!.props.accountLocaleContext;
   assert.equal(JSON.stringify(context), JSON.stringify({ mode: "account", accountId: actor.id }));

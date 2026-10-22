@@ -1,4 +1,5 @@
 import "server-only";
+import { allowsClubOwnerAvatarLocalEnvironment } from "@/lib/touchlineArena/club-owner-avatar-local-admission";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isOwnerEmail, ownerEmails } from "@/lib/admin/owner";
@@ -19,19 +20,20 @@ const unavailable = () => Response.json({ ok: false, state: "unknown", error: "A
 export async function POST(request: Request) {
   try {
     const environment = { ...process.env }, target = new URL(request.url);
+    const local = allowsClubOwnerAvatarLocalEnvironment(environment, target.origin);
     const expires = performance.now() + 8_000, accountId = environment.TOUCHLINE_CLUB_OWNER_AVATAR_UPLOAD_ACCOUNT_ID;
     if (environment.TOUCHLINE_CLUB_OWNER_AVATAR_READ_ENABLED !== "true" || environment.TOUCHLINE_CLUB_OWNER_AVATAR_UPLOAD_ENABLED !== "true"
-      || !isAvatarAccountId(accountId) || target.origin !== TOUCHLINE_QA_ORIGIN
-      || inspectTouchlineQaVercelEnvironment({ environment, requestHostname: target.hostname }).status !== "PASS"
+      || !isAvatarAccountId(accountId) || (!local && target.origin !== TOUCHLINE_QA_ORIGIN)
+      || (!local && inspectTouchlineQaVercelEnvironment({ environment, requestHostname: target.hostname }).status !== "PASS")
       || resolveTouchlineDataSource(environment) !== "direct" || ownerEmails().length === 0) return unavailable();
     const assertSnapshot = () => {
       if (Object.keys(environment).length !== Object.keys(process.env).length
         || Object.keys(environment).some(key => process.env[key] !== environment[key])) throw Error("AVATAR_CONFIGURATION_CHANGED");
     };
     assertSnapshot(); const supabaseOrigin = new URL(environment.SUPABASE_URL!).origin;
-    const serve = createClubOwnerAvatarRecoveryServer({ enabled: true, accountId, requestOrigin: TOUCHLINE_QA_ORIGIN,
+    const serve = createClubOwnerAvatarRecoveryServer({ enabled: true, accountId, requestOrigin: local ? target.origin : TOUCHLINE_QA_ORIGIN,
       supabaseOrigin, publicSupabaseOrigin: new URL(environment.NEXT_PUBLIC_SUPABASE_URL!).origin,
-      serviceRoleKey: environment.SUPABASE_SERVICE_ROLE_KEY, dataSource: "direct", environment: "qa",
+      serviceRoleKey: environment.SUPABASE_SERVICE_ROLE_KEY, dataSource: "direct", environment: local ? "local" : "qa",
       deploymentMode: environment.TOUCHLINE_DEPLOYMENT_MODE, publicDeploymentMode: environment.NEXT_PUBLIC_TOUCHLINE_DEPLOYMENT_MODE,
     }, {
       assertEnvironment: assertSnapshot,

@@ -9,7 +9,8 @@ function harness(table = "football_players", columns = "id") {
   const path = "lib/touchlineArena/complete-catalogue-read-server.ts";
   const source = readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
   const code = stripTypeScriptTypes(source).replace(/^import\s+[\s\S]*?;\s*$/gm, "").replace(/^export /gm, "");
-  const factory = runInNewContext(`${code}\ncreateCompleteTouchlineCatalogueAdmin;`, { isTouchlineProvisionalColumnsUnavailable, console: { warn() {} } });
+  const diagnostics: unknown[][] = [];
+  const factory = runInNewContext(`${code}\ncreateCompleteTouchlineCatalogueAdmin;`, { isTouchlineProvisionalColumnsUnavailable, console: { warn() {}, error: (...args: unknown[]) => diagnostics.push(args) } });
   const calls: Array<{ batch: number; offset: number; release: (response?: unknown) => void }> = [];
   let active = 0, peak = 0;
   const admin = { from() {
@@ -20,7 +21,7 @@ function harness(table = "football_players", columns = "id") {
     } }; return q;
   } };
   const result = Promise.resolve(factory(admin).from(table).select(columns).in("player_id", Array.from({ length: 601 }, (_, i) => String(i).padStart(4, "0"))));
-  return { calls, result, peak: () => peak };
+  return { calls, result, diagnostics, peak: () => peak };
 }
 test("five partitions refill at most two slots and merge in input order", async () => {
   const h = harness(); await turn(); assert.equal(h.calls.length, 2);
@@ -38,7 +39,11 @@ test("failure drains sibling and stops new partitions, supplementary rows discar
     h.calls[1].release({ data: null, count: null, error: { code: "42703", message: "provenance_status does not exist" } });
     await turn(); assert.equal(done, false); assert.equal(h.calls.length, 2);
     h.calls[0].release(); const outcome = await result;
-    if (table === "football_players") assert.ok("error" in outcome);
+    if (table === "football_players") {
+      assert.ok("error" in outcome);
+      assert.match(String(outcome.error), /TL_CATALOGUE_READ_FAILED:football_players/);
+      assert.equal(h.diagnostics.length, 1);
+    }
     else { assert.ok("value" in outcome); assert.equal(outcome.value.data, null); assert.ok(outcome.value.error); }
   }
 });

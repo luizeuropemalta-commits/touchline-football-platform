@@ -10,6 +10,9 @@ import * as localeModule from "../lib/touchlineArena/i18n.ts";
 import * as selection from "../lib/touchlineArena/club-owner-avatar-selection-contract.ts";
 import * as profileMetrics from "../lib/touchlineArena/club-owner-profile-metrics.ts";
 import * as planShowcase from "../lib/touchlineArena/club-owner-plan-showcase.ts";
+import * as acquisition from "../lib/touchlineFantasy/club-acquisition.ts";
+import * as budgetCopy from "../lib/touchlineFantasy/market-budget-i18n.ts";
+import * as catalogueLocale from "../lib/touchlineArena/catalogue-locale.ts";
 
 const actor = "11111111-1111-4111-8111-111111111111", other = "33333333-3333-4333-8333-333333333333";
 const operation = "22222222-2222-4222-8222-222222222222";
@@ -37,13 +40,19 @@ test("real header forwards separate dormant selection capabilities without chang
     // This fixture inspects capability forwarding, not preview interaction.
     react: { useState: (initial: unknown) => [typeof initial === "function" ? initial() : initial, () => {}] },
     "react/jsx-runtime": jsx, "next/image": { default: "img" }, "next/link": { default: "a" },
-    "lucide-react": { CalendarDays: "calendar", Camera: "camera", Crown: "crown", Diamond: "diamond", LockKeyhole: "lock", Shield: "shield" },
+    "lucide-react": { CalendarDays: "calendar", Camera: "camera", ChevronRight: "chevron-right", Crown: "crown", Diamond: "diamond", LockKeyhole: "lock", Shield: "shield" },
     "@/lib/touchlineArena/club-owner-market-i18n": { getTouchlineClubOwnerMarketCopy: () => ({ nameUnavailable: "Unavailable" }) },
     "@/lib/touchlineArena/club-owner-profile-metrics": profileMetrics,
     "@/lib/touchlineArena/club-owner-plan-showcase": planShowcase,
     "./market/TouchlineMarketMarks": { TouchlineCoinMark: "coin" },
-    "./ClubOwnerPlanShowcase": { default: "plan-showcase" },
+    "./ClubOwnerPlanShowcase": { default: "plan-showcase", ClubOwnerPlanCard: "plan-card" },
+    "./ClubOwnerPlanOnboarding": { default: "plan-onboarding" },
     "./ClubOwnerAvatarControl": { default: "avatar-control" },
+    "./fantasy/ClubCollectionContext": { useConfirmedClubCollection: () => ({ state: null }) },
+    "@/lib/touchlineFantasy/club-acquisition": acquisition,
+    "@/lib/touchlineFantasy/market-budget-i18n": budgetCopy,
+    "@/lib/touchlineArena/catalogue-locale": catalogueLocale,
+    "./ClubOwnerPlanShowcase.module.css": { default: {} },
     "./TouchlineGlobalNavigation.module.css": { default: {} }, "./ClubOwnerMarketHeader.module.css": { default: {} },
   }).default as (props: unknown) => unknown;
   const recovery = context(), owner = { name: "Synthetic", avatarUrl: "", city: "", nationality: "", since: "" };

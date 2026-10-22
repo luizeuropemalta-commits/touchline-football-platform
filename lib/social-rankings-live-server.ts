@@ -11,6 +11,7 @@ import { loadRankingsLiveCardsInChunks } from "./social-rankings-live-catalog";
 import type { ClubOwnerSquadCard } from "./touchlineArena/demo-data";
 import { deriveRankingsLive, type RankingsLiveSource, type RankingsLiveEvidence, type RankingsLiveDerived } from "./social-rankings-live-contract";
 import { applyRankingsGoldenBootEvidence, type RankingsGoldenBootEvidence } from "./social-rankings-live-golden-boot";
+import { readRankingsLocalInput } from "./social-rankings-render-input-local.mjs";
 
 export type RankingsLiveRenderInput = { data: RankingsLiveDerived; cards: Record<string, ClubOwnerSquadCard>; sourceSha256: string; evidenceSha256: string; ratingFeedsSha256: string; goldenBootEvidenceSha256: string; preparedAt: string; publicCardsRevalidated: true; coachSnapshotValidated: true };
 const root = () => path.join(process.cwd(), "artifacts/social-studio/rankings");
@@ -76,9 +77,7 @@ export async function prepareRankingsLiveRenderInput(): Promise<RankingsLiveRend
   return { data, cards, sourceSha256: hash(sourceBytes), evidenceSha256: hash(evidenceBytes), ratingFeedsSha256: hash(ratingFeedsBytes), goldenBootEvidenceSha256: hash(goldenBootBytes), preparedAt: new Date().toISOString(), publicCardsRevalidated: true, coachSnapshotValidated: true };
 }
 
-export async function readRankingsLiveRenderInput(): Promise<RankingsLiveRenderInput> {
+export async function readRankingsLiveRenderInput(runId?: unknown, inputSha256?: unknown): Promise<{ input: RankingsLiveRenderInput; runId: string; inputSha256: string }> {
   if (process.env.NODE_ENV !== "development") throw new Error("LOCAL_DEVELOPMENT_ONLY");
-  const value = JSON.parse(await readFile(path.join(root(), "render-input-20260914.json"), "utf8")) as RankingsLiveRenderInput;
-  if (value.publicCardsRevalidated !== true || value.coachSnapshotValidated !== true || value.data.provenance.source !== "LOCAL_CANONICAL_REPLAY_NOT_PUBLISHED" || value.data.publishable !== false || !value.data.weeklySelection?.complete || !value.goldenBootEvidenceSha256) throw new Error("INVALID_LOCAL_REVIEW_INPUT_REPREPARE_REQUIRED");
-  return value;
+  return readRankingsLocalInput(root(), runId, inputSha256);
 }

@@ -71,6 +71,7 @@ runInNewContext(ts.transpileModule(`export function render(language, draftLocale
  const textDirection=language === "ar-SA" ? "rtl" : "ltr";
  const selected={id:'fixture $&'};
  const railOnly=false;
+ const hideRecentResults=false;
  const accountLocaleContext={mode:'account',accountId:'trusted-id'};
  const schedule={currentFixtures:[1,2,3],recentResults:[1,2]};
  return <>${headers[0].getText(ast)}${nodes.pageTitle[0].getText(ast)}${nodes.fixtureCount[0].getText(ast)}</>;

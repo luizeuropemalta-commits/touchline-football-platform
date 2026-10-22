@@ -1,17 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
-import sharp from "sharp";
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { parseAssetWriteOptions, runAssetUtility } from './normalize-touchline-card-template-boxes.mjs';
+let sharp;
 
-const WRITE_CONFIRMATION_FLAG = "--confirm-one-off-asset-write";
-
-if (!process.argv.includes(WRITE_CONFIRMATION_FLAG)) {
-  console.error(
-    `Inactive one-off asset repair. No files were changed. Pass ${WRITE_CONFIRMATION_FLAG} only after creating an independent backup and reviewing every target.`,
-  );
-  process.exit(1);
-}
-
-const projectRoot = process.cwd();
+const projectRoot = fileURLToPath(new URL('..', import.meta.url));
 const clubsRoot = path.join(projectRoot, "public/touchlineArena/cards/templates/clubs");
 const WIDTH = 430;
 const HEIGHT = 691;
@@ -22,8 +15,11 @@ function listPngs(dir) {
     .readdirSync(dir, { withFileTypes: true })
     .flatMap((entry) => {
       const fullPath = path.join(dir, entry.name);
+      if (entry.isSymbolicLink()) throw new Error('symlink in templates');
       if (entry.isDirectory()) return listPngs(fullPath);
-      return fullPath.endsWith(".png") && fullPath.includes(`${path.sep}market-tiers${path.sep}`) ? [fullPath] : [];
+      if (!fullPath.endsWith(".png") || !fullPath.includes(`${path.sep}market-tiers${path.sep}`)) return [];
+      if (!entry.isFile()) throw new Error('non-regular template');
+      return [fullPath];
     })
     .sort();
 }
@@ -107,11 +103,16 @@ async function loadNormalizedPixels(filePath) {
   };
 }
 
+async function analyzeRepair(bytes) {
+  const { info, greenPct } = await loadNormalizedPixels(bytes);
+  return `${info.width}x${info.height}` !== `${WIDTH}x${HEIGHT}` || greenPct > 0.1;
+}
+
 async function repairAsset(filePath) {
   const { buffer, info, box, greenPct } = await loadNormalizedPixels(filePath);
   const dimension = `${info.width}x${info.height}`;
   const needsRepair = dimension !== `${WIDTH}x${HEIGHT}` || greenPct > 0.1;
-  if (!needsRepair) return null;
+  if (!needsRepair) throw new Error('repair selection changed');
 
   const expanded = expandBoxToRatio(box, info.width, info.height);
   const source = sharp(buffer, {
@@ -155,22 +156,20 @@ async function repairAsset(filePath) {
     .png({ compressionLevel: 9, adaptiveFiltering: true })
     .toBuffer();
 
-  await fs.promises.writeFile(filePath, extended);
-
-  return {
-    filePath,
-    before: dimension,
-    greenPct: Number((greenPct * 100).toFixed(1)),
-  };
+  return extended;
 }
 
-const repaired = [];
-for (const filePath of listPngs(clubsRoot)) {
-  const result = await repairAsset(filePath).catch((error) => {
-    error.message = `${error.message}\nWhile repairing: ${filePath}`;
-    throw error;
-  });
-  if (result) repaired.push(result);
+export async function runRepair(options) {
+  return runAssetUtility({ ...options, analyze: options.analyze ?? analyzeRepair, transform: options.transform ?? repairAsset });
 }
 
-console.log(JSON.stringify({ repairedCount: repaired.length, repaired }, null, 2));
+async function main(args) {
+  const options = parseAssetWriteOptions(args);
+  sharp = (await import('sharp')).default;
+  const result = await runRepair({ ...options, sourceRoot: clubsRoot, files: listPngs(clubsRoot).map(filePath => ({ filePath })) });
+  console.log(JSON.stringify(result, null, 2));
+}
+
+if (process.argv[1] && pathToFileURL(path.resolve(process.argv[1])).href === import.meta.url) {
+  main(process.argv.slice(2)).catch(error => { console.error(error); process.exitCode = 1; });
+}

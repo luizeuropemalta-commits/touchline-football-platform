@@ -52,7 +52,14 @@ export default function AccountLocaleMenu({ context, locale, menuClassName, pane
         const client = createClient();
         if (!client) throw new Error("Account session unavailable");
         const { data } = client.auth.onAuthStateChange((_event, session) => {
-          callback(session?.user?.id ?? null);
+          let observedAccountId: string | null = null;
+          try {
+            observedAccountId = session?.user?.id ?? null;
+          } catch {
+            // Token-only sessions can expose an unavailable-user proxy.
+            // An unreadable identity invalidates an account-bound host.
+          }
+          callback(observedAccountId);
         });
         return () => data.subscription.unsubscribe();
       },

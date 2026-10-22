@@ -29,6 +29,8 @@ type TouchlineCoachCardZoomProps = {
   cardClassName?: string;
   publishedTouchlinePoints?: number | null;
   showLeadershipCrown?: boolean;
+  /** Game-only quotation; never inferred from real-world coach statistics. */
+  acquisitionPrice?: { label: string; valueTc: number };
   /**
    * A coach card in the matchday technical area is immediately visible above
    * the fold. Safari can defer the two identity assets on a lazy compact card,
@@ -70,6 +72,7 @@ export default function TouchlineCoachCardZoom({
   cardClassName,
   publishedTouchlinePoints = null,
   showLeadershipCrown,
+  acquisitionPrice,
   assetLoading,
   frameLoading,
   frameDecoding,
@@ -90,6 +93,9 @@ export default function TouchlineCoachCardZoom({
       ? [{ label: copy.dateOfBirth, value: formattedDateOfBirth, icon: "coach-birth", group: "identity" as const }]
       : []),
     { label: copy.cardTier, value: touchlineCardTierName(slot.cardTier, presentationLocale, draftLocalesEnabled), icon: "coach-tier", group: "identity", accent: true },
+    ...(acquisitionPrice && Number.isSafeInteger(acquisitionPrice.valueTc) && acquisitionPrice.valueTc >= 0
+      ? [{ label: acquisitionPrice.label, value: `${new Intl.NumberFormat(presentationLocale).format(acquisitionPrice.valueTc)} TC`, group: "identity" as const, accent: true }]
+      : []),
   ];
   const performanceFields: TouchlineCardZoomDetails["fields"] = verifiedRecord
     ? [
@@ -162,6 +168,7 @@ export default function TouchlineCoachCardZoom({
       frameFetchPriority={frameFetchPriority}
       fixtureContext={contract?.currentFixture?.context ?? null}
       publishedTouchlinePoints={publishedTouchlinePoints}
+      acquisitionPrice={acquisitionPrice}
       showLeadershipCrown={showLeadershipCrown}
     />
   );
@@ -191,6 +198,7 @@ export default function TouchlineCoachCardZoom({
           frameFetchPriority={frameFetchPriority ?? "high"}
           fixtureContext={contract?.currentFixture?.context ?? null}
           publishedTouchlinePoints={publishedTouchlinePoints}
+          acquisitionPrice={acquisitionPrice}
           showLeadershipCrown={showLeadershipCrown}
         />
       }

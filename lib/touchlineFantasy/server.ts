@@ -1,4 +1,7 @@
 import "server-only";
+import { readQaClubMarketOpening } from "./qa-club-market";
+import { resolvePrimaryPositionDetails } from "./club-primary-position-policy";
+import { readClubRelatedSnapshot, type ClubRelatedPlayer } from "./club-round-confirmation";
 import type { ArenaPhaseTiming } from "@/lib/touchlineArena/server-phase-timing";
 
 import type { User } from "@supabase/supabase-js";
@@ -94,7 +97,11 @@ export type TouchlineFantasySnapshot = Readonly<{
   /** Null only for verified no-plan onboarding; never grants gameplay access. */
   marketAccess?: TouchlineFantasyMarketAccess | null;
   betaEnrollmentAvailable?: boolean;
+  /** Explicit QA test window; never changes football rounds or scores. */
+  qaClubMarketOpen?: boolean;
   config: Readonly<{
+    /** Page-bound context for collection commands, never client-selected authority. */
+    seasonId?: string;
     budgetEur: number | null;
     maxPlayersPerClub: number;
     lockOffsetMinutes: number;
@@ -108,6 +115,7 @@ export type TouchlineFantasySnapshot = Readonly<{
     totalMarketValueEur: number;
     carriedFromPrevious: boolean;
     selectedCoachId: string | null;
+    collectionRelatedSnapshot?: readonly ClubRelatedPlayer[] | null;
   }> | null;
   selections: readonly TouchlineFantasySelectionView[];
   catalogue: readonly ClubOwnerSquadCard[];
@@ -160,10 +168,14 @@ async function loadCatalogue(admin: NonNullable<ReturnType<typeof createAdminCli
   const catalogueAdmin = createCompleteTouchlineCatalogueAdmin(admin);
   const { data: publicationData } = await catalogueAdmin
     .from("touchline_card_publications")
-    .select("player_id")
+    .select("player_id,current_membership_id")
     .eq("publication_status", "published")
     .order("player_id", { ascending: true });
   const playerIds = [...new Set(rows(publicationData).map((row) => text(row.player_id)?.toLowerCase()).filter((id): id is string => Boolean(id)))];
+  const publicationMembershipByPlayer = new Map(rows(publicationData).flatMap(row => {
+    const id = text(row.player_id)?.toLowerCase(), membershipId = text(row.current_membership_id);
+    return id && membershipId ? [[id, membershipId] as const] : [];
+  }));
   if (!playerIds.length) return [];
 
   const [presentations, seasonPoints, { players, clubsResponse }, membershipsResponse] = await Promise.all([
@@ -182,7 +194,7 @@ async function loadCatalogue(admin: NonNullable<ReturnType<typeof createAdminCli
       return { players, clubsResponse };
     })(),
     catalogueAdmin.from("football_squad_members")
-      .select("player_id,club_id,jersey_number,position,detailed_position,status,source_updated_at")
+      .select("id,player_id,club_id,jersey_number,position,detailed_position,status,source_updated_at")
       .eq("status", "active")
       .in("player_id", playerIds)
       .order("source_updated_at", { ascending: false }),
@@ -192,7 +204,8 @@ async function loadCatalogue(admin: NonNullable<ReturnType<typeof createAdminCli
   const membershipByPlayer = new Map<string, Row>();
   for (const membership of rows(membershipsResponse.data)) {
     const playerId = text(membership.player_id)?.toLowerCase();
-    if (playerId && !membershipByPlayer.has(playerId)) membershipByPlayer.set(playerId, membership);
+    if (playerId && text(membership.id) === publicationMembershipByPlayer.get(playerId)
+      && !membershipByPlayer.has(playerId)) membershipByPlayer.set(playerId, membership);
   }
   const cards = players.flatMap((player): ClubOwnerSquadCard[] => {
     const playerId = text(player.id)?.toLowerCase();
@@ -205,6 +218,7 @@ async function loadCatalogue(admin: NonNullable<ReturnType<typeof createAdminCli
     if (!name || !clubName) return [];
     const position = text(membership.detailed_position) ?? text(membership.position)
       ?? text(player.detailed_position) ?? text(player.provider_position) ?? text(player.position) ?? "Player";
+    const primary = resolvePrimaryPositionDetails(player.detailed_position, membership.detailed_position);
     return [{
       id: playerId,
       canonicalPlayerId: playerId,
@@ -213,6 +227,7 @@ async function loadCatalogue(admin: NonNullable<ReturnType<typeof createAdminCli
       shortName: makeArenaShortName(name),
       role: inferArenaRole(position),
       position,
+      primaryPositionDetail: primary.detail,
       clubName,
       shirtNumber: presentation.shirtNumber ?? normalizeOfficialShirtNumber(membership.jersey_number),
       countryCode3: countryCode(player),
@@ -380,11 +395,19 @@ async function loadFantasySnapshotCore(user: User, projection: "full" | "arena",
     if (syncError) return null;
   }
   timing?.mark("config");
-  const [{ data: configData, error: configError }, formationRegistry] = await Promise.all([
+  const readEntitlement = () => admin.from("touchline_fantasy_entitlements")
+    .select("status,current_period_start,current_period_end,plan_key")
+    .eq("user_id", user.id)
+    .eq("entitlement_key", "fantasy_access")
+    .maybeSingle();
+  const [{ data: configData, error: configError }, formationRegistry, readOnlyEntitlement] = await Promise.all([
     admin.from("touchline_fantasy_configs").select("season_id,max_players_per_club,lock_offset_minutes").eq("competition_key", "england").eq("status", "active").maybeSingle(),
     projection === "arena" && providedFormationRegistry !== undefined
       ? Promise.resolve(providedFormationRegistry)
       : readTouchlineFormationGeometryRegistry(),
+    // The read-only page needs no lifecycle result to read this account's plan.
+    // Keep writer callers' original post-reconciliation ordering unchanged.
+    reconcileLifecycle ? Promise.resolve(null) : readEntitlement(),
   ]);
   if (configError || !configData) return null;
   const config = configData as Row;
@@ -424,11 +447,7 @@ async function loadFantasySnapshotCore(user: User, projection: "full" | "arena",
   }
 
   timing?.mark("entitlement");
-  const { data: entitlementData, error: entitlementError } = await admin.from("touchline_fantasy_entitlements")
-    .select("status,current_period_start,current_period_end,plan_key")
-    .eq("user_id", user.id)
-    .eq("entitlement_key", "fantasy_access")
-    .maybeSingle();
+  const { data: entitlementData, error: entitlementError } = readOnlyEntitlement ?? await readEntitlement();
   if (entitlementError) return null;
   const entitlement = entitlementData as Row | null;
   const marketAccess = resolveTouchlineFantasyMarketAccess(entitlement?.plan_key);
@@ -440,7 +459,7 @@ async function loadFantasySnapshotCore(user: User, projection: "full" | "arena",
       userId: user.id, entitlementActive: false,
       plan: { active: false, expiresAt: null }, marketAccess: null,
       betaEnrollmentAvailable: true,
-      config: { budgetEur: 0, maxPlayersPerClub: number(config.max_players_per_club) ?? 11, lockOffsetMinutes: number(config.lock_offset_minutes) ?? 5 },
+      config: { ...(process.env.TOUCHLINE_CLUB_COLLECTION_ENABLED === "true" ? {seasonId} : {}), budgetEur: 0, maxPlayersPerClub: number(config.max_players_per_club) ?? 11, lockOffsetMinutes: number(config.lock_offset_minutes) ?? 5 },
       gameweeks: [], activeGameweek: null, userGameweek: null,
       selections: [], catalogue: [], coaches: [], lineupAlerts: [],
       matchCardIndicators: [], playerAvailabilityIndicators: [], formationRegistry,
@@ -466,7 +485,8 @@ async function loadFantasySnapshotCore(user: User, projection: "full" | "arena",
     projection === "full" ? loadCoaches(admin) : Promise.resolve([]),
     activeGameweek
       ? admin.from("touchline_fantasy_user_gameweeks")
-        .select("id,formation_code,selected_coach_id,locked_coach_id,state,total_market_value_eur,carry_source_user_gameweek_id")
+        .select("id,formation_code,selected_coach_id,locked_coach_id,state,total_market_value_eur,carry_source_user_gameweek_id"
+          + (process.env.TOUCHLINE_CLUB_COLLECTION_ENABLED === "true" ? ",collection_related_snapshot" : ""))
         .eq("user_id", user.id)
         .eq("gameweek_id", activeGameweek.id)
         .maybeSingle()
@@ -482,9 +502,8 @@ async function loadFantasySnapshotCore(user: User, projection: "full" | "arena",
     await admin.rpc("touchline_fantasy_reconcile_lineup_alerts", { p_gameweek_id: activeGameweek.id });
   }
   timing?.mark("selections");
-  const [{ selections, historyData }, scoreResponse, seasonScoresResponse, alertsResponse] = userGameweekId
-    ? await Promise.all([
-      (async () => {
+  const [{ selections, historyData }, scoreResponse, seasonScoresResponse, alertsResponse] = await Promise.all([
+      userGameweekId ? (async () => {
         const [draftResponse, lockedResponse] = await Promise.all([
           admin.from("touchline_fantasy_user_gameweek_selections").select("player_id,slot_id").eq("user_gameweek_id", userGameweekId),
           admin.from("touchline_fantasy_locked_selections").select("player_id,slot_id").eq("user_gameweek_id", userGameweekId),
@@ -510,17 +529,21 @@ async function loadFantasySnapshotCore(user: User, projection: "full" | "arena",
             .in("player_id", selectedPlayerIds)
           : { data: [] };
         return { selections, historyData };
-      })(),
-      projection === "full" ? admin.from("touchline_fantasy_user_gameweek_scores").select("gameweek_score").eq("user_gameweek_id", userGameweekId).maybeSingle() : Promise.resolve({ data: null, error: null }),
+      })() : Promise.resolve({ selections: [], historyData: [] }),
+      projection === "full" && userGameweekId ? admin.from("touchline_fantasy_user_gameweek_scores").select("gameweek_score").eq("user_gameweek_id", userGameweekId).maybeSingle() : Promise.resolve({ data: null, error: null }),
+      // Season history belongs to the account, not to the existence of this
+      // round's draft. A new round must never make earned points disappear.
       projection === "full" ? admin.from("touchline_fantasy_user_gameweek_scores").select("gameweek_score,settlement_status,touchline_fantasy_user_gameweeks!inner(user_id,touchline_fantasy_gameweeks!inner(season_id))")
         .eq("touchline_fantasy_user_gameweeks.user_id", user.id)
         .eq("touchline_fantasy_user_gameweeks.touchline_fantasy_gameweeks.season_id", seasonId) : Promise.resolve({ data: [], error: null }),
-      projection === "full" ? admin.from("touchline_fantasy_lineup_alerts")
+      projection === "full" && userGameweekId ? admin.from("touchline_fantasy_lineup_alerts")
         .select("player_id,fixture_id,state,was_editable_at_detection,detected_at")
         .eq("user_gameweek_id", userGameweekId)
         .order("detected_at", { ascending: false }) : Promise.resolve({ data: [], error: null }),
-    ])
-    : [{ selections: [], historyData: [] }, { data: null, error: null }, { data: [], error: null }, { data: [], error: null }];
+    ]);
+  if (projection === "full" && (seasonScoresResponse.error || !Array.isArray(seasonScoresResponse.data))) {
+    throw new Error("TOUCHLINE_SEASON_SCORE_READ_UNAVAILABLE");
+  }
   timing?.mark("projection");
   const userGameweek: TouchlineFantasySnapshot["userGameweek"] = userGameweekId ? {
     id: userGameweekId,
@@ -529,6 +552,8 @@ async function loadFantasySnapshotCore(user: User, projection: "full" | "arena",
     totalMarketValueEur: number(userGameweekRow?.total_market_value_eur) ?? 0,
     carriedFromPrevious: Boolean(text(userGameweekRow?.carry_source_user_gameweek_id)),
     selectedCoachId: text(userGameweekRow?.locked_coach_id) ?? text(userGameweekRow?.selected_coach_id),
+    ...(process.env.TOUCHLINE_CLUB_COLLECTION_ENABLED === "true"
+      ? { collectionRelatedSnapshot: readClubRelatedSnapshot(userGameweekRow?.collection_related_snapshot) } : {}),
   } : null;
   // Keep every lifecycle writer above. Only unused read-only enrichments are
   // omitted; the Arena receives the same complete catalogue and locked XI.
@@ -573,9 +598,12 @@ async function loadFantasySnapshotCore(user: User, projection: "full" | "arena",
   return {
     userId: user.id,
     entitlementActive,
+    qaClubMarketOpen: projection === "full" && process.env.TOUCHLINE_CLUB_COLLECTION_ENABLED === "true"
+      ? await readQaClubMarketOpening(admin, seasonId) : false,
     plan: { active: entitlementActive, expiresAt: planExpiresAt },
     marketAccess,
     config: {
+      ...(process.env.TOUCHLINE_CLUB_COLLECTION_ENABLED === "true" ? {seasonId} : {}),
       budgetEur: marketAccess.budgetEur,
       maxPlayersPerClub: number(config.max_players_per_club) ?? 11,
       lockOffsetMinutes: number(config.lock_offset_minutes) ?? 5,

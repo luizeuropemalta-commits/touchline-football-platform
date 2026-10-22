@@ -1,12 +1,10 @@
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
 import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
-import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { runInNewContext } from "node:vm";
 import test from "node:test";
-import ts from "typescript";
+import { bundleIsolatedBrowserFixture, transpileFixtureModule } from "./helpers/touchline-isolated-browser-bundle.mts";
 import { chromium, webkit, expect, type Browser, type Locator, type Page } from "@playwright/test";
 import { TOUCHLINE_DEFAULT_FORMATION_GEOMETRY_REGISTRY } from "../lib/touchlineArena/formation-geometry.ts";
 import { findTouchLineClub, type ClubOwnerSquadCard } from "../lib/touchlineArena/demo-data.ts";
@@ -18,6 +16,9 @@ import type { TouchlineFantasySnapshot } from "../lib/touchlineFantasy/server.ts
 import { resolvePlayerAvailabilityBadge } from "../lib/touchlineArena/player-availability-badge.ts";
 import { getTouchlineFantasyMarketBudgetCopy } from "../lib/touchlineFantasy/market-budget-i18n.ts";
 import { isTouchlineFantasyMarketAccess } from "../lib/touchlineFantasy/market-plan-policy.ts";
+import { acquireClubPlayer, type ClubAcquisitionState, type ClubAcquisitionCommand } from "../lib/touchlineFantasy/club-acquisition.ts";
+import { clubPlayerPosition } from "../lib/touchlineFantasy/club-position.ts";
+import { collectionSlotPlan } from "../lib/touchlineFantasy/club-position-plan.ts";
 
 // Finite, opt-in DOM proof only. No server, credentials, real account, provider,
 // DB, Next build or remote assets. All requests are fulfilled/aborted locally.
@@ -41,7 +42,6 @@ function validateXiKeyboardScope(mode: ReturnType<typeof parseXiKeyboardMode>, s
 }
 validateXiKeyboardScope(keyboardMode, browserScope);
 const root = fileURLToPath(new URL("../", import.meta.url));
-const require = createRequire(import.meta.url);
 const origin = "https://xi.test";
 const geometry = TOUCHLINE_DEFAULT_FORMATION_GEOMETRY_REGISTRY["4-3-3"];
 const club = findTouchLineClub("Arsenal")!;
@@ -130,28 +130,6 @@ test("XI browser fixtures use recognized Standard 400M and exact Beta five-playe
   }
 });
 
-function transpileFixtureModule(source: string, fileName: string) {
-  return ts.transpileModule(source, { fileName, compilerOptions: {
-    module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true,
-  }, transformers: { before: [context => sourceFile => {
-    // ESM evaluates static dependencies before the module body, even when an
-    // import is written last. CommonJS lowering otherwise leaves its require at
-    // that textual position. Hoist AST declarations, not generated JS strings;
-    // retain dependency order, live bindings and leading directives.
-    const directives: ts.Statement[] = [], dependencies: ts.Statement[] = [], body: ts.Statement[] = [];
-    let prologue = true;
-    for (const statement of sourceFile.statements) {
-      if (prologue && ts.isExpressionStatement(statement) && ts.isStringLiteral(statement.expression)) {
-        directives.push(statement); continue;
-      }
-      prologue = false;
-      if (ts.isImportDeclaration(statement) || (ts.isExportDeclaration(statement) && statement.moduleSpecifier)) dependencies.push(statement);
-      else body.push(statement);
-    }
-    return context.factory.updateSourceFile(sourceFile, [...directives, ...dependencies, ...body]);
-  }] } }).outputText;
-}
-
 test("fixture module lowering initializes ESM dependencies before body in source order", async () => {
   const execute = (source: string, fileName: string, dependencies: Record<string, unknown>) => {
     const fixtureModule = { exports: {} as Record<string, unknown> };
@@ -193,102 +171,196 @@ test("fixture module lowering initializes ESM dependencies before body in source
 });
 
 function bundleProduct(): Bundle {
-  const modules = new Map<string, { source: string; imports: Record<string, string> }>();
-  const css: string[] = [];
-  const sources = new Set<string>();
-  const nextRequire = createRequire(require.resolve("next/package.json"));
-  // Reuse Next's installed CSS Modules processors; never flatten module scopes.
-  const postcss = nextRequire("postcss");
-  const localByDefault = require("next/dist/compiled/postcss-modules-local-by-default");
-  const scope = require("next/dist/compiled/postcss-modules-scope");
-  const boundaries: Record<string, string> = {
-    "next/image": `const React=require('react'); module.exports=React.forwardRef(function Image(p,ref){const {unoptimized,priority,fill,quality,loader,placeholder,blurDataURL,onLoadingComplete,...rest}=p;return React.createElement('img',{...rest,ref});});`,
-    "next/link": `const React=require('react'); module.exports=React.forwardRef(function Link(p,ref){const {prefetch,replace,scroll,shallow,locale,legacyBehavior,passHref,...rest}=p;return React.createElement('a',{...rest,ref});});`,
-    "next/navigation": `exports.usePathname=()=>location.pathname;exports.useRouter=()=>({refresh(){throw Error('Unexpected Next refresh');},push(){throw Error('Unexpected Next navigation');},replace(){throw Error('Unexpected Next navigation');}});`,
-    // Real createClient executes its missing-config branch in this credential-free
-    // fixture. The SDK is a forbidden transport, not a fake authenticated session.
-    "@supabase/ssr": `const forbidden=()=>{throw Error('Unexpected Supabase transport in isolated XI fixture');};exports.createBrowserClient=forbidden;exports.parseCookieHeader=forbidden;exports.serializeCookieHeader=forbidden;`,
-  };
-  const allowedPackages = new Set(["react", "react-dom", "scheduler", "lucide-react"]);
-  function resolve(specifier: string, parent: string): string {
-    if (Object.hasOwn(boundaries, specifier)) return `boundary:${specifier}`;
-    if (specifier.startsWith("@/") || specifier.startsWith(".")) {
-      const base = specifier.startsWith("@/") ? path.join(root, specifier.slice(2)) : path.resolve(path.dirname(parent), specifier);
-      const file = [base, `${base}.ts`, `${base}.tsx`, `${base}.js`, path.join(base, "index.ts"), path.join(base, "index.js")]
-        .find(candidate => existsSync(candidate) && statSync(candidate).isFile());
-      assert.ok(file, `Missing fixture module: ${specifier}`);
-      assert.ok(file.startsWith(root), "fixture module escaped repository");
-      return file;
-    }
-    assert.ok(allowedPackages.has(specifier.split("/")[0]), `Unapproved browser dependency: ${specifier}`);
-    // Keep a single root React instance; resolve transitive dependencies from
-    // their actual importer, as pnpm does not expose scheduler at the root.
-    return specifier === "react" || specifier.startsWith("react/")
-      ? require.resolve(specifier)
-      : createRequire(parent).resolve(specifier);
-  }
-  function add(id: string): void {
-    if (modules.has(id)) return;
-    const compiledModule = { source: "", imports: {} as Record<string, string> };
-    modules.set(id, compiledModule);
-    const isBoundary = id.startsWith("boundary:");
-    let source = isBoundary ? boundaries[id.slice("boundary:".length)] : readFileSync(id, "utf8");
-    if (!isBoundary && !id.includes("/node_modules/")) sources.add(path.relative(root, id));
-    if (id.endsWith(".css")) {
-      const suffix = createHash("sha256").update(path.relative(root, id)).digest("hex").slice(0, 10);
-      const result = postcss([localByDefault({ mode: "local" }), scope({ generateScopedName: (name: string) => `xi_${suffix}_${name}` })])
-        .process(source, { from: id }).sync();
-      const exported: Record<string, string> = {};
-      result.root.walkRules(":export", (rule: { walkDecls(fn: (decl: { prop: string; value: string }) => void): void; remove(): void }) => {
-        rule.walkDecls(decl => { exported[decl.prop] = decl.value; }); rule.remove();
-      });
-      assert.ok(Object.keys(exported).length, `CSS Module has no exported classes: ${id}`);
-      css.push(result.root.toString());
-      compiledModule.source = `module.exports=${JSON.stringify(exported)};`; return;
-    }
-    if (id.endsWith(".json")) { compiledModule.source = `module.exports=${JSON.stringify(JSON.parse(source))};`; return; }
-    if (/\.tsx?$/.test(id)) source = transpileFixtureModule(source, id);
-    compiledModule.source = source;
-    const ast = ts.createSourceFile(id, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
-    function visit(node: ts.Node) {
-      if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === "require") {
-        assert.equal(node.arguments.length, 1); assert.ok(ts.isStringLiteral(node.arguments[0]), `Dynamic require refused: ${id}`);
-        const name = node.arguments[0].text, child = resolve(name, isBoundary ? path.join(root, "fixture.js") : id);
-        compiledModule.imports[name] = child; add(child);
-      }
-      ts.forEachChild(node, visit);
-    }
-    visit(ast);
-  }
-  const entry = path.join(root, "app/fantasy/FantasyGameweekClient.tsx");
-  const react = require.resolve("react"), client = require.resolve("react-dom/client"), dom = require.resolve("react-dom");
-  for (const id of [entry, react, client, dom]) add(id);
-  for (const required of ["app/fantasy/FantasyGameweekClient.tsx", "app/fantasy/fantasy.module.css",
-    "lib/touchlineFantasy/domain.ts", "components/touchline/fantasy/TouchlineGameweekCard.tsx",
-    "components/touchline/cards/TouchlineCardZoom.tsx", "components/touchline/cards/TouchlineEliteExactCard.tsx",
-    "components/touchline/pitch/TouchlinePitchSurface.tsx"]) assert.ok(sources.has(required), required);
-  const definitions = [...modules].map(([id, mod]) => `${JSON.stringify(id)}:[function(module,exports,require){${mod.source}\n},${JSON.stringify(mod.imports)}]`).join(",");
-  return { sources: [...sources].sort(), css: css.join("\n"), script: `
-    const process={env:{NODE_ENV:'development'}};const modules={${definitions}},cache={};
-    function load(id){if(cache[id])return cache[id].exports;const definition=modules[id];if(!definition)throw Error('Missing bundled module');const module={exports:{}};cache[id]=module;definition[0](module,module.exports,name=>{if(!Object.hasOwn(definition[1],name))throw Error('Unmapped import '+name);return load(definition[1][name]);});return module.exports;}
-    function markPhase(phase){window.fixtureMountPhase=phase;console.info('XI_MOUNT_PHASE '+JSON.stringify({phase,atMs:Math.round(performance.now())}));}
-    markPhase('module-load');
-    const React=load(${JSON.stringify(react)}),root=load(${JSON.stringify(client)}).createRoot(document.getElementById('root'));
-    const flushSync=load(${JSON.stringify(dom)}).flushSync,Fantasy=load(${JSON.stringify(entry)}).default;
-    window.fixtureScrolls=[];const nativeScroll=Element.prototype.scrollIntoView;
-    Element.prototype.scrollIntoView=function(options){window.fixtureScrolls.push({id:this.id,behavior:options?.behavior});return nativeScroll.call(this,options);};
-    window.unmountFixture=()=>flushSync(()=>root.unmount());
-    markPhase('render-start');
-    flushSync(()=>root.render(React.createElement(React.StrictMode,null,React.createElement(Fantasy,window.fixtureProps))));
-    markPhase('render-returned');
-  ` };
+  return bundleIsolatedBrowserFixture({
+    entryPath: "app/fantasy/FantasyGameweekClient.tsx",
+    requiredSources: ["app/fantasy/FantasyGameweekClient.tsx", "app/fantasy/fantasy.module.css",
+      "lib/touchlineFantasy/domain.ts", "components/touchline/fantasy/TouchlineGameweekCard.tsx",
+      "components/touchline/cards/TouchlineCardZoom.tsx", "components/touchline/cards/TouchlineEliteExactCard.tsx",
+      "components/touchline/pitch/TouchlinePitchSurface.tsx"],
+    mountScript: `
+      function markPhase(phase){window.fixtureMountPhase=phase;console.info('XI_MOUNT_PHASE '+JSON.stringify({phase,atMs:Math.round(performance.now())}));}
+      markPhase('module-load');
+      const Fantasy=loadEntry().default;
+      window.fixtureScrolls=[];const nativeScroll=Element.prototype.scrollIntoView;
+      Element.prototype.scrollIntoView=function(options){window.fixtureScrolls.push({id:this.id,behavior:options?.behavior});return nativeScroll.call(this,options);};
+      window.unmountFixture=()=>flushSync(()=>root.unmount());
+      markPhase('render-start');
+      flushSync(()=>root.render(React.createElement(React.StrictMode,null,React.createElement(Fantasy,window.fixtureProps))));
+      markPhase('render-returned');
+    `,
+  });
 }
 
 type Mode = { locale: "en-GB" | "pt-BR"; touch: boolean; reduced: boolean };
 const modes: Mode[] = [{ locale: "en-GB", touch: false, reduced: false }, { locale: "pt-BR", touch: true, reduced: true }];
+test("original market mounted: explicit destination cancellation delayed confirmation", {
+  skip: process.env.TOUCHLINE_RUN_ORIGINAL_MARKET_BROWSER !== "1", timeout: 180_000,
+}, async t => {
+  const bundle = bundleProduct();
+  const engine = process.env.TOUCHLINE_MARKET_ENGINE === "webkit" ? webkit : chromium;
+  const browser = await engine.launch({ headless: true, timeout: 15_000 });
+  try {
+    for (const area of ["starters", "reserves", "outside"] as const) await t.test(`${engine.name()} ${area}`, async () => {
+      const fixture = await openFixture(browser, bundle, { locale: "en-GB", touch: area === "outside", reduced: true }, {
+        collection: true, holdCollection: true, marketVacancy: area,
+        viewport: area === "outside" ? { width: 844, height: 390 } : { width: 1280, height: 900 },
+      });
+      try {
+        const { page, list } = fixture;
+        if(area === "reserves") assert.ok(fixture.collection?.players.every(p => p.primaryDetail === undefined), "legacy fixture must NOT backfill stored contracts");
+        const opening = page.locator('button[data-guided-action="true"]').first();
+        await expect(opening).toBeEnabled(); await opening.click();
+        const destination = list.locator("[data-collection-market-destination]");
+        await expect(destination).toHaveAttribute("data-collection-market-destination", `${area}:0`);
+        await expect(list).toBeFocused();
+        await expect(list.locator("img")).not.toHaveCount(0);
+        await expect(list.locator('[data-touchline-card-zoom="trigger"]')).toHaveCount(1);
+        await expect(page.getByRole("dialog", { name: "Select player", exact: true })).toHaveCount(0);
+        await list.getByRole("button", { name: "Sign", exact: true }).click();
+        const signingConfirmation = list.locator("[data-collection-signing-confirmation]");
+        await expect(signingConfirmation).toHaveCount(1);
+        await expect(signingConfirmation).toHaveAttribute("data-collection-signing-confirmation", `fictional-${area}-0`);
+        await expect(destination.getByRole("button", { name: "Confirm signing", exact: true })).toHaveCount(0);
+        await expect(signingConfirmation.getByRole("button", { name: "Confirm signing", exact: true })).toBeEnabled();
+        if (process.env.TOUCHLINE_MARKET_CAPTURE_DIR) await list.screenshot({ path: `${process.env.TOUCHLINE_MARKET_CAPTURE_DIR}/original-market-${engine.name()}-${area}.png`, animations: "disabled" });
+        assert.equal(fixture.collectionWrites.length, 0, "staging is not a purchase");
+        await list.getByRole("button", { name: /Back to pitch/i }).click();
+        await expect(destination).toHaveCount(0);
+        assert.equal(fixture.collectionWrites.length, 0, "cancel before confirmation has no write");
+        await opening.click();
+        await list.getByRole("button", { name: "Sign", exact: true }).click();
+        await signingConfirmation.getByRole("button", { name: "Confirm signing", exact: true }).click();
+        await expect.poll(() => fixture.collectionWrites.length).toBe(1);
+        assert.deepEqual([fixture.collectionWrites[0].area, fixture.collectionWrites[0].slot, fixture.collectionWrites[0].expectedRevision], [area, 0, 34]);
+        assert.equal(fixture.collection?.players.length, 34, "no optimistic contract before receipt");
+        await expect(signingConfirmation.getByRole("button", { name: "Confirm signing", exact: true })).toBeDisabled();
+        if (area === "outside") {
+          await list.getByRole("button", { name: /Back to pitch/i }).click();
+          await expect(destination).toHaveCount(0);
+          // Cancellation schedules its own legitimate focus/scroll in RAF.
+          // Observe that before measuring navigation caused by the late receipt.
+          await expect(fixture.pitch).toBeFocused();
+          await page.evaluate("window.fixtureScrolls=[]");
+        }
+        fixture.releaseCollection();
+        await expect.poll(() => fixture.collection?.players.length).toBe(35);
+        await expect(page.locator("output").filter({ hasText: "Squad balance" })).toContainText("474,000,000");
+        await expect(destination).toHaveCount(0);
+        assert.equal(fixture.collectionWrites.length, 1);
+        assert.equal(fixture.collection?.balanceEur, 474_000_000);
+        assert.equal(fixture.collection?.players.filter(p => p.area === area && p.slot === 0).length, 1);
+        if(area === "reserves") assert.equal(fixture.collection?.players.filter(p => p.primaryDetail === undefined).length, 34, "confirmed signing must preserve original legacy contracts");
+        if (area === "outside") assert.deepEqual(await page.evaluate("window.fixtureScrolls"), [], "cancelled intent must not navigate on late receipt");
+        else await expect(fixture.pitch).toBeFocused();
+        await fixture.assertClean();
+      } finally { await fixture.close(); }
+    });
+  } finally { await browser.close(); }
+});
+test("original market zoom signing mounted: staged confirmation only", {
+  skip: process.env.TOUCHLINE_RUN_MARKET_ZOOM_SIGNING_BROWSER !== "1", timeout: 90_000,
+}, async () => {
+  const bundle = bundleProduct();
+  const browser = await chromium.launch({ headless: true, timeout: 15_000 });
+  try {
+    const fixture = await openFixture(browser, bundle, { locale: "en-GB", touch: false, reduced: true }, {
+      collection: true, holdCollection: true, marketVacancy: "reserves", viewport: { width: 1280, height: 900 },
+    });
+    try {
+      const { page, list } = fixture;
+      const noWrites = () => { assert.equal(fixture.collectionWrites.length, 0); assert.equal(fixture.writes.length, 0); };
+      assert.equal(fixture.collection?.players.length, 34);
+      assert.ok(fixture.collection?.players.every(player => player.primaryDetail === undefined));
+      noWrites();
+      await page.locator('button[data-guided-action="true"]').first().click();
+      const destination = list.locator("[data-collection-market-destination]");
+      await expect(destination).toHaveAttribute("data-collection-market-destination", "reserves:0");
+      await list.locator('[data-touchline-card-zoom="trigger"]').click();
+      const dialog = page.getByRole("dialog");
+      await expect(dialog).toHaveCount(1);
+      const actions = dialog.locator('[data-zoom-signing-actions="true"]');
+      await expect(actions).toHaveCount(1);
+      await expect(actions.getByRole("button", { name: "Confirm signing", exact: true })).toHaveCount(0);
+      noWrites();
+      await actions.getByRole("button", { name: "Sign", exact: true }).click();
+      const confirm = actions.getByRole("button", { name: "Confirm signing", exact: true });
+      await expect(confirm).toBeEnabled();
+      const inline = list.locator("[data-collection-signing-confirmation]");
+      await expect(inline).toHaveCount(1);
+      await expect(inline).toHaveAttribute("data-collection-signing-confirmation", "fictional-reserves-0");
+      await expect(destination.getByRole("button", { name: "Confirm signing", exact: true, includeHidden: true })).toHaveCount(0);
+      noWrites();
+      await confirm.click();
+      await expect.poll(() => fixture.collectionWrites.length).toBe(1);
+      const command = fixture.collectionWrites[0];
+      assert.deepEqual([command.playerId, command.area, command.slot, command.expectedRevision], ["fictional-reserves-0", "reserves", 0, 34]);
+      assert.equal(command.expectedAccountId, fixture.snapshot.userId);
+      assert.equal(command.expectedSeasonId, fixture.collection?.seasonId);
+      assert.equal(fixture.collection?.players.length, 34, "held receipt must not create an optimistic contract");
+      assert.equal(fixture.collection?.balanceEur, 475_000_000);
+      assert.equal(fixture.writes.length, 0, "signing must not submit a lineup");
+      await expect(confirm).toBeDisabled();
+      fixture.releaseCollection();
+      await expect.poll(() => fixture.collection?.players.length).toBe(35);
+      await expect(page.locator("output").filter({ hasText: "Squad balance" })).toContainText("474,000,000");
+      assert.equal(fixture.collection?.balanceEur, 474_000_000);
+      assert.equal(fixture.collection?.players.filter(player => player.area === "reserves" && player.slot === 0 && player.playerId === "fictional-reserves-0").length, 1);
+      assert.equal(fixture.collection?.players.filter(player => player.primaryDetail === undefined).length, 34);
+      assert.equal(fixture.collectionWrites.length, 1, "only one intercepted confirmation is allowed");
+      assert.equal(fixture.writes.length, 0);
+      await fixture.assertClean();
+    } finally { await fixture.close(); }
+  } finally { await browser.close(); }
+});
 type SaveRequest = { gameweekId: string; selectedCoachId: string; formationCode: string; selections: Array<{ playerId: string; slotId: string }>; action: string; idempotencyKey: string };
-async function openFixture(browser: Browser, bundle: Bundle, mode: Mode, options: { locked?: boolean; divergent?: boolean; indicators?: boolean; budgetExhausted?: boolean; viewport?: { width: number; height: number }; formationCode?: string } = {}) {
-  const snapshot = options.budgetExhausted ? exhaustedBetaSnapshot() : fixtureSnapshot(options.locked, options.formationCode), initialSelections = JSON.stringify(snapshot.selections);
+async function openFixture(browser: Browser, bundle: Bundle, mode: Mode, options: { marketVacancy?: "starters" | "reserves" | "outside"; emptyAccount?: boolean; expiredDeadline?: boolean; structure?: boolean; collection?: boolean; filledBench?: boolean; holdCollection?: boolean; locked?: boolean; divergent?: boolean; indicators?: boolean; budgetExhausted?: boolean; viewport?: { width: number; height: number }; formationCode?: string } = {}) {
+  const snapshot = options.budgetExhausted ? exhaustedBetaSnapshot() : fixtureSnapshot(options.locked, options.formationCode);
+  if (options.emptyAccount) { snapshot.userGameweek = null; snapshot.selections = []; }
+  if (options.expiredDeadline && snapshot.activeGameweek) snapshot.activeGameweek.locksAt = new Date(Date.now() - 60_000).toISOString();
+  let collection: ClubAcquisitionState | undefined;
+  const collectionWrites: ClubAcquisitionCommand[] = [];
+  if (options.collection && options.emptyAccount) {
+    snapshot.userId = "30000000-0000-4000-8000-000000000001";
+    snapshot.config = { ...snapshot.config, seasonId: "30000000-0000-4000-8000-000000000003" };
+  }
+  if (options.collection && !options.emptyAccount) {
+    snapshot.userId = "30000000-0000-4000-8000-000000000001";
+    // The round snapshot still carries legacy XI policy; the enabled collection
+    // supplies its separate confirmed 500M total. Do not invent a server DTO.
+    snapshot.config = { ...snapshot.config, seasonId: "30000000-0000-4000-8000-000000000003" };
+    snapshot.selections = [];
+    snapshot.userGameweek = { ...snapshot.userGameweek!, totalMarketValueEur: 0 };
+    collection = { revision: 0, seasonId: snapshot.config.seasonId!, plan: "standard", balanceEur: 475_000_000, formationCode: "4-3-3",
+      coach: { id: snapshot.coaches[0].id, tier: "radiant-gold", valueEur: 25_000_000 }, players: [], receipts: [] };
+    // Isolated layout fixture only: nine confirmed contracts through the real
+    // transition, never inserted into the customer's account or catalogue.
+    if (options.filledBench) for (const [slot, card] of snapshot.catalogue.filter(card => clubPlayerPosition(card.position) !== null).slice(0, 9).entries()) {
+      const position = clubPlayerPosition(card.position); assert.ok(position);
+      collection = acquireClubPlayer(collection, { playerId: card.id, area: "reserves", slot,
+        expectedRevision: collection.revision, idempotencyKey: `filled_bench_${slot}` }, {
+        marketOpen: true, allowedClubIds: null, offer: { playerId: card.id,
+          clubId: `synthetic-club-${Math.floor(slot / 3)}`, position, valueEur: 1_000_000, published: true },
+      }).state;
+    }
+  }
+  if (options.marketVacancy) {
+    assert.ok(collection);
+    const plan = collectionSlotPlan(geometry); assert.ok(plan);
+    const details = { GK: "Goalkeeper", CB: "Centre Back", RB: "Right Back", LB: "Left Back", DM: "Defensive Midfield", MID: "Central Midfield", RW: "Right Wing", LW: "Left Wing", CF: "Centre Forward" };
+    const all = (["starters", "reserves", "outside"] as const).flatMap(area => plan[area].map((position, slot) => ({
+      playerId: `fictional-${area}-${slot}`, area, slot, position, primaryDetail: details[position], clubId: club.teamId, valueEur: 1_000_000,
+    })));
+    snapshot.catalogue = all.map(p => ({ ...snapshot.catalogue[0], id: p.playerId, canonicalPlayerId: p.playerId,
+      name: `Fictional ${p.area} ${p.slot}`, shortName: `Fictional ${p.position}`, position: details[p.position], primaryPositionDetail: details[p.position] }));
+    collection = { ...collection, revision: 34, players: all.filter(p => p.area !== options.marketVacancy || p.slot !== 0) };
+    // Real legacy shape: all existing contracts lack detail. Only catalogue is
+    // authoritative. This MUST remain missing to catch market-intent P2 again.
+    if(options.marketVacancy === "reserves") collection = { ...collection, players: collection.players.map(p => {
+      const { primaryDetail: omitted, ...legacy } = p; void omitted; return legacy;
+    }) };
+    snapshot.selections = collection.players.filter(p => p.area === "starters").map(p => ({ playerId: p.playerId, slotId: geometry.slots[p.slot].id }));
+  }
+  const initialSelections = JSON.stringify(snapshot.selections);
   if (options.indicators) {
     const playerId = snapshot.selections[0].playerId;
     const badge = resolvePlayerAvailabilityBadge({ source: "sportmonks", fixtureId: "991", playerId,
@@ -343,8 +415,9 @@ async function openFixture(browser: Browser, bundle: Bundle, mode: Mode, options
       }
     });
     let releaseSave: (() => void) | undefined, committed: SaveRequest | undefined, readsAfterSave = 0;
+    let releaseCollection: (() => void) | undefined;
     const publicRoot = realpathSync(path.join(root, "public"));
-    const props = { initialSnapshot: snapshot, locale: mode.locale, embedded: true, marketPage: true, initialPlayerClubTeamId: options.budgetExhausted ? "22" : club.teamId };
+    const props = { initialSnapshot: snapshot, locale: mode.locale, embedded: true, marketPage: true, collectionEnabled: !!options.collection, collectionStructureVisible: !!options.structure, initialPlayerClubTeamId: options.budgetExhausted ? "22" : club.teamId };
     const safeScript = (value: string) => value.replace(/<\/script/gi, "<\\/script");
     const html = `<!doctype html><html lang="${mode.locale}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
       *{box-sizing:border-box}body{margin:0;background:#020907;color:#f8fafc;font-family:Arial,sans-serif}button,input,select{font:inherit}#root{max-width:1440px;margin:auto;padding:16px}
@@ -353,6 +426,38 @@ async function openFixture(browser: Browser, bundle: Bundle, mode: Mode, options
       const request = route.request(), url = new URL(request.url()), method = request.method();
       if (url.origin !== origin) { unexpected.push(`${method} external:${url.hostname}`); await route.abort("blockedbyclient"); return; }
       if (url.pathname === "/fixture" && method === "GET") { await route.fulfill({ contentType: "text/html", body: html }); return; }
+      if (options.emptyAccount && url.pathname === "/api/touchline-fantasy/prepare" && method === "POST") {
+        // A missing round remains unconfirmed. Its warning must not replace the shell.
+        await route.fulfill({ json: { ok: false } }); return;
+      }
+      if (options.emptyAccount && options.collection && url.pathname.startsWith("/api/touchline-fantasy/collection")) {
+        if (method !== "GET") { unexpected.push(`${method} ${url.pathname}`); await route.abort(); return; }
+        if (options.locked) {
+          expectedHttpErrors.set(request.url(), (expectedHttpErrors.get(request.url()) ?? 0) + 1);
+          await route.fulfill({ status: 503, json: { ok: false } });
+        } else await route.fulfill({ json: { ok: true, state: null, accountId: snapshot.userId, seasonId: snapshot.config.seasonId } });
+        return;
+      }
+      // Transport-only fixture: actual component/hook and acquisition domain;
+      // SQL persistence is proved separately, never represented as a remote call.
+      if (options.collection && ["/api/touchline-fantasy/collection", "/api/touchline-fantasy/collection/read"].includes(url.pathname) && (method === "GET" || method === "POST")) {
+        if (method === "POST") {
+          const command = request.postDataJSON();
+          assert.equal(command.expectedAccountId, snapshot.userId);
+          assert.equal(command.expectedSeasonId, collection!.seasonId);
+          const card = snapshot.catalogue.find(card => card.id === command.playerId)!;
+          assert.ok(card);
+          const position = clubPlayerPosition(card.position); assert.ok(position);
+          collectionWrites.push(command);
+          if (options.holdCollection) await new Promise<void>(resolve => {
+            const release = () => { heldSaves.delete(release); resolve(); };
+            heldSaves.add(release); releaseCollection = release;
+          });
+          collection = acquireClubPlayer(collection!, command, { marketOpen: true, allowedClubIds: null,
+            offer: { playerId: card.id, clubId: club.teamId, position, primaryDetail: card.primaryPositionDetail ?? undefined, valueEur: card.editorialCard!.marketValueEur, published: true } }).state;
+        }
+        await route.fulfill({ json: { ok: true, state: collection, accountId: snapshot.userId, seasonId: collection!.seasonId } }); return;
+      }
       if (url.pathname === "/api/touchline-fantasy/lineup" && method === "POST") {
         const body = request.postDataJSON() as SaveRequest; writes.push(body);
         await new Promise<void>(resolve => {
@@ -403,7 +508,9 @@ async function openFixture(browser: Browser, bundle: Bundle, mode: Mode, options
     await expect(pitch.locator('[data-touchline-pitch-surface] [data-touchline-card-zoom="trigger"]')).toHaveCount(snapshot.selections.length);
     if (process.env.TOUCHLINE_XI_CAPTURE_PREFIX) await pitch.screenshot({ path: `${process.env.TOUCHLINE_XI_CAPTURE_PREFIX}-${browser.browserType().name()}-${mode.locale}-${options.budgetExhausted ? "beta-budget" : options.locked ? "locked" : "open"}.png`, animations: "disabled" });
     console.log(`XI_FIXTURE_READY ${JSON.stringify({ engine: browser.browserType().name(), elapsedMs: Math.round(performance.now() - mountStartedAt), scriptBytes: Buffer.byteLength(bundle.script), cssBytes: Buffer.byteLength(bundle.css), mountPhases, resourceTiming })}`);
-    return { page, snapshot, writes, errors, unexpected, pitch, list, confirm, removeName,
+    return { page, snapshot, writes, errors, unexpected, pitch, list, confirm, removeName, collectionWrites,
+      get collection() { return collection; },
+      releaseCollection() { assert.ok(releaseCollection, "purchase confirmation must be held"); releaseCollection(); releaseCollection = undefined; },
       setStateUnavailable(value: boolean) { stateUnavailable = value; },
       get stateReads() { return stateReads; },
       get readsAfterSave() { return readsAfterSave; },
@@ -990,6 +1097,222 @@ test("diagnostic: WebKit EN native and real XI keyboard navigation", { skip: !en
     try { await replacePlayer(h, modes[0], true, selectedKey); await h.assertClean(); }
     finally { await h.close(); }
   } finally { t.signal.removeEventListener("abort", abortBrowser); await browser.close(); }
+});
+
+test("empty ClubOwner preserves pitch, bench, outside slots, Exchange and embedded Live even when recovery fails", {
+  skip: process.env.TOUCHLINE_RUN_COLLECTION_BROWSER_TESTS !== "1", timeout: 120_000,
+}, async () => {
+  const bundle = bundleProduct();
+  for (const engine of [chromium, webkit]) {
+    const browser = await engine.launch({ headless: true, timeout: 15_000 });
+    try {
+      for (const scenario of [{locked:false,expiredDeadline:false},{locked:true,expiredDeadline:false},{locked:false,expiredDeadline:true}]) {
+        const { locked, expiredDeadline } = scenario;
+        const h = await openFixture(browser, bundle, modes[0], { emptyAccount: true, structure: true, collection: true, ...scenario });
+        try {
+          await expect(h.pitch.locator('[data-touchline-pitch-surface] button')).toHaveCount(11);
+          await expect(h.page.locator('[data-collection-area="reserves"] button')).toHaveCount(9);
+          await expect(h.page.locator('[data-collection-area="outside"] button')).toHaveCount(15);
+          await expect(h.page.getByRole('region', { name: 'ClubOwner Exchange', exact: true })).toHaveCount(1);
+          await expect(h.page.getByRole('complementary', { name: 'Fixtures', exact: true })).toHaveCount(1);
+          await expect(h.confirm).toBeDisabled();
+          for (const button of await h.page.locator('[data-collection-area] button').all()) await expect(button).toBeDisabled();
+          if (!locked && !expiredDeadline) await h.pitch.locator('[data-touchline-pitch-surface] button').first().click();
+          else for (const button of await h.pitch.locator('[data-touchline-pitch-surface] button').all()) await expect(button).toBeDisabled();
+          if (!locked && !expiredDeadline) await expect(h.page.locator('[data-fantasy-continuity="unconfirmed"]')).toBeVisible();
+          else await expect(h.page.locator('[data-fantasy-continuity]')).toHaveCount(0);
+          assert.equal(h.writes.length, 0);
+          assert.equal(h.collectionWrites.length, 0);
+          assert.equal(h.snapshot.userGameweek, null);
+          await h.assertClean();
+        } finally { await h.close(); }
+      }
+    } finally { await browser.close(); }
+  }
+});
+
+test("collection structure: visible without activating ownership or purchases", {
+  skip: process.env.TOUCHLINE_RUN_COLLECTION_BROWSER_TESTS !== "1", timeout: 120_000,
+}, async t => {
+  const bundle = bundleProduct();
+  for (const engine of [chromium, webkit]) {
+    const browser = await engine.launch({ headless: true, timeout: 15_000 });
+    try {
+      for (const mode of modes) await t.test(`${engine.name()} ${mode.locale}`, async () => {
+        const fixture = await openFixture(browser, bundle, mode, { structure: true });
+        try {
+          const { page } = fixture;
+          const groups = page.locator('[data-collection-area="reserves"]');
+          await expect(groups).toHaveCount(2);
+          await expect(groups.nth(0).getByRole("button")).toHaveCount(4);
+          await expect(groups.nth(1).getByRole("button")).toHaveCount(5);
+          await expect(groups.locator("small")).toHaveCount(0);
+          const measured = await groups.nth(0).evaluate(left => {
+            const row = left.parentElement!;
+            const coach = row.children[1] as HTMLElement;
+            const rowBox = row.getBoundingClientRect();
+            const coachBox = coach.getBoundingClientRect();
+            const lineBox = row.nextElementSibling!.getBoundingClientRect();
+            const buttons = Array.from(row.querySelectorAll('[data-collection-placeholder]')).map(el => el.getBoundingClientRect());
+            return {
+              centerError: Math.abs(coachBox.x + coachBox.width / 2 - rowBox.x - rowBox.width / 2),
+              gapToLine: lineBox.bottom - rowBox.bottom,
+              green: getComputedStyle(row.querySelector('[data-collection-placeholder]')!).color,
+              coachHeight: row.querySelector('[data-coach-card-art]')!.getBoundingClientRect().height,
+              coachWidth: row.querySelector('[data-coach-card-art]')!.getBoundingClientRect().width,
+              separated: buttons.every((b, i) => !i || b.x >= buttons[i - 1].right + 3),
+            };
+          });
+          assert.ok(measured.centerError < 1, `coach center error: ${measured.centerError}`);
+          assert.ok(measured.separated, "reserve controls must not touch each other");
+          assert.ok(measured.gapToLine > 0 && measured.gapToLine <= 10, `technical line gap: ${measured.gapToLine}`);
+          assert.equal(measured.green, "rgb(170, 255, 62)");
+          const toolbar = page.locator('[data-formation-toolbar="true"]');
+          await expect(toolbar.locator("details")).toHaveCount(1);
+          const alignment = await toolbar.evaluate(el => {
+            const children = Array.from(el.children).map(child => child.getBoundingClientRect());
+            return Math.max(...children.map(b => b.y + b.height / 2)) - Math.min(...children.map(b => b.y + b.height / 2));
+          });
+          assert.ok(alignment <= 2, `formation toolbar alignment: ${alignment}`);
+          await expect.poll(async () => page.locator('[data-market-starting-xi="true"]').evaluate(el => {
+            const coachWidth = el.querySelector('[data-coach-card-art]')!.getBoundingClientRect().width;
+            const playerWidth = el.querySelector('[data-arena-slot] .touchline-card-surface')!.getBoundingClientRect().width;
+            return Math.abs(coachWidth / playerWidth - 1.1);
+          })).toBeLessThan(.01);
+          const outside = page.locator('[data-collection-area="outside"]');
+          await expect(outside.getByRole("button")).toHaveCount(15);
+          for (const button of await page.locator('[data-collection-area] button').all()) await expect(button).toBeDisabled();
+          await expect(page.getByRole("heading", { name: "ClubOwner Exchange", exact: true })).toBeVisible();
+          assert.equal(fixture.collectionWrites.length, 0);
+          assert.equal(fixture.writes.length, 0);
+          assert.equal(fixture.collection, undefined, "presentation must not create a wallet or ownership state");
+          assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
+          await page.screenshot({ path: `/tmp/touchline-structure-${engine.name()}-${mode.locale}.png`, fullPage: true, animations: "disabled" });
+          await fixture.assertClean();
+        } finally { await fixture.close(); }
+      });
+    } finally { await browser.close(); }
+  }
+});
+
+test("collection filled bench: nine original cards stay separated from coach and each other", {
+  skip: process.env.TOUCHLINE_RUN_COLLECTION_BROWSER_TESTS !== "1", timeout: 120_000,
+}, async t => {
+  const bundle = bundleProduct();
+  for (const engine of [chromium, webkit]) {
+    const browser = await engine.launch({ headless: true, timeout: 15_000 });
+    try {
+      for (const mode of modes) await t.test(`${engine.name()} ${mode.locale}`, async () => {
+        const fixture = await openFixture(browser, bundle, mode, { collection: true, filledBench: true });
+        try {
+          const groups = fixture.page.locator('[data-collection-area="reserves"]');
+          await expect(groups.nth(0).locator('[data-touchline-card-zoom="trigger"]')).toHaveCount(4);
+          await expect(groups.nth(1).locator('[data-touchline-card-zoom="trigger"]')).toHaveCount(5);
+          const layout = await groups.nth(0).evaluate(left => {
+            const row = left.parentElement!;
+            const cards = Array.from(row.querySelectorAll('.touchline-card-surface, [data-coach-card-art]'))
+              .map(card => card.getBoundingClientRect()).sort((a, b) => a.left - b.left);
+            const buttons = Array.from(row.querySelectorAll('[data-collection-area] > div > button'))
+              .map(button => button.getBoundingClientRect()).sort((a, b) => a.left - b.left);
+            return { count: cards.length, separated: cards.every((card, i) => !i || card.left - cards[i - 1].right >= 3),
+              controlsSeparated: buttons.length === 9 && buttons.every((button, i) => button.width >= 44 && button.height >= 44
+                && (!i || button.left - buttons[i - 1].right >= 3)),
+              overflow: document.documentElement.scrollWidth > window.innerWidth + 1 };
+          });
+          assert.equal(layout.count, 10);
+          assert.equal(layout.separated, true, "filled cards must retain a visible gap");
+          assert.equal(layout.controlsSeparated, true, "change controls must not overlap or shrink below touch size");
+          assert.equal(layout.overflow, false);
+          assert.equal(fixture.collectionWrites.length, 0);
+          await fixture.pitch.screenshot({ path: `/tmp/touchline-filled-bench-${engine.name()}-${mode.locale}.png`, animations: "disabled" });
+          await fixture.assertClean();
+        } finally { await fixture.close(); }
+      });
+    } finally { await browser.close(); }
+  }
+});
+
+test("collection DOM: original plus slots 4+5 and 15, purchase confirmed before card and budget update", {
+  skip: process.env.TOUCHLINE_RUN_COLLECTION_BROWSER_TESTS !== "1", timeout: 120_000,
+}, async t => {
+  const bundle = bundleProduct();
+  for (const engine of [chromium, webkit]) {
+    const browser = await engine.launch({ headless: true, timeout: 15_000 });
+    try {
+      for (const mode of modes) await t.test(`${engine.name()} ${mode.locale}`, async () => {
+        const fixture = await openFixture(browser, bundle, mode, { collection: true, holdCollection: true });
+        try {
+          const { page } = fixture;
+          const reserveGroups = page.locator('[data-collection-area="reserves"]');
+          await expect(reserveGroups).toHaveCount(2);
+          await expect(reserveGroups.nth(0).getByRole("button")).toHaveCount(4);
+          await expect(reserveGroups.nth(1).getByRole("button")).toHaveCount(5);
+          const outside = page.locator('[data-collection-area="outside"]');
+          await expect(outside.getByRole("button")).toHaveCount(15);
+          const pt = mode.locale === "pt-BR";
+          const opening = reserveGroups.nth(0).getByRole("button").first();
+          await opening.click();
+          let dialog = page.getByRole("dialog", { name: pt ? "Selecionar jogador" : "Select player", exact: true });
+          await expect(dialog).toBeVisible();
+          await expect(dialog.getByRole("textbox")).toBeFocused();
+          await dialog.getByRole("textbox").fill(fixture.snapshot.catalogue.find(card => card.position === "Goalkeeper")!.name);
+          if (process.env.TOUCHLINE_COLLECTION_CAPTURE_PREFIX) await page.screenshot({
+            path: `${process.env.TOUCHLINE_COLLECTION_CAPTURE_PREFIX}-${engine.name()}-${mode.locale}-picker.png`, animations: "disabled",
+          });
+          await dialog.getByRole("button", { name: pt ? "Contratar" : "Sign", exact: true }).click();
+          await expect.poll(() => fixture.collectionWrites.length).toBe(1);
+          await expect(dialog.getByRole("button", { name: pt ? "Contratar" : "Sign", exact: true })).toBeDisabled();
+          await expect(reserveGroups.nth(0).locator('[data-touchline-card-zoom="trigger"]')).toHaveCount(0);
+          await expect(page.locator("output").filter({ hasText: pt ? "Saldo do elenco" : "Squad balance" })).toContainText("475");
+          fixture.releaseCollection();
+          await expect(dialog).toHaveCount(0);
+          await expect(reserveGroups.nth(0).locator('[data-touchline-card-zoom="trigger"]')).toHaveCount(1);
+          assert.equal(fixture.collectionWrites.length, 1);
+          assert.equal(fixture.collection?.balanceEur, 474_000_000);
+          assert.deepEqual(fixture.collection?.players.map(p => [p.area, p.slot]), [["reserves", 0]]);
+
+          await outside.getByRole("button").first().click();
+          dialog = page.getByRole("dialog", { name: pt ? "Selecionar jogador" : "Select player", exact: true });
+          await dialog.getByRole("button", { name: "TouchLine Markt Transfer", exact: true }).click();
+          await dialog.getByRole("textbox").fill("Synthetic Replacement");
+          await dialog.getByRole("button", { name: pt ? "Contratar" : "Sign", exact: true }).click();
+          await expect.poll(() => fixture.collectionWrites.length).toBe(2);
+          await expect(outside.locator('[data-touchline-card-zoom="trigger"]')).toHaveCount(0);
+          fixture.releaseCollection();
+          await expect(dialog).toHaveCount(0);
+          await expect(outside.locator('[data-touchline-card-zoom="trigger"]')).toHaveCount(1);
+          assert.equal(fixture.collectionWrites.length, 2);
+          assert.equal(fixture.collection?.balanceEur, 473_000_000);
+          await expect(page.locator("output").filter({ hasText: pt ? "Saldo do elenco" : "Squad balance" })).toContainText("473");
+          for (const group of [reserveGroups.nth(0), reserveGroups.nth(1), outside]) {
+            const violations = await group.evaluate(element => {
+              const rects = [...element.children].map(slot => {
+                const first = slot.firstElementChild as HTMLElement;
+                const bounds = first.getBoundingClientRect();
+                const container = slot.getBoundingClientRect();
+                return { bounds, container, empty: first.tagName === "BUTTON" && first.textContent === "+" };
+              });
+              return rects.filter(({ bounds, container, empty }) => bounds.left < container.left - 1
+                || bounds.right > container.right + 1 || (empty && (Math.abs(bounds.width - 44) > 1 || Math.abs(bounds.height - 44) > 1)))
+                .map(({ bounds, container, empty }) => ({ bounds: bounds.toJSON(), container: container.toJSON(), empty }));
+            });
+            assert.deepEqual(violations, [], "original 70px cards must fit their slots and original plus remain 44px circles");
+          }
+          const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
+          assert.equal(overflow, false, "collection must not overflow the viewport");
+          if (process.env.TOUCHLINE_COLLECTION_CAPTURE_PREFIX) await fixture.pitch.screenshot({
+            path: `${process.env.TOUCHLINE_COLLECTION_CAPTURE_PREFIX}-${engine.name()}-${mode.locale}.png`, animations: "disabled",
+          });
+          await page.reload({ waitUntil: "domcontentloaded" });
+          await expect(reserveGroups.nth(0).locator('[data-touchline-card-zoom="trigger"]')).toHaveCount(1);
+          await expect(outside.locator('[data-touchline-card-zoom="trigger"]')).toHaveCount(1);
+          await expect(page.locator("output").filter({ hasText: pt ? "Saldo do elenco" : "Squad balance" })).toContainText("473");
+          assert.equal(fixture.collectionWrites.length, 2, "reload must read confirmed ownership, never repurchase");
+          await fixture.assertClean();
+        } finally { await fixture.close(); }
+      });
+    } finally { await browser.close(); }
+  }
 });
 
 test("real My Club XI DOM: replace, focus, explicit save and readback", { skip: !enabled || keyboardMode === "diagnostic", timeout: 180_000 }, async t => {

@@ -17,6 +17,7 @@ import * as round from "../lib/touchlineArena/arena-fixture-round.ts";
 import * as pitch from "../lib/touchlineArena/top-eleven-broadcast-layout.ts";
 import * as rankingPoints from "../lib/touchlineArena/ranking-points-i18n.ts";
 import * as positionLabels from "../lib/touchlineArena/position-labels.ts";
+import * as ownerStandings from "../lib/touchlineArena/club-owner-standings.ts";
 import { getTouchLineRankingsCopy } from "../lib/touchlineArena/rankings-i18n.ts";
 import { getTouchlineTablesPresentationCopy } from "../lib/touchlineArena/tables-presentation-i18n.ts";
 import { resolveTouchlineCatalogueLocale } from "../lib/touchlineArena/catalogue-locale.ts";
@@ -35,9 +36,11 @@ const load = () => import("../lib/touchlineArena/tables-presentation-i18n.ts");
 const clientSource = readFileSync(new URL("../app/rankings/touchline-tables-client.tsx", import.meta.url), "utf8");
 const pageSource = readFileSync(new URL("../app/rankings/page.tsx", import.meta.url), "utf8");
 const stylesSource = readFileSync(new URL("../app/rankings/touchline-tables.module.css", import.meta.url), "utf8");
+// Source baseline only: MANAGER’S CROWN is the owner's provisional naming;
+// matching this catalogue does not constitute rendered visual acceptance.
 const en = {
   incompleteSelection: "The published selection does not yet resolve all 11 canonical cards; no partial XI is shown.",
-  topCoachEyebrow: "NO. 1 COACH", bestCoach: "Best coach", topCoachDescription: "Current leader from official season results.", seasonLeader: "SEASON LEADER",
+  topCoachEyebrow: "MANAGER’S CROWN", bestCoach: "Best coach", topCoachDescription: "Current leader from official season results.", seasonLeader: "SEASON LEADER",
   coachRankingEyebrow: "SEASON RANKING", bestCoaches: "Best coaches", coachRankingDescription: "Top 7 by canonical points. Ties use wins, away wins and canonical identity.", coachStandings: "Coach standings",
   wins: "Wins", winsShort: "W", draws: "Draws", drawsShort: "D", losses: "Losses", lossesShort: "L",
   podiumEyebrow: "OVERALL PODIUM", podiumTitle: "Season Awards", podiumDescription: "Best Player, Golden Boot and Best Coach. Every award uses its own published authority.",
@@ -47,7 +50,7 @@ const en = {
 };
 const pt = {
   incompleteSelection: "A seleção publicada ainda não resolve os 11 cards canônicos; nenhuma seleção incompleta é exibida.",
-  topCoachEyebrow: "TREINADOR Nº 1", bestCoach: "Melhor treinador", topCoachDescription: "Líder atual pelos resultados oficiais da temporada.", seasonLeader: "LÍDER DA TEMPORADA",
+  topCoachEyebrow: "MANAGER’S CROWN", bestCoach: "Melhor treinador", topCoachDescription: "Líder atual pelos resultados oficiais da temporada.", seasonLeader: "LÍDER DA TEMPORADA",
   coachRankingEyebrow: "RANKING DA TEMPORADA", bestCoaches: "Melhores treinadores", coachRankingDescription: "Top 7 pelos pontos canônicos. Empates seguem vitórias, vitórias fora e identidade canônica.", coachStandings: "Classificação dos treinadores",
   wins: "Vitórias", winsShort: "V", draws: "Empates", drawsShort: "E", losses: "Derrotas", lossesShort: "D",
   podiumEyebrow: "PÓDIO GERAL", podiumTitle: "Prêmios da Temporada", podiumDescription: "Melhor Jogador, Artilheiro e Melhor Treinador. Cada prêmio usa sua própria autoridade publicada.",
@@ -115,6 +118,7 @@ async function harness(locale: Locale = "en-GB", draftLocalesEnabled = false, se
     "@/lib/touchlineArena/top-eleven-broadcast-layout": pitch,
     "@/lib/touchlineArena/ranking-points-i18n": rankingPoints,
     "@/lib/touchlineArena/position-labels": positionLabels,
+    "@/lib/touchlineArena/club-owner-standings": ownerStandings,
   };
   const client = compile(clientSource, shared);
   const empty = { phase: "unavailable", rows: [], snapshotId: null, seasonId: null, scoringVersion: null, fixtureIds: [] };
@@ -275,7 +279,7 @@ test("tables ready XI preserves eleven coordinates and identities while totals d
       const hero = h.render("TouchlineRankingsHero", { totalPublishedCards: total, totalRankedCards: total, rankMode: "mode-$&<>" });
       assert.deepEqual(nodes(hero).filter(n => n.type === "dd").map(n => n.props.children), [total ?? "—", total ?? "—", "mode-$&<>"]);
     }
-    const owner = html(h.render("TouchlineRankingEnding", { touchLineEnglandTable: [{ id: "owner", name: "$&<Owner>", clubName: "$&<Club>", avatarUrl: null, touchlinePoints: 0 }] }));
+    const owner = html(h.render("TouchlineRankingEnding", { touchLineEnglandTable: [{ rank: 1, name: "$&<Owner>", touchlinePoints: 0 }] }));
     assert.ok(owner.includes("<b>01</b>")); assert.ok(owner.includes("$&amp;&lt;Owner&gt;")); assert.ok(owner.includes("<strong>0</strong>"));
     const Pending = h.page.BestXiPending as (props: object) => Element;
     const pending = html(Pending({ locale, copy: h.copy }));
@@ -296,6 +300,7 @@ test("tables actual async page consumes loading labels without changing query or
       "@/lib/touchlineArena/card-ranking-server": { loadTouchLineActiveRanking: async () => { calls.push("ranking"); return {}; }, loadTouchLinePublishedTopEleven: async () => { calls.push("xi"); return null; } },
       "@/lib/touchlineArena/ranked-card-catalog-server": { loadTouchLineRankedCardCatalog: async () => { calls.push("catalogue"); return []; } },
       "@/lib/touchlineArena/coach-ranking-server": { loadTouchLineCoachRanking: async () => { calls.push("coach"); return {}; } },
+      "@/lib/touchlineArena/club-owner-standings-server": { loadClubOwnerStandings: async () => { calls.push("owners"); return { status: "ready", rows: [] }; } },
       "@/lib/touchlineArena/card-publication-read-model": { countTouchlinePublishedPlayerCards: async () => { calls.push("count"); return 0; } },
       "@/lib/football-data/fixture-schedule-store": { readPublicCompetitionFixtures: async () => { calls.push("fixtures"); return []; } },
       "@/lib/touchlineArena/rankings-highlight-projection": { projectTouchlineRankingsHighlights: () => ({}) },
@@ -306,7 +311,7 @@ test("tables actual async page consumes loading labels without changing query or
     const Page = compile(pageSource, modules).default as (props: object) => Promise<Element>;
     let settled = false; const pending = Page({ searchParams: Promise.resolve({ lang }) }).then(tree => { settled = true; return tree; });
     await new Promise<void>(done => setImmediate(done)); assert.equal(settled, false);
-    assert.deepEqual(calls.filter(x => !x.startsWith("copy:")).sort(), ["auth", "catalogue", "coach", "count", "fixtures", "ranking", "xi"]);
+    assert.deepEqual(calls.filter(x => !x.startsWith("copy:")).sort(), ["auth", "catalogue", "coach", "count", "fixtures", "owners", "ranking", "xi"]);
     release({ data: { user: null } }); const tree = await pending;
     const suspense = nodes(tree).filter(n => n.type === React.Suspense);
     assert.equal(suspense.length, 2); assert.equal(html(suspense[0].props.fallback as React.ReactNode).includes("matchweek:$&amp;&lt;&gt;"), true);

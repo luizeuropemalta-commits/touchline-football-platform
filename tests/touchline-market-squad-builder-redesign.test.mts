@@ -40,7 +40,8 @@ test("the Market owns one canonical XI editor with coach-first setup", async () 
   assert.deepEqual([getTouchlineFantasyMarketWorkflowCopy("pt-BR").startingXI, getTouchlineFantasyMarketWorkflowCopy("en-GB").startingXI], ["ELENCO TITULAR", "STARTING XI"]);
   assert.match(source, /TouchlinePitchSurface/);
   assert.match(source, /snapshot\?\.formationRegistry\[formationCode\]/);
-  assert.match(source, /const selectedCards = geometry\?\.slots\.map/);
+  assert.match(source, /const selectedCards = displayGeometry\?\.slots\.map/);
+  assert.match(source, /const displayGeometry = geometry \?\? \(marketPage \? snapshot\?\.formationRegistry\["4-3-3"\] : null\)/);
   assert.match(source, /data-market-starting-xi="true"/);
   assert.doesNotMatch(source, /Banco da partida|Matchday bench/);
   assert.doesNotMatch(source, /className=\{styles\.bench\}/);
@@ -91,7 +92,8 @@ test("published catalogue candidates remain available without rendering a Market
   assert.match(stage, /snapshot\?\.catalogue \?\? \[\]/);
   assert.match(stage, /browseCards\.map\(\(card\)/);
   assert.match(stage, /const inLineup = selections\.some/);
-  assert.match(stage, /marketPage \? Boolean\(activeSlot\) && slotAccepts\(activeSlot, card\)/);
+  assert.match(stage, /marketPage \? Boolean\(activeSlot\) && marketSlotAccepts\(activeSlot, card\)/);
+  assert.match(stage, /primaryPositionFitsTacticalSlot\(primaryDetails\[card.canonicalPlayerId \?\? card.id\], geometry.formationCode, slot.id\)/);
   assert.match(stage, /!editable \? <span[\s\S]*?: inLineup \? <span/);
   assert.doesNotMatch(stage, /className=\{styles\.bench\}|className=\{styles\.remaining\}/);
 });
@@ -115,7 +117,10 @@ test("formation vacancies and replacements use the inline list with eligible-onl
   assert.match(stage, /id="my-club-player-selection" tabIndex=\{-1\} data-open="true" data-inline-selection="true"/);
   assert.match(stage, /touchlineFantasySlotAcceptsPlayer\(activeSlot, player\)/);
   assert.match(stage, /replaceTouchlineFantasyPlayerAtSlot/);
-  assert.match(stage, /const editable = snapshot\?\.entitlementActive === true && activeGameweek\?\.state === "MARKET_OPEN" && !deadlineReached/);
+  assert.match(stage, /const roundEditable = snapshot\?\.entitlementActive === true && activeGameweek\?\.state === "MARKET_OPEN" && !deadlineReached/);
+  assert.match(stage, /const qaClubMarketOpen = collectionEnabled && \(live\?\.qaClubMarketOpen \?\? snapshot\?\.qaClubMarketOpen\) === true/);
+  assert.match(stage, /const marketOpen = qaClubMarketOpen \|\| \(activeGameweek\?\.state === "MARKET_OPEN" && !deadlineReached\)/);
+  assert.match(stage, /const editable = snapshot\?\.entitlementActive === true && marketOpen/);
   assert.match(stage, /if \(!editable \|\| !geometry\) return false/);
-  assert.match(stage, /if \(!addPlayer\(card\)\) return;[\s\S]*scrollToLineupSection\("my-club-xi-pitch"\)/);
+  assert.match(stage, /if \(!await addPlayer\(card\)\) return;[\s\S]*scrollToLineupSection\("my-club-xi-pitch"\)/);
 });

@@ -69,6 +69,7 @@ function scenario(options: Options = {}) {
     },
   };
   const context = {
+    process: { env: {} },
     createAdminClient: () => admin,
     readTouchlineFormationGeometryRegistry: async () => ({}),
     reconcileTouchlineFantasyGameweeks: async () => { events.push("lifecycle"); return { error: options.writerError === "lifecycle" ? "failed" : null, reconciled: 0 }; },

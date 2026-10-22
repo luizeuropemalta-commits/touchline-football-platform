@@ -129,6 +129,28 @@ test("real GET wiring remains Node-only; default OFF and invalid QA config creat
     const response = await f.route.GET(f.request()); assert.equal(response.status, 503); privateHeaders(response); assert.deepEqual(f.calls, []);
   }
 });
+const localSettings = { NODE_ENV: "development", TOUCHLINE_CLUB_OWNER_AVATAR_LOCAL_ENABLED: "true",
+ VERCEL_ENV: undefined, VERCEL_GIT_COMMIT_REF: undefined, VERCEL_BRANCH_URL: undefined, VERCEL_URL: undefined };
+
+test("local real GET/POST wiring preserves exact origin, account and QA destination", async () => {
+ const url = "http://localhost:3319";
+ const f = fixture({ ...uploadSettings, ...localSettings });
+ assert.equal((await post(f, uploadRequest({}, url).request)).status, 200);
+ assert.ok(f.receipt());
+ assert.equal((await f.route.GET(new Request(url + "/api/account/avatar?version=" + version))).status, 200);
+ for (const bad of ["http://localhost:3320", "http://127.0.0.1:3319"]) {
+  const g = fixture({ ...uploadSettings, ...localSettings });
+  assert.equal((await post(g, uploadRequest({}, bad).request)).status, 503); assert.deepEqual(g.calls, []);
+ }
+ for (const patch of [{ SUPABASE_URL: "https://other.invalid" }, { TOUCHLINE_CLUB_OWNER_AVATAR_LOCAL_ENABLED: undefined }]) {
+  const g = fixture({ ...uploadSettings, ...localSettings, ...patch });
+  assert.equal((await post(g, uploadRequest({}, url).request)).status, 503); assert.deepEqual(g.calls, []);
+ }
+ const g = fixture({ ...uploadSettings, ...localSettings });
+ assert.equal((await post(g, uploadRequest({ "x-touchline-expected-account": other }, url).request)).status, 403);
+ assert.equal((await post(g, uploadRequest({ origin: "http://localhost:3320" }, url).request)).status, 403);
+ assert.deepEqual(g.calls, []);
+});
 test("real factories receive checked config and asynchronous cookies; GET without Origin reaches own zero revision only", async () => {
   const f = fixture(); const response = await f.route.GET(f.request());
   assert.equal(response.status, 404); privateHeaders(response); assert.deepEqual(f.actors, [actor]);

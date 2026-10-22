@@ -87,6 +87,26 @@ async function renderRootLayout({ children }: Readonly<{ children: React.ReactNo
   return (
     <html lang={locale} dir={draftLocalesEnabled ? "ltr" : touchlineDocumentDirection(locale)} data-scroll-behavior="smooth">
       <body>
+        <svg width="0" height="0" aria-hidden="true" focusable="false" style={{ position: "absolute" }}>
+          <defs>
+            <filter id="touchline-proportional-crest-outline" primitiveUnits="objectBoundingBox" x="-5%" y="-5%" width="110%" height="110%" colorInterpolationFilters="sRGB">
+              <feComponentTransfer in="SourceAlpha" result="solidSilhouette">
+                <feFuncA type="discrete" tableValues="0 1" />
+              </feComponentTransfer>
+              <feOffset in="solidSilhouette" dx="0.006" dy="0" result="rightEdge" />
+              <feOffset in="solidSilhouette" dx="-0.006" dy="0" result="leftEdge" />
+              <feOffset in="solidSilhouette" dx="0" dy="0.006" result="bottomEdge" />
+              <feOffset in="solidSilhouette" dx="0" dy="-0.006" result="topEdge" />
+              <feMerge result="outline">
+                <feMergeNode in="rightEdge" /><feMergeNode in="leftEdge" />
+                <feMergeNode in="bottomEdge" /><feMergeNode in="topEdge" />
+              </feMerge>
+              <feFlood floodColor="#ffffff" floodOpacity="1" result="white" />
+              <feComposite in="white" in2="outline" operator="in" result="whiteOutline" />
+              <feMerge><feMergeNode in="whiteOutline" /><feMergeNode in="SourceGraphic" /></feMerge>
+            </filter>
+          </defs>
+        </svg>
         <SiteLocaleReleaseProvider enabled={draftLocalesEnabled}>
         <TouchlineDecorationMotion />
         {!isIsolatedPreview ? (

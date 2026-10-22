@@ -20,6 +20,7 @@ const REQUEST_ERROR_STATUS: Record<TouchlineMarketCheckoutRequestError, number> 
 };
 
 const DATABASE_ERROR_STATUS: Record<string, number> = {
+  CLUB_COLLECTION_ROUTE_REQUIRED: 409,
   TL_MARKET_AUTH_REQUIRED: 401,
   TL_MARKET_USER_NOT_FOUND: 404,
   TL_MARKET_CARD_NOT_FOUND: 404,

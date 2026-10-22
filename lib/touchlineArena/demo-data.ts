@@ -36,6 +36,8 @@ export type ClubOwnerSquadCard = {
   shortName: string;
   role: string;
   position: string;
+  /** Verified persisted primary detail for ClubOwner eligibility; null is not eligible. */
+  primaryPositionDetail?: string | null;
   clubName: string;
   shirtNumber: number | null;
   countryCode3: string;

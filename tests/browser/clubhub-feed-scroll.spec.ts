@@ -124,7 +124,7 @@ test("the compact 20-club table remains contained in the companion rail", async 
   await expect.poll(() => tableRegion.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
 });
 
-test("current official fixture and table panel composition contains table scrolling across breakpoints", async ({ page }) => {
+test("stacked official fixture and table panels contain table scrolling across breakpoints", async ({ page }) => {
   await page.setContent(`
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style>
@@ -161,12 +161,8 @@ test("current official fixture and table panel composition contains table scroll
   expect((regionBox?.y ?? 0) + (regionBox?.height ?? 0)).toBeLessThanOrEqual((railBox?.y ?? 0) + (railBox?.height ?? 0) + 1);
   const fixtureBox = await page.locator("[data-fixture-panel=true]").boundingBox();
   expect(fixtureBox).not.toBeNull();
-  if ((page.viewportSize()?.width ?? 0) > 1120) {
-    expect(Math.abs((fixtureBox?.y ?? 0) - (railBox?.y ?? 0))).toBeLessThanOrEqual(1);
-    expect((railBox?.x ?? 0)).toBeGreaterThan((fixtureBox?.x ?? 0));
-  } else {
-    expect((railBox?.y ?? 0)).toBeGreaterThanOrEqual((fixtureBox?.y ?? 0) + (fixtureBox?.height ?? 0));
-  }
+  expect((railBox?.y ?? 0)).toBeGreaterThanOrEqual((fixtureBox?.y ?? 0) + (fixtureBox?.height ?? 0));
+  expect(Math.abs((fixtureBox?.x ?? 0) - (railBox?.x ?? 0))).toBeLessThanOrEqual(1);
   expect(await tableRegion.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(true);
 
   await tableRegion.hover();

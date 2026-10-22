@@ -6,7 +6,7 @@ import { readFileSync } from "node:fs";
 test("Lineup pins exactly the current independently validated encoder without editing it", () => {
   const encoder = readFileSync(new URL("../scripts/local/encode-png-sequence-to-mp4.swift", import.meta.url));
   const actual = createHash("sha256").update(encoder).digest("hex");
-  assert.equal(actual, "e823c09860eda5035d6a1fba312ff1f669a59da07bac989f889c0d2613f8a46b");
+  assert.equal(actual, "b3de3f4766373a0c011eb8786411ca7aa5c459ee2414685a8d16d30273f95932");
   const exporter = readFileSync(new URL("../scripts/social-lineup-live-render.mjs", import.meta.url), "utf8");
   assert.ok(exporter.includes(`sha256:${actual}`), "Lineup encoder pin is stale");
 });

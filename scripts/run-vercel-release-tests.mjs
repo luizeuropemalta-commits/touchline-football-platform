@@ -7,6 +7,7 @@ import { releaseSqlEnvironment } from "./release-sql-runtime.mjs";
 // validate immutable local audit artifacts under docs/, so they remain part of
 // `pnpm test` but cannot run inside the production build sandbox.
 const DOCS_ARTIFACT_TESTS = new Set([
+  "touchline-club-qa-predecessor-compatibility.test.mts",
   "owner-approved-sportmonks-application-candidate.test.mts",
   "owner-approved-transcript-market-values.test.mts",
   "owner-approved-transcript-reconciliation.test.mts",

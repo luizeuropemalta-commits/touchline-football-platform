@@ -16,11 +16,15 @@ export async function GET() {
   });
   return NextResponse.json({
     ok: true,
+    userId: snapshot.userId,
+    qaClubMarketOpen: snapshot.qaClubMarketOpen === true,
+    gameweeks: snapshot.gameweeks,
     activeGameweek: snapshot.activeGameweek,
     userGameweek: snapshot.userGameweek,
     selections: snapshot.selections,
     lineupAlerts: snapshot.lineupAlerts,
     matchCardIndicators: snapshot.matchCardIndicators ?? null,
+    playerAvailabilityIndicators: snapshot.playerAvailabilityIndicators ?? null,
     gameweekScore: snapshot.gameweekScore,
     seasonScore: snapshot.seasonScore,
     matchHistory: snapshot.matchHistory,

@@ -29,7 +29,7 @@ test("formation handler refuses changes while a previous save is pending", () =>
   runInNewContext(`${code}; changeFormation("4-4-2");`, {
     snapshot: { formationRegistry: { "4-4-2": { slots: [] } } }, editable: true, saving: false, formationCode: "4-4-2",
   });
-  assert.match(owner, /key=\{code\} disabled=\{!editable \|\| saving\} aria-pressed=\{formationCode === code\}/);
+  assert.match(owner, /key=\{code\} disabled=\{!editable \|\| saving \|\| !selectedCoach \|\| \(collectionEnabled && !collectionSlotsEditable\)\} aria-pressed=\{formationCode === code\}/);
   assert.doesNotMatch(owner, /id="arena-formation-select"/);
 });
 test("current fixtures show their own weekday while historical and accessible dates remain complete", () => {
@@ -73,8 +73,10 @@ test("Arena and Live reuse one fixture rail and existing alerts, with detail dis
   assert.match(owner, /\(arenaOpen \|\| marketPage\) \? <div className=\{styles.arenaLiveRail\}>/);
   assert.match(owner, /<TouchlineMatchCentre railOnly/);
 });
-test("ClubOwner rail includes the latest results and explains a degraded persisted score feed", () => {
-  assert.match(source, /\{ id: "results", label: dictionary\.recentResults, fixtures: schedule\.recentResults \}/);
+test("ClubOwner opts out of recent results while Live retains results and degraded feed notices", () => {
+  assert.match(source, /hideRecentResults = false/);
+  assert.match(source, /!hideRecentResults \? \[\{ id: "results" as const, label: dictionary\.recentResults, fixtures: schedule\.recentResults \}/);
+  assert.match(owner, /hideRecentResults=\{marketPage\}/);
   assert.doesNotMatch(source, /!railOnly \? <div><dt>\{dictionary\.recentResults\}/);
   assert.match(source, /railOnly && readMetadata\?\.degraded \? <p className=\{styles\.railFreshness\} role="status"/);
   assert.match(source, /readMetadata\.state === "partial-persisted-schedule" \? dictionary\.partialScheduleCopy : dictionary\.liveDataUpdatingCopy/);

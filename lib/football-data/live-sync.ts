@@ -276,7 +276,13 @@ export async function syncSportmonksLiveState(
     const liveResponse = await provider.getLiveScores({ competitionId: COMPETITION_ID });
     const incoming: TouchlineFixture[] = [];
     if (liveResponse.ok) incoming.push(...liveResponse.data.filter((fixture) => recoveryFixtureMatches(fixture, scope)));
-    else result.errors.push(`live-scores:${liveResponse.error.code}`);
+    else {
+      // Persist only bounded HTTP diagnostics, never provider messages or URLs.
+      const status = liveResponse.error.status;
+      const http = typeof status === "number" && Number.isInteger(status) && status >= 100 && status <= 599
+        ? `:http_${status}` : "";
+      result.errors.push(`live-scores:${liveResponse.error.code}${http}`);
+    }
 
     const candidateIds = new Set([
       ...decision.candidateFixtureIds,

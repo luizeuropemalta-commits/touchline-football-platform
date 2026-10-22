@@ -4,6 +4,7 @@ import { createRequire } from "node:module";
 import test from "node:test";
 import vm from "node:vm";
 import ts from "typescript";
+import { CLUB_PLANS } from "../lib/touchlineFantasy/club-market-rules.ts";
 
 const require = createRequire(import.meta.url);
 const source = readFileSync(new URL("../components/admin-vip-access.tsx", import.meta.url), "utf8");
@@ -49,6 +50,7 @@ function harness(fetchImpl: (url: string, init: RequestInit) => Promise<unknown>
       if (id === "react") return hookReact;
       if (id === "react/jsx-runtime") return require(id);
       if (id === "lucide-react") return { CheckCircle2: "svg", Loader2: "svg", ShieldCheck: "svg" };
+      if (id.endsWith("club-market-rules")) return {CLUB_PLANS};
       if (id.endsWith(".module.css")) return { default: { arena: "shared-arena", link: "shared-link" } };
       throw new Error(`Unexpected dependency: ${id}`);
     },
@@ -81,12 +83,29 @@ test("double submit sends one request and never displays success before a valida
   for (const name of ["email", "reason", "confirm"]) assert.equal(form.input(name).props.disabled, true);
   assert.equal(elements(form.render()).some(element => element.props["data-vip-confirmed"]), false);
   assert.equal(requests[0].url, "/api/admin/vip-access"); assert.equal(requests[0].init.credentials, "same-origin");
-  assert.deepEqual(JSON.parse(String(requests[0].init.body)), { email: "registered@example.test", reason: "Approved by owner", commandId });
+  assert.deepEqual(JSON.parse(String(requests[0].init.body)), { email: "registered@example.test", reason: "Approved by owner", commandId,planKey:"vip" });
   settle(response(200, reply())); await first;
   assert.equal(elements(form.render()).some(element => element.props["data-vip-confirmed"] === "true"), true);
   assert.ok(textOf(form.render()).includes("No expiry date configured."));
   assert.equal(elements(form.render()).some(element => element.props.type === "submit"), false);
   await form.submit(); assert.equal(requests.length, 1);
+});
+
+test("guest form exposes canonical budgets and binds chosen plan across confirmation and retries",async()=>{
+  for(const planKey of ["standard","master","vip"] as const) {
+    const bodies:string[]=[];
+    const form=harness(async(_url,init)=>{bodies.push(String(init.body));const source=planKey==="vip"?"owner_vip_grant":"owner_guest_grant";
+      return response(200,{...reply(),grant:{...reply().grant,planKey,source}});});
+    form.fill();form.enter("planKey",planKey);
+    assert.equal(form.input("confirm").props.checked,false,"plan changes require renewed confirmation");
+    assert.ok(textOf(form.render()).includes(new Intl.NumberFormat("en-GB").format(CLUB_PLANS[planKey].budget)));
+    assert.ok(textOf(form.render()).includes("No automatic credit refill"));
+    await form.submit();assert.equal(bodies.length,0);
+    form.enter("confirm",true);await form.submit();
+    assert.equal(JSON.parse(bodies[0]).planKey,planKey);
+    assert.equal(form.input("planKey").props.disabled,true);
+    assert.equal(elements(form.render()).some(element=>element.props["data-vip-confirmed"]==="true"),true);
+  }
 });
 
 test("lost response and 503 preserve the exact command and freeze fields until replay confirms", async () => {

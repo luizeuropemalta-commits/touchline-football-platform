@@ -226,7 +226,9 @@ export function buildTouchlinePlayerCardZoomDetails(input: Readonly<{
         "player-identity-price",
       ),
     ]
-    : [];
+    : marketValue
+      ? [field(copy.marketValue, marketValue, true, "identity", "player-identity-price")]
+      : [];
   const baseFields = [
     ...reviewFields,
     ...editorialFields,

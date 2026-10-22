@@ -33,7 +33,6 @@ import {
   TOUCHLINE_ENGLAND_CLUBS,
   squadCardToExactPlayer,
   type ClubOwnerSquadCard,
-  type TouchLineClubOwnerStanding,
 } from "@/lib/touchlineArena/demo-data";
 import { touchlinePlayerProfileHref } from "@/lib/touchlineArena/player-links";
 import { touchlineCoachRankingClubLogo } from "@/lib/touchlineArena/coach-ranking-club";
@@ -50,6 +49,8 @@ import type { getTouchLineRankingsCopy } from "@/lib/touchlineArena/rankings-i18
 import { getTouchlineTablesPresentationCopy } from "@/lib/touchlineArena/tables-presentation-i18n";
 import { getTouchlinePlayerPerformanceCopy } from "@/lib/touchlineArena/player-performance-i18n";
 import styles from "./touchline-tables.module.css";
+import { clubOwnerStandingsNote, type ClubOwnerStanding } from "@/lib/touchlineArena/club-owner-standings";
+import { getClubOwnerProfileMetricsCopy } from "@/lib/touchlineArena/club-owner-profile-metrics";
 
 type RankingsCopy = ReturnType<typeof getTouchLineRankingsCopy>;
 
@@ -64,13 +65,11 @@ type TouchLineTablesClientProps = {
   highlights: TouchlineRankingsHighlights;
   totalPublishedCards: number | null;
   totalRankedCards: number | null;
-  touchLineEnglandTable: TouchLineClubOwnerStanding[];
+  touchLineEnglandTable: readonly ClubOwnerStanding[];
+  ownerTableUnavailable?: boolean;
 };
 
-function OwnerAvatar({ owner }: { owner: TouchLineClubOwnerStanding }) {
-  if (owner.avatarUrl) {
-    return <Image src={owner.avatarUrl} alt="" width={54} height={54} unoptimized />;
-  }
+function OwnerAvatar({ owner }: { owner: ClubOwnerStanding }) {
   return <span aria-hidden="true">{owner.name.slice(0, 2)}</span>;
 }
 
@@ -292,8 +291,8 @@ function TopCoachAward({ coachRanking, copy, locale, draftLocalesEnabled = false
             style={{ "--tier-accent": topCoachSlot ? touchlineCardTierPalette(topCoachSlot.cardTier).accent : undefined } as CSSProperties}>
             <TouchlineClubPerimeterTrace accent={topCoachSlot ? touchlineCardTierPalette(topCoachSlot.cardTier).accent : undefined} />
             <header className={styles.awardHeader} aria-label={presentationCopy.topCoachDescription}>
-              <span><Crown aria-hidden="true" /> {presentationCopy.topCoachEyebrow}</span>
-              <h3 id="top-coach-title">{presentationCopy.bestCoach}</h3>
+              <Crown aria-hidden="true" />
+              <div><span>{presentationCopy.topCoachEyebrow}</span><h3 id="top-coach-title">{presentationCopy.bestCoach}</h3></div>
             </header>
             {topCoachIdentity && topCoachClub && topCoachSlot && topCoachRow ? (
               <div className={styles.awardBody}>
@@ -449,7 +448,7 @@ export function TouchlineRankingPodium({ highlights, coachRanking, copy, locale,
   );
 }
 
-export function TouchlineRankingEnding({ copy, locale, touchLineEnglandTable, draftLocalesEnabled = false }: Pick<TouchLineTablesClientProps, "copy" | "draftLocalesEnabled" | "locale" | "touchLineEnglandTable">) {
+export function TouchlineRankingEnding({ copy, locale, touchLineEnglandTable, ownerTableUnavailable = false, draftLocalesEnabled = false }: Pick<TouchLineTablesClientProps, "copy" | "draftLocalesEnabled" | "locale" | "touchLineEnglandTable" | "ownerTableUnavailable">) {
   const presentationCopy = getTouchlineTablesPresentationCopy(locale, draftLocalesEnabled);
   return (<>
       <section className={styles.clubOwnerSection} id="club-owner-table">
@@ -458,7 +457,7 @@ export function TouchlineRankingEnding({ copy, locale, touchLineEnglandTable, dr
             <p>{copy.englandTable}</p>
             <h2>{copy.ownerLeagueTable}</h2>
           </div>
-          <span>{copy.ownerLeagueRule}</span>
+          <span>{copy.ownerLeagueRule} {clubOwnerStandingsNote(locale)}</span>
         </div>
         <div className={styles.clubOwnerTableShell}>
           <div className={styles.clubOwnerTableHeader}>
@@ -469,15 +468,15 @@ export function TouchlineRankingEnding({ copy, locale, touchLineEnglandTable, dr
           </div>
           {touchLineEnglandTable.length ? <ol className={styles.ownerTableList}>
             {touchLineEnglandTable.map((owner, index) => (
-              <li key={owner.id}>
-                <b>{String(index + 1).padStart(2, "0")}</b>
+              <li key={`${owner.rank}:${index}`}>
+                <b>{String(owner.rank).padStart(2, "0")}</b>
                 <div className={styles.ownerAvatar}><OwnerAvatar owner={owner} /></div>
-                <div className={styles.rowIdentity}><strong>{owner.name}</strong><span>{owner.clubName}</span></div>
+                <div className={styles.rowIdentity}><strong>{owner.name}</strong><span>—</span></div>
                 <div className={styles.pointsValue}><strong>{owner.touchlinePoints}</strong><span>{touchlineRankingPointsLabel(owner.touchlinePoints, locale, copy.pointsShort, draftLocalesEnabled)}</span></div>
                 <span className={styles.rowEnd} />
               </li>
             ))}
-          </ol> : <RankingPending copy={copy} />}
+          </ol> : ownerTableUnavailable ? <div className={styles.rankingPending} role="status"><strong>{getClubOwnerProfileMetricsCopy(locale, draftLocalesEnabled).unavailable}</strong></div> : <RankingPending copy={copy} />}
         </div>
       </section>
 

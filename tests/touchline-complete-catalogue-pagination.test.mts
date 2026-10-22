@@ -6,6 +6,7 @@ import { runInNewContext } from "node:vm";
 import { applyTouchlineSeasonPoints } from "../lib/touchlineArena/matchday-player-points.ts";
 import { projectTouchlineCardStatsByPosition } from "../lib/touchlineArena/position-aware-card-stats.ts";
 import { canonicalSportmonksPlayerId } from "../lib/touchlineArena/match-card-indicator.ts";
+import { resolvePrimaryPositionDetails } from "../lib/touchlineFantasy/club-primary-position-policy.ts";
 import { parseTouchlinePublicEditorialCardPresentation } from "../lib/touchlineArena/editorial-card-profile.ts";
 import { isTouchlineProvisionalColumnsUnavailable } from "../lib/touchlineArena/card-engine-provisional-schema-compat.ts";
 import { TOUCHLINE_PROVISIONAL_MARKET_VALUE_EUR, TOUCHLINE_PROVISIONAL_MISSING_MARKET_VALUE, TOUCHLINE_PROVISIONAL_MISSING_SHIRT } from "../lib/touchlineArena/card-engine-provisional-policy.ts";
@@ -22,6 +23,7 @@ type Row = Record<string, unknown>;
 type Options = {
   count?: number; cap?: number; unpublishedIndex?: number;
   membershipHistory?: boolean; oldOverrideSchema?: boolean; failedTable?: string;
+  readError?: { code: string; message: string; details?: string; hint?: string }; transportFailure?: boolean;
   fault?: "page-error" | "duplicate" | "count-changed" | "null-count" | "editorial-error" | "stats-truncated" | "stats-error" | "stats-transport";
 };
 
@@ -47,6 +49,7 @@ function scenario(options: Options = {}) {
   let rankingReads = 0;
   let projectionReads = 0;
   const editorialBatches: number[] = [];
+  const diagnostics: unknown[][] = [];
   const admin = { from(table: string) {
     assert.ok(table in tables, `Unexpected read: ${table}`);
     let filtered = [...tables[table]];
@@ -68,6 +71,7 @@ function scenario(options: Options = {}) {
           return 0;
         });
         const laterStatsBatch = table === "football_player_season_statistics" && String(sorted[0]?.football_player_id) >= id(150);
+        if (options.transportFailure && options.failedTable === table) return Promise.reject(new Error("private-transport-details")).then(resolve, reject);
         if (options.fault === "stats-transport" && laterStatsBatch) return Promise.reject(new Error("private-transport-details")).then(resolve, reject);
         if (options.oldOverrideSchema && table === "touchline_card_editorial_overrides" && selected.includes("provenance_status")) {
           return Promise.resolve({ data: null, error: { code: "42703", message: "provenance_status does not exist" }, count: null }).then(resolve, reject);
@@ -76,7 +80,7 @@ function scenario(options: Options = {}) {
           || (options.fault === "editorial-error" && table === "football_player_market_values")
           || (options.fault === "stats-error" && laterStatsBatch)
           || options.failedTable === table) {
-          return Promise.resolve({ data: null, error: { code: "XX000", message: "private-database-details" }, count: null }).then(resolve, reject);
+          return Promise.resolve({ data: null, error: options.readError ?? { code: "XX000", message: "private-database-details" }, count: null, status: 500 }).then(resolve, reject);
         }
         const cap = options.fault === "stats-truncated" && table === "football_player_season_statistics" ? 20 : options.cap ?? 1000;
         const page = sorted.slice(from, Math.min(to + 1, from + cap));
@@ -107,9 +111,9 @@ function scenario(options: Options = {}) {
     return realPublicationReader(input);
   };
   const helperPath = "lib/touchlineArena/complete-catalogue-read-server.ts";
-  const pagination = runInNewContext(`${code(helperPath)}\n({ createCompleteTouchlineCatalogueAdmin, loadCompleteTouchlineCataloguePresentations });`, { loadTouchlinePublishedCardPresentations, isTouchlineProvisionalColumnsUnavailable, console: { warn() {} } });
+  const pagination = runInNewContext(`${code(helperPath)}\n({ createCompleteTouchlineCatalogueAdmin, loadCompleteTouchlineCataloguePresentations });`, { loadTouchlinePublishedCardPresentations, isTouchlineProvisionalColumnsUnavailable, console: { warn() {}, error: (...args: unknown[]) => diagnostics.push(args) } });
   const context = {
-    ...shared, ...pagination, loadTouchlinePublishedCardPresentations, applyTouchlineSeasonPoints, canonicalSportmonksPlayerId,
+    ...shared, ...pagination, loadTouchlinePublishedCardPresentations, applyTouchlineSeasonPoints, canonicalSportmonksPlayerId, resolvePrimaryPositionDetails,
     readPublicSeasonPlayerPoints: (...args: unknown[]) => { projectionReads++; return realSeasonReader(...args); },
     inferArenaRole: () => "goalkeeper", makeArenaShortName: (value: string) => value,
     normalizeOfficialShirtNumber: (value: unknown) => value,
@@ -122,7 +126,7 @@ function scenario(options: Options = {}) {
   const showcase = runInNewContext(`${code("lib/touchlineArena/ranked-card-catalog-server.ts")}\nloadTouchlinePublishedCardShowcaseCatalog;`, context);
   return {
     run: (surface: "myClub" | "showcase") => (surface === "myClub" ? myClub(admin) : showcase(admin)) as Promise<ClubOwnerSquadCard[]>,
-    ids, reads, editorialBatches, rankingReads: () => rankingReads, projectionReads: () => projectionReads,
+    ids, reads, editorialBatches, diagnostics, rankingReads: () => rankingReads, projectionReads: () => projectionReads,
   };
 }
 
@@ -160,6 +164,30 @@ for (const surface of ["myClub", "showcase"] as const) {
   test(`${surface}: existing old-schema editorial compatibility remains available`, async () => {
     const s = scenario({ oldOverrideSchema: true });
     assert.equal((await s.run(surface)).length, 1203);
+    assert.equal(s.diagnostics.length, 0);
+  });
+  for (const readError of [
+    { code: "57014", message: "private-database-details", details: "private-token", hint: "private-url" },
+    { code: "private-token", message: "private-database-details", details: "private-query" },
+  ]) {
+    test(`${surface}: failed required read logs only fixed status/code, never raw error data (${readError.code === "57014" ? "known" : "unknown"})`, async () => {
+      const s = scenario({ count: 1, failedTable: "touchline_card_editorial_overrides", readError });
+      await assert.rejects(s.run(surface), /TL_CATALOGUE_READ_FAILED:touchline_card_editorial_overrides/);
+      assert.equal(s.diagnostics.length, 1);
+      for (const [event, diagnostic] of s.diagnostics) {
+        assert.equal(event, "TL_CATALOGUE_READ_DIAGNOSTIC");
+        assert.equal(JSON.stringify(diagnostic), JSON.stringify({ table: "touchline_card_editorial_overrides", offset: 0, status: 500, code: readError.code === "57014" ? "57014" : "unknown" }));
+      }
+      assert.doesNotMatch(JSON.stringify(s.diagnostics), /private-/);
+    });
+  }
+  test(`${surface}: transport rejection is classified without serializing exception or retrying`, async () => {
+    const s = scenario({ count: 1, failedTable: "touchline_card_editorial_overrides", transportFailure: true });
+    await assert.rejects(s.run(surface), /TL_CATALOGUE_READ_FAILED/);
+    assert.equal(s.diagnostics.length, 1);
+    assert.ok(s.diagnostics.every(([, diagnostic]) => JSON.stringify(diagnostic) === JSON.stringify({ table: "touchline_card_editorial_overrides", offset: 0, status: 0, code: "TL_TRANSPORT_REJECTED" })));
+    assert.doesNotMatch(JSON.stringify(s.diagnostics), /private-/);
+    assert.equal(s.reads.filter(read => read.table === "touchline_card_editorial_overrides").length, 1);
   });
   for (const fault of ["stats-error", "stats-transport"] as const) {
     test(`${surface}: ${fault} discards partial supplementary stats but preserves publication`, async () => {

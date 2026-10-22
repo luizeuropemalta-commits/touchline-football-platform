@@ -10,6 +10,7 @@ import { createClubOwnerAvatarStorage } from "./club-owner-avatar-storage.ts";
 import { createClubOwnerAvatarReader } from "./club-owner-avatar-storage.ts";
 import { handleClubOwnerAvatarRead } from "./club-owner-avatar-read-handler.ts";
 import { getClubOwnerAvatarResourceAdmission, type ClubOwnerAvatarResourceScope } from "./club-owner-avatar-resource-admission.ts";
+import { allowsClubOwnerAvatarLocalCore } from "./club-owner-avatar-local-admission.ts";
 import { getClubOwnerAvatarControlAdmission } from "./club-owner-avatar-control-admission.ts";
 import { awaitAvatarStep, isAvatarRevision, projectAvatarRecoveryContext, type AvatarFenceResult } from "./club-owner-avatar-upload-contract.ts";
 
@@ -45,7 +46,7 @@ function reply(status: number, error: string) {
 }
 
 function configuredServer(config: ClubOwnerAvatarServerConfig, dependencies: ClubOwnerAvatarServerDependencies) {
-  return httpsOrigin(config.requestOrigin) && httpsOrigin(config.supabaseOrigin)
+  return (httpsOrigin(config.requestOrigin) || allowsClubOwnerAvatarLocalCore(config)) && httpsOrigin(config.supabaseOrigin)
     && config.publicSupabaseOrigin === config.supabaseOrigin && config.dataSource === "direct"
     && (config.environment === "qa" || config.environment === "local")
     && config.deploymentMode === config.publicDeploymentMode
@@ -134,7 +135,7 @@ export function createClubOwnerAvatarReadServer(config: ClubOwnerAvatarServerCon
           reader ??= createClubOwnerAvatarReader({ supabaseOrigin: settings.supabaseOrigin!, serviceRoleKey: settings.serviceRoleKey!, fetchImpl: deps.fetchImpl, resourceScope });
           return reader.readImmutable(identity, signal);
         },
-      }, { enabled: true, requestOrigin: settings.requestOrigin });
+      }, { enabled: true, requestOrigin: settings.requestOrigin, localAdmission: allowsClubOwnerAvatarLocalCore(settings) });
       if (response.ok && (performance.now() >= expires || request.signal.aborted)) return unavailable("AVATAR_READ_UNAVAILABLE");
       return response;
     } catch { return unavailable("AVATAR_READ_UNAVAILABLE"); }

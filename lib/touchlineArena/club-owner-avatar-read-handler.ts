@@ -32,14 +32,14 @@ function current(value: AvatarCurrent, actor: string): AvatarCurrent {
  * out future commits after that read. No arbitrary/legacy URL fetch or deletion.
  */
 export async function handleClubOwnerAvatarRead(request: Request, deps: ReadDependencies,
-  config: { enabled?: boolean; requestOrigin?: string; timeoutMs?: number } = {}): Promise<Response> {
+  config: { enabled?: boolean; requestOrigin?: string; timeoutMs?: number; localAdmission?: boolean } = {}): Promise<Response> {
   const reply = (status: number, error: string) => Response.json({ ok: false, error }, { status, headers: {
     ...PRIVATE_HEADERS, ...(status === 405 ? { Allow: "GET" } : {}),
   } });
   if (config.enabled !== true) return reply(503, "AVATAR_READ_DISABLED");
   try {
     const origin = new URL(config.requestOrigin ?? "");
-    if (origin.protocol !== "https:" || origin.origin !== config.requestOrigin || origin.username || origin.password) return reply(503, "AVATAR_READ_UNCONFIGURED");
+    if ((origin.protocol !== "https:" && !(config.localAdmission === true && config.requestOrigin === "http://localhost:3319")) || origin.origin !== config.requestOrigin || origin.username || origin.password) return reply(503, "AVATAR_READ_UNCONFIGURED");
     const target = new URL(request.url), suppliedOrigin = request.headers.get("origin"), site = request.headers.get("sec-fetch-site");
     if (target.origin !== origin.origin || target.pathname !== "/api/account/avatar"
       || (suppliedOrigin !== null && suppliedOrigin !== origin.origin)

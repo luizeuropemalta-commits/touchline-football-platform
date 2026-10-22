@@ -15,6 +15,7 @@ import * as access from "../lib/touchlineArena/auth-access.ts";
 import * as isolation from "../lib/touchlinePreview/isolation.ts";
 import * as admission from "../lib/touchlineArena/club-owner-avatar-resource-admission.ts";
 import * as controlAdmission from "../lib/touchlineArena/club-owner-avatar-control-admission.ts";
+import * as localAdmission from "../lib/touchlineArena/club-owner-avatar-local-admission.ts";
 
 const actorId = "123e4567-e89b-42d3-a456-426614174000", operationId = "123e4567-e89b-42d3-a456-426614174001";
 const other = "123e4567-e89b-42d3-a456-426614174002";
@@ -129,6 +130,7 @@ function load(name = "createClubOwnerAvatarServer", clock = performance, replace
     "./auth-access.ts": access, "../touchlinePreview/isolation.ts": isolation,
     "./club-owner-avatar-resource-admission.ts": admission, ...replacements,
     "./club-owner-avatar-control-admission.ts": controlAdmission,
+    "./club-owner-avatar-local-admission.ts": localAdmission,
   };
   const exports: Record<string, unknown> = {};
   vm.runInNewContext(javascript, { exports, require: (name: string) => {

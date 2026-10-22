@@ -82,7 +82,7 @@ function harness(options: { legacy?: boolean; statsFailure?: boolean; competitio
     isTouchlineProvisionalColumnsUnavailable,
   });
   const complete = runInNewContext(`${code("complete-catalogue-read-server")}\n({ createCompleteTouchlineCatalogueAdmin, loadCompleteTouchlineCataloguePresentations });`, {
-    loadTouchlinePublishedCardPresentations: publication, isTouchlineProvisionalColumnsUnavailable, console: { warn() {} },
+    loadTouchlinePublishedCardPresentations: publication, isTouchlineProvisionalColumnsUnavailable, console: { warn() {}, error() {} },
   });
   const load = runInNewContext(`${code("ranked-card-catalog-server")}\nloadTouchLineRankedCardCatalog;`, {
     createCatalogueLoadDiagnostics: () => createCatalogueLoadDiagnostics({}),

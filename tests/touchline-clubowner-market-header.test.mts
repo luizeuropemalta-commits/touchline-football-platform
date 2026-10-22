@@ -1,12 +1,16 @@
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
+import { dirname, join, resolve } from "node:path";
 import test from "node:test";
 import { runInNewContext } from "node:vm";
 import { TOUCHLINE_APPROVED_LOCALES, isTouchLineLocaleComplete } from "../lib/touchlineArena/i18n.ts";
 import { getTouchlineFantasyMarketWorkflowCopy } from "../lib/touchlineFantasy/market-workflow-i18n.ts";
 import * as profileMetrics from "../lib/touchlineArena/club-owner-profile-metrics.ts";
 import * as planShowcase from "../lib/touchlineArena/club-owner-plan-showcase.ts";
+import * as acquisition from "../lib/touchlineFantasy/club-acquisition.ts";
+import * as catalogueLocale from "../lib/touchlineArena/catalogue-locale.ts";
+import * as marketBudgetCopy from "../lib/touchlineFantasy/market-budget-i18n.ts";
 
 const page = readFileSync(new URL("../app/clubowner/page.tsx", import.meta.url), "utf8");
 const stage = readFileSync(new URL("../app/fantasy/FantasyGameweekClient.tsx", import.meta.url), "utf8");
@@ -37,7 +41,7 @@ test("the actual account owns the ClubOwner header, while the approved countdown
   assert.match(header, /owner\?\.name/);
   assert.doesNotMatch(header, /PUBLIC_CLUB_OWNER|Luiz Lopez|localStorage/);
   assert.doesNotMatch(stage, /styles\.clubOwnerArea|data-market-club-owner-area/);
-  assert.match(stage, /data-market-heading="status">\s*<MarketWindowClock/);
+  assert.match(stage, /data-market-heading="status">\s*\{qaClubMarketOpen \? null : <MarketWindowClock/);
   assert.doesNotMatch(stage, /<h2>\{workflowCopy\.market\}<\/h2>/);
   assert.equal(getTouchlineFantasyMarketWorkflowCopy("en-GB").market, "Market");
   assert.equal(getTouchlineFantasyMarketWorkflowCopy("pt-BR").market, "Mercado");
@@ -45,14 +49,16 @@ test("the actual account owns the ClubOwner header, while the approved countdown
 
 test("the plan is explicit, uses entitlement state and has no invented payment or balance", () => {
   assert.match(header, /data-plan-state=/);
-  assert.match(header, /onPreviewChange=\{setVisualTier\}/);
+  assert.match(header, /const displayedTier = currentTier \?\? undefined/);
+  assert.doesNotMatch(header, /setVisualTier|onPreviewChange/);
   assert.doesNotMatch(header, /showAllPlans/);
   assert.doesNotMatch(header, /fetch\(|localStorage|checkout|stripe|walletBalance|amountMinor|£|€|\bGBP\b|\bBRL\b/);
 });
 
 test("the right-hand plan selector owns the premium interaction without an old gallery", () => {
   const css = readFileSync(new URL("../components/touchline/ClubOwnerMarketHeader.module.css", import.meta.url), "utf8");
-  assert.match(header, /<ClubOwnerPlanShowcase/);
+  assert.match(header, /<ClubOwnerPlanCard compact tier=\{currentTier\}/);
+  assert.match(header, /<ClubOwnerPlanOnboarding open=\{plansOpen\}/);
   assert.match(header, /className=\{styles\.bank\}/);
   assert.match(css, /\.profile::before, \.bank::before/);
   assert.match(css, /\.header\[data-plan-preview\] :is\(\.profile,\.bank\)/);
@@ -62,19 +68,21 @@ test("the right-hand plan selector owns the premium interaction without an old g
 test("market power stays inside the compact right-hand selector", async () => {
   const html = renderHeader(null, "pt-BR", await loadCopy(), { remainingMarketPower: 121_000_000 });
   assert.match(html, /Poder de mercado/);
-  assert.match(html, /121\s*mi/);
-  assert.match(html, /Moeda TouchLine TC/);
-  assert.match(html, /role="tablist"/);
-  assert.equal((html.match(/data-plan-offer=/g) ?? []).length, 1);
+  assert.match(html, /data-account-market-power="true"[\s\S]*>121\.000\.000<\/strong>/);
+  assert.match(html, /TouchLine Credits/);
+  assert.match(html, /Ver planos/);
+  assert.doesNotMatch(html, /role="tablist"|data-plan-onboarding/);
+  assert.equal((html.match(/data-plan-offer=/g) ?? []).length, 0);
 });
 
-test("local Pro preview marks only the rendered sample, not the account identity or entitlement", async () => {
+test("retired local Pro preview cannot restore a fifth offered plan or change account identity", async () => {
   const html = renderHeader({ name: "Real Owner", avatarUrl: "/owner.webp", city: "", nationality: "", since: "" }, "pt-BR", await loadCopy(), { planPreview: "pro" });
-  assert.match(html, /data-plan-tier="pro"/);
+  assert.doesNotMatch(html, /data-plan-tier=|data-plan-preview=/);
   assert.match(html, /class="header"/);
   assert.match(html, /Meu plano/);
   assert.match(html, /Real Owner/);
-  assert.equal((html.match(/data-plan-tier="pro"/g) ?? []).length, 1);
+  assert.equal((html.match(/data-plan-tier="pro"/g) ?? []).length, 0);
+  assert.match(html, /data-plan-state="inactive"/);
   assert.doesNotMatch(html, /data-profile-tier=|data-profile-active-plan=/);
 });
 
@@ -82,8 +90,63 @@ test("VIP never exposes a legacy unlimited market-power path", async () => {
   const copyModule = await loadCopy();
   for (const { code } of TOUCHLINE_APPROVED_LOCALES) {
     const html = renderHeader(null, code, copyModule, { remainingMarketPower: null, plan: { active: true, expiresAt: null }, activePlanKey: "vip", draftLocalesEnabled: true });
-    assert.doesNotMatch(html, /data-current-xi-unlimited|>∞|Ilimitado|Unlimited/);
-    assert.match(html, /data-plan-budget="vip"[\s\S]*>1B<\/strong>/);
+    assert.doesNotMatch(html, /data-current-xi-unlimited|>∞/);
+    // Club-count benefits may say unlimited; monetary authority must not.
+    const budgetMarkup = html.match(/<span[^>]*data-plan-budget="vip"[\s\S]*?<\/strong>/)?.[0];
+    assert.ok(budgetMarkup);
+    assert.doesNotMatch(budgetMarkup, /Ilimitado|Unlimited|∞/);
+    assert.match(html, /data-plan-budget="vip"[\s\S]*>3B<\/strong>/);
+  }
+});
+
+test("collection header uses only the confirmed collection wallet, never the old XI balance", async () => {
+  const copy = await loadCopy();
+  const props = { collectionEnabled: true, remainingMarketPower: 211_000_000,
+    activePlanKey: "vip", plan: { active: true, expiresAt: null } };
+  const waiting = renderHeader(null, "pt-BR", copy, props);
+  assert.doesNotMatch(waiting, /211\.000\.000/);
+  assert.match(waiting, /data-account-market-power="true"[^>]*aria-label="Poder de mercado indisponível"/);
+  const state: acquisition.ClubAcquisitionState = { revision: 2, seasonId: "season", plan: "vip",
+    balanceEur: 873_000_000, coach: { id: "coach", tier: "ruby-red", valueEur: 5_000_000 }, players: [], receipts: [] };
+  const confirmed = renderHeader(null, "pt-BR", copy, props, undefined, state);
+  assert.match(confirmed, /data-account-market-power="true"[\s\S]*>873\.000\.000<\/strong>/);
+  assert.doesNotMatch(confirmed, /211\.000\.000/);
+  assert.match(confirmed, /3\.000\.000\.000 TouchLine Credits/);
+  const legacy = renderHeader(null, "pt-BR", copy, { ...props, collectionEnabled: false }, undefined, state);
+  assert.match(legacy, /data-account-market-power="true"[\s\S]*>211\.000\.000<\/strong>/);
+  assert.doesNotMatch(legacy, /873\.000\.000/);
+});
+
+test("collection header distinguishes signing funds from the last confirmed balance", async () => {
+  const copy = await loadCopy();
+  const props = { collectionEnabled: true, remainingMarketPower: 211_000_000,
+    activePlanKey: "vip", plan: { active: true, expiresAt: null } };
+  const state: acquisition.ClubAcquisitionState = { revision: 2, seasonId: "season", plan: "vip",
+    balanceEur: 873_000_000, coach: { id: "coach", tier: "ruby-red", valueEur: 5_000_000 }, players: [], receipts: [] };
+  for (const locale of ["pt-BR", "en-GB"]) {
+    const labels = marketBudgetCopy.getClubCollectionBudgetCopy(locale);
+    const confirmed = renderHeader(null, locale, copy, props, undefined, state, null, "confirmed");
+    assert.ok(confirmed.includes(`<dt>${labels.signingBudget}</dt>`));
+    const balance = confirmed.match(/<dd data-account-market-power="true"[^>]*>([\s\S]*?)<\/dd>/)?.[1];
+    assert.ok(balance);
+    assert.ok(balance.includes(`<strong>${new Intl.NumberFormat(locale).format(state.balanceEur)}</strong>`));
+    assert.doesNotMatch(balance, /211[,.]000[,.]000/);
+    assert.doesNotMatch(confirmed, /remaining XI budget|orçamento restante do XI|data-balance-verification/);
+    for (const status of ["pending", "unavailable"] as const) {
+      const waiting = renderHeader(null, locale, copy, props, undefined, state, null, status);
+      assert.ok(waiting.includes(`<dt>${labels.lastConfirmedBalance}</dt>`));
+      assert.ok(waiting.includes(new Intl.NumberFormat(locale).format(state.balanceEur)));
+      assert.ok(waiting.includes(labels[status]));
+      assert.match(waiting, new RegExp(`data-balance-verification="${status}"`));
+      assert.match(waiting, /aria-describedby="clubowner-balance-status"/);
+      assert.doesNotMatch(waiting, /211[,.]000[,.]000/);
+    }
+    const missing = renderHeader(null, locale, copy, props, undefined, null, null, "pending");
+    assert.ok(missing.includes(`<dt>${labels.signingBudget}</dt>`));
+    assert.doesNotMatch(missing, new RegExp(labels.lastConfirmedBalance));
+    assert.match(missing, /<strong>—<\/strong>/);
+    const zero = renderHeader(null, locale, copy, props, undefined, { ...state, balanceEur: 0 }, null, "unavailable");
+    assert.ok(zero.includes(labels.lastConfirmedBalance)); assert.match(zero, /<strong>0<\/strong>/);
   }
 });
 
@@ -99,55 +162,63 @@ test("ClubOwner keeps the green sweep on panels without a duplicated profile pla
   assert.match(css, /prefers-reduced-motion/);
 });
 
-test("local Standard preview uses the blue plan surface without changing account identity", async () => {
+test("Standard preview cannot recolour an account without confirmed entitlement", async () => {
   const html = renderHeader({ name: "Real Owner", avatarUrl: "/owner.webp", city: "", nationality: "", since: "" }, "pt-BR", await loadCopy(), { planPreview: "standard" });
-  assert.equal((html.match(/data-plan-tier="standard"/g) ?? []).length, 1);
+  assert.equal((html.match(/data-plan-tier="standard"/g) ?? []).length, 0);
   assert.doesNotMatch(html, /data-profile-tier=|data-profile-active-plan=/);
-  assert.match(html, /Standard/);
+  assert.match(html, /Real Owner/);
+  assert.match(html, /Ver planos/);
+  assert.doesNotMatch(html, /data-plan-preview=/);
   const css = readFileSync(new URL("../components/touchline/ClubOwnerMarketHeader.module.css", import.meta.url), "utf8");
   assert.match(css, /\.header\[data-plan-preview="standard"\].+--plan-preview-rgb: 65,139,226/);
 });
 
-test("local Standard preview presents its approved seasonal offer without enabling payment", async () => {
+test("Standard preview leaves unconfirmed account unchanged and offers remain in exploration", async () => {
   const html = renderHeader({ name: "Real Owner", avatarUrl: "/owner.webp", city: "", nationality: "", since: "" }, "pt-BR", await loadCopy(), { plan: { active: true, expiresAt: "2026-11-08T00:00:00.000Z" }, planPreview: "standard" });
+  assert.doesNotMatch(html, /data-plan-offer=|data-account-plan-card/);
+  assert.match(html, /data-plan-state="active"/);
+  assert.match(html, /Ver planos/);
+  const offers = renderPlanGallery("pt-BR", await loadCopy());
+  assert.match(offers, /data-plan-offer="standard"/);
+  assert.match(offers, /€49,90\/temporada/);
+  assert.match(offers, /disabled=""[^>]*>Contratar plano/);
+  assert.doesNotMatch(html, /checkout|stripe|walletBalance|amountMinor/);
+});
+
+test("confirmed Master presents its approved seasonal offer without enabling payment", async () => {
+  const html = renderHeader({ name: "Real Owner", avatarUrl: "/owner.webp", city: "", nationality: "", since: "" }, "pt-BR", await loadCopy(), { plan: { active: true, expiresAt: "2026-11-08T00:00:00.000Z" }, activePlanKey: "master" });
+  assert.match(html, /data-plan-offer="master"/);
+  assert.match(html, /data-plan-state="active"/);
+  assert.match(html, /data-plan-budget="master"[\s\S]*>1\.5B<\/strong>/);
+  const offers = renderPlanGallery("pt-BR", await loadCopy(), "master");
+  assert.match(offers, /€89,90\/temporada/);
+  assert.match(offers, /data-current-plan-badge="master"/);
+  assert.doesNotMatch(html, /checkout|stripe|walletBalance|amountMinor/);
+});
+
+test("confirmed Standard renders one compact member pass without inline exploration", async () => {
+  const html = renderHeader({ name: "Real Owner", avatarUrl: "/owner.webp", city: "", nationality: "", since: "" }, "pt-BR", await loadCopy(), { planPreview: "pro", plan: { active: true, expiresAt: null }, activePlanKey: "standard" });
   assert.match(html, /data-plan-offer="standard"/);
-  assert.match(html, /data-plan-state="inactive"/);
-  assert.match(html, /€49,90\/temporada/);
-  assert.match(html, /Acesso completo ao jogo e ao ranking\./);
-  assert.match(html, /Detalhes do plano/);
-  assert.match(html, /Prévia do plano — sua assinatura não foi alterada\./);
-  assert.doesNotMatch(html, /checkout|stripe|walletBalance|amountMinor/);
-});
-
-test("local Pro preview presents its approved seasonal offer without enabling payment", async () => {
-  const html = renderHeader({ name: "Real Owner", avatarUrl: "/owner.webp", city: "", nationality: "", since: "" }, "pt-BR", await loadCopy(), { plan: { active: true, expiresAt: "2026-11-08T00:00:00.000Z" }, planPreview: "pro" });
-  assert.match(html, /data-plan-offer="pro"/);
-  assert.match(html, /data-plan-state="inactive"/);
-  assert.match(html, /€89,90\/temporada/);
-  assert.match(html, /Visual premium, histórico, relatórios e alertas\./);
-  assert.match(html, /Detalhes do plano/);
-  assert.doesNotMatch(html, /checkout|stripe|walletBalance|amountMinor/);
-});
-
-test("local Pro preview renders a member pass without changing the account entitlement", async () => {
-  const html = renderHeader({ name: "Real Owner", avatarUrl: "/owner.webp", city: "", nationality: "", since: "" }, "pt-BR", await loadCopy(), { planPreview: "pro" });
-  assert.match(html, /data-plan-offer="pro"/);
+  assert.match(html, /data-plan-state="active"/);
   assert.match(html, /data-compact="true"/);
   assert.doesNotMatch(html, /class="cardOwner"|class="cardKicker"/);
   assert.match(html, /Real Owner/);
-  assert.match(html, /role="tablist"/);
-  assert.match(html, /Comparar planos/);
+  assert.doesNotMatch(html, /role="tablist"/);
+  assert.match(html, /Ver planos/);
   assert.match(readFileSync(new URL("../components/touchline/ClubOwnerPlanShowcase.module.css", import.meta.url), "utf8"), /\.memberCard \{[^}]+border-radius: 18px/);
 });
 
-test("membership design stays inside the local sample with eight languages and static gold budget", async () => {
+test("membership exploration retains eight languages while account preview stays inert", async () => {
   const copyModule = await loadCopy();
   for (const { code } of TOUCHLINE_APPROVED_LOCALES) {
     const copy = copyModule.getTouchlineClubOwnerMarketCopy(code, true);
     const html = renderHeader({ name: "Sample Owner", avatarUrl: "", city: "", nationality: "", since: "" }, code, copyModule,
-      { planPreview: "pro", remainingMarketPower: 121_000_000, draftLocalesEnabled: true });
-    assert.match(html, /data-plan-preview="pro"/);
-    for (const value of [copy.planProPrice, copy.planProBenefit, planShowcase.getClubOwnerPlanShowcaseCopy(code, true).preview]) assert.ok(html.includes(value));
+      { planPreview: "standard", remainingMarketPower: 121_000_000, draftLocalesEnabled: true });
+    assert.doesNotMatch(html, /data-plan-preview=|data-plan-offer=/);
+    const offers = renderPlanGallery(code, copyModule);
+    assert.ok(offers.includes(copy.planStandardPrice));
+    assert.ok(offers.includes(planShowcase.getClubOwnerPlanShowcaseCopy(code, true).browse));
+    assert.equal((offers.match(/data-plan-offer=/g) ?? []).length, 4);
     assert.match(html, /Sample Owner/);
     assert.match(html, /data-plan-state="inactive"/);
     assert.match(html, /aria-haspopup="dialog"/);
@@ -179,7 +250,12 @@ test("photo editing is not falsely presented as persisted before upload capabili
 });
 
 type Owner = { name: string; avatarUrl: string; city: string; nationality: string; since: string };
-function renderHeader(owner: Owner | null, locale: string, copyModule: Record<string, unknown>, extraProps = {}, control?: (props: Record<string, unknown>) => unknown) {
+// Render the real exploration component separately: SSR proves copy and closed
+// payment controls, not dialog focus/Escape (covered by the mounted onboarding tests).
+function renderPlanGallery(locale: string, copyModule: Record<string, unknown>, activePlanKey: string | null = null) {
+  return renderHeader(null, locale, copyModule, { fixtureGallery: true, activePlanKey, draftLocalesEnabled: true });
+}
+function renderHeader(owner: Owner | null, locale: string, copyModule: Record<string, unknown>, extraProps = {}, control?: (props: Record<string, unknown>) => unknown, collection: acquisition.ClubAcquisitionState | null = null, initialBudget: {plan:"vip";balanceEur:number}|null = null, verificationStatus: "pending" | "confirmed" | "unavailable" = collection || initialBudget ? "confirmed" : "pending") {
   const require = createRequire(import.meta.url);
   const ts = require("typescript");
   const React = require("react");
@@ -200,7 +276,11 @@ function renderHeader(owner: Owner | null, locale: string, copyModule: Record<st
     if (name === "@/lib/touchlineArena/club-owner-market-i18n") return copyModule;
     if (name === "@/lib/touchlineArena/club-owner-profile-metrics") return profileMetrics;
     if (name === "@/lib/touchlineArena/club-owner-plan-showcase") return planShowcase;
-    if (name === "./ClubOwnerPlanShowcase" || name === "./TouchlineClubPerimeterTrace") {
+    if (name === "@/lib/touchlineFantasy/club-acquisition") return acquisition;
+    if (name === "@/lib/touchlineFantasy/market-budget-i18n") return marketBudgetCopy;
+    if (name === "@/lib/touchlineArena/catalogue-locale") return catalogueLocale;
+    if (name === "./fantasy/ClubCollectionContext") return { useConfirmedClubCollection: () => ({ state: collection, initialBudget, verificationStatus }) };
+    if (name === "./ClubOwnerPlanShowcase" || name === "./ClubOwnerPlanOnboarding" || name === "./TouchlineClubPerimeterTrace") {
       const source = readFileSync(new URL(`../components/touchline/${name.slice(2)}.tsx`, import.meta.url), "utf8");
       const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true } }).outputText;
       const showcase = { exports: {} };
@@ -211,70 +291,167 @@ function renderHeader(owner: Owner | null, locale: string, copyModule: Record<st
     return require(name);
   };
   runInNewContext(output, { exports: loaded.exports, module: loaded, require: requireView });
+  if ("fixtureGallery" in extraProps) {
+    const { fixtureGallery: _fixtureGallery, ...props } = extraProps;
+    const gallery = requireView("./ClubOwnerPlanOnboarding") as { default: unknown };
+    return renderToStaticMarkup(React.createElement(gallery.default, { ...props, locale, open: true, onDismiss: () => {} })) as string;
+  }
   return renderToStaticMarkup(React.createElement(loaded.exports.default, { owner, locale, ...extraProps })) as string;
 }
 
-if (process.env.TOUCHLINE_RUN_XI_BROWSER_TESTS === "1") test("membership preview fits the existing profile on desktop and phone", async () => {
-  const { chromium } = await import("@playwright/test");
-  const css = readFileSync(new URL("../components/touchline/ClubOwnerMarketHeader.module.css", import.meta.url), "utf8");
-  const controls = readFileSync(new URL("../components/touchline/TouchlineGlobalNavigation.module.css", import.meta.url), "utf8");
-  const membershipCss = readFileSync(new URL("../components/touchline/ClubOwnerPlanShowcase.module.css", import.meta.url), "utf8");
+// Real React DOM + native dialog, isolated from accounts and external services.
+// The unit harnesses cover catalogue semantics; these cases add actual keyboard,
+// top-layer, responsive layout and focus integration across header and onboarding.
+function interactiveHeaderFixture(locale: string, active: boolean) {
+  const require = createRequire(import.meta.url), root = resolve(import.meta.dirname, ".."), ts = require("typescript");
+  const react = dirname(require.resolve("react")), dom = dirname(require.resolve("react-dom/client"));
+  const scheduler = dirname(createRequire(require.resolve("react-dom/client")).resolve("scheduler"));
+  const modules: Record<string, string> = {
+    react: readFileSync(join(react, "cjs/react.development.js"), "utf8"),
+    "react/jsx-runtime": readFileSync(join(react, "cjs/react-jsx-runtime.development.js"), "utf8"),
+    "react-dom": readFileSync(join(dom, "cjs/react-dom.development.js"), "utf8"),
+    "react-dom/client": readFileSync(join(dom, "cjs/react-dom-client.development.js"), "utf8"),
+    scheduler: readFileSync(join(scheduler, "cjs/scheduler.development.js"), "utf8"),
+    "lucide-react": readFileSync(require.resolve("lucide-react"), "utf8"),
+    "next/image": "exports.default=({unoptimized,...props})=>require('react').createElement('img',props);",
+    [join(root, "components/touchline/ClubOwnerAvatarControl.tsx")]: "exports.default=()=>{throw Error('Avatar recovery is outside fixture scope')};",
+    [join(root, "components/touchline/fantasy/ClubCollectionContext.tsx")]: "exports.useConfirmedClubCollection=()=>({state:null,initialBudget:null,verificationStatus:'confirmed'});",
+  };
+  const stylesheets: string[] = [];
+  function bundle(path: string): string {
+    if (path in modules) return path;
+    if (path.endsWith(".css")) {
+      // Reuse Next's installed CSS module pipeline, as the showcase browser
+      // fixture does. Unscoped CSS would collide (header/dialog/header).
+      const nextRequire = createRequire(require.resolve("next/package.json"));
+      const { getModulesPlugins } = nextRequire("next/dist/build/webpack/loaders/css-loader/src/utils");
+      const { getCssModuleLocalIdent } = nextRequire("next/dist/build/webpack/config/blocks/css/loaders/getCssModuleLocalIdent");
+      const plugins = getModulesPlugins({ modules: { mode: "pure", getLocalIdent: getCssModuleLocalIdent,
+        localIdentName: "[hash:base64]", localIdentContext: root, localIdentHashPrefix: "", exportGlobals: false } },
+        { rootContext: root, resourcePath: path, emitError: (error: Error) => { throw error; } });
+      const result = nextRequire("postcss")(plugins).process(readFileSync(path, "utf8"), { from: path, map: false }).sync();
+      const { icssImports, icssExports } = nextRequire("next/dist/compiled/icss-utils").extractICSS(result.root);
+      assert.deepEqual(icssImports, {});
+      stylesheets.push(result.root.toString());
+      modules[path] = `exports.default=${JSON.stringify(icssExports)};`;
+      return path;
+    }
+    modules[path] = "";
+    const code = ts.transpileModule(readFileSync(path, "utf8"), { compilerOptions: {
+      module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX,
+    } }).outputText;
+    modules[path] = code.replace(/require\("([^"]+)"\)/g, (all: string, id: string) => {
+      if (!id.startsWith(".") && !id.startsWith("@/")) return all;
+      let target = id.startsWith("@/") ? join(root, id.slice(2)) : resolve(dirname(path), id);
+      if (!/\.(ts|tsx|css)$/.test(target)) target += existsSync(`${target}.ts`) ? ".ts" : ".tsx";
+      return `require(${JSON.stringify(bundle(target))})`;
+    });
+    return path;
+  }
+  const entry = bundle(join(root, "components/touchline/ClubOwnerMarketHeader.tsx"));
+  const definitions = Object.entries(modules).map(([id, code]) => `${JSON.stringify(id)}:function(module,exports,require){${code}\n}`).join(",");
+  const props = { owner: { name: "Sample Owner", avatarUrl: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E", city: "", nationality: "", since: "" },
+    locale, draftLocalesEnabled: true, planPreview: "pro", remainingMarketPower: 121_000_000,
+    plan: active ? { active: true, expiresAt: null } : null, activePlanKey: active ? "standard" : null };
+  return `<!doctype html><html dir="${locale === "ar-SA" ? "rtl" : "ltr"}"><meta charset="utf-8">
+    <style>*{box-sizing:border-box}body{margin:0;background:#07100b;color:white;padding:16px;font-family:Arial,sans-serif}${stylesheets.join("\n")}</style>
+    <div id="root"></div><script>const process={env:{NODE_ENV:"development"}},modules={${definitions}},cache={};
+    function require(id){if(cache[id])return cache[id].exports;if(!modules[id])throw Error("Unbundled module: "+id);
+      const m={exports:{}};cache[id]=m;modules[id](m,m.exports,require);return m.exports;}
+    require("react-dom/client").createRoot(document.getElementById("root")).render(
+      require("react").createElement(require(${JSON.stringify(entry)}).default,${JSON.stringify(props)}));</script></html>`;
+}
+
+if (process.env.TOUCHLINE_RUN_XI_BROWSER_TESTS === "1") test("active card and balance survive real modal exploration on desktop and phone", async () => {
+  const { chromium, expect } = await import("@playwright/test");
   const browser = await chromium.launch({ headless: true });
   try {
     for (const width of [1280, 844, 390]) for (const locale of ["pt-BR", "ar-SA"]) {
-      const markup = renderHeader({ name: "Sample Owner", avatarUrl: "", city: "", nationality: "", since: "" }, locale, await loadCopy(),
-        { planPreview: "pro", remainingMarketPower: 121_000_000, draftLocalesEnabled: true }).replace(/<link rel="preload"[^>]*>/g, "");
       const page = await browser.newPage({ viewport: { width, height: width === 844 ? 390 : 900 }, reducedMotion: "reduce" });
-      await page.route("https://preview.invalid/**", route => route.fulfill({ status: 404, body: "" }));
-      await page.setContent(`<html dir="${locale === "ar-SA" ? "rtl" : "ltr"}"><head><base href="https://preview.invalid/"><style>body{margin:0;background:#07100b;color:#fff;padding:16px;font-family:Arial,sans-serif}*{box-sizing:border-box}${controls}${css}${membershipCss}</style></head><body>${markup}</body></html>`);
-      const bank = page.locator('.bank .planShowcase[data-plan-preview="pro"]');
+      const errors: string[] = [], requests: string[] = [];
+      page.on("pageerror", error => errors.push(error.message));
+      await page.route("**/*", route => { requests.push(route.request().url()); return route.abort(); });
+      await page.setContent(interactiveHeaderFixture(locale, true));
+      const trigger = page.locator('button[aria-haspopup="dialog"]');
+      await expect(trigger).toBeVisible();
+      const card = page.locator('[data-account-plan-card]'), balance = page.locator('[data-account-market-power]');
+      const before = await card.innerHTML(), cash = await balance.textContent();
+      await expect(card.locator('[data-plan-offer="standard"]')).toHaveCount(1);
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
-      const box = (await bank.boundingBox())!;
-      for (const selector of [".showcaseHeading", ".cardIdentity", ".offerSummary", ".marketPowerValue"]) {
-        const rect = (await bank.locator(selector).boundingBox())!;
-        assert.ok(rect.width > 0 && rect.x >= box.x && rect.x + rect.width <= box.x + box.width + 1, `${locale}/${width}: ${selector} stays in frame`);
-      }
-      assert.equal(await bank.locator(".planAction").isDisabled(), false);
-      assert.equal(await bank.locator(".planAction").evaluate(el => getComputedStyle(el).animationName), "none");
-      await bank.locator("summary").focus();
-      await page.keyboard.press("Enter");
-      assert.equal(await bank.locator("details").evaluate((el: HTMLDetailsElement) => el.open), true);
-      await page.keyboard.press("Enter");
-      assert.equal(await bank.locator("details").evaluate((el: HTMLDetailsElement) => el.open), false);
-      if (locale === "pt-BR") await page.screenshot({ path: `/private/tmp/touchline-membership-profile-${width}.png`, fullPage: true });
+      await trigger.focus(); await page.keyboard.press("Enter");
+      const dialog = page.locator('dialog[data-plan-onboarding]');
+      await expect(dialog).toBeVisible();
+      assert.equal(await dialog.evaluate(el => el.matches(":modal")), true);
+      await expect(dialog.locator('h2')).toBeFocused();
+      await expect(dialog.locator('[data-plan-gallery] [data-plan-offer]')).toHaveCount(4);
+      const vip = dialog.locator('article[data-plan-preview="vip"]');
+      // The second enabled action is the real benefits entry (the first is the card).
+      await vip.locator('button:not([disabled])').nth(1).click();
+      await expect(dialog.locator('[data-plan-detail="vip"]')).toBeVisible();
+      await page.keyboard.press("Escape");
+      await expect(dialog).toHaveCount(0); await expect(trigger).toBeFocused();
+      assert.equal(await card.innerHTML(), before); assert.equal(await balance.textContent(), cash);
+      await trigger.click(); await expect(dialog.locator('[data-plan-gallery]')).toBeVisible();
+      const labels = planShowcase.getClubOwnerPlanShowcaseCopy(locale, true);
+      await dialog.getByRole("button", { name: labels.close, exact: true }).click();
+      await expect(dialog).toHaveCount(0); await expect(trigger).toBeFocused();
+      assert.equal(await card.innerHTML(), before); assert.equal(await balance.textContent(), cash);
+      assert.deepEqual(errors, []); assert.deepEqual(requests, []);
       await page.close();
     }
   } finally { await browser.close(); }
 });
 
-if (process.env.TOUCHLINE_RUN_XI_BROWSER_TESTS === "1") test("inactive plan comparison opens with keyboard without duplicating the gallery", async () => {
-  const { chromium } = await import("@playwright/test");
-  const css = readFileSync(new URL("../components/touchline/ClubOwnerMarketHeader.module.css", import.meta.url), "utf8");
-  const planCss = readFileSync(new URL("../components/touchline/ClubOwnerPlanShowcase.module.css", import.meta.url), "utf8");
-  const controls = readFileSync(new URL("../components/touchline/TouchlineGlobalNavigation.module.css", import.meta.url), "utf8");
-  const markup = renderHeader(null, "pt-BR", await loadCopy()).replace(/<link rel="preload"[^>]*>/g, "");
+if (process.env.TOUCHLINE_RUN_XI_BROWSER_TESTS === "1") test("inactive account opens one real gallery without inventing entitlement or payment", async () => {
+  const { chromium, expect } = await import("@playwright/test");
   const browser = await chromium.launch({ headless: true });
   try {
     for (const width of [390, 1280]) {
       const page = await browser.newPage({ viewport: { width, height: 900 } });
-      await page.setContent(`<style>body{margin:0;background:#07100b;color:#fff;padding:12px;box-sizing:border-box}*{box-sizing:border-box}${controls}${css}${planCss}</style>${markup}`);
-      const details = page.locator('.bank .comparison');
-      const planTopAligned = await page.locator('.bank[data-plan-state="inactive"]').evaluate((element: HTMLElement) => {
-        const heading = element.querySelector("h2")!;
-        return Math.abs(heading.getBoundingClientRect().top - element.getBoundingClientRect().top - parseFloat(getComputedStyle(element).paddingTop)) < 8;
+      const errors: string[] = [], requests: string[] = [];
+      page.on("pageerror", error => errors.push(error.message));
+      await page.route("**/*", route => { requests.push(route.request().url()); return route.abort(); });
+      await page.setContent(interactiveHeaderFixture("pt-BR", false));
+      const trigger = page.getByRole("button", { name: "Ver planos", exact: true });
+      await expect(trigger).toBeVisible();
+      await expect(page.locator('[data-account-plan-card]')).toHaveCount(0);
+      await expect(page.locator('[data-plan-offer]')).toHaveCount(0);
+      const bank = page.locator('[data-plan-state="inactive"]');
+      const geometry = await bank.evaluate(el => {
+        const heading = el.querySelector("h2")!;
+        const row = heading.parentElement!;
+        const button = row.querySelector("button")!;
+        const rect = (node: Element) => {
+          const bounds = node.getBoundingClientRect(), css = getComputedStyle(node);
+          return { top: bounds.top, height: bounds.height, width: bounds.width,
+            paddingTop: parseFloat(css.paddingTop), borderTop: parseFloat(css.borderTopWidth),
+            alignItems: css.alignItems, minHeight: css.minHeight };
+        };
+        return { bank: rect(el), row: rect(row), heading: rect(heading), button: rect(button) };
       });
-      assert.equal(planTopAligned, true, "plan heading starts at the top padding, not vertically centered");
-      assert.equal(await details.evaluate((element: HTMLDetailsElement) => element.open), false);
-      const compactHeight = (await details.boundingBox())?.height ?? 0;
-      await page.screenshot({ path: `/private/tmp/touchline-clubowner-bank-closed-${width}.png`, fullPage: true });
-      await details.locator("summary").focus();
-      await page.keyboard.press("Enter");
-      assert.equal(await details.evaluate((element: HTMLDetailsElement) => element.open), true);
-      assert.equal(await page.locator('[data-plan-offer]').count(), 1);
-      assert.equal(await page.locator('[data-current-plan]').count(), 0);
-      assert.ok((await details.boundingBox())!.height > compactHeight + 30);
+      const geometryMessage = JSON.stringify({ width, geometry });
+      // The row starts at the content edge; its title is vertically centered
+      // beside the 44px action, not itself anchored to the panel padding.
+      assert.ok(Math.abs(geometry.row.top - geometry.bank.top - geometry.bank.borderTop - geometry.bank.paddingTop) <= 1, geometryMessage);
+      assert.equal(geometry.row.alignItems, "center", geometryMessage);
+      assert.ok(Math.abs(geometry.heading.top + geometry.heading.height / 2 - geometry.row.top - geometry.row.height / 2) <= 1, geometryMessage);
+      assert.ok(geometry.button.height >= 44, geometryMessage);
+      const cash = await page.locator('[data-account-market-power]').textContent();
+      await trigger.focus(); await page.keyboard.press("Enter");
+      const dialog = page.locator('dialog[data-plan-onboarding]');
+      await expect(dialog).toBeVisible(); await expect(page.locator("dialog")).toHaveCount(1);
+      await expect(dialog.locator('[data-plan-offer]')).toHaveCount(4);
+      await expect(dialog.locator('[data-current-plan]')).toHaveCount(0);
+      const subscriptions = dialog.getByRole("button", { name: "Contratar plano", exact: true });
+      await expect(subscriptions).toHaveCount(4);
+      for (const button of await subscriptions.all()) await expect(button).toBeDisabled();
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
-      await page.screenshot({ path: `/private/tmp/touchline-clubowner-bank-${width}.png`, fullPage: true });
+      const rect = (await dialog.boundingBox())!;
+      assert.ok(rect.x >= -1 && rect.width <= width + 1);
+      await page.keyboard.press("Escape"); await expect(dialog).toHaveCount(0); await expect(trigger).toBeFocused();
+      await expect(page.locator('[data-account-plan-card]')).toHaveCount(0);
+      assert.equal(await page.locator('[data-account-market-power]').textContent(), cash);
+      assert.deepEqual(errors, []); assert.deepEqual(requests, []);
       await page.close();
     }
   } finally { await browser.close(); }
@@ -309,20 +486,21 @@ test("server-rendered header exposes real identity, exact EN/PT labels and disab
     assert.match(html, /src="\/actual-owner.webp"/);
     assert.doesNotMatch(html, /Valletta|2024/);
     assert.match(html, locale === "pt-BR" ? />Meu plano<\/h2>/ : />My plan<\/h2>/);
-    for (const [key, value] of Object.entries(baseline[locale])) if (!["nameUnavailable", "location", "nationality", "memberSince", "watchIntro", "planStandard", "planPro", "planActive", "planInactive", "planUntil", "planActiveNoEnd", "planInactiveDetail", "activatePlan", "renewPlan", "planStandardPrice", "planStandardBenefit", "planProPrice", "planProBenefit", "proMember", "proAccess", "proPrivileges"].includes(key)) assert.ok(html.includes(value), key);
+    for (const key of ["photoAria", "photoUnavailable", "yourProfile", "plan", "marketPowerUnavailable", "planActionUnavailable"] as const) assert.ok(html.includes(baseline[locale][key]), key);
     for (const key of ["proMember", "proAccess", "proPrivileges"] as const) assert.ok(!html.includes(baseline[locale][key]));
     assert.doesNotMatch(html, /href="\/intro/);
     assert.doesNotMatch(page, /\/intro\?/);
-    assert.match(page, /brandAccessory=\{<TouchlineSignOutButton locale=\{locale\} draftLocalesEnabled=\{draftLocalesEnabled\} \/>\}/);
+    assert.match(page, /navigationAccessory=\{<TouchlineSignOutButton compact locale=\{locale\} draftLocalesEnabled=\{draftLocalesEnabled\} \/>\}/);
     assert.ok(html.includes(`aria-label="${baseline[locale].photoAria}"`));
     assert.ok(html.includes('id="clubowner-photo-status" role="status"'), `${locale}: disabled photo has visible status`);
     assert.match(html, /aria-describedby="clubowner-photo-status"/);
     assert.match(html, /id="clubowner-photo-status"/);
-    assert.match(html, /role="tablist"/);
+    assert.doesNotMatch(html, /role="tablist"|data-plan-onboarding/);
+    assert.match(html, /aria-haspopup="dialog"/);
     assert.match(html, /data-plan-state="inactive"/);
     assert.equal((html.match(/disabled=""/g) ?? []).length, 1);
     assert.doesNotMatch(html, /type="file"|Luiz Lopez/);
-    assert.match(html, /data-plan-preview="beta"/, "the compact selector starts on Beta outside development");
+    assert.doesNotMatch(html, /data-plan-preview=|data-plan-offer=/, "an unconfirmed account must not invent Beta");
   }
 });
 
@@ -341,10 +519,10 @@ test("missing owner and empty facts remain honest fallbacks without invented acc
 test("actual rendered header and plan catalogue use the same selected locale", () => {
   const calls: string[] = [];
   const markerCopy = Object.fromEntries(Object.keys(baseline['en-GB']).map(key => [key, `copy-${key}`]));
-  const html = renderHeader(null, 'pt-BR', { getTouchlineClubOwnerMarketCopy: (locale: string) => { calls.push(locale); return markerCopy; } });
+  const html = renderHeader(null, 'pt-BR', { getTouchlineClubOwnerMarketCopy: (locale: string) => { calls.push(locale); return markerCopy; } }, { plan: { active: true, expiresAt: null }, activePlanKey: "standard" });
   assert.ok(calls.length >= 2);
   assert.ok(calls.every(locale => locale === 'pt-BR'));
-  for (const [key, value] of Object.entries(markerCopy)) if (!["location", "nationality", "memberSince", "watchIntro", "planStandard", "planPro", "planActive", "planInactive", "planUntil", "planActiveNoEnd", "planInactiveDetail", "activatePlan", "renewPlan", "planStandardPrice", "planStandardBenefit", "planProPrice", "planProBenefit", "proMember", "proAccess", "proPrivileges"].includes(key)) assert.ok(html.includes(value), value);
+  for (const key of ["nameUnavailable", "photoAria", "photoUnavailable", "yourProfile", "plan", "marketPowerUnavailable", "planStandard", "planActive"]) assert.ok(html.includes(markerCopy[key]), key);
   for (const key of ["proMember", "proAccess", "proPrivileges"]) assert.ok(!html.includes(markerCopy[key]));
   assert.match(html, /<div class="title"><h1>ClubOwner<\/h1><\/div>/);
   assert.doesNotMatch(html, /<span>TOUCHLINE<\/span>/);
@@ -359,12 +537,31 @@ test("verified active VIP has its real name and finite amethyst card without ope
   assert.match(html, /data-plan-preview="vip"/);
   assert.match(html, /data-current-plan="true"/);
   assert.match(html, /data-plan-state="active"/);
-  assert.match(html, /data-plan-budget="vip"[\s\S]*1\.000\.000\.000 TouchLine Credits/);
-  assert.match(html, /<td>1B<\/td>/);
-  assert.doesNotMatch(html, /data-current-xi-unlimited|>∞|Ilimitado/);
+  assert.match(html, /data-plan-budget="vip"[\s\S]*3\.000\.000\.000 TouchLine Credits/);
+  assert.match(html, /data-plan-budget="vip"[\s\S]*>3B<\/strong>/);
+  assert.doesNotMatch(html, /<td>|role="tablist"/);
+  assert.doesNotMatch(html, /data-current-xi-unlimited|>∞/);
+  const budgetMarkup = html.match(/<span[^>]*data-plan-budget="vip"[\s\S]*?<\/strong>/)?.[0];
+  assert.ok(budgetMarkup);
+  assert.doesNotMatch(budgetMarkup, /Ilimitado|Unlimited|∞/);
   assert.doesNotMatch(html, />Renovar<\/button>/);
   assert.equal((html.match(/data-current-plan="true"/g) ?? []).length, 1);
   assert.doesNotMatch(html, /checkout|stripe|type="file"/);
+});
+
+test("confirmed initial and spent balances render exact amounts independently of the plan preview", async () => {
+  const props={collectionEnabled:true,plan:{active:true,expiresAt:null},activePlanKey:"vip",activePlanBudget:1_000_000_000};
+  const budget={plan:"vip" as const,balanceEur:1_200_000_000};
+  const copy=await loadCopy();
+  const empty=renderHeader(null,"en-GB",copy,props,undefined,null,budget);
+  assert.match(empty,/data-account-market-power="true"[\s\S]*1,200,000,000/);
+  const state:acquisition.ClubAcquisitionState={revision:0,seasonId:"season",plan:"vip",coach:{id:"coach",tier:"ruby-red",valueEur:5_000_000},balanceEur:1_195_000_000,players:[],receipts:[]};
+  const hired=renderHeader(null,"en-GB",copy,props,undefined,state,budget);
+  assert.match(hired,/data-account-market-power="true"[\s\S]*1,195,000,000/);
+  const zero=renderHeader(null,"en-GB",copy,props,undefined,{...state,balanceEur:0},budget);
+  assert.match(zero,/data-account-market-power="true"[\s\S]*>0<\/strong>/);
+  const unknown=renderHeader(null,"en-GB",copy,props);
+  assert.match(unknown,/Market power unavailable/);
 });
 
 test("paid plan validity and available budget remain visible outside the plan dialog", async () => {
@@ -372,7 +569,7 @@ test("paid plan validity and available budget remain visible outside the plan di
     plan: { active: true, expiresAt: "2026-11-08T00:00:00.000Z" }, activePlanKey: "standard", remainingMarketPower: 121_000_000,
   });
   assert.match(html, /data-plan-validity="true">Valid until 8 Nov 2026/);
-  assert.match(html, /data-account-market-power="true"[\s\S]*121m/);
+  assert.match(html, /data-account-market-power="true"[\s\S]*121,000,000/);
   assert.equal((html.match(/<h2[^>]*>My plan/g) ?? []).length, 1);
   for (const [activePlanKey, expiresAt] of [["vip", "2026-11-08"], ["standard", "invalid"]]) {
     const invalid = renderHeader(null, "en-GB", await loadCopy(), { plan: { active: true, expiresAt }, activePlanKey });
@@ -380,11 +577,15 @@ test("paid plan validity and available budget remain visible outside the plan di
   }
 });
 
-test("an account without a plan sees one compact Beta preview and five selector tabs", async () => {
+test("an account without a plan stays unassigned while exploration offers exactly four plans", async () => {
   const html = renderHeader(null, "pt-BR", await loadCopy(), { plan: null });
-  assert.match(html, /data-plan-offer="beta"/);
-  assert.equal((html.match(/data-plan-offer=/g) ?? []).length, 1);
-  assert.equal((html.match(/role="tab"/g) ?? []).length, 5);
+  assert.equal((html.match(/data-plan-offer=/g) ?? []).length, 0);
+  assert.equal((html.match(/role="tab"/g) ?? []).length, 0);
+  assert.match(html, /Ver planos/);
+  const offers = renderPlanGallery("pt-BR", await loadCopy());
+  assert.deepEqual([...offers.matchAll(/data-plan-offer="([^"]+)"/g)].map(match => match[1]), ["beta", "standard", "master", "vip"]);
+  assert.equal((offers.match(/>Contratar plano<\/button>/g) ?? []).length, 4);
+  assert.equal((offers.match(/disabled=""/g) ?? []).length, 4);
   assert.doesNotMatch(html, /data-plan-choice=/);
   assert.doesNotMatch(html, /data-current-plan="true"/);
 });
@@ -445,7 +646,8 @@ test("header catalogues cover exact8locale vocabulary and preserve EN/PT while s
       assert.equal(mod.getTouchlineClubOwnerMarketCopy(locale), mod.TOUCHLINE_CLUB_OWNER_MARKET_CATALOGUES['en-GB']);
       for (const key of ['photoUnavailable', 'planInactiveDetail', 'virtualBudgetSeparate'] as const) assert.notEqual(copy[key], baseline['en-GB'][key]);
       const html = renderHeader(null, locale, mod);
-      assert.match(html, /role="tablist"/);
+      assert.doesNotMatch(html, /role="tablist"|data-plan-offer=/);
+      assert.match(html, />View plans</);
       assert.equal((html.match(/disabled=""/g) ?? []).length, 1);
     }
   }

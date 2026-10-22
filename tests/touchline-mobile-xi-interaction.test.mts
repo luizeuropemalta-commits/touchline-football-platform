@@ -20,12 +20,22 @@ function collectHandlers(node: ts.Node) {
 collectHandlers(tree);
 assert.equal(handlerDeclarations.length, handlerNames.length);
 const handlers = handlerDeclarations.join("\n");
+let marketSlotAcceptance = "";
+function collectAcceptance(node: ts.Node) {
+  if (ts.isFunctionDeclaration(node) && node.name?.text === "marketSlotAccepts") marketSlotAcceptance = node.getText(tree);
+  ts.forEachChild(node, collectAcceptance);
+}
+collectAcceptance(tree);
+assert.ok(marketSlotAcceptance);
 
 function selectionHarness({ accepted = true, marketPage = true, compatibleBrowse = true } = {}) {
   const events: unknown[] = [];
   const record = (name: string) => (value: unknown) => events.push([name, value]);
   const bindings = {
     marketPage,
+    collectionEnabled: false, // Legacy selection path; collection behavior is tested separately.
+    selections: [], guidedChoice: { area: "starters", slot: "ST" }, selectedCoach: { id: "coach" },
+    geometry: { formationCode: "4-3-3" }, visualIntentEpoch: { current: 0 },
     activeSlot: { id: "ST" },
     browseSlot: { id: compatibleBrowse ? "ST" : "GK" },
     setActiveSlotId: record("slot"), setBrowsePosition: record("browse"),
@@ -46,18 +56,18 @@ test("slot selection clears search and scrolls to the same-page player list", ()
   }
 });
 
-test("insertion returns to pitch only after the existing add/validation path accepts", () => {
+test("insertion returns to pitch only after the existing add/validation path accepts", async () => {
   const card = { id: "canonical-player" };
   for (const marketPage of [true, false]) {
     const passed = selectionHarness({ marketPage });
-    passed.actions.selectMyClubPlayer(card);
+    await passed.actions.selectMyClubPlayer(card);
     assert.deepEqual(passed.events, [["add", card], ["browse", null], ["view", "tactical"], ["scroll", "my-club-xi-pitch"]]);
     const rejected = selectionHarness({ marketPage, accepted: false });
-    rejected.actions.selectMyClubPlayer(card);
+    await rejected.actions.selectMyClubPlayer(card);
     assert.deepEqual(rejected.events, [["add", card]]);
   }
   const incompatible = selectionHarness({ marketPage: false, compatibleBrowse: false });
-  incompatible.actions.selectMyClubPlayer(card);
+  await incompatible.actions.selectMyClubPlayer(card);
   assert.deepEqual(incompatible.events, []);
 });
 
@@ -77,17 +87,18 @@ test("section scroll moves keyboard focus without double scrolling and honors re
   }
 });
 
-test("zoom replaces without a field X; explicit list removal stays local and open-market slots retain +", () => {
-  const removal = source.slice(source.indexOf("  function removePlayer("), source.indexOf("  async function loadPersistedLineup("));
-  assert.match(removal, /if \(!editable \|\| saving\) return/);
+test("zoom distinguishes draft removal from collection allocation and keeps guarded open-market slots", () => {
+  const removal = source.slice(source.indexOf("  async function removePlayer("), source.indexOf("  async function loadPersistedLineup("));
+  assert.match(removal, /if \(!editable \|\| saving \|\| \(collectionEnabled && !collectionSlotsEditable\)\) return/);
   assert.match(removal, /removeTouchlineFantasyPlayerFromSlot\(current, removed.slotId\)/);
   assert.doesNotMatch(removal, /fetch|DELETE|save\(|scrollToLineupSection|openTacticalSelector/);
   assert.doesNotMatch(source, /className=\{styles.pitchRemove\}/);
-  assert.match(source, /replacementAction=\{selection \? \{[^\n]*disabled: !editable \|\| saving, onSelect: \(\) => replaceMyClubPlayer\(selection.playerId, slot.id\)/);
-  assert.match(source, /removalAction=\{selection \? \{[^\n]*disabled: !editable \|\| saving, onSelect: \(\) => removePlayer\(selection.playerId\)/);
+  assert.match(source, /replacementAction=\{selection \? \{[^\n]*disabled: !editable \|\| saving \|\| \(collectionEnabled && !collectionSlotsEditable\), onSelect: \(\) => replaceMyClubPlayer\(selection.playerId, slot.id\)/);
+  assert.match(source, /removalAction=\{selection \? \{[^\n]*disabled: !editable \|\| saving \|\| \(collectionEnabled && !collectionSlotsEditable\), onSelect: \(\) => removePlayer\(selection.playerId\)/);
   assert.match(source, /lockedReason=\{selection && !editable \? lockedZoomReason : undefined\}/);
-  assert.match(source, /function addPlayer[^]*?if \(saving\) return false/);
-  assert.match(source, /: marketOpen \? budgetExhausted \? <button[^\n]*className=\{styles.emptyPosition\} disabled[^\n]*<LockKeyhole[^\n]*: <button[^\n]*className=\{styles.emptyPosition\}[^\n]*>\+<\/button> : null/);
+  assert.match(source, /function addPlayer[^]*?if \(saving \|\| \(collectionEnabled && !collectionSlotsEditable\)\) return false/);
+  assert.match(source, /: marketPage \|\| marketOpen \? budgetExhausted \? <button[^\n]*className=\{styles.emptyPosition\} disabled[^\n]*<LockKeyhole[^\n]*: <button[^\n]*className=\{styles.emptyPosition\}[^\n]*>\+<\/button> : null/);
+  assert.match(source, /disabled=\{!editable \|\| saving \|\| !selectedCoach \|\| !geometry \|\| \(collectionEnabled && !collectionSlotsEditable\) \|\| \(marketPage && !\(guidedChoice\?\.area === "starters" && guidedChoice.slot === slot.id\)\)\}/);
   assert.doesNotMatch(source, /TouchlinePositionPicker|data-slot-action|aria-haspopup/);
   assert.match(css, /\.pitchRemove[^}]*width: 44px; height: 44px; min-height: 44px/);
   assert.match(css, /@media \(hover: hover\) and \(pointer: fine\)/);
@@ -107,6 +118,7 @@ test("zoom replacement preserves selection and cannot mutate or scroll while loc
     const record = (name: string) => (value: unknown) => events.push([name, value]);
     const remove = runInNewContext(`${stripTypeScriptTypes(handlers)}; replaceMyClubPlayer;`, {
       ...state, selections: [{ playerId: "player", slotId: "ST" }],
+      marketPage: true, collectionEnabled: false, selectedCoach: { id: "coach" }, geometry: { formationCode: "4-3-3" }, visualIntentEpoch: { current: 0 },
       removePlayer: record("remove"), setActiveSlotId: record("slot"), setBrowsePosition: record("browse"),
       setVisibleStep: record("step"), setSquadView: record("view"), setQuery: record("query"),
       setArenaOpen: record("arena"),
@@ -128,7 +140,8 @@ test("the Market inline list excludes players ineligible for the removed positio
     { id: "defender", name: "Defender", position: "CB", role: "defender", clubName: "Club" },
     { id: "winger", name: "Winger", position: "RW", role: "forward", clubName: "Club" },
   ];
-  const result = runInNewContext(`${stripTypeScriptTypes(eligibility + listing)}; browseCards.map(card => card.id);`, {
+  const result = runInNewContext(`${stripTypeScriptTypes(eligibility + marketSlotAcceptance + listing)}; browseCards.map(card => card.id);`, {
+    collectionEnabled: false,
     touchlineMarketPositionBucket, touchlineFantasySlotAcceptsPlayer,
     snapshot: { catalogue }, marketPage: true, activeSlot: { id: "ST", allowedPositions: ["centre-forward"] },
     selectedPlayerClub: { teamId: "club" }, findTouchLineClub: () => ({ teamId: "club" }), normalizedQuery: "",
@@ -137,15 +150,15 @@ test("the Market inline list excludes players ineligible for the removed positio
   assert.deepEqual(Array.from(result), ["striker"]);
 });
 
-test("locked or saving lineups reject additions and removals before any selection write", () => {
-  const mutationHandlers = source.slice(source.indexOf("  function addPlayer("), source.indexOf("  async function loadPersistedLineup("));
+test("locked or saving lineups reject additions and removals before any selection write", async () => {
+  const mutationHandlers = source.slice(source.indexOf("  async function addPlayer("), source.indexOf("  async function loadPersistedLineup("));
   for (const state of [{ editable: false, saving: false }, { editable: true, saving: true }]) {
     let writes = 0;
     const actions = runInNewContext(`${stripTypeScriptTypes(mutationHandlers)}; ({ addPlayer, removePlayer });`, {
-      ...state, geometry: { slots: [] }, setSelections: () => { writes += 1; },
+      ...state, collectionEnabled: false, geometry: { slots: [] }, setSelections: () => { writes += 1; },
     });
-    assert.equal(actions.addPlayer({ id: "player" }), false);
-    actions.removePlayer("player");
+    assert.equal(await actions.addPlayer({ id: "player" }), false);
+    await actions.removePlayer("player");
     assert.equal(writes, 0);
   }
 });

@@ -32,12 +32,40 @@ test("VIP owner grant executes atomically with immutable receipt and Stripe guar
     const plan=await sql("20261011010000_touchline_fantasy_market_plan_policy");
     await db.exec(plan.slice(0,plan.indexOf("do $migration$"))+"\ncommit;");
     await db.exec(await sql("20261011011000_touchline_fantasy_owner_vip_access"));
+    await db.exec(`create table public.touchline_club_collections(user_id uuid,state jsonb,season_id uuid default '${id(90)}');
+      create table public.touchline_fantasy_configs(season_id uuid,status text,competition_key text);
+      insert into public.touchline_fantasy_configs values('${id(90)}','active','england');`);
+    await db.exec(await sql("20261017182144_touchline_owner_guest_plan_access"));
     const seed=async()=>db.exec(`insert into auth.users(id,email,email_confirmed_at,raw_app_meta_data) values
       ('${actor}','owner@example.com',now(),'{"touchline_arena_access_v1":true}'),('${target}','member@example.com',now(),'{}');
       insert into public.users(id) values('${actor}'),('${target}');`);
     async function scenario(name:string,body:()=>Promise<void>){await t.test(name,async()=>{await db.exec("begin");try{await seed();await body();}finally{await db.exec("rollback");}});}
     async function reject(call:()=>Promise<unknown>,pattern:RegExp){await db.exec("savepoint rejected");await assert.rejects(call,pattern);await db.exec("rollback to savepoint rejected");}
     const apply=async(values=args)=>(await db.query<{result:Row}>(grantSql,values)).rows[0].result;
+    const guest=async(plan:string,values=args)=>(await db.query<{result:Row}>(
+      "select public.touchline_fantasy_grant_guest_access($1,$2,$3,$4,$5,$6) as result",[...values,plan])).rows[0].result;
+    for(const plan of ["standard","master","vip"]) await scenario(`${plan} complimentary grant binds plan, preserves normal wallet and protects against subscription events`,async()=>{
+      const result=await guest(plan);const receipt=result.grant as Row;
+      assert.equal(receipt.planKey,plan);assert.equal(receipt.source,plan==="vip"?"owner_vip_grant":"owner_guest_grant");
+      assert.equal(receipt.expiresAt,null);
+      const row=(await db.query("select plan_key,source,metadata,current_period_end from touchline_fantasy_entitlements where user_id=$1",[target])).rows[0];
+      assert.equal(row.plan_key,plan);assert.equal((row.metadata as Row).complimentary,true);assert.equal(row.current_period_end,null);
+      assert.equal((await db.query("select count(*)::int n from touchline_club_collections")).rows[0].n,0,"grant never creates a collection or credits");
+      assert.equal((await db.query("select plan_key from touchline_fantasy_vip_grants")).rows[0].plan_key,plan);
+      assert.equal((await guest(plan)).replay,true);
+      await reject(()=>guest(plan==="vip"?"standard":"vip"),/VIP_IDEMPOTENCY_CONFLICT/);
+      const event=(await db.query<{result:Row}>("select touchline_fantasy_apply_test_subscription_event($1,now(),'customer.subscription.deleted',false,$2,'cus_test','sub_test','canceled',null,null) result",["event_guest_"+plan,target])).rows[0].result;
+      assert.equal(event.complimentaryVipPreserved,true);
+      assert.equal((await db.query("select plan_key,status from touchline_fantasy_entitlements where user_id=$1",[target])).rows[0].plan_key,plan);
+    });
+    await scenario("guest plans reject invalid input and cannot silently reprice an initialized collection",async()=>{
+      for(const invalid of ["beta","pro","",null]) await reject(()=>guest(invalid as string),/VIP_INVALID_COMMAND/);
+      await db.query("insert into touchline_club_collections(user_id,state) values($1,$2::jsonb)",[target,JSON.stringify({plan:"vip",balanceEur:123})]);
+      await reject(()=>guest("standard"),/VIP_COLLECTION_PLAN_CHANGE_REQUIRED/);
+      assert.equal((await db.query("select count(*)::int n from touchline_fantasy_vip_grants")).rows[0].n,0);
+      await guest("vip");
+      assert.deepEqual((await db.query("select state from touchline_club_collections")).rows[0].state,{plan:"vip",balanceEur:123});
+    });
     await scenario("confirmed account gets perpetual VIP once; exact retry returns original receipt",async()=>{
       const first=await apply();assert.equal(first.ok,true);assert.equal(first.replay,false);
       assert.equal((first.grant as Row).accessReady,true);
@@ -132,6 +160,11 @@ test("VIP owner grant executes atomically with immutable receipt and Stripe guar
         has_table_privilege('authenticated','public.touchline_fantasy_vip_grants','SELECT') as receipt_read,
         (select relrowsecurity from pg_class where oid='public.touchline_fantasy_vip_grants'::regclass) as rls`)).rows[0];
       assert.deepEqual(result,{anon:false,customer:false,service:true,direct_insert:false,receipt_read:false,rls:true});
+      const guestAcl=(await db.query(`select
+        has_function_privilege('anon','public.touchline_fantasy_grant_guest_access(uuid,text,text,text,uuid,text)','EXECUTE') as anon,
+        has_function_privilege('authenticated','public.touchline_fantasy_grant_guest_access(uuid,text,text,text,uuid,text)','EXECUTE') as customer,
+        has_function_privilege('service_role','public.touchline_fantasy_grant_guest_access(uuid,text,text,text,uuid,text)','EXECUTE') as service`)).rows[0];
+      assert.deepEqual(guestAcl,{anon:false,customer:false,service:true});
     });
   } finally {await db.close();}
 });

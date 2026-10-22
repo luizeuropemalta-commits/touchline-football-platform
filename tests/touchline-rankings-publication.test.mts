@@ -48,7 +48,9 @@ test("TouchLine Tables never present demo data as an official competition rankin
   assert.doesNotMatch(page, /rankClubOwnerCards|buildDemoClubOwnerStandings|buildTouchlineRankingSnapshot/);
   assert.match(page, /loadTouchLineActiveRanking\(\)/);
   assert.match(page, /loadTouchLineRankedCardCatalog\(activeRanking\)/);
-  assert.match(page, /const touchLineEnglandTable: never\[\] = \[\]/);
+  assert.match(page, /loadClubOwnerStandings\(\)/);
+  assert.match(page, /touchLineEnglandTable=\{standings.rows\}/);
+  assert.doesNotMatch(page, /const touchLineEnglandTable: never\[\] = \[\]/);
   assert.match(client, /function RankingPending/);
   assert.match(client, /touchLineEnglandTable\.length \?/);
   assert.match(copy, /rankingPending/);

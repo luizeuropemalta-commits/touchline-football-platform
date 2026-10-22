@@ -7,6 +7,7 @@ import { applyTouchlineSeasonPoints } from "../lib/touchlineArena/matchday-playe
 import { projectTouchlineCardStatsByPosition } from "../lib/touchlineArena/position-aware-card-stats.ts";
 import { squadCardToExactPlayer, type ClubOwnerSquadCard } from "../lib/touchlineArena/demo-data.ts";
 import { canonicalSportmonksPlayerId } from "../lib/touchlineArena/match-card-indicator.ts";
+import { resolvePrimaryPositionDetails } from "../lib/touchlineFantasy/club-primary-position-policy.ts";
 
 const SEASON = "00000000-0000-4000-8000-000000000010";
 const COMPETITION = "00000000-0000-4000-8000-000000000020";
@@ -21,7 +22,7 @@ function catalogue(options: { statsError?: boolean; noStats?: boolean; otherSeas
     players: ids.map((playerId, n) => ({ playerId, totalRating: [13.2, null, 0][n] })),
   };
   const tables: Record<string, Array<Record<string, unknown>>> = {
-    touchline_card_publications: ids.map(player_id => ({ player_id, publication_status: "published" })),
+    touchline_card_publications: ids.map((player_id,n) => ({ player_id, current_membership_id:`member-${n}`, publication_status: "published" })),
     football_players: ids.map((id, n) => ({ id, display_name: `Test keeper ${n}`, current_club_id: "club", position: "Goalkeeper" })),
     football_squad_members: ids.map((player_id, n) => ({ id: `member-${n}`, player_id, club_id: "club", status: "active", position: "Goalkeeper", jersey_number: 1 })),
     football_clubs: [{ id: "club", name: "Manchester City" }],
@@ -66,7 +67,7 @@ function catalogue(options: { statsError?: boolean; noStats?: boolean; otherSeas
   };
   const readPublicSeasonPlayerPoints = runInNewContext(`${code("lib/touchlineArena/public-season-player-points-server.ts")}\nreadPublicSeasonPlayerPoints;`, shared);
   const context = {
-    ...shared, readPublicSeasonPlayerPoints, applyTouchlineSeasonPoints, canonicalSportmonksPlayerId,
+    ...shared, readPublicSeasonPlayerPoints, applyTouchlineSeasonPoints, canonicalSportmonksPlayerId, resolvePrimaryPositionDetails,
     loadTouchlinePublishedCardPresentations: async () => new Map(ids.map(id => [id, { tierKey: "elite", marketValueEur: 1000000, shirtNumber: 1 }])),
     inferArenaRole: () => "goalkeeper", makeArenaShortName: (value: string) => value,
     normalizeOfficialShirtNumber: (value: unknown) => value,

@@ -12,7 +12,6 @@
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint .",
-    "pretypecheck": "node scripts/clean-next-type-duplicates.mjs",
     "typecheck": "tsc --noEmit",
     "test": "node --test --experimental-strip-types tests/*.test.mts",
     "test:browser": "playwright test",

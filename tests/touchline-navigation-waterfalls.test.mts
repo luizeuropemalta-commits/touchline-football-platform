@@ -16,6 +16,7 @@ import * as performanceCopy from "../lib/touchlineArena/player-performance-i18n.
 import * as catalogueLocale from "../lib/touchlineArena/catalogue-locale.ts";
 import { AuthSessionMissingError } from "@supabase/supabase-js";
 import { cardGoalsLeaderIds } from "../lib/touchlineArena/card-goals-leadership.ts";
+import type { ClubOwnerStandingsRead } from "../lib/touchlineArena/club-owner-standings-server.ts";
 
 const require = createRequire(import.meta.url);
 function loadPage(path: string, modules: Record<string, unknown>, exportName = "default") {
@@ -207,6 +208,7 @@ function rankingsWithDeferredSchedule(extra: Record<string, unknown> = {}) {
   const ranking = { snapshotId: "published-snapshot", phase: "ranked" };
   const selection = { snapshotId: ranking.snapshotId, slots: [] };
   const coaches = { snapshotId: "published-coaches" };
+  const owners: ClubOwnerStandingsRead = { status: "ready", rows: [] };
   const page = loadPage("../app/rankings/page.tsx", {
     "@/lib/touchlineArena/i18n": { normalizeTouchLineLocale: (lang: string) => lang },
     "@/lib/supabase/server": { createClient: async () => ({ auth: { getUser: () => auth.promise } }) },
@@ -220,13 +222,14 @@ function rankingsWithDeferredSchedule(extra: Record<string, unknown> = {}) {
       reads.push("fixtures"); return fixtures.promise;
     } },
     "@/lib/touchlineArena/coach-ranking-server": { loadTouchLineCoachRanking: async () => { reads.push("coaches"); return coaches; } },
+    "@/lib/touchlineArena/club-owner-standings-server": { loadClubOwnerStandings: async () => { reads.push("owners"); return owners; } },
     "@/lib/touchlineArena/card-publication-read-model": { countTouchlinePublishedPlayerCards: async () => { reads.push("count"); return 17; } },
     "@/lib/touchlineArena/arena-fixture-round": { selectArenaFixtureRound: (rows: unknown) => rows },
     "@/lib/touchlineArena/rankings-i18n": { getTouchLineRankingsCopy: () => ({ pointsMode: "Published rating", publishedCards: "Published", rankedCards: "Ranked", rankMode: "Mode" }) },
     "@/lib/touchlineArena/global-navigation": { resolveTouchlineGlobalNavigationSurface: () => "public" },
     ...extra,
   });
-  return { fixtures, catalogue, auth, reads, selection, coaches, page };
+  return { fixtures, catalogue, auth, reads, selection, coaches, owners, page };
 }
 
 test("real React stream publishes the coach table before deferred catalogue and keeps it once", async () => {
@@ -235,6 +238,7 @@ test("real React stream publishes the coach table before deferred catalogue and 
   let refreshes = 0;
   let featuredRenders = 0;
   let projections = 0;
+  let endingRenders = 0;
   const passedHighlights: unknown[] = [];
   const h = rankingsWithDeferredSchedule({
     "@/lib/touchlineArena/card-leadership-authority": { buildTouchlineCardLeadershipValue: (ranking: { snapshotId: string }, coach: unknown) => { assert.equal(ranking.snapshotId, "published-snapshot"); assert.equal(coach, h.coaches); return {}; } },
@@ -244,7 +248,12 @@ test("real React stream publishes the coach table before deferred catalogue and 
     "./touchline-tables-client": {
       default: ({ highlights }: { highlights: unknown }) => { passedHighlights.push(highlights); return createElement("div", { "data-loaded-section": "overview" }, "Published player content"); },
       TouchlineRankingPodium: ({ highlights, coachRanking }: { highlights: unknown; coachRanking: unknown }) => { passedHighlights.push(highlights); featuredRenders++; assert.equal(coachRanking, h.coaches); return createElement("div", { "data-loaded-section": "podium", "data-featured-coach": true }, "Published featured coach"); },
-      TouchlineRankingEnding: () => createElement("div", { "data-loaded-section": "ending" }),
+      TouchlineRankingEnding: ({ touchLineEnglandTable, ownerTableUnavailable }: { touchLineEnglandTable: unknown; ownerTableUnavailable: boolean }) => {
+        endingRenders++;
+        assert.equal(touchLineEnglandTable, h.owners.rows);
+        assert.equal(ownerTableUnavailable, false, "ready envelope must not be presented as unavailable");
+        return createElement("div", { "data-loaded-section": "ending" });
+      },
       TouchlineCoachRankingTable: CoachTable,
       TouchlineRankingPodiumPending: PodiumPending,
       TouchlineRankingsHero: () => createElement("header", null, "Rankings"),
@@ -273,6 +282,8 @@ test("real React stream publishes the coach table before deferred catalogue and 
     assert.equal((html.match(/id="coach-rankings"/g) ?? []).length, 1);
     assert.match(html, /Published player content/);
     assert.equal(h.reads.filter(read => read === "coaches").length, 1);
+    assert.equal(h.reads.filter(read => read === "owners").length, 1);
+    assert.equal(endingRenders, 1);
     assert.equal(refreshes, 1);
     assert.equal(featuredRenders, 1);
     assert.equal((html.match(/data-featured-coach="true"/g) ?? []).length, 1);
@@ -347,7 +358,7 @@ test("Ranking content resolves while only its round badge awaits the unchanged s
   assert.equal(hero.props.totalRankedCards, 1);
   assert.equal(client.canEditCardEngine, false);
   assert.equal((await badgeResult).props.children[1], "Matchweek 6");
-  assert.deepEqual(h.reads.slice().sort(), ["catalogue", "coaches", "count", "fixtures", "ranking", "xi"]);
+  assert.deepEqual(h.reads.slice().sort(), ["catalogue", "coaches", "count", "fixtures", "owners", "ranking", "xi"]);
 });
 
 for (const timing of ["before auth", "after content"] as const) {

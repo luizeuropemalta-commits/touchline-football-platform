@@ -21,7 +21,7 @@ const encoder = resolve(root, "scripts/local/encode-png-sequence-to-mp4.swift");
 const encoderChecksum = hash(await readFile(encoder));
 const decoder = resolve(root, "scripts/local/probe-social-studio-video.swift");
 const decoderChecksum = hash(await readFile(decoder));
-if (encoderChecksum !== "sha256:e823c09860eda5035d6a1fba312ff1f669a59da07bac989f889c0d2613f8a46b") throw new Error("ENCODER_REVIEW_REQUIRED");
+if (encoderChecksum !== "sha256:b3de3f4766373a0c011eb8786411ca7aa5c459ee2414685a8d16d30273f95932") throw new Error("ENCODER_REVIEW_REQUIRED");
 if (process.argv.includes("--check")) {
   console.log(JSON.stringify({ state: "REFERENCE_CHECKED_RUNTIME_READER_PENDING", fixtureId: reference.fixtureId, members: reference.members.length,
     gate, referenceChecksum: checksumTouchlineCanonicalJson(reference), encoderChecksum, publishable: false }));

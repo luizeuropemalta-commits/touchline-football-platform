@@ -1,6 +1,7 @@
 import { expect, test, type BrowserContextOptions } from "@playwright/test";
+import { localBrowserBaseURL } from "../helpers/local-browser-target.ts";
 
-const baseURL = process.env.TOUCHLINE_TEST_BASE_URL ?? "http://127.0.0.1:3130";
+const baseURL = localBrowserBaseURL(process.env.TOUCHLINE_TEST_BASE_URL, "http://127.0.0.1:3130");
 test.setTimeout(120_000);
 
 const publicRoutes = [

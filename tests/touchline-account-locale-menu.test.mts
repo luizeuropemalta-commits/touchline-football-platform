@@ -55,6 +55,7 @@ function harness(mode = context, request = async (_url: string, init: RequestIni
       // Model commit layout phase only: passive cleanup has not run yet.
       if (phase === 'layout') { cleanup(); cleanup = effect!(); }
     },
+    emitSession: (session: { user: { id: string } } | null) => identity!('INITIAL_SESSION', session),
     emit: (id: string | null) => identity!('SIGNED_IN', id === null ? null : { user: { id } }), counts: () => ({ authCalls, unsubscribes, refreshes }) };
 }
 type Element = { type: unknown; props: Record<string, unknown> };
@@ -123,6 +124,72 @@ test('identity switch and cleanup fence late save and unsubscribe', async () => 
   await settle(); click(elements(h.render(), 'a')[1]); h.emit(null); await settle();
   assert.equal(h.counts().refreshes, 1); pending.resolve(json(saved)); await settle();
   assert.deepEqual(h.navigations, []); h.cleanup(); assert.equal(h.counts().unsubscribes, 1);
+});
+test('unavailable session user never escapes the auth callback and blocks account preference effects', async () => {
+  for (const variant of ['menu', 'select']) {
+    const h = harness(context, undefined, variant);
+    await settle();
+    // SDK-compatible failure input, not a real auth session or SDK instance.
+    const user = new Proxy({ id: owner }, {
+      get(_target, property) {
+        if (property === 'id') throw new Error('User unavailable in separate userStorage');
+        return undefined;
+      },
+    });
+    assert.doesNotThrow(() => h.emitSession({ user }));
+    const blocked = h.render();
+    if (variant === 'menu') {
+      const anchors = elements(blocked, 'a');
+      assert.ok(anchors.every(anchor => anchor.props['aria-disabled'] === true));
+      click(anchors[1]);
+    } else {
+      assert.equal(elements(blocked, 'select')[0].props.disabled, true);
+    }
+    await settle();
+    assert.equal(h.counts().refreshes, 1, 'retain existing single identity-change refresh');
+    h.emit(owner); h.emitSession({ user });
+    await settle();
+    assert.equal(h.counts().refreshes, 1, 'no repeat notification or implicit recovery');
+    assert.deepEqual(h.calls.map(call => call.method), ['GET']);
+    assert.deepEqual(h.navigations, []);
+    assert.deepEqual(h.storageWrites, []);
+    assert.equal(h.document.cookie, '');
+    h.cleanup();
+    assert.equal(h.counts().unsubscribes, 1);
+  }
+});
+test('null and different account sessions remain blocked without preference writes', async () => {
+  for (const session of [null, { user: { id: '22222222-2222-4222-8222-222222222222' } }]) {
+    const h = harness();
+    await settle();
+    assert.doesNotThrow(() => h.emitSession(session));
+    const anchors = elements(h.render(), 'a');
+    assert.ok(anchors.every(anchor => anchor.props['aria-disabled'] === true));
+    click(anchors[1]);
+    await settle();
+    assert.equal(h.counts().refreshes, 1);
+    assert.deepEqual(h.calls.map(call => call.method), ['GET']);
+    assert.deepEqual(h.navigations, []);
+    assert.deepEqual(h.storageWrites, []);
+    assert.equal(h.document.cookie, '');
+    h.cleanup();
+  }
+});
+test('unavailable user in guest context preserves local-only behavior without auth refresh', async () => {
+  const h = harness({ mode: 'guest', accountId: '' });
+  await settle();
+  const user = new Proxy({ id: owner }, {
+    get() { throw new Error('User unavailable in separate userStorage'); },
+  });
+  assert.doesNotThrow(() => h.emitSession({ user }));
+  await settle();
+  assert.ok(elements(h.render(), 'a').every(anchor => anchor.props['aria-disabled'] === false));
+  assert.equal(h.counts().refreshes, 0);
+  assert.deepEqual(h.calls, []);
+  assert.deepEqual(h.navigations, []);
+  assert.deepEqual(h.storageWrites, []);
+  assert.equal(h.document.cookie, '');
+  h.cleanup();
 });
 test('demo and unavailable instantiate no browser auth client or account request', async () => {
   for (const mode of ['demo', 'unavailable']) {

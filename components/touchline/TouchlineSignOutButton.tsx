@@ -7,9 +7,10 @@ import { getTouchlineArenaShellCopy } from "@/lib/touchlineArena/arena-shell-i18
 import { touchLineAuthHref } from "@/lib/touchlineArena/auth-i18n";
 import styles from "./TouchlineGlobalNavigation.module.css";
 
-export default function TouchlineSignOutButton({ locale, draftLocalesEnabled = false }: {
+export default function TouchlineSignOutButton({ locale, draftLocalesEnabled = false, compact = false }: {
   locale: string;
   draftLocalesEnabled?: boolean;
+  compact?: boolean;
 }) {
   const copy = getTouchlineArenaShellCopy(locale, draftLocalesEnabled);
   const busy = useRef(false);
@@ -37,9 +38,9 @@ export default function TouchlineSignOutButton({ locale, draftLocalesEnabled = f
   }
 
   return <div>
-    <button type="button" className={styles.link} onClick={signOut} disabled={pending} aria-busy={pending}>
+    <button type="button" className={`${styles.link} ${compact ? styles.compactAction : ""}`} onClick={signOut} disabled={pending} aria-busy={pending}>
       <LogOut size={14} aria-hidden="true" />
-      {pending ? copy.signingOut : locale === "pt-BR" ? "Sair da conta" : copy.signOut}
+      {pending ? copy.signingOut : locale === "pt-BR" ? compact ? "Sair" : "Sair da conta" : copy.signOut}
     </button>
     {failed ? <p role="alert">{copy.authUnavailable}</p> : null}
   </div>;

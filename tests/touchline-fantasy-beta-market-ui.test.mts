@@ -13,10 +13,12 @@ const source = readFileSync(new URL("../app/fantasy/FantasyGameweekClient.tsx", 
 const tree = ts.createSourceFile("market.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
 const functions = new Map<string, string>();
 const variables = new Map<string, string>();
+const clubSelectors: ts.JsxSelfClosingElement[] = [];
 let unavailableGuard = "";
 function visit(node: ts.Node) {
   if (ts.isFunctionDeclaration(node) && node.name) functions.set(node.name.text, node.getText(tree));
   if (ts.isVariableDeclaration(node)) variables.set(node.name.getText(tree), node.getText(tree));
+  if (ts.isJsxSelfClosingElement(node) && node.tagName.getText(tree) === "CompactClubSelector") clubSelectors.push(node);
   if (ts.isIfStatement(node) && node.expression.getText(tree).includes("!snapshot")
     && node.thenStatement.getText(tree).includes("styles.unavailable")) unavailableGuard = node.getText(tree);
   ts.forEachChild(node, visit);
@@ -91,7 +93,16 @@ test("coach selection remains free across all clubs while player selection fails
     onSelect: () => assert.fail("No-plan player selection must remain locked") }));
   assert.equal(playerButtons.filter(button => button.props["aria-disabled"] === true).length, 20);
   assert.equal(source.match(/<CompactClubSelector mode="coach"/g)?.length, 2);
-  assert.equal(source.match(/<CompactClubSelector selectedTeamId=\{selectedPlayerClub/g)?.length, 2);
+  assert.equal(source.match(/<CompactClubSelector selectedTeamId=\{selectedPlayerClub/g)?.length, 1);
+  // ClubOwner now shares one selector between coaches and players; its player
+  // mode must retain the same authoritative plan policy and locked notice.
+  const shared = clubSelectors.filter(node => node.attributes.properties.some(attribute => ts.isJsxAttribute(attribute)
+    && attribute.name.getText(tree) === "mode" && attribute.initializer?.getText(tree) === '{browsingCoaches ? "coach" : "player"}'));
+  assert.equal(shared.length, 1);
+  for (const [name, initializer] of [["marketAccess", "{marketPolicy}"], ["lockedLabel", "{marketPlanLockCopy}"]]) {
+    assert.ok(shared[0].attributes.properties.some(attribute => ts.isJsxAttribute(attribute)
+      && attribute.name.getText(tree) === name && attribute.initializer?.getText(tree) === initializer));
+  }
 });
 
 test("Beta initial selection uses an allowed club but preserves a locked deep link for its notice", () => {
@@ -109,8 +120,8 @@ test("both actual Market filters exclude restricted clubs even through search an
   const catalogue = [makeCard("19"), makeCard("22")];
   for (const marketPage of [false, true]) {
     for (const teamId of ["19", "22"]) {
-      const context = { snapshot: { catalogue }, selections: [], marketPolicy: beta, activeSlot: { id: "GK" },
-        slotAccepts: () => true, marketPage, browsingPosition: "goalkeeper", touchlineMarketPositionBucket: () => "goalkeeper",
+      const context = { snapshot: { catalogue }, selections: [], marketPolicy: beta, activeSlot: { id: "GK" }, collectionEnabled: false,
+        marketSlotAccepts: () => true, marketPage, browsingPosition: "goalkeeper", touchlineMarketPositionBucket: () => "goalkeeper",
         canonicalRosterRole: (value: string) => value, selectedPlayerClub: { teamId }, normalizedQuery: "synthetic" };
       for (const name of ["filtered", "browseCards"]) {
         const cards = actualVariable(name, context) as Array<{ id: string }>;
@@ -120,18 +131,18 @@ test("both actual Market filters exclude restricted clubs even through search an
   }
 });
 
-test("the actual addPlayer guard refuses a restricted card before any draft mutation", () => {
+test("the actual addPlayer guard refuses a restricted card before any draft mutation", async () => {
   const notices: string[] = [];
-  const add = actualFunction("addPlayer", { editable: true, geometry: { slots: [] }, saving: false, marketPolicy: beta,
+  const add = actualFunction("addPlayer", { editable: true, geometry: { slots: [] }, saving: false, collectionEnabled: false, marketPolicy: beta,
     marketPlanLockCopy: "locked", setFeedback: (value: string) => notices.push(value) });
-  assert.equal(add({ id: "synthetic", clubName: findTouchLineClub("19")!.name }), false);
+  assert.equal(await add({ id: "synthetic", clubName: findTouchLineClub("19")!.name }), false);
   assert.deepEqual(notices, ["locked"]);
 });
 
 test("the actual save guard cannot submit a restricted existing XI as a new draft or confirmation", async () => {
   const notices: string[] = [], requests: unknown[] = [];
   const selections = Object.freeze([{ playerId: "synthetic", slotId: "GK" }]);
-  const save = actualFunction("save", { activeGameweek: { id: "gameweek" }, editable: true, selectedCoachId: "coach", formationCode: "4-3-3",
+  const save = actualFunction("save", { collectionEnabled: false, activeGameweek: { id: "gameweek" }, roundEditable: true, selectedCoachId: "coach", formationCode: "4-3-3",
     selections, marketPolicy: beta, catalogueById: new Map([["synthetic", { clubName: findTouchLineClub("19")!.name }]]),
     marketPlanLockCopy: "locked", setFeedback: (value: string) => notices.push(value), fetch: (...args: unknown[]) => requests.push(args) });
   await save("draft"); await save("confirm");
@@ -141,8 +152,8 @@ test("the actual save guard cannot submit a restricted existing XI as a new draf
 });
 
 test("budget presentation uses the server's policy and never a selected plan preview", () => {
-  assert.equal(actualVariable("marketBudgetEur", { marketPolicy: beta, snapshot: { config: { budgetEur: 777_000_000 } } }), 50_000_000);
-  assert.equal(actualVariable("marketBudgetEur", { marketPolicy: undefined, snapshot: { config: { budgetEur: 777_000_000 } } }), 0);
+  assert.equal(actualVariable("marketBudgetEur", { collectionEnabled: false, marketPolicy: beta, snapshot: { config: { budgetEur: 777_000_000 } } }), 50_000_000);
+  assert.equal(actualVariable("marketBudgetEur", { collectionEnabled: false, marketPolicy: undefined, snapshot: { config: { budgetEur: 777_000_000 } } }), 0);
   assert.doesNotMatch(source, /planPreview/);
 });
 
@@ -157,7 +168,7 @@ test("explicit missing or malformed policy cannot unlock clubs or expose a fallb
       (button.props.onClick as () => void)();
     }
     assert.deepEqual(selected, []);
-    assert.equal(actualVariable("marketBudgetEur", { marketPolicy: marketAccess, snapshot: { config: { budgetEur: 777_000_000 } } }), 0);
+    assert.equal(actualVariable("marketBudgetEur", { collectionEnabled: false, marketPolicy: marketAccess, snapshot: { config: { budgetEur: 777_000_000 } } }), 0);
     const unavailable = execute(`(() => { ${unavailableGuard} return "available"; })()`, {
       snapshot: {}, marketPolicy: marketAccess, embedded: true, locale: "en-GB", draftLocalesEnabled: false,
       getTouchlineFantasyMarketStateCopy: () => ({ unavailableTitle: "Unavailable", unavailableMessage: "Unavailable" }),

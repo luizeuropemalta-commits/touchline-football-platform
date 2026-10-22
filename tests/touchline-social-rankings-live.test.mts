@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { deriveRankingsLive, type RankingsLiveSource, type RankingsLiveEvidence } from "../lib/social-rankings-live-contract.ts";
 import { leadershipCrownEligibility } from "../lib/touchlineArena/leadership-decision.ts";
 import { syntheticRankingsV4Evidence } from "./fixtures/rankings-v4.synthetic.mts";
+import { validateRankingsLocalInput } from "../lib/social-rankings-render-input-local.mjs";
 
 const source = JSON.parse(readFileSync(new URL("../artifacts/social-studio/rankings/snapshot-20260914.json", import.meta.url), "utf8")) as RankingsLiveSource;
 const evidence: RankingsLiveEvidence = syntheticRankingsV4Evidence();
@@ -91,10 +92,27 @@ test("season coach artwork consumes every exact published ranking row", () => {
   assert.deepEqual(data.coaches.map(c => ({ coachProviderId: c.coachProviderId, touchlinePoints: c.touchlinePoints, wins: c.wins, draws: c.draws, losses: c.losses, awayWins: c.awayWins })), source.coachSnapshot.ranking_payload.map(c => ({ coachProviderId: c.coachProviderId, touchlinePoints: c.touchlinePoints, wins: c.wins, draws: c.draws, losses: c.losses, awayWins: c.awayWins })));
 });
 
-test("old frozen inputs cannot bypass the published coach payload validation", () => {
+test("old frozen inputs require explicit validation flags through the gated extracted reader", () => {
+  const valid = {
+    publicCardsRevalidated: true, coachSnapshotValidated: true,
+    goldenBootEvidenceSha256: "synthetic",
+    data: { provenance: { source: "LOCAL_CANONICAL_REPLAY_NOT_PUBLISHED" }, publishable: false, weeklySelection: { complete: true } },
+  };
+  assert.equal(validateRankingsLocalInput(valid), valid);
+  // The binding suite covers false flags; retained inputs can omit flags or encode truthy non-booleans.
+  for (const property of ["publicCardsRevalidated", "coachSnapshotValidated"]) {
+    for (const invalid of [undefined, null, 1, "true"]) {
+      assert.throws(() => validateRankingsLocalInput({ ...valid, [property]: invalid }), /INVALID_LOCAL_REVIEW_INPUT_REPREPARE_REQUIRED/);
+    }
+  }
+  assert.throws(() => validateRankingsLocalInput({ ...valid, data: { ...valid.data, provenance: { source: "PUBLISHED" } } }), /INVALID_LOCAL_REVIEW_INPUT_REPREPARE_REQUIRED/);
   const server = readFileSync(new URL("../lib/social-rankings-live-server.ts", import.meta.url), "utf8");
-  assert.ok(server.includes("coachSnapshotValidated: true"));
-  assert.ok(server.includes("value.coachSnapshotValidated !== true"));
+  assert.match(server, /import\s*\{\s*readRankingsLocalInput\s*\}\s*from\s*"\.\/social-rankings-render-input-local\.mjs"/);
+  const readerStart = server.indexOf("export async function readRankingsLiveRenderInput");
+  assert.ok(readerStart >= 0);
+  assert.match(server.slice(readerStart), /if\s*\(process\.env\.NODE_ENV !== "development"\) throw new Error\("LOCAL_DEVELOPMENT_ONLY"\);\s*return readRankingsLocalInput\(root\(\), runId, inputSha256\);/);
+  const reader = readFileSync(new URL("../lib/social-rankings-render-input-local.mjs", import.meta.url), "utf8");
+  assert.match(reader, /const input = validateRankingsLocalInput\(JSON\.parse\(bytes\.toString\("utf8"\)\)\);\s*return \{ input,/);
 });
 
 test("unreconciled recorded goals cannot authorize a Golden Boot candidate", () => {

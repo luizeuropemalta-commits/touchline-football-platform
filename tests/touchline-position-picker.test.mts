@@ -1,14 +1,28 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import ts from "typescript";
 
 const source = (path: string) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 
 test("market selection uses the approved embedded position-bound section and returns to the field", () => {
   const client = source("app/fantasy/FantasyGameweekClient.tsx");
-  assert.match(client, /const openTacticalSelector = \(slotId: string\) => \{\s*setArenaOpen\(false\);\s*setActiveSlotId\(slotId\);[\s\S]*?scrollToLineupSection\("my-club-player-selection"\)/);
-  assert.match(client, /marketPage \? Boolean\(activeSlot\) && slotAccepts\(activeSlot, card\)/);
-  assert.match(client, /if \(!addPlayer\(card\)\) return;\s*setBrowsePosition\(null\);\s*setSquadView\("tactical"\);\s*scrollToLineupSection\("my-club-xi-pitch"\)/);
+  const ast = ts.createSourceFile("FantasyGameweekClient.tsx", client, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const initializers = new Map<string, string>();
+  const visit = (node: ts.Node) => {
+    if (ts.isVariableDeclaration(node) && node.initializer) initializers.set(node.name.getText(ast), node.initializer.getText(ast));
+    ts.forEachChild(node, visit);
+  };
+  visit(ast);
+  const open = initializers.get("openTacticalSelector");
+  assert.ok(open);
+  assert.match(open, /if \(marketPage && !selections\.some\(entry => entry\.slotId === slotId\)\s*&& !\(guidedChoice\?\.area === "starters" && guidedChoice\.slot === slotId\)\) return;/);
+  assert.match(open, /visualIntentEpoch\.current\+\+;\s*setArenaOpen\(false\);\s*setActiveSlotId\(slotId\);/);
+  assert.match(open, /scrollToLineupSection\("my-club-player-selection"\);\s*\}$/);
+  assert.match(client, /marketPage \? Boolean\(activeSlot\) && marketSlotAccepts\(activeSlot, card\)/);
+  const select = initializers.get("selectMyClubPlayer");
+  assert.ok(select);
+  assert.match(select, /const intent = visualIntentEpoch\.current;\s*if \(!await addPlayer\(card\)\) return;\s*if \(intent !== visualIntentEpoch\.current\) return;\s*setBrowsePosition\(null\);\s*setSquadView\("tactical"\);\s*scrollToLineupSection\("my-club-xi-pitch"\)/);
   assert.match(client, /onClick=\{\(\) => openTacticalSelector\(slot\.id\)\}/);
   assert.match(client, /id="my-club-player-selection" tabIndex=\{-1\} data-open="true" data-inline-selection="true"/);
   assert.match(client, /section\.focus\(\{ preventScroll: true \}\)/);

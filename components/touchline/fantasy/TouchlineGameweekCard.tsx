@@ -1,6 +1,6 @@
 "use client";
 
-import TouchlineCardZoom from "@/components/touchline/cards/TouchlineCardZoom";
+import TouchlineCardZoom, { type TouchlineSigningActions } from "@/components/touchline/cards/TouchlineCardZoom";
 import TouchlineEliteExactCard from "@/components/touchline/cards/TouchlineEliteExactCard";
 import { touchlineCardTierPalette } from "@/lib/touchlineArena/card-rules";
 import { buildTouchlinePlayerCardZoomDetails } from "@/lib/touchlineArena/card-zoom-details";
@@ -9,7 +9,7 @@ import { touchlinePlayerProfileHref } from "@/lib/touchlineArena/player-links";
 import { getTouchlineExactCardCopy } from "@/lib/touchlineArena/exact-card-i18n";
 import { touchlinePlayerPositionKind } from "@/lib/touchlineArena/position-aware-card-stats";
 
-export default function TouchlineGameweekCard({ card, locale, compact = false, displayWidth, fitContainer = false, draftLocalesEnabled = false, replacementAction, removalAction, lockedReason }: {
+export default function TouchlineGameweekCard({ card, locale, compact = false, displayWidth, fitContainer = false, draftLocalesEnabled = false, replacementAction, removalAction, releaseAction, signingActions, lockedReason }: {
   card: ClubOwnerSquadCard;
   locale: string;
   draftLocalesEnabled?: boolean;
@@ -19,6 +19,8 @@ export default function TouchlineGameweekCard({ card, locale, compact = false, d
   fitContainer?: boolean;
   replacementAction?: { label: string; onSelect: () => void; disabled?: boolean };
   removalAction?: { label: string; onSelect: () => void; disabled?: boolean };
+  releaseAction?: { label: string; onSelect: () => void; disabled?: boolean };
+  signingActions?: TouchlineSigningActions;
   lockedReason?: string;
 }) {
   const copy = getTouchlineExactCardCopy(locale, draftLocalesEnabled);
@@ -60,6 +62,8 @@ export default function TouchlineGameweekCard({ card, locale, compact = false, d
   return <TouchlineCardZoom
     replacementAction={replacementAction}
     removalAction={removalAction}
+    releaseAction={releaseAction}
+    signingActions={signingActions}
     lockedReason={lockedReason}
     locale={locale}
     draftLocalesEnabled={draftLocalesEnabled}

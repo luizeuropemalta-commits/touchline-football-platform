@@ -17,6 +17,12 @@ const maximum = "9223372036854775807";
 const objectKey = `${actorId}/${operationId}/${digest}.webp`;
 const avatarUrl = `/api/account/avatar?version=${operationId}`;
 const signal = () => new AbortController().signal;
+const avatarModules = () => readdirSync(resolve(import.meta.dirname, "../lib/touchlineArena")).filter(name => /^club-owner-avatar-.*\.ts$/.test(name)).sort();
+const expectedAvatarModules = ["client", "context-server", "control-admission", "local-admission", "output-policy", "persistence", "read-handler", "resource-admission", "retention-discovery-worker", "retention-list-storage", "retention-rpc", "retention-server", "retention-storage", "retention-worker", "selection-contract", "server", "storage", "transport-limits", "ui-i18n", "upload-contract", "upload-handler", "validation-types", "validation"].map(name => `club-owner-avatar-${name}.ts`).sort();
+
+test("avatar compiler inventory includes every reviewed module, including the explicit local admission guard", () => {
+  assert.deepEqual(avatarModules(), expectedAvatarModules);
+});
 
 test("avatar dependencies typecheck with the repository's unmodified target/lib and real compiler", () => {
   const root = resolve(import.meta.dirname, ".."), config = ts.readConfigFile(resolve(root, "tsconfig.json"), ts.sys.readFile);
@@ -24,8 +30,8 @@ test("avatar dependencies typecheck with the repository's unmodified target/lib 
   const parsed = ts.parseJsonConfigFileContent(config.config, ts.sys, root);
   assert.deepEqual(parsed.errors, []);
   assert.equal(parsed.options.target, ts.ScriptTarget.ES2017);
-  const modules = readdirSync(resolve(root, "lib/touchlineArena")).filter(name => /^club-owner-avatar-.*\.ts$/.test(name)).sort();
-  assert.deepEqual(modules, ["client", "context-server", "control-admission", "output-policy", "persistence", "read-handler", "resource-admission", "retention-discovery-worker", "retention-list-storage", "retention-rpc", "retention-server", "retention-storage", "retention-worker", "selection-contract", "server", "storage", "transport-limits", "ui-i18n", "upload-contract", "upload-handler", "validation-types", "validation"].map(name => `club-owner-avatar-${name}.ts`).sort());
+  const modules = avatarModules();
+  assert.deepEqual(modules, expectedAvatarModules);
   const roots = [resolve(root, "next-env.d.ts"), resolve(root, "app/api/account/avatar/route.ts"), resolve(root, "app/api/account/avatar/recovery/route.ts"),
     ...modules.map(name => resolve(root, "lib/touchlineArena", name))];
   // Compiler roots are read, never dynamically imported: server-only, GET and

@@ -90,6 +90,23 @@ test("recovery real route gates full QA config, both exact flags and dedicated a
     const f = fixture(); assert.equal((await f.route.POST(f.request(undefined, headers))).status, 403); assert.deepEqual(f.calls, []);
   }
 });
+const localSettings = { NODE_ENV: "development", TOUCHLINE_CLUB_OWNER_AVATAR_LOCAL_ENABLED: "true",
+ VERCEL_ENV: undefined, VERCEL_GIT_COMMIT_REF: undefined, VERCEL_BRANCH_URL: undefined, VERCEL_URL: undefined };
+
+test("local recovery remains account bound and rejects foreign origin and port", async () => {
+ const request = (url = "http://localhost:3319", expected = actor) => new Request(url + "/api/account/avatar/recovery", {
+ method: "POST", headers: { origin: url, "content-type": "application/json", "x-touchline-expected-account": expected },
+ body: JSON.stringify({ action: "status" }) });
+ const f = fixture(localSettings);
+ assert.equal((await f.route.POST(request())).status, 200);
+ for (const url of ["http://localhost:3320", "http://127.0.0.1:3319"]) {
+  const g = fixture(localSettings); assert.equal((await g.route.POST(request(url))).status, 503); assert.deepEqual(g.calls, []);
+ }
+ const g = fixture(localSettings);
+ assert.equal((await g.route.POST(request(undefined, other))).status, 403); assert.deepEqual(g.calls, []);
+ const h = fixture({ ...localSettings, SUPABASE_URL: "https://other.invalid" });
+ assert.equal((await h.route.POST(request())).status, 503); assert.deepEqual(h.calls, []);
+});
 
 test("recovery real route executes status and explicit idle fence through actual SDK without image work or readiness", async () => {
   const f = fixture(), response = await f.route.POST(f.request()); assert.equal(response.status, 200);

@@ -28,7 +28,7 @@
 .frame[data-centered-navigation="true"] .row { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 16px; }
 .frame[data-centered-navigation="true"] .row > :first-child { justify-self: start; }
 .frame[data-centered-navigation="true"] .row > :last-child { justify-self: end; }
-.navigationSlot { min-width: 0; max-width: calc(100vw - 440px); }
+.navigationSlot { display: flex; align-items: center; justify-content: center; gap: 8px; min-width: 0; max-width: calc(100vw - 440px); }
 .navigationSlot > nav { width: auto; margin: 0; padding: 0; justify-content: center; }
 .brandGroup { display: flex; align-items: center; flex-wrap: wrap; gap: 0 12px; min-width: 0; max-width: 100%; }
 .brandAccessory a { display: inline-flex; align-items: center; min-height: 44px; color: #b9ec8c; font-size: 11px; white-space: nowrap; text-underline-offset: 4px; }

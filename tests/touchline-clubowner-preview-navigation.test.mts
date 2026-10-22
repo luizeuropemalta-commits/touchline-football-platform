@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { clubCollectionPresentationEnabled } from "../lib/touchlineFantasy/club-collection-presentation.ts";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { runInNewContext } from "node:vm";
@@ -16,6 +17,12 @@ function fixture(environment: string, patch: Record<string, unknown> = {}) {
   const snapshot = Object.freeze({ entitlementActive: true, marketAccess: marketPolicy.resolveTouchlineFantasyMarketAccess("standard"),
     config: { budgetEur: 500_000_000 }, userGameweek: { totalMarketValueEur: 379_000_000 }, plan, ...patch });
   const dependencies: Record<string, unknown> = {
+    "@/lib/touchlineFantasy/club-collection-server": { clubCollectionEnabled: () => false },
+    "@/lib/touchlineFantasy/club-collection-read-server": { readClubCollectionServer: async (accountId: string) => {
+      assert.equal(accountId, user.id);
+      return { status: "unavailable", error: "CLUB_COLLECTION_UNAVAILABLE", httpStatus: 503 };
+    } },
+    "@/lib/touchlineFantasy/club-collection-presentation": { clubCollectionPresentationEnabled },
     "react/jsx-runtime": jsxRuntime,
     "next/headers": { headers: async () => ({ get: () => null }) },
     "next/navigation": { redirect: () => assert.fail("Customer must remain signed in"), notFound: () => assert.fail("Customer must remain allowed") },
@@ -37,6 +44,7 @@ function fixture(environment: string, patch: Record<string, unknown> = {}) {
     "@/lib/touchlineFantasy/market-workflow-i18n": { getTouchlineFantasyMarketWorkflowCopy: () => ({ metadataDescription: "ClubOwner" }) },
     "./market-game.module.css": { default: { page: "page", content: "content" } },
   };
+  dependencies["@/components/touchline/fantasy/ClubCollectionContext"] = { ClubCollectionProvider: "collection-provider" };
   for (const name of ["@/components/touchline/ClubOwnerMarketHeader", "@/components/touchline/TouchlineBrandHeader", "@/components/touchline/TouchlineGlobalNavigation", "@/components/touchline/TouchlineSignOutButton", "@/app/fantasy/FantasyGameweekClient"]) {
     dependencies[name] = { default: () => null };
   }
@@ -48,7 +56,8 @@ function fixture(environment: string, patch: Record<string, unknown> = {}) {
   return { plan, async render(params: Params) {
     const root = await exports.default!({ searchParams: Promise.resolve(params) });
     const [brand, content] = root.props.children as Element[];
-    const [header, fantasy] = content.props.children as Element[];
+    const provider = content.props.children as Element;
+    const [header, fantasy] = provider.props.children as Element[];
     assert.equal(header.props.plan, plan, "Navigation must not replace the real subscription");
     assert.equal(fantasy.props.initialSnapshot, snapshot);
     return { href: brand.props.href, header };

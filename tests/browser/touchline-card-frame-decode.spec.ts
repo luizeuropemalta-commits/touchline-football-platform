@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { localBrowserBaseURL } from "../helpers/local-browser-target.ts";
 
-const visualQaBaseUrl = process.env.TOUCHLINE_VISUAL_QA_BASE_URL ?? "http://127.0.0.1:3123";
+const visualQaBaseUrl = localBrowserBaseURL(process.env.TOUCHLINE_VISUAL_QA_BASE_URL, "http://127.0.0.1:3123");
 const visualQaPath = "/visual-qa/card-goalkeeper-stat-strip?lang=en-GB";
 const supportedProjects = new Set(["chromium-desktop-1280", "chromium-phone-390"]);
 

@@ -169,6 +169,12 @@
   }
 }
 
+.shell[data-card-motion="true"] .clubBadge [data-touchline-card-crest-host="true"][data-crest-contrast="light"] > img,
+.shell:hover .clubBadge [data-touchline-card-crest-host="true"][data-crest-contrast="light"] > img {
+  /* The fine masked silhouette supplies contrast without a second halo. */
+  filter: none;
+}
+
 .nameplate {
   position: absolute;
   z-index: 3;
@@ -324,6 +330,22 @@
 }
 
 .pointsStat strong {
+  color: var(--coach-touchline);
+}
+
+/* Reuse the existing reserved footer layer without replacing points or art. */
+.signingPrice {
+  position: absolute;
+  z-index: 3;
+  left: var(--coach-footer-x, 18%);
+  top: var(--coach-footer-y, 86.4%);
+  width: var(--coach-footer-w, 64%);
+  min-height: 0;
+  padding: 1.2cqw 1cqw;
+  gap: 1px;
+}
+
+.signingPrice strong {
   color: var(--coach-touchline);
 }
 

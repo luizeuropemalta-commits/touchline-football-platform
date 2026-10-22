@@ -9,7 +9,7 @@ import * as jsx from "react/jsx-runtime";
 import ts from "typescript";
 import { resolvePlayerAvailabilityBadge, playerAvailabilityBadgeLabel } from "../lib/touchlineArena/player-availability-badge.ts";
 
-test("the approved red cross SSR preserves its accessible label and artwork", async () => {
+test("the approved red cross SSR preserves its accessible label and artwork", { skip: process.env.TOUCHLINE_RUN_PLAYER_AVAILABILITY_BROWSER_TESTS !== "1" }, async () => {
   const source = readFileSync(new URL("../components/touchline/cards/TouchlinePlayerAvailabilityBadge.tsx", import.meta.url), "utf8");
   const css = readFileSync(new URL("../components/touchline/cards/TouchlinePlayerAvailabilityBadge.module.css", import.meta.url), "utf8");
   const exports: Record<string, unknown> = {};

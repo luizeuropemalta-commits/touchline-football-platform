@@ -27,7 +27,8 @@ test("Market reuses the Gameweek transaction boundary and legacy Fantasy forward
   assert.match(route, /MAX_LINEUP_REQUEST_BYTES = 8_192/);
   assert.match(route, /new URL\(origin\)\.origin === request\.nextUrl\.origin/);
   assert.match(route, /new TextEncoder\(\)\.encode\(bodyText\)\.byteLength/);
-  assert.match(route, /parseTouchlineFantasyLineupRequest\(await readBoundedJson\(request\)\)/);
+  assert.match(route, /const body = await readBoundedJson\(request\)/);
+  assert.match(route, /parseTouchlineFantasyLineupRequest\(body\)/);
 });
 
 test("the My Club presentation keeps the guided coach-first Gameweek flow", async () => {
@@ -60,7 +61,9 @@ test("the My Club presentation keeps the guided coach-first Gameweek flow", asyn
   assert.match(client, /touchlineLiveOptimizedClubLogoUrl/);
   assert.match(client, /function CompactClubIdentity[\s\S]*?touchlineLiveOptimizedClubLogoUrl\(clubLogoUrl\)[\s\S]*?data-club-identity="compact"[\s\S]*?<Image[^>]*unoptimized[^>]*loading="eager"/);
   assert.match(client, /filteredCoaches\.map[\s\S]*?<CompactClubIdentity clubName=\{entry\.clubName\} clubLogoUrl=\{entry\.clubLogoUrl/);
-  assert.match(client, /filteredCoaches = snapshot\.coaches\.filter\(\(entry\) => findTouchLineClub\(entry\.clubName\)\?\.teamId === selectedCoachClub\?\.teamId\)/);
+  // Legacy browsing stays club-scoped; the funded collection can only display
+  // its owned coach until an audited paid coach-change flow is available.
+  assert.match(client, /filteredCoaches = snapshot\.coaches\.filter\(\(entry\) => findTouchLineClub\(entry\.clubName\)\?\.teamId === selectedCoachClub\?\.teamId\s*&& \(!normalizedQuery \|\| `\$\{entry\.coach\.displayName\} \$\{entry\.clubName\}`\.toLowerCase\(\)\.includes\(normalizedQuery\)\)\s*&& \(!collectionEnabled \|\| !collection\.state \|\| entry\.id === collection\.state\.coach\.id\)\)/);
   assert.match(client, /builderCopy\.hireCoach/);
   assert.match(client, /entry\.competition\?\.home\.touchlinePoints[\s\S]*?entry\.competition\?\.away\.touchlinePoints/);
   assert.match(client, /<aside className=\{styles\.guidePanel\} ref=\{guidePanelRef\} data-guide-step=\{visibleStep\} tabIndex=\{0\}[^>]*onPointerDown=\{\(event\) => \{ if \(event\.target === event\.currentTarget\) event\.currentTarget\.focus\(\{ preventScroll: true \}\); \}\}/);
@@ -104,7 +107,7 @@ test("the My Club presentation keeps the guided coach-first Gameweek flow", asyn
   assert.match(styles, /\.myClubTacticalPitch\{[\s\S]*?--pitch-line:rgba\(170,255,62[\s\S]*?aspect-ratio:105\/68/);
   assert.match(styles, /@keyframes myClubPitchTrace/);
   assert.match(client, /function verticalPitchPosition[\s\S]*?100 - slot\.x/);
-  assert.match(client, /slotAccepts\(activeSlot \?\? null, card\)[\s\S]*?cardClub\?\.teamId === selectedPlayerClub\?\.teamId/);
+  assert.match(client, /marketSlotAccepts\(activeSlot \?\? null, card\)[\s\S]*?cardClub\?\.teamId === selectedPlayerClub\?\.teamId/);
   assert.match(client, /function canonicalRosterRole[\s\S]*?role === "goalkeeper"[\s\S]*?role === "defender"[\s\S]*?role === "midfielder"[\s\S]*?role === "forward"/);
   assert.match(client, /touchlineMarketPositionBucket\(card\.position, canonicalRosterRole\(card\.role\)\)/);
   assert.doesNotMatch(client, /card\.role === "goalkeeper" \? "goalkeeper" : null/);

@@ -50,6 +50,7 @@ type Props = {
   initialFixtures: TouchlinePublicFixture[];
   /** Reuse the Live rail in Arena without mounting the match detail. */
   railOnly?: boolean;
+  hideRecentResults?: boolean;
   initialFixtureId?: string | null;
   initialMatchDetail?: TouchlinePublicFantasyFixtureMatchDetail | null;
   canReadMatchDetail?: boolean;
@@ -299,6 +300,7 @@ function MatchTeamSheet({
 export default function TouchlineMatchCentre({
   initialFixtures,
   railOnly = false,
+  hideRecentResults = false,
   initialFixtureId,
   initialMatchDetail = null,
   canReadMatchDetail = false,
@@ -456,7 +458,7 @@ export default function TouchlineMatchCentre({
   }, [now, selected]);
   const fixtureSections: Array<{ id: FixtureSection; label: string; fixtures: TouchlinePublicFixture[] }> = [
     { id: "current", label: dictionary.currentFixtures, fixtures: schedule.currentFixtures },
-    { id: "results", label: dictionary.recentResults, fixtures: schedule.recentResults },
+    ...(!hideRecentResults ? [{ id: "results" as const, label: dictionary.recentResults, fixtures: schedule.recentResults }] : []),
   ];
 
   function selectFixture(fixture: TouchlinePublicFixture) {
@@ -485,7 +487,7 @@ export default function TouchlineMatchCentre({
             <span className={styles.railLeague} dir={textDirection}><strong>{dictionary.league}</strong>{seasonLabel ? <small>{seasonLabel}</small> : null}</span>
             <dl className={styles.fixtureCount}>
               <div><dt>{dictionary.currentFixtures}</dt><dd>{schedule.currentFixtures.length}</dd></div>
-              <div><dt>{dictionary.recentResults}</dt><dd>{schedule.recentResults.length}</dd></div>
+              {!hideRecentResults ? <div><dt>{dictionary.recentResults}</dt><dd>{schedule.recentResults.length}</dd></div> : null}
             </dl>
             {railOnly && readMetadata?.degraded ? <p className={styles.railFreshness} role="status" data-state={readMetadata.state}>
               <Clock3 size={14} aria-hidden="true" />
@@ -495,7 +497,7 @@ export default function TouchlineMatchCentre({
           <div
             className={styles.fixtureScroller}
             tabIndex={0}
-            aria-label={`${dictionary.currentFixtures}: ${schedule.currentFixtures.length}; ${dictionary.recentResults}: ${schedule.recentResults.length}`}
+            aria-label={fixtureSections.map(section => `${section.label}: ${section.fixtures.length}`).join("; ")}
           >
             {fixtureSections.map((section) => {
               const railFixtures = section.fixtures;

@@ -123,6 +123,9 @@ export async function PUT(request: Request) {
     );
   }
   if (error) {
+    if (error.message.includes("CLUB_COLLECTION_ROUTE_REQUIRED")) {
+      return NextResponse.json({ ok: false, error: "CLUB_COLLECTION_ROUTE_REQUIRED" }, { status: 409 });
+    }
     const conflict = error.message.includes("TL_COACH_ACTIVE_CONTRACT_EXISTS");
     return NextResponse.json(
       { ok: false, error: conflict ? "TL_COACH_ACTIVE_CONTRACT_EXISTS" : "TL_COACH_HIRE_FAILED" },

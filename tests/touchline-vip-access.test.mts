@@ -20,12 +20,30 @@ const plain = (value: unknown) => JSON.parse(JSON.stringify(value));
 
 test("VIP command accepts only a normalized bounded email, reason and command UUID", () => {
   assert.deepEqual(plain(api.parseVipAccessCommand({ ...command, email: " MEMBER@Example.com " })), command);
-  for (const invalid of [null, [], {}, { ...command, actorId: actor.id }, { ...command, planKey: "vip" },
+  for (const invalid of [null, [], {}, { ...command, actorId: actor.id }, { ...command, planKey: "beta" },
     { ...command, email: "x\n@example.com" }, { ...command, email: "a..b@example.com" },
     { ...command, email: "a@-example.com" }, { ...command, reason: "a" }, { ...command, reason: "x".repeat(241) },
     { ...command, reason: "owner\nreason" }, { ...command, commandId: "not-uuid" }]) {
     assert.equal(api.parseVipAccessCommand(invalid), null);
   }
+});
+
+test("guest commands allow exactly the three paid plans, bind the plan to the receipt and retain legacy VIP compatibility",async()=>{
+  for(const planKey of ["standard","master","vip"]) {
+    const cmd={...command,planKey};
+    assert.deepEqual(plain(api.parseVipAccessCommand(cmd)),cmd);
+    const source=planKey==="vip"?"owner_vip_grant":"owner_guest_grant";
+    const result=await api.grantVipAccess({rpc:async(name:string,args:Record<string,unknown>)=>{
+      assert.equal(name,"touchline_fantasy_grant_guest_access");assert.equal(args.p_plan_key,planKey);
+      return {data:{ok:true,replay:false,grant:{...grant,planKey,source}},error:null};
+    }},actor,cmd);
+    assert.equal(result.status,200);assert.equal(result.body.grant.planKey,planKey);
+    const mismatch=await api.grantVipAccess({rpc:async()=>({data:{ok:true,replay:false,grant:{...grant,planKey:"beta"}},error:null})},actor,cmd);
+    assert.equal(mismatch.status,503);
+  }
+  for(const planKey of [null,undefined,"standard ","pro",0,{}])assert.equal(api.parseVipAccessCommand({...command,planKey}),null);
+  const blocked=await api.grantVipAccess({rpc:async()=>({data:null,error:{message:"VIP_COLLECTION_PLAN_CHANGE_REQUIRED"}})},actor,{...command,planKey:"master"});
+  assert.equal(blocked.status,409);
 });
 
 test("VIP body reader rejects non-JSON, oversized, malformed and aborted commands", async () => {

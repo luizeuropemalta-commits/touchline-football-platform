@@ -35,7 +35,7 @@ const elements: ts.JsxElement[] = [];
 const declarations: string[] = [];
 function visit(node: ts.Node) {
   if (ts.isJsxElement(node)) elements.push(node);
-  if (ts.isVariableDeclaration(node) && ["marketAccessCopy", "editable", "marketOpen", "marketStatusLabel", "marketAccessLabel"].includes(node.name.getText(tree))) {
+  if (ts.isVariableDeclaration(node) && ["marketAccessCopy", "roundEditable", "qaClubMarketOpen", "editable", "marketOpen", "marketStatusLabel", "marketAccessLabel"].includes(node.name.getText(tree))) {
     declarations.push(`const ${node.getText(tree)};`);
   }
   ts.forEachChild(node, visit);
@@ -64,6 +64,7 @@ function renderMarkup(node: ts.JsxElement, input: Record<string, unknown>) {
   const element = vm.runInNewContext(javascript, {
     React, styles: new Proxy({}, { get: (_target, key) => String(key) }),
     locale: input.pt ? "pt-BR" : "en-GB", draftLocalesEnabled: false, gameweeks: [], marketPage: false,
+    collectionEnabled: false, live: null,
     getTouchlineFantasyMarketAccessCopy: catalogueResult.value?.getTouchlineFantasyMarketAccessCopy,
     workflowCopy: getTouchlineFantasyMarketWorkflowCopy(typeof input.locale === "string" ? input.locale : input.pt ? "pt-BR" : "en-GB"),
     // The clock has its own real-render tests. Here only its status prop is a seam.
@@ -106,9 +107,11 @@ for (const pt of [true, false]) {
 }
 
 test("copy keeps the existing edit and persistence gates", () => {
-  assert.match(source, /const editable = snapshot\?\.entitlementActive === true && activeGameweek\?\.state === "MARKET_OPEN" && !deadlineReached;/);
-  assert.match(source, /if \(!activeGameweek \|\| !editable \|\| !selectedCoachId \|\| !formationCode\) return;/);
-  assert.match(source, /disabled=\{!editable \|\| saving \|\| !selectedCoachId \|\| !validation\?\.valid \|\| lineupConfirmed\}/);
+  // QA collection access may open recruitment, never the real round's save gate.
+  assert.match(source, /const roundEditable = snapshot\?\.entitlementActive === true && activeGameweek\?\.state === "MARKET_OPEN" && !deadlineReached;/);
+  assert.match(source, /const editable = snapshot\?\.entitlementActive === true && marketOpen;/);
+  assert.match(source, /if \(!activeGameweek \|\| !roundEditable \|\| !selectedCoachId \|\| !formationCode\) return;/);
+  assert.match(source, /disabled=\{!roundEditable \|\| saving \|\| !selectedCoachId \|\| !validation\?\.valid \|\| lineupConfirmed\}/);
   assert.doesNotMatch(source, /Modo consulta · mercado fechado|Review mode · market closed/);
 });
 

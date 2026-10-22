@@ -11,6 +11,7 @@ type Props = Readonly<{
   draftLocalesEnabled?: boolean;
   navigation?: ReactNode;
   brandAccessory?: ReactNode;
+  navigationAccessory?: ReactNode;
 }>;
 
 /** Mount once, first in an unpadded full-width page shell, outside its content
@@ -18,13 +19,13 @@ type Props = Readonly<{
  * and wide-screen left column; do not nest it inside auth-entry-content or add
  * another brand/audio row. The caller owns the destination and trusted context.
  * This is not a replacement for ClubOwner's identity/avatar/bank section. */
-export default function TouchlineBrandHeader({ href, locale, accountLocaleContext, draftLocalesEnabled = false, navigation, brandAccessory }: Props) {
+export default function TouchlineBrandHeader({ href, locale, accountLocaleContext, draftLocalesEnabled = false, navigation, brandAccessory, navigationAccessory }: Props) {
   const logo = <Logo href={href} officialArena minimalMark subtitle="TouchLine Futebol Cards" wordmarkClassName="text-[clamp(26px,3.2vw,34px)]" />;
   return <header className={styles.frame} dir="ltr" data-centered-navigation={navigation ? "true" : undefined}>
     <div className={styles.column}>
       <div className={styles.row}>
         {brandAccessory ? <div className={styles.brandGroup}>{logo}<div className={styles.brandAccessory}>{brandAccessory}</div></div> : logo}
-        {navigation ? <div className={styles.navigationSlot}>{navigation}</div> : null}
+        {navigation ? <div className={styles.navigationSlot}>{navigation}{navigationAccessory}</div> : null}
         <TouchlinePageControls locale={locale} accountLocaleContext={accountLocaleContext} draftLocalesEnabled={draftLocalesEnabled} />
       </div>
     </div>

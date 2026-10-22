@@ -102,9 +102,9 @@ export async function POST(request: Request) {
       path: `/${MASTER_LAYOUT_RELATIVE_PATH}`,
       layout,
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
-      { ok: false, error: error instanceof Error ? error.message : "Could not save card layout." },
+      { ok: false, error: "Could not save card layout." },
       { status: 500 },
     );
   }

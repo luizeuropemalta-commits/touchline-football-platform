@@ -1,7 +1,7 @@
-import sharp from 'sharp';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
-import { resolve } from 'node:path';
+import { isAbsolute, resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 // Owner-authorised deterministic extraction. RGB comes only from coach originals.
 // Each polygon follows the bottom gem's own bezel, not the connected frame arms.
@@ -15,9 +15,26 @@ export const coachGemMasks = [
   { tier: 'ruby-red', source: '02_red_coach.png', points: [[499,1206],[585,1206],[644,1263],[644,1345],[586,1402],[543,1424],[500,1402],[443,1345],[443,1263]] },
 ];
 
+export function parseOutputDirectory(args) {
+  if (args.length !== 2 || args[0] !== '--output-dir' || !isAbsolute(args[1])) {
+    throw new Error('usage: extract-touchline-coach-gems.mjs --output-dir <new-absolute-directory>');
+  }
+  return resolve(args[1]);
+}
+
+export async function reserveOutputDirectory(output) {
+  if (typeof output !== 'string' || !isAbsolute(output)) {
+    throw new Error('output directory must be absolute');
+  }
+  // No recursive creation: an existing entry (including a symlink) must fail.
+  await mkdir(output, { recursive: false });
+  return output;
+}
+
+async function main(args) {
+const out = await reserveOutputDirectory(parseOutputDirectory(args));
+const { default: sharp } = await import('sharp');
 const root = resolve(import.meta.dirname, '..');
-const out = resolve(root, '../../outputs/card-review-20260921/coach-gems-candidate');
-await mkdir(out, { recursive: true });
 const manifest = [];
 const tiles = [];
 for (const [index, gem] of coachGemMasks.entries()) {
@@ -31,12 +48,22 @@ for (const [index, gem] of coachGemMasks.entries()) {
     .resize(width, height).png().toBuffer();
   const png = await sharp(input).extract({ left, top, width, height })
     .composite([{ input: mask, blend: 'dest-in' }]).png().toBuffer();
-  await writeFile(resolve(out, `${gem.tier}.png`), png);
+  await writeFile(resolve(out, `${gem.tier}.png`), png, { flag: 'wx' });
   manifest.push({ rank: index + 1, ...gem, crop: { left, top, width, height }, sourceSha256: createHash('sha256').update(input).digest('hex'), outputSha256: createHash('sha256').update(png).digest('hex') });
   const thumb = await sharp(png).resize(180,240,{fit:'inside'}).toBuffer();
   tiles.push({input:thumb,left:index*210+15,top:15});
 }
-await sharp({create:{width:1470,height:265,channels:4,background:'#07100e'}}).composite(tiles).png().toFile(resolve(out,'review-dark.png'));
-await sharp({create:{width:1470,height:265,channels:4,background:'#eeeeee'}}).composite(tiles).png().toFile(resolve(out,'review-light.png'));
-await writeFile(resolve(out, 'manifest.json'), JSON.stringify(manifest,null,2)+'\n');
+const darkSheet = await sharp({create:{width:1470,height:265,channels:4,background:'#07100e'}}).composite(tiles).png().toBuffer();
+await writeFile(resolve(out,'review-dark.png'), darkSheet, { flag: 'wx' });
+const lightSheet = await sharp({create:{width:1470,height:265,channels:4,background:'#eeeeee'}}).composite(tiles).png().toBuffer();
+await writeFile(resolve(out,'review-light.png'), lightSheet, { flag: 'wx' });
+await writeFile(resolve(out, 'manifest.json'), JSON.stringify(manifest,null,2)+'\n', { flag: 'wx' });
 console.log(`Extracted ${manifest.length} original coach gems for review only: ${out}`);
+}
+
+if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) {
+  main(process.argv.slice(2)).catch(error => {
+    console.error(error.message);
+    process.exitCode = 1;
+  });
+}

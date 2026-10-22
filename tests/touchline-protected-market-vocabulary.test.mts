@@ -8,6 +8,7 @@ import ts from "typescript";
 import { TOUCHLINE_CLUB_OWNER_MARKET_CATALOGUES as headerCopy, getTouchlineClubOwnerMarketCopy } from "../lib/touchlineArena/club-owner-market-i18n.ts";
 import { TOUCHLINE_FANTASY_MARKET_STATE_CATALOGUES as stateCopy, getTouchlineFantasyMarketStateCopy } from "../lib/touchlineFantasy/market-state-i18n.ts";
 import { isTouchLineLocaleComplete } from "../lib/touchlineArena/i18n.ts";
+import { getClubCollectionBudgetCopy } from "../lib/touchlineFantasy/market-budget-i18n.ts";
 
 const locales = ["en-GB", "pt-BR", "es-ES", "it-IT", "fr-FR", "ar-SA", "tr-TR", "de-DE"] as const;
 // Owner-approved protected terms at actual paths, not an English-only sentence rule.
@@ -78,9 +79,15 @@ test("real market-power accessible label retains TouchLine Credits across locale
   for (const locale of locales) {
     const copy = headerCopy[locale];
     for (const marketPower of [0, 121_000_000]) {
-      assert.equal(runInNewContext(expression, { copy, marketPower }), `${copy.marketPower} ${marketPower} TouchLine Credits`);
+      assert.equal(runInNewContext(expression, { copy, marketPower, collectionEnabled: false }), `${copy.marketPower} ${marketPower} TouchLine Credits`);
+      const budgetCopy = getClubCollectionBudgetCopy(locale, true);
+      for (const balanceLabel of [budgetCopy.signingBudget, budgetCopy.lastConfirmedBalance]) {
+        assert.equal(runInNewContext(expression, { copy, marketPower, collectionEnabled: true, balanceLabel }), `${balanceLabel} ${marketPower} TouchLine Credits`);
+      }
     }
-    assert.equal(runInNewContext(expression, { copy, marketPower: null }), copy.marketPowerUnavailable);
+    for (const collectionEnabled of [false, true]) {
+      assert.equal(runInNewContext(expression, { copy, marketPower: null, collectionEnabled }), copy.marketPowerUnavailable);
+    }
   }
 });
 

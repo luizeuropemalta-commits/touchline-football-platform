@@ -10,6 +10,7 @@ import { isTouchLineLocaleComplete } from "../lib/touchlineArena/i18n.ts";
 import { getTouchlineFantasyMarketWorkflowCopy } from "../lib/touchlineFantasy/market-workflow-i18n.ts";
 import { touchlineCardTierPalette } from "../lib/touchlineArena/card-rules.ts";
 import * as catalogueLocale from "../lib/touchlineArena/catalogue-locale.ts";
+import { canChooseGuidedSlot } from "../lib/touchlineFantasy/next-guided-choice.ts";
 
 const source = readFileSync(new URL("../app/fantasy/FantasyGameweekClient.tsx", import.meta.url), "utf8");
 const ast = ts.createSourceFile("FantasyGameweekClient.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
@@ -40,6 +41,7 @@ function actual(position: string | null | undefined, locale: string, overrides: 
   const context = {
     React, locale, draftLocalesEnabled: false, browseCards: [card], marketPage: true, activeSlot: { id: "GK" }, browseSlot: { id: "GK" },
     selections: [], editable: true, saving: false, selectedCoach: { id: "coach-id" }, marketAccessLabel: "LOCKED",
+    collectionEnabled: false, collectionSlotsEditable: true, guidedChoice: { area: "starters", slot: "GK" }, canChooseGuidedSlot,
     workflowCopy: getTouchlineFantasyMarketWorkflowCopy(locale), localizedPositionLabel: helper, touchlineCardTierPalette,
     styles: { marketClosedLabel: "marketClosedLabel", myClubMarketResults: "myClubMarketResults" },
     TouchlineGameweekCard: CardBoundary, TouchlineClubPerimeterTrace: TraceBoundary,
@@ -134,4 +136,22 @@ test("real picker action branches preserve choose/swap, locks, disabled saving, 
     assert.equal(empty.all.some(node => node.type === "article"), false);
     assert.ok(empty.html.includes(copy.noCards));
   }
+});
+
+test("picker disables a later empty position and unconfirmed collection while retaining occupied-slot management", () => {
+  const later = { area: "starters", slot: "CB" };
+  const laterView = actual("GK", "en-GB", { guidedChoice: later });
+  assert.equal(laterView.all.find(node => node.type === "button")?.props.disabled, true);
+  assert.equal(laterView.selected.length, 0);
+  // The current collection flow has no signing action until a destination is confirmed.
+  const unconfirmed = actual("GK", "en-GB", {
+    collectionEnabled: true, collectionSlotsEditable: false,
+    collectionDestination: null, collection: { state: null },
+  });
+  assert.equal(unconfirmed.all.some(node => node.type === "button"), false);
+  assert.equal(unconfirmed.all.find(node => node.type === CardBoundary)?.props.signingActions, undefined);
+  assert.ok(unconfirmed.html.includes(getTouchlineFantasyMarketWorkflowCopy("en-GB").reviewOnly));
+  assert.equal(unconfirmed.selected.length, 0);
+  const occupied = actual("GK", "en-GB", { guidedChoice: later, selections: [{ slotId: "GK", playerId: "old-id" }] });
+  assert.equal(occupied.all.find(node => node.type === "button")?.props.disabled, false);
 });

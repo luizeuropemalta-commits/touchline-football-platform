@@ -9,12 +9,12 @@ const styles = readFileSync(new URL("../components/touchline/cards/TouchlineCard
 
 test("ClubOwner card details retain replace and remove controls while the market is locked", () => {
   assert.match(gameweek, /replacementAction=\{selection \? \{ label: `\$\{workflowCopy\.replace\} · \$\{card\.name\}`, disabled: !editable \|\| saving/);
-  assert.match(gameweek, /removalAction=\{selection \? \{ label: `\$\{workflowCopy\.remove\} · \$\{card\.name\}`, disabled: !editable \|\| saving, onSelect: \(\) => removePlayer\(selection\.playerId\)/);
+  assert.match(gameweek, /removalAction=\{selection \? \{ label: `\$\{workflowCopy\.remove\} · \$\{card\.name\}`, disabled: !editable \|\| saving \|\| \(collectionEnabled && !collectionSlotsEditable\), onSelect: \(\) => removePlayer\(selection\.playerId\)/);
   assert.match(gameweek, /lockedReason=\{selection && !editable \? lockedZoomReason : undefined\}/);
   assert.match(card, /removalAction\?: \{ label: string; onSelect: \(\) => void; disabled\?: boolean \}/);
   assert.match(card, /removalAction=\{removalAction\}/);
   assert.match(card, /lockedReason=\{lockedReason\}/);
-  assert.match(zoom, /flushSync\(\(\) => setIsOpen\(false\)\);\s*removalAction\.onSelect\(\)/);
+  assert.match(zoom, /flushSync\(\(\) => setIsOpen\(false\)\);\s*triggerRef\.current\?\.focus\(\{ preventScroll: true \}\);\s*removalAction\.onSelect\(\)/);
   assert.match(zoom, /lockedReason \? <p className=\{styles\.lineupLockReason\} role="status"/);
   assert.match(styles, /\.lineupActions \{\s*display: grid;\s*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
   assert.match(styles, /\.lineupActions \.contractAction:disabled/);

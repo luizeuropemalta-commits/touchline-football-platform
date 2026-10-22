@@ -70,7 +70,7 @@ test("Market keeps card zoom on the Starting XI without rendering a substitute b
   assert.doesNotMatch(builder, /Matchday bench/);
   assert.doesNotMatch(builder, /remainingSquad\.map|className=\{styles\.bench\}/);
   assert.doesNotMatch(builder, /className=\{styles\.pitchRemove\}/);
-  assert.match(builder, /replacementAction=\{selection \? \{[^\n]*disabled: !editable \|\| saving, onSelect: \(\) => replaceMyClubPlayer\(selection\.playerId, slot\.id\)/);
+  assert.match(builder, /replacementAction=\{selection \? \{[^\n]*disabled: !editable \|\| saving \|\| \(collectionEnabled && !collectionSlotsEditable\), onSelect: \(\) => replaceMyClubPlayer\(selection\.playerId, slot\.id\)/);
   assert.match(builder, /className=\{styles\.emptyPosition\}[^>]*onClick=\{\(\) => openTacticalSelector\(slot\.id\)\}/);
   const styles = source("app/fantasy/fantasy.module.css");
   assert.match(styles, /\.myClubPitchViewport \.myClubTacticalSlot > \.pitchRemove \{[^}]*width: 44px; height: 44px; min-height: 44px/);
@@ -81,7 +81,7 @@ test("Market keeps card zoom on the Starting XI without rendering a substitute b
   assert.match(builder, /<aside className=\{styles\.myClubMarket\} id="my-club-player-selection" tabIndex=\{-1\} data-open="true" data-inline-selection="true"/);
   assert.match(builder, /const targetSlot = marketPage \? activeSlot : browseSlot/);
   assert.match(builder, /targetSlot && targetSlot\.id === activeSlot\?\.id && selectedCoach/);
-  assert.match(builder, /<button type="button" disabled=\{saving\} aria-disabled=\{overBudget \|\| undefined\}[^\n]*onClick=\{\(\) => selectMyClubPlayer\(card\)\}/);
+  assert.match(builder, /<button type="button" disabled=\{saving \|\| \(collectionEnabled && !collectionSlotsEditable\) \|\| \(marketPage && !canChooseGuidedSlot\(guidedChoice, \{area:"starters",slot:targetSlot\.id\}, selections\.some\(entry=>entry\.slotId===targetSlot\.id\)\)\)\} aria-disabled=\{overBudget \|\| undefined\}[^\n]*onClick=\{\(\) => selectMyClubPlayer\(card\)\}/);
   assert.match(builder, /if \(!activeSlot \|\| \(!marketPage && browseSlot\?\.id !== activeSlot\.id\)\) return/);
   assert.match(builder, /scrollToLineupSection\("my-club-xi-pitch"\)/);
 });

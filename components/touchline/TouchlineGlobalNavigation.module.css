@@ -195,3 +195,6 @@
   .more { display: block; order: 3; }
   .morePanel { right: 0; }
 }
+
+/* Compact shared action, retaining the accessible touch target. */
+.link.compactAction { min-height: 44px; padding: 8px 10px; font-size: 11px; gap: 6px; white-space: nowrap; }

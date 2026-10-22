@@ -1,16 +1,17 @@
 import { resolveTouchlineCatalogueLocale } from "./catalogue-locale.ts";
 import type { TouchLineLocale } from "./i18n.ts";
-import { TOUCHLINE_FANTASY_PLAN_BUDGETS as planBudgets } from "../touchlineFantasy/market-plan-policy.ts";
+import { CLUB_PLANS, CLUB_SEASON_TOP_UP_LIMIT } from "../touchlineFantasy/club-market-rules.ts";
+import { CLUB_ROSTER_CAPACITY } from "../touchlineFantasy/club-roster.ts";
 
 /** Product proposal only. Never use these values as wallet balances or entitlements. */
 export const CLUB_OWNER_PLAN_PREVIEWS = [
-  { id: "beta", amount: "50M", budget: planBudgets.beta },
-  { id: "standard", amount: "400M", budget: planBudgets.standard },
-  { id: "pro", amount: "650M", budget: planBudgets.pro },
-  { id: "master", amount: "850M", budget: planBudgets.master },
-  { id: "vip", amount: "1B", budget: planBudgets.vip },
+  { id: "beta", amount: "100M", budget: CLUB_PLANS.beta.budget },
+  { id: "standard", amount: "750M", budget: CLUB_PLANS.standard.budget },
+  { id: "master", amount: "1.5B", budget: CLUB_PLANS.master.budget },
+  { id: "vip", amount: "3B", budget: CLUB_PLANS.vip.budget },
 ] as const;
-export type ClubOwnerPlanPreview = typeof CLUB_OWNER_PLAN_PREVIEWS[number]["id"];
+// Legacy persisted entitlements remain readable, but Pro is not a new offer.
+export type ClubOwnerPlanPreview = typeof CLUB_OWNER_PLAN_PREVIEWS[number]["id"] | "pro";
 
 const VIP_PLAN_NAMES: Readonly<Record<TouchLineLocale, string>> = {
   "en-GB": "VIP", "pt-BR": "VIP", "es-ES": "VIP", "it-IT": "VIP",
@@ -61,17 +62,85 @@ const BETA_PRICE: Readonly<Record<TouchLineLocale, string>> = {
   "en-GB": "Free", "pt-BR": "Gratuito", "es-ES": "Gratis", "it-IT": "Gratuito",
   "fr-FR": "Gratuit", "ar-SA": "مجاني", "tr-TR": "Ücretsiz", "de-DE": "Kostenlos",
 };
-const MASTER_PRICE_COPY: Readonly<Record<TouchLineLocale, Readonly<{ masterPrice: string; seasonalPrice: string; priceLabel: string }>>> = {
-  "en-GB": { masterPrice: "€169.90/season", seasonalPrice: "Price per season", priceLabel: "Price" },
-  "pt-BR": { masterPrice: "€169,90/temporada", seasonalPrice: "Preço por temporada", priceLabel: "Preço" },
-  "es-ES": { masterPrice: "169,90 €/temporada", seasonalPrice: "Precio por temporada", priceLabel: "Precio" },
-  "it-IT": { masterPrice: "169,90 €/stagione", seasonalPrice: "Prezzo per stagione", priceLabel: "Prezzo" },
-  "fr-FR": { masterPrice: "169,90 €/saison", seasonalPrice: "Prix par saison", priceLabel: "Prix" },
-  "ar-SA": { masterPrice: "169.90 € لكل موسم", seasonalPrice: "السعر لكل موسم", priceLabel: "السعر" },
-  "tr-TR": { masterPrice: "169,90 €/sezon", seasonalPrice: "Sezon başına fiyat", priceLabel: "Fiyat" },
-  "de-DE": { masterPrice: "169,90 €/Saison", seasonalPrice: "Preis pro Saison", priceLabel: "Preis" },
+const SEASON_PRICE_COPY: Readonly<Record<TouchLineLocale, Readonly<{ masterPrice: string; vipPrice: string; seasonalPrice: string; priceLabel: string }>>> = {
+  "en-GB": { masterPrice: "€89.90/season", vipPrice: "€169.90/season", seasonalPrice: "Price per season", priceLabel: "Price" },
+  "pt-BR": { masterPrice: "€89,90/temporada", vipPrice: "€169,90/temporada", seasonalPrice: "Preço por temporada", priceLabel: "Preço" },
+  "es-ES": { masterPrice: "89,90 €/temporada", vipPrice: "169,90 €/temporada", seasonalPrice: "Precio por temporada", priceLabel: "Precio" },
+  "it-IT": { masterPrice: "89,90 €/stagione", vipPrice: "169,90 €/stagione", seasonalPrice: "Prezzo per stagione", priceLabel: "Prezzo" },
+  "fr-FR": { masterPrice: "89,90 €/saison", vipPrice: "169,90 €/saison", seasonalPrice: "Prix par saison", priceLabel: "Prix" },
+  "ar-SA": { masterPrice: "89.90 € لكل موسم", vipPrice: "169.90 € لكل موسم", seasonalPrice: "السعر لكل موسم", priceLabel: "السعر" },
+  "tr-TR": { masterPrice: "89,90 €/sezon", vipPrice: "169,90 €/sezon", seasonalPrice: "Sezon başına fiyat", priceLabel: "Fiyat" },
+  "de-DE": { masterPrice: "89,90 €/Saison", vipPrice: "169,90 €/Saison", seasonalPrice: "Preis pro Saison", priceLabel: "Preis" },
 };
 export function getClubOwnerPlanShowcaseCopy(locale: string, draftLocalesEnabled = false) {
   const code = resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled);
-  return { ...CLUB_OWNER_PLAN_SHOWCASE_COPY[code], ...CLUB_OWNER_PLAN_EXPERIENCE_COPY[code], betaBenefit: BETA_MARKET_BENEFIT[code], betaPrice: BETA_PRICE[code], ...MASTER_PRICE_COPY[code] };
+  return { ...CLUB_OWNER_PLAN_SHOWCASE_COPY[code], ...CLUB_OWNER_PLAN_EXPERIENCE_COPY[code], betaBenefit: BETA_MARKET_BENEFIT[code], betaPrice: BETA_PRICE[code], ...SEASON_PRICE_COPY[code] };
+}
+
+const BENEFIT_LABELS = {
+  "en-GB": ["Players in your squad", "Per real club · maximum", "Send an Exchange proposal", "Accept an exchange", "Return to TouchLine", "100M TC top-up", "Fair Play · per season", "No fee + half the sender's fee in TC"],
+  "pt-BR": ["Jogadores no elenco", "Por clube real · máximo", "Enviar proposta no Exchange", "Aceitar uma troca", "Devolução à TouchLine", "Recarga de 100M TC", "Fair Play · por temporada", "Sem taxa + metade da taxa do proponente em TC"],
+  "es-ES": ["Jugadores en la plantilla", "Por club real · máximo", "Enviar propuesta en Exchange", "Aceptar un intercambio", "Devolución a TouchLine", "Recarga de 100M TC", "Fair Play · por temporada", "Sin comisión + mitad de la comisión del proponente en TC"],
+  "it-IT": ["Giocatori in rosa", "Per club reale · massimo", "Invia proposta Exchange", "Accetta uno scambio", "Restituzione a TouchLine", "Ricarica di 100M TC", "Fair Play · per stagione", "Nessuna commissione + metà della commissione del proponente in TC"],
+  "fr-FR": ["Joueurs dans l’effectif", "Par club réel · maximum", "Envoyer une offre Exchange", "Accepter un échange", "Retour à TouchLine", "Recharge de 100M TC", "Fair Play · par saison", "Sans frais + moitié des frais du proposant en TC"],
+  "ar-SA": ["لاعبو الفريق", "لكل نادٍ حقيقي · الحد الأقصى", "إرسال عرض تبادل", "قبول التبادل", "إعادة إلى TouchLine", "شحن 100M TC", "اللعب النظيف · لكل موسم", "دون رسوم + نصف رسوم مقدم العرض بعملة TC"],
+  "tr-TR": ["Kadrodaki oyuncular", "Gerçek kulüp başına · en fazla", "Exchange teklifi gönder", "Takası kabul et", "TouchLine’a iade", "100M TC yükleme", "Fair Play · sezon başına", "Ücretsiz + teklif sahibinin ücretinin yarısı TC olarak"],
+  "de-DE": ["Spieler im Kader", "Je realem Verein · maximal", "Exchange-Angebot senden", "Tausch annehmen", "Rückgabe an TouchLine", "100M TC aufladen", "Fair Play · pro Saison", "Gebührenfrei + Hälfte der Gebühr des Anbieters in TC"],
+} as const;
+
+const BENEFIT_TERMS: Readonly<Record<TouchLineLocale, string>> = {
+  "en-GB": "Top-ups only at zero balance. Credits expire at season end. The bonus is credited only when the exchange completes.",
+  "pt-BR": "Recargas só com saldo zerado. Créditos expiram no fim da temporada. O bônus entra apenas na troca concluída.",
+  "es-ES": "Recargas solo con saldo cero. Los créditos caducan al final de la temporada. La bonificación se acredita al completar el intercambio.",
+  "it-IT": "Ricariche solo con saldo zero. I crediti scadono a fine stagione. Il bonus viene accreditato solo a scambio concluso.",
+  "fr-FR": "Recharges uniquement à solde nul. Les crédits expirent en fin de saison. Le bonus est crédité après l’échange.",
+  "ar-SA": "الشحن فقط عند نفاد الرصيد. تنتهي صلاحية الرصيد بنهاية الموسم. تُضاف المكافأة عند اكتمال التبادل فقط.",
+  "tr-TR": "Yükleme yalnızca bakiye sıfırken yapılır. Krediler sezon sonunda sona erer. Bonus takas tamamlanınca eklenir.",
+  "de-DE": "Aufladen nur bei Guthaben null. Credits verfallen am Saisonende. Der Bonus wird erst nach abgeschlossenem Tausch gutgeschrieben.",
+};
+export function getClubOwnerPlanBenefitTerms(locale: string, draftLocalesEnabled = false) {
+  return BENEFIT_TERMS[resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled)];
+}
+
+const PLAN_DISCLOSURE = {
+  "en-GB": { viewBenefits: "View benefits", squad: "35 players + 1 coach. Players and coach share the same credit balance.", status: "Exchange and release: planned rules, not available yet. Release: 10% of the original purchase price; 90% returned. Exploring a plan does not activate it or credit your balance." },
+  "pt-BR": { viewBenefits: "Ver benefícios", squad: "35 jogadores + 1 treinador. Jogadores e treinador usam o mesmo saldo de créditos.", status: "Exchange e rescisão: regras previstas, ainda indisponíveis. Rescisão: multa de 10% do valor original pago; retorno de 90%. Explorar um plano não o ativa nem credita seu saldo." },
+  "es-ES": { viewBenefits: "Ver ventajas", squad: "35 jugadores + 1 entrenador. Jugadores y entrenador comparten el saldo de créditos.", status: "Exchange y rescisión: reglas previstas, aún no disponibles. Rescisión: 10% del precio original; devolución del 90%. Explorar un plan no lo activa ni añade saldo." },
+  "it-IT": { viewBenefits: "Vedi vantaggi", squad: "35 giocatori + 1 allenatore. Giocatori e allenatore condividono lo stesso saldo.", status: "Exchange e rescissione: regole previste, non ancora disponibili. Rescissione: 10% del prezzo originale; rimborso del 90%. Esplorare un piano non lo attiva né accredita il saldo." },
+  "fr-FR": { viewBenefits: "Voir les avantages", squad: "35 joueurs + 1 entraîneur. Joueurs et entraîneur partagent le même solde.", status: "Exchange et résiliation : règles prévues, pas encore disponibles. Résiliation : 10 % du prix initial ; remboursement de 90 %. Consulter une offre ne l’active pas et ne crédite pas le solde." },
+  "ar-SA": { viewBenefits: "عرض المزايا", squad: "35 لاعبًا + مدرب واحد. يتشارك اللاعبون والمدرب رصيد الاعتمادات نفسه.", status: "التبادل والفسخ: قواعد مخططة وغير متاحة بعد. الفسخ: خصم 10٪ من سعر الشراء الأصلي وإعادة 90٪. استعراض الخطة لا يفعّلها ولا يضيف رصيدًا." },
+  "tr-TR": { viewBenefits: "Avantajları gör", squad: "35 oyuncu + 1 teknik direktör. Oyuncular ve teknik direktör aynı kredi bakiyesini kullanır.", status: "Exchange ve fesih: planlanan kurallar, henüz kullanılamıyor. Fesih: ilk alış fiyatının %10’u kesilir, %90’ı iade edilir. Planı incelemek etkinleştirmez veya bakiye eklemez." },
+  "de-DE": { viewBenefits: "Vorteile ansehen", squad: "35 Spieler + 1 Trainer. Spieler und Trainer nutzen dasselbe Guthaben.", status: "Exchange und Vertragsauflösung: geplante Regeln, noch nicht verfügbar. Auflösung: 10 % des ursprünglichen Kaufpreises; 90 % zurück. Ein Plan wird durch Ansehen weder aktiviert noch gutgeschrieben." },
+} as const;
+
+export function getClubOwnerPlanDisclosure(locale: string, draftLocalesEnabled = false) {
+  const code = resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled);
+  return { ...PLAN_DISCLOSURE[code], betaSquad: BETA_SQUAD_DISCLOSURE[code] };
+}
+
+const BETA_SQUAD_DISCLOSURE: Readonly<Record<TouchLineLocale, string>> = {
+  "en-GB": "Planned Beta squad: 35 players + 1 coach sharing one credit balance. This collection is not available for Beta yet.",
+  "pt-BR": "Elenco Beta previsto: 35 jogadores + 1 treinador no mesmo saldo de créditos. Esta coleção ainda não está disponível para Beta.",
+  "es-ES": "Plantilla Beta prevista: 35 jugadores + 1 entrenador con un saldo compartido. Esta colección aún no está disponible para Beta.",
+  "it-IT": "Rosa Beta prevista: 35 giocatori + 1 allenatore con saldo condiviso. Questa collezione non è ancora disponibile per Beta.",
+  "fr-FR": "Effectif Beta prévu : 35 joueurs + 1 entraîneur avec un solde commun. Cette collection n’est pas encore disponible pour Beta.",
+  "ar-SA": "تشكيلة Beta المخططة: 35 لاعبًا ومدرب واحد برصيد مشترك. هذه المجموعة غير متاحة لخطة Beta بعد.",
+  "tr-TR": "Planlanan Beta kadrosu: ortak bakiyeyle 35 oyuncu + 1 teknik direktör. Bu koleksiyon henüz Beta için kullanılamıyor.",
+  "de-DE": "Geplanter Beta-Kader: 35 Spieler + 1 Trainer mit gemeinsamem Guthaben. Diese Sammlung ist für Beta noch nicht verfügbar.",
+};
+
+/** Presentation of approved rules only: never activates a plan or a payment. */
+export function getClubOwnerPlanBenefits(plan: typeof CLUB_OWNER_PLAN_PREVIEWS[number]["id"], locale: string, draftLocalesEnabled = false) {
+  if (plan === "beta") return [];
+  const labels = BENEFIT_LABELS[resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled)];
+  const rules = CLUB_PLANS[plan];
+  return [
+    { label: labels[0], value: String(CLUB_ROSTER_CAPACITY.total) },
+    { label: labels[1], value: CLUB_OWNER_PLAN_SHOWCASE_COPY[resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled)].unlimited },
+    { label: labels[2], value: `${rules.exchange}%` },
+    { label: labels[3], value: labels[7] },
+    { label: labels[4], value: `${rules.market}%` },
+    { label: labels[5], value: new Intl.NumberFormat(locale, { style: "currency", currency: "EUR" }).format(rules.topUpCents / 100) },
+    { label: labels[6], value: `${CLUB_SEASON_TOP_UP_LIMIT / 1_000_000}M TC` },
+  ];
 }

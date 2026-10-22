@@ -1,18 +1,23 @@
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
-import sharp from "sharp";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { planAssetBackup, verifyAssetSources } from "./local/verified-asset-backup.mjs";
+import { transformVerifiedAssets } from "./local/verified-asset-transform.mjs";
+let sharp;
 
 const WRITE_CONFIRMATION_FLAG = "--confirm-one-off-asset-write";
 
-if (!process.argv.includes(WRITE_CONFIRMATION_FLAG)) {
-  console.error(
-    `Inactive one-off asset normalizer. No files were changed. Pass ${WRITE_CONFIRMATION_FLAG} only after creating an independent backup and reviewing every target.`,
-  );
-  process.exit(1);
+export function parseAssetWriteOptions(args) {
+  const backups = args.filter(arg => arg.startsWith('--backup-root='));
+  if (args.length !== 2 || args.filter(arg => arg === WRITE_CONFIRMATION_FLAG).length !== 1 || backups.length !== 1
+      || !path.isAbsolute(backups[0].slice('--backup-root='.length))) {
+    throw new Error(`Inactive one-off asset utility. Require ${WRITE_CONFIRMATION_FLAG} --backup-root=<new-absolute-directory>`);
+  }
+  return { backupRoot: path.resolve(backups[0].slice('--backup-root='.length)) };
 }
 
-const PROJECT_ROOT = path.resolve(new URL("..", import.meta.url).pathname);
+const PROJECT_ROOT = fileURLToPath(new URL("..", import.meta.url));
 const CLUB_TEMPLATES_DIR = path.join(PROJECT_ROOT, "public/touchlineArena/cards/templates/clubs");
 const CANVAS_W = 430;
 const CANVAS_H = 691;
@@ -27,10 +32,6 @@ const TARGET_BOX_BY_TIER = {
   "ruby-red": { left: 0, top: 12, width: 430, height: 668 },
   "sapphire-blue": { left: 0, top: 15, width: 430, height: 661 },
 };
-
-async function fileSha256(filePath) {
-  return crypto.createHash("sha256").update(await fs.readFile(filePath)).digest("hex");
-}
 
 async function alphaBox(filePath) {
   const { data, info } = await sharp(filePath).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
@@ -69,17 +70,21 @@ async function listTemplateFiles() {
   const files = [];
 
   for (const club of clubs) {
+    if (club.isSymbolicLink()) throw new Error('symlink in templates');
     if (!club.isDirectory()) continue;
     const tiersDir = path.join(CLUB_TEMPLATES_DIR, club.name, "market-tiers");
     let tierFiles = [];
     try {
+      if ((await fs.lstat(tiersDir)).isSymbolicLink()) throw new Error('symlink in market tiers');
       tierFiles = await fs.readdir(tiersDir, { withFileTypes: true });
-    } catch {
-      continue;
+    } catch (error) {
+      if (error.code === 'ENOENT') continue;
+      throw error;
     }
 
     for (const tierFile of tierFiles) {
-      if (!tierFile.isFile() || !tierFile.name.endsWith(".png")) continue;
+      if (!tierFile.name.endsWith(".png")) continue;
+      if (!tierFile.isFile()) throw new Error('non-regular template');
       const tier = tierFile.name.replace(/\.png$/i, "");
       if (!TARGET_BOX_BY_TIER[tier]) continue;
       files.push({
@@ -90,14 +95,18 @@ async function listTemplateFiles() {
     }
   }
 
-  return files;
+  return files.sort((a, b) => a.filePath.localeCompare(b.filePath));
 }
 
-async function normalizeTemplate({ filePath, tier }) {
+async function analyzeTemplate(bytes, { tier }) {
+  const box = await alphaBox(bytes);
+  return Boolean(box && !boxMatches(box, TARGET_BOX_BY_TIER[tier]));
+}
+
+async function normalizeTemplate(filePath, { tier }) {
   const target = TARGET_BOX_BY_TIER[tier];
   const box = await alphaBox(filePath);
-  if (!box) return { changed: false, reason: "empty-alpha" };
-  if (boxMatches(box, target)) return { changed: false, reason: "already-normalized", box };
+  if (!box || boxMatches(box, target)) throw new Error('normalization selection changed');
 
   const extracted = await sharp(filePath)
     .ensureAlpha()
@@ -118,42 +127,36 @@ async function normalizeTemplate({ filePath, tier }) {
     .png()
     .toBuffer();
 
-  await fs.writeFile(filePath, normalized);
-  return { changed: true, before: box, after: await alphaBox(filePath) };
+  return normalized;
 }
 
-async function main() {
-  const files = await listTemplateFiles();
-  const backupRoot = process.argv.find((arg) => arg.startsWith("--backup-root="))?.split("=")[1];
-  const touched = [];
-
-  for (const item of files) {
-    const beforeHash = await fileSha256(item.filePath);
-    const result = await normalizeTemplate(item);
-    const afterHash = await fileSha256(item.filePath);
-
-    if (result.changed || beforeHash !== afterHash) {
-      touched.push({
-        club: item.club,
-        tier: item.tier,
-        file: path.relative(PROJECT_ROOT, item.filePath),
-        beforeHash,
-        afterHash,
-        before: result.before,
-        after: result.after,
-      });
-    }
+// Shared only by the two inactive utilities; injected callbacks enable byte-only tests.
+export async function runAssetUtility({ sourceRoot, files, backupRoot, analyze, transform }) {
+  if (!path.isAbsolute(backupRoot)) throw new Error('absolute backup required');
+  const items = files.map(item => ({ filePath: item.filePath, tier: item.tier, club: item.club }));
+  if (!items.length) return { status: 'NOOP', completed: [], skipped: [] };
+  const plan = await planAssetBackup(sourceRoot, items.map(item => item.filePath));
+  const changedPaths = [];
+  for (const [index, item] of items.entries()) {
+    const bytes = await fs.readFile(item.filePath);
+    if (crypto.createHash('sha256').update(bytes).digest('hex') !== plan.entries[index].sha256) throw new Error('analysis source diverged');
+    if (await analyze(bytes, { ...item })) changedPaths.push(item.filePath);
   }
-
-  if (backupRoot) {
-    await fs.mkdir(backupRoot, { recursive: true });
-    await fs.writeFile(path.join(backupRoot, "normalize-report.json"), JSON.stringify({ touched, totalFiles: files.length }, null, 2));
-  }
-
-  console.log(JSON.stringify({ totalFiles: files.length, changed: touched.length, touched }, null, 2));
+  await verifyAssetSources(plan);
+  return transformVerifiedAssets({ plan, changedPaths, backupRoot, transform: (bytes, entry) => transform(bytes, { ...items.find(item => item.filePath === entry.path) }) });
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exit(1);
-});
+export async function runNormalizer(options) {
+  return runAssetUtility({ ...options, analyze: options.analyze ?? analyzeTemplate, transform: options.transform ?? normalizeTemplate });
+}
+
+async function main(args) {
+  const options = parseAssetWriteOptions(args);
+  sharp = (await import('sharp')).default;
+  const result = await runNormalizer({ ...options, sourceRoot: CLUB_TEMPLATES_DIR, files: await listTemplateFiles() });
+  console.log(JSON.stringify(result, null, 2));
+}
+
+if (process.argv[1] && pathToFileURL(path.resolve(process.argv[1])).href === import.meta.url) {
+  main(process.argv.slice(2)).catch(error => { console.error(error); process.exitCode = 1; });
+}

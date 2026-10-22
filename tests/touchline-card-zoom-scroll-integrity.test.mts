@@ -16,6 +16,15 @@ function source(relativePath: string) {
   return readFileSync(path.join(process.cwd(), relativePath), "utf8");
 }
 
+test("zoom action focuses the persistent trigger before opening the next dialog", () => {
+  const zoom=source("components/touchline/cards/TouchlineCardZoom.tsx");
+  for(const action of ["replacementAction", "removalAction"]) {
+    const start=zoom.indexOf(`const ${action === "replacementAction" ? "replacementButton" : "removalButton"}`);
+    const handler=zoom.slice(start,zoom.indexOf(`${action}.onSelect();`,start));
+    assert.match(handler,/flushSync\(\(\) => setIsOpen\(false\)\);[\s\S]*triggerRef\.current\?\.focus\(\{ preventScroll: true \}\);/);
+  }
+});
+
 test("touch users retain a visible close control while scrolling expanded details", () => {
   const zoomCss = source("components/touchline/cards/TouchlineCardZoom.module.css");
   const close = zoomCss.match(/\.panelWithDetails \.close \{([^}]+)\}/)?.[1] ?? "";

@@ -21,6 +21,23 @@ type Filter = { kind: "eq"; column: string; value: unknown } | { kind: "in"; col
 type Order = { column: string; ascending: boolean };
 type ReadResult = { data: Row[] | null; error: { message: string } | null; count: number | null };
 
+// Only fixed diagnostic codes may reach logs. Error messages/details can contain
+// SQL, query values, URLs or credentials and must never be serialized here.
+const DIAGNOSTIC_CODES = new Set([
+  "TL_TRANSPORT_REJECTED", "57014", "42501", "42P01", "42703", "53300", "XX000",
+  "PGRST000", "PGRST001", "PGRST002", "PGRST003", "PGRST100", "PGRST106", "PGRST116", "PGRST204", "PGRST205",
+]);
+
+function logReadFailure(table: string, offset: number, status: unknown, error: unknown) {
+  const code = error && typeof error === "object" && "code" in error ? error.code : null;
+  console.error("TL_CATALOGUE_READ_DIAGNOSTIC", {
+    table,
+    offset,
+    status: typeof status === "number" && Number.isInteger(status) && status >= 0 && status <= 599 ? status : null,
+    code: typeof code === "string" && DIAGNOSTIC_CODES.has(code) ? code : "unknown",
+  });
+}
+
 function failure(reason: string, table: string): never {
   // Never expose database messages, query values or provider payloads.
   throw new Error(`TL_CATALOGUE_${reason}:${table}`);
@@ -69,7 +86,7 @@ async function readComplete(
       for (const order of ordered) query = query.order(order.column, { ascending: order.ascending });
       const response = await query.range(offset, offset + responsePageSize - 1).then(
         (value) => value,
-        () => ({ data: null, count: null, error: { message: "transport unavailable" } }),
+        () => ({ data: null, count: null, status: 0, error: { code: "TL_TRANSPORT_REJECTED", message: "transport unavailable" } }),
       );
       if (response.error) {
         // Supplementary stats can be unavailable without hiding the published
@@ -83,6 +100,7 @@ async function readComplete(
         if (table === "touchline_card_editorial_overrides"
           && selected.includes("provenance_status")
           && isTouchlineProvisionalColumnsUnavailable(response.error)) return response;
+        logReadFailure(table, offset, response.status, response.error);
         failure("READ_FAILED", table);
       }
       const { data, count } = response;

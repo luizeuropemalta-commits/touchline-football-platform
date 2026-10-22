@@ -12,6 +12,7 @@ import { touchlineCoachCardArtForTier, type TouchlineArenaCoachSlot } from "@/li
 import { touchlineArenaTierForKey, touchlineCardTierPalette } from "@/lib/touchlineArena/card-rules";
 import { touchlineCountryFlagUrl } from "@/lib/touchlineArena/country-flags";
 import { getTouchlineCoachCardCopy } from "@/lib/touchlineArena/coach-card-i18n";
+import { resolveCoachSigningPricePresentation } from "@/lib/touchlineArena/coach-signing-price-i18n";
 import type { TouchlineCoachFixtureContext } from "@/lib/touchlineArena/coach-scoring";
 import {
   TOUCHLINE_COACH_CARD_DEFAULT_LAYOUT,
@@ -77,6 +78,8 @@ type TouchlineCoachCardProps = {
   showLeadershipCrown?: boolean;
   /** Immutable Gameweek points may be displayed without borrowing season data. */
   publishedTouchlinePoints?: number | null;
+  /** Optional canonical TouchLine signing price, separate from football statistics. */
+  acquisitionPrice?: { label: string; valueTc: number };
   /**
    * Provider-backed coach discipline. It stays unavailable until a canonical
    * source supplies it; the card must never convert missing data to zero.
@@ -130,6 +133,7 @@ export default function TouchlineCoachCard({
   fixtureContext = null,
   showLeadershipCrown: explicitLeadershipCrown,
   publishedTouchlinePoints = null,
+  acquisitionPrice,
   discipline = null,
 }: TouchlineCoachCardProps) {
   const leadershipAuthority = useTouchlineCardLeadershipAuthority();
@@ -154,6 +158,7 @@ export default function TouchlineCoachCard({
   } | null>(null);
   const layout = layoutOverride ?? storedLayout;
   const copy = getTouchlineCoachCardCopy(locale, draftLocalesEnabled);
+  const signingPresentation = resolveCoachSigningPricePresentation(locale, draftLocalesEnabled);
   const tier = touchlineArenaTierForKey(slot.cardTier) ?? touchlineArenaTierForKey("ruby-red")!;
   const tierPalette = touchlineCardTierPalette(tier.key);
   const compactCardTemplateUrl = touchlineLiveCompactCoachFrameUrl(slot.cardTier);
@@ -454,8 +459,8 @@ export default function TouchlineCoachCard({
         {runtimeClubLogoUrl ? (
           <div className={styles.clubBadge} {...editableLayerProps("clubCrest", "Escudo do clube")}>
             <span>{copy.currentClub}</span>
-            <div data-touchline-card-crest-host="true">
-              <img ref={crestRef} src={runtimeClubLogoUrl} alt={clubName} draggable={false} loading={assetLoading ?? "eager"} data-touchline-card-crest="true" />
+            <div data-touchline-card-crest-host="true" data-crest-contrast={runtimeClubLogoUrl.includes("/tottenham-hotspur.") ? "light" : undefined}>
+              <img ref={crestRef} src={runtimeClubLogoUrl} alt={clubName} draggable={false} loading={assetLoading ?? "eager"} data-touchline-card-crest="true" style={runtimeClubLogoUrl.includes("/tottenham-hotspur.") ? { filter: "none" } : undefined} />
             </div>
           </div>
         ) : null}
@@ -481,6 +486,13 @@ export default function TouchlineCoachCard({
           <span className={styles.stat} data-coach-discipline-source={yellowCards === null && redCards === null ? "unavailable" : "canonical"}><CoachStatIcon type="discipline" /><small>{copy.cards}</small><strong>{disciplineValue}</strong></span>
           <span className={`${styles.stat} ${styles.pointsStat}`}><CoachStatIcon type="points" /><small>TL PTS</small><strong>{points}</strong></span>
         </div>
+
+        {acquisitionPrice && Number.isSafeInteger(acquisitionPrice.valueTc) && acquisitionPrice.valueTc >= 0 ? (
+          <div className={`${styles.stat} ${styles.signingPrice}`} data-coach-signing-value={acquisitionPrice.valueTc}>
+            <small>{acquisitionPrice.label}</small>
+            <strong>{new Intl.NumberFormat(signingPresentation.locale, { notation: "compact", maximumFractionDigits: 1 }).format(acquisitionPrice.valueTc)} TC</strong>
+          </div>
+        ) : null}
 
       </div>
       <img

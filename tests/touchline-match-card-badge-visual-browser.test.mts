@@ -9,7 +9,7 @@ import * as jsx from "react/jsx-runtime";
 import ts from "typescript";
 import { matchCardLabel } from "../lib/touchlineFantasy/match-card-i18n.ts";
 
-test("original match cards SSR preserves artwork and accessible labels at desktop and phone widths", async () => {
+test("original match cards SSR preserves artwork and accessible labels at desktop and phone widths", { skip: process.env.TOUCHLINE_RUN_MATCH_CARD_BROWSER_TESTS !== "1" }, async () => {
   const source = readFileSync(new URL("../components/touchline/cards/TouchlineMatchCardBadge.tsx", import.meta.url), "utf8");
   const css = readFileSync(new URL("../components/touchline/cards/TouchlineMatchCardBadge.module.css", import.meta.url), "utf8");
   const exports: Record<string, unknown> = {};

@@ -12,6 +12,19 @@ import { TOUCHLINE_EXACT_CARD_CATALOGUES } from "../lib/touchlineArena/exact-car
 
 const PLAYER_ID = "d9428888-122b-11e1-b85c-61cd3cbb3210";
 
+test("verified player value remains visible in zoom text without an editorial tier", () => {
+  for (const locale of ["en-GB", "pt-BR"]) {
+    const details = buildTouchlinePlayerCardZoomDetails({ locale, name: "Verified player", marketValue: "10M TC", marketValueState: "verified" });
+    const prices = details.fields.filter(field => field.icon === "player-identity-price");
+    assert.equal(prices.length, 1);
+    assert.equal(prices[0].value, "10M TC");
+    for (const state of ["pending", "unavailable", "error"]) {
+      const unknown = buildTouchlinePlayerCardZoomDetails({ locale, name: "Unknown value", marketValue: "10M TC", marketValueState: state });
+      assert.equal(unknown.fields.some(field => field.value === "10M TC"), false);
+    }
+  }
+});
+
 test("zoom distinguishes the accumulated season rating from selected-match statistics in both locales", () => {
   for (const [locale, subtitle] of [
     ["en-GB", "Total rating: season total. Match statistics: selected match."],

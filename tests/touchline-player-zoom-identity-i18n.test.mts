@@ -138,7 +138,7 @@ test("real builder and real panel preserve every identity state, canonical value
     assert.deepEqual(contract.fields, published.fields);
     assert.doesNotMatch(JSON.stringify(contract), /Stored contract amount/);
     const zero = buildTouchlinePlayerCardZoomDetails({ ...input, locale, cardReview: { state: "REVIEW_REQUIRED", missingFields: [] }, marketValueState: "verified", marketValue: 0 });
-    assert.equal(zero.fields.some(({ icon }) => icon === "player-identity-price"), false, "verified zero is not absent and must not create a missing-value row");
+    assert.deepEqual(zero.fields.filter(({ icon }) => icon === "player-identity-price").map(({ value }) => value), ["0"], "verified zero remains visible as a confirmed value, never a pending-value row");
     const absent = buildTouchlinePlayerCardZoomDetails({ locale, name: "No data", clubName: null, position: null, nationality: null });
     assert.deepEqual(absent.fields, []); assert.equal(absent.profileHref, undefined); assert.equal(absent.historyHref, undefined); assert.equal(absent.cardEngineHref, undefined);
   }

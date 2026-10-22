@@ -4,6 +4,8 @@ import type {
 } from "../touchlineArena/formation-geometry.ts";
 import type { TouchlineMarketPositionBucket } from "../touchlineArena/position-eligibility.ts";
 import { resolveTouchlineCatalogueLocale } from "../touchlineArena/catalogue-locale.ts";
+import type { ClubPrimaryPositionIndex } from "./club-primary-position-index.ts";
+import { primaryPositionFitsTacticalSlot } from "./club-primary-position-policy.ts";
 
 export const TOUCHLINE_FANTASY_ENTITLEMENT_KEY = "fantasy_access" as const;
 // Historical monthly GBP contract only; not an offer for new subscriptions.
@@ -257,6 +259,8 @@ export function validateTouchlineFantasyLineup(input: Readonly<{
   budgetEur: number | null;
   maxPlayersPerClub: number;
   requireComplete?: boolean;
+  /** Collection-only detailed position authority; absent retains legacy XI validation. */
+  primaryDetails?: ClubPrimaryPositionIndex;
 }>): TouchlineFantasyLineupValidation {
   const issues = new Set<TouchlineFantasyLineupIssue>();
   const players = new Map(input.players.map((player) => [player.playerId, player] as const));
@@ -285,7 +289,11 @@ export function validateTouchlineFantasyLineup(input: Readonly<{
       issues.add("SLOT_INVALID");
       continue;
     }
-    if (!touchlineFantasySlotAcceptsPlayer(slot, player)) issues.add("POSITION_INVALID");
+    const positionValid = input.primaryDetails
+      ? Object.hasOwn(input.primaryDetails, player.playerId)
+        && primaryPositionFitsTacticalSlot(input.primaryDetails[player.playerId], input.geometry.formationCode, slot.id)
+      : touchlineFantasySlotAcceptsPlayer(slot, player);
+    if (!positionValid) issues.add("POSITION_INVALID");
     totalMarketValueEur += player.marketValueEur;
   }
 

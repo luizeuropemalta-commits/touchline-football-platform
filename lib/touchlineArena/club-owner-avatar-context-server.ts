@@ -1,4 +1,5 @@
 import "server-only";
+import { allowsClubOwnerAvatarLocalEnvironment } from "./club-owner-avatar-local-admission";
 import { headers } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isOwnerEmail, ownerEmails } from "@/lib/admin/owner";
@@ -68,8 +69,10 @@ export function createClubOwnerAvatarContextReader() {
       const requestHeaders = await awaitAvatarStep(() => pool.track(scope!, () => headers()), signal);
       guard();
       const hostname = requestHeaders.get("host");
-      if (hostname !== new URL(TOUCHLINE_QA_ORIGIN).hostname || requestHeaders.get("x-touchline-isolated-preview") !== null
-        || inspectTouchlineQaVercelEnvironment({ environment, requestHostname: hostname }).status !== "PASS") return null;
+      const local = hostname === "localhost:3319"
+        && allowsClubOwnerAvatarLocalEnvironment(environment, "http://localhost:3319");
+      if ((!local && hostname !== new URL(TOUCHLINE_QA_ORIGIN).hostname) || requestHeaders.get("x-touchline-isolated-preview") !== null
+        || (!local && inspectTouchlineQaVercelEnvironment({ environment, requestHostname: hostname }).status !== "PASS")) return null;
       guard();
       const client = createAdminClient();
       guard();

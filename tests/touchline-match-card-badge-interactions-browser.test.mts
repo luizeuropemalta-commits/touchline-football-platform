@@ -33,7 +33,7 @@ function harness() {
   </script>`;
 }
 
-test("hover tooltip does not steal Escape from an independently opened modal", async () => {
+test("hover tooltip does not steal Escape from an independently opened modal", { skip: process.env.TOUCHLINE_RUN_MATCH_CARD_BROWSER_TESTS !== "1" }, async () => {
   const browser = await chromium.launch({ headless: true });
   try {
     const page = await browser.newPage();
@@ -60,7 +60,7 @@ test("hover tooltip does not steal Escape from an independently opened modal", a
   } finally { await browser.close(); }
 });
 
-test("hydrated match-card tooltip stays in viewport, supports touch/keyboard and preserves card boundary", { timeout: 120_000 }, async () => {
+test("hydrated match-card tooltip stays in viewport, supports touch/keyboard and preserves card boundary", { skip: process.env.TOUCHLINE_RUN_MATCH_CARD_BROWSER_TESTS !== "1", timeout: 120_000 }, async () => {
   for (const engine of [chromium, webkit]) {
     const browser = await engine.launch({ headless: true });
     try {

@@ -54,7 +54,7 @@ test('inline Market is a direct unconditional child after the setup/XI branch, n
   assert.equal(attribute(market.openingElement, 'hidden'), undefined);
   const earlier = root.children.slice(0, root.children.indexOf(market));
   const setup = earlier.find(node => ts.isJsxExpression(node) && node.expression
-    && ts.isConditionalExpression(node.expression) && node.expression.condition.getText(source) === '!selectedCoach');
+    && ts.isConditionalExpression(node.expression) && node.expression.condition.getText(source) === '!marketPage && !selectedCoach');
   assert.ok(setup, 'coach/formation/XI branch precedes, rather than encloses, the Market');
   assert.ok(ts.isReturnStatement(root.parent));
   const embedded = root.parent.parent.parent;
@@ -66,10 +66,10 @@ test('inline Market is a direct unconditional child after the setup/XI branch, n
   const filter = declaration('browseCards');
   const branch = nodes(filter, node => ts.isConditionalExpression(node) && node.condition.getText(source) === 'marketPage')[0] as ts.ConditionalExpression;
   assert.ok(branch, 'real market filter remains position-led');
-  assert.equal(branch.whenTrue.getText(source), 'Boolean(activeSlot) && slotAccepts(activeSlot, card)');
+  assert.equal(branch.whenTrue.getText(source), 'Boolean(activeSlot) && marketSlotAccepts(activeSlot, card)');
 });
 
-test('real slot selection focuses and scrolls in place; adding a player returns to the same XI', () => {
+test('real slot selection focuses and scrolls in place; adding a player returns to the same XI', async () => {
   const scroll = nodes(source, node => ts.isFunctionDeclaration(node) && node.name?.text === 'scrollToLineupSection')[0];
   assert.ok(scroll);
   const open = declaration('openTacticalSelector');
@@ -80,11 +80,14 @@ test('real slot selection focuses and scrolls in place; adding a player returns 
   for (const reduced of [false, true]) {
     const events: unknown[][] = [];
     let addSucceeds = true;
+    const visualIntentEpoch = { current: 0 };
     const record = (name: string) => (value: unknown) => events.push([name, value]);
     const { open: openSlot, select: selectPlayer } = runInNewContext(code, {
       setActiveSlotId: record('slot'), setBrowsePosition: record('browse'), setVisibleStep: record('step'),
       setSquadView: record('view'), setQuery: record('query'), activeSlot: { id: 'GK' }, marketPage: true,
+      collectionEnabled: false, // This fixture exercises the legacy, non-collection path.
       setArenaOpen: record('arena'),
+      selections: [], guidedChoice: { area: 'starters', slot: 'GK' }, selectedCoach: { id: 'coach' }, geometry: { formationCode: '4-3-3' }, visualIntentEpoch,
       addPlayer: () => addSucceeds,
       // No router, location or navigation mock: a new route dependency fails.
       window: { requestAnimationFrame: (fn: () => void) => fn(), matchMedia: () => ({ matches: reduced }) },
@@ -93,17 +96,21 @@ test('real slot selection focuses and scrolls in place; adding a player returns 
         scrollIntoView: (options: { behavior: string; block: string }) => events.push(['scroll', id, options.behavior, options.block]),
       }) },
     });
+    openSlot('RB');
+    assert.deepEqual(events, [], 'a later empty slot does not bypass the next-choice guard');
+    assert.equal(visualIntentEpoch.current, 0);
     openSlot('GK');
+    assert.equal(visualIntentEpoch.current, 1);
     assert.deepEqual(events, [
       ['arena',false], ['slot','GK'], ['browse',null], ['step','players'], ['view','tactical'], ['query',''],
       ['focus','my-club-player-selection',true], ['scroll','my-club-player-selection',reduced ? 'instant' : 'smooth','start'],
     ]);
     events.length = 0;
-    selectPlayer({ id: 'canonical-player' });
+    await selectPlayer({ id: 'canonical-player' });
     assert.deepEqual(events, [['browse',null], ['view','tactical'], ['focus','my-club-xi-pitch',true], ['scroll','my-club-xi-pitch',reduced ? 'instant' : 'smooth','start']]);
     events.length = 0;
     addSucceeds = false;
-    selectPlayer({ id: 'rejected-player' });
+    await selectPlayer({ id: 'rejected-player' });
     assert.deepEqual(events, [], 'failed selection never moves focus or navigates');
   }
 });

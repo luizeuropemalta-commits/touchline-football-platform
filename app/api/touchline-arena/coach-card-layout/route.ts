@@ -45,10 +45,10 @@ export async function POST(request: Request) {
     await fs.writeFile(OUTPUT_PATH, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
 
     return NextResponse.json({ ok: true, path: `/${RELATIVE_PATH}`, layout });
-  } catch (error) {
+  } catch {
     return NextResponse.json({
       ok: false,
-      error: error instanceof Error ? error.message : "Não foi possível salvar o Card Mestre do treinador.",
+      error: "Não foi possível salvar o Card Mestre do treinador.",
     }, { status: 500 });
   }
 }

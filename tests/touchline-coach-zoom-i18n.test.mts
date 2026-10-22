@@ -42,7 +42,7 @@ function fixture(copy?: Partial<CopyModule>) {
   function compile(file: string) {
     const exports: Record<string, unknown> = {};
     runInNewContext(ts.transpileModule(readFileSync(new URL(file, import.meta.url), "utf8"), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText, {
-      exports, Intl: { DateTimeFormat: function(locale: string, options: Intl.DateTimeFormatOptions) { formatLocales.push({ kind: "date", locale, options }); return new Intl.DateTimeFormat(locale, options); } },
+      exports, Intl: { NumberFormat: Intl.NumberFormat, DateTimeFormat: function(locale: string, options: Intl.DateTimeFormatOptions) { formatLocales.push({ kind: "date", locale, options }); return new Intl.DateTimeFormat(locale, options); } },
       require: (name: string) => { assert.ok(name in modules, name); return modules[name]; },
     });
     return exports;
@@ -57,6 +57,19 @@ function fixture(copy?: Partial<CopyModule>) {
     render(props: ZoomProps) { return renderToStaticMarkup(React.createElement(Panel, { details: props.details, locale: props.locale })); },
   };
 }
+
+test("game quotation is explicit, exact and absent from ordinary coach profiles", async () => {
+  const copy = await import("../lib/touchlineArena/coach-zoom-i18n.ts");
+  const view = fixture(copy);
+  const quotation = (valueTc: number) => ({ competition: null, contract: null, acquisitionPrice: { label: "Valor de contratação", valueTc } });
+  const priced = view.produce("pt-BR", quotation(10_000_000));
+  assert.equal(priced.details.fields.find((field) => field.label === "Valor de contratação")?.value, "10.000.000 TC");
+  assert.equal(view.produce("pt-BR", quotation(0)).details.fields.find((field) => field.label === "Valor de contratação")?.value, "0 TC");
+  for (const value of [-1, NaN, Infinity, 1.5]) {
+    assert.equal(view.produce("pt-BR", quotation(value)).details.fields.some((field) => field.label === "Valor de contratação"), false);
+  }
+  assert.equal(view.produce("pt-BR").details.fields.some((field) => field.label === "Valor de contratação"), false);
+});
 
 test("producer binds every copy key and normalizes once for copy and all formatters", () => {
   const seen: string[] = [];

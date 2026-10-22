@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { clubCollectionPresentationEnabled } from "../lib/touchlineFantasy/club-collection-presentation.ts";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { runInNewContext } from "node:vm";
@@ -37,12 +38,15 @@ function compile(sourceText: string, context: Record<string, unknown>) {
   return exports;
 }
 
-function fixture(options: { user?: User | null; configured?: boolean; rejectAuth?: boolean; rejectSnapshot?: boolean } = {}) {
+function fixture(options: { user?: User | null; configured?: boolean; rejectAuth?: boolean; rejectSnapshot?: boolean; rejectFixtures?: boolean } = {}) {
   const user = options.user === undefined ? customer : options.user;
   const events: string[] = [];
   const authentication = { data: { user }, error: null };
   const avatarContext = Object.freeze({ avatarUrl: "/confirmed-avatar.png" });
   const railFixtures = Object.freeze([{ id: "sportmonks:101", providerId: "101", status: "Not Started" }]);
+  const persistedFixtures = Object.freeze([{ id: "sportmonks:101" }]);
+  const scheduleCalls: Array<Record<string, unknown>> = [];
+  const projectorInputs: unknown[] = [];
   const snapshot = Object.freeze({ sentinel: "canonical-snapshot", entitlementActive: true,
     marketAccess: marketPolicy.resolveTouchlineFantasyMarketAccess("standard"), config: { budgetEur: 500_000_000 }, userGameweek: { totalMarketValueEur: 120_000_000 } });
   // Leaf identities inspect the actual route's props without running browser
@@ -52,16 +56,30 @@ function fixture(options: { user?: User | null; configured?: boolean; rejectAuth
     process: { env: { TOUCHLINE_OWNER_EMAILS: "owner@example.test, admin@example.test" } },
   });
   const modules: Record<string, unknown> = {
+    "@/components/touchline/fantasy/ClubCollectionContext": { ClubCollectionProvider: React.Fragment },
+    "@/lib/touchlineFantasy/club-collection-server": { clubCollectionEnabled: () => false },
+    "@/lib/touchlineFantasy/club-collection-read-server": { readClubCollectionServer: async (accountId: string) => {
+      assert.equal(accountId, customer.id);
+      events.push("collection-read");
+      return { status: "unavailable", error: "CLUB_COLLECTION_UNAVAILABLE", httpStatus: 503 };
+    } },
+    "@/lib/touchlineFantasy/club-collection-presentation": { clubCollectionPresentationEnabled },
     "@/lib/touchlineArena/site-locales-release": siteLocalePolicy,
     "react/jsx-runtime": jsxRuntime,
     "next/headers": { headers: async () => ({ get: () => "Europe/Malta" }) },
     "@/lib/touchlineArena/match-centre": { normalizeTouchlineMatchCentreTimeZone },
     "@/lib/football-data/fixture-schedule-store": { readPublicCompetitionFixtures: async (options: unknown) => {
       events.push("fixtures");
-      assert.deepEqual(JSON.parse(JSON.stringify(options)), { includeHistorical: true, limit: 240 });
-      return [{ id: "sportmonks:101" }];
+      scheduleCalls.push(JSON.parse(JSON.stringify(options)));
+      if (rejectFixtures) throw new Error("fixtures unavailable");
+      return persistedFixtures;
     } },
-    "@/lib/touchlineArena/stadium-catalog": { toTouchlineLiveFixtures: () => railFixtures },
+    "@/lib/touchlineArena/stadium-catalog": { toTouchlineLiveFixtures: (input: unknown) => {
+      projectorInputs.push(input);
+      if (input === persistedFixtures) return railFixtures;
+      assert.ok(Array.isArray(input) && input.length === 0, "only the explicit empty fallback is accepted");
+      return [];
+    } },
     "@/lib/touchlineArena/club-owner-profile-metrics": profileMetrics,
     "@/lib/touchlineFantasy/market-plan-policy": marketPolicy,
     "next/navigation": {
@@ -105,6 +123,7 @@ function fixture(options: { user?: User | null; configured?: boolean; rejectAuth
     "@/lib/touchlineArena/catalogue-locale": { resolveTouchlineCatalogueLocale },
     "@/lib/touchlineFantasy/market-workflow-i18n": { getTouchlineFantasyMarketWorkflowCopy },
   };
+  const rejectFixtures = options.rejectFixtures;
   const loaded = compile(`${source}\nexports.internalRoute = typeof renderClubOwnerPage === "function" ? renderClubOwnerPage : undefined;\nexports.internalMetadata = typeof generateClubOwnerMetadata === "function" ? generateClubOwnerMetadata : undefined;`, {
     process: { env: {} },
     require: (name: string) => { assert.ok(Object.hasOwn(modules, name), `Unexpected dependency ${name}`); return modules[name]; },
@@ -120,13 +139,44 @@ function fixture(options: { user?: User | null; configured?: boolean; rejectAuth
     assert.equal(typeof loaded.internalMetadata, "function", "private generateClubOwnerMetadata seam must exist");
     return (loaded.internalMetadata as (props: { searchParams: Promise<Params> }, enabled?: boolean) => Promise<{ title: string; description: string }>)({ searchParams: Promise.resolve(params) }, enabled);
   };
-  return { events, leaves, snapshot, avatarContext, railFixtures, internalRoute, internalMetadata, route: (params: Params) => route({ searchParams: Promise.resolve(params) }), metadata: (params: Params) => metadata({ searchParams: Promise.resolve(params) }) };
+  return { events, leaves, snapshot, avatarContext, railFixtures, persistedFixtures, scheduleCalls, projectorInputs, internalRoute, internalMetadata, route: (params: Params) => route({ searchParams: Promise.resolve(params) }), metadata: (params: Params) => metadata({ searchParams: Promise.resolve(params) }) };
 }
 
 function descendants(node: React.ReactNode): Element[] {
   return React.Children.toArray(node).flatMap(child => React.isValidElement<Record<string, unknown>>(child)
     ? [child, ...descendants(child.props.children as React.ReactNode), ...descendants(child.props.navigation as React.ReactNode)] : []);
 }
+
+test("route schedule window and projection distinguish persisted fixtures from the empty fallback", async () => {
+  const day = 86_400_000;
+  for (const rejectFixtures of [false, true]) {
+    const h = fixture({ rejectFixtures });
+    const before = Date.now();
+    const root = await h.route({ lang: "pt-BR" });
+    const after = Date.now();
+    assert.equal(h.scheduleCalls.length, 1);
+    const call = h.scheduleCalls[0];
+    assert.deepEqual(Object.keys(call).sort(), ["from", "includeHistorical", "limit", "through"]);
+    assert.equal(call.includeHistorical, true);
+    assert.equal(call.limit, 240);
+    assert.equal(typeof call.from, "string");
+    assert.equal(typeof call.through, "string");
+    const from = Date.parse(call.from as string), through = Date.parse(call.through as string);
+    assert.equal(new Date(from).toISOString(), call.from);
+    assert.equal(new Date(through).toISOString(), call.through);
+    assert.ok(from + 7 * day >= before && from + 7 * day <= after);
+    assert.equal(through - from, 21 * day);
+    assert.equal(h.projectorInputs.length, 1);
+    const fantasy = descendants(root).find(element => element.type === h.leaves.fantasy)!;
+    if (rejectFixtures) {
+      assert.ok(Array.isArray(h.projectorInputs[0]) && h.projectorInputs[0].length === 0);
+      assert.deepEqual(fantasy.props.initialLiveFixtures, []);
+    } else {
+      assert.equal(h.projectorInputs[0], h.persistedFixtures);
+      assert.equal(fantasy.props.initialLiveFixtures, h.railFixtures);
+    }
+  }
+});
 
 test("default route keeps all draft requests in English and passes false to every child boundary", async () => {
   for (const requested of drafts) {
@@ -162,7 +212,7 @@ test("default route keeps all draft requests in English and passes false to ever
     assert.ok((fantasy.props.initialLiveNow as number) > 0);
     assert.equal(fantasy.props.embedded, true);
     assert.equal(fantasy.props.marketPage, true);
-    assert.deepEqual(h.events, ["avatarReaderCreated", "createClient", "getUser", "avatarRead", "snapshot", "fixtures"]);
+    assert.deepEqual(h.events, ["avatarReaderCreated", "createClient", "getUser", "avatarRead", "snapshot", "fixtures", "collection-read"]);
   }
 });
 
@@ -188,6 +238,7 @@ test("missing auth, missing configuration and rejected auth redirect before prot
     });
     assert.equal(h.events.includes("snapshot"), false);
     assert.equal(h.events.includes("avatarRead"), false);
+    assert.equal(h.events.includes("collection-read"), false);
   }
 });
 
@@ -255,7 +306,7 @@ test("trusted private render propagates all eight locales without changing ident
     assert.equal(fantasy.props.embedded, true);
     assert.equal(fantasy.props.marketPage, true);
     assert.equal(elements.find(element => element.type === h.leaves.navigation)!.props.showAudioControl, false);
-    assert.deepEqual(h.events, ["avatarReaderCreated", "createClient", "getUser", "avatarRead", "snapshot", "fixtures"]);
+    assert.deepEqual(h.events, ["avatarReaderCreated", "createClient", "getUser", "avatarRead", "snapshot", "fixtures", "collection-read"]);
   }
 });
 

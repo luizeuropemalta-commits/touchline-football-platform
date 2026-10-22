@@ -426,6 +426,7 @@
 .myClubSelect:disabled{cursor:default;opacity:.6}
 .myClubMarket{grid-template-columns:repeat(5,minmax(0,1fr));gap:16px;padding:20px}
 .myClubMarket>header{grid-column:1/-1}
+.myClubMarket > .myClubSetup { grid-column: 1 / -1; min-width: 0; }
 .myClubMarket .myClubSearch{grid-column:1/-1;width:min(100%,620px);justify-self:center}
 .myClubMarket .clubSelector{align-content:start;grid-column:1/-1;grid-template-columns:repeat(10,minmax(0,1fr));gap:10px;padding:0}
 .myClubMarket .clubSelector>button{min-height:82px;border-color:rgba(170,255,62,.12);background:rgba(170,255,62,.025)}
@@ -508,7 +509,7 @@
 @media(prefers-reduced-motion:reduce){.myClubTacticalSlot>span [data-touchline-card-zoom=trigger]:hover{transform:none}}
 .myClubSetup{display:grid;gap:18px;padding:clamp(18px,3vw,32px);border:1px solid rgba(170,255,62,.2);border-radius:22px;background:radial-gradient(circle at 50% 0,rgba(170,255,62,.1),transparent 48%),rgba(2,10,7,.78)}
 .myClubSetup>header{display:grid;gap:6px}.myClubSetup>header>span{color:var(--lime);font-size:.64rem;font-weight:900;letter-spacing:.13em}.myClubSetup h2{margin:0;color:#f7fff2;font-size:clamp(1.2rem,2.4vw,1.8rem)}.myClubSetup p{margin:0;color:#a7b5a9;line-height:1.55}
-.myClubCoachResults{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.myClubCoachResults>article{display:grid;grid-template-columns:72px minmax(0,1fr);gap:10px;align-items:center;padding:12px;border:1px solid rgba(170,255,62,.16);border-radius:14px;background:rgba(2,10,7,.64)}.myClubCoachResults>article>span{width:72px}.myClubCoachResults>article>div{display:grid;gap:4px;min-width:0}.myClubCoachResults strong{overflow:hidden;color:#f7fff2;text-overflow:ellipsis;white-space:nowrap}.myClubCoachResults button{grid-column:1/-1;min-height:34px;border:1px solid rgba(170,255,62,.48);border-radius:9px;color:#eaffd6;background:rgba(170,255,62,.08);font:inherit;font-weight:900;cursor:pointer}.myClubCoachResults button:not(:disabled):hover,.myClubCoachResults button:not(:disabled):focus-visible{color:#071007;background:var(--lime);outline:none}
+.myClubCoachResults{grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.myClubCoachResults>article{display:grid;grid-template-columns:72px minmax(0,1fr);gap:10px;align-items:center;padding:12px;border:1px solid rgba(170,255,62,.16);border-radius:14px;background:rgba(2,10,7,.64)}.myClubCoachResults>article>span{width:72px}.myClubCoachResults>article>div{display:grid;gap:4px;min-width:0}.myClubCoachResults>article>div>strong{overflow:hidden;color:#f7fff2;text-overflow:ellipsis;white-space:nowrap}.myClubCoachResults>article>button,.myClubCoachResults>article>div>button{grid-column:1/-1;min-height:34px;border:1px solid rgba(170,255,62,.48);border-radius:9px;color:#eaffd6;background:rgba(170,255,62,.08);font:inherit;font-weight:900;cursor:pointer}.myClubCoachResults>article>div>button:not(:disabled):hover,.myClubCoachResults>article>div>button:not(:disabled):focus-visible,.myClubCoachResults>article>button:not(:disabled):hover,.myClubCoachResults>article>button:not(:disabled):focus-visible{color:#071007;background:var(--lime);outline:none}
 .gameSummary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .gameSummary > div { padding: 16px; border: 1px solid #33433c; border-radius: 12px; background: #101a17; }
 .gameSummary span { display: block; color: #bac9bf; font-size: 13px; }
@@ -628,8 +629,27 @@
   }
 }
 .emptyPosition { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 1px dashed #c2eea1; border-radius: 50%; color: #aaff3e; background: #091410; font-size: 24px; }
-.emptyPosition:disabled { border-color: rgba(255,202,99,.68); color: #ffe7b5; background: rgba(65,44,7,.9); box-shadow: 0 0 16px rgba(255,202,99,.16); cursor: not-allowed; }
+.emptyPosition:disabled:not([data-collection-placeholder]) { border-color: rgba(255,202,99,.68); color: #ffe7b5; background: rgba(65,44,7,.9); box-shadow: 0 0 16px rgba(255,202,99,.16); cursor: not-allowed; }
+.emptyPosition:disabled[data-collection-placeholder] { cursor:not-allowed; }
 .emptyPosition:focus-visible { outline: 2px solid #efffd2; outline-offset: 3px; }
+.emptyPosition[data-guided-action="true"]:not(:disabled),
+.formationPicker[data-guided-action="true"] > summary {
+  border: 2px solid transparent;
+  background: linear-gradient(#091410, #091410) padding-box,
+    conic-gradient(from var(--touchline-neon-angle), rgba(194,238,161,.32) 0% 72%, #72ff1f 84%, #efffd2 88%, #aaff3e 91%, rgba(194,238,161,.32) 96% 100%) border-box;
+  box-shadow: none;
+  animation: touchlineNeonOrbit 3s linear infinite;
+}
+/* Empty placeholders have circular borders, not a glowing card-sized envelope. */
+.myClubTacticalSlot > span:has(> .emptyPosition),
+.myClubTacticalSlot:not(:disabled):hover > span:has(> .emptyPosition) {
+  filter: none;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .emptyPosition[data-guided-action="true"]:not(:disabled),
+  .formationPicker[data-guided-action="true"] > summary { animation: none; }
+}
 .myClubMarket[data-inline-selection="true"] { --lime: #aaff3e; scroll-margin-top: 24px; }
 .myClubMarket[data-inline-selection="true"] .myClubMarketResults { grid-template-columns: repeat(auto-fit, minmax(min(100%,235px), 1fr)); max-height: none; overflow: visible; }
 .myClubMarket[data-inline-selection="true"] .myClubMarketResults article button { min-height: 44px; font-size: 13px; }
@@ -768,12 +788,17 @@
 .myClubCommand[data-fantasy-context="market"]:not(.arenaOverlay) .myClubPitchViewport > .myClubSquadHeader > div { gap: 2px; }
 .myClubCommand[data-fantasy-context="market"]:not(.arenaOverlay) .myClubPitchViewport > .myClubSquadHeader strong { font-size: .8rem; }
 .myClubCommand[data-fantasy-context="market"]:not(.arenaOverlay) .myClubPitchViewport > .myClubSquadHeader .viewToggle { margin: 0 0 2px; }
+.myClubCommand[data-fantasy-context="market"]:not(.arenaOverlay) .myClubPitchViewport > .myClubSquadHeader[data-formation-toolbar="true"] { display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); align-items:center; padding-top:10px; }
+.myClubSquadHeader[data-formation-toolbar="true"] > .viewToggle { grid-column:3; grid-row:1; justify-self:end; }
+.myClubSquadHeader[data-formation-toolbar="true"] > .formationPicker { grid-column:2; grid-row:1; }
+.myClubSquadHeader[data-formation-toolbar="true"] > .formationPicker[open] { grid-column:1 / -1; grid-row:2; }
+.myClubSquadHeader[data-formation-toolbar="true"] > .formationPicker[open] > summary { width:fit-content; margin-inline:auto; }
 @media (min-width: 1001px) {
   /* Keep the normal XI at its full width.  Live occupies only the space
      alongside the grass, rather than shrinking the whole ClubOwner grid. */
   .myClubCommand[data-fantasy-context="market"]:not(.arenaOverlay) .myClubCommandGrid { grid-template-columns: minmax(0, 1fr); }
   .myClubCommand[data-fantasy-context="market"]:not(.arenaOverlay) .arenaBody { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(360px, .42fr); align-items: stretch; gap: 18px; }
-  .myClubCommand[data-fantasy-context="market"]:not(.arenaOverlay) .myClubPitchViewport { align-self: start; height: auto; aspect-ratio: auto; }
+  .myClubCommand[data-fantasy-context="market"]:not(.arenaOverlay) .myClubPitchViewport { align-self: stretch; display:flex; flex-direction:column; height: auto; aspect-ratio: auto; }
   .myClubCommand[data-fantasy-context="market"]:not(.arenaOverlay) .myClubPitchViewport .myClubTacticalPitch { width: calc(100% - 32px); height: auto; min-height: 0; max-width: none; aspect-ratio: 105 / 68; }
   .myClubCommand[data-fantasy-context="market"] .marketSideColumn { padding-top: 206px; transform: translateX(clamp(16px, 2vw, 36px)); }
   .myClubCommand[data-fantasy-context="market"]:not(.arenaOverlay) .arenaLiveRail { align-self: stretch; min-width: 0; height: auto; min-height: 0; margin-top: 88px; padding-top: 0; overflow: auto; }

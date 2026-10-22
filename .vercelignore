@@ -33,6 +33,12 @@ docs/touchline/*
 docs/touchline/project-memory/*
 !docs/touchline/project-memory/TOUCHLINE_MISSION_FOOTER.md
 !docs/touchline/project-memory/TOUCHLINE_CODEX_PROMPT_TEMPLATE.md
+# Exact football-position audit inputs used by the release regression suite.
+# Keep every other audit document excluded; these contain no customer records.
+!docs/touchline/release-audit
+docs/touchline/release-audit/*
+!docs/touchline/release-audit/2026-10-18-POSITION-AUDIT-SNAPSHOT.json
+!docs/touchline/release-audit/2026-10-18-POSITION-CENSUS.json
 # Module 046 hashes this exact checked-in lexicon during the QA build. Keep the
 # single canonical input available without shipping the rest of the playbook.
 !docs/touchline-arena

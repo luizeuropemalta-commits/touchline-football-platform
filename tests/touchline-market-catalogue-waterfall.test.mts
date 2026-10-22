@@ -6,12 +6,13 @@ import { runInNewContext } from "node:vm";
 import test from "node:test";
 import { applyTouchlineSeasonPoints } from "../lib/touchlineArena/matchday-player-points.ts";
 import { canonicalSportmonksPlayerId } from "../lib/touchlineArena/match-card-indicator.ts";
+import { resolvePrimaryPositionDetails } from "../lib/touchlineFantasy/club-primary-position-policy.ts";
 
 const playerId = "00000000-0000-4000-8000-000000000001";
 const presentation = { tierKey: "elite", marketValueEur: 1000000, shirtNumber: 1 };
 const golden = [{
   id: playerId, canonicalPlayerId: playerId, providerPlayerId: null, name: "Test keeper", shortName: "Test keeper",
-  role: "goalkeeper", position: "Goalkeeper", clubName: "Manchester City", shirtNumber: 1,
+  role: "goalkeeper", position: "Goalkeeper", primaryPositionDetail:"Goalkeeper", clubName: "Manchester City", shirtNumber: 1,
   countryCode3: "ITA", marketValue: "€1M", marketValueSource: "verified-cache",
   marketValueState: "verified", classificationState: "verified", cardTier: "elite",
   editorialCard: presentation, touchlinePoints: 0, seasonTouchlinePoints: null,
@@ -26,16 +27,22 @@ function deferred() {
   return { promise, resolve };
 }
 
-function scenario(failure?: string, empty = false) {
+function scenario(failure?: string, empty = false, detailCase?: "conflict" | "missing" | "unbound-newer") {
   const gates = Object.fromEntries(["players", "memberships", "presentations", "points"].map(key => [key, deferred()]));
   const reads: string[] = [];
   const failureError = new Error("controlled reader failure");
   const tables: Record<string, Array<Record<string, unknown>>> = {
-    touchline_card_publications: empty ? [] : [{ player_id: playerId, publication_status: "published" }],
-    football_players: [{ id: playerId, display_name: "Test keeper", current_club_id: "club", position: "Goalkeeper" }],
-    football_squad_members: [{ id: "membership", player_id: playerId, club_id: "club", status: "active", position: "Goalkeeper", jersey_number: 1 }],
+    touchline_card_publications: empty ? [] : [{ player_id: playerId, current_membership_id:"membership", publication_status: "published" }],
+    football_players: [{ id: playerId, display_name: "Test keeper", current_club_id: "club", position: "Goalkeeper", detailed_position:"Goalkeeper" }],
+    football_squad_members: [{ id: "membership", player_id: playerId, club_id: "club", status: "active", position: "Goalkeeper", detailed_position:"Goalkeeper", jersey_number: 1 }],
     football_clubs: [{ id: "club", name: "Manchester City" }],
   };
+  if (detailCase === "conflict") tables.football_squad_members[0].detailed_position = "Right Wing";
+  if (detailCase === "missing") {
+    delete tables.football_players[0].detailed_position;
+    delete tables.football_squad_members[0].detailed_position;
+  }
+  if (detailCase === "unbound-newer") tables.football_squad_members.unshift({ ...tables.football_squad_members[0], id:"other-membership", detailed_position:"Right Wing", source_updated_at:"2099-01-01" });
   const admin = { from(table: string) {
     assert.ok(table in tables, `unexpected table ${table}`);
     let data = tables[table];
@@ -57,7 +64,7 @@ function scenario(failure?: string, empty = false) {
     return query;
   } };
   const context = {
-    applyTouchlineSeasonPoints, canonicalSportmonksPlayerId,
+    applyTouchlineSeasonPoints, canonicalSportmonksPlayerId, resolvePrimaryPositionDetails,
     loadTouchlinePublishedCardPresentations: async () => {
       reads.push("presentations"); await gates.presentations.promise;
       if (failure === "presentations") throw failureError;
@@ -103,6 +110,18 @@ test("Market reads clubs when players resolve while publication enrichment, poin
 test("Market catalogue output preserves the baseline card projection", async () => {
   const fixture = scenario(); fixture.release();
   assert.deepEqual(JSON.parse(JSON.stringify(await fixture.run())), golden);
+});
+
+test("catalogue primary detail fails closed on conflict/missing, while published presentation stays visible",async()=>{
+  for(const detailCase of ["conflict","missing"] as const) {
+    const fixture=scenario(undefined,false,detailCase);fixture.release();
+    const cards=await fixture.run() as Array<{primaryPositionDetail:string|null;id:string}>;
+    assert.equal(cards.length,1);assert.equal(cards[0].id,playerId);assert.equal(cards[0].primaryPositionDetail,null);
+  }
+});
+test("catalogue eligibility uses the publication-bound membership, not an unrelated newer active row",async()=>{
+  const fixture=scenario(undefined,false,"unbound-newer");fixture.release();
+  assert.deepEqual(JSON.parse(JSON.stringify(await fixture.run())),golden);
 });
 
 test("an empty publication list starts no catalogue enrichment", async () => {

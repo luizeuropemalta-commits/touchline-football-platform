@@ -1,6 +1,7 @@
 import AppKit
 import AVFoundation
 import CoreVideo
+import Darwin
 
 let arguments = Array(CommandLine.arguments.dropFirst())
 guard arguments.count == 5,
@@ -14,6 +15,21 @@ guard arguments.count == 5,
 
 let framesDirectory = URL(fileURLWithPath: arguments[0], isDirectory: true)
 let output = URL(fileURLWithPath: arguments[1])
+guard output.pathExtension.lowercased() == "mp4", !output.hasDirectoryPath else {
+  fputs("output must be a new .mp4 file, not a directory\n", stderr)
+  exit(64)
+}
+// lstat also detects dangling symlinks; fileExists follows them and misses those.
+var outputStatus = stat()
+let outputLookup = output.path.withCString { lstat($0, &outputStatus) }
+guard outputLookup != 0 else {
+  fputs("refusing to replace existing output\n", stderr)
+  exit(73)
+}
+guard errno == ENOENT else {
+  fputs("unable to verify that output is absent\n", stderr)
+  exit(73)
+}
 let frames = try FileManager.default.contentsOfDirectory(
   at: framesDirectory,
   includingPropertiesForKeys: nil,
@@ -24,10 +40,6 @@ guard !frames.isEmpty else {
   fputs("no PNG frames found\n", stderr)
   exit(65)
 }
-if FileManager.default.fileExists(atPath: output.path) {
-  try FileManager.default.removeItem(at: output)
-}
-
 let writer = try AVAssetWriter(outputURL: output, fileType: .mp4)
 let input = AVAssetWriterInput(mediaType: .video, outputSettings: [
   AVVideoCodecKey: AVVideoCodecType.h264,

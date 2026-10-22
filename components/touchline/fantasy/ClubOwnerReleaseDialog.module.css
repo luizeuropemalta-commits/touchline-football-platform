@@ -1,0 +1,22 @@
+.dialog { width: min(900px, 100%); }
+.review { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: clamp(16px, 3vw, 32px); align-items: start; }
+.review[data-has-card="false"] { grid-template-columns: minmax(0, 1fr); }
+.dialog h2, .owner, .safety { overflow-wrap: anywhere; }
+.card { width: 200px; justify-self: center; pointer-events: none; }
+.details { min-width: 0; }
+.details p { line-height: 1.5; }
+.section { padding: 16px 0; border-top: 1px solid rgb(180 255 80 / 22%); }
+.section h3 { margin: 0 0 10px; font-size: .9rem; letter-spacing: .04em; }
+.section .owner { margin: 0 0 10px; font-weight: 600; }
+.section .note { margin: 10px 0 0; font-size: .8rem; opacity: .8; }
+.safety { border-top: 1px solid rgb(255 255 255 / 14%); margin-top: 16px; font-size: .85rem; line-height: 1.5; }
+.safety:empty { display: none; }
+.amounts { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px 16px; align-items: baseline; }
+.amounts dt { overflow-wrap: anywhere; }
+.amounts dd { margin: 0; font-variant-numeric: tabular-nums; text-align: end; }
+.amounts { margin: 10px 0 0; }
+@media (max-width: 600px) {
+  .review { grid-template-columns: minmax(0, 1fr); }
+  .amounts { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  .amounts dd { text-align: start; margin-bottom: 8px; }
+}

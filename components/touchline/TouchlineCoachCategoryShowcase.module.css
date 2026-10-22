@@ -102,6 +102,11 @@
   overflow: visible;
 }
 
+.playerCardVisual {
+  /* Every tier reserves the same space as the Golden Boot/Ball winner. */
+  --touchline-card-reserve-head-award: 1;
+}
+
 .playerCardVisual > *,
 .coachCardVisual > * {
   width: 100%;
@@ -112,6 +117,11 @@
    inside a content-visibility surface. This public gallery already preloads
    its seven coach assets, so keep its frame and content paintable even before
    that enhancement runs. The shared coach card remains unchanged elsewhere. */
+.coachCardVisual :global([data-coach-ranking-leader="false"]) {
+  /* Reserve the leader's crown clearance without adding another crown. */
+  margin-top: 29.55%;
+}
+
 .coachCardVisual :global([data-coach-card-inner="true"]),
 .coachCardVisual :global([data-touchline-card-frame="true"]) {
   opacity: 1 !important;

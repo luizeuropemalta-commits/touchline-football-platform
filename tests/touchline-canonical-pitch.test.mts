@@ -68,7 +68,7 @@ test("field art is a shared component rather than separate page drawings", () =>
   assert.match(clubHubLineup, /TouchlinePitchSurface/);
   assert.match(clubLineupBuilder, /touchlineCanonicalFormationSlots\(formation, input\.formationGeometryRegistry\)/);
   assert.match(market, /const geometry = formationCode \? snapshot\?\.formationRegistry\[formationCode\] : null/);
-  assert.match(market, /const selectedCards = geometry\?\.slots\.map/);
+  assert.match(market, /const selectedCards = displayGeometry\?\.slots\.map/);
   assert.match(readFileSync(new URL("../lib/touchlineFantasy/server.ts", import.meta.url), "utf8"), /readTouchlineFormationGeometryRegistry\(\)/);
   assert.doesNotMatch(clubHubLineup, /styles\.goalBox/);
 });

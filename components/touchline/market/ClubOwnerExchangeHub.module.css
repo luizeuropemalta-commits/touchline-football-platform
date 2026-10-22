@@ -1,0 +1,23 @@
+.notice { min-width:0; padding-block:0 10px; border-bottom:1px solid rgba(var(--room-rgb,145,213,111),.25); }
+.notice h3 { margin:0 0 8px; font-size:1rem; color:var(--room-ink,#dcefd4); overflow-wrap:anywhere; }
+.notice.notice p { margin:0; max-width:58ch; text-align:start; font-size:.8rem; line-height:1.55; color:#c1cbc5; overflow-wrap:anywhere; }
+.actions { display:flex; flex-wrap:wrap; gap:10px; padding-block:12px 4px; }
+.actions > button { max-width:100%; white-space:normal; overflow-wrap:anywhere; }
+.overlay { --accent: #c4cec8; position:fixed; inset:0; z-index:120; padding:clamp(12px,3vw,40px); background:rgba(0,0,0,.6); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); overflow:auto; color:#edf3ee; }
+.overlay[data-exchange-plan="beta"] { --accent:#ff888e; }
+.overlay[data-exchange-plan="standard"] { --accent:#75bbff; }
+.overlay[data-exchange-plan="master"] { --accent:#a5e4b6; }
+.overlay[data-exchange-plan="vip"] { --accent:#d5b4f6; }
+.dialog { width:100%; min-height:calc(100dvh - clamp(24px,6vw,80px)); border:1px solid color-mix(in srgb,var(--accent) 40%,transparent); border-radius:24px; padding:clamp(18px,4vw,48px); background:rgb(6,14,11); outline:none; box-sizing:border-box; overflow-wrap:anywhere; }
+.heading { display:flex; justify-content:space-between; align-items:start; gap:20px; padding-bottom:24px; border-bottom:1px solid color-mix(in srgb,var(--accent) 25%,transparent); }
+.heading small { color:var(--accent); }
+.heading h2 { margin:8px 0 0; font-size:clamp(22px,3vw,38px); }
+.section { padding:24px 0; border-bottom:1px solid color-mix(in srgb,var(--accent) 18%,transparent); }
+.section h3 { margin:0 0 12px; color:var(--accent); font-size:1rem; }
+.section p { max-width:78ch; line-height:1.65; color:#c1cbc5; }
+.amounts { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:20px; max-width:850px; }
+.amounts dd { margin:0; text-align:end; font-variant-numeric:tabular-nums; }
+.history { margin:20px 0 0; padding:0; list-style:none; max-width:850px; }
+.history li { display:flex; justify-content:space-between; gap:20px; padding:16px 0; border-top:1px solid rgba(255,255,255,.1); }
+.history strong { white-space:nowrap; font-variant-numeric:tabular-nums; }
+@media(max-width:600px) { .heading { flex-wrap:wrap; } .amounts { grid-template-columns:minmax(0,1fr); gap:8px; } .amounts dd { text-align:start; margin-bottom:12px; } .history li { flex-wrap:wrap; gap:8px; } }
