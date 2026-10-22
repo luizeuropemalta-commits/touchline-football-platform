@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { stripTypeScriptTypes } from "node:module";
 import { PGlite } from "@electric-sql/pglite";
 import test from "node:test";
+import { runInNewContext } from "node:vm";
 
 const sql = readFileSync(new URL("../supabase/qa/club_market_test_opening.sql", import.meta.url), "utf8");
 const season = "00000000-0000-4000-8000-000000000001";
@@ -38,9 +40,43 @@ test("QA opening installs closed, opens only its season, preserves rounds and re
   } finally { await db.close(); }
 });
 
-test("local override fails closed outside QA and reads a server-controlled value only", () => {
+test("market override reads the RPC only in the exact QA Preview runtime", async () => {
   const source = readFileSync(new URL("../lib/touchlineFantasy/qa-club-market.ts", import.meta.url),"utf8");
-  assert.match(source,/url !== "https:\/\/xgxbwqxjssxxuihuwmgy.supabase.co"/);
-  assert.match(source,/NODE_ENV === "production"/);
-  assert.match(source,/!error && data === true/);
+  const executable = stripTypeScriptTypes(source)
+    .replace(/^import[^;]*;\s*$/gm, "")
+    .replace(/^export /gm, "");
+  const qa = {
+    NODE_ENV: "production",
+    VERCEL_ENV: "preview",
+    VERCEL_GIT_COMMIT_REF: "qa",
+    TOUCHLINE_DEPLOYMENT_MODE: "qa-preview",
+    NEXT_PUBLIC_TOUCHLINE_DEPLOYMENT_MODE: "qa-preview",
+    TOUCHLINE_QA_SUPABASE_PROJECT_REF: "xgxbwqxjssxxuihuwmgy",
+    SUPABASE_URL: "https://xgxbwqxjssxxuihuwmgy.supabase.co",
+    NEXT_PUBLIC_SUPABASE_URL: "https://xgxbwqxjssxxuihuwmgy.supabase.co",
+  };
+  let calls = 0;
+  const admin = { rpc: async () => { calls++; return { data: true, error: null }; } };
+  const read = (env: Record<string, string>) => runInNewContext(
+    `${executable}\nreadQaClubMarketOpening(admin, "season")`,
+    { process: { env }, admin },
+  ) as Promise<boolean>;
+  assert.equal(await read(qa), true);
+  assert.equal(calls, 1);
+  for (const env of [
+    { ...qa, VERCEL_ENV: "production" },
+    { ...qa, VERCEL_GIT_COMMIT_REF: "main" },
+    { ...qa, TOUCHLINE_DEPLOYMENT_MODE: "production" },
+    { ...qa, NEXT_PUBLIC_SUPABASE_URL: "https://other.supabase.co" },
+    { ...qa, SUPABASE_URL: "https://other.supabase.co" },
+    { ...qa, SUPABASE_URL: "" },
+  ]) assert.equal(await read(env), false);
+  assert.equal(calls, 1, "non-QA runtimes must not query the override");
+});
+
+test("an open QA collection does not advertise XI confirmation when the round is locked", () => {
+  const source = readFileSync(new URL("../app/fantasy/FantasyGameweekClient.tsx", import.meta.url), "utf8");
+  assert.match(source, /const roundEditable = snapshot\?\.entitlementActive === true && activeGameweek\?\.state === "MARKET_OPEN" && !deadlineReached;/);
+  assert.match(source, /lineupConfirmed \? \(workflowCopy\.xiConfirmed\) : !editable \? marketAccessLabel : !roundEditable \? marketAccessCopy\.closed : validation\?\.valid \? \(workflowCopy\.readyConfirm\)/);
+  assert.match(source, /disabled=\{!roundEditable \|\| saving \|\| !selectedCoachId \|\| !validation\?\.valid \|\| lineupConfirmed\}/);
 });

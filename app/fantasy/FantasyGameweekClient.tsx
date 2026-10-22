@@ -1174,7 +1174,7 @@ export default function FantasyGameweekClient({
           </>}
           {marketPage && feedback ? <p role="status">{feedback}</p> : null}
         </aside>
-<footer className={styles.myClubGameweekFooter}><div><span>{workflowCopy.round}</span><strong>{lineupConfirmed ? (workflowCopy.xiConfirmed) : !editable ? marketAccessLabel : validation?.valid ? (workflowCopy.readyConfirm) : `${selectedCount}/11`}</strong></div><div><small>{hasUnsavedChanges ? (workflowCopy.unsavedChanges) : (workflowCopy.squadSynced)}</small><button type="button" disabled={!roundEditable || saving || !selectedCoachId || !validation?.valid || lineupConfirmed} onClick={() => save("confirm")}>{workflowCopy.confirmXI}</button></div></footer>
+<footer className={styles.myClubGameweekFooter}><div><span>{workflowCopy.round}</span><strong>{lineupConfirmed ? (workflowCopy.xiConfirmed) : !editable ? marketAccessLabel : !roundEditable ? marketAccessCopy.closed : validation?.valid ? (workflowCopy.readyConfirm) : `${selectedCount}/11`}</strong></div><div><small>{hasUnsavedChanges ? (workflowCopy.unsavedChanges) : (workflowCopy.squadSynced)}</small><button type="button" disabled={!roundEditable || saving || !selectedCoachId || !validation?.valid || lineupConfirmed} onClick={() => save("confirm")}>{workflowCopy.confirmXI}</button></div></footer>
       {feedback ? <p className={styles.feedback} role="status">{feedback}</p> : null}
     </section>;
   }
