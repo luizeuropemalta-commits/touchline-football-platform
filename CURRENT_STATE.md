@@ -1,5 +1,11 @@
 # TouchLine Current State
 
+## QA Git-context correction — 2026-10-23, 05:14 UTC
+
+Owner renewed exactly one QA Git-native build after a3dbf8f2 failed; budget1/consumed0 before push. GitHub39860021839 passed complete verification (5900total/5866PASS/0FAIL/34SKIP), then unscoped git diff returned129/not-a-repository; VercelBcTBgTPnTyS5AcSLEQLpJaZAuSo4 correctly blocked before Next build. The exact message is now reproduced locally with Git's different-owner test hook; command-scoped safe.directory and explicit -C for the exact checkout pass. Remote UID remains unobserved, not asserted.
+
+New CI-only delta validates repository root/SHA before dependency installation and scopes both final Git checks to GITHUB_WORKSPACE. Separate status assignment preserves errors instead of accepting an empty failed command. No wildcard/global trust, credential persistence or bypass. Tests include wrong root/SHA, Git errors and dirty status. Fresh16focusedPASS, TypeScriptPASS, fullESLint0errors/9knownwarnings, YAML/governance/input/readiness/diffPASS; independent final review GO. Product/runtime/lockfile/build inputs unchanged from previously built bc971cd7, so its successful local build and fresh a3dbf8f2 remote full suite remain bounded evidence; exact new-SHA remote verification is still mandatory. Manifest: workflow, contract test, CURRENT_STATE, CURRENT_EXECUTION_LEDGER. Main Production, customer session, original candidate WIP, databases and credentials untouched. Live/points remain open. Previous published7ec9ed22 is the QA rollback reference. READY/alias/customer/mobile/log evidence required before publication can be claimed.
+
 ## QA CI preparation repair — 2026-10-22, 21:40 UTC
 
 21:46 UTC gate update: focused15/15PASS, TypeScript PASS, complete ESLint0errors/9knownwarnings, YAML parse/diff/input/governance/readiness PASS; independent final review GO for CI-only delta. Browser dashboard freshly confirms required Preview/qa variable names/scopes without revealing values. GitHub lists no active QA verification run. Product files and lockfile remain unchanged from prior local suite/build. Exact container execution still must pass remotely; no new application success claimed before READY/smoke.

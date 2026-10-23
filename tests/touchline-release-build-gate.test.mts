@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { spawnSync } from "node:child_process";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
 
 const packageJsonUrl = new URL("../package.json", import.meta.url);
@@ -46,10 +49,51 @@ test("QA workflow uses pinned preinstalled Ubuntu browsers and executes the comp
   assert.ok(workflow.includes("-noble@sha256:dcc5531e97840b9b5e794f2814476b21571c5124a3fca2267d73041f56e7580e"), "release image must retain the reviewed immutable digest");
   assert.doesNotMatch(workflow, /playwright install|apt-get|apt install/, "browser OS setup must not depend on runner package mirrors");
   assert.match(workflow, /run: pnpm run verify:release/);
-  assert.match(workflow, /git diff --check/);
-  assert.match(workflow, /git status --porcelain/);
+  assert.match(workflow, /git -c safe\.directory="\$GITHUB_WORKSPACE" -C "\$GITHUB_WORKSPACE" diff --check/);
+  assert.match(workflow, /repo_status=\$\(git -c safe\.directory="\$GITHUB_WORKSPACE" -C "\$GITHUB_WORKSPACE" status --porcelain\)/);
+  assert.match(workflow, /test -z "\$repo_status"/);
+  assert.ok(workflow.indexOf("Verify exact checked-out repository") < workflow.indexOf("Frozen install"));
+  assert.doesNotMatch(workflow, /safe\.directory[= ]['"]?\*|git config --global|persist-credentials: true/);
   assert.doesNotMatch(workflow, /vercel-build|check-touchline-qa-ci-gate|secrets\./);
   for (const action of workflow.matchAll(/uses: (\S+)/g)) {
     assert.match(action[1], /^[\w-]+\/[\w-]+@[a-f0-9]{40}$/, "workflow actions must be pinned to immutable revisions");
+  }
+});
+
+test("container repository checks bind exact path and SHA and fail closed on Git errors", async () => {
+  const workflow = await readFile(new URL("../.github/workflows/touchline-qa-release.yml", import.meta.url), "utf8");
+  const step = (name: string) => {
+    const block = workflow.split(`      - name: ${name}\n        run: |\n`)[1]?.split(/\n      - /)[0];
+    assert.ok(block, `missing workflow step: ${name}`);
+    return block.split("\n").map((line) => line.replace(/^          /, "")).join("\n");
+  };
+  const preflight = step("Verify exact checked-out repository");
+  const safety = step("Diff and generated-artifact safety");
+  const fixture = await mkdtemp(join(tmpdir(), "touchline-ci-git-"));
+  try {
+    await writeFile(join(fixture, "git"), `#!/bin/sh
+test "$1" = '-c' || exit 91
+test "$2" = "safe.directory=$GITHUB_WORKSPACE" || exit 92
+test "$3" = '-C' || exit 93
+test "$4" = "$GITHUB_WORKSPACE" || exit 94
+shift 4
+case "$*" in
+  'rev-parse --show-toplevel') test "$CI_TEST_CASE" != root-error || exit 128; if test "$CI_TEST_CASE" = wrong-root; then printf '/other-checkout\\n'; else printf '%s\\n' "$GITHUB_WORKSPACE"; fi ;;
+  'rev-parse HEAD') test "$CI_TEST_CASE" != sha-error || exit 128; if test "$CI_TEST_CASE" = wrong-sha; then printf 'wrong-sha\\n'; else printf '%s\\n' "$GITHUB_SHA"; fi ;;
+  'diff --check') test "$CI_TEST_CASE" != diff-error || exit 129 ;;
+  'status --porcelain') test "$CI_TEST_CASE" != status-error || exit 128; if test "$CI_TEST_CASE" = dirty; then printf ' M tracked-file\\n'; fi ;;
+  *) exit 95 ;;
+esac
+`, { mode: 0o700 });
+    const run = (script: string, scenario: string) => spawnSync("/bin/sh", ["-e", "-c", script], {
+      cwd: tmpdir(),
+      env: { ...process.env, PATH: `${fixture}:${process.env.PATH ?? ""}`, GITHUB_WORKSPACE: "/exact checkout with spaces", GITHUB_SHA: "a".repeat(40), CI_TEST_CASE: scenario },
+      encoding: "utf8",
+    });
+    for (const script of [preflight, safety]) assert.equal(run(script, "clean").status, 0);
+    for (const scenario of ["root-error", "wrong-root", "sha-error", "wrong-sha"]) assert.notEqual(run(preflight, scenario).status, 0, scenario);
+    for (const scenario of ["diff-error", "status-error", "dirty"]) assert.notEqual(run(safety, scenario).status, 0, scenario);
+  } finally {
+    await rm(fixture, { recursive: true, force: true });
   }
 });
