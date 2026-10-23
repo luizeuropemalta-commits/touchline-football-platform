@@ -609,8 +609,8 @@ test("Match Centre fixture rail presents each confrontation as a vertical score 
   assert.match(component, /function fixtureRailStatus\(/);
   assert.match(component, /function fixtureScorePair\(fixture: TouchlinePublicFixture\) \{\s*if \(Number\.isFinite\(fixture\.homeScore\) && Number\.isFinite\(fixture\.awayScore\)\)/);
   assert.match(component, /return null;/);
-  assert.match(component, /const liveSnapshot = Array\.isArray\(payload\.data\) \? payload\.data : null;/);
-  assert.match(component, /setFixtures\(\(current\) => mergeTouchlineLiveFixtures\(current, liveSnapshot\)\)/);
+  assert.match(component, /useTouchlinePublishedLive\(initialFixtures, initialReadMetadata, now, liveUpdates\)/);
+  assert.doesNotMatch(component, /livescores\?snapshot|setFixtures|setReadMetadata/);
   assert.doesNotMatch(component, /return copy\[language\]\.next;/);
   assert.doesNotMatch(component, /homeScore \?\? 0|awayScore \?\? 0/);
   assert.match(component, /touchlineFixtureRailDateLabel\(fixture, language, timeZone, now, draftLocalesEnabled\)/);

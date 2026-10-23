@@ -10,6 +10,7 @@ import * as localeModule from "../lib/touchlineArena/i18n.ts";
 import * as tablesCopy from "../lib/touchlineArena/tables-presentation-i18n.ts";
 import * as matchCopy from "../lib/touchlineArena/match-centre-i18n.ts";
 import * as coachCopy from "../lib/touchlineArena/coach-card-i18n.ts";
+import * as publishedTable from "../lib/touchlineArena/sports-publication-official-table.ts";
 import { resolveTouchlineOfficialLeagueTable, type TouchlineOfficialLeagueTable, type TouchlineOfficialLeagueTableRow } from "../lib/football-data/official-league-table.ts";
 
 const read = (path: string) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
@@ -49,18 +50,38 @@ function draftCatalogue(seen?: unknown[]) {
 function view(getCopy: (locale?: string | null) => Copy) {
   const links: Record<string, unknown>[] = [], effects: (() => void | (() => void))[] = [], intervals: { callback: () => void; ms: number }[] = [], cleared: number[] = [];
   let refreshes = 0, traces = 0;
+  let inView = false;
+  const boundaries: { serverRefreshAfterMs: number | null }[] = [];
   const document = { hidden: false };
   let visibility: (entries: { isIntersecting: boolean }[]) => void = () => {};
+  const publicationCalls: { enabled: boolean; visible: boolean }[] = [];
+  // Execute the real hook's SSR branch. Its subscriptions/lifecycle are proved
+  // separately in the real browser; no synthetic SSR session may start work.
+  const publicationHook = evaluate<typeof import("../lib/touchlineArena/sports-publication-official-table-client")>(
+    read("lib/touchlineArena/sports-publication-official-table-client.ts"), {
+      "react": { useMemo: (fn: () => unknown) => fn(),
+        useSyncExternalStore: (_subscribe: unknown, _get: unknown, server: () => unknown) => server() },
+      "./live-presentation-client-store": { touchlineLivePresentationStore: { getRequestEpoch: () => 0,
+        subscribe: () => assert.fail("SSR must not subscribe"), revalidate: () => assert.fail("SSR must not fetch") } },
+      "./sports-publication-official-table": publishedTable,
+    });
   const Table = evaluate<{ default: (props: Record<string, unknown>) => React.ReactElement }>(source, {
-    "react": { ...React, useRef: () => ({ current: {} }), useEffect: (fn: () => void | (() => void)) => effects.push(fn) },
+    "react": { ...React, useState: () => [inView, (value: boolean) => { inView = value; }], useRef: () => ({ current: {} }), useEffect: (fn: () => void | (() => void)) => effects.push(fn) },
+    "@/components/touchline/TouchlineLivePresentationRefresh": { default: (props: { serverRefreshAfterMs: number | null }) => { boundaries.push(props); return null; } },
     "next/navigation": { useRouter: () => ({ refresh: () => { refreshes++; } }) },
     "next/link": { default: (props: Record<string, unknown>) => { links.push(props); const htmlProps = { ...props }; delete htmlProps.prefetch; return React.createElement("a", htmlProps, props.children as React.ReactNode); } },
     "@/components/touchline/TouchlineClubPerimeterTrace": { default: () => { traces++; return null; } },
     "@/lib/touchlineArena/official-league-table-i18n": { getTouchlineOfficialLeagueTableCopy: getCopy },
+    "@/lib/touchlineArena/sports-publication-official-table-client": {
+      useTouchlinePublishedOfficialTable: (table: TouchlineOfficialLeagueTable, enabled: boolean, visible: boolean) => {
+        publicationCalls.push({ enabled, visible });
+        return publicationHook.useTouchlinePublishedOfficialTable(table, enabled, visible);
+      },
+    },
     "./TouchlineOfficialLeagueTable.module.css": { default: new Proxy({}, { get: (_, key) => String(key) }) },
   }, { document, IntersectionObserver: class { constructor(cb: typeof visibility) { visibility = cb; } observe() {} disconnect() {} }, window: { setInterval: (callback: () => void, ms: number) => { intervals.push({ callback, ms }); return 11; }, clearInterval: (id: number) => cleared.push(id) } }).default;
-  return { links, effects, intervals, cleared, document, visibility: (value: boolean) => visibility([{ isIntersecting: value }]), refreshes: () => refreshes, traces: () => traces, render(table: TouchlineOfficialLeagueTable, extra: Record<string, unknown> = {}) {
-    links.length = 0; effects.length = 0; traces = 0;
+  return { links, effects, intervals, cleared, document, boundaries, publicationCalls, visibility: (value: boolean) => visibility([{ isIntersecting: value }]), refreshes: () => refreshes, traces: () => traces, render(table: TouchlineOfficialLeagueTable, extra: Record<string, unknown> = {}) {
+    links.length = 0; effects.length = 0; traces = 0; boundaries.length = 0;
     const props = { table, locale: "en-GB", variant: "profile", currentTeamId: "team-0", id: "official-table", className: "owner-class", ...extra };
     const before = JSON.stringify(props), html = renderToStaticMarkup(Table(props)); assert.equal(JSON.stringify(props), before); return html;
   } };
@@ -193,16 +214,23 @@ test("official table real SSR covers all states and variants while preserving ze
   }
 });
 
-test("official table keeps ten-second refresh and cleanup; catalogue rendering never itself starts work", async () => {
+test("official table shares refresh only when opted in and visible; static catalogue never starts work", async () => {
   const c = await load(), f = view(c.getTouchlineOfficialLeagueTableCopy);
   f.render(table("ready", 3, true)); assert.equal(f.intervals.length, 0); assert.equal(f.refreshes(), 0);
-  const cleanup = f.effects[0](); assert.equal(f.intervals[0].ms, 10_000);
-  f.intervals[0].callback(); assert.equal(f.refreshes(), 0);
-  f.visibility(true); f.intervals[0].callback(); assert.equal(f.refreshes(), 1);
-  f.document.hidden = true; f.intervals[0].callback(); assert.equal(f.refreshes(), 1);
-  f.document.hidden = false; f.visibility(false); f.intervals[0].callback(); assert.equal(f.refreshes(), 1);
-  f.visibility(true); f.intervals[0].callback(); assert.equal(f.refreshes(), 2);
-  cleanup?.(); assert.deepEqual(f.cleared, [11]);
+  assert.equal(f.effects[0](), undefined); assert.equal(f.boundaries.length, 0);
+  f.render(table("ready", 3, true), { liveReadsEnabled: true });
+  const cleanup = f.effects[0](); assert.equal(f.boundaries.length, 0);
+  f.visibility(true); f.render(table("ready", 3, true), { liveReadsEnabled: true });
+  assert.deepEqual(f.publicationCalls.at(-1), { enabled: true, visible: true });
+  assert.equal(f.boundaries.length, 1); assert.equal(f.boundaries[0].serverRefreshAfterMs, 10_000);
+  f.visibility(false); f.render(table("ready", 3, true), { liveReadsEnabled: true });
+  assert.deepEqual(f.publicationCalls.at(-1), { enabled: true, visible: false });
+  assert.equal(f.boundaries.length, 0); cleanup?.();
+  f.visibility(true); f.render(table("ready", 3, false), { liveReadsEnabled: true });
+  assert.equal(f.boundaries[0].serverRefreshAfterMs, null, "idle table discovers new publications without periodic SSR refresh");
+  f.render(table("ready", 3, true), { liveReadsEnabled: false }); assert.equal(f.boundaries.length, 0);
+  assert.deepEqual(f.publicationCalls.at(-1), { enabled: false, visible: true });
+  assert.doesNotMatch(source, /setInterval|setTimeout|useRouter|\bfetch\(/);
   const idle = view(c.getTouchlineOfficialLeagueTableCopy); idle.render(table("ready", 3, false)); assert.equal(idle.effects[0](), undefined); assert.equal(idle.intervals.length, 0);
   const input = { season: { id: "season", providerSeasonId: "28083", name: "2026/27", sourceUpdatedAt: null },
     teams: Array.from({ length: 20 }, (_, i) => ({ clubId: `club-${i}`, providerTeamId: String(i), name: `Official ${i}`, shortCode: null, slug: `club-${i}`, logoUrl: null, sourceUpdatedAt: null })), fixtures: [] };

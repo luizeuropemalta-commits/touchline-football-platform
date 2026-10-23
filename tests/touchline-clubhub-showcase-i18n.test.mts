@@ -16,6 +16,9 @@ import * as demo from "../lib/touchlineArena/demo-data.ts";
 import * as gallery from "../lib/touchlineArena/coach-tier-gallery.ts";
 import * as coach from "../lib/touchlineArena/coach-card.ts";
 import * as competition from "../lib/touchlineArena/coach-competition-projection.ts";
+import { buildTouchlineCardLeadershipValue } from "../lib/touchlineArena/card-leadership-authority.ts";
+import { localizedCountryLabel } from "../lib/touchlineArena/country-labels.ts";
+import { resolveTouchlineCoachZoomPresentation } from "../lib/touchlineArena/coach-zoom-i18n.ts";
 import * as links from "../lib/touchlineArena/player-links.ts";
 import type { TouchLineCoachRankingState } from "../lib/touchlineArena/coach-ranking-server.ts";
 
@@ -102,12 +105,33 @@ async function fixture(future = false, sentinels = false, tierSentinel?: string,
     "./TouchlineCoachCategoryShowcase.module.css": { default: new Proxy({}, { get: (_, key) => String(key) }) },
   };
   const view = compile(source, dependencies);
-  return { getter, tierCalls, captures, requested, render(locale: string, cards: demo.ClubOwnerSquadCard[], ranking: TouchLineCoachRankingState = unavailable) {
-    captures.length = 0; requested.length = 0;
-    const props = { locale, playerCards: cards, coachRanking: ranking, draftLocalesEnabled: future }, before = JSON.stringify(props);
-    const html = renderToStaticMarkup(React.createElement(view.default as React.ComponentType<typeof props>, props));
-    assert.equal(JSON.stringify(props), before); return html;
-  } };
+  let coachAuthority: ReturnType<typeof buildTouchlineCardLeadershipValue> | null = null;
+  const CoachZoom = compile(readFileSync(new URL("../components/touchline/cards/TouchlineCoachCardZoom.tsx", import.meta.url), "utf8"), {
+    "@/lib/touchlineArena/card-rules": rules,
+    "@/lib/touchlineArena/country-labels": { localizedCountryLabel },
+    "@/lib/touchlineArena/coach-zoom-i18n": { resolveTouchlineCoachZoomPresentation },
+    "@/lib/touchlineArena/coach-competition-projection": competition,
+    "./TouchlineCardLeadershipProvider": { useTouchlineCardLeadershipAuthority: () => coachAuthority },
+    "./TouchlineCoachCard": leaf("resolved-coach"), "./TouchlineCardZoom": leaf("zoom"),
+  }).default as (props: Record<string, unknown>) => React.ReactElement<{
+    children: React.ReactElement<Record<string, unknown>>;
+    expandedContent: React.ReactElement<Record<string, unknown>>;
+  }>;
+  return { getter, tierCalls, captures, requested,
+    resolveCoach(props: Record<string, unknown>, ranking: TouchLineCoachRankingState) {
+      coachAuthority = buildTouchlineCardLeadershipValue(null, ranking);
+      const original = JSON.stringify(props);
+      const resolved = CoachZoom(props).props;
+      assert.equal(JSON.stringify(props), original);
+      return [resolved.children.props, resolved.expandedContent.props];
+    },
+    render(locale: string, cards: demo.ClubOwnerSquadCard[], ranking: TouchLineCoachRankingState = unavailable) {
+      captures.length = 0; requested.length = 0;
+      const props = { locale, playerCards: cards, coachRanking: ranking, draftLocalesEnabled: future }, before = JSON.stringify(props);
+      const html = renderToStaticMarkup(React.createElement(view.default as React.ComponentType<typeof props>, props));
+      assert.equal(JSON.stringify(props), before); return html;
+    },
+  };
 }
 const unavailable: TouchLineCoachRankingState = { phase: "unavailable", snapshotId: null, seasonId: null, scoringVersion: null, fixtureIds: [], generatedAt: null, rows: [] };
 function player(name: string, tierKey: tiers.TouchlineCardTierKey, value: number | null): demo.ClubOwnerSquadCard {
@@ -163,7 +187,13 @@ test("real eight-locale SSR preserves representatives, seven-tier order, names, 
     coaches.forEach((row, index) => {
       const official = reps[index].snapshot!;
       assert.equal(row.props.coach, official.coach); assert.equal(row.props.locale, locale);
-      assert.equal(row.props.competition, null); assert.equal(row.props.publishedTouchlinePoints, null); assert.equal(row.props.showLeadershipCrown, false);
+      assert.equal(row.props.competition, null);
+      assert.equal(row.props.liveCompetitionUpdates, true);
+      assert.equal(Object.hasOwn(row.props, "publishedTouchlinePoints"), false);
+      assert.equal(Object.hasOwn(row.props, "showLeadershipCrown"), false);
+      for (const card of view.resolveCoach(row.props, unavailable)) {
+        assert.equal(card.publishedTouchlinePoints, null); assert.equal(card.showLeadershipCrown, false);
+      }
       assert.ok(html.includes(esc(`${copy.openCoach}: ${official.coach.displayName}`)));
       assert.equal(row.props.profileHref, `/touchline-coaches/${encodeURIComponent(official.coach.providerId)}?lang=${encodeURIComponent(locale)}`);
     });
@@ -192,7 +222,12 @@ test("real selector and ranking projection preserve publication absence, coach s
       const rep = reps[index];
       assert.deepEqual(row.props.slot, coach.createTouchlineArenaCoachSlot(rep.snapshot!.coach, rep.classification!.finalPosition ?? null, rep.classification!.tierKey));
       assert.deepEqual(row.props.competition, competition.coachCompetitionFromRanking(ranking, rep.snapshot!.coach.providerId));
-      assert.equal(row.props.publishedTouchlinePoints, index ? 0 : 3); assert.equal(row.props.showLeadershipCrown, index === 0);
+      assert.equal(row.props.liveCompetitionUpdates, true);
+      assert.equal(Object.hasOwn(row.props, "publishedTouchlinePoints"), false);
+      assert.equal(Object.hasOwn(row.props, "showLeadershipCrown"), false);
+      for (const card of view.resolveCoach(row.props, ranking)) {
+        assert.equal(card.publishedTouchlinePoints, index ? 0 : 3); assert.equal(card.showLeadershipCrown, index === 0);
+      }
       assert.equal(row.props.contract, null); assert.equal(row.props.assetLoading, "eager"); assert.equal(row.props.frameLoading, "eager");
     });
   }
@@ -236,18 +271,20 @@ test("real JSX renders promotion and position evidence with synthetic records on
   }
 });
 
-test("showcase JSX, tier styling and evidence logic retain the admitted preimage except approved locale, value and pending-state changes", () => {
+test("showcase JSX, tier styling and evidence logic retain the admitted preimage except approved locale, value, pending-state and live-publication changes", () => {
   const expected: Record<string, string> = { tierStyle: "9a8dfb2be2686c166f3cf1b0016a95addb3b8fd40434a314f11e2e26c314a8eb", coachEvidenceLabel: "dfadad058ffafad7a157dc1a1600e7b7a35cc408013cd3d5bb84ec5584478d4f" };
   for (const node of ast.statements) if (ts.isFunctionDeclaration(node)) {
     if (node.name?.text === "TouchlineCoachCategoryShowcase") {
       let preimage = node.body!.statements.find(ts.isReturnStatement)!.getText(ast);
       // Invert only the admitted locale bindings and the explicitly authorized
-      // restoration of football market value (not commercial card price).
+      // restoration of football market value (not commercial card price), plus
+      // the public live-record opt-in replacing frozen point/crown props.
       for (const [added, previous, count] of [
         ['touchlineCardTierName(tierKey, effectiveLocale, draftLocalesEnabled)', 'touchlineCardTierName(tierKey, effectiveLocale)', 2],
         ['<TouchlineEliteExactCard draftLocalesEnabled={draftLocalesEnabled}', '<TouchlineEliteExactCard', 1],
         ['<TouchlineCoachCardZoom draftLocalesEnabled={draftLocalesEnabled}', '<TouchlineCoachCardZoom', 1],
         ['hideMarketValuePanel={false}', 'hideMarketValuePanel', 1],
+        ['                        liveCompetitionUpdates\n', '                        publishedTouchlinePoints={competition?.totalTouchlinePoints ?? null}\n                        showLeadershipCrown={competition?.rank === 1}\n', 1],
       ] as const) {
         assert.equal(preimage.split(added).length - 1, count, `exact authorized delta: ${added}`);
         preimage = preimage.split(added).join(previous);

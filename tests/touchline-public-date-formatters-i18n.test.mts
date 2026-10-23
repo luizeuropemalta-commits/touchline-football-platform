@@ -163,6 +163,8 @@ function fixtureCard(api: typeof kickoff, locale: string, mode: "server" | "brow
     "next/navigation": { useRouter: () => ({ refresh: () => { throw new Error("No refresh in SSR fixture"); } }) },
     "lucide-react": { CalendarDays: () => null, MapPin: () => null },
     "@/lib/touchlineArena/local-kickoff": api,
+    "@/lib/touchlineArena/sports-publication-client": { useTouchlinePublishedLive: (fixtures: unknown[]) => ({ fixtures }) },
+    "@/components/touchline/TouchlineLivePresentationRefresh": { default: () => null },
     "@/lib/touchlineArena/match-centre": { normalizeTouchlineMatchCentreTimeZone },
     "@/lib/touchlineArena/club-hub-fixture-rail": {
       resolveClubHubFixtureRail: (...args: Parameters<typeof resolveClubHubFixtureRail>) => resolveClubHubFixtureRail(args[0], args[1], now, args[3]),

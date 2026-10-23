@@ -16,6 +16,7 @@ type ClubHubOutsideMatchRosterProps = {
   sidelinedFixtureId?: string | null;
   locale: string;
   draftLocalesEnabled?: boolean;
+  liveSeasonRating?: boolean;
   labels: { nationality: string; points: string; totalPoints: string; cardPrice: string; currentClub: string };
   squadUnavailable?: boolean;
   retryHref?: string;
@@ -36,6 +37,7 @@ export default function ClubHubOutsideMatchRoster({
   sidelinedFixtureId = null,
   locale,
   draftLocalesEnabled = false,
+  liveSeasonRating = false,
   labels,
   squadUnavailable = false,
   retryHref,
@@ -74,7 +76,7 @@ export default function ClubHubOutsideMatchRoster({
 
       {cards.length ? (
         <div className={styles.cards}>
-          <ClubHubSquadGrid draftLocalesEnabled={draftLocalesEnabled}
+          <ClubHubSquadGrid liveSeasonRating={liveSeasonRating} draftLocalesEnabled={draftLocalesEnabled}
             cards={[...cards]}
             sidelined={sidelined}
             sidelinedFixtureId={sidelinedFixtureId}

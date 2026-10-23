@@ -20,7 +20,9 @@ test("shared TouchLine dialog primitive keeps focus, Escape and background isola
   assert.match(dialog, /lockSiblingBackground/);
   assert.match(dialog, /sibling\.inert = true/);
   assert.match(dialog, /const explicitReturnTarget = returnFocusRef\?\.current \?\? null/);
+  assert.match(dialog, /const fallbackReturnTarget = returnFocusFallbackRef\?\.current \?\? null/);
   assert.match(dialog, /const returnTarget = explicitReturnTarget \?\? previousFocusRef\.current/);
+  assert.match(dialog, /for \(const target of \[returnTarget, fallbackReturnTarget\]\)/);
   assert.match(dialog, /window\.requestAnimationFrame\(\(\) => \{[\s\S]*?returnTarget/);
   assert.doesNotMatch(dialog, /const shouldRestore/);
 });
@@ -31,7 +33,37 @@ test("card and tables use the shared accessible dialog behaviour", () => {
 
   assert.match(cardZoom, /useTouchlineDialog<HTMLDivElement>/);
   assert.match(cardZoom, /initialFocusRef: closeRef/);
-  assert.match(cardZoom, /returnFocusRef: triggerRef/);
+  const tree = ts.createSourceFile("TouchlineCardZoom.tsx", cardZoom, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const calls: ts.CallExpression[] = [], initializers = new Map<string, string>();
+  function visit(node: ts.Node) {
+    if (ts.isCallExpression(node) && node.expression.getText(tree) === "useTouchlineDialog") calls.push(node);
+    if (ts.isVariableDeclaration(node) && node.initializer) initializers.set(node.name.getText(tree), node.initializer.getText(tree));
+    ts.forEachChild(node, visit);
+  }
+  visit(tree);
+  assert.equal(calls.length, 1, "all presentation modes use one shared dialog hook");
+  assert.ok(ts.isObjectLiteralExpression(calls[0].arguments[0]));
+  const optionsExpression = calls[0].arguments[0].getText(tree);
+  const requestedOpen = initializers.get("requestedOpen"), isOpen = initializers.get("isOpen");
+  assert.ok(requestedOpen);assert.ok(isOpen);
+  const triggerRef = { current: { name: "local trigger" } }, externalRef = { current: { name: "selected list trigger" } };
+  const closeRef = { current: { name: "close button" } }, fallbackRef = { current: { name: "persistent heading" } };
+  for (const presentationMode of ["combined", "trigger-only", "dialog-only"]) for (const open of [undefined, false, true]) for (const internalIsOpen of [false, true]) {
+    const requested = runInNewContext(`(${requestedOpen})`, { open, internalIsOpen }) as boolean;
+    const active = runInNewContext(`(${isOpen})`, { presentationMode, requestedOpen: requested }) as boolean;
+    assert.equal(requested, open ?? internalIsOpen, "controlled state overrides the legacy internal default");
+    assert.equal(active, presentationMode !== "trigger-only" && (open ?? internalIsOpen), "trigger-only never owns a focus lock");
+    for (const returnFocusRef of [undefined, null, externalRef]) {
+      const dismissals: boolean[] = [];
+      const options = runInNewContext(`(${optionsExpression})`, { isOpen: active, ariaLabel: "Canonical card", closeRef, triggerRef, returnFocusRef, returnFocusFallbackRef: fallbackRef, setIsOpen: (next: boolean) => dismissals.push(next) }) as {
+        open: boolean; label: string; initialFocusRef: unknown; returnFocusRef: unknown; returnFocusFallbackRef: unknown; onDismiss: () => void;
+      };
+      assert.equal(options.open, active);assert.equal(options.label, "Canonical card");assert.equal(options.initialFocusRef, closeRef);
+      assert.equal(options.returnFocusRef, returnFocusRef ?? triggerRef, "default callers retain their local trigger; controlled hosts use the invoking trigger");
+      assert.equal(options.returnFocusFallbackRef, fallbackRef);
+      options.onDismiss();assert.deepEqual(dismissals, [false]);
+    }
+  }
   assert.match(cardZoom, /document\.documentElement\.lang === "pt-BR"/);
 
   assert.match(tables, /import TouchlineCardZoom/);
@@ -153,4 +185,132 @@ test("nested dialog owns its Tab and Escape while the current dialog still handl
   }
   assert.deepEqual(h.key(h.heading, "Escape"), { prevented: 1, stopped: 1, focused: h.heading });
   assert.equal(h.dismissals, 1);
+});
+
+/** Runs the real focus-recovery effect against a deliberately small DOM model. */
+function focusRecoveryFixture() {
+  class TestElement {
+    isConnected = true;
+    inert = false;
+    visible = true;
+    parentElement: TestElement | null = null;
+    children: TestElement[] = [];
+    controls: TestElement[] = [];
+    attributes = new Map<string, string>();
+    listeners = new Map<string, ((event: { target: TestElement }) => void)[]>();
+    style = { overflow: "" };
+    dataset: Record<string, string | undefined> = {};
+    focusCalls = 0;
+    readonly name: string;
+    private readonly document: { activeElement: TestElement | null };
+    constructor(name: string, document: { activeElement: TestElement | null }) { this.name = name; this.document = document; }
+    append(child: TestElement) { child.parentElement = this; this.children.push(child); }
+    contains(node: TestElement) {
+      for (let cursor: TestElement | null = node; cursor; cursor = cursor.parentElement) if (cursor === this) return true;
+      return false;
+    }
+    getClientRects() { return this.visible ? [{}] : []; }
+    hasAttribute(name: string) { return this.attributes.has(name); }
+    getAttribute(name: string) { return this.attributes.get(name) ?? null; }
+    setAttribute(name: string, value: string) { this.attributes.set(name, value); }
+    removeAttribute(name: string) { this.attributes.delete(name); }
+    querySelectorAll() { return this.controls; }
+    addEventListener(name: string, listener: (event: { target: TestElement }) => void) {
+      this.listeners.set(name, [...(this.listeners.get(name) ?? []), listener]);
+    }
+    removeEventListener(name: string, listener: (event: { target: TestElement }) => void) {
+      this.listeners.set(name, (this.listeners.get(name) ?? []).filter(candidate => candidate !== listener));
+    }
+    emitFocus(target: TestElement) { for (const listener of this.listeners.get("focusin") ?? []) listener({ target }); }
+    focus() { this.focusCalls += 1; this.document.activeElement = this; }
+  }
+
+  const document: {
+    activeElement: TestElement | null;
+    body: TestElement;
+    documentElement: TestElement;
+    querySelector: () => null;
+    querySelectorAll: () => TestElement[];
+  } = {} as never;
+  const root = new TestElement("root", document);
+  const body = new TestElement("body", document);
+  const dialog = new TestElement("dialog", document);
+  const close = new TestElement("close", document);
+  const toggle = new TestElement("removed-toggle", document);
+  const ordinary = new TestElement("ordinary-update", document);
+  const nestedDialog = new TestElement("nested-dialog", document);
+  const nestedButton = new TestElement("nested-button", document);
+  document.activeElement = body;
+  document.body = body;
+  document.documentElement = root;
+  document.querySelector = () => null;
+  document.querySelectorAll = () => [];
+  root.append(body); body.append(dialog); dialog.append(close); dialog.append(toggle); body.append(nestedDialog); nestedDialog.append(nestedButton);
+  dialog.controls = [close, toggle];
+
+  const effects: Array<() => void | (() => void)> = [];
+  const observers: Array<{ callback: (records: Array<{ removedNodes: TestElement[] }>) => void; disconnected: boolean }> = [];
+  class TestMutationObserver {
+    disconnected = false;
+    readonly callback: (records: Array<{ removedNodes: TestElement[] }>) => void;
+    constructor(callback: (records: Array<{ removedNodes: TestElement[] }>) => void) { this.callback = callback; observers.push(this); }
+    observe() {}
+    disconnect() { this.disconnected = true; }
+  }
+  const exports: { useTouchlineDialog?: (options: unknown) => {
+    dialogRef: { current: TestElement | null };
+  } } = {};
+  runInNewContext(compiledDialog, {
+    exports,
+    document,
+    Element: TestElement,
+    HTMLElement: TestElement,
+    MutationObserver: TestMutationObserver,
+    window: { requestAnimationFrame(callback: () => void) { callback(); return 1; }, cancelAnimationFrame() {} },
+    require(name: string) {
+      assert.equal(name, "react");
+      return {
+        useRef: <T,>(value: T) => ({ current: value }),
+        useCallback: <T,>(callback: T) => callback,
+        useMemo: <T,>(factory: () => T) => factory(),
+        useEffect: (effect: () => void | (() => void)) => { effects.push(effect); },
+      };
+    },
+  });
+  const hook = exports.useTouchlineDialog!({ open: true, label: "Stable stage", onDismiss() {}, initialFocusRef: { current: close } });
+  hook.dialogRef.current = dialog;
+  const cleanups = effects.map(effect => effect()).filter((cleanup): cleanup is () => void => typeof cleanup === "function");
+  return { document, body, dialog, close, toggle, ordinary, nestedDialog, nestedButton, observer: observers[0]!, cleanups };
+}
+
+test("live removal of the focused detail repairs focus inside the same dialog without stealing nested focus", () => {
+  const h = focusRecoveryFixture();
+  assert.equal(h.document.activeElement, h.close, "initial dialog focus remains the close control");
+
+  // A normal DOM change does not reset focus; only removal of the remembered
+  // focused node while the browser falls back to body is repaired.
+  h.dialog.emitFocus(h.toggle); h.document.activeElement = h.toggle;
+  h.observer.callback([{ removedNodes: [h.ordinary] }]);
+  assert.equal(h.document.activeElement, h.toggle);
+
+  h.toggle.isConnected = false;
+  h.dialog.emitFocus(h.toggle); h.document.activeElement = h.body;
+  h.observer.callback([{ removedNodes: [h.toggle] }]);
+  assert.equal(h.document.activeElement, h.close, "Escape remains reachable after the selected detail unmounts");
+
+  // An open nested dialog owns focus. Removing the parent's former target must
+  // not drag focus away from that dialog.
+  h.toggle.isConnected = true; h.dialog.emitFocus(h.toggle); h.toggle.isConnected = false; h.document.activeElement = h.nestedButton;
+  h.observer.callback([{ removedNodes: [h.toggle] }]);
+  assert.equal(h.document.activeElement, h.nestedButton);
+
+  // A deeper in-tree dialog may still be waiting for its own focus RAF. Its
+  // presence itself makes the older dialog ineligible to repair body focus.
+  h.dialog.append(h.nestedDialog); h.document.querySelectorAll = () => [h.dialog, h.nestedDialog];
+  h.toggle.isConnected = true; h.dialog.emitFocus(h.toggle); h.toggle.isConnected = false; h.document.activeElement = h.body;
+  h.observer.callback([{ removedNodes: [h.toggle] }]);
+  assert.equal(h.document.activeElement, h.body);
+
+  for (const cleanup of h.cleanups) cleanup();
+  assert.equal(h.observer.disconnected, true, "StrictMode/unmount cleanup disconnects the observer");
 });

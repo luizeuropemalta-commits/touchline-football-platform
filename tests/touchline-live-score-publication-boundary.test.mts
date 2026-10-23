@@ -41,7 +41,9 @@ function boundary(options: { absent?: boolean; pointerError?: boolean; snapshotE
   };
   const source = stripTypeScriptTypes(readFileSync(new URL("../lib/football-data/live-score-persistence.ts", import.meta.url), "utf8"))
     .replace(/^import\s+[\s\S]*?;\s*$/gm, "").replace(/^export /gm, "");
-  const read = runInNewContext(`${source}\nreadPersistedLiveScoreSnapshot;`, {
+  const contract = stripTypeScriptTypes(readFileSync(new URL("../lib/football-data/live-score-snapshot-contract.ts", import.meta.url), "utf8"))
+    .replace(/^import\s+[\s\S]*?;\s*$/gm, "").replace(/^export /gm, "");
+  const read = runInNewContext(`${contract}\n${source}\nreadPersistedLiveScoreSnapshot;`, {
     createAdminClient: () => admin, readPublishedTouchlineLivePresentationInput,
     isOfficialSportmonksFixtureId: (value: string) => /^[1-9]\d*$/.test(value),
   }) as (options: { now: number }) => Promise<ReturnType<typeof score> | null>;

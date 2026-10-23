@@ -70,17 +70,32 @@ async function consumer(getCopy: (locale: string) => Copy, formationCopy?: (loca
   modules["@/lib/touchlineArena/club-lineup"] = { isClubHubSquadPreviewWindow: (input: Parameters<typeof isClubHubSquadPreviewWindow>[0]) =>
     isClubHubSquadPreviewWindow({ ...input, now: Date.parse("2026-11-01T12:00:00Z") }) };
   const captures: { kind: string; props: Record<string, unknown> }[] = [];
+  const leaf = (kind: string) => function CapturedLeaf(props: Record<string, unknown>) {
+    captures.push({ kind, props });
+    if (kind === "TouchlineEliteExactCard") return React.createElement("a", { href: props.playerProfileHref as string, "data-card": "true" });
+    if (kind === "ClubHubLiveFixtureScore") return React.createElement("span", { "data-score": "true" }, "2–1");
+    if (kind === "ClubHubLocalKickoff") return React.createElement("span", { "data-kickoff": "true" }, props.fallback as string);
+    return React.createElement("div", { "aria-label": (props.ariaLabel as string) || undefined }, props.children as React.ReactNode);
+  };
+  // Run the actual named wrappers/context, keeping only the original visual
+  // leaf markers. Preview seed identity and every captured card prop remain real.
+  const seasonScope: Record<string, unknown> = {};
+  const seasonResolver = await import("../lib/touchlineArena/player-season-presentation.ts");
+  runInNewContext(ts.transpileModule(readFileSync(resolve(root, "components/touchline/cards/TouchlinePlayerSeasonScope.tsx"), "utf8"), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.React },
+  }).outputText, { exports: seasonScope, React, require: (name: string) => {
+    if (name === "react") return React;
+    if (name === "./TouchlineCardLeadershipProvider") return { useTouchlineCardLeadershipAuthority: () => null };
+    if (name === "./TouchlineEliteExactCard") return { default: leaf("TouchlineEliteExactCard") };
+    if (name === "./TouchlineCardZoom") return { default: leaf("TouchlineCardZoom") };
+    assert.equal(name, "@/lib/touchlineArena/player-season-presentation"); return seasonResolver;
+  } });
   const exports: { default?: React.ComponentType<Record<string, unknown>> } = {};
   runInNewContext(ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.React } }).outputText,
     { exports, React, require: (name: string) => {
       if (name.endsWith(".css")) return { default: new Proxy({}, { get: (_, key) => String(key) }) };
-      if (name.startsWith("@/components/")) return { default: (props: Record<string, unknown>) => {
-        const kind = name.split("/").at(-1)!; captures.push({ kind, props });
-        if (kind === "TouchlineEliteExactCard") return React.createElement("a", { href: props.playerProfileHref as string, "data-card": "true" });
-        if (kind === "ClubHubLiveFixtureScore") return React.createElement("span", { "data-score": "true" }, "2–1");
-        if (kind === "ClubHubLocalKickoff") return React.createElement("span", { "data-kickoff": "true" }, props.fallback as string);
-        return React.createElement("div", { "aria-label": (props.ariaLabel as string) || undefined }, props.children as React.ReactNode);
-      } };
+      if (name === "@/components/touchline/cards/TouchlinePlayerSeasonScope") return seasonScope;
+      if (name.startsWith("@/components/")) return { default: leaf(name.split("/").at(-1)!) };
       assert.ok(name in modules, `Unexpected import ${name}`); return modules[name];
     } });
   assert.ok(exports.default);

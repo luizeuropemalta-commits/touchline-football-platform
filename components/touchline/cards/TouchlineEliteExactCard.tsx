@@ -934,7 +934,7 @@ export function TouchlineEliteExactCard({
   // public publication or commercial authority.
   const editorialCard = player.editorialCard ?? null;
   const goldenBootPlayers = useTouchlineGoldenBootPlayers(!isEditable && Boolean(editorialCard)
-    && allowsInheritedCardLeadership(awardPath) && Boolean(player.canonicalPlayerId));
+    && allowsInheritedCardLeadership(awardPath) && Boolean(player.canonicalPlayerId), activeRanking);
   const hasGoldenBoot = !isEditable && Boolean(editorialCard) && Boolean(player.canonicalPlayerId
     && goldenBootPlayers.includes(player.canonicalPlayerId.toLowerCase()));
   const reviewRequired = !editorialCard && player.cardReview?.state === "REVIEW_REQUIRED";

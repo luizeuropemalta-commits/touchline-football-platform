@@ -16,6 +16,8 @@ import * as performanceCopy from "../lib/touchlineArena/player-performance-i18n.
 import * as catalogueLocale from "../lib/touchlineArena/catalogue-locale.ts";
 import { AuthSessionMissingError } from "@supabase/supabase-js";
 import { cardGoalsLeaderIds } from "../lib/touchlineArena/card-goals-leadership.ts";
+import { TOUCHLINE_PRESEASON_RANKING_STATE } from "../lib/touchlineArena/card-ranking-live.ts";
+import * as rankingSummary from "../lib/touchlineArena/published-ranking-summary.ts";
 import type { ClubOwnerStandingsRead } from "../lib/touchlineArena/club-owner-standings-server.ts";
 
 const require = createRequire(import.meta.url);
@@ -35,6 +37,11 @@ function loadPage(path: string, modules: Record<string, unknown>, exportName = "
     if (name === "@/lib/touchlineArena/ranking-load-diagnostics") return { createRankingLoadDiagnostics: () => createRankingLoadDiagnostics({}) };
     if (name === "@/lib/touchlineArena/rankings-highlight-projection") return { projectTouchlineRankingsHighlights };
     if (name === "@/lib/touchlineArena/card-goals-leadership") return { cardGoalsLeaderIds };
+    if (name === "@/lib/touchlineArena/published-ranking-summary") return rankingSummary;
+    if (name === "@/components/touchline/cards/TouchlineCardLeadershipProvider") return {
+      useTouchlineCardLeadershipAuthority: () => null,
+      TouchlineCardLeadershipProvider: ({ children }: { children: ReactNode }) => children,
+    };
     if (name === "react" || name === "react/jsx-runtime") return require(name);
     if (name.endsWith(".css")) return { default: {} };
     return new Proxy({}, { get: () => () => null });
@@ -48,6 +55,26 @@ function contentShell(tree: ReturnType<typeof loadPage>) {
   const content = tree.props.children.find((child: { type?: unknown } | null) => child?.type === "div");
   assert.ok(content, "page retains its content wrapper below the brand header");
   return { ...tree, props: { ...tree.props, children: content.props.children } };
+}
+
+function publishedCard(index: number) {
+  const id = `a0000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`;
+  return {
+    id, canonicalPlayerId: id, providerPlayerId: String(100 + index), name: `Synthetic player ${index}`,
+    editorialCard: { tierKey: "ruby-red", cardPrice: { amountMinor: 1500, currency: "TC" }, lastReviewedAt: "2026-10-01T00:00:00Z" },
+    seasonTotalRating: index,
+  };
+}
+
+function publishedRanking(snapshotId: string, count: number) {
+  return {
+    ...TOUCHLINE_PRESEASON_RANKING_STATE, phase: "ranked", snapshotId, seasonId: "season-2026",
+    scoringVersion: "player_scoring_v4", coverageStatus: "complete_for_scoring",
+    players: Array.from({ length: count }, (_, index) => ({
+      playerId: publishedCard(index).id, providerPlayerId: publishedCard(index).providerPlayerId,
+      totalRating: index === 0 ? null : index,
+    })),
+  };
 }
 
 test("catalogue continuously refills a two-read pool and merges in input order despite reverse completion", async () => {
@@ -143,7 +170,7 @@ test("Rankings starts independent reads while authentication is pending and shar
   const pending = new Promise(resolve => { release = resolve; });
   let releaseCatalogue!: (value: unknown[]) => void;
   const catalogue = new Promise<unknown[]>(resolve => { releaseCatalogue = resolve; });
-  const ranking = { snapshotId: "same-snapshot" };
+  const ranking = publishedRanking("same-snapshot", 5);
   const page = loadPage("../app/rankings/page.tsx", {
     "@/lib/touchlineArena/i18n": { normalizeTouchLineLocale: () => "en-GB" },
     "@/lib/supabase/server": { createClient: async () => ({ auth: { getUser: () => pending } }) },
@@ -151,7 +178,11 @@ test("Rankings starts independent reads while authentication is pending and shar
       loadTouchLineActiveRanking: async () => { calls.push("ranking"); return ranking; },
       loadTouchLinePublishedTopEleven: async (state: unknown) => { assert.equal(state, ranking); calls.push("xi"); return null; },
     },
-    "@/lib/touchlineArena/ranked-card-catalog-server": { loadTouchLineRankedCardCatalog: async (state: unknown) => { assert.equal(state, ranking); calls.push("catalogue"); return catalogue; } },
+    "@/lib/touchlineArena/ranked-card-catalog-server": { loadTouchLineRankedCardCatalog: async (state: unknown, admin: unknown, options: unknown) => {
+      assert.equal(state, ranking); assert.equal(admin, undefined);
+      assert.equal(JSON.stringify(options), JSON.stringify({ includeGoalCandidates: true }));
+      calls.push("catalogue"); return catalogue;
+    } },
     "@/lib/touchlineArena/global-navigation": { resolveTouchlineGlobalNavigationSurface: ({ isAuthenticated, isAdmin }: { isAuthenticated: boolean; isAdmin: boolean }) => { assert.equal(isAuthenticated, true); assert.equal(isAdmin, false); return "authenticated"; } },
     "@/lib/admin/owner": { isOwnerEmail: () => false },
     "@/lib/football-data/fixture-schedule-store": { readPublicCompetitionFixtures: async () => { calls.push("fixtures"); return []; } },
@@ -180,14 +211,23 @@ test("Rankings starts independent reads while authentication is pending and shar
   const complete = sporting.type(sporting.props).then((tree: { props: { rosterCards?: unknown[]; highlights?: TouchlineRankingsHighlights; totalRankedCards?: number } }) => { sportingReady = true; return tree; });
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(sportingReady, false, "Catalogue pending must not block the authenticated shell");
-  const allCards = Array.from({ length: 5 }, (_, index) => ({ id: `published-${index}`, name: `Synthetic player ${index}`, editorialCard: {}, seasonTotalRating: index }));
+  const allCards = [
+    ...Array.from({ length: 5 }, (_, index) => publishedCard(index)),
+    { ...publishedCard(5), name: "Published scorer without rating", seasonTotalRating: null },
+  ];
   releaseCatalogue(allCards);
   const loaded = await complete;
   assert.equal(loaded.props.rosterCards, undefined);
-  assert.deepEqual(loaded.props.highlights?.topPlayerCards.map((card: TouchlineRankingsHighlights["topPlayerCards"][number]) => card.id), ["published-4", "published-3", "published-2"]);
+  assert.deepEqual(loaded.props.highlights?.topPlayerCards.map((card: TouchlineRankingsHighlights["topPlayerCards"][number]) => card.id), [4, 3, 2].map(index => publishedCard(index).id));
   const heroElement = frame.props.children[1].props.children;
   const hero = await heroElement.type(heroElement.props);
-  assert.equal(hero.props.totalRankedCards, 5, "Do not truncate the catalogue to the top three");
+  assert.equal(hero.props.totalRankedCards, 5, "Count every ranking identity, including null rating, excluding the sixth goals-only card");
+  assert.deepEqual(hero.props.catalogueIndex, allCards.map(card => ({ playerId: card.id, providerPlayerId: card.providerPlayerId })), "Only verified public identity bindings reach the summary");
+  const podiumElement = frame.props.children[3].props.children[0].props.children;
+  const podium = await podiumElement.type(podiumElement.props);
+  assert.equal(podium.props.catalogue, allCards, "The award boundary receives the whole union, not top3");
+  assert.equal(podium.props.seedRanking, ranking);
+  assert.equal(podium.props.highlights, undefined, "Awards cannot inherit an old sliced projection");
   assert.equal(pageTree.props.children[0].props.navigation, navigation, "Navigation is owned by the brand header, not sporting completion");
 });
 
@@ -205,7 +245,7 @@ function rankingsWithDeferredSchedule(extra: Record<string, unknown> = {}) {
   const catalogue = deferred<unknown[]>();
   const auth = deferred<{ data: { user: null } }>();
   const reads: string[] = [];
-  const ranking = { snapshotId: "published-snapshot", phase: "ranked" };
+  const ranking = publishedRanking("published-snapshot", 1);
   const selection = { snapshotId: ranking.snapshotId, slots: [] };
   const coaches = { snapshotId: "published-coaches" };
   const owners: ClubOwnerStandingsRead = { status: "ready", rows: [] };
@@ -216,7 +256,11 @@ function rankingsWithDeferredSchedule(extra: Record<string, unknown> = {}) {
       loadTouchLineActiveRanking: async () => { reads.push("ranking"); return ranking; },
       loadTouchLinePublishedTopEleven: async (state: unknown) => { assert.equal(state, ranking); reads.push("xi"); return selection; },
     },
-    "@/lib/touchlineArena/ranked-card-catalog-server": { loadTouchLineRankedCardCatalog: (state: unknown) => { assert.equal(state, ranking); reads.push("catalogue"); return catalogue.promise; } },
+    "@/lib/touchlineArena/ranked-card-catalog-server": { loadTouchLineRankedCardCatalog: (state: unknown, admin: unknown, options: unknown) => {
+      assert.equal(state, ranking); assert.equal(admin, undefined);
+      assert.equal(JSON.stringify(options), JSON.stringify({ includeGoalCandidates: true }));
+      reads.push("catalogue"); return catalogue.promise;
+    } },
     "@/lib/football-data/fixture-schedule-store": { readPublicCompetitionFixtures: (options: unknown) => {
       assert.equal(JSON.stringify(options), JSON.stringify({ includeHistorical: true, limit: 240 }));
       reads.push("fixtures"); return fixtures.promise;
@@ -229,7 +273,7 @@ function rankingsWithDeferredSchedule(extra: Record<string, unknown> = {}) {
     "@/lib/touchlineArena/global-navigation": { resolveTouchlineGlobalNavigationSurface: () => "public" },
     ...extra,
   });
-  return { fixtures, catalogue, auth, reads, selection, coaches, owners, page };
+  return { fixtures, catalogue, auth, reads, ranking, selection, coaches, owners, page };
 }
 
 test("real React stream publishes the coach table before deferred catalogue and keeps it once", async () => {
@@ -240,6 +284,7 @@ test("real React stream publishes the coach table before deferred catalogue and 
   let projections = 0;
   let endingRenders = 0;
   const passedHighlights: unknown[] = [];
+  const passedCatalogues: unknown[] = [];
   const h = rankingsWithDeferredSchedule({
     "@/lib/touchlineArena/card-leadership-authority": { buildTouchlineCardLeadershipValue: (ranking: { snapshotId: string }, coach: unknown) => { assert.equal(ranking.snapshotId, "published-snapshot"); assert.equal(coach, h.coaches); return {}; } },
     "@/components/touchline/TouchlineLivePresentationRefresh": { default: ({ initialPlayerRankingSnapshotId, initialCoachRankingSnapshotId }: { initialPlayerRankingSnapshotId: string; initialCoachRankingSnapshotId: string }) => { refreshes++; assert.equal(initialPlayerRankingSnapshotId, "published-snapshot"); assert.equal(initialCoachRankingSnapshotId, "published-coaches"); return null; } },
@@ -247,7 +292,11 @@ test("real React stream publishes the coach table before deferred catalogue and 
     "@/components/touchline/cards/TouchlineCardLeadershipProvider": { TouchlineCardLeadershipProvider: ({ children }: { children: ReactNode }) => children },
     "./touchline-tables-client": {
       default: ({ highlights }: { highlights: unknown }) => { passedHighlights.push(highlights); return createElement("div", { "data-loaded-section": "overview" }, "Published player content"); },
-      TouchlineRankingPodium: ({ highlights, coachRanking }: { highlights: unknown; coachRanking: unknown }) => { passedHighlights.push(highlights); featuredRenders++; assert.equal(coachRanking, h.coaches); return createElement("div", { "data-loaded-section": "podium", "data-featured-coach": true }, "Published featured coach"); },
+      TouchlineRankingPodium: ({ catalogue, seedRanking, coachRanking }: { catalogue: unknown; seedRanking: unknown; coachRanking: unknown }) => {
+        passedCatalogues.push(catalogue); featuredRenders++;
+        assert.equal(seedRanking, h.ranking); assert.equal(coachRanking, h.coaches);
+        return createElement("div", { "data-loaded-section": "podium", "data-featured-coach": true }, "Published featured coach");
+      },
       TouchlineRankingEnding: ({ touchLineEnglandTable, ownerTableUnavailable }: { touchLineEnglandTable: unknown; ownerTableUnavailable: boolean }) => {
         endingRenders++;
         assert.equal(touchLineEnglandTable, h.owners.rows);
@@ -277,7 +326,8 @@ test("real React stream publishes the coach table before deferred catalogue and 
     assert.doesNotMatch(html, /Published player content/);
     assert.doesNotMatch(html, /Published featured coach/);
     assert.equal(featuredRenders, 0, "Coach award shares the three-award boundary; the coach table streams independently");
-    h.catalogue.resolve([]); h.fixtures.resolve([]);
+    const publishedCatalogue: unknown[] = [];
+    h.catalogue.resolve(publishedCatalogue); h.fixtures.resolve([]);
     await new Promise<void>(resolve => sink.on("end", resolve));
     assert.equal((html.match(/id="coach-rankings"/g) ?? []).length, 1);
     assert.match(html, /Published player content/);
@@ -288,8 +338,9 @@ test("real React stream publishes the coach table before deferred catalogue and 
     assert.equal(featuredRenders, 1);
     assert.equal((html.match(/data-featured-coach="true"/g) ?? []).length, 1);
     assert.equal(projections, 1);
-    assert.equal(passedHighlights.length, 2);
-    assert.equal(passedHighlights[0], passedHighlights[1]);
+    assert.equal(passedHighlights.length, 1, "Only the pinned XI receives the highlights projection");
+    assert.equal(passedCatalogues.length, 1);
+    assert.equal(passedCatalogues[0], publishedCatalogue);
     assert.deepEqual(errors, []);
   } finally { stream.abort(); sink.destroy(); }
 });
@@ -338,7 +389,7 @@ test("Ranking content resolves while only its round badge awaits the unchanged s
   const sportingResult = sporting.type(sporting.props).then((value: unknown) => { sportingReady = true; return value; });
   await turn();
   assert.equal(sportingReady, false, "Catalogue still gates the sporting content");
-  const cards = [{ id: "canonical-published-player" }];
+  const cards = [publishedCard(0)];
   h.catalogue.resolve(cards);
   await turn();
   try {
@@ -356,6 +407,7 @@ test("Ranking content resolves while only its round badge awaits the unchanged s
   const hero = await heroElement.type(heroElement.props);
   assert.equal(hero.props.totalPublishedCards, 17);
   assert.equal(hero.props.totalRankedCards, 1);
+  assert.deepEqual(hero.props.catalogueIndex, [{ playerId: cards[0].id, providerPlayerId: cards[0].providerPlayerId }]);
   assert.equal(client.canEditCardEngine, false);
   assert.equal((await badgeResult).props.children[1], "Matchweek 6");
   assert.deepEqual(h.reads.slice().sort(), ["catalogue", "coaches", "count", "fixtures", "owners", "ranking", "xi"]);

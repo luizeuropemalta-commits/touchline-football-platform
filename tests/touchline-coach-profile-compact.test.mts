@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const source = readFileSync("app/touchline-coaches/[coach]/page.tsx", "utf8");
+const publication = readFileSync("components/touchline/TouchlineCoachProfilePublication.tsx", "utf8");
 
 test("coach profile groups identity beside a compact complete card instead of a centred empty hero", () => {
   assert.match(source, /\.coach-profile-hero \{[^}]*align-items:start/);
@@ -20,7 +21,10 @@ test("compact coach card reserves the calibrated crown height without changing i
   assert.match(source, /width:min\(100%,280px\)/);
   assert.match(source, /padding-top:84px/);
   assert.match(source, /\.coach-profile-card > \[data-coach-ranking-leader="true"\] \{ margin-top:0 !important/);
-  assert.match(source, /showLeadershipCrown=\{competition\?\.rank === 1\}/);
+  const card = source.match(/<TouchlineCoachCard\s[\s\S]*?\/>/)?.[0];
+  assert.ok(card);
+  assert.match(card, /\bliveRankingPoints\b/);
+  assert.doesNotMatch(card, /\bshowLeadershipCrown\s*=|\bpublishedTouchlinePoints\s*=/);
 });
 
 test("tablet and desktop performance follow identity without waiting for the taller portrait", () => {
@@ -32,6 +36,7 @@ test("tablet and desktop performance follow identity without waiting for the tal
   assert.match(desktop, /\.coach-profile-game-card \{ grid-column:1; grid-row:2; \}/);
   assert.match(desktop, /\.coach-profile-card \{ grid-column:2; grid-row:1 \/ 3; \}/);
   assert.match(desktop, /\.coach-profile-facts \{ grid-column:1 \/ -1; grid-row:3; \}/);
-  assert.equal(source.match(/<TouchlineCoachPerformance /g)?.length, 1);
+  assert.equal(source.match(/<TouchlineCoachProfilePerformance /g)?.length, 1);
+  assert.equal(publication.match(/<TouchlineCoachPerformance /g)?.length, 1);
   assert.equal(source.match(/<TouchlineCoachCard\s/g)?.length, 1);
 });

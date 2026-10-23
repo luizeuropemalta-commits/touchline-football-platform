@@ -22,6 +22,9 @@ const componentSource = readFileSync(
   new URL("../components/touchline/TouchlineLivePresentationRefresh.tsx", import.meta.url),
   "utf8",
 );
+const clientStoreSource = readFileSync(
+  new URL("../lib/touchlineArena/live-presentation-client-store.ts", import.meta.url), "utf8",
+);
 const endpointSource = readFileSync(
   new URL("../app/api/touchline-arena/live-presentation-state/route.ts", import.meta.url),
   "utf8",
@@ -188,14 +191,16 @@ test("publication revisions accept generated snapshot identities without weakeni
   }), { mode: "idle", pollAfterMs: null, resumeAt: null });
 });
 
-test("the refresh boundary deduplicates at the page level and preserves browser state", () => {
-  assert.match(componentSource, /fetch\(STATE_URL/);
-  assert.match(componentSource, /requestController/);
-  assert.match(componentSource, /requestController !== controller/);
-  assert.match(componentSource, /if \(requestController === controller\) requestController = null/);
-  assert.match(componentSource, /visibilitychange/);
-  assert.match(componentSource, /window\.addEventListener\("online"/);
-  assert.match(componentSource, /window\.addEventListener\("offline"/);
+test("the shared transport deduplicates across boundaries and preserves browser state", () => {
+  assert.match(componentSource, /touchlineLivePresentationStore\.subscribe/);
+  assert.match(componentSource, /changed \|\| periodicDue \|\| wakeDue/);
+  assert.match(componentSource, /claimRefresh\(refreshOwnerRef\.current\)/);
+  assert.doesNotMatch(componentSource, /fetch\(|setTimeout|addEventListener/);
+  assert.match(clientStoreSource, /fetch\(STATE_URL/);
+  assert.match(clientStoreSource, /request\?\.controller === controller/);
+  assert.match(clientStoreSource, /visibilitychange/);
+  assert.match(clientStoreSource, /window\.addEventListener\("online"/);
+  assert.match(clientStoreSource, /window\.addEventListener\("offline"/);
   assert.match(componentSource, /router\.refresh\(\)/);
   assert.doesNotMatch(componentSource, /location\.(?:reload|replace)|window\.location/);
   assert.doesNotMatch(componentSource, /setInterval/);

@@ -25,9 +25,9 @@ import controls from "@/components/touchline/TouchlineGlobalNavigation.module.cs
 export type CollectionDestination = Readonly<{ area: ClubRosterArea; slot: number }>;
 
 /** Internal allocation only: no acquisition, release or cross-account trade. */
-export function ClubOwnerSquadSwapDialog({ state, playerId, outsideOnly = false, catalogue, geometry, locale, draftLocalesEnabled = false, busy, enabled, error, onClose, onMove }: {
+export function ClubOwnerSquadSwapDialog({ state, playerId, outsideOnly = false, catalogue, geometry, locale, liveSeasonRating = false, draftLocalesEnabled = false, busy, enabled, error, onClose, onMove }: {
   state: ClubAcquisitionState; playerId: string; outsideOnly?: boolean; catalogue: readonly ClubOwnerSquadCard[];
-  geometry: TouchlineFormationGeometry; locale: string; draftLocalesEnabled?: boolean; busy: boolean; enabled: boolean; error: string | null;
+  geometry: TouchlineFormationGeometry; locale: string; liveSeasonRating?: boolean; draftLocalesEnabled?: boolean; busy: boolean; enabled: boolean; error: string | null;
   onClose: () => void; onMove: (playerId: string, destination: CollectionDestination) => Promise<boolean>;
 }) {
   const close = useRef<HTMLButtonElement>(null);
@@ -69,7 +69,7 @@ export function ClubOwnerSquadSwapDialog({ state, playerId, outsideOnly = false,
     </section> : <>
       {(["reserves", "outside"] as const).filter(area => !outsideOnly || area === "outside").map(area => <section key={area}>
         <h3>{area === "reserves" ? (copy.bench) : (copy.outside)}</h3>
-        <div className={`${styles.myClubMarketResults} ${layout.results}`}>{candidates.filter(p => p.area === area).map(p => <TouchlineMarketPlayerTile key={p.card.id} card={p.card} locale={locale} draftLocalesEnabled={draftLocalesEnabled}>
+        <div className={`${styles.myClubMarketResults} ${layout.results}`}>{candidates.filter(p => p.area === area).map(p => <TouchlineMarketPlayerTile liveSeasonRating={liveSeasonRating} key={p.card.id} card={p.card} locale={locale} draftLocalesEnabled={draftLocalesEnabled}>
           <button type="button" className={controls.link} disabled={busy || !enabled} onClick={() => choose(p.id, p.destination, p.card.name)}>{copy.select}</button>
         </TouchlineMarketPlayerTile>)}</div>
         {!candidates.some(p => p.area === area) ? <p>{copy.noPlayers}</p> : null}
@@ -79,9 +79,9 @@ export function ClubOwnerSquadSwapDialog({ state, playerId, outsideOnly = false,
 }
 
 /** Placement only. Card artwork, points, zoom and empty-slot button are canonical. */
-export function ClubOwnerCollectionSlots({ state, catalogue, area, start = 0, count, locale, draftLocalesEnabled = false, enabled, displayWidth = 70, guidedSlot, onChoose, onFieldPlayer, onReleasePlayer, onOutsidePlayer, grouped = false, slotPositions }: {
+export function ClubOwnerCollectionSlots({ state, catalogue, area, start = 0, count, locale, liveSeasonRating = false, draftLocalesEnabled = false, enabled, displayWidth = 70, guidedSlot, onChoose, onFieldPlayer, onReleasePlayer, onOutsidePlayer, grouped = false, slotPositions }: {
   state: Pick<ClubAcquisitionState, "players"> | null; catalogue: readonly ClubOwnerSquadCard[]; area: ClubRosterArea;
-  start?: number; count: number; locale: string; draftLocalesEnabled?: boolean; enabled: boolean; displayWidth?: number; guidedSlot?: number;
+  start?: number; count: number; locale: string; liveSeasonRating?: boolean; draftLocalesEnabled?: boolean; enabled: boolean; displayWidth?: number; guidedSlot?: number;
   onChoose: (destination: CollectionDestination) => void;
   onFieldPlayer?: (playerId: string) => void;
   onReleasePlayer?: (playerId: string) => void;
@@ -102,7 +102,7 @@ export function ClubOwnerCollectionSlots({ state, catalogue, area, start = 0, co
       const card = owned ? cards.get(owned.playerId) : null;
       const positionName = position ? collectionPositionName(position, locale, draftLocalesEnabled) : null;
       return <div className={layout.slot} key={slot} data-collection-slot={slot} data-position={position ?? undefined} data-owned={owned ? "true" : undefined}>
-        {card ? <TouchlineGameweekCard card={card} locale={locale} draftLocalesEnabled={draftLocalesEnabled} compact displayWidth={displayWidth}
+        {card ? <TouchlineGameweekCard liveSeasonRating={liveSeasonRating} card={card} locale={locale} draftLocalesEnabled={draftLocalesEnabled} compact displayWidth={displayWidth}
           replacementAction={owned && onFieldPlayer ? { label: area === "reserves" ? (copy.replacePlayer) : (copy.addToXI), disabled: !enabled || !state,
             onSelect: () => { if (enabled && state) onFieldPlayer(owned.playerId); } } : undefined}
           removalAction={owned && area === "reserves" && onOutsidePlayer ? { label: copy.moveOutside, disabled: !enabled || !state,
@@ -175,10 +175,10 @@ export function ClubOwnerPlayerPlacementDialog({ state, playerId, catalogue, geo
   </div></div>, document.body);
 }
 
-export function ClubOwnerCollectionPicker({ destination, state, catalogue, geometry, locale, busy, enabled, verificationRequired, error, requiredPosition, onClose, onRefresh, onPurchase, onMove }: {
+export function ClubOwnerCollectionPicker({ destination, state, catalogue, geometry, locale, liveSeasonRating = false, busy, enabled, verificationRequired, error, requiredPosition, onClose, onRefresh, onPurchase, onMove }: {
   destination: CollectionDestination; state: ClubAcquisitionState; catalogue: readonly ClubOwnerSquadCard[];
   geometry: TouchlineFormationGeometry | null;
-  locale: string; busy: boolean; enabled: boolean; verificationRequired: boolean; error: string | null; onClose: () => void; onRefresh: () => void;
+  locale: string; liveSeasonRating?: boolean; busy: boolean; enabled: boolean; verificationRequired: boolean; error: string | null; onClose: () => void; onRefresh: () => void;
   requiredPosition?: ExchangePosition | null;
   onPurchase: (playerId: string, destination: CollectionDestination) => Promise<boolean>;
   onMove: (playerId: string, destination: CollectionDestination) => Promise<boolean>;
@@ -235,7 +235,7 @@ export function ClubOwnerCollectionPicker({ destination, state, catalogue, geome
       </div> : null}
       {!enabled && !busy && !verificationRequired ? <p role="status">{pt ? "Esta vaga não está disponível para contratação neste momento." : "This slot is not available for signing right now."}</p> : null}
       <div className={`${styles.myClubMarketResults} ${layout.results}`}>
-        {filtered.map(card => <TouchlineMarketPlayerTile key={card.id} card={card} locale={locale}>
+        {filtered.map(card => <TouchlineMarketPlayerTile liveSeasonRating={liveSeasonRating} key={card.id} card={card} locale={locale}>
           <button type="button" className={controls.link} disabled={busy || !enabled || (mode === "market" && (card.editorialCard?.marketValueEur === undefined || card.editorialCard.marketValueEur > state.balanceEur))}
             onClick={async () => { if (!busy && enabled && await (mode === "owned" ? onMove : onPurchase)(card.canonicalPlayerId ?? card.id, destination)) onClose(); }}>{mode === "owned" ? (pt ? "Selecionar" : "Select") : (pt ? "Contratar" : "Sign")}</button>
         </TouchlineMarketPlayerTile>)}

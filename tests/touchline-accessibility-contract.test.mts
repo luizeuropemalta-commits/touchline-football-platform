@@ -25,7 +25,9 @@ test("card zoom moves keyboard focus into its modal and restores it on close", (
   assert.match(cardZoom, /const closeRef = useRef<HTMLButtonElement>/);
   assert.match(cardZoom, /useTouchlineDialog<HTMLDivElement>\(/);
   assert.match(cardZoom, /initialFocusRef: closeRef/);
-  assert.match(cardZoom, /returnFocusRef: triggerRef/);
+  // A persistent host may supply the surviving page trigger; legacy cards
+  // retain their own trigger as the fallback return target.
+  assert.match(cardZoom, /returnFocusRef: returnFocusRef \?\? triggerRef/);
   assert.match(cardZoom, /ref=\{triggerRef\}/);
   assert.match(cardZoom, /ref=\{closeRef\}/);
   assert.match(dialog, /event\.key === "Escape"/);

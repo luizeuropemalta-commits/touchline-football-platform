@@ -128,7 +128,9 @@
 
 /* Preserve the safe fallback in browsers without :has(), but do not reserve
    an absent crown above ordinary cards in supporting browsers. */
-.cardColumn:not(:has([data-card-golden-ball="true"], [data-coach-ranking-leader="true"])) {
+/* A persistent publication dialog may gain/lose the crown while open. Keep
+   that stage stable so a live correction cannot shrink its scroll range. */
+.cardColumn:not([data-touchline-card-zoom-persistent-stage="true"]):not(:has([data-card-golden-ball="true"], [data-coach-ranking-leader="true"])) {
   padding-top: 0;
 }
 

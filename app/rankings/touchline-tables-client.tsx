@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { touchlineCoachRankingGem } from "@/lib/touchlineArena/coach-ranking-gems";
-import { type CSSProperties } from "react";
+import { useRef, useState, type CSSProperties, type RefObject } from "react";
 import {
   Crown,
   Footprints,
@@ -51,6 +51,30 @@ import { getTouchlinePlayerPerformanceCopy } from "@/lib/touchlineArena/player-p
 import styles from "./touchline-tables.module.css";
 import { clubOwnerStandingsNote, type ClubOwnerStanding } from "@/lib/touchlineArena/club-owner-standings";
 import { getClubOwnerProfileMetricsCopy } from "@/lib/touchlineArena/club-owner-profile-metrics";
+import { useTouchlineCardLeadershipAuthority } from "@/components/touchline/cards/TouchlineCardLeadershipProvider";
+import type { TouchlineActiveRankingState } from "@/lib/touchlineArena/card-ranking-live";
+import { projectTouchlinePublishedRankingAwards } from "@/lib/touchlineArena/published-ranking-awards";
+import { projectTouchlinePublishedRankingSummary, type TouchlineRankingSummaryIndex } from "@/lib/touchlineArena/published-ranking-summary";
+import {
+  resolveTouchlineRankingZoomSelection,
+  touchlineRankingZoomSelectionForCard,
+  type TouchlineRankingZoomSelection,
+} from "@/lib/touchlineArena/touchline-ranking-zoom-selection";
+
+const UNAVAILABLE_COACH_RANKING: TouchLineCoachRankingState = {
+  phase: "unavailable", snapshotId: null, seasonId: null, scoringVersion: null, fixtureIds: [], generatedAt: null, rows: [],
+};
+function usePublishedCoachRanking(seed: TouchLineCoachRankingState) {
+  const ranking = useTouchlineCardLeadershipAuthority()?.coachRanking;
+  return ranking === undefined ? seed : ranking ?? UNAVAILABLE_COACH_RANKING;
+}
+
+function usePublishedPlayerRanking(seed: TouchlineActiveRankingState) {
+  const authority = useTouchlineCardLeadershipAuthority();
+  // A permitted standalone seam has no provider and keeps its server seed.
+  // The provider's explicit null is instead an accepted withdrawal.
+  return authority ? authority.playerRanking : seed;
+}
 
 type RankingsCopy = ReturnType<typeof getTouchLineRankingsCopy>;
 
@@ -116,11 +140,8 @@ function CompactPlayerCard({
   );
 }
 
-function TablePlayerCardZoom({
-  card,
-  locale,
-  canEditCardEngine,
-  draftLocalesEnabled = false,
+function buildTablePlayerCardZoomPresentation({
+  card, locale, canEditCardEngine, draftLocalesEnabled = false,
 }: {
   card: ClubOwnerSquadCard;
   locale: string;
@@ -133,52 +154,85 @@ function TablePlayerCardZoom({
   const zoomCopy = getTouchlineCardZoomCopy(locale, draftLocalesEnabled);
   const exactCopy = getTouchlineExactCardCopy(locale, draftLocalesEnabled);
   const profileHref = touchlinePlayerProfileHref(player, locale);
+  return {
+    ariaLabel: zoomCopy.openCard.replace("{playerName}", () => card.name),
+    tierAccent: tierKey ? touchlineCardTierPalette(tierKey).accent : "#b8ff46",
+    tierLabel: tierKey ? touchlineCardTierName(tierKey, locale, draftLocalesEnabled) : undefined,
+    details: buildTouchlinePlayerCardZoomDetails({
+      locale,
+      draftLocalesEnabled,
+      name: card.name,
+      clubName: card.clubName,
+      position: card.position,
+      positionKind: positionKind === "unknown" ? undefined : positionKind,
+      nationality: card.countryCode3,
+      editorialCard: card.editorialCard,
+      cardReview: card.cardReview,
+      profileHref,
+      cardEngineHref: canEditCardEngine
+        ? touchlineCardEnginePlayerHref(card.canonicalPlayerId, locale)
+        : null,
+      extraFields: [
+        {
+          label: exactCopy.totalRating,
+          value: card.seasonTotalRating == null ? "—" : String(card.seasonTotalRating),
+          accent: true,
+          primary: true,
+          kind: "rating-total",
+          icon: "rating",
+        },
+        {
+          label: zoomCopy.lastMatchRating,
+          value: card.matchRating == null ? "—" : String(card.matchRating),
+          accent: true,
+          kind: "rating-last",
+          icon: "rating",
+        },
+        ...buildTouchlineVerifiedMatchFactFields({
+          statistics: card.matchStats,
+          position: card.position,
+        }, locale, draftLocalesEnabled),
+      ],
+    }),
+    expandedContent: <CompactPlayerCard draftLocalesEnabled={draftLocalesEnabled} card={card} locale={locale} expanded />,
+    children: <CompactPlayerCard draftLocalesEnabled={draftLocalesEnabled} card={card} locale={locale} />,
+  };
+}
+
+function TablePlayerCardZoom({
+  card,
+  locale,
+  canEditCardEngine,
+  draftLocalesEnabled = false,
+  presentationMode,
+  open,
+  onOpenChange,
+  returnFocusRef,
+  returnFocusFallbackRef,
+}: {
+  card: ClubOwnerSquadCard;
+  locale: string;
+  canEditCardEngine: boolean;
+  draftLocalesEnabled?: boolean;
+  presentationMode?: "combined" | "trigger-only" | "dialog-only";
+  open?: boolean;
+  onOpenChange?: (open: boolean, trigger: HTMLElement | null) => void;
+  returnFocusRef?: RefObject<HTMLElement | null>;
+  returnFocusFallbackRef?: RefObject<HTMLElement | null>;
+}) {
+  const { children, ...presentation } = buildTablePlayerCardZoomPresentation({ card, locale, canEditCardEngine, draftLocalesEnabled });
 
   return (
     <TouchlineCardZoom draftLocalesEnabled={draftLocalesEnabled}
+      presentationMode={presentationMode}
+      open={open}
+      onOpenChange={onOpenChange}
+      returnFocusRef={returnFocusRef}
+      returnFocusFallbackRef={returnFocusFallbackRef}
       locale={locale}
-      ariaLabel={zoomCopy.openCard.replace("{playerName}", () => card.name)}
-      tierAccent={tierKey ? touchlineCardTierPalette(tierKey).accent : "#b8ff46"}
-      tierLabel={tierKey ? touchlineCardTierName(tierKey, locale, draftLocalesEnabled) : undefined}
-      details={buildTouchlinePlayerCardZoomDetails({
-        locale,
-        draftLocalesEnabled,
-        name: card.name,
-        clubName: card.clubName,
-        position: card.position,
-        positionKind: positionKind === "unknown" ? undefined : positionKind,
-        nationality: card.countryCode3,
-        editorialCard: card.editorialCard,
-        cardReview: card.cardReview,
-        profileHref,
-        cardEngineHref: canEditCardEngine
-          ? touchlineCardEnginePlayerHref(card.canonicalPlayerId, locale)
-          : null,
-        extraFields: [
-          {
-            label: exactCopy.totalRating,
-            value: card.seasonTotalRating == null ? "—" : String(card.seasonTotalRating),
-            accent: true,
-            primary: true,
-            kind: "rating-total",
-            icon: "rating",
-          },
-          {
-            label: zoomCopy.lastMatchRating,
-            value: card.matchRating == null ? "—" : String(card.matchRating),
-            accent: true,
-            kind: "rating-last",
-            icon: "rating",
-          },
-          ...buildTouchlineVerifiedMatchFactFields({
-            statistics: card.matchStats,
-            position: card.position,
-          }, locale, draftLocalesEnabled),
-        ],
-      })}
-      expandedContent={<CompactPlayerCard draftLocalesEnabled={draftLocalesEnabled} card={card} locale={locale} expanded />}
+      {...presentation}
     >
-      <CompactPlayerCard draftLocalesEnabled={draftLocalesEnabled} card={card} locale={locale} />
+      {children}
     </TouchlineCardZoom>
   );
 }
@@ -231,7 +285,15 @@ export default function TouchLineTablesClient({ canEditCardEngine, copy, locale,
           </div>);
 }
 
-export function TouchlineRankingsHero({ copy, rankMode, totalPublishedCards, totalRankedCards }: Pick<TouchLineTablesClientProps, "copy" | "rankMode" | "totalPublishedCards" | "totalRankedCards">) {
+export function TouchlineRankingsHero({ copy, rankMode, totalPublishedCards, totalRankedCards, catalogueIndex = null }: Pick<TouchLineTablesClientProps, "copy" | "rankMode" | "totalPublishedCards" | "totalRankedCards"> & { catalogueIndex?: TouchlineRankingSummaryIndex }) {
+  const authority = useTouchlineCardLeadershipAuthority();
+  // Only an absent provider may use the standalone SSR seam. Explicit null
+  // (including the private-route guard) withdraws instead of reviving its seed.
+  const summary = authority === null ? null : projectTouchlinePublishedRankingSummary(catalogueIndex, authority.playerRanking);
+  const displayedRankedCards = summary === null ? totalRankedCards : summary.totalRankedCards;
+  const displayedRankMode = summary === null ? rankMode : summary.phase === "withdrawn" ? copy.marketMode : copy.pointsMode;
+  // totalPublishedCards is a separate SSR/editorial fact. The existing shared
+  // route refresh renews it; the sports envelope cannot recalculate that count.
  return (      <section className={styles.hero}>
         <div>
           <p>TouchLine Cards League</p>
@@ -240,13 +302,14 @@ export function TouchlineRankingsHero({ copy, rankMode, totalPublishedCards, tot
         </div>
         <dl className={styles.summary}>
           <div><dt>{copy.publishedCards}</dt><dd>{totalPublishedCards ?? "—"}</dd></div>
-          <div><dt>{copy.rankedCards}</dt><dd>{totalRankedCards ?? "—"}</dd></div>
-          <div><dt>{copy.rankMode}</dt><dd>{rankMode}</dd></div>
+          <div><dt>{copy.rankedCards}</dt><dd>{displayedRankedCards ?? "—"}</dd></div>
+          <div><dt>{copy.rankMode}</dt><dd>{displayedRankMode}</dd></div>
         </dl>
       </section>);
 }
 
-function TopCoachAward({ coachRanking, copy, locale, draftLocalesEnabled = false }: Pick<TouchLineTablesClientProps, "coachRanking" | "copy" | "draftLocalesEnabled" | "locale">) {
+function TopCoachAward({ coachRanking: seed, copy, locale, draftLocalesEnabled = false }: Pick<TouchLineTablesClientProps, "coachRanking" | "copy" | "draftLocalesEnabled" | "locale">) {
+  const coachRanking = usePublishedCoachRanking(seed);
   const topSevenCoaches = coachRanking.phase === "ranked" ? coachRanking.rows.slice(0, 7) : [];
   const topCoachRow = topSevenCoaches[0] ?? null;
   const topCoachIdentity = topCoachRow
@@ -332,10 +395,11 @@ function TopCoachAward({ coachRanking, copy, locale, draftLocalesEnabled = false
 /** Kept as an exported rendering seam for verified ranking consumers. The
  * full-width page now renders this compact award inside the three-award row. */
 export function TouchlineFeaturedCoach(props: Pick<TouchLineTablesClientProps, "coachRanking" | "copy" | "draftLocalesEnabled" | "locale">) {
-  return TopCoachAward(props);
+  return <TopCoachAward {...props} />;
 }
 
-export function TouchlineCoachRankingTable({ coachRanking, copy, locale, draftLocalesEnabled = false }: Pick<TouchLineTablesClientProps, "coachRanking" | "copy" | "draftLocalesEnabled" | "locale">) {
+export function TouchlineCoachRankingTable({ coachRanking: seed, copy, locale, draftLocalesEnabled = false }: Pick<TouchLineTablesClientProps, "coachRanking" | "copy" | "draftLocalesEnabled" | "locale">) {
+  const coachRanking = usePublishedCoachRanking(seed);
   const presentationCopy = getTouchlineTablesPresentationCopy(locale, draftLocalesEnabled);
   const topSevenCoaches = coachRanking.phase === "ranked" ? coachRanking.rows.slice(0, 7) : [];
   return (
@@ -383,12 +447,12 @@ export function TouchlineCoachRankingTable({ coachRanking, copy, locale, draftLo
   );
 }
 
-function PodiumHeading({ locale, draftLocalesEnabled = false }: { locale: TouchLineLocale; draftLocalesEnabled?: boolean }) {
+function PodiumHeading({ locale, draftLocalesEnabled = false, headingRef }: { locale: TouchLineLocale; draftLocalesEnabled?: boolean; headingRef?: RefObject<HTMLHeadingElement | null> }) {
   const presentationCopy = getTouchlineTablesPresentationCopy(locale, draftLocalesEnabled);
   return <div className={styles.sectionHeading}>
             <div>
               <p>{presentationCopy.podiumEyebrow}</p>
-              <h2>{presentationCopy.podiumTitle}</h2>
+              <h2 ref={headingRef} tabIndex={headingRef ? -1 : undefined} data-ranking-podium-focus-anchor={headingRef ? "true" : undefined}>{presentationCopy.podiumTitle}</h2>
             </div>
             <span>{presentationCopy.podiumDescription}</span>
           </div>;
@@ -408,15 +472,53 @@ export function TouchlineRankingPodiumPending({ locale, draftLocalesEnabled = fa
   </div>;
 }
 
-export function TouchlineRankingPodium({ highlights, coachRanking, copy, locale, canEditCardEngine, draftLocalesEnabled = false }: Pick<TouchLineTablesClientProps, "highlights" | "coachRanking" | "copy" | "draftLocalesEnabled" | "locale" | "canEditCardEngine">) {
-  const bestPlayerCard = highlights.bestPlayerCard ?? highlights.topPlayerCards[0] ?? null;
-  const goldenBootCard = highlights.goldenBootCard ?? null;
-  const goldenBootState = highlights.goldenBootState ?? "pending";
+export function TouchlineRankingPodium({ catalogue, seedRanking, coachRanking, copy, locale, canEditCardEngine, draftLocalesEnabled = false }: Pick<TouchLineTablesClientProps, "coachRanking" | "copy" | "draftLocalesEnabled" | "locale" | "canEditCardEngine"> & { catalogue: readonly ClubOwnerSquadCard[]; seedRanking: TouchlineActiveRankingState }) {
+  const ranking = usePublishedPlayerRanking(seedRanking);
+  const awards = projectTouchlinePublishedRankingAwards(catalogue, ranking);
+  const [selection, setSelection] = useState<TouchlineRankingZoomSelection | null>(null);
+  const [selectedSurface, setSelectedSurface] = useState<string | null>(null);
+  const selectedTriggerRef = useRef<HTMLElement | null>(null);
+  const headingRef = useRef<HTMLHeadingElement | null>(null);
+  // Classification never grants the Ball: its persisted decision must name one
+  // unique contender. A tie remains visibly unawarded.
+  const bestPlayerCard = awards.goldenBall.phase === "ready"
+    && awards.goldenBall.status === "unique-leader"
+    && awards.goldenBall.awardedPlayerIds.length === 1
+    ? awards.goldenBall.contenders[0] ?? null
+    : null;
+  // The Boot is allowed to have all published joint leaders. Do not promote
+  // its stable sort order into an invented single winner.
+  const goldenBootCards = awards.goldenBoot.phase === "ready"
+    ? awards.goldenBoot.contenders.filter((card) => awards.goldenBoot.awardedPlayerIds.includes((card.canonicalPlayerId ?? card.id).trim().toLowerCase()))
+    : [];
+  const selected = selection ? resolveTouchlineRankingZoomSelection(catalogue, ranking, selection) : null;
+  const selectedCard = selected?.phase === "available" ? selected.card : null;
+  const selectedPresentation = selectedCard
+    ? buildTablePlayerCardZoomPresentation({ card: selectedCard, locale, canEditCardEngine, draftLocalesEnabled })
+    : null;
+  const isSelected = (card: ClubOwnerSquadCard, surface: string) => {
+    const identity = touchlineRankingZoomSelectionForCard(card);
+    return Boolean(selection && identity && selectedSurface === surface
+      && selection.playerId === identity.playerId && selection.providerPlayerId === identity.providerPlayerId);
+  };
+  const openSelected = (card: ClubOwnerSquadCard, surface: string, open: boolean, trigger: HTMLElement | null) => {
+    if (!open) return;
+    const identity = touchlineRankingZoomSelectionForCard(card);
+    if (!identity) return;
+    selectedTriggerRef.current = trigger;
+    setSelectedSurface(surface);
+    setSelection(identity);
+  };
+  const closeSelected = (open: boolean) => {
+    if (open) return;
+    setSelection(null);
+    setSelectedSurface(null);
+  };
   const resolvedCoachRanking = coachRanking ?? { phase: "unavailable" } as TouchLineCoachRankingState;
   const presentationCopy = getTouchlineTablesPresentationCopy(locale, draftLocalesEnabled);
   return (
         <div className={styles.podiumPanel} id="top-player-cards">
-          <PodiumHeading draftLocalesEnabled={draftLocalesEnabled} locale={locale} />
+          <PodiumHeading draftLocalesEnabled={draftLocalesEnabled} locale={locale} headingRef={headingRef} />
             <ol className={styles.awardPodium}>
               <li className={styles.awardEntry} data-ranking-award="best-player">
                 <header className={styles.awardHeader}>
@@ -425,7 +527,9 @@ export function TouchlineRankingPodium({ highlights, coachRanking, copy, locale,
                 </header>
                 {bestPlayerCard ? <div className={styles.awardBody}>
                   <div className={styles.awardPlayerCard}>
-                    <TablePlayerCardZoom draftLocalesEnabled={draftLocalesEnabled} card={bestPlayerCard} locale={locale} canEditCardEngine={canEditCardEngine} />
+                    <TablePlayerCardZoom draftLocalesEnabled={draftLocalesEnabled} card={bestPlayerCard} locale={locale} canEditCardEngine={canEditCardEngine}
+                      presentationMode="trigger-only" open={isSelected(bestPlayerCard, "best-player")}
+                      onOpenChange={(open, trigger) => openSelected(bestPlayerCard, "best-player", open, trigger)} />
                   </div>
                   <div className={styles.awardIdentity}><strong>{bestPlayerCard.shortName}</strong><small>{bestPlayerCard.clubName} · {localizedPositionLabel(bestPlayerCard.position, locale, draftLocalesEnabled)}</small></div>
                 </div> : <div className={styles.awardPending}><RankingPending copy={copy} /></div>}
@@ -433,17 +537,31 @@ export function TouchlineRankingPodium({ highlights, coachRanking, copy, locale,
               <li className={styles.awardEntry} data-ranking-award="golden-boot">
                 <header className={styles.awardHeader}>
                   <Footprints aria-hidden="true" />
-                  <div><span>{goldenBootState === "preview" ? presentationCopy.goldenBootPreview : presentationCopy.goldenBootEyebrow}</span><h3>{presentationCopy.goldenBoot}</h3></div>
+                  <div><span>{presentationCopy.goldenBootEyebrow}</span><h3>{presentationCopy.goldenBoot}</h3></div>
                 </header>
-                {goldenBootCard ? <div className={styles.awardBody}>
+                {goldenBootCards.length ? goldenBootCards.map((goldenBootCard) => <div className={styles.awardBody} key={goldenBootCard.canonicalPlayerId ?? goldenBootCard.id}>
                   <div className={styles.awardPlayerCard}>
-                    <TablePlayerCardZoom draftLocalesEnabled={draftLocalesEnabled} card={goldenBootCard} locale={locale} canEditCardEngine={canEditCardEngine} />
+                    <TablePlayerCardZoom draftLocalesEnabled={draftLocalesEnabled} card={goldenBootCard} locale={locale} canEditCardEngine={canEditCardEngine}
+                      presentationMode="trigger-only" open={isSelected(goldenBootCard, `golden-boot:${goldenBootCard.canonicalPlayerId ?? goldenBootCard.id}`)}
+                      onOpenChange={(open, trigger) => openSelected(goldenBootCard, `golden-boot:${goldenBootCard.canonicalPlayerId ?? goldenBootCard.id}`, open, trigger)} />
                   </div>
-                  <div className={styles.awardIdentity}><strong>{goldenBootCard.shortName}</strong><small>{goldenBootState === "preview" ? presentationCopy.goldenBootPreviewDescription : `${goldenBootCard.clubName} · ${localizedPositionLabel(goldenBootCard.position, locale, draftLocalesEnabled)}`}</small></div>
-                </div> : <p className={styles.awardPending}>{presentationCopy.goldenBootPending}</p>}
+                  <div className={styles.awardIdentity}><strong>{goldenBootCard.shortName}</strong><small>{`${goldenBootCard.clubName} · ${localizedPositionLabel(goldenBootCard.position, locale, draftLocalesEnabled)}`}</small></div>
+                </div>) : <p className={styles.awardPending}>{presentationCopy.goldenBootPending}</p>}
               </li>
               <li className={styles.awardCoachSlot}><TopCoachAward draftLocalesEnabled={draftLocalesEnabled} coachRanking={resolvedCoachRanking} copy={copy} locale={locale} /></li>
             </ol>
+            {/* Identity, not which current award slot happens to render it, owns this dialog. */}
+            <TouchlineCardZoom
+              presentationMode="dialog-only" open={selection !== null} onOpenChange={closeSelected}
+              returnFocusRef={selectedTriggerRef} returnFocusFallbackRef={headingRef}
+              locale={locale} draftLocalesEnabled={draftLocalesEnabled}
+              ariaLabel={selectedPresentation?.ariaLabel ?? copy.rankingPending}
+              tierAccent={selectedPresentation?.tierAccent}
+              tierLabel={selectedPresentation?.tierLabel}
+              details={selectedPresentation?.details}
+              expandedContent={selectedPresentation?.expandedContent}
+              detailsContent={selection && !selectedPresentation ? <p role="status" data-ranking-podium-zoom-unavailable="true">{copy.rankingPendingDescription}</p> : undefined}
+            >{selectedPresentation?.children ?? null}</TouchlineCardZoom>
         </div>
   );
 }

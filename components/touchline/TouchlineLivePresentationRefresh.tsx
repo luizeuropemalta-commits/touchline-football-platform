@@ -1,23 +1,23 @@
 "use client";
 
-import { startTransition, useEffect, useRef } from "react";
+import { useEffect, useRef, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 import {
-  parseTouchlineLivePresentationState,
   mergeTouchlineLivePresentationRevision,
   touchlineLivePresentationRevisionChanged,
   type TouchlineLivePresentationState,
 } from "@/lib/touchlineArena/live-presentation-state";
-
-const STATE_URL = "/api/touchline-arena/live-presentation-state";
-const REQUEST_TIMEOUT_MS = 8_000;
-const ERROR_RETRY_MS = 30_000;
-const MAX_RESUME_TIMER_MS = 60 * 60 * 1_000;
+import { touchlineLivePresentationStore } from "@/lib/touchlineArena/live-presentation-client-store";
 
 type Props = {
   initialPlayerRankingSnapshotId?: string | null;
   initialCoachRankingSnapshotId?: string | null;
+  /** Server-only facts (official XI/table cache) are not yet in the sports envelope. */
+  serverRefreshAfterMs?: number | null;
+  /** One context boundary such as T−24/T−1, checked on the shared read. */
+  serverRefreshAt?: number | null;
+  serverRefreshScope?: string | null;
 };
 
 /**
@@ -28,10 +28,36 @@ type Props = {
 export default function TouchlineLivePresentationRefresh({
   initialPlayerRankingSnapshotId,
   initialCoachRankingSnapshotId,
+  serverRefreshAfterMs = null,
+  serverRefreshAt = null,
+  serverRefreshScope = null,
 }: Props) {
   const router = useRouter();
+  const [isRefreshing, startTransition] = useTransition();
+  const refreshOwnerRef = useRef({});
+  const isRefreshingRef = useRef(false);
+  const lastServerRefreshRef = useRef<number | null>(null);
+  const wakesRef = useRef({ scope: serverRefreshScope, pending: new Set<number>(), acknowledged: new Set<number>() });
+  useEffect(() => {
+    if (wakesRef.current.scope !== serverRefreshScope) {
+      wakesRef.current = { scope: serverRefreshScope, pending: new Set(), acknowledged: new Set() };
+    }
+    // Retain a deadline crossed before an RSC/clock rerender moves its prop
+    // to the next future boundary. Only an accepted shared read acknowledges it.
+    if (serverRefreshAt !== null && Number.isFinite(serverRefreshAt)
+      && !wakesRef.current.acknowledged.has(serverRefreshAt)) wakesRef.current.pending.add(serverRefreshAt);
+  }, [serverRefreshAt, serverRefreshScope]);
+  useEffect(() => {
+    isRefreshingRef.current = isRefreshing;
+    if (!isRefreshing) touchlineLivePresentationStore.completeRouteRefresh(refreshOwnerRef.current);
+  }, [isRefreshing]);
+  useEffect(() => {
+    const owner = refreshOwnerRef.current;
+    return () => touchlineLivePresentationStore.completeRouteRefresh(owner);
+  }, []);
   const watchesPlayerRanking = initialPlayerRankingSnapshotId !== undefined;
   const watchesCoachRanking = initialCoachRankingSnapshotId !== undefined;
+  const hasObservedPublicationRef = useRef(false);
   const latestVerifiedRef = useRef<Pick<
     TouchlineLivePresentationState,
     "playerRankingSnapshotId" | "coachRankingSnapshotId" | "livePresentationSnapshotId"
@@ -42,6 +68,9 @@ export default function TouchlineLivePresentationRefresh({
   });
 
   useEffect(() => {
+    // A late Server Component tree must not roll back an acknowledged client
+    // signal. Before the first read, updated SSR props remain the baseline.
+    if (hasObservedPublicationRef.current) return;
     latestVerifiedRef.current = {
       playerRankingSnapshotId: watchesPlayerRanking
         ? initialPlayerRankingSnapshotId ?? null
@@ -59,118 +88,49 @@ export default function TouchlineLivePresentationRefresh({
   ]);
 
   useEffect(() => {
-    let disposed = false;
-    let timer: number | null = null;
-    let requestController: AbortController | null = null;
-    let requestDeadline: number | null = null;
-
-    const scheduleAfter = (delay: number) => {
-      if (disposed || document.hidden || !navigator.onLine) return;
-      if (timer !== null) window.clearTimeout(timer);
-      timer = window.setTimeout(() => void load(), delay);
-    };
-
-    const clearScheduledWork = () => {
-      if (timer !== null) window.clearTimeout(timer);
-      timer = null;
-      if (requestDeadline !== null) window.clearTimeout(requestDeadline);
-      requestDeadline = null;
-      requestController?.abort();
-      requestController = null;
-    };
-
-    const schedule = (state: TouchlineLivePresentationState) => {
-      if (disposed || document.hidden || !navigator.onLine) return;
-      let delay = state.pollAfterMs;
-      if (delay === null && state.resumeAt) {
-        delay = Math.min(
-          MAX_RESUME_TIMER_MS,
-          Math.max(1_000, Date.parse(state.resumeAt) - Date.now()),
-        );
-      }
-      if (delay === null || !Number.isFinite(delay)) return;
-      scheduleAfter(delay);
-    };
-
-    async function load() {
-      if (disposed || document.hidden || !navigator.onLine || requestController) return;
-      const controller = new AbortController();
-      requestController = controller;
-      const deadline = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-      requestDeadline = deadline;
-      try {
-        const response = await fetch(STATE_URL, {
-          cache: "no-store",
-          signal: controller.signal,
+    lastServerRefreshRef.current ??= Date.now();
+    return touchlineLivePresentationStore.subscribe(({ state }, claimRefresh, refreshPending) => {
+      if (isRefreshingRef.current || refreshPending) return;
+      const trackedState = mergeTouchlineLivePresentationRevision(
+        latestVerifiedRef.current,
+        state,
+        { player: watchesPlayerRanking, coach: watchesCoachRanking },
+      );
+      // No shared digest accompanies the SSR seed yet. Its rendered score
+      // may therefore predate even the first known publication. Refresh once
+      // for that publication; retain the acknowledged digest across renders
+      // and effect restarts so router.refresh cannot create a refresh loop.
+      // The merge preserves a known digest when an absent/null one arrives.
+      const changed = touchlineLivePresentationRevisionChanged(latestVerifiedRef.current, trackedState);
+      const previousRevision = latestVerifiedRef.current;
+      const previouslyObserved = hasObservedPublicationRef.current;
+      const previousRefreshAt = lastServerRefreshRef.current;
+      latestVerifiedRef.current = trackedState;
+      hasObservedPublicationRef.current = true;
+      const now = Date.now();
+      const periodicDue = serverRefreshAfterMs !== null && Number.isFinite(serverRefreshAfterMs)
+        && serverRefreshAfterMs >= 10_000 && now - (lastServerRefreshRef.current ?? now) >= serverRefreshAfterMs;
+      const dueWakes = [...wakesRef.current.pending].filter(at => at <= now);
+      const wakeDue = dueWakes.length > 0;
+      if (changed || periodicDue || wakeDue) {
+        // A false claim means another subscriber has refreshed this same route
+        // for this accepted read. Acknowledge it too, avoiding a staggered loop.
+        lastServerRefreshRef.current = now;
+        for (const at of dueWakes) { wakesRef.current.pending.delete(at); wakesRef.current.acknowledged.add(at); }
+        if (claimRefresh(refreshOwnerRef.current)) startTransition(() => {
+          try { router.refresh(); }
+          catch (error) {
+            latestVerifiedRef.current = previousRevision;
+            hasObservedPublicationRef.current = previouslyObserved;
+            lastServerRefreshRef.current = previousRefreshAt;
+            for (const at of dueWakes) { wakesRef.current.acknowledged.delete(at); wakesRef.current.pending.add(at); }
+            touchlineLivePresentationStore.completeRouteRefresh(refreshOwnerRef.current);
+            throw error;
+          }
         });
-        if (disposed || requestController !== controller) return;
-        if (!response.ok) {
-          scheduleAfter(ERROR_RETRY_MS);
-          return;
-        }
-        const payload = await response.json();
-        // Body reading is asynchronous too: navigation, visibility changes or
-        // the request deadline can invalidate a response after its headers.
-        if (disposed || requestController !== controller || document.hidden || !navigator.onLine) return;
-        if (controller.signal.aborted) {
-          scheduleAfter(ERROR_RETRY_MS);
-          return;
-        }
-        const state = parseTouchlineLivePresentationState(payload);
-        if (!state?.available) {
-          scheduleAfter(ERROR_RETRY_MS);
-          return;
-        }
-        const trackedState = mergeTouchlineLivePresentationRevision(
-          latestVerifiedRef.current,
-          state,
-          { player: watchesPlayerRanking, coach: watchesCoachRanking },
-        );
-        // No shared digest accompanies the SSR seed yet. Its rendered score
-        // may therefore predate even the first known publication. Refresh once
-        // for that publication; retain the acknowledged digest across renders
-        // and effect restarts so router.refresh cannot create a refresh loop.
-        // The merge preserves a known digest when an absent/null one arrives.
-        const changed = touchlineLivePresentationRevisionChanged(latestVerifiedRef.current, trackedState);
-        latestVerifiedRef.current = trackedState;
-        if (changed) startTransition(() => router.refresh());
-        schedule(state);
-      } catch {
-        // Preserve the last verified Server Component tree. Visibility/online
-        // recovery or the next scheduled read will retry without clearing it.
-        if (requestController === controller) scheduleAfter(ERROR_RETRY_MS);
-      } finally {
-        window.clearTimeout(deadline);
-        if (requestDeadline === deadline) requestDeadline = null;
-        if (requestController === controller) requestController = null;
       }
-    }
-
-    const resume = () => {
-      if (disposed || document.hidden || !navigator.onLine) return;
-      if (timer !== null) window.clearTimeout(timer);
-      timer = null;
-      void load();
-    };
-    const pause = () => {
-      if (!document.hidden && navigator.onLine) return;
-      clearScheduledWork();
-    };
-    const handleVisibility = () => document.hidden ? pause() : resume();
-
-    document.addEventListener("visibilitychange", handleVisibility);
-    window.addEventListener("online", resume);
-    window.addEventListener("offline", pause);
-    void load();
-
-    return () => {
-      disposed = true;
-      clearScheduledWork();
-      document.removeEventListener("visibilitychange", handleVisibility);
-      window.removeEventListener("online", resume);
-      window.removeEventListener("offline", pause);
-    };
-  }, [router, watchesCoachRanking, watchesPlayerRanking]);
+    });
+  }, [router, watchesCoachRanking, watchesPlayerRanking, serverRefreshAfterMs, startTransition]);
 
   return null;
 }

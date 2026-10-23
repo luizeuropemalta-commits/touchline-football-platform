@@ -18,6 +18,11 @@ import * as pitch from "../lib/touchlineArena/top-eleven-broadcast-layout.ts";
 import * as rankingPoints from "../lib/touchlineArena/ranking-points-i18n.ts";
 import * as positionLabels from "../lib/touchlineArena/position-labels.ts";
 import * as ownerStandings from "../lib/touchlineArena/club-owner-standings.ts";
+import { TOUCHLINE_PRESEASON_RANKING_STATE, type TouchlineActiveRankingState } from "../lib/touchlineArena/card-ranking-live.ts";
+import { projectTouchlinePublishedRankingAwards } from "../lib/touchlineArena/published-ranking-awards.ts";
+import * as rankingZoom from "../lib/touchlineArena/touchline-ranking-zoom-selection.ts";
+import * as rankingSummary from "../lib/touchlineArena/published-ranking-summary.ts";
+import { touchlinePlayerLeadershipScope } from "../lib/touchlineArena/player-ranking-leadership.ts";
 import { getTouchLineRankingsCopy } from "../lib/touchlineArena/rankings-i18n.ts";
 import { getTouchlineTablesPresentationCopy } from "../lib/touchlineArena/tables-presentation-i18n.ts";
 import { resolveTouchlineCatalogueLocale } from "../lib/touchlineArena/catalogue-locale.ts";
@@ -88,6 +93,45 @@ function cardBoundary(node: React.ReactNode): React.ReactNode {
 }
 function html(node: React.ReactNode) { return renderToStaticMarkup(React.createElement(React.Fragment, null, cardBoundary(node))); }
 
+function awardsFixture({ tied = false, noRatedCandidate = false } = {}) {
+  const playerId = (index: number) => `a0000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`;
+  const catalogue: clubs.ClubOwnerSquadCard[] = Array.from({ length: 2 }, (_, index) => ({
+    id: playerId(index), canonicalPlayerId: playerId(index), providerPlayerId: String(100 + index),
+    name: index === 0 ? "$&<Player>" : "Published scorer", shortName: index === 0 ? "$&<Player>" : "Published scorer",
+    clubName: "Official club", role: "ST", position: "ST", shirtNumber: index + 1, countryCode3: "ENG",
+    marketValue: "€1m", touchlinePoints: 999, seasonTotalRating: 999,
+    editorialCard: { tierKey: "ruby-red", cardPrice: { amountMinor: 1500, currency: "TC" }, lastReviewedAt: "2026-10-01T00:00:00Z" },
+  }));
+  const snapshotId = "published-awards";
+  const seedRanking: TouchlineActiveRankingState = {
+    ...TOUCHLINE_PRESEASON_RANKING_STATE, phase: "ranked", snapshotId, seasonId: "season-2026",
+    scoringVersion: "player_scoring_v4", coverageStatus: "complete_for_scoring", publishedAt: "2026-10-23T10:00:00Z",
+    fixtureIds: ["fixture-1"], expectedFixtureIds: ["fixture-1"], totalScorePoints: 0,
+    players: catalogue.slice(0, noRatedCandidate ? 1 : 2).map((card, index) => ({
+      playerId: card.canonicalPlayerId!, providerPlayerId: card.providerPlayerId!,
+      totalRating: noRatedCandidate ? null : tied ? 10 : 10 - index,
+      minutesPlayed: 90, appearances: 1, positionGroup: "striker", positionRank: index + 1,
+      groupSize: noRatedCandidate ? 1 : 2, tierKey: "ruby-red", priceTc: tiers.touchlineArenaTierForKey("ruby-red")!.retailPriceTc,
+    })),
+    leadershipDecision: tied
+      ? { status: "tied", scope: touchlinePlayerLeadershipScope(snapshotId), contenders: catalogue.map(card => ({ subjectType: "player", subjectId: card.canonicalPlayerId! })) }
+      : { status: "unique-leader", scope: touchlinePlayerLeadershipScope(snapshotId), leader: { subjectType: "player", subjectId: playerId(0) } },
+    cardGoals: { source: "published-card-goals-v1", snapshotId,
+      rows: catalogue.map((card, index) => ({ playerId: card.canonicalPlayerId!, goals: tied ? 5 : index === 0 ? 0 : 5 })) },
+  };
+  return { catalogue, seedRanking };
+}
+
+// Capture the actual component result under React's SSR dispatcher. Calling a
+// hooked component as an ordinary test function would bypass its real contract.
+function captureRenderedTree(Component: (props: Record<string, unknown>) => Element, props: Record<string, unknown>): Element {
+  let tree: Element | undefined;
+  function Capture() { tree = Component(props); return null; }
+  renderToStaticMarkup(React.createElement(Capture));
+  assert.ok(tree);
+  return tree;
+}
+
 test("public tables cards preserve football market values without changing their controls", () => {
   const cards = clientSource.match(/<TouchlineEliteExactCard\b[\s\S]*?\/>/g) ?? [];
 
@@ -97,7 +141,7 @@ test("public tables cards preserve football market values without changing their
   assert.match(cards[0], /showSocialMetrics=\{expanded\}/);
 });
 
-async function harness(locale: Locale = "en-GB", draftLocalesEnabled = false, sentinel = false) {
+async function harness(locale: Locale = "en-GB", draftLocalesEnabled = false, sentinel = false, authority: { playerRanking: TouchlineActiveRankingState | null } | null = null) {
   const effective = resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled);
   const calls: string[] = [];
   const presentation = sentinel ? { getTouchlineTablesPresentationCopy: (value: string) => { calls.push(value); return Object.fromEntries(Object.keys(en).map(key => [key, `${key}:$&<>`])); } }
@@ -119,12 +163,24 @@ async function harness(locale: Locale = "en-GB", draftLocalesEnabled = false, se
     "@/lib/touchlineArena/ranking-points-i18n": rankingPoints,
     "@/lib/touchlineArena/position-labels": positionLabels,
     "@/lib/touchlineArena/club-owner-standings": ownerStandings,
+    "@/components/touchline/cards/TouchlineCardLeadershipProvider": { useTouchlineCardLeadershipAuthority: () => authority },
+    "@/lib/touchlineArena/published-ranking-awards": { projectTouchlinePublishedRankingAwards },
+    "@/lib/touchlineArena/touchline-ranking-zoom-selection": rankingZoom,
+    "@/lib/touchlineArena/published-ranking-summary": rankingSummary,
   };
   const client = compile(clientSource, shared);
   const empty = { phase: "unavailable", rows: [], snapshotId: null, seasonId: null, scoringVersion: null, fixtureIds: [] };
   const rows = Array.from({ length: 9 }, (_, index) => ({ coachProviderId: coaches.TOUCHLINE_LIVE_COACHES[index].coach.providerId, rank: index + 1, coachName: `Official $&<Coach${index}>`, clubName: "Official $&<Club>", wins: 0, draws: 2, losses: 3, touchlinePoints: 0, home: { wins: 0, draws: 1, losses: 2, touchlinePoints: 0 }, away: { wins: 0, draws: 1, losses: 1, touchlinePoints: 0 } }));
   const ranked = { ...empty, phase: "ranked", rows, snapshotId: "snapshot", seasonId: "season", scoringVersion: "version" };
-  const render = (name: string, props: Record<string, unknown> = {}) => (client[name] as (props: Record<string, unknown>) => Element)({ locale: effective, draftLocalesEnabled, copy, canEditCardEngine: false, ...props });
+  const render = (name: string, props: Record<string, unknown> = {}) => {
+    const tree = captureRenderedTree(client[name] as (props: Record<string, unknown>) => Element, {
+      locale: effective, draftLocalesEnabled, copy, canEditCardEngine: false,
+      catalogue: [], seedRanking: TOUCHLINE_PRESEASON_RANKING_STATE, ...props,
+    });
+    return name === "TouchlineFeaturedCoach" && typeof tree.type === "function"
+      ? captureRenderedTree(tree.type as (props: Record<string, unknown>) => Element, tree.props)
+      : tree;
+  };
   const page = compile(`${pageSource}\nexports.RoundBadge = RoundBadge; exports.BestXiPending = BestXiPending; exports.SportingFrame = SportingFrame;`, {
     ...shared, "./touchline-tables-client": client,
     "@/lib/touchlineArena/arena-fixture-round": round,
@@ -134,18 +190,68 @@ async function harness(locale: Locale = "en-GB", draftLocalesEnabled = false, se
   return { client, page, calls, effective, copy, empty, ranked, render };
 }
 
-test("podium preserves coach and scorer when the best-player catalogue is unavailable", async () => {
+test("hero keeps all eight locales while the shared publication controls ranking membership and mode", async () => {
+  const fixture = awardsFixture({ noRatedCandidate: true });
+  const catalogueIndex = rankingSummary.buildTouchlineRankingSummaryIndex(fixture.catalogue);
+  assert.ok(catalogueIndex);
+  const unknownRanking: TouchlineActiveRankingState = { ...fixture.seedRanking, players: [{
+    ...fixture.seedRanking.players[0], playerId: "a0000000-0000-4000-8000-000000000003", providerPlayerId: "103",
+  }] };
+  for (const locale of locales) {
+    const copy = getTouchLineRankingsCopy(locale, true);
+    for (const { authority, expectedCount, expectedMode } of [
+      { authority: null, expectedCount: 9, expectedMode: "Standalone SSR mode" },
+      { authority: { playerRanking: fixture.seedRanking }, expectedCount: 1, expectedMode: copy.pointsMode },
+      { authority: { playerRanking: unknownRanking }, expectedCount: "—", expectedMode: copy.pointsMode },
+      { authority: { playerRanking: null }, expectedCount: 0, expectedMode: copy.marketMode },
+    ]) {
+      const h = await harness(locale, true, false, authority);
+      const tree = h.render("TouchlineRankingsHero", {
+        catalogueIndex, totalPublishedCards: 37, totalRankedCards: 9, rankMode: "Standalone SSR mode",
+      });
+      assert.deepEqual(nodes(tree).filter(node => node.type === "dt").map(node => node.props.children),
+        [copy.publishedCards, copy.rankedCards, copy.rankMode], locale);
+      assert.deepEqual(nodes(tree).filter(node => node.type === "dd").map(node => node.props.children),
+        [37, expectedCount, expectedMode], `${locale}: editorial count stays separate from the accepted sports publication`);
+      assert.ok(html(tree).includes(escape(copy.tablesTitle)), locale);
+    }
+  }
+});
+
+test("podium preserves coach and verified goals-only scorer when no player has a published rating", async () => {
   const h = await harness("pt-BR", true);
+  const fixture = awardsFixture({ noRatedCandidate: true });
   const output = html(h.render("TouchlineRankingPodium", {
-    coachRanking: h.ranked,
-    highlights: { bestPlayerCard: null, topPlayerCards: [], goldenBootCard: {
-      id: "published-scorer", shortName: "Published scorer", clubName: "Club", position: "ST",
-    }, goldenBootState: "published" },
+    coachRanking: h.ranked, ...fixture,
   }));
   assert.match(output, /data-ranking-award="best-player"/);
   assert.match(output, /data-ranking-award="golden-boot"/);
-  assert.match(output, /data-card-id="published-scorer"/);
+  assert.ok(output.includes(`data-card-id="${fixture.catalogue[1].id}"`));
+  assert.ok(!output.includes(`data-card-id="${fixture.catalogue[0].id}"`));
   assert.match(output, /Official \$&amp;&lt;Coach0&gt;/);
+});
+
+test("podium leaves a tied Ball pending and renders every published joint Golden Boot leader", async () => {
+  const h = await harness("en-GB", true);
+  const fixture = awardsFixture({ tied: true });
+  const tree = h.render("TouchlineRankingPodium", fixture);
+  const bestPlayer = nodes(tree).find(node => node.props["data-ranking-award"] === "best-player")!;
+  const boot = nodes(tree).find(node => node.props["data-ranking-award"] === "golden-boot")!;
+  assert.equal(nodes(bestPlayer).filter(node => node.props.card).length, 0);
+  assert.ok(html(bestPlayer).includes('role="status"'));
+  assert.deepEqual(nodes(boot).filter(node => node.props.card).map(node => (node.props.card as clubs.ClubOwnerSquadCard).canonicalPlayerId), fixture.catalogue.map(card => card.canonicalPlayerId));
+  assert.doesNotMatch(html(tree), /GOLDEN BOOT PREVIEW|QA placeholder|Haaland/);
+});
+
+test("podium respects explicit publication withdrawal and never resurrects a seed or preview scorer", async () => {
+  const h = await harness("en-GB", true, false, { playerRanking: null });
+  const tree = h.render("TouchlineRankingPodium", {
+    ...awardsFixture(), highlights: { goldenBootState: "preview", goldenBootCard: { id: "preview-haaland", shortName: "Haaland" } },
+  });
+  const output = html(tree);
+  assert.equal(nodes(tree).filter(node => node.props.card).length, 0);
+  assert.ok(output.includes(getTouchlineTablesPresentationCopy("en-GB", true).goldenBootPending));
+  assert.doesNotMatch(output, /data-card-id|Haaland|GOLDEN BOOT PREVIEW/);
 });
 
 test("tables new getter is consumed by the actual podium pending component", async () => {
@@ -196,14 +302,14 @@ test("tables award catalogue keeps exact EN/PT and six unpublished drafts", asyn
   for (const locale of [null, undefined, "", "pt", "unknown", "constructor"]) assert.deepEqual(mod.getTouchlineTablesPresentationCopy(locale), en);
 });
 
-test("tables actual exported panels consume every presentation key with safe sentinels", async () => {
+test("tables actual exported panels consume active presentation keys and never render legacy preview copy", async () => {
   const consumed = new Set<string>();
   for (const locale of locales) {
     const h = await harness(locale, true, true);
     const panels = [h.render("default", { highlights: { gameweekBest: { phase: "unavailable", reason: "incomplete-card-catalogue" } } }),
       h.render("TouchlineFeaturedCoach", { coachRanking: h.ranked }), h.render("TouchlineCoachRankingTable", { coachRanking: h.ranked }),
-      h.render("TouchlineRankingPodium", { coachRanking: h.ranked, highlights: { topPlayerCards: [{ id: "uuid", canonicalPlayerId: "canonical", shortName: "Official player", clubName: "Official club", position: "GK", editorialCard: null }] } }),
-      h.render("TouchlineRankingPodium", { coachRanking: h.ranked, highlights: { topPlayerCards: [{ id: "uuid-preview", canonicalPlayerId: "canonical-preview", shortName: "Preview player", clubName: "Official club", position: "ST", editorialCard: null }], goldenBootCard: { id: "uuid-preview", canonicalPlayerId: "canonical-preview", shortName: "Preview player", clubName: "Official club", position: "ST", editorialCard: null }, goldenBootState: "preview" } }),
+      h.render("TouchlineRankingPodium", { coachRanking: h.ranked, ...awardsFixture() }),
+      h.render("TouchlineRankingPodium", { coachRanking: h.ranked }),
       h.render("TouchlineRankingPodiumPending"), h.render("TouchlineRankingEnding", { touchLineEnglandTable: [] })];
     let output = panels.map(html).join("");
     const Badge = h.page.RoundBadge as (props: object) => Promise<Element>;
@@ -212,12 +318,13 @@ test("tables actual exported panels consume every presentation key with safe sen
     const frame = await (h.page.SportingFrame as (props: object) => Promise<Element>)({ data: { leadership: Promise.resolve([{ phase: "ranked" }, h.ranked]), complete: new Promise(() => {}) }, locale, user: null });
     assert.equal(nodes(frame).find(node => node.props.className === "rankingHighlights")?.props["aria-label"], "seasonHighlights:$&<>");
     consumed.add("seasonHighlights");
-    for (const key of Object.keys(en).filter(key => key !== "loadingMatchweek" && key !== "seasonHighlights")) { assert.ok(output.includes(escape(`${key}:$&<>`)), `${locale}:${key}`); consumed.add(key); }
+    for (const key of Object.keys(en).filter(key => !["loadingMatchweek", "seasonHighlights", "goldenBootPreview", "goldenBootPreviewDescription"].includes(key))) { assert.ok(output.includes(escape(`${key}:$&<>`)), `${locale}:${key}`); consumed.add(key); }
+    for (const legacyKey of ["goldenBootPreview", "goldenBootPreviewDescription"]) assert.ok(!output.includes(escape(`${legacyKey}:$&<>`)), `${locale}:legacy preview copy cannot describe a real award`);
     const coachElement = nodes(panels[1]).find(node => node.props.competition)!;
     assert.equal((coachElement.props.competition as { seasonLabel: string }).seasonLabel, "currentSeason:$&<>");
     assert.ok(output.includes("Official $&amp;&lt;Coach0&gt;")); assert.ok(!output.includes("<Coach0>")); assert.ok(output.includes("positionHeading:$&amp;&lt;&gt;")); assert.ok(output.includes("CLUBOWNER"));
   }
-  assert.equal(consumed.size, 32, "loadingMatchweek belongs to the real async page test");
+  assert.equal(consumed.size, 30, "loadingMatchweek has its async-page test; two legacy preview keys must remain unrendered");
 });
 
 test("tables panels consume explicitly opted-in copy, preserving top7 order, zero and absent data", async () => {
@@ -244,9 +351,9 @@ test("tables panels consume explicitly opted-in copy, preserving top7 order, zer
     assert.ok(incomplete.includes(escape(copy.incompleteSelection))); assert.ok(!incomplete.includes("data-best-eleven-player"));
     const ordinary = html(h.render("default", { highlights: { gameweekBest: { phase: "unavailable", reason: "no-published-selection" } } }));
     assert.ok(!ordinary.includes(escape(copy.incompleteSelection)));
-    const podium = html(h.render("TouchlineRankingPodium", { highlights: { topPlayerCards: [{ id: "uuid", canonicalPlayerId: "canonical", shortName: "$&<Player>", clubName: "Official club", position: "GK", editorialCard: null }] } }));
+    const podium = html(h.render("TouchlineRankingPodium", awardsFixture()));
     assert.ok(podium.includes('data-ranking-award="best-player"')); assert.ok(podium.includes("$&amp;&lt;Player&gt;"));
-    assert.ok(html(h.render("TouchlineRankingPodium", { highlights: { topPlayerCards: [] } })).includes('role="status"'));
+    assert.ok(html(h.render("TouchlineRankingPodium")).includes('role="status"'));
   }
 });
 

@@ -30,6 +30,9 @@ import * as presentation from '../lib/touchlineArena/public-card-presentation.ts
 import * as leadership from '../lib/touchlineArena/card-leadership-authority.ts';
 import { AuthSessionMissingError } from '@supabase/supabase-js';
 import * as access from '../lib/touchlineArena/auth-access.ts';
+import * as projection from '../lib/touchlineArena/published-ranking-catalog.ts';
+import * as selectionHelpers from '../lib/touchlineArena/touchline-ranking-zoom-selection.ts';
+import { TOUCHLINE_PRESEASON_RANKING_STATE } from '../lib/touchlineArena/card-ranking-live.ts';
 
 const empty=()=>null;
 type CapturedProps = Record<string, unknown> & {
@@ -39,16 +42,21 @@ type CapturedProps = Record<string, unknown> & {
   player: { name: string; id: string };
   details: { cardEngineHref?: string };
   accountLocaleContext: { mode: string; accountId?: string };
+  onOpenChange?: (open: boolean, trigger: HTMLElement | null) => void;
 };
 type PageRender = (props: { searchParams: Promise<{ lang: string }> }, draft?: boolean) => Promise<React.ReactNode>;
 function harness(authFailure?:Error, publicationFailure?:Error, envelope: unknown = {data:{user:null},error:null}) {
   let authReads=0;
+  let hookIndex=0;
+  const hookStates:unknown[]=[];
   const captures:Array<{kind:string;props:CapturedProps}>=[];
-  const card={id:'literal-id',canonicalPlayerId:'22222222-2222-4222-8222-222222222222',name:'Player $& <official>',clubName:'Official FC',position:'Defender',role:'DEF',countryCode3:'FRA',shirtNumber:4,seasonTotalRating:12.75,matchRating:7.5,matchStats:{},seasonStats:{},editorialCard:null,cardReview:null};
-  const leaf=(kind:string)=>function CapturedLeaf(props:CapturedProps){captures.push({kind,props}); return kind==='zoom'?React.createElement(React.Fragment,null,props.children,props.expandedContent):kind==='header'?props.navigation:null;};
+  const card={id:'22222222-2222-4222-8222-222222222222',canonicalPlayerId:'22222222-2222-4222-8222-222222222222',providerPlayerId:'123',name:'Player $& <official>',shortName:'Player',clubName:'Official FC',position:'Defender',role:'DEF',countryCode3:'FRA',shirtNumber:4,marketValue:15,touchlinePoints:0,seasonTotalRating:12.75,matchRating:7.5,matchStats:{},seasonStats:{},editorialCard:{tierKey:'ruby-red',cardPrice:{amountMinor:1500,currency:'TC'},lastReviewedAt:'2026-10-01T00:00:00Z'},cardReview:null};
+  const snapshot={...TOUCHLINE_PRESEASON_RANKING_STATE,phase:'ranked',snapshotId:'snapshot-id',seasonId:'season-id',scoringVersion:'player_scoring_v4',coverageStatus:'complete_for_scoring',players:[{playerId:card.canonicalPlayerId,providerPlayerId:card.providerPlayerId,name:card.name,clubName:card.clubName,totalRating:12.75,minutesPlayed:90,appearances:1,positionGroup:'centre-back',positionRank:1,groupSize:1,tierKey:'diamond-gold',priceTc:999}]};
+  const leaf=(kind:string)=>function CapturedLeaf(props:CapturedProps){captures.push({kind,props}); return kind==='zoom'?React.createElement(React.Fragment,null,props.presentationMode==='trigger-only'?props.children:props.open?props.expandedContent:null):kind==='header'?props.navigation:null;};
   const modules:Record<string,unknown>={
     "@/lib/touchlineArena/site-locales-release": siteLocalePolicy,
     'react/jsx-runtime':jsx,
+    react:{...React,useState(initial:unknown){const index=hookIndex++;if(!(index in hookStates))hookStates[index]=initial;return[hookStates[index],(next:unknown)=>{hookStates[index]=next;}];}},
     '@supabase/supabase-js':{AuthSessionMissingError},
     '@/lib/touchlineArena/auth-access':access,
     '@/components/touchline/TouchlineBrandHeader':{default:leaf('header')},
@@ -57,6 +65,8 @@ function harness(authFailure?:Error, publicationFailure?:Error, envelope: unknow
     '@/lib/touchlineArena/position-labels':positions,'@/lib/touchlineArena/position-aware-card-stats':stats,
     '@/lib/touchlineArena/card-rules':tiers,'@/lib/touchlineArena/card-zoom-details':details,
     '@/lib/touchlineArena/ranked-card-catalog':compare,'@/lib/touchlineArena/arena-navigation':navigation,
+    '@/lib/touchlineArena/published-ranking-catalog':projection,
+    '@/lib/touchlineArena/touchline-ranking-zoom-selection':selectionHelpers,
     '@/lib/touchlineArena/player-links':links,'@/lib/touchlineArena/card-engine-links':engineLinks,
     '@/lib/touchlineArena/global-navigation':surfaces,'@/lib/touchlineArena/public-card-presentation':presentation,
     '@/lib/touchlineArena/card-leadership-authority':leadership,
@@ -65,24 +75,31 @@ function harness(authFailure?:Error, publicationFailure?:Error, envelope: unknow
     '@/components/touchline/cards/TouchlineCardZoom':{default:leaf('zoom')},
     '@/components/touchline/TouchlineGlobalNavigation':{default:leaf('nav')},
     '@/components/touchline/TouchlineLivePresentationRefresh':{default:empty},
-    '@/components/touchline/cards/TouchlineCardLeadershipProvider':{TouchlineCardLeadershipProvider:({children}:React.PropsWithChildren)=>children},
+    '@/components/touchline/cards/TouchlineCardLeadershipProvider':{TouchlineCardLeadershipProvider:({children}:React.PropsWithChildren)=>children,useTouchlineCardLeadershipAuthority:()=>null},
     '@/lib/touchlineArena/demo-data':{TOUCHLINE_CARD_STUDIO_LAYOUT_KEY:'stable-layout',findTouchLineClub:()=>null,squadCardToExactPlayer:(value:unknown)=>value},
     '@/lib/supabase/server':{createClient:async()=>({auth:{getUser:async()=>{authReads++;if(authFailure)throw authFailure;return envelope;}}})},
-    '@/lib/touchlineArena/card-ranking-server':{loadTouchLineActiveRanking:async()=>{if(publicationFailure)throw publicationFailure;return {phase:'ranked',snapshotId:'snapshot-id',seasonId:'season-id'};}},
+    '@/lib/touchlineArena/card-ranking-server':{loadTouchLineActiveRanking:async()=>{if(publicationFailure)throw publicationFailure;return snapshot;}},
     '@/lib/touchlineArena/ranked-card-catalog-server':{loadTouchLineRankedCardCatalog:async()=>[{...card}]},
     '@/lib/admin/owner':{isOwnerEmail:(email:string)=>email==='owner@example.test'},
   };
+  const clientExports:Record<string,unknown>={};
+  const clientSource=readFileSync(new URL('../components/touchline/TouchlinePlayerCardRankingsPublication.tsx',import.meta.url),'utf8');
+  runInNewContext(ts.transpileModule(clientSource,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText,{exports:clientExports,require(name:string){assert.ok(name in modules,name);return modules[name];}});
+  modules['@/components/touchline/TouchlinePlayerCardRankingsPublication']={default:(props:unknown)=>{hookIndex=0;return(clientExports.default as (props:unknown)=>React.ReactNode)(props);}};
   const exports={} as { default: PageRender; isolatedRender: PageRender };
   const source=readFileSync(new URL('../app/touchline-player-card-rankings/page.tsx',import.meta.url),'utf8');
   runInNewContext(ts.transpileModule(source+'\nexport {renderPlayerCardRankings as isolatedRender};',{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText,{exports,require(name:string){assert.ok(name in modules,name);return modules[name];}});
-  return {exports,captures,authReads:()=>authReads,card};
+  return {exports,captures,authReads:()=>authReads,card,
+    openCard(){const trigger=captures.find(x=>x.kind==='zoom'&&x.props.presentationMode==='trigger-only');assert.ok(trigger);trigger.props.onOpenChange?.(true,null);},
+    closeCard(){captures.find(x=>x.kind==='zoom'&&x.props.presentationMode==='dialog-only')?.props.onOpenChange?.(false,null);},
+  };
 }
 
 test('real ranking route keeps defaults and propagates all eight opted-in presentations to existing cards/zooms',async()=>{
   const h=harness();
   for(const locale of ['en-GB','pt-BR','es-ES','it-IT','fr-FR','ar-SA','tr-TR','de-DE']) for(const [draft,publicRelease] of [[false,false],[true,false],[true,true]]) {
     siteLocaleEnv.TOUCHLINE_SITE_LOCALES_ENABLED = publicRelease ? 'true' : undefined;
-    h.captures.length=0; const before=h.authReads();
+    h.closeCard();h.captures.length=0; const before=h.authReads();
     const props={searchParams:Promise.resolve({lang:locale})};
     const tree=draft&&!publicRelease?await h.exports.isolatedRender(props,true):await h.exports.default(props);
     delete siteLocaleEnv.TOUCHLINE_SITE_LOCALES_ENABLED;
@@ -96,7 +113,7 @@ test('real ranking route keeps defaults and propagates all eight opted-in presen
     assert.ok(html.includes(rankingCopy.getTouchLineRankingsCopy(locale,draft).rankingTitle));
     const cards=h.captures.filter(x=>x.kind==='card');
     const zooms=h.captures.filter(x=>x.kind==='zoom');
-    assert.equal(cards.length,4); assert.equal(zooms.length,2);
+    assert.equal(cards.length,2); assert.equal(zooms.length,3);
     for(const {props:child} of cards) {
       assert.equal(child.runtimeLocaleOverride,effective);assert.equal(child.draftLocalesEnabled,draft);
       assert.equal(child.player.name,h.card.name);assert.equal(child.player.id,h.card.id);
@@ -104,9 +121,10 @@ test('real ranking route keeps defaults and propagates all eight opted-in presen
     }
     for(const {props:child} of zooms) {
       assert.equal(child.locale,effective);assert.equal(child.draftLocalesEnabled,draft);
-      assert.equal(child.ariaLabel,zoomCopy.getTouchlineCardZoomCopy(locale,draft).openCard.replace('{playerName}',()=>h.card.name));
+      assert.equal(child.open,false);
+      assert.equal(child.ariaLabel,child.presentationMode==='dialog-only'?exactCopy.getTouchlineExactCardCopy(locale,draft).pending:zoomCopy.getTouchlineCardZoomCopy(locale,draft).openCard.replace('{playerName}',()=>h.card.name));
       assert.equal(child.contractHref,undefined);assert.equal(child.contractValue,undefined);
-      assert.ok(child.details);
+      assert.equal(child.details,undefined);
     }
     const nav=h.captures.find(x=>x.kind==='nav')!.props;
     assert.equal(nav.locale,effective);assert.equal(nav.draftLocalesEnabled,draft);
@@ -115,6 +133,14 @@ test('real ranking route keeps defaults and propagates all eight opted-in presen
     assert.equal(headers[0].props.locale,effective);assert.equal(headers[0].props.draftLocalesEnabled,draft);
     assert.equal(headers[0].props.accountLocaleContext.mode,'guest');
     assert.equal(headers[0].props.href,`/touchline-player-card-rankings?lang=${encodeURIComponent(effective)}`);
+    h.openCard();h.captures.length=0;renderToStaticMarkup(tree);
+    const selectedHost=h.captures.filter(x=>x.kind==='zoom'&&x.props.presentationMode==='dialog-only');
+    assert.equal(selectedHost.length,1);assert.equal(selectedHost[0].props.open,true);
+    assert.ok(selectedHost[0].props.details);assert.equal(selectedHost[0].props.locale,effective);assert.equal(selectedHost[0].props.draftLocalesEnabled,draft);
+    assert.equal(selectedHost[0].props.ariaLabel,zoomCopy.getTouchlineCardZoomCopy(locale,draft).openCard.replace('{playerName}',()=>h.card.name));
+    const selectedCards=h.captures.filter(x=>x.kind==='card');assert.equal(selectedCards.length,3);
+    assert.ok(selectedCards.every(({props})=>props.runtimeLocaleOverride===effective&&props.draftLocalesEnabled===draft));
+    assert.equal(h.authReads(),before+1,'selecting a dialog does not re-read authentication');
   }
 });
 
@@ -135,13 +161,17 @@ test('single verified identity drives header account controls and owner links; e
   ];
   for(const item of cases){
     const h=harness(undefined,undefined,item.envelope);
-    renderToStaticMarkup(await h.exports.default({searchParams:Promise.resolve({lang:'pt-BR'})}));
+    const tree=await h.exports.default({searchParams:Promise.resolve({lang:'pt-BR'})});
+    renderToStaticMarkup(tree);
     assert.equal(h.authReads(),1);
     const header=h.captures.filter(x=>x.kind==='header');assert.equal(header.length,1);
     assert.equal(header[0].props.accountLocaleContext.mode,item.mode);
     if(item.mode==='account')assert.equal(header[0].props.accountLocaleContext.accountId,item.envelope.data.user!.id);
     else assert.equal(header[0].props.accountLocaleContext.accountId,undefined);
-    for(const {props} of h.captures.filter(x=>x.kind==='zoom')){
+    h.openCard();h.captures.length=0;renderToStaticMarkup(tree);
+    const zooms=h.captures.filter(x=>x.kind==='zoom'&&x.props.presentationMode==='dialog-only');
+    assert.equal(zooms.length,1,'owner and non-owner controls are exercised on the actual selected host');
+    for(const {props} of zooms){
       assert.equal(Boolean(props.details.cardEngineHref),item.owner);
       if(item.owner)assert.equal(props.details.cardEngineHref,engineLinks.touchlineCardEnginePlayerHref(h.card.canonicalPlayerId,'pt-BR'));
     }

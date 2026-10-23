@@ -6,7 +6,7 @@ import { useEffect, useId, useRef, useState, type CSSProperties, type PointerEve
 
 import type { TouchlineCoach } from "@/lib/football-data/types";
 import { useTouchlineCardLeadershipAuthority } from "./TouchlineCardLeadershipProvider";
-import { inheritedCoachCrown } from "@/lib/touchlineArena/card-leadership-authority";
+import { inheritedCoachCrown, resolveCoachCardPoints } from "@/lib/touchlineArena/card-leadership-authority";
 import { loadCoachCardLayout } from "@/lib/touchlineArena/coach-card-layout-loader";
 import { touchlineCoachCardArtForTier, type TouchlineArenaCoachSlot } from "@/lib/touchlineArena/coach-card";
 import { touchlineArenaTierForKey, touchlineCardTierPalette } from "@/lib/touchlineArena/card-rules";
@@ -78,6 +78,8 @@ type TouchlineCoachCardProps = {
   showLeadershipCrown?: boolean;
   /** Immutable Gameweek points may be displayed without borrowing season data. */
   publishedTouchlinePoints?: number | null;
+  /** Explicit public season ranking; never infer this from an audited contract slot. */
+  liveRankingPoints?: boolean;
   /** Optional canonical TouchLine signing price, separate from football statistics. */
   acquisitionPrice?: { label: string; valueTc: number };
   /**
@@ -133,6 +135,7 @@ export default function TouchlineCoachCard({
   fixtureContext = null,
   showLeadershipCrown: explicitLeadershipCrown,
   publishedTouchlinePoints = null,
+  liveRankingPoints = false,
   acquisitionPrice,
   discipline = null,
 }: TouchlineCoachCardProps) {
@@ -166,11 +169,9 @@ export default function TouchlineCoachCard({
   const runtimeCardTemplateUrl = optimizeForLiveCompact ? compactCardTemplateUrl : zoomCardTemplateUrl;
   const runtimeClubLogoUrl = touchlineRuntimeCoachCrestUrl(clubLogoUrl);
   const flagUrl = touchlineCountryFlagUrl(countryCode3);
-  const points = Number.isFinite(publishedTouchlinePoints)
-    ? String(publishedTouchlinePoints)
-    : slot.status === "audited" && Number.isFinite(slot.touchlinePoints)
-      ? String(slot.touchlinePoints)
-      : "—";
+  const publishedPoints = resolveCoachCardPoints({ authority: leadershipAuthority, coachProviderId: coach?.providerId,
+    editable, liveRankingPoints, publishedTouchlinePoints, slotStatus: slot.status, slotPoints: slot.touchlinePoints });
+  const points = publishedPoints === null ? "—" : String(publishedPoints);
   const yellowCards = officialCardCount(discipline?.yellowCards);
   const redCards = officialCardCount(discipline?.redCards);
   const disciplineValue = yellowCards === null && redCards === null

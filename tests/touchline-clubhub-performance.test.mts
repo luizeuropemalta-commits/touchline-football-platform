@@ -3,6 +3,7 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import sharp from "sharp";
+import ts from "typescript";
 
 import {
   getTouchlineClubTrophyAssets,
@@ -22,7 +23,10 @@ test("official league section does not wait for squad presentation", () => {
   assert.match(clubPage, /<ClubHubOfficialLeagueSection[\s\S]*?matchSnapshotPromise=\{matchSnapshotPromise\}/);
 });
 test("next-match hero waits only for the shared match snapshot, never squad or season points", () => {
-  const hero = clubPage.slice(clubPage.indexOf("async function ClubHubHeroNextMatch"), clubPage.indexOf("function normalizedPlayerIdentity"));
+  const ast = ts.createSourceFile("club-page.tsx", clubPage, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const declaration = ast.statements.find((node): node is ts.FunctionDeclaration => ts.isFunctionDeclaration(node) && node.name?.text === "ClubHubHeroNextMatch");
+  assert.ok(declaration?.body, "the real hero function must exist independently of adjacent helper names");
+  const hero = declaration.getText(ast);
   assert.match(hero, /const matchSnapshot = await matchSnapshotPromise/);
   assert.doesNotMatch(hero, /presentationPromise/);
   assert.equal((clubPage.match(/\(\) => loadClubMatchSnapshot\(club, locale, dataSource, mirrorResultPromise, draftLocalesEnabled\)/g) ?? []).length, 1);

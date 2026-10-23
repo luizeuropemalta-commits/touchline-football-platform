@@ -11,6 +11,7 @@ import * as i18n from "../lib/touchlineArena/i18n.ts";
 import * as exact from "../lib/touchlineArena/exact-card-i18n.ts";
 import * as navigation from "../lib/touchlineArena/club-hub-section-navigation-i18n.ts";
 import { compareTouchlineRankingPlayers } from "../lib/touchlineArena/card-ranking.ts";
+import { projectClubPositionLeaders } from "../lib/touchlineArena/club-position-leaders.ts";
 
 // Real server policy in an isolated environment; never inherit the host flag.
 const releaseEnv: Record<string, string | undefined> = {};
@@ -62,9 +63,9 @@ type Copy = Record<keyof typeof baseline["en-GB"], string>;
 type Props = Record<string, unknown>;
 const source = readFileSync(new URL("../app/touchline-clubs/[club]/page.tsx", import.meta.url), "utf8");
 const ast = ts.createSourceFile("page.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
-const names = ["localizedFixtureStatus", "normalizedPlayerIdentity", "ClubHubLineupSection", "ClubHubOfficialLeagueSection", "ClubHubOfficialTablePanel", "ClubHubHeroNextMatch", "ClubHubHomeStadiumIdentity", "ClubHubDeferredSection", "ClubHubChapterMarker", "ClubHubPage", "renderClubHubPage"];
+const names = ["localizedFixtureStatus", "ClubHubLineupSection", "ClubHubOfficialLeagueSection", "ClubHubOfficialTablePanel", "ClubHubHeroNextMatch", "ClubHubHomeStadiumIdentity", "ClubHubDeferredSection", "ClubHubChapterMarker", "ClubHubPage", "renderClubHubPage"];
 const selected = ast.statements.filter(node => (ts.isFunctionDeclaration(node) && names.includes(node.name?.text ?? ""))
-  || (ts.isVariableStatement(node) && node.declarationList.declarations.some(d => d.name.getText(ast) === "CLUB_POSITION_LEADER_GROUPS")));
+  );
 const declarations = selected.map(node => node.getText(ast).replace(/^export default /, "")).join("\n");
 const loaderNames = ["loadPersistedClubSquadCards", "loadClubSquadCards", "loadClubHubPresentation"];
 const loaderDeclarations = ast.statements
@@ -76,6 +77,30 @@ function compile(input: string, context: Props) {
   const exports: Props = {};
   runInNewContext(ts.transpileModule(input, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2017, jsx: ts.JsxEmit.React } }).outputText, { exports, React, ...releasePolicy, ...context });
   return exports;
+}
+function renderExtractedPositionLeaders(props: Props, copy: Copy) {
+  const componentSource = readFileSync(new URL("../components/touchline/ClubHubPositionLeaders.tsx", import.meta.url), "utf8");
+  const exports: Props = {};
+  const GameweekCard = (cardProps: Props) => React.createElement("i", { "data-leaf": "gameweek", "data-width": String(cardProps.displayWidth) });
+  runInNewContext(ts.transpileModule(componentSource, {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2017, jsx: ts.JsxEmit.React },
+  }).outputText, {
+    exports, React,
+    require: (name: string) => {
+      const modules: Record<string, Props> = {
+        "./cards/TouchlineCardLeadershipProvider": { useTouchlineCardLeadershipAuthority: () => null },
+        "./fantasy/TouchlineGameweekCard": { default: GameweekCard },
+        "./TouchlineClubPerimeterTrace": { default: () => null },
+        "@/lib/touchlineArena/club-position-leaders": { projectClubPositionLeaders },
+        "@/lib/touchlineArena/club-hub-profile-i18n": { getTouchlineClubHubProfileCopy: () => copy },
+        "@/lib/touchlineArena/card-rules": { touchlineCardTierPalette: () => ({ accent: "#abc" }) },
+        "./club-hub/ClubHubPremiumPrototype.module.css": { default: new Proxy({}, { get: (_target, key) => String(key) }) },
+      };
+      assert.ok(Object.hasOwn(modules, name), name);
+      return modules[name];
+    },
+  });
+  return renderToStaticMarkup(React.createElement(exports.default as React.ComponentType<Props>, props));
 }
 function compileUnavailableLoaders(copy: Copy) {
   return compile(loaderDeclarations + "\nObject.assign(exports, {" + loaderNames.join(",") + "});", {
@@ -120,7 +145,7 @@ async function fixture(locale: string, options: { future?: boolean; sentinel?: b
     touchlineCardTierPalette: () => ({ accent: "#abc" }),
     Suspense: (props: Props) => React.createElement(React.Fragment, null, props.fallback as React.ReactNode),
   };
-  for (const name of ["TouchlineBrandHeader", "ClubHubBrandHeader", "Image", "ClubTrophyCarousel", "ClubHubCrestTrace", "TouchlineGlobalNavigation", "ClubHubSectionNavigation", "ClubHubFixtureStrip", "ClubHubNextFixtureCard", "TouchlineClubPerimeterTrace", "TouchlineClubSocialFeed", "TouchlineOfficialLeagueTable", "TouchlineGameweekCard", "ClubHubOfficialLineup", "ClubHubTechnicalSections", "ClubHubOfficialChannel"]) context[name] = leaf(name);
+  for (const name of ["TouchlineBrandHeader", "ClubHubBrandHeader", "Image", "ClubTrophyCarousel", "ClubHubCrestTrace", "TouchlineGlobalNavigation", "ClubHubSectionNavigation", "ClubHubFixtureStrip", "ClubHubNextFixtureCard", "TouchlineClubPerimeterTrace", "TouchlineClubSocialFeed", "TouchlineOfficialLeagueTable", "TouchlineGameweekCard", "ClubHubPositionLeaders", "ClubHubOfficialLineup", "ClubHubTechnicalSections", "ClubHubOfficialChannel"]) context[name] = leaf(name);
   const exports = compile(declarations + "\nObject.assign(exports, {" + names.join(",") + "});", context);
   const invoke = async (name: string, props: Props) => (exports[name === "ClubHubPage" && options.future ? "renderClubHubPage" : name] as (props: Props, enabled?: boolean) => Promise<React.ReactElement> | React.ReactElement)({ ...props, draftLocalesEnabled: options.future ?? false }, options.future ?? false);
   return { mod, exports, invoke, copy, calls, reads, club, context };
@@ -235,6 +260,7 @@ test("ClubHub draft consumer seams expose active texts and existing authorities 
     chunks.push(renderToStaticMarkup(lineup));
     const leaderProps = f.calls.find(c => c.kind === "ClubHubOfficialLineup")!.props;
     chunks.push(renderToStaticMarkup(leaderProps.leaderCards as React.ReactElement));
+    chunks.push(renderExtractedPositionLeaders({ cards: [], seed: { phase: "ranked", players: [] }, enabled: true, locale, draftLocalesEnabled: true }, f.copy));
     const base = { club: f.club, locale, dataSource: "direct", cursor: null, mirrorResultPromise: null, tablePromise: Promise.resolve({ rows: [] }) };
     chunks.push(renderToStaticMarkup(await f.invoke("ClubHubOfficialLeagueSection", { ...base, matchSnapshotPromise: Promise.resolve({ railFixture: null }) })));
     chunks.push(renderToStaticMarkup(await f.invoke("ClubHubHeroNextMatch", { locale, matchSnapshotPromise: Promise.resolve({ publicFixture: null }) })));
@@ -266,30 +292,45 @@ test("ClubHub status keeps legacy aliases, EN raw and unknown values under publi
   assert.equal(status("unknown $&<>", "pt-BR"), "unknown $&<>");
 });
 
-test("ClubHub real positional leaders preserve order, zero, null exclusion and published rank", async () => {
+test("ClubHub passes the verified roster and ranking seed to the extracted positional-leader boundary", async () => {
   const ranking = [
-    { playerId: "CB", name: "Defender $&<>", clubName: "Official", totalRating: 0, positionGroup: "centre-back", positionRank: 4 },
-    { playerId: "ST", name: "Striker", clubName: "Official", totalRating: 9, positionGroup: "striker", positionRank: 3 },
-    { playerId: "WG", name: "Winger", clubName: "Official", totalRating: 11, positionGroup: "winger", positionRank: 2 },
-    { playerId: "CM", name: "Missing", clubName: "Official", totalRating: null, positionGroup: "midfielder", positionRank: 1 },
+    { playerId: "00000000-0000-4000-8000-000000000001", providerPlayerId: "1", name: "Defender $&<>", clubName: "Official", totalRating: 0, positionGroup: "centre-back", positionRank: 4 },
+    { playerId: "00000000-0000-4000-8000-000000000002", providerPlayerId: "2", name: "Striker", clubName: "Official", totalRating: 9, positionGroup: "striker", positionRank: 3 },
+    { playerId: "00000000-0000-4000-8000-000000000003", providerPlayerId: "3", name: "Winger", clubName: "Official", totalRating: 11, positionGroup: "winger", positionRank: 2 },
+    { playerId: "00000000-0000-4000-8000-000000000004", providerPlayerId: "4", name: "Missing", clubName: "Official", totalRating: null, positionGroup: "midfielder", positionRank: 1 },
   ];
+  const roster = ranking.map(row => ({ id: row.playerId, canonicalPlayerId: row.playerId, providerPlayerId: row.providerPlayerId, name: row.name }));
+  const publishedRanking = { phase: "ranked", snapshotId: "snapshot-exact", seasonId: "season-exact", leagueKey: "touchline-england", scoringVersion: "player_scoring_v4", players: ranking } as never;
+  const projected = projectClubPositionLeaders(roster as never, publishedRanking);
+  assert.deepEqual(projected.map(item => item.key), ["centre-back", "full-back", "midfielder", "attacker"]);
+  assert.equal(projected[0].leader?.card.seasonTotalRating, 0);
+  assert.equal(projected[3].leader?.card.seasonTotalRating, 11);
+  assert.equal(projected[2].leader, undefined);
+  assert.equal(projected[0].leader?.positionRank, 4);
+  assert.equal(projected[3].leader?.positionRank, 2);
+  assert.equal(projected[0].leader?.card.publishedRanking?.totalRating, 0);
   for (const locale of ["en-GB", "pt-BR"]) {
     const f = await fixture(locale, { ranking });
-    const presentation = { clubCards: ranking.map(row => ({ id: row.playerId.toLowerCase(), name: row.name })), matchSnapshot: { preview: { status: "FT", home: {}, away: {} }, publicFixture: null }, matchdayPresentation: { lineup: {} } };
+    const presentation = { clubCards: roster, matchSnapshot: { preview: { status: "FT", home: {}, away: {} }, publicFixture: null }, matchdayPresentation: { lineup: {} } };
     const before = JSON.stringify(presentation);
     renderToStaticMarkup(await f.invoke("ClubHubLineupSection", { club: f.club, locale, cardLabels: {}, dataSource: "direct", presentationPromise: Promise.resolve(presentation), viewerAccessPromise: Promise.resolve({ canEditCardEngine: false }) }));
     const props = f.calls.find(c => c.kind === "ClubHubOfficialLineup")!.props;
-    const html = renderToStaticMarkup(props.leaderCards as React.ReactElement);
-    assert.ok(html.includes("#4")); assert.ok(html.includes("#2")); assert.ok(!html.includes("#1"));
-    assert.ok(html.indexOf("position-centre-back") < html.indexOf("position-full-back"));
-    assert.ok(html.indexOf("position-midfielder") < html.indexOf("position-attacker"));
-    assert.ok(html.includes(esc("Defender $&<>"))); assert.ok(!html.includes("Striker"));
-    const cards = f.calls.filter(c => c.kind === "TouchlineGameweekCard");
-    assert.deepEqual(cards.map(c => (c.props.card as Props).seasonTotalRating), [0, 11]);
-    assert.ok(cards.every(c => c.props.displayWidth === 112 && c.props.locale === locale));
+    renderToStaticMarkup(props.leaderCards as React.ReactElement);
+    const boundary = f.calls.find(c => c.kind === "ClubHubPositionLeaders")!;
+    assert.equal(boundary.props.cards, presentation.clubCards);
+    assert.equal((boundary.props.seed as Props).phase, "ranked");
+    assert.equal(boundary.props.enabled, true);
+    assert.equal(boundary.props.locale, locale);
     assert.equal((props.matchup as Props).status, locale === "pt-BR" ? "Encerrada" : "FT");
     assert.equal(JSON.stringify(presentation), before);
   }
+  const leaders = readFileSync(new URL("../components/touchline/ClubHubPositionLeaders.tsx", import.meta.url), "utf8");
+  const projection = readFileSync(new URL("../lib/touchlineArena/club-position-leaders.ts", import.meta.url), "utf8");
+  assert.match(leaders, /projectClubPositionLeaders\(cards, ranking\)/);
+  assert.match(leaders, /displayWidth=\{112\}/);
+  assert.match(projection, /filter\(row => row\.totalRating !== null\)\.sort\(compareTouchlineRankingPlayers\)/);
+  assert.match(projection, /if \(!facts \|\| facts\.totalRating === null\) return \[\]/);
+  assert.match(projection, /publishedRanking:/);
 });
 
 test("ClubHub extraction preserves CSS and inactive labels rather than activating commercial UI", () => {

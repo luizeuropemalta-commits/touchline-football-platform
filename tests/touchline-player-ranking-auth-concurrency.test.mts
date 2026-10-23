@@ -3,6 +3,8 @@ import test from "node:test";
 import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import { setImmediate } from "node:timers/promises";
+import React from "react";
+import * as jsx from "react/jsx-runtime";
 import ts from "typescript";
 
 const siteLocaleEnv: Record<string, string | undefined> = {};
@@ -18,23 +20,32 @@ function deferred<T>() {
   return { promise, resolve, reject };
 }
 
-// Execute the real page through its data-loading seam. Stop at locale lookup,
-// before presentation: any attempted earlier JSX/owner-link work must fail.
+// Execute the real page through its data-loading seam. Failure cases stop at
+// locale lookup; the successful case inspects the real server/client boundary.
 function harness(input: {
   client: () => unknown;
   ranking: () => unknown;
   catalogue: (state: unknown) => unknown;
+  renderBoundary?: boolean;
 }) {
   const reachedPresentation = new Error("presentation reached");
   let presentationCalls = 0;
+  const publicationType = () => null;
+  const resolveLocale = () => {
+    presentationCalls++;
+    if (!input.renderBoundary) throw reachedPresentation;
+    return "en-GB";
+  };
   const dependencies: Record<string, Record<string, unknown>> = {
     "@/lib/touchlineArena/site-locales-release": siteLocalePolicy,
     "@/lib/supabase/server": { createClient: input.client },
     "@/lib/touchlineArena/card-ranking-server": { loadTouchLineActiveRanking: input.ranking },
     "@/lib/touchlineArena/ranked-card-catalog-server": { loadTouchLineRankedCardCatalog: input.catalogue },
-    "@/lib/touchlineArena/ranked-card-catalog": { compareTouchLineRankedCards: () => 0 },
-    "@/lib/touchlineArena/i18n": { normalizeTouchLineLocale: () => { presentationCalls++; throw reachedPresentation; } },
-    "@/lib/touchlineArena/catalogue-locale": { resolveTouchlineCatalogueLocale: () => { presentationCalls++; throw reachedPresentation; } },
+    "@/lib/touchlineArena/catalogue-locale": { resolveTouchlineCatalogueLocale: resolveLocale },
+    "react/jsx-runtime": jsx,
+    "@/components/touchline/TouchlinePlayerCardRankingsPublication": { default: publicationType },
+    "@/lib/touchlineArena/card-leadership-authority": { buildTouchlineCardLeadershipValue: (state: unknown) => state },
+    "@/lib/touchlineArena/global-navigation": { resolveTouchlineGlobalNavigationSurface: () => "public" },
   };
   const exports: Record<string, unknown> = {};
   const source = readFileSync(new URL("../app/touchline-player-card-rankings/page.tsx", import.meta.url), "utf8");
@@ -47,6 +58,7 @@ function harness(input: {
     run: () => (exports.default as (props: unknown) => Promise<unknown>)({ searchParams: Promise.resolve({ lang: "en-GB" }) }),
     reachedPresentation,
     presentationCalls: () => presentationCalls,
+    publicationType,
   };
 }
 
@@ -54,12 +66,11 @@ test("public snapshot and complete catalogue advance while client/auth waits, pr
   const client = deferred<unknown>(), auth = deferred<unknown>(), ranking = deferred<unknown>();
   const snapshot = { seasonId: "season-a", players: [{ playerId: "canonical-a" }] };
   const cards = [{ id: "a" }, { id: "b" }, { id: "c" }, { id: "d" }];
-  let rankingCalls = 0, catalogueCalls = 0, authCalls = 0, sortedCount = 0;
-  cards.sort = function (compare) { sortedCount = this.length; return Array.prototype.sort.call(this, compare); };
-  const h = harness({ client: () => client.promise, ranking: () => { rankingCalls++; return ranking.promise; },
+  let rankingCalls = 0, catalogueCalls = 0, authCalls = 0;
+  cards.sort = () => assert.fail("the server must not mutate or pre-rank the complete catalogue");
+  const h = harness({ renderBoundary: true, client: () => client.promise, ranking: () => { rankingCalls++; return ranking.promise; },
     catalogue: state => { catalogueCalls++; assert.equal(state, snapshot); return Promise.resolve(cards); } });
   const pending = h.run();
-  const checked = assert.rejects(pending, error => error === h.reachedPresentation);
   await setImmediate();
   assert.equal(rankingCalls, 1); assert.equal(catalogueCalls, 0);
   ranking.resolve(snapshot); await setImmediate();
@@ -67,8 +78,17 @@ test("public snapshot and complete catalogue advance while client/auth waits, pr
   client.resolve({ auth: { getUser: () => { authCalls++; return auth.promise; } } });
   await setImmediate(); assert.equal(authCalls, 1); assert.equal(h.presentationCalls(), 0);
   auth.resolve({ data: { user: { email: "owner@example.test" } } });
-  await checked;
-  assert.equal(sortedCount, 4, "all catalogue rows reach the unchanged presentation calculation");
+  const tree = await pending;
+  const descendants = (node: React.ReactNode): React.ReactElement<Record<string, unknown>>[] =>
+    React.Children.toArray(node).flatMap(child => React.isValidElement<Record<string, unknown>>(child)
+      ? [child, ...descendants(child.props.children as React.ReactNode)] : []);
+  const publications = descendants(tree as React.ReactNode).filter(node => node.type === h.publicationType);
+  assert.equal(publications.length, 1, "one shared projection boundary receives the complete catalogue");
+  assert.equal(publications[0].props.catalogue, cards, "all rows retain identity without top3/top20 pre-slicing");
+  assert.equal((publications[0].props.catalogue as unknown[]).length, 4);
+  assert.equal(publications[0].props.seedRanking, snapshot, "catalogue and publication share the same resolved snapshot");
+  assert.equal(publications[0].props.canEditCardEngine, false, "unverified owner email cannot unlock controls");
+  assert.equal(h.presentationCalls(), 1);
 });
 
 test("early public rejection is observed while auth waits; original public error survives", async () => {

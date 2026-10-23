@@ -111,7 +111,11 @@ test("the My Club presentation keeps the guided coach-first Gameweek flow", asyn
   assert.match(client, /function canonicalRosterRole[\s\S]*?role === "goalkeeper"[\s\S]*?role === "defender"[\s\S]*?role === "midfielder"[\s\S]*?role === "forward"/);
   assert.match(client, /touchlineMarketPositionBucket\(card\.position, canonicalRosterRole\(card\.role\)\)/);
   assert.doesNotMatch(client, /card\.role === "goalkeeper" \? "goalkeeper" : null/);
-  assert.match(client, /TouchlineGameweekCard card=\{card\} locale=\{locale\} draftLocalesEnabled=\{draftLocalesEnabled\} displayWidth=\{132\}/);
+  const marketTile = client.match(/<TouchlineGameweekCard[^>]*displayWidth=\{132\}[^>]*\/>/)?.[0] ?? "";
+  assert.match(marketTile, /card=\{card\}/);
+  assert.match(marketTile, /locale=\{locale\}/);
+  assert.match(marketTile, /draftLocalesEnabled=\{draftLocalesEnabled\}/);
+  assert.match(marketTile, /liveSeasonRating/);
   assert.doesNotMatch(client, /className=\{styles\.pagination\}/);
   assert.match(client, /className=\{styles\.selectedCoachSummary\}[\s\S]*?selectedCoach\.competition\.rank[\s\S]*?selectedCoach\.competition\?\.home\.touchlinePoints[\s\S]*?selectedCoach\.competition\?\.away\.touchlinePoints/);
   assert.match(client, /function FantasyCoachZoom[\s\S]*?TouchlineCoachCardZoom[\s\S]*?profileHref=/);

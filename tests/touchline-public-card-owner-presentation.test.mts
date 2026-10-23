@@ -8,14 +8,17 @@ const read = (path: string) => readFileSync(new URL(`../${path}`, import.meta.ur
 
 test("public player profile and ranking omit card prices while keeping ranking and total rating", () => {
   const profile = read("app/touchline-players/[player]/page.tsx");
-  const ranking = read("app/touchline-player-card-rankings/page.tsx");
+  const rankingPage = read("app/touchline-player-card-rankings/page.tsx");
+  const ranking = read("components/touchline/TouchlinePlayerCardRankingsPublication.tsx");
+  const projection = read("lib/touchlineArena/published-ranking-catalog.ts");
   assert.doesNotMatch(profile, /displayedPriceText|formatTouchlineEditorialCardPrice|text\.price|Preço do card|Card price/);
   assert.doesNotMatch(ranking, /displayPrice|formatTouchlineEditorialCardPrice|Preço do card|Card price/);
   assert.match(profile, /competition\.positionRank/);
   assert.match(profile, /\{cumulativeRatingText\}/);
-  assert.match(ranking, /compareTouchLineRankedCards/);
+  assert.match(ranking, /projectTouchlinePublishedRankingCatalog\(catalogue, ranking\)/);
+  assert.match(projection, /sort\(compareTouchLineRankedCards\)/);
   assert.match(ranking, /\{index \+ 1\}/);
-  assert.match(ranking, /\.tl-card-rankings-row\s*\{[^}]*grid-template-columns: 64px 86px minmax\(0, 1fr\) 126px auto;/);
+  assert.match(rankingPage, /\.tl-card-rankings-row\s*\{[^}]*grid-template-columns: 64px 86px minmax\(0, 1fr\) 126px auto;/);
 });
 
 test("shared card removes only the above-head match badge and keeps total rating and real market value", () => {

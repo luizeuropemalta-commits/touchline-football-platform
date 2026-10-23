@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent, type PointerEvent, type ReactNode } from "react";
+import { useId, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent, type PointerEvent, type ReactNode, type RefObject } from "react";
 import { createPortal, flushSync } from "react-dom";
 import {
   Activity,
@@ -124,6 +124,13 @@ export type TouchlineSigningActions = {
 };
 type TouchlineCardZoomProps = {
   ariaLabel: string;
+  /** Legacy callers keep one combined trigger/dialog with local open state. */
+  presentationMode?: "combined" | "trigger-only" | "dialog-only";
+  open?: boolean;
+  onOpenChange?: (open: boolean, trigger: HTMLElement | null) => void;
+  /** A stable dialog host may outlive the card that opened it. */
+  returnFocusRef?: RefObject<HTMLElement | null>;
+  returnFocusFallbackRef?: RefObject<HTMLElement | null>;
   /** Explicit page context wins; omission preserves the legacy fallbacks. */
   locale?: string;
   draftLocalesEnabled?: boolean;
@@ -326,6 +333,11 @@ export function TouchlineCardZoomDetailsPanel({ details, locale, draftLocalesEna
 
 export default function TouchlineCardZoom({
   ariaLabel,
+  presentationMode = "combined",
+  open,
+  onOpenChange,
+  returnFocusRef,
+  returnFocusFallbackRef,
   locale,
   draftLocalesEnabled = false,
   children,
@@ -347,18 +359,27 @@ export default function TouchlineCardZoom({
 }: TouchlineCardZoomProps) {
   const explicitLocale = locale === undefined ? undefined : resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled);
   const socialPlayerId = details?.profileActionKind === "coach" ? null : resolvePlayerSocialSubject(socialProviderId, details?.profileHref);
-  const [isOpen, setIsOpen] = useState(false);
+  const [internalIsOpen, setInternalIsOpen] = useState(false);
+  const requestedOpen = open ?? internalIsOpen;
+  // Trigger-only instances never own a portal, focus/scroll lock or observer.
+  // Hooks still run unconditionally, with an inactive dialog state.
+  const isOpen = presentationMode !== "trigger-only" && requestedOpen;
   const triggerRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const expandedRef = useRef<HTMLDivElement>(null);
   const pointerOriginRef = useRef<{ x: number; y: number } | null>(null);
   const pointerMovedRef = useRef(false);
+  function setIsOpen(next: boolean) {
+    if (open === undefined) setInternalIsOpen(next);
+    onOpenChange?.(next, triggerRef.current);
+  }
   const { dialogProps } = useTouchlineDialog<HTMLDivElement>({
     open: isOpen,
     onDismiss: () => setIsOpen(false),
     label: ariaLabel,
     initialFocusRef: closeRef,
-    returnFocusRef: triggerRef,
+    returnFocusRef: returnFocusRef ?? triggerRef,
+    returnFocusFallbackRef,
   });
   // Only legacy callers consult the document. Explicit page context is stable
   // on server/client and never inferred from a translated heading.
@@ -448,7 +469,7 @@ export default function TouchlineCardZoom({
 
   return (
     <>
-      <div
+      {presentationMode !== "dialog-only" ? <div
         className={styles.triggerFrame}
         data-touchline-card-zoom="trigger"
         style={{ "--touchline-card-zoom-accent": tierAccent } as CSSProperties}
@@ -459,7 +480,7 @@ export default function TouchlineCardZoom({
           role="button"
           tabIndex={0}
           aria-label={ariaLabel}
-          aria-expanded={isOpen}
+          aria-expanded={requestedOpen}
           onPointerDown={rememberPointerOrigin}
           onPointerMove={trackPointerMovement}
           onPointerCancel={() => {
@@ -471,10 +492,10 @@ export default function TouchlineCardZoom({
         >
           {children}
         </div>
-      </div>
+      </div> : null}
 
       {isOpen ? createPortal(
-        <div {...dialogProps} dir={draftLocalesEnabled ? "ltr" : undefined} lang={explicitLocale} className={styles.backdrop} onClick={() => setIsOpen(false)}>
+        <div {...dialogProps} data-touchline-card-zoom="dialog" dir={draftLocalesEnabled ? "ltr" : undefined} lang={explicitLocale} className={styles.backdrop} onClick={() => setIsOpen(false)}>
           <div
             className={`${styles.panel} ${details || detailsContent ? styles.panelWithDetails : ""}`}
             style={{ "--touchline-card-zoom-accent": tierAccent } as CSSProperties}
@@ -487,7 +508,7 @@ export default function TouchlineCardZoom({
             <button ref={closeRef} type="button" className={styles.close} aria-label={closeLabel} onClick={() => setIsOpen(false)}>
               ×
             </button>
-            <div className={styles.cardColumn}>
+            <div className={styles.cardColumn} data-touchline-card-zoom-persistent-stage={presentationMode === "dialog-only" ? "true" : undefined}>
               <div ref={expandedRef} className={styles.expandedCard} data-card-zoom="expanded">{expandedContent ?? children}</div>
               {!details || detailsContent ? lineupActions : null}
               {socialPlayerId && details ? <TouchlinePlayerSocialActions

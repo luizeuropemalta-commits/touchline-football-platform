@@ -30,10 +30,25 @@ const readRequestActiveRanking = cache(async (): Promise<TouchlineActiveRankingS
   if (activeError) throw new Error("TOUCHLINE_RANKING_READ_UNAVAILABLE");
   if (!active?.snapshot_id) return TOUCHLINE_PRESEASON_RANKING_STATE;
 
+  return readTouchlinePlayerRankingSnapshot(admin, active.snapshot_id, false);
+});
+
+/** Resolve only the immutable ID supplied by a shared publication, never its active pointer. */
+export async function readTouchlinePlayerRankingSnapshot(
+  admin: NonNullable<ReturnType<typeof createAdminClient>>,
+  snapshotId: string,
+  strict = true,
+): Promise<TouchlineActiveRankingState> {
+  const invalid = () => {
+    if (strict) throw new Error("TOUCHLINE_PINNED_RANKING_INVALID");
+    return TOUCHLINE_PRESEASON_RANKING_STATE;
+  };
+  if (!snapshotId) return invalid();
+
   const snapshotRead = Promise.resolve(admin
     .from("touchline_card_ranking_snapshots")
     .select("snapshot_id, league_key, season_id, round_id, source, status, published_at, price_table_version, expected_player_count, actual_player_count, scoring_version, coverage_status, fixture_ids, expected_fixture_ids, total_score_points, ranking_payload")
-    .eq("snapshot_id", active.snapshot_id)
+    .eq("snapshot_id", snapshotId)
     .eq("league_key", TOUCHLINE_ENGLAND_LEAGUE_KEY)
     .maybeSingle());
   // Both reads are pinned to the same pointer. Observe speculative failure even
@@ -41,7 +56,7 @@ const readRequestActiveRanking = cache(async (): Promise<TouchlineActiveRankingS
   const leadershipRead = Promise.resolve().then(() => admin
     .from("touchline_player_ranking_leadership_decisions")
     .select("ranking_id,status,leader_player_id,contender_player_ids")
-    .eq("snapshot_id", active.snapshot_id)
+    .eq("snapshot_id", snapshotId)
     .eq("league_key", TOUCHLINE_ENGLAND_LEAGUE_KEY)
     .maybeSingle()).then(
       value => ({ ok: true as const, value }),
@@ -51,14 +66,16 @@ const readRequestActiveRanking = cache(async (): Promise<TouchlineActiveRankingS
   if (error) throw new Error("TOUCHLINE_RANKING_READ_UNAVAILABLE");
   // V2/V3 conversion snapshots remain technical audit history only. A product
   // surface activates only the current fully auditable rating snapshot.
-  if (!record || record.status !== "published" || record.source !== "sportmonks-audited" || record.scoring_version !== "player_scoring_v4" || (record.coverage_status !== "complete" && record.coverage_status !== "complete_for_scoring") || record.actual_player_count !== record.expected_player_count) {
-    return TOUCHLINE_PRESEASON_RANKING_STATE;
+  if (!record || record.snapshot_id !== snapshotId || record.league_key !== TOUCHLINE_ENGLAND_LEAGUE_KEY
+    || record.status !== "published" || record.source !== "sportmonks-audited" || record.scoring_version !== "player_scoring_v4" || (record.coverage_status !== "complete" && record.coverage_status !== "complete_for_scoring") || record.actual_player_count !== record.expected_player_count) {
+    return invalid();
   }
 
   const payload = record.ranking_payload as TouchlinePublishedRankingSnapshot;
   const leadershipOutcome = await leadershipRead;
   if (!leadershipOutcome.ok) throw leadershipOutcome.error;
   const { data: persistedLeadership, error: leadershipError } = leadershipOutcome.value;
+  if (strict && leadershipError) throw new Error("TOUCHLINE_PINNED_RANKING_UNAVAILABLE");
   const playerIds = Array.isArray(payload?.players) ? payload.players.map((player) => player.playerId) : [];
   const leadershipDecision = leadershipError
     ? null
@@ -93,9 +110,10 @@ const readRequestActiveRanking = cache(async (): Promise<TouchlineActiveRankingS
   });
 
   return state && state.players.length === record.actual_player_count
+    && !(strict && payload?.cardGoals != null && !state.cardGoals)
     ? state
-    : TOUCHLINE_PRESEASON_RANKING_STATE;
-});
+    : invalid();
+}
 
 /** Reads only an immutable, audited published Top 11; absence is a valid state. */
 export async function loadTouchLinePublishedTopEleven(ranking: TouchlineActiveRankingState): Promise<TouchlinePublishedTopEleven | null> {

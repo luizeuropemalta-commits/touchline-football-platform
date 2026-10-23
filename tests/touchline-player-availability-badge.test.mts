@@ -61,6 +61,39 @@ test("provider return date is optional and never inferred", () => {
   assert.equal(resolvePlayerAvailabilityBadge(evidence, fixtureId, playerId)?.estimatedReturnDate, "2026-10-30");
 });
 
+test("conflicting or duplicate absence records never choose a badge by array order", () => {
+  const active = { id: "sidelined-1", providerId: "1", provider: "sportmonks" as const,
+    fixtureId, playerId, category: "injury", completed: false };
+  for (const other of [
+    { ...active },
+    { ...active, id: "sidelined-2", providerId: "2", completed: true },
+    { ...active, category: "suspension", typeName: "Red card suspension" },
+    { ...active, completed: undefined },
+    { ...active, fixtureId: "wrong-fixture" },
+  ]) {
+    assert.equal(availabilityBadgeForPlayer([active, other], fixtureId, playerId), null);
+    assert.equal(availabilityBadgeForPlayer([other, active], fixtureId, playerId), null);
+  }
+  assert.equal(availabilityBadgeForPlayer([active], fixtureId, playerId)?.reason, "injury");
+  assert.equal(availabilityBadgeForPlayer([{ ...active, completed: true }], fixtureId, playerId), null);
+  assert.equal(availabilityBadgeForPlayer([], fixtureId, playerId), null);
+  assert.equal(availabilityBadgeForPlayer([active, { ...active, playerId: "other-player" }], fixtureId, playerId)?.reason, "injury");
+});
+
+test("malformed or incomplete absence evidence cannot throw or invent an active injury", () => {
+  const item = { id: "sidelined-1", providerId: "1", provider: "sportmonks" as const,
+    fixtureId, playerId, category: "injury", completed: false };
+  for (const key of ["category", "reason", "typeName"] as const) {
+    const malformed = { ...item, [key]: 123 } as unknown as typeof item;
+    assert.equal(availabilityBadgeForPlayer([malformed], fixtureId, playerId), null);
+  }
+  const nonTarget = null as unknown as typeof item;
+  assert.equal(availabilityBadgeForPlayer([nonTarget, item], fixtureId, playerId)?.reason, "injury");
+  assert.equal(availabilityBadgeForPlayer([item, nonTarget], fixtureId, playerId)?.reason, "injury");
+  assert.equal(availabilityBadgeForPlayer([nonTarget], fixtureId, playerId), null);
+  assert.equal(availabilityBadgeForPlayer([{ ...item, category: undefined, completed: undefined, typeName: "Hamstring Injury" }], fixtureId, playerId), null);
+});
+
 test("a sidelined end date is not silently reclassified as a return estimate", () => {
   // Sportmonks documents end_date as the end of the sidelined period,
   // not a dedicated expected-return field. Keep the source distinction.

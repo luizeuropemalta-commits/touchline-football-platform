@@ -88,6 +88,23 @@ async function consumer(name: "ClubHubMatchdayTechnicalArea" | "ClubHubSquadGrid
   }
   let state: number | undefined;
   const captures: { kind: string; props: Record<string, unknown> }[] = [];
+  const leaf = (kind: string) => function CapturedLeaf(props: Record<string, unknown>) {
+    captures.push({ kind, props });
+    return kind === "TouchlineEliteExactCard" ? React.createElement("a", { href: props.playerProfileHref as string, "data-card": "true" }) : React.createElement("div", null, props.children as React.ReactNode);
+  };
+  // Exercise the real named wrappers and React context; only their visual leafs
+  // retain the existing capture boundary, including full card and zoom props.
+  const seasonScope: Record<string, unknown> = {};
+  const seasonResolver = await import("../lib/touchlineArena/player-season-presentation.ts");
+  runInNewContext(ts.transpileModule(readFileSync(resolve(root, "components/touchline/cards/TouchlinePlayerSeasonScope.tsx"), "utf8"), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.React },
+  }).outputText, { exports: seasonScope, React, require: (name: string) => {
+    if (name === "react") return React;
+    if (name === "./TouchlineCardLeadershipProvider") return { useTouchlineCardLeadershipAuthority: () => null };
+    if (name === "./TouchlineEliteExactCard") return { default: leaf("TouchlineEliteExactCard") };
+    if (name === "./TouchlineCardZoom") return { default: leaf("TouchlineCardZoom") };
+    assert.equal(name, "@/lib/touchlineArena/player-season-presentation"); return seasonResolver;
+  } });
   const exports: { default?: (props: Record<string, unknown>) => React.ReactElement } = {};
   runInNewContext(ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.React } }).outputText,
     { exports, React, require: (name: string) => {
@@ -96,10 +113,8 @@ async function consumer(name: "ClubHubMatchdayTechnicalArea" | "ClubHubSquadGrid
       } };
       if (name.endsWith(".css")) return { default: new Proxy({}, { get: (_, key) => String(key) }) };
       if (name === "next/link") return { default: (props: Record<string, unknown>) => React.createElement("a", props, props.children as React.ReactNode) };
-      if (name.startsWith("@/components/")) return { default: (props: Record<string, unknown>) => {
-        const kind = name.split("/").at(-1)!; captures.push({ kind, props });
-        return kind === "TouchlineEliteExactCard" ? React.createElement("a", { href: props.playerProfileHref as string, "data-card": "true" }) : React.createElement("div", null, props.children as React.ReactNode);
-      } };
+      if (name === "@/components/touchline/cards/TouchlinePlayerSeasonScope") return seasonScope;
+      if (name.startsWith("@/components/")) return { default: leaf(name.split("/").at(-1)!) };
       assert.ok(name in modules, name); return modules[name];
     } });
   assert.ok(exports.default);

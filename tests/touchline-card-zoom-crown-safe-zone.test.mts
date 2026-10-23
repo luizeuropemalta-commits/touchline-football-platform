@@ -7,9 +7,11 @@ function source(relativePath: string) {
   return readFileSync(path.join(process.cwd(), relativePath), "utf8");
 }
 
-test("ordinary zoom cards do not reserve an absent player award or coach crown", () => {
+test("ordinary zoom cards omit absent crowns while persistent dialogs retain a stable crown stage", () => {
   const css = source("components/touchline/cards/TouchlineCardZoom.module.css");
-  assert.match(css, /\.cardColumn:not\(:has\(\[data-card-golden-ball="true"\], \[data-coach-ranking-leader="true"\]\)\) \{\s*padding-top: 0;/);
+  const zoom = source("components/touchline/cards/TouchlineCardZoom.tsx");
+  assert.match(css, /\.cardColumn:not\(\[data-touchline-card-zoom-persistent-stage="true"\]\):not\(:has\(\[data-card-golden-ball="true"\], \[data-coach-ranking-leader="true"\]\)\) \{\s*padding-top: 0;/);
+  assert.match(zoom, /data-touchline-card-zoom-persistent-stage=\{presentationMode === "dialog-only" \? "true" : undefined\}/);
   assert.match(css, /\.cardColumn \{[^}]*padding-top: var\(--touchline-card-zoom-crown-safe-top\)/);
 });
 

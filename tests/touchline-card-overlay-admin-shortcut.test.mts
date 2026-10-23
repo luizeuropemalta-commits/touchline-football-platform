@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
+import ts from "typescript";
 
 import { touchlineCardEnginePlayerHref } from "../lib/touchlineArena/card-engine-links.ts";
 import { getTouchlinePlayerZoomIdentityCopy } from "../lib/touchlineArena/player-zoom-identity-i18n.ts";
@@ -64,7 +65,26 @@ test("Market keeps card zoom on the Starting XI without rendering a substitute b
   const builder = source("app/fantasy/FantasyGameweekClient.tsx");
   const card = source("components/touchline/fantasy/TouchlineGameweekCard.tsx");
   assert.match(builder, /data-market-starting-xi="true"/);
-  assert.match(builder, /<TouchlineGameweekCard card=\{card\}/);
+  const tree = ts.createSourceFile("FantasyGameweekClient.tsx", builder, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const hasAttribute = (attributes: ts.JsxAttributes, name: string, value?: string) => attributes.properties.some((property) => {
+    if (!ts.isJsxAttribute(property) || property.name.text !== name) return false;
+    return value === undefined || property.initializer?.getText(tree) === value;
+  });
+  let startingXi: ts.JsxElement | undefined;
+  const locateStartingXi = (node: ts.Node): void => {
+    if (ts.isJsxElement(node) && hasAttribute(node.openingElement.attributes, "data-market-starting-xi", '"true"')) startingXi ??= node;
+    ts.forEachChild(node, locateStartingXi);
+  };
+  locateStartingXi(tree);
+  assert.ok(startingXi, "the market Starting XI host must exist");
+  let gameweekCard: ts.JsxSelfClosingElement | undefined;
+  const locateCard = (node: ts.Node): void => {
+    if (ts.isJsxSelfClosingElement(node) && node.tagName.getText(tree) === "TouchlineGameweekCard"
+      && hasAttribute(node.attributes, "card", "{card}")) gameweekCard ??= node;
+    ts.forEachChild(node, locateCard);
+  };
+  locateCard(startingXi);
+  assert.ok(gameweekCard, "the Starting XI host itself must render the selected card");
   assert.match(card, /<TouchlineCardZoom/);
   assert.match(card, /expandedContent=\{<TouchlineEliteExactCard/);
   assert.doesNotMatch(builder, /Matchday bench/);

@@ -17,6 +17,9 @@ import * as appearance from "../lib/touchlineArena/player-appearance-presentatio
 import { buildTouchlineVerifiedMatchFactFields } from "../lib/touchlineArena/card-zoom-details.ts";
 import { isSeasonPercentage, seasonPercentageFromCounts } from "../lib/football-data/season-statistic-ratios.ts";
 import { formatTouchlineProfileTimestamp } from "../lib/touchlineArena/profile-timestamp.ts";
+import { resolveTouchlineSeasonPlayer } from "../lib/touchlineArena/player-season-presentation.ts";
+import { buildTouchlineCardLeadershipValue, type TouchlineCardLeadershipAuthority } from "../lib/touchlineArena/card-leadership-authority.ts";
+import { TOUCHLINE_PRESEASON_RANKING_STATE } from "../lib/touchlineArena/card-ranking-live.ts";
 
 // Real server policy in an isolated environment; never inherit the host flag.
 const releaseEnv: Record<string, string | undefined> = {};
@@ -64,8 +67,9 @@ const baseline = {
   "pt-BR": { performance: "Desempenho na temporada", currentSeason: "Temporada atual", latestSeason: "Última temporada concluída", currentFixture: "Partida atual ou selecionada", currentMatchRating: "Nota da partida atual", appearances: "Jogos", starts: "Titularidades", substituteAppearances: "Entradas como substituto", ratedAppearances: "Partidas com nota", officialData: "Dados do futebol real", performanceCopy: "As estatísticas refletem os dados disponíveis por partida. Participação não confirmada não comprova ausência nem seu motivo. Notas indisponíveis não são estimadas.", syncPending: "As estatísticas TouchLine Verified aguardam sincronização completa de jogador, temporada e fixtures.", identityPending: "A identidade verificada do jogador está indisponível no momento.", updatedAt: "Atualizado", verifiedSeason: "Temporada verificada", fullStats: "Estatísticas TouchLine Verified", percentageExplanation: "Percentuais calculados a partir das contagens disponíveis. Sem contagens compatíveis, a taxa fica indisponível." },
 } as const;
 const season = (patch: Partial<statistics.TouchLinePlayerSeasonStatistics> = {}) => ({ ...statistics.emptyTouchLinePlayerSeasonStatistics(), ...patch });
+const canonicalPlayerId = "10000000-0000-4000-8000-000000000001";
 const model = (current = false): statistics.TouchLinePlayerStatisticsReadModel => ({
-  touchlinePlayerId: "CANONICAL_UUID", providerPlayerId: "101", mappingStatus: "verified",
+  touchlinePlayerId: canonicalPlayerId, providerPlayerId: "101", mappingStatus: "verified",
   previousCompletedSeason: season(), currentSeason: season(), lastFiveMatches: [],
   matchHistory: [{ fixtureId: "FIXTURE_CANONICAL", fixtureName: "<script>official</script>", fixtureStartsAt: "2026-10-03T10:00:00Z",
     fixtureStatus: "FT", appearanceStatus: "started", minutes: 0, rating: 0, statistics: {}, latestSyncAt: null }],
@@ -114,11 +118,37 @@ function futureModule<T>(path: string, dependencies: Record<string, unknown>): T
   return exports as T;
 }
 
+// Real context and consumer derivation; only artwork and the upstream authority
+// are fixtures. This does not replace the season/identity admission rules.
+function seasonPublicationFixture() {
+  let authority: TouchlineCardLeadershipAuthority | null = null;
+  const dependencies: Record<string, unknown> = {
+    react: React, "react/jsx-runtime": jsxRuntime,
+    "./TouchlineCardLeadershipProvider": { useTouchlineCardLeadershipAuthority: () => authority },
+    "./TouchlineEliteExactCard": { default: () => null },
+    "./TouchlineCardZoom": { default: () => null },
+    "@/lib/touchlineArena/player-season-presentation": { resolveTouchlineSeasonPlayer },
+  };
+  const exports: Record<string, unknown> = {};
+  const code = readFileSync(new URL("../components/touchline/cards/TouchlinePlayerSeasonScope.tsx", import.meta.url), "utf8");
+  runInNewContext(ts.transpileModule(code, { compilerOptions: {
+    target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX,
+  } }).outputText, { exports, require: (name: string) => {
+    assert.ok(Object.hasOwn(dependencies, name), `Unexpected dependency ${name}`);
+    return dependencies[name];
+  } });
+  return {
+    ...exports as typeof import("../components/touchline/cards/TouchlinePlayerSeasonScope.tsx"),
+    setAuthority(next: TouchlineCardLeadershipAuthority | null) { authority = next; },
+  };
+}
+
 // Real panel functions, summary calculation and section JSX from the page.
 // Fetch/auth and surrounding page layout are not executed. CSS is a name proxy.
 // Future mode supplies the existing opt-in to real catalogue paths; no public gate changes.
 async function consumer(locale: string, future = false, sentinel = false, statisticLabelOverride?: (code: string, fallback: string, locale: string) => string) {
   const catalogue = await load(), stats = statistics;
+  const publication = seasonPublicationFixture();
   const seen: string[] = [];
   const getPerformance = (requested: string, enabled = false) => {
     seen.push(requested);
@@ -142,6 +172,7 @@ async function consumer(locale: string, future = false, sentinel = false, statis
     localizedStatLabel: statisticLabelOverride ?? statisticLabels.localizedStatLabel,
     normalizeTouchLineLocale: i18n.normalizeTouchLineLocale,
     resolveTouchlineCatalogueLocale: catalogueLocale.resolveTouchlineCatalogueLocale,
+    TouchlineSeasonStat: publication.TouchlineSeasonStat,
     styles: new Proxy({}, { get: (_, key) => String(key) }), React,
   };
   context.copy = value(initializer("copy"), context);
@@ -161,16 +192,23 @@ async function consumer(locale: string, future = false, sentinel = false, statis
     && node.openingElement.attributes.properties.some(property => ts.isJsxAttribute(property) && property.name.getText() === "id" && property.initializer?.getText() === '"official-performance"'));
   assert.equal(sections.length, 1);
   const sectionTree = (data: statistics.TouchLinePlayerStatisticsReadModel, total: number | null,
-    matchStats: Record<string, number | null> = { goals: 0 }, position = "ST") => {
+    matchStats: Record<string, number | null> = { goals: 0 }, position = "ST", live = true) => {
     const scope: Record<string, unknown> = { ...context, playerStatistics: data, exactPlayer: { matchStats }, cardFactPosition: position, totalRatingText: total };
+    scope.liveProfileSeason = value(initializer("liveProfileSeason", routeBody), {
+      previewTier: live ? null : { key: "ruby-red" }, profileSeasonId: data.currentSeason.seasonId ?? "fixture-current-season",
+    });
     scope.performanceCopy = value(initializer("performanceCopy", routeBody), scope);
     return value(sections[0].getText(), scope) as React.ReactElement;
   };
-  return { context, seen, copy: getPerformance(locale, future), sectionTree,
+  return { context, seen, copy: getPerformance(locale, future), sectionTree, setAuthority: publication.setAuthority,
     seasonComponent: exports.SeasonStatisticsPanel, fixtureComponent: exports.FixtureStatisticsPanel,
     season: (data: statistics.TouchLinePlayerSeasonStatistics, total?: number | null) => renderToStaticMarkup(React.createElement(exports.SeasonStatisticsPanel as React.ComponentType<Record<string, unknown>>, { title: "UNCHANGED_TITLE", statistics: data, text: context.text, locale, draftLocalesEnabled: future, publishedTotalRating: total })),
     fixture: (data: statistics.TouchLinePlayerStatisticsReadModel) => renderToStaticMarkup(React.createElement(exports.FixtureStatisticsPanel as React.ComponentType<Record<string, unknown>>, { model: data, text: context.text, locale, draftLocalesEnabled: future, matchStats: { goals: 0, assists: null }, position: "ST" })),
-    section: (data: statistics.TouchLinePlayerStatisticsReadModel, total: number | null) => renderToStaticMarkup(sectionTree(data, total)),
+    section: (data: statistics.TouchLinePlayerStatisticsReadModel, total: number | null, live = true) => renderToStaticMarkup(
+      React.createElement(publication.TouchlinePlayerSeasonScope, {
+        enabled: live, playerId: data.touchlinePlayerId, providerPlayerId: data.providerPlayerId,
+        seasonId: data.currentSeason.seasonId ?? "fixture-current-season",
+      }, sectionTree(data, total, undefined, "ST", live))),
   };
 }
 
@@ -438,8 +476,10 @@ test("real performance section preserves season provenance and published-rating 
       assert.equal(previous.title, h.copy.latestSeason);
       assert.equal(current.title, h.copy.currentSeason);
       assert.equal(Object.hasOwn(previous, "publishedTotalRating"), false);
+      assert.equal(Object.hasOwn(previous, "liveSeasonRating"), false);
       assert.equal(Object.hasOwn(current, "publishedTotalRating"), true);
       assert.equal(current.publishedTotalRating, total);
+      assert.equal(current.liveSeasonRating, true);
       assert.equal(fixture.model, data);
       assert.equal(fixture.matchStats, matchStats);
       assert.equal(fixture.position, "GK");
@@ -450,6 +490,38 @@ test("real performance section preserves season provenance and published-rating 
       }
       assert.deepEqual({ data, matchStats }, before);
     }
+  }
+});
+
+test("real current-season consumer follows accepted corrections without changing historical totals or preview seeds", async () => {
+  for (const locale of locales) {
+    const h = await consumer(locale, true);
+    const data = model(true);
+    data.previousCompletedSeason = season({ seasonId: "previous-season", summary: { ...season().summary, totalRating: 77 } });
+    data.currentSeason = season({ seasonId: "current-season", summary: { ...season().summary, totalRating: 999 } });
+    const before = JSON.stringify(data);
+    const text = h.context.text as { totalRating: string; unavailable: string };
+    const ratingValues = (html: string) => [...html.matchAll(/<small>([^<]*)<\/small><strong>([^<]*)<\/strong>/g)]
+      .filter(match => match[1] === escape(text.totalRating)).map(match => match[2]);
+    assert.deepEqual(ratingValues(h.section(data, 7.5)), ["77", "7.5"], "absent authority preserves the published seed, not mutable 999");
+    for (const totalRating of [11, 9, 0, null, 11]) {
+      const ranking = {
+        ...TOUCHLINE_PRESEASON_RANKING_STATE, phase: "ranked" as const,
+        snapshotId: `publication-${totalRating}`, seasonId: "current-season", scoringVersion: "player_scoring_v4" as const,
+        players: [{ playerId: canonicalPlayerId, providerPlayerId: "101", totalRating,
+          positionGroup: "striker" as const, positionRank: 1, groupSize: 1, minutesPlayed: 90, appearances: 1,
+          tierKey: "radiant-gold" as const, priceTc: 999 }],
+      };
+      h.setAuthority(buildTouchlineCardLeadershipValue(ranking, null));
+      const html = h.section(data, 7.5);
+      assert.deepEqual(ratingValues(html), ["77", totalRating === null ? escape(text.unavailable) : String(totalRating)]);
+      const expectedClass = totalRating === null ? "unavailableStat" : "primaryStat";
+      assert.ok(html.includes(`class="${expectedClass}"><small>${escape(text.totalRating)}</small><strong>${totalRating === null ? escape(text.unavailable) : totalRating}</strong>`));
+      assert.deepEqual(ratingValues(h.section(data, 7.5, false)), ["77", "7.5"], "a local preview never inherits live season points");
+    }
+    h.setAuthority(buildTouchlineCardLeadershipValue(TOUCHLINE_PRESEASON_RANKING_STATE, null));
+    assert.deepEqual(ratingValues(h.section(data, 7.5)), ["77", escape(text.unavailable)], "withdrawal never restores the old seed or mutable total");
+    assert.equal(JSON.stringify(data), before);
   }
 });
 

@@ -69,6 +69,33 @@ const readRequestCoachRanking = cache(async (): Promise<TouchLineCoachRankingSta
   // Never repair a missing/malformed relation with stale or unscoped data.
   const snapshot = object(active?.snapshot);
   if (!snapshot || snapshot.snapshot_id !== active!.snapshot_id || snapshot.league_key !== "touchline-england") return EMPTY;
+  return parseTouchlineCoachRankingSnapshot(snapshot);
+});
+
+/** A shared publication supplies the exact immutable ID. Missing is an error, not preseason. */
+export async function readTouchlineCoachRankingSnapshot(
+  admin: NonNullable<ReturnType<typeof createAdminClient>>,
+  snapshotId: string,
+): Promise<TouchLineCoachRankingState> {
+  const { data, error } = await admin.from("touchline_coach_ranking_snapshots")
+    .select("snapshot_id,league_key,season_id,scoring_version,fixture_ids,generated_at,ranking_payload")
+    .eq("snapshot_id", snapshotId).eq("league_key", "touchline-england").maybeSingle();
+  if (error) throw new Error("TOUCHLINE_PINNED_COACH_RANKING_UNAVAILABLE");
+  const snapshot = object(data);
+  if (!snapshot || snapshot.snapshot_id !== snapshotId || snapshot.league_key !== "touchline-england") {
+    throw new Error("TOUCHLINE_PINNED_COACH_RANKING_INVALID");
+  }
+  const state = parseTouchlineCoachRankingSnapshot(snapshot);
+  if (state.phase !== "ranked" || !state.seasonId || !state.generatedAt
+    || !Number.isFinite(Date.parse(state.generatedAt))
+    || state.fixtureIds.length !== (snapshot.fixture_ids as unknown[]).length
+    || new Set(state.fixtureIds).size !== state.fixtureIds.length) {
+    throw new Error("TOUCHLINE_PINNED_COACH_RANKING_INVALID");
+  }
+  return state;
+}
+
+function parseTouchlineCoachRankingSnapshot(snapshot: Record<string, unknown>): TouchLineCoachRankingState {
   if (snapshot.scoring_version !== "coach_scoring_v2" || !Array.isArray(snapshot.ranking_payload) || !Array.isArray(snapshot.fixture_ids)) return EMPTY;
   const parsed = snapshot.ranking_payload.flatMap((value): TouchLineCoachRankingRow[] => {
     if (!value || typeof value !== "object" || Array.isArray(value)) return [];
@@ -105,4 +132,4 @@ const readRequestCoachRanking = cache(async (): Promise<TouchLineCoachRankingSta
     generatedAt: text(snapshot.generated_at),
     rows: parsed,
   };
-});
+}

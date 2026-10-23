@@ -4,6 +4,9 @@ import {readFileSync} from 'node:fs';
 import ts from 'typescript';
 const source=readFileSync(new URL('../app/touchline-player-card-rankings/page.tsx',import.meta.url),'utf8');
 const ast=ts.createSourceFile('page.tsx',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
+const clientSource=readFileSync(new URL('../components/touchline/TouchlinePlayerCardRankingsPublication.tsx',import.meta.url),'utf8');
+const clientAst=ts.createSourceFile('TouchlinePlayerCardRankingsPublication.tsx',clientSource,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
+const projectionSource=readFileSync(new URL('../lib/touchlineArena/published-ranking-catalog.ts',import.meta.url),'utf8');
 
 test('public wrapper cannot enable drafts; ranking and data authority remain intact',()=>{
   const functions=ast.statements.filter(ts.isFunctionDeclaration);
@@ -13,13 +16,18 @@ test('public wrapper cannot enable drafts; ranking and data authority remain int
   assert.equal(renderer.parameters[1].initializer!.getText(ast),'false');
   const contractCalls: ts.CallExpression[] = [];
   function inspectCalls(node: ts.Node) {
-    if (ts.isCallExpression(node) && node.expression.getText(ast) === 'touchlineArenaContractHref') contractCalls.push(node);
+    if (ts.isCallExpression(node) && node.expression.getText(clientAst) === 'touchlineArenaContractHref') contractCalls.push(node);
     ts.forEachChild(node, inspectCalls);
   }
-  inspectCalls(ast);
-  assert.equal(contractCalls.length, 2);
-  for (const call of contractCalls) assert.equal(call.arguments[1]?.getText(ast), 'draftLocalesEnabled');
-  for(const expression of ['rosterCards.sort(compareTouchLineRankedCards)','rankedCards.slice(0, 3)','rankedCards.slice(0, 20)','totalRatings.toFixed(2)','activeContractPrice: undefined','activeContractCard: null']) assert.ok(source.includes(expression),expression);
+  inspectCalls(clientAst);
+  assert.equal(contractCalls.length, 0, 'public ranking has no signing path, including the selected host');
+  assert.doesNotMatch(clientSource,/contractHref=|contractValue=|contractTermLabel=/);
+  assert.match(source,/loadTouchLineRankedCardCatalog\(activeRanking\)/);
+  assert.match(source,/catalogue=\{rosterCards\}/);
+  assert.doesNotMatch(source,/rosterCards\.slice|rosterCards\.sort/);
+  assert.match(clientSource,/projectTouchlinePublishedRankingCatalog\(catalogue, ranking\)/);
+  assert.match(projectionSource,/sort\(compareTouchLineRankedCards\)/);
+  for(const expression of ['rankedCards.slice(0, 3)','rankedCards.slice(0, 20)','totalRatings.toFixed(2)','activeContractPrice: undefined','activeContractCard: null']) assert.ok(clientSource.includes(expression),expression);
   assert.equal((source.match(/supabase.auth.getUser\(\)/g)||[]).length,1);
   assert.match(source,/if \(!result.ok\) throw result.error/);
   assert.equal((source.match(/<TouchlineBrandHeader\b/g)||[]).length,1);
@@ -34,22 +42,25 @@ test('every authored card and zoom boundary carries opt-in and presentation help
   const counts:Record<string,number>={};
   function visit(node:ts.Node) {
     if(ts.isJsxOpeningElement(node)||ts.isJsxSelfClosingElement(node)) {
-      const tag=node.tagName.getText(ast);
+      const tag=node.tagName.getText();
       if(['TouchlineEliteExactCard','TouchlineCardZoom','TouchlineGlobalNavigation'].includes(tag)) {
         counts[tag]=(counts[tag]||0)+1;
         const attrs=node.attributes.properties.filter(ts.isJsxAttribute);
-        const flag=attrs.find(attr=>attr.name.getText(ast)==='draftLocalesEnabled');
-        assert.equal(flag?.initializer?.getText(ast),'{draftLocalesEnabled}');
-        if(tag==='TouchlineEliteExactCard') assert.equal(attrs.find(attr=>attr.name.getText(ast)==='runtimeLocaleOverride')?.initializer?.getText(ast),'{locale}');
+        const flag=attrs.find(attr=>attr.name.getText()==='draftLocalesEnabled');
+        assert.equal(flag?.initializer?.getText(),'{draftLocalesEnabled}');
+        if(tag==='TouchlineEliteExactCard') assert.equal(attrs.find(attr=>attr.name.getText()==='runtimeLocaleOverride')?.initializer?.getText(),'{locale}');
       }
     }
     node.forEachChild(visit);
   }
   visit(ast);
-  assert.deepEqual(counts,{TouchlineGlobalNavigation:1,TouchlineCardZoom:2,TouchlineEliteExactCard:4});
-  for(const getter of ['getTouchlineCardZoomCopy','getTouchlineExactCardCopy','getTouchLineRankingsCopy']) assert.ok(source.includes(`${getter}(locale, draftLocalesEnabled)`));
-  assert.match(source,/touchlineCardTierName\(presentation.tierKey, locale, draftLocalesEnabled\)/);
-  assert.equal((source.match(/localizedPositionLabel\(card.position, locale, draftLocalesEnabled\)/g)||[]).length,2);
-  assert.match(source,/buildTouchlinePlayerCardZoomDetails\(\{\s*locale,\s*draftLocalesEnabled,/);
-  assert.match(source,/buildTouchlineVerifiedMatchFactFields\(\{[\s\S]*?\}, locale, draftLocalesEnabled\)/);
+  visit(clientAst);
+  assert.deepEqual(counts,{TouchlineGlobalNavigation:1,TouchlineCardZoom:3,TouchlineEliteExactCard:3});
+  assert.equal((clientSource.match(/presentationMode="trigger-only"/g)||[]).length,2);
+  assert.equal((clientSource.match(/presentationMode="dialog-only"/g)||[]).length,1);
+  for(const getter of ['getTouchlineCardZoomCopy','getTouchlineExactCardCopy','getTouchLineRankingsCopy']) assert.ok(clientSource.includes(`${getter}(locale, draftLocalesEnabled)`));
+  assert.match(clientSource,/touchlineCardTierName\(presentation.tierKey, locale, draftLocalesEnabled\)/);
+  assert.equal((clientSource.match(/localizedPositionLabel\(card.position, locale, draftLocalesEnabled\)/g)||[]).length,2);
+  assert.match(clientSource,/buildTouchlinePlayerCardZoomDetails\(\{\s*locale,\s*draftLocalesEnabled,/);
+  assert.match(clientSource,/buildTouchlineVerifiedMatchFactFields\(\{[\s\S]*?\}, locale, draftLocalesEnabled\)/);
 });

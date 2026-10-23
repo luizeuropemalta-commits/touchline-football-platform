@@ -83,6 +83,44 @@ test("only single-feed explicit zero-HTTP denial exposes deferred recovery resul
   });
 });
 
+test("Live preserves a closed zero-HTTP refusal diagnostic without changing error semantics or retrying", async () => {
+  let fetches = 0, admissions = 0;
+  await synthetic(async () => { fetches++; return json([fixture()]); }, async () => {
+    const p = new Constructor({ fixtureGuard: { accountScope: "qa-main", createPort: () => ({
+      beforeAttempt: () => { admissions++; return { allowed: false }; },
+      afterAttempt: () => assert.fail("a refused attempt must not be completed"),
+    }) } });
+    for (const read of [() => p.getLiveScores(), () => p.getLiveScores(), () => p.getLatestLiveScores()]) {
+      const result = await read();
+      assert.equal(result.ok, false);
+      if (!result.ok) {
+        assert.equal(result.error.code, "provider_error", "no new deferred/success control flow");
+        assert.equal(result.error.requestDisposition, "deferred-before-http");
+        assert.equal(result.error.status, undefined);
+        assert.equal(result.error.remaining, undefined, "a refusal is not a measured balance");
+      }
+    }
+    assert.equal(admissions, 3, "a refused read is not cached or retried");
+    assert.equal(fetches, 0);
+    const multi = await p.getFixturesBetween({ fromDate: "2026-10-01", throughDate: "2026-10-02", competitionId: "8" });
+    assert.equal(multi.ok, false);
+    if (!multi.ok) assert.equal(multi.error.requestDisposition, undefined, "never infer whole paginated operation from one response");
+  });
+});
+
+test("Live transport failure and invalid enforcement do not claim explicit zero-HTTP refusal", async () => {
+  let fetches = 0;
+  await synthetic(async () => { fetches++; throw new Error("synthetic network failure"); }, async () => {
+    const invalid = await new Constructor({ fixtureGuard: null }).getLiveScores();
+    assert.equal(invalid.ok, false);
+    if (!invalid.ok) assert.equal(invalid.error.requestDisposition, undefined);
+    const result = await guard().provider().getLiveScores();
+    assert.equal(result.ok, false);
+    if (!result.ok) assert.equal(result.error.requestDisposition, undefined);
+    assert.ok(fetches > 0);
+  });
+});
+
 test("exact Fixture endpoint families use sanitized awaited ports; League is not misclassified", async () => {
   const g = guard();
   let calls = 0;

@@ -50,6 +50,7 @@ type Input = {
   coachError?: string;
   liveError?: string;
   liveHttpStatus?: number;
+  liveRequestDisposition?: unknown;
   feedError?: string;
   feedPersistenceError?: string;
   lineupError?: string;
@@ -208,7 +209,8 @@ function scenario(input: Input = {}) {
     provider: input.providerInitializationFailure ? undefined : {
       async getLiveScores() {
         calls.push("provider-live");
-        return input.liveError ? { ok: false, error: { code: input.liveError, status: input.liveHttpStatus, message: "secret-provider-payload" } } : { ok: true, data: input.noIncomingFixtures ? []
+        return input.liveError ? { ok: false, error: { code: input.liveError, status: input.liveHttpStatus,
+          requestDisposition: input.liveRequestDisposition, message: "secret-provider-payload" } } : { ok: true, data: input.noIncomingFixtures ? []
           : input.secondUnwrittenFixture ? [incomingFixture, secondIncoming] : [incomingFixture] };
       },
       async getFixtureFantasyFeed(providerId: string) {
@@ -675,6 +677,24 @@ test("provider HTTP diagnostic preserves status without provider messages", asyn
     assert.equal(JSON.stringify(s.writes).includes("secret-provider-payload"), false);
     assert.equal(result.status, "error");
   }
+});
+
+test("Live receipt distinguishes an explicit pre-HTTP denial while preserving failure and redacting arbitrary details", async () => {
+  for (const disposition of ["deferred-before-http", "private-token=https://secret.invalid", null, {}]) {
+    const s = scenario({ liveError: "provider_error", liveRequestDisposition: disposition, feedError: "unavailable" });
+    const result = await s.run();
+    const suffix = disposition === "deferred-before-http" ? ":admission_denied_before_http" : "";
+    assert.ok(result.errors.includes(`live-scores:provider_error${suffix}`));
+    assert.ok(s.writes[0].error_message?.includes(`live-scores:provider_error${suffix}`));
+    assert.equal(result.status, "error"); assert.equal(result.ok, false);
+    assert.doesNotMatch(JSON.stringify(s.writes), /secret-provider-payload|private-token|secret\.invalid/);
+    assertCompletion(s, result);
+  }
+  const contradictory = scenario({ liveError: "provider_error", liveHttpStatus: 403,
+    liveRequestDisposition: "deferred-before-http", feedError: "unavailable" });
+  const result = await contradictory.run();
+  assert.ok(result.errors.includes("live-scores:provider_error:http_403"));
+  assert.doesNotMatch(contradictory.writes[0].error_message ?? "", /admission_denied/);
 });
 
 test("a normal cadence no-op stays successful without postponing real work", async () => {

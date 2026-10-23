@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import ts from "typescript";
 import { getTouchlineFantasyMarketAccessCopy } from "../lib/touchlineFantasy/market-access-i18n.ts";
 import { getTouchlineFantasyMarketWorkflowCopy } from "../lib/touchlineFantasy/market-workflow-i18n.ts";
 
@@ -99,7 +100,30 @@ test("My Club opens the tactical field by default and keeps eligibility contextu
   assert.match(embedded, /"--touchline-card-static-scale": pitchCardWidth \/ 430/);
   assert.match(embedded, /className=\{styles\.myClubTacticalSlot\}/);
   assert.match(embedded, /data-pitch-edge=\{slot\.x >= 75 \? "end" : undefined\}/);
-  assert.match(embedded, /<TouchlineGameweekCard card=\{card\} locale=\{locale\} draftLocalesEnabled=\{draftLocalesEnabled\} compact displayWidth=\{pitchCardWidth\} replacementAction=/);
+  // JSX callbacks contain `=>`; an HTML-style regex would truncate these
+  // attributes before the card closes. Bind every assertion to one real node.
+  const ast = ts.createSourceFile("FantasyGameweekClient.tsx", client, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const tacticalCards: ts.JsxSelfClosingElement[] = [];
+  const visit = (node: ts.Node) => {
+    if (ts.isJsxSelfClosingElement(node) && node.tagName.getText(ast) === "TouchlineGameweekCard"
+      && node.attributes.properties.some(attribute => ts.isJsxAttribute(attribute)
+        && attribute.name.getText(ast) === "displayWidth" && attribute.initializer?.getText(ast) === "{pitchCardWidth}")) tacticalCards.push(node);
+    ts.forEachChild(node, visit);
+  };
+  visit(ast);
+  assert.equal(tacticalCards.length, 1);
+  const tacticalCard = tacticalCards[0];
+  assert.ok(tacticalCard);
+  assert.ok(tacticalCard.getStart(ast) >= client.indexOf("if (embedded) {"));
+  assert.ok(tacticalCard.end < client.indexOf('className={styles.shell}'));
+  const attributes = new Map(tacticalCard.attributes.properties.filter(ts.isJsxAttribute)
+    .map(attribute => [attribute.name.getText(ast), attribute]));
+  assert.equal(attributes.get("card")?.initializer?.getText(ast), "{card}");
+  assert.equal(attributes.get("locale")?.initializer?.getText(ast), "{locale}");
+  assert.equal(attributes.get("draftLocalesEnabled")?.initializer?.getText(ast), "{draftLocalesEnabled}");
+  assert.ok(attributes.has("compact"));
+  assert.equal(attributes.get("compact")?.initializer, undefined);
+  assert.ok(attributes.get("replacementAction")?.initializer);
   assert.doesNotMatch(embedded, /data-slot-action/);
   assert.match(embedded, /removalAction=\{selection \? \{ label: `\$\{workflowCopy\.remove\} · \$\{card\.name\}`/);
   assert.match(embedded, /className=\{styles\.emptyPosition\}[^\n]*onClick=\{\(\) => openTacticalSelector\(slot\.id\)\}/);

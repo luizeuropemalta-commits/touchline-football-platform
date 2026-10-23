@@ -41,7 +41,7 @@ export default async function ClubHubPremiumRedesignPage({
   const liveReadsEnabled = process.env.TOUCHLINE_CLUBHUB_VISUAL_QA_LIVE_READ === "1";
 
   const [table, squad, feed, featuredPost, fullTimeDraft] = await Promise.all([
-    liveReadsEnabled ? loadTouchlineOfficialLeagueTable() : Promise.resolve(null),
+    liveReadsEnabled ? loadTouchlineOfficialLeagueTable({ includeLiveProjectionSource: true }) : Promise.resolve(null),
     liveReadsEnabled ? readPublicPremierSquad(club.teamId) : Promise.resolve(null),
     liveReadsEnabled
       ? readTouchlineClubSocialFeed({ providerTeamId: club.teamId, limit: 12, cursor: feedCursor ?? null })
@@ -177,6 +177,7 @@ export default async function ClubHubPremiumRedesignPage({
       initialTimeZone={initialTimeZone}
       nextFixture={{ ...qaSnapshot.nextFixture, homePosition: arsenalPosition, awayPosition: chelseaPosition }}
       snapshotMode={!liveReadsEnabled || table?.rows.length !== 20 || !(squad?.status === 200 && squad.body.ok)}
+      liveReadsEnabled={liveReadsEnabled && table?.rows.length === 20}
       squad={squadView}
       table={tableView}
     />

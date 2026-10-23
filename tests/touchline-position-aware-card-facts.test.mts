@@ -220,7 +220,7 @@ test("zoom facts are position-aware and render unavailable rating as a dash", ()
 
 test("public match-fact surfaces consume the shared position-aware fact builder", async () => {
   const paths = [
-    "app/touchline-player-card-rankings/page.tsx",
+    "components/touchline/TouchlinePlayerCardRankingsPublication.tsx",
     "app/touchline-players/[player]/page.tsx",
     "components/touchline/ClubHubOfficialLineup.tsx",
     "components/touchline/ClubHubSquadGrid.tsx",

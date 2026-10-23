@@ -13,6 +13,8 @@ import { createTouchlineArenaCoachSlot } from "../lib/touchlineArena/coach-card.
 import { TOUCHLINE_COACH_CARD_DEFAULT_LAYOUT } from "../lib/touchlineArena/coach-card-layout.ts";
 import type { TouchlineCoach } from "../lib/football-data/types.ts";
 import { resolveCoachSigningPricePresentation } from "../lib/touchlineArena/coach-signing-price-i18n.ts";
+import { buildTouchlineCardLeadershipValue, type TouchlineCardLeadershipAuthority } from "../lib/touchlineArena/card-leadership-authority.ts";
+import type { TouchLineCoachRankingState } from "../lib/touchlineArena/coach-ranking-server.ts";
 
 type CopyModule = typeof import("../lib/touchlineArena/coach-card-i18n.ts");
 const root = fileURLToPath(new URL("../", import.meta.url));
@@ -35,10 +37,10 @@ const slot = createTouchlineArenaCoachSlot(coach, 1);
 
 // Full real component, React hooks/JSX and pure collaborators. The leadership
 // context is an external boundary; SSR deliberately does not run browser effects.
-function fixture(copy?: Partial<CopyModule>) {
+function fixture(copy?: Partial<CopyModule>, authority: () => TouchlineCardLeadershipAuthority | null = () => null) {
   const cache = new Map<string, unknown>();
   const replacements: Record<string, unknown> = {
-    "./TouchlineCardLeadershipProvider": { useTouchlineCardLeadershipAuthority: () => null },
+    "./TouchlineCardLeadershipProvider": { useTouchlineCardLeadershipAuthority: authority },
     ...(copy ? { "@/lib/touchlineArena/coach-card-i18n": copy } : {}),
   };
   function load(specifier: string, parent: string): unknown {
@@ -62,6 +64,30 @@ function fixture(copy?: Partial<CopyModule>) {
     coach, slot, clubName: "Canonical Club & Co", clubLogoUrl: "/canonical-crest.png", countryCode3: "ENG", locale, ...props,
   }));
 }
+
+test("real coach compact and zoom card render the same live points and moving crown without changing settled values", () => {
+  let current: TouchlineCardLeadershipAuthority | null = null;
+  const render = fixture(undefined, () => current);
+  const record = { wins: 0, draws: 0, losses: 0, touchlinePoints: 0 };
+  for (const [points, leader] of [[3, "1"], [1, "2"], [-2, "2"], [3, "1"]] as const) {
+    const ranking: TouchLineCoachRankingState = { phase: "ranked", snapshotId: `coach-${points}`, seasonId: "season", scoringVersion: "coach_scoring_v2", fixtureIds: [], generatedAt: null,
+      rows: [
+        { rank: leader === "1" ? 1 : 2, coachProviderId: "1", coachName: "Coach", clubName: "Club", touchlinePoints: points, wins: 0, draws: 0, losses: 0, awayWins: 0, home: record, away: record },
+        { rank: leader === "2" ? 1 : 2, coachProviderId: "2", coachName: "Other", clubName: "Other", touchlinePoints: 2, wins: 0, draws: 0, losses: 0, awayWins: 0, home: record, away: record },
+      ].sort((a, b) => a.rank - b.rank) };
+    current = buildTouchlineCardLeadershipValue(null, ranking);
+    for (const optimizeForLiveCompact of [true, false]) {
+      const html = render("pt-BR", { optimizeForLiveCompact, liveRankingPoints: true });
+      assert.ok(html.includes(`<small>TL PTS</small><strong>${points}</strong>`));
+      assert.equal(html.includes('data-touchline-coach-leader-crown="true"'), leader === "1");
+      const frozen = render("pt-BR", { optimizeForLiveCompact, liveRankingPoints: true, publishedTouchlinePoints: 0 });
+      assert.match(frozen, /<small>TL PTS<\/small><strong>0<\/strong>/);
+      assert.doesNotMatch(frozen, /data-touchline-coach-leader-crown="true"/);
+    }
+  }
+  current = buildTouchlineCardLeadershipValue(null, null);
+  assert.match(render("pt-BR", { liveRankingPoints: true }), /<small>TL PTS<\/small><strong>—<\/strong>/);
+});
 
 test("game-only signing footer preserves points and rejects invalid prices", () => {
   const render = fixture();

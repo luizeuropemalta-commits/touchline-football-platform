@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { stripTypeScriptTypes } from "node:module";
 import { runInNewContext } from "node:vm";
 import test from "node:test";
+import { CLUB_POSITION_LEADER_GROUPS } from "../lib/touchlineArena/club-position-leaders.ts";
 
 const page = readFileSync(new URL("../app/touchline-clubs/[club]/page.tsx", import.meta.url), "utf8");
 const leagueTable = readFileSync(new URL("../components/touchline/TouchlineOfficialLeagueTable.tsx", import.meta.url), "utf8");
@@ -17,6 +18,8 @@ const technicalStyles = readFileSync(new URL("../components/touchline/ClubHubMat
 const outsideRoster = readFileSync(new URL("../components/touchline/ClubHubOutsideMatchRoster.tsx", import.meta.url), "utf8");
 const outsideRosterStyles = readFileSync(new URL("../components/touchline/ClubHubOutsideMatchRoster.module.css", import.meta.url), "utf8");
 const lineup = readFileSync(new URL("../lib/touchlineArena/club-lineup.ts", import.meta.url), "utf8");
+const leaders = readFileSync(new URL("../components/touchline/ClubHubPositionLeaders.tsx", import.meta.url), "utf8");
+const leaderProjection = readFileSync(new URL("../lib/touchlineArena/club-position-leaders.ts", import.meta.url), "utf8");
 
 test("compact fixtures occupy the former stadium slot after navigation", () => {
   const navigation = page.indexOf("<ClubHubSectionNavigation");
@@ -199,7 +202,7 @@ test("technical area keeps a nine-card preview distinct from the official bench 
 });
 
 test("the official league table remains server-owned and separate from TouchLine-card content", () => {
-  assert.match(page, /loadTouchlineOfficialLeagueTable\(\)/);
+  assert.match(page, /loadTouchlineOfficialLeagueTable\(\{ includeLiveProjectionSource: true \}\)/);
   assert.match(page, /<TouchlineOfficialLeagueTable[\s\S]*?variant="clubHubRail"/);
   assert.doesNotMatch(page, /ClubHubCardsSection/);
 });
@@ -237,12 +240,14 @@ test("the functional ClubHub places canonical positional leaders beside the matc
   assert.match(page, /<ClubHubNextFixtureCard/);
   assert.match(page, /previewHref=\{null\}/);
   assert.match(page, /<ClubHubCanonicalCoachPanel[\s\S]*?presentation="technical"/);
-  assert.match(page, /<TouchlineGameweekCard\b[^>]*\bcard=\{leader\.card\}/);
-  assert.match(page, /leaderCards=\{\(/);
-  assert.match(page, /displayWidth=\{112\}/);
-  assert.match(page, /const clubPositionLeaders = CLUB_POSITION_LEADER_GROUPS\.map/);
-  assert.match(page, /ranking\.positionGroup/);
-  assert.doesNotMatch(page, /fallbackLeaderCard/);
+  assert.match(page, /leaderCards=\{<ClubHubPositionLeaders cards=\{presentation\.clubCards\} seed=\{activeRanking\} enabled=\{dataSource === "direct"\}/);
+  assert.match(leaders, /projectClubPositionLeaders\(cards, ranking\)/);
+  assert.match(leaders, /<TouchlineGameweekCard\b[^>]*\bcard=\{leader\.card\}/);
+  assert.match(leaders, /displayWidth=\{112\}/);
+  assert.match(leaderProjection, /CLUB_POSITION_LEADER_GROUPS\.map/);
+  assert.match(leaderProjection, /positionGroup: facts\.positionGroup/);
+  assert.deepEqual(CLUB_POSITION_LEADER_GROUPS.map(group => group.key), ["centre-back", "full-back", "midfielder", "attacker"]);
+  assert.doesNotMatch(`${page}\n${leaders}\n${leaderProjection}`, /fallbackLeaderCard/);
   assert.match(page, /normalizeTouchlineMatchCentreTimeZone/);
   assert.doesNotMatch(page, /qa-canonical-snapshot|NOT A FOOTBALL CLAIM|LOCAL DRAFT/);
 });

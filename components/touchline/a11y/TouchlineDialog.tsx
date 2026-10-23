@@ -34,6 +34,8 @@ type TouchlineDialogOptions = {
   initialFocusRef?: RefObject<HTMLElement | null>;
   /** Prefer this control after the dialog closes. */
   returnFocusRef?: RefObject<HTMLElement | null>;
+  /** Safe page anchor when a live list removes the original trigger. */
+  returnFocusFallbackRef?: RefObject<HTMLElement | null>;
 };
 
 type InertSnapshot = {
@@ -168,9 +170,14 @@ export function useTouchlineDialog<T extends HTMLElement = HTMLElement>({
   label,
   initialFocusRef,
   returnFocusRef,
+  returnFocusFallbackRef,
 }: TouchlineDialogOptions) {
   const dialogRef = useRef<T | null>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
+  // A live publication can replace the currently focused card/detail control
+  // without closing its persistent dialog. Keep only the last in-dialog node;
+  // it is used exclusively when that node is actually removed.
+  const lastDialogFocusRef = useRef<HTMLElement | null>(null);
   const dismissRef = useRef(onDismiss);
 
   useEffect(() => {
@@ -229,30 +236,76 @@ export function useTouchlineDialog<T extends HTMLElement = HTMLElement>({
       ? activeElement
       : null;
     const explicitReturnTarget = returnFocusRef?.current ?? null;
+    const fallbackReturnTarget = returnFocusFallbackRef?.current ?? null;
+    lastDialogFocusRef.current = null;
 
     const unlockBackground = lockSiblingBackground(dialog);
+    const rememberDialogFocus = (event: FocusEvent) => {
+      const target = event.target;
+      if (target instanceof HTMLElement && dialog.contains(target)) {
+        lastDialogFocusRef.current = target;
+      }
+    };
+    const focusInsideDialog = () => {
+      for (const target of [initialFocusRef?.current, getFocusableElements(dialog)[0], dialog]) {
+        if (target && focusElement(target)) {
+          lastDialogFocusRef.current = target;
+          return true;
+        }
+      }
+      return false;
+    };
+    const focusWasLost = () => {
+      const active = document.activeElement;
+      // Do not take focus from a nested dialog, another modal, or a deliberate
+      // in-dialog relocation. Browsers normally fall back to body after a
+      // focused node is unmounted; documentElement covers equivalent fallback.
+      return active === null || active === document.body || active === document.documentElement;
+    };
+    const isCoveredByAnotherDialog = () => {
+      // A portaled nested dialog inerts its older sibling. An in-tree nested
+      // dialog instead remains a descendant, so recognise that deeper modal
+      // directly. Either case must win over an older dialog's repair RAF.
+      if (hasInertAncestor(dialog)) return true;
+      return Array.from(document.querySelectorAll<HTMLElement>('[data-touchline-dialog-root="true"][aria-modal="true"]'))
+        .some((candidate) => candidate !== dialog && dialog.contains(candidate));
+    };
+    const removedFocusedNode = (records: MutationRecord[]) => {
+      const focused = lastDialogFocusRef.current;
+      if (!focused) return false;
+      return records.some((record) => Array.from(record.removedNodes).some((node) => node === focused || node.contains(focused)));
+    };
+    const repairFocusAfterRemoval = (records: MutationRecord[]) => {
+      if (!removedFocusedNode(records) || !focusWasLost() || !dialog.isConnected || isCoveredByAnotherDialog()) return;
+      focusInsideDialog();
+    };
+    dialog.addEventListener("focusin", rememberDialogFocus);
+    const focusObserver = new MutationObserver(repairFocusAfterRemoval);
+    focusObserver.observe(dialog, { childList: true, subtree: true });
     const focusFrame = window.requestAnimationFrame(() => {
       if (!dialog.isConnected) return;
-      if (focusElement(initialFocusRef?.current)) return;
-      if (focusElement(getFocusableElements(dialog)[0])) return;
-      focusElement(dialog);
+      focusInsideDialog();
     });
 
     return () => {
       window.cancelAnimationFrame(focusFrame);
+      focusObserver.disconnect();
+      dialog.removeEventListener("focusin", rememberDialogFocus);
       unlockBackground();
 
       window.requestAnimationFrame(() => {
         const anotherDialogIsOpen = document.querySelector('[data-touchline-dialog-root="true"][aria-modal="true"]');
         const returnTarget = explicitReturnTarget ?? previousFocusRef.current;
-        // A nested zoom may return to its trigger in the still-open picker,
-        // but never to the background behind an unrelated dialog.
-        if (anotherDialogIsOpen && (!returnTarget || !anotherDialogIsOpen.contains(returnTarget))) return;
-        if (!returnTarget || hasInertAncestor(returnTarget)) return;
-        focusElement(returnTarget);
+        for (const target of [returnTarget, fallbackReturnTarget]) {
+          // A nested zoom may return to its trigger in the still-open picker,
+          // but never to the background behind an unrelated dialog.
+          if (!target || hasInertAncestor(target)) continue;
+          if (anotherDialogIsOpen && !anotherDialogIsOpen.contains(target)) continue;
+          if (focusElement(target)) return;
+        }
       });
     };
-  }, [initialFocusRef, open, returnFocusRef]);
+  }, [initialFocusRef, open, returnFocusRef, returnFocusFallbackRef]);
 
   const dialogProps = useMemo(() => ({
     ref: dialogRef,

@@ -9,6 +9,7 @@ import { TOUCHLINE_LIVE_COACHES } from "../lib/touchlineArena/live-coaches.ts";
 import { isTouchLineLocaleComplete, TOUCHLINE_COMPLETE_LOCALES } from "../lib/touchlineArena/i18n.ts";
 import { touchlineCardTierName, touchlineCardTierPalette } from "../lib/touchlineArena/card-rules.ts";
 import { resolveTouchlineCoachZoomPresentation } from "../lib/touchlineArena/coach-zoom-i18n.ts";
+import { coachCompetitionFromRanking } from "../lib/touchlineArena/coach-competition-projection.ts";
 import type { TouchlineCardZoomDetails } from "../components/touchline/cards/TouchlineCardZoom.tsx";
 
 const locales = ["en-GB", "pt-BR", "es-ES", "it-IT", "fr-FR", "ar-SA", "tr-TR", "de-DE"] as const;
@@ -71,6 +72,8 @@ test("actual coach zoom consumes the public country helper without mutating coac
     "@/lib/touchlineArena/card-rules": { touchlineCardTierName, touchlineCardTierPalette },
     "@/lib/touchlineArena/country-labels": { localizedCountryLabel },
     "@/lib/touchlineArena/coach-zoom-i18n": { resolveTouchlineCoachZoomPresentation },
+    "@/lib/touchlineArena/coach-competition-projection": { coachCompetitionFromRanking },
+    "./TouchlineCardLeadershipProvider": { useTouchlineCardLeadershipAuthority: () => null },
     "./TouchlineCoachCard": { default: () => null }, "./TouchlineCardZoom": { default: () => null },
   };
   const Coach = compile("../components/touchline/cards/TouchlineCoachCardZoom.tsx", name => { assert.ok(name in modules, name); return modules[name]; }).default as (props: Record<string, unknown>) => { props: { details: TouchlineCardZoomDetails; children: { props: Record<string, unknown> }; expandedContent: { props: Record<string, unknown> } } };

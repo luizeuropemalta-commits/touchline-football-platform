@@ -13,12 +13,18 @@ import { localizedCountryLabel } from "../lib/touchlineArena/country-labels.ts";
 import { resolveTouchLinePresentationLocale } from "../lib/touchlineArena/root-locale.ts";
 import { getTouchlineCardZoomCopy } from "../lib/touchlineArena/card-zoom-i18n.ts";
 import * as coachCopy from "../lib/touchlineArena/coach-zoom-i18n.ts";
+import { coachCompetitionFromRanking } from "../lib/touchlineArena/coach-competition-projection.ts";
+import { buildTouchlineCardLeadershipValue, type TouchlineCardLeadershipAuthority } from "../lib/touchlineArena/card-leadership-authority.ts";
+import type { TouchLineCoachRankingState } from "../lib/touchlineArena/coach-ranking-server.ts";
 
 const competition = { snapshotId: "snapshot", seasonId: "season", seasonLabel: "Canonical season", rank: 3, scoringVersion: "coach_scoring_v2", totalTouchlinePoints: 0, home: { wins: 2, draws: 1, losses: 0, touchlinePoints: 7 }, away: { wins: 0, draws: 1, losses: 3, touchlinePoints: -3 } };
 const contract = { id: "contract", coachProviderId: "789", clubProviderId: "123", status: "active", startedAt: "2026-01-01", endedAt: null, endReason: null, scoringVersion: "coach_scoring_v2", totalTouchlinePoints: 41, home: { wins: 4, draws: 1, losses: 0, touchlinePoints: 13 }, away: { wins: 3, draws: 2, losses: 0, touchlinePoints: 28 }, currentFixture: { fixtureId: "fixture", context: "away", status: "live", startsAt: null, provisionalPoints: 0 }, fixtureHistory: [] };
 
 type ZoomProps = { locale: string; details: TouchlineCardZoomDetails; expandedContent: React.ReactElement<Record<string, unknown>>; children: React.ReactElement<Record<string, unknown>>; ariaLabel: string };
+let liveAuthority: TouchlineCardLeadershipAuthority | null = null;
 const modules: Record<string, unknown> = {
+  "./TouchlineCardLeadershipProvider": { useTouchlineCardLeadershipAuthority: () => liveAuthority },
+  "@/lib/touchlineArena/coach-competition-projection": { coachCompetitionFromRanking },
   "@/lib/touchlineArena/catalogue-locale": catalogueLocale,
   react: { ...React, useState: () => [true, () => {}] }, "react/jsx-runtime": jsxRuntime,
   "react-dom": { createPortal: (children: React.ReactNode) => children },
@@ -51,6 +57,38 @@ function render(details: TouchlineCardZoomDetails, locale: string) {
   return renderToStaticMarkup(React.createElement(Panel, { details, locale }));
 }
 function icons(html: string) { return [...html.matchAll(/data-icon="([^"]+)"/g)].map((match) => match[1]); }
+
+test("an already-open zoom updates its entire record with both cards; explicit contract scope remains pinned", () => {
+  try {
+    for (const points of [3, 1, -2, 3]) {
+      const ranking: TouchLineCoachRankingState = { phase: "ranked", snapshotId: `s${points}`, seasonId: "season", scoringVersion: "coach_scoring_v2", generatedAt: null, fixtureIds: [],
+        rows: [{ coachProviderId: "789", coachName: "Coach", clubName: "Club", rank: 1, touchlinePoints: points, wins: 0, draws: 0, losses: 0, awayWins: 0,
+          home: { wins: points === 3 ? 1 : 0, draws: points === 1 ? 1 : 0, losses: points === -2 ? 1 : 0, touchlinePoints: points },
+          away: { wins: 0, draws: 0, losses: 0, touchlinePoints: 0 } }] };
+      liveAuthority = buildTouchlineCardLeadershipValue(null, ranking);
+      const props = Coach({ coach: { providerId: "789", displayName: "Coach" }, slot: { cardTier: "ruby-red" }, clubName: "Club", competition, contract,
+        liveCompetitionUpdates: true }).props;
+      const fields = props.details.fields.filter(field => field.group === "performance");
+      assert.deepEqual(Array.from(fields, field => field.value), ["#1", String(points), `${points === 3 ? 1 : 0}-${points === 1 ? 1 : 0}-${points === -2 ? 1 : 0}`, String(points), "0-0-0", "0"]);
+      for (const card of [props.children, props.expandedContent]) {
+        assert.equal(card.props.publishedTouchlinePoints, points);
+        assert.equal(card.props.showLeadershipCrown, true);
+      }
+      const pinned = produce("en-GB", { competition: null, contract });
+      assert.equal(pinned.details.fields.find(field => field.primary)?.value, "41");
+      assert.equal(pinned.children.props.publishedTouchlinePoints, 999);
+      const explicit = Coach({ coach: { providerId: "789", displayName: "Coach" }, slot: { cardTier: "ruby-red" }, clubName: "Club", competition, contract,
+        liveCompetitionUpdates: true, publishedTouchlinePoints: 999, showLeadershipCrown: false }).props;
+      assert.equal(explicit.children.props.publishedTouchlinePoints, 999, "explicit frozen points override live opt-in");
+      assert.equal(explicit.expandedContent.props.showLeadershipCrown, false, "explicit weekly award remains pinned");
+    }
+    liveAuthority = buildTouchlineCardLeadershipValue(null, null);
+    const unavailable = Coach({ coach: { providerId: "789", displayName: "Coach" }, slot: { cardTier: "ruby-red" }, clubName: "Club", competition, contract, liveCompetitionUpdates: true }).props;
+    assert.equal(unavailable.details.fields.some(field => field.primary), false, "withdrawn public ranking never falls back to a private contract");
+    assert.equal(unavailable.children.props.publishedTouchlinePoints, null);
+    assert.equal(unavailable.children.props.showLeadershipCrown, false);
+  } finally { liveAuthority = null; }
+});
 
 test("coach producer declares canonical grouping and distinct rank tokens without translating labels", () => {
   for (const locale of ["pt-BR", "en-GB", "es-ES", "it-IT", "fr-FR", "ar-SA", "tr-TR", "de-DE"]) {

@@ -3,65 +3,54 @@
 import { useSyncExternalStore } from "react";
 import {
   TOUCHLINE_PRESEASON_RANKING_STATE,
-  parseTouchlineActiveRankingState,
   type TouchlineActiveRankingState,
 } from "./card-ranking-live";
-
-const ACTIVE_RANKING_URL = "/api/touchline-arena/card-ranking/active";
+import { touchlineLivePresentationStore } from "./live-presentation-client-store";
+import type { TouchLineCoachRankingState } from "./coach-ranking-server";
 
 let currentState: TouchlineActiveRankingState = TOUCHLINE_PRESEASON_RANKING_STATE;
-export type TouchlineRankingRead = Readonly<{ state: TouchlineActiveRankingState; revision: number; requestEpoch: number }>;
-let requestEpoch = 0;
-export const getTouchlineRankingRequestEpoch = () => requestEpoch;
+export type TouchlineRankingRead = Readonly<{ state: TouchlineActiveRankingState; coachRanking: TouchLineCoachRankingState | null; revision: number; requestEpoch: number; publicationDigest: string }>;
+export const getTouchlineRankingRequestEpoch = () => touchlineLivePresentationStore.getRequestEpoch();
 const NO_COMPLETED_READ: TouchlineRankingRead | null = null;
 let completedRead: TouchlineRankingRead | null = null;
 export const getTouchlineRankingReadRevision = () => completedRead?.revision ?? 0;
 const getCompletedRead = () => completedRead;
 const getNoCompletedRead = () => NO_COMPLETED_READ;
-let activeRequest: Promise<void> | null = null;
-let refreshTimer: number | null = null;
+let stopShared: (() => void) | null = null;
 const listeners = new Set<() => void>();
 const subscribeWithoutUpdates = () => () => undefined;
 const getActiveRankingSnapshot = () => currentState;
 const getPreseasonRankingSnapshot = () => TOUCHLINE_PRESEASON_RANKING_STATE;
 
 function emitChange() {
-  for (const listener of listeners) listener();
-}
-
-function loadActiveRanking() {
-  if (activeRequest || typeof window === "undefined") return;
-  const startedEpoch = ++requestEpoch;
-
-  const controller = new AbortController();
-  const deadline = window.setTimeout(() => controller.abort(), 8_000);
-  activeRequest = fetch(ACTIVE_RANKING_URL, { cache: "no-store", signal: controller.signal })
-    .then(async (response) => {
-      if (!response.ok) return;
-      const nextState = parseTouchlineActiveRankingState(await response.json());
-      if (!nextState) return;
-      currentState = nextState;
-      completedRead = { state: nextState, revision: (completedRead?.revision ?? 0) + 1, requestEpoch: startedEpoch };
-      emitChange();
-    })
-    .catch(() => undefined)
-    .finally(() => {
-      window.clearTimeout(deadline);
-      activeRequest = null;
-    });
+  for (const listener of listeners) {
+    try { listener(); } catch (error) { globalThis.reportError?.(error); }
+  }
 }
 
 function subscribe(listener: () => void) {
+  if (typeof window === "undefined") return () => undefined;
   listeners.add(listener);
-  loadActiveRanking();
-  if (listeners.size === 1 && typeof window !== "undefined") {
-    refreshTimer = window.setInterval(loadActiveRanking, 45_000);
+  if (!stopShared) {
+    stopShared = touchlineLivePresentationStore.subscribe(read => {
+      const publication = read.sportsPublication;
+      if (!publication || publication.publication.contentDigest !== read.state.livePresentationSnapshotId
+        || publication.publication.playerRankingSnapshotId !== read.state.playerRankingSnapshotId
+        || publication.publication.coachRankingSnapshotId !== read.state.coachRankingSnapshotId) return;
+      currentState = publication.playerRanking ?? TOUCHLINE_PRESEASON_RANKING_STATE;
+      completedRead = { state: currentState, coachRanking: publication.coachRanking, revision: read.generation, requestEpoch: read.requestEpoch,
+        publicationDigest: publication.publication.contentDigest };
+      emitChange();
+    }, true);
+  } else {
+    // A new server-seeded route must not wait for the previous route's timer.
+    touchlineLivePresentationStore.revalidate();
   }
   return () => {
     listeners.delete(listener);
-    if (!listeners.size && refreshTimer !== null) {
-      window.clearInterval(refreshTimer);
-      refreshTimer = null;
+    if (!listeners.size) {
+      stopShared?.();
+      stopShared = null;
     }
   };
 }

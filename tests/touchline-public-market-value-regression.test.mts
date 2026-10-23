@@ -5,7 +5,7 @@ import test from "node:test";
 const publicSurfaces = [
   "app/touchline-clubs/[club]/page.tsx",
   "app/touchline-players/[player]/page.tsx",
-  "app/touchline-player-card-rankings/page.tsx",
+  "components/touchline/TouchlinePlayerCardRankingsPublication.tsx",
   "app/rankings/touchline-tables-client.tsx",
   "components/touchline/TouchlineCoachCategoryShowcase.tsx",
   "components/touchline/fantasy/TouchlineGameweekCard.tsx",

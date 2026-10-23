@@ -17,19 +17,23 @@ import { resolveTouchLinePresentationLocale } from "../lib/touchlineArena/root-l
 import { isTouchLineLocaleComplete, normalizeTouchLineLocale } from "../lib/touchlineArena/i18n.ts";
 import { touchlinePlayerPositionKind } from "../lib/touchlineArena/position-aware-card-stats.ts";
 import { touchlineCardTierName, touchlineCardTierPalette } from "../lib/touchlineArena/card-rules.ts";
+import { touchlineRankingZoomSelectionForCard } from "../lib/touchlineArena/touchline-ranking-zoom-selection.ts";
+import { touchlineCardEnginePlayerHref } from "../lib/touchlineArena/card-engine-links.ts";
 
 const callers = [
   ["components/touchline/ClubHubSquadGrid.tsx", 1],
   ["components/touchline/ClubHubOfficialLineup.tsx", 1],
   ["components/touchline/ClubHubMatchdayTechnicalArea.tsx", 1],
-  ["app/touchline-player-card-rankings/page.tsx", 2],
-  ["app/rankings/touchline-tables-client.tsx", 1],
+  ["components/touchline/TouchlinePlayerCardRankingsPublication.tsx", 3],
+  ["app/rankings/touchline-tables-client.tsx", 2],
   ["app/touchline-players/[player]/page.tsx", 1],
 ] as const;
 const sources = new Map(callers.map(([path]) => [path, ts.createSourceFile(path, readFileSync(new URL(`../${path}`, import.meta.url), "utf8"), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)]));
 type Path = typeof callers[number][0];
 type Details = ReturnType<typeof buildTouchlinePlayerCardZoomDetails>;
-type Props = { details: Details; ariaLabel: string; locale: string; contractHref?: string; children: React.ReactElement; expandedContent: React.ReactElement };
+type Props = { details: Details; ariaLabel: string; locale: string; contractHref?: string; children: React.ReactElement<Record<string, unknown>>; expandedContent: React.ReactElement<Record<string, unknown>>; presentationMode?: string;
+  open?: boolean; onOpenChange?: (open: boolean) => void; returnFocusRef?: unknown; returnFocusFallbackRef?: unknown; detailsContent?: React.ReactElement<{ role: string }> };
+const tablesPath = "app/rankings/touchline-tables-client.tsx";
 const locales = ["en-GB", "pt-BR", "es-ES", "it-IT", "fr-FR", "ar-SA", "tr-TR", "de-DE"] as const;
 const expected = {
   "en-GB": { expandCard: "Expand card for {playerName}", openCard: "Open card for {playerName}", openCurrentCard: "Open current card for {playerName}", openMatchCard: "Open match card for {playerName}", openGoalCard: "Open goal card for {playerName}", openUpgradedCard: "Open upgraded card for {playerName}", lastMatchRating: "Last match rating", officialPlayerProfile: "Official player profile", matchHistoryEntry: "Match history" },
@@ -65,13 +69,28 @@ const expressions = callers.flatMap(([path, count]) => {
   return found.map((node, index) => ({ path, index, source: node.getText() }));
 });
 
-// The seven actual JSX nodes and ranking's real presentation closure execute
+function prepareTableZoomContext(context: Record<string, unknown>, index: number) {
+  const builder = nodes(tablesPath, node => ts.isFunctionDeclaration(node) && node.name?.text === "buildTablePlayerCardZoomPresentation");
+  assert.equal(builder.length, 1, "both Tables zoom hosts use the one actual presentation builder");
+  context.buildTablePlayerCardZoomPresentation = evaluate(builder[0].getText(), context);
+  if (index === 0) {
+    const { children, ...presentation } = evaluate(initializer(tablesPath, "{ children, ...presentation }", "TablePlayerCardZoom"), context) as Props;
+    Object.assign(context, { children, presentation });
+  } else {
+    for (const name of ["selectedCard", "selectedPresentation", "closeSelected"]) {
+      context[name] = evaluate(initializer(tablesPath, name, "TouchlineRankingPodium"), context);
+    }
+  }
+}
+
+// All actual JSX nodes and ranking's real selected presentation closure execute
 // with real builders. Only surrounding page fetching/artwork are boundaries.
-function contextFor(path: Path, locale: string, value: number | null, sentinel = false, requireBindings = true) {
-  const card = { id: "canonical-id", canonicalPlayerId: "123", sportmonksPlayerId: 123, name: "Canonical $& <Player>", clubName: "Canonical Club", position: "ST", role: "ST", countryCode3: "ENG", editorialCard: null, cardReview: undefined, seasonTotalRating: value, matchRating: value, matchStats: { goals: 0, assists: null } };
+function contextFor(path: Path, locale: string, value: number | null, sentinel = false, requireBindings = true, expressionIndex = 0) {
+  const card = { id: "a0000000-0000-4000-8000-000000000123", canonicalPlayerId: "a0000000-0000-4000-8000-000000000123", providerPlayerId: "123", sportmonksPlayerId: 123, name: "Canonical $& <Player>", clubName: "Canonical Club", position: "ST", role: "ST", countryCode3: "ENG", editorialCard: null, cardReview: undefined, seasonTotalRating: value, matchRating: value, matchStats: { goals: 0, assists: null } };
   const seen: Array<[string, string]> = [];
-  const zoomGetter = (requested: string) => { seen.push(["zoom", requested]); return sentinel ? { ...getTouchlineCardZoomCopy("en-GB"), ...Object.fromEntries(Object.keys(expected["en-GB"]).map((key) => [key, key.includes("Card") ? `TRANSLATED_${key} {playerName}` : `TRANSLATED_${key}`])) } : getTouchlineCardZoomCopy(requested); };
-  const exactGetter = (requested: string) => { seen.push(["exact", requested]); return { ...getTouchlineExactCardCopy(requested), ...(sentinel ? { totalRating: "TRANSLATED_TOTAL" } : {}) }; };
+  const resolvedCopies: Record<string, unknown> = {};
+  const zoomGetter = (requested: string) => { seen.push(["zoom", requested]); const copy = sentinel ? { ...getTouchlineCardZoomCopy("en-GB"), ...Object.fromEntries(Object.keys(expected["en-GB"]).map((key) => [key, key.includes("Card") ? `TRANSLATED_${key} {playerName}` : `TRANSLATED_${key}`])) } : getTouchlineCardZoomCopy(requested); resolvedCopies.zoomCopy = copy; return copy; };
+  const exactGetter = (requested: string) => { seen.push(["exact", requested]); const copy = { ...getTouchlineExactCardCopy(requested), ...(sentinel ? { totalRating: "TRANSLATED_TOTAL" } : {}) }; resolvedCopies.exactCopy = copy; return copy; };
   const factGetter = (requested: string) => { seen.push(["facts", requested]); return { ...getTouchlineCardMatchFactLabels(requested), ...(sentinel ? { rating: "TRANSLATED_SCORE" } : {}) }; };
   const context: Record<string, unknown> = {
     draftLocalesEnabled: false,
@@ -83,7 +102,7 @@ function contextFor(path: Path, locale: string, value: number | null, sentinel =
     tierKey: null, tierAccent: "#b8ff46", tierLabel: undefined, tierPalette: { accent: "#b8ff46" }, tierDisplayName: undefined,
     touchlineCardTierPalette, touchlineCardTierName, TOUCHLINE_NEUTRAL_CARD_ACCENT: "#b8ff46",
     squadCardToExactPlayer: (input: unknown) => input, touchlinePlayerProfileHref: () => "/canonical-profile?keep=1#anchor",
-    buildTouchlinePlayerCardZoomDetails, buildTouchlineVerifiedMatchFactFields, touchlinePlayerPositionKind,
+    buildTouchlinePlayerCardZoomDetails, buildTouchlineVerifiedMatchFactFields, touchlinePlayerPositionKind, touchlineCardEnginePlayerHref,
     positionKind: touchlinePlayerPositionKind(card.position),
     cardFactPosition: "ST", displayPosition: "Visible position", displayNationality: "ENG", editorialCard: null,
     cumulativeRatingText: value === null ? "—" : String(value),
@@ -92,7 +111,7 @@ function contextFor(path: Path, locale: string, value: number | null, sentinel =
     styles: new Proxy({}, { get: (_, key) => String(key) }), cardRenderScale: 0.5, staticVisualQa: false,
     TOUCHLINE_CARD_STUDIO_LAYOUT_KEY: "PRESERVED_LAYOUT_KEY", TouchlineCardZoom: "zoom-boundary", TouchlineEliteExactCard: "exact-boundary", CompactPlayerCard: "compact-boundary", ClubHubOfficialChannel: "official-channel-boundary",
   };
-  for (const name of ["zoomCopy", "exactCopy"]) context[name] = requireBindings ? evaluate(initializer(path, name), context) : name === "zoomCopy" ? zoomGetter(locale) : exactGetter(locale);
+  if (path !== tablesPath) for (const name of ["zoomCopy", "exactCopy"]) context[name] = requireBindings ? evaluate(initializer(path, name), context) : name === "zoomCopy" ? zoomGetter(locale) : exactGetter(locale);
   if (path.includes("[player]")) {
     const profileContext = { ...context,
       copy: evaluate(initializer(path, "copy"), context),
@@ -106,12 +125,23 @@ function contextFor(path: Path, locale: string, value: number | null, sentinel =
     context.matchFactLabels = requireBindings ? evaluate(initializer(path, "matchFactLabels"), context) : factGetter(locale);
     context.text = evaluate(initializer(path, "text", "renderPlayerProfilePage"), context);
   }
-  if (path === "app/touchline-player-card-rankings/page.tsx") {
+  if (path === "components/touchline/TouchlinePlayerCardRankingsPublication.tsx") {
     context.editorialPresentation = evaluate(initializer(path, "editorialPresentation"), context);
-    const presentation = evaluate(initializer(path, "zoomPresentation"), context) as (input: unknown) => unknown;
-    context.zoom = presentation(card);
+    context.cardPresentation = evaluate(initializer(path, "cardPresentation"), context);
+    context.zoomPresentation = evaluate(initializer(path, "zoomPresentation"), context);
+    context.zoom = (context.cardPresentation as (input: unknown) => unknown)(card);
+    Object.assign(context, { selected: { phase: "available", card }, selection: touchlineRankingZoomSelectionForCard(card as Parameters<typeof touchlineRankingZoomSelectionForCard>[0]), selectedSurface: "featured", touchlineRankingZoomSelectionForCard, selectedTriggerRef: { current: null }, headingRef: { current: null }, setSelection: () => {}, setSelectedSurface: () => {} });
+    for (const name of ["selectedCard", "selectedZoom", "isSelected", "openSelected"]) context[name] = evaluate(initializer(path, name), context);
   }
-  if (path === "app/rankings/touchline-tables-client.tsx") context.player = evaluate(initializer(path, "player", "TablePlayerCardZoom"), context);
+  if (path === tablesPath) {
+    Object.assign(context, {
+      presentationMode: undefined, open: undefined, onOpenChange: () => {}, returnFocusRef: { current: null }, returnFocusFallbackRef: { current: null },
+      selected: { phase: "available", card }, selection: touchlineRankingZoomSelectionForCard(card as Parameters<typeof touchlineRankingZoomSelectionForCard>[0]),
+      selectedTriggerRef: { current: null }, headingRef: { current: null }, setSelection: () => {}, setSelectedSurface: () => {},
+    });
+    prepareTableZoomContext(context, expressionIndex);
+    Object.assign(context, resolvedCopies);
+  }
   return { context, seen, card };
 }
 
@@ -145,10 +175,14 @@ test("nine caller labels preserve exact EN/PT, placeholders, eight catalogues an
   assert.equal(TOUCHLINE_CARD_ZOOM_DRAFT_STATUS, "draft");
 });
 
-test("all seven actual producers explicitly carry total/last semantics before translated labels", () => {
+test("all actual detail producers carry total/last semantics and trigger-only nodes contain no duplicate detail producer", () => {
   for (const expression of expressions) {
-    const { context } = contextFor(expression.path, "en-GB", 0, false, false);
+    const { context } = contextFor(expression.path, "en-GB", 0, false, false, expression.index);
     const props = (evaluate(expression.source, context) as React.ReactElement<Props>).props;
+    if (props.presentationMode === "trigger-only") {
+      assert.equal(props.details, undefined);assert.equal(props.expandedContent, undefined);assert.ok(props.children);
+      continue;
+    }
     const total = props.details.fields.find((field) => field.label === "Total rating" || field.label === "LEGACY_TOTAL");
     const last = props.details.fields.find((field) => field.label === "Last match rating");
     assert.ok(total, expression.path); assert.ok(last, expression.path);
@@ -160,8 +194,16 @@ test("all seven actual producers explicitly carry total/last semantics before tr
 
 for (const expression of expressions) test(`${expression.path}#${expression.index + 1}: real copy and explicit ratings survive translation, zero and unavailable`, () => {
   for (const locale of [...locales, "future-locale-sentinel"]) for (const sentinel of [false, true]) for (const value of [0, null]) {
-    const { context, seen, card } = contextFor(expression.path, locale, value, sentinel);
+    const { context, seen, card } = contextFor(expression.path, locale, value, sentinel, true, expression.index);
     const props = (evaluate(expression.source, context) as React.ReactElement<Props>).props;
+    const copy = context.zoomCopy as Record<string, string>;
+    assert.equal(props.ariaLabel, expression.path.includes("[player]") ? "PRESERVED_ARIA_OVERRIDE" : copy[expression.path.includes("ClubHub") ? "expandCard" : "openCard"].replace("{playerName}", () => card.name));
+    assert.equal(props.locale, locale);assert.equal(props.contractHref, undefined);
+    assert.deepEqual(seen, expression.path.includes("[player]") ? [["zoom", locale], ["exact", locale], ["facts", locale]] : [["zoom", locale], ["exact", locale]]);
+    if (props.presentationMode === "trigger-only") {
+      assert.equal(props.details, undefined);assert.equal(props.expandedContent, undefined);assert.ok(props.children);
+      continue;
+    }
     const totalLabel = sentinel ? "TRANSLATED_TOTAL" : getTouchlineExactCardCopy(locale).totalRating;
     const lastLabel = sentinel ? "TRANSLATED_lastMatchRating" : expected[locale === "pt-BR" ? "pt-BR" : "en-GB"].lastMatchRating;
     const totals = props.details.fields.filter((field) => field.kind === "rating-total");
@@ -171,15 +213,58 @@ for (const expression of expressions) test(`${expression.path}#${expression.inde
     assert.equal(totals[0].primary, true);
     for (const field of [...totals, ...lasts]) { assert.equal(field.icon, "rating"); assert.equal(field.value, value === null ? "—" : "0"); assert.equal(field.accent, true); }
     assert.equal(props.details.title, card.name); assert.equal(props.details.profileHref, "/canonical-profile?keep=1#anchor");
-    assert.equal(props.locale, locale); assert.equal(props.contractHref, undefined);
-    assert.deepEqual(seen, expression.path.includes("[player]") ? [["zoom", locale], ["exact", locale], ["facts", locale]] : [["zoom", locale], ["exact", locale]]);
-    const copy = context.zoomCopy as Record<string, string>;
-    assert.equal(props.ariaLabel, expression.path.includes("[player]") ? "PRESERVED_ARIA_OVERRIDE" : copy[expression.path.includes("ClubHub") ? "expandCard" : "openCard"].replace("{playerName}", () => card.name));
     if (expression.path.includes("[player]")) assert.equal(props.details.eyebrow, copy.officialPlayerProfile);
     const html = renderToStaticMarkup(React.createElement(panelExports.TouchlineCardZoomDetailsPanel, { details: props.details, locale: props.locale }));
     assert.match(html, /class="ratingHero"/); assert.match(html, /data-icon="Star"/); assert.match(html, /data-icon="CircleGauge"/);
     assert.ok(html.includes(totalLabel)); assert.ok(html.includes(lastLabel));
     assert.match(html, value === null ? /<strong>—<\/strong>/ : /<strong>0<\/strong>/);
+  }
+});
+
+test("Tables combined and persistent hosts preserve owner-only links and the same editorial economy", () => {
+  for (const expression of expressions.filter(expression => expression.path === tablesPath)) {
+    for (const locale of locales) for (const owner of [false, true]) {
+      const { context, card } = contextFor(tablesPath, locale, 0, false, true, expression.index);
+      const publishedCard = { ...card, editorialCard: {
+        tierKey: "ruby-red", cardPrice: { amountMinor: 1500, currency: "TC" }, marketValueEur: 1000000,
+        marketValueState: "verified", lastReviewedAt: "2026-10-01T00:00:00Z",
+      } };
+      const before = JSON.stringify(publishedCard);
+      Object.assign(context, { card: publishedCard, selected: { phase: "available", card: publishedCard }, canEditCardEngine: owner });
+      prepareTableZoomContext(context, expression.index);
+      const props = (evaluate(expression.source, context) as React.ReactElement<Props>).props;
+      assert.equal(props.presentationMode, expression.index === 0 ? undefined : "dialog-only");
+      assert.equal(props.details.cardEngineHref, owner ? touchlineCardEnginePlayerHref(card.canonicalPlayerId, locale) : undefined);
+      assert.equal(props.contractHref, undefined, "public ranking does not manufacture a contract action");
+      assert.equal(props.expandedContent.props.card, publishedCard);
+      assert.equal(props.children.props.card, publishedCard);
+      assert.equal(props.details.fields.filter(field => field.icon === "player-identity-price").length, 1);
+      assert.equal(props.details.fields.find(field => field.icon === "rating")?.value, "0");
+      assert.equal(JSON.stringify(publishedCard), before, "owner actions cannot change editorial price or sports facts");
+    }
+  }
+});
+
+test("Tables persistent host retains identity and focus references but withdraws stale details and actions", () => {
+  const expression = expressions.find(expression => expression.path === tablesPath && expression.index === 1)!;
+  for (const locale of locales) {
+    const { context } = contextFor(tablesPath, locale, 0, false, true, 1);
+    const changes: unknown[] = [];
+    Object.assign(context, {
+      selected: { phase: "unavailable" }, canEditCardEngine: true,
+      copy: { rankingPending: "PUBLICATION_UNAVAILABLE", rankingPendingDescription: "No verified selected card" },
+      setSelection: (value: unknown) => changes.push(["identity", value]),
+      setSelectedSurface: (value: unknown) => changes.push(["surface", value]),
+    });
+    prepareTableZoomContext(context, 1);
+    const props = (evaluate(expression.source, context) as React.ReactElement<Props>).props;
+    assert.equal(props.presentationMode, "dialog-only"); assert.equal(props.open, true);
+    assert.equal(props.locale, locale); assert.equal(props.ariaLabel, "PUBLICATION_UNAVAILABLE");
+    assert.equal(props.details, undefined); assert.equal(props.expandedContent, undefined); assert.equal(props.children, null);
+    assert.equal(props.contractHref, undefined); assert.equal(props.detailsContent?.props.role, "status");
+    assert.equal(props.returnFocusRef, context.selectedTriggerRef); assert.equal(props.returnFocusFallbackRef, context.headingRef);
+    props.onOpenChange?.(true); assert.deepEqual(changes, [], "an open notification does not clear the selection");
+    props.onOpenChange?.(false); assert.deepEqual(changes, [["identity", null], ["surface", null]]);
   }
 });
 

@@ -8,13 +8,14 @@ const source = readFileSync(new URL("../components/touchline/match-centre/Touchl
 const ast = ts.createSourceFile("live.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
 const effects: ts.CallExpression[] = [];
 function visit(node: ts.Node) {
-  if (ts.isCallExpression(node) && node.expression.getText(ast) === "useEffect" && node.getText(ast).includes("await fetch(")) effects.push(node);
+  if (ts.isCallExpression(node) && node.expression.getText(ast) === "useEffect"
+    && (node.getText(ast).includes("await fetch(") || node.getText(ast).includes("void detailRefresh.current?.()"))) effects.push(node);
   node.forEachChild(visit);
 }
 visit(ast);
 assert.equal(effects.length, 2);
 const detail = effects.find(node => node.getText(ast).includes("fixture?fixtureId="))!;
-const polling = effects.find(node => node.getText(ast).includes("livescores?snapshot=1"))!;
+const polling = effects.find(node => node.getText(ast).includes("void detailRefresh.current?.()"))!;
 function deferred<T>() {
   let resolve!: (value: T) => void;
   let reject!: (error: unknown) => void;
@@ -42,7 +43,6 @@ function harness() {
   `, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText, {
     exports, AbortController, document: visibility, detailRefresh: { current: null },
     setMatchDetail: (snapshot: DetailSnapshot | null) => snapshots.push(snapshot),
-    setFixtures: () => {}, setReadMetadata: () => {}, mergeTouchlineLiveFixtures: () => [], isTouchlineLiveReadMetadata: () => false,
     window: {
       setInterval: (callback: () => void, ms: number) => { assert.equal(ms, 45_000); assert.equal(timer, null); timer = callback; timerCount++; return 1; },
       clearInterval: (id: number) => { assert.equal(id, 1); timer = null; },
@@ -51,7 +51,6 @@ function harness() {
     },
     fetch: (url: string, options: { signal: AbortSignal; cache: string }) => {
       assert.equal(options.cache, "no-store");
-      if (url.includes("livescores?snapshot=1")) return Promise.resolve({ json: async () => ({ ok: false }) });
       const result = deferred<DetailResponse>(); requests.push({ url, signal: options.signal, result }); return result.promise;
     },
   });

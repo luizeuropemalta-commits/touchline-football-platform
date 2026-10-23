@@ -6,13 +6,13 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 
 import TouchlineCoachCard from "@/components/touchline/cards/TouchlineCoachCard";
-import TouchlineCoachPerformance from "@/components/touchline/cards/TouchlineCoachPerformance";
+import { TouchlineCoachProfilePublication, TouchlineCoachProfileValue, TouchlineCoachProfilePerformance, TouchlineCoachProfileCampaign } from "@/components/touchline/TouchlineCoachProfilePublication";
 import TouchlineLivePresentationRefresh from "@/components/touchline/TouchlineLivePresentationRefresh";
 import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
 import TouchlineBrandHeader from "@/components/touchline/TouchlineBrandHeader";
 import { loadAccountLocaleContext } from "@/lib/touchlineArena/account-locale-context-server";
 import navigationStyles from "@/components/touchline/TouchlineGlobalNavigation.module.css";
-import { CalendarDays, Flag, Gem, House, PlaneTakeoff, ShieldCheck, Trophy } from "lucide-react";
+import { CalendarDays, Flag, Gem, ShieldCheck, Trophy } from "lucide-react";
 import { TOUCHLINE_ENGLAND_CLUBS } from "@/lib/touchlineArena/demo-data";
 import { createTouchlineArenaCoachSlot } from "@/lib/touchlineArena/coach-card";
 import { loadTouchLineCoachRanking } from "@/lib/touchlineArena/coach-ranking-server";
@@ -27,7 +27,6 @@ import { resolveTouchlineCatalogueLocale } from "@/lib/touchlineArena/catalogue-
 import { getTouchlineCoachProfileCopy, getTouchlineCoachProfileReason } from "@/lib/touchlineArena/coach-profile-i18n";
 import { getTouchlineCoachCardCopy } from "@/lib/touchlineArena/coach-card-i18n";
 import { getTouchlineMatchCentreCopy } from "@/lib/touchlineArena/match-centre-i18n";
-import { getTouchlineTablesPresentationCopy } from "@/lib/touchlineArena/tables-presentation-i18n";
 
 const TOUCHLINE_ENGLAND_SEASON = "2026-27";
 
@@ -84,7 +83,6 @@ async function renderCoachProfilePage({
   const copy = getTouchlineCoachProfileCopy(locale, draftLocalesEnabled);
   const cardCopy = getTouchlineCoachCardCopy(locale, draftLocalesEnabled);
   const matchCopy = getTouchlineMatchCentreCopy(locale, draftLocalesEnabled);
-  const recordCopy = getTouchlineTablesPresentationCopy(locale, draftLocalesEnabled);
   const entry = TOUCHLINE_LIVE_COACHES.find(({ coach }) => (
     coach.providerId === coachParam || coachSlug(coach.displayName) === coachSlug(coachParam)
   ));
@@ -110,10 +108,6 @@ async function renderCoachProfilePage({
       scoringVersion: competition.scoringVersion,
     },
   } : slot;
-  const matchesPlayed = competition
-    ? competition.home.wins + competition.home.draws + competition.home.losses
-      + competition.away.wins + competition.away.draws + competition.away.losses
-    : null;
   const profileLocale = `?lang=${encodeURIComponent(locale)}`;
   const historyAvailable = Boolean(
     classification.sourceClub
@@ -121,12 +115,9 @@ async function renderCoachProfilePage({
     || classification.sourceSeasonId
     || classification.finalPosition !== null,
   );
-  const campaign = competition ? [
-    { key: "home", icon: House, label: copy.homeCampaign, record: competition.home },
-    { key: "away", icon: PlaneTakeoff, label: copy.awayCampaign, record: competition.away },
-  ] : [];
 
   return (
+    <TouchlineCoachProfilePublication coachProviderId={entry.coach.providerId} seed={competition} seasonLabel={TOUCHLINE_ENGLAND_SEASON}>
     <main className="coach-profile-page" dir="ltr">
       <TouchlineBrandHeader href={`/touchline-coaches/${encodeURIComponent(entry.coach.providerId)}${profileLocale}`} locale={locale} accountLocaleContext={accountLocaleContext} draftLocalesEnabled={draftLocalesEnabled} navigation={<TouchlineGlobalNavigation locale={locale} draftLocalesEnabled={draftLocalesEnabled} currentRoute="coachProfile" surface="public" showAudioControl={false} />} />
       <div className="coach-profile-content">
@@ -159,7 +150,7 @@ async function renderCoachProfilePage({
           draftLocalesEnabled={draftLocalesEnabled}
           forceNeonActive
           enableInteractiveNeon={false}
-          showLeadershipCrown={competition?.rank === 1}
+          liveRankingPoints
         /></div>
       </section>
       <section className="coach-profile-grid">
@@ -168,11 +159,11 @@ async function renderCoachProfilePage({
           <h2>{copy.performance}</h2>
           <div className="coach-profile-offer-grid">
             <div><Gem aria-hidden="true" /><span><small>{copy.tier}</small><strong>{touchlineCardTierName(classification.tierKey, locale, draftLocalesEnabled)}</strong></span></div>
-            <div><ShieldCheck aria-hidden="true" /><span><small>{matchCopy.season}</small><strong>{competition?.seasonLabel ?? TOUCHLINE_ENGLAND_SEASON}</strong></span></div>
-            <div><Trophy aria-hidden="true" /><span><small>{copy.currentRank}</small><strong>{competition ? `#${competition.rank}` : "—"}</strong></span></div>
-            <div><CalendarDays aria-hidden="true" /><span><small>{copy.matches}</small><strong>{matchesPlayed ?? "—"}</strong></span></div>
+            <div><ShieldCheck aria-hidden="true" /><span><small>{matchCopy.season}</small><strong><TouchlineCoachProfileValue field="season" fallback={TOUCHLINE_ENGLAND_SEASON} /></strong></span></div>
+            <div><Trophy aria-hidden="true" /><span><small>{copy.currentRank}</small><strong><TouchlineCoachProfileValue field="rank" /></strong></span></div>
+            <div><CalendarDays aria-hidden="true" /><span><small>{copy.matches}</small><strong><TouchlineCoachProfileValue field="matches" /></strong></span></div>
           </div>
-          <TouchlineCoachPerformance contract={null} competition={competition} locale={locale} draftLocalesEnabled={draftLocalesEnabled} />
+          <TouchlineCoachProfilePerformance locale={locale} draftLocalesEnabled={draftLocalesEnabled} />
           <p>{copy.competitionExplanation}</p>
           <p>{copy.classificationDescription.replace("{reason}", () => getTouchlineCoachProfileReason(classification.classificationReason, locale, draftLocalesEnabled))}</p>
         </article>
@@ -185,17 +176,11 @@ async function renderCoachProfilePage({
           </div>
           <dl className="coach-profile-fact-grid">
             <div><dt>{cardCopy.nationality}</dt><dd>{nationalityLabel}</dd></div>
-            <div><dt>{matchCopy.season}</dt><dd>{competition?.seasonLabel ?? TOUCHLINE_ENGLAND_SEASON}</dd></div>
-            <div><dt>{copy.matches}</dt><dd>{matchesPlayed ?? "—"}</dd></div>
+            <div><dt>{matchCopy.season}</dt><dd><TouchlineCoachProfileValue field="season" fallback={TOUCHLINE_ENGLAND_SEASON} /></dd></div>
+            <div><dt>{copy.matches}</dt><dd><TouchlineCoachProfileValue field="matches" /></dd></div>
             <div><dt>{copy.tier}</dt><dd>{touchlineCardTierName(classification.tierKey, locale, draftLocalesEnabled)}</dd></div>
           </dl>
-          {campaign.length ? <section className="coach-profile-campaign" aria-label={copy.seasonCampaign}>
-            <header><span>{copy.seasonForm}</span><strong>{copy.homeAndAway}</strong></header>
-            <div>{campaign.map(({ key, icon: Icon, label, record }) => <article key={key}>
-              <Icon aria-hidden="true" />
-              <span><small>{label}</small><strong>{record.wins}{draftLocalesEnabled ? recordCopy.winsShort : "W"} · {record.draws}{draftLocalesEnabled ? recordCopy.drawsShort : "D"} · {record.losses}{draftLocalesEnabled ? recordCopy.lossesShort : "L"}</strong></span>
-            </article>)}</div>
-          </section> : null}
+          <TouchlineCoachProfileCampaign locale={locale} draftLocalesEnabled={draftLocalesEnabled} />
           {historyAvailable ? (
             <dl className="coach-profile-history-grid">
               <div><dt>{copy.previousClub}</dt><dd>{classification.sourceClub ?? "—"}</dd></div>
@@ -271,5 +256,6 @@ async function renderCoachProfilePage({
         @media (max-width:520px) { .coach-profile-hero { grid-template-columns:1fr; } .coach-profile-copy { padding-top:0; } }
       `}</style>
     </main>
+    </TouchlineCoachProfilePublication>
   );
 }

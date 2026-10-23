@@ -46,7 +46,7 @@ test("market tile forwards only the opt-in presentation gate to card and positio
   }
 });
 
-test("the three mounted collection callers and swap tile pass the gate; picker stays unchanged", () => {
+test("the three mounted collection callers pass the gate; the picker retains its deliberately closed locale surface", () => {
   const parent = readFileSync(new URL("../app/fantasy/FantasyGameweekClient.tsx", import.meta.url), "utf8");
   const callers = [...parent.matchAll(/<ClubOwnerCollectionSlots\b[\s\S]*?\/>/g)];
   assert.equal(callers.length, 3);
@@ -55,5 +55,6 @@ test("the three mounted collection callers and swap tile pass the gate; picker s
   const swap = slots.slice(slots.indexOf("export function ClubOwnerSquadSwapDialog"), slots.indexOf("export function ClubOwnerCollectionSlots"));
   assert.match(swap, /<TouchlineMarketPlayerTile[^>]*draftLocalesEnabled=\{draftLocalesEnabled\}/);
   const picker = slots.slice(slots.indexOf("export function ClubOwnerCollectionPicker"));
-  assert.match(picker, /<TouchlineMarketPlayerTile key=\{card.id\} card=\{card\} locale=\{locale\}>/);
+  assert.match(picker, /<TouchlineMarketPlayerTile liveSeasonRating=\{liveSeasonRating\} key=\{card\.id\} card=\{card\} locale=\{locale\}>/);
+  assert.doesNotMatch(picker, /draftLocalesEnabled=/);
 });

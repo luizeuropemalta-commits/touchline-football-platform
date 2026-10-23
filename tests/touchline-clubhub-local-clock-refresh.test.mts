@@ -40,29 +40,19 @@ test('ClubHub matchup kickoff hydrates from explicit UTC to browser zone, indepe
   assert.match(lineup, /<ClubHubLocalKickoff[\s\S]*?startsAt=\{matchup\.startsAtIso\}/);
 });
 
-test('ClubHub refresh rearms for two completed cycles, waits for pending transition and cancels on unmount', () => {
+test('ClubHub delegates periodic and T-24/T-1 refresh to the shared boundary without its own timer', () => {
   const code = source('components/touchline/club-hub/ClubHubNextFixtureCard.tsx');
   const ast = ts.createSourceFile('fixture.tsx', code, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
-  let effect: ts.CallExpression | undefined;
+  const effects: ts.CallExpression[] = [];
   function visit(node: ts.Node) {
-    if (ts.isCallExpression(node) && node.expression.getText(ast) === 'useEffect' && node.getText(ast).includes('router.refresh')) effect = node;
+    if (ts.isCallExpression(node) && /useEffect|setTimeout|setInterval|fetch/.test(node.expression.getText(ast))) effects.push(node);
     ts.forEachChild(node, visit);
   }
-  visit(ast); assert.ok(effect);
-  let next = 0, refreshes = 0;
-  const timers = new Map<number, () => void>();
-  const context = { refreshMs: 45000, isRefreshing: false,
-    router: { refresh: () => { refreshes++; } },
-    startRefresh: (work: () => void) => { context.isRefreshing = true; work(); },
-    window: { setTimeout: (work: () => void) => { timers.set(++next, work); return next; }, clearTimeout: (id: number) => timers.delete(id) },
-  };
-  const callback = runInNewContext(ts.transpileModule(`(${effect.arguments[0].getText(ast)})`, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText, context) as () => (() => void) | undefined;
-  const tick = () => { const [id, work] = [...timers][0]; timers.delete(id); work(); };
-  const cleanup = callback(); assert.equal(timers.size, 1); tick(); assert.equal(refreshes, 1);
-  cleanup?.(); assert.equal(context.isRefreshing, true); assert.equal(callback(), undefined); assert.equal(timers.size, 0);
-  context.isRefreshing = false;
-  const secondCleanup = callback(); tick(); assert.equal(refreshes, 2); secondCleanup?.();
-  context.isRefreshing = false;
-  const finalCleanup = callback(); assert.equal(timers.size, 1); finalCleanup?.(); assert.equal(timers.size, 0);
-  assert.ok(effect.arguments[1].getText(ast).includes('isRefreshing'), 'transition completion must rearm the same cadence');
+  visit(ast); assert.equal(effects.length, 0);
+  assert.match(code, /serverRefreshAfterMs=\{contextWake \? null : refreshMs\}/);
+  assert.match(code, /serverRefreshAt=\{contextWake && refreshMs !== null \? now \+ refreshMs : null\}/);
+  assert.match(code, /serverRefreshScope=/);
+  assert.match(code, /clubHubFixtureRailRefreshMs\(rail, startsAt, now\)/);
+  // Real shared-store transitions/wakes, pending ownership and unmount are
+  // exercised in touchline-live-refresh-lifecycle.test.mts.
 });

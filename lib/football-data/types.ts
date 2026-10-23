@@ -60,6 +60,9 @@ export type FootballDataError = {
   retryAfterSeconds?: number;
   remaining?: number;
   requestedEntity?: string;
+  /** Internal diagnostic: authority explicitly refused this whole operation
+   * before any provider HTTP. Not a quota balance or permission to retry. */
+  requestDisposition?: "deferred-before-http";
 };
 
 export type FootballDataResult<T> =

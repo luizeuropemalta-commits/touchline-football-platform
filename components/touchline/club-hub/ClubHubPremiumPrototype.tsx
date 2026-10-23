@@ -92,6 +92,7 @@ type ClubHubPremiumPrototypeProps = Readonly<{
     awayTeam: Readonly<{ teamId: string; name: string; shortCode: string; logoUrl: string }>;
   }>;
   snapshotMode: boolean;
+  liveReadsEnabled?: boolean;
   squad: Readonly<{
     state: string;
     capturedAt: string | null;
@@ -121,7 +122,7 @@ function publicProfileSlug(value: string) {
     .replace(/^-+|-+$/g, "");
 }
 
-export default function ClubHubPremiumPrototype({ club, clubCoach, clubLeader, feed, fullTimePost, featuredPost, initialTimeZone, nextFixture, snapshotMode, squad, table }: ClubHubPremiumPrototypeProps) {
+export default function ClubHubPremiumPrototype({ club, clubCoach, clubLeader, feed, fullTimePost, featuredPost, initialTimeZone, nextFixture, snapshotMode, squad, table, liveReadsEnabled = false }: ClubHubPremiumPrototypeProps) {
   const verifiedSquad = squad.players;
   const clubDisplayName = club.name.replace(/ FC$/i, "");
   const squadCapturedAt = squad.capturedAt
@@ -158,6 +159,7 @@ export default function ClubHubPremiumPrototype({ club, clubCoach, clubLeader, f
         </header>
 
         <TouchlineOfficialLeagueTable
+          liveReadsEnabled={liveReadsEnabled && !snapshotMode}
           currentTeamId={club.teamId}
           id="rankings"
           locale="en-GB"

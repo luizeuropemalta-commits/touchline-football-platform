@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -36,10 +36,13 @@ export function transpileFixtureModule(source: string, fileName: string) {
 
 export function bundleIsolatedBrowserFixture(options: {
   entryPath: string; requiredSources: readonly string[]; mountScript: string; cssPrefix?: string;
+  /** Explicit synthetic boundary: records refresh intent, never proves a real RSC refresh. */
+  allowSyntheticRouteRefresh?: boolean;
 }): BrowserFixtureBundle {
   const modules = new Map<string, { source: string; imports: Record<string, string> }>();
   const css: string[] = [];
   const sources = new Set<string>();
+  const installedDependencies = realpathSync(path.join(root, "node_modules")) + path.sep;
   const nextRequire = createRequire(require.resolve("next/package.json"));
   // Reuse Next's installed CSS Modules processors; never flatten module scopes.
   const postcss = nextRequire("postcss");
@@ -48,7 +51,7 @@ export function bundleIsolatedBrowserFixture(options: {
   const boundaries: Record<string, string> = {
     "next/image": `const React=require('react'); module.exports=React.forwardRef(function Image(p,ref){const {unoptimized,priority,fill,quality,loader,placeholder,blurDataURL,onLoadingComplete,...rest}=p;return React.createElement('img',{...rest,ref});});`,
     "next/link": `const React=require('react'); module.exports=React.forwardRef(function Link(p,ref){const {prefetch,replace,scroll,shallow,locale,legacyBehavior,passHref,...rest}=p;return React.createElement('a',{...rest,ref});});`,
-    "next/navigation": `exports.usePathname=()=>location.pathname;exports.useRouter=()=>({refresh(){throw Error('Unexpected Next refresh');},push(){throw Error('Unexpected Next navigation');},replace(){throw Error('Unexpected Next navigation');}});`,
+    "next/navigation": `const router={refresh(){${options.allowSyntheticRouteRefresh ? "if(typeof window.onFixtureRouteRefresh!=='function')throw Error('Missing synthetic refresh observer');window.onFixtureRouteRefresh();" : "throw Error('Unexpected Next refresh');"}},push(){throw Error('Unexpected Next navigation');},replace(){throw Error('Unexpected Next navigation');}};exports.usePathname=()=>location.pathname;exports.useRouter=()=>router;`,
     // Real createClient executes its missing-config branch in this credential-free
     // fixture. The SDK is a forbidden transport, not a fake authenticated session.
     "@supabase/ssr": `const forbidden=()=>{throw Error('Unexpected Supabase transport in isolated XI fixture');};exports.createBrowserClient=forbidden;exports.parseCookieHeader=forbidden;exports.serializeCookieHeader=forbidden;`,
@@ -61,7 +64,12 @@ export function bundleIsolatedBrowserFixture(options: {
       const file = [base, `${base}.ts`, `${base}.tsx`, `${base}.js`, path.join(base, "index.ts"), path.join(base, "index.js")]
         .find(candidate => existsSync(candidate) && statSync(candidate).isFile());
       assert.ok(file, `Missing fixture module: ${specifier}`);
-      assert.ok(file.startsWith(root), "fixture module escaped repository");
+      // This release reuses the installed node_modules through a symlink.
+      // Allow package-internal relative imports only within that exact tree;
+      // product sources still cannot escape the selected repository.
+      const packageInternal = realpathSync(parent).startsWith(installedDependencies)
+        && realpathSync(file).startsWith(installedDependencies);
+      assert.ok(file.startsWith(root) || packageInternal, `fixture module escaped repository: ${specifier}`);
       return file;
     }
     assert.ok(allowedPackages.has(specifier.split("/")[0]), `Unapproved browser dependency: ${specifier}`);

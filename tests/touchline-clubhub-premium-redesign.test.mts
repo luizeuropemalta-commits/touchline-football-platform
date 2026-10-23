@@ -24,7 +24,7 @@ test("ClubHub redesign is isolated behind a local visual-QA route", () => {
   assert.match(page, /ClubHubPremiumPrototype/);
   assert.match(page, /index: false, follow: false/);
   assert.match(page, /TOUCHLINE_CLUBHUB_VISUAL_QA_LIVE_READ/);
-  assert.match(page, /liveReadsEnabled \? loadTouchlineOfficialLeagueTable\(\) : Promise\.resolve\(null\)/);
+  assert.match(page, /liveReadsEnabled \? loadTouchlineOfficialLeagueTable\(\{ includeLiveProjectionSource: true \}\) : Promise\.resolve\(null\)/);
 });
 
 test("ClubHub redesign gives the canonical timeline the primary content position", () => {

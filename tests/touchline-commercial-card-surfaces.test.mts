@@ -32,7 +32,7 @@ test("market-value hiding remains a public opt-in and changes only the visual va
 
   for (const relativePath of [
     "app/rankings/touchline-tables-client.tsx",
-    "app/touchline-player-card-rankings/page.tsx",
+    "components/touchline/TouchlinePlayerCardRankingsPublication.tsx",
   ]) {
     const cards = exactCards(relativePath);
     assert.ok(cards.length, relativePath);
@@ -75,17 +75,24 @@ test("player-card rankings retain published authority without displaying card pr
 
   assert.match(tablesPage, /countTouchlinePublishedPlayerCards\(\)/);
   assert.match(tablesPage, /totalPublishedCards=\{publishedCardCount\}/);
-  assert.match(tablesPage, /totalRankedCards=\{rankedCards\.length\}/);
+  assert.match(tablesPage, /loadTouchLineRankedCardCatalog\(activeRanking, undefined, \{ includeGoalCandidates: true \}\)/);
+  assert.match(tablesPage, /const catalogueIndex = buildTouchlineRankingSummaryIndex\(rankedCards\)/);
+  assert.match(tablesPage, /const summary = projectTouchlinePublishedRankingSummary\(catalogueIndex, activeRanking\)/);
+  assert.match(tablesPage, /totalRankedCards=\{summary\.totalRankedCards\} catalogueIndex=\{catalogueIndex\}/);
+  assert.doesNotMatch(tablesPage, /totalRankedCards=\{rankedCards\.length\}/);
   assert.doesNotMatch(tablesPage, /resolveTouchlineTablesOwnerSummary|formatTouchlineCommercialCardTotal/);
   assert.doesNotMatch(tablesClient, /squadValueTc|formatTouchlineCommercialCardTotal/);
   assert.match(tablesClient, /data-best-eleven-player/);
-  const playerRankings = readFileSync(new URL("../app/touchline-player-card-rankings/page.tsx", import.meta.url), "utf8");
+  const playerRankingsPage = readFileSync(new URL("../app/touchline-player-card-rankings/page.tsx", import.meta.url), "utf8");
+  const playerRankings = readFileSync(new URL("../components/touchline/TouchlinePlayerCardRankingsPublication.tsx", import.meta.url), "utf8");
   assert.doesNotMatch(playerRankings, /formatTouchlineEditorialCardPrice|displayPrice/);
-  assert.match(playerRankings, /loadTouchLineRankedCardCatalog\(activeRanking\)/);
+  assert.match(playerRankingsPage, /loadTouchLineRankedCardCatalog\(activeRanking\)/);
+  assert.match(playerRankingsPage, /catalogue=\{rosterCards\}/);
+  assert.match(playerRankings, /projectTouchlinePublishedRankingCatalog\(catalogue, ranking\)/);
   assert.match(rankedCatalog, /loadCompleteTouchlineCataloguePresentations\(playerIds, catalogueAdmin\)/);
   assert.match(rankedCatalog, /if \([^\n]*!state\.seasonId[^\n]*\) return \[\];\s*const seasonId = state\.seasonId;/);
   assert.match(rankedCatalog, /readPublicSeasonPlayerPoints\(playerIds, \{[\s\S]*?\bseasonId,[\s\S]*?publishedRankingState: state/);
-  assert.match(rankedCatalog, /requireCompleteRankedSeasonProjection\(playerIds, seasonPoints\)/);
+  assert.match(rankedCatalog, /requireCompleteRankedSeasonProjection\(rankedPlayerIds, seasonPoints, playerIds\)/);
   assert.match(rankedCatalog, /if \(!player \|\| !editorialCard\) return \[\]/);
   assert.match(playerRankings, /buildTouchlinePlayerCardZoomDetails/);
   assert.match(playerRankings, /editorialCard: card\.editorialCard/);
@@ -95,7 +102,8 @@ test("player-card rankings retain published authority without displaying card pr
   assert.doesNotMatch(playerRankings, /formatPlayerMarket(?:TierRange|ValueEur)/);
   assert.doesNotMatch(playerRankings, /Official economic profile|Perfil económico oficial/);
   assert.doesNotMatch(playerRankings, /Market value|Valor de mercado/);
-  assert.doesNotMatch(playerRankings, /Pending|Pendente|Updating|Em atualização/);
+  assert.doesNotMatch(playerRankings, /["'](?:Pending|Pendente|Updating|Em atualização)["']/);
+  assert.match(playerRankings, /copy\.rankingPendingDescription/);
   assert.doesNotMatch(tablesClient, /<strong>£\{owner\.squadValueTc\}<\/strong>/);
   assert.doesNotMatch(rankingsCopy, /current TC prices|preços TC atuais|Total TC|Total em TC/);
 });

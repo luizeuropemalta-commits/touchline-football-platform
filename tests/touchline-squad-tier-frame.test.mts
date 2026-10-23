@@ -12,12 +12,14 @@ test("ClubHub squad frames use confirmed card tiers and leave unresolved borders
 });
 
 test("ClubHub positional leaders share their published card colour, not a fixed green frame", () => {
-  const source = readFileSync(new URL("../app/touchline-clubs/[club]/page.tsx", import.meta.url), "utf8");
+  const page = readFileSync(new URL("../app/touchline-clubs/[club]/page.tsx", import.meta.url), "utf8");
+  const source = readFileSync(new URL("../components/touchline/ClubHubPositionLeaders.tsx", import.meta.url), "utf8");
   const css = readFileSync(new URL("../components/touchline/club-hub/ClubHubPremiumPrototype.module.css", import.meta.url), "utf8");
+  assert.match(page, /leaderCards=\{<ClubHubPositionLeaders cards=\{presentation\.clubCards\} seed=\{activeRanking\}/);
   assert.match(source, /const tierKey = leader\?\.card\.editorialCard\?\.tierKey \?\? null/);
   assert.match(source, /data-leader-tier-frame=\{tierKey \?\? "unresolved"\}/);
   assert.match(source, /"--tier-accent": tierAccent/);
-  assert.match(source, /TouchlineClubPerimeterTrace accent=\{tierKey \? tierAccent : undefined\} className=\{premiumStyles.lineupLeaderTrace\}/);
+  assert.match(source, /TouchlineClubPerimeterTrace accent=\{tierKey \? tierAccent : undefined\} className=\{styles.lineupLeaderTrace\}/);
   const block = css.slice(css.indexOf(".lineupLeaderCard {"), css.indexOf(".statusRail .nextFixtureCard"));
   assert.match(block, /color-mix\(in srgb, var\(--tier-accent\)/);
   assert.doesNotMatch(block, /#a3ff12|rgba\(163,255,18/);

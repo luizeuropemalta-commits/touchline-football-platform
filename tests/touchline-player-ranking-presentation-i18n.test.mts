@@ -25,6 +25,9 @@ import * as navigation from "../lib/touchlineArena/arena-navigation.ts";
 import * as globalNavigation from "../lib/touchlineArena/global-navigation.ts";
 import * as engineLinks from "../lib/touchlineArena/card-engine-links.ts";
 import * as presentation from "../lib/touchlineArena/public-card-presentation.ts";
+import * as projection from "../lib/touchlineArena/published-ranking-catalog.ts";
+import * as selectionHelpers from "../lib/touchlineArena/touchline-ranking-zoom-selection.ts";
+import { TOUCHLINE_PRESEASON_RANKING_STATE, type TouchlineActiveRankingState } from "../lib/touchlineArena/card-ranking-live.ts";
 
 // Real server policy in an isolated environment; never inherit the host flag.
 const releaseEnv: Record<string, string | undefined> = {};
@@ -50,6 +53,7 @@ const pt = {
 };
 const keys = Object.keys(en) as Array<keyof typeof en>;
 const source = readFileSync(new URL("../app/touchline-player-card-rankings/page.tsx", import.meta.url), "utf8");
+const clientSource = readFileSync(new URL("../components/touchline/TouchlinePlayerCardRankingsPublication.tsx", import.meta.url), "utf8");
 const dictionary = readFileSync(new URL("../lib/touchlineArena/rankings-i18n.ts", import.meta.url), "utf8");
 
 test("public ranking wrapper preserves omitted opt-in and the renderer defaults to false", () => {
@@ -94,29 +98,54 @@ function nodes(node: React.ReactNode): Element[] {
 }
 const text = (value: string) => renderToStaticMarkup(React.createElement(React.Fragment, null, value));
 function cards(count: number): demo.ClubOwnerSquadCard[] {
-  return Array.from({ length: count }, (_, index) => ({ ...demo.CLUB_OWNER_SQUAD_CARDS[0], id: `uuid-${index}`, canonicalPlayerId: `10000000-0000-4000-8000-${String(index).padStart(12, "0")}`, name: `Official $&<Player ${index}>`, shortName: `Official ${index}`, clubName: demo.TOUCHLINE_ENGLAND_CLUBS[0].name, seasonTotalRating: index === 0 ? null : index - 1, publishedRanking: undefined, editorialCard: null }));
+  return Array.from({ length: count }, (_, index) => ({
+    ...demo.CLUB_OWNER_SQUAD_CARDS[0],
+    id: `10000000-0000-4000-8000-${String(index).padStart(12, "0")}`,
+    canonicalPlayerId: `10000000-0000-4000-8000-${String(index).padStart(12, "0")}`,
+    providerPlayerId: String(1000 + index),
+    name: `Official $&<Player ${index}>`, shortName: `Official ${index}`,
+    clubName: demo.TOUCHLINE_ENGLAND_CLUBS[0].name,
+    // A published zero is eligible; a missing rating is not a zero.
+    seasonTotalRating: index === 0 ? 0 : index - 1, publishedRanking: undefined,
+    editorialCard: { tierKey: "ruby-red", cardPrice: { amountMinor: 1500, currency: "TC" }, lastReviewedAt: "2026-10-01T00:00:00Z" },
+  }));
 }
-function harness(input: { lang?: string; future?: boolean; sentinel?: boolean; count?: number; phase?: string; user?: { email: string } | null; query?: Promise<{ lang?: string }> }) {
+function harness(input: { lang?: string; future?: boolean; sentinel?: boolean; count?: number; phase?: "ranked" | "preseason"; user?: { email: string } | null; query?: Promise<{ lang?: string }> }) {
   const effective = catalogueLocale.resolveTouchlineCatalogueLocale(input.lang, input.future ?? false);
   const copy = input.future && effective !== "en-GB" && effective !== "pt-BR" ? touchlineRankingsDrafts[effective] : getCopy(effective);
   const sentinels = Object.fromEntries(keys.map(key => [key, `${effective}:${key}:$&<>`]));
-  const seen: string[] = [], roster = cards(input.count ?? 1), snapshot = { phase: input.phase ?? "ranked", snapshotId: "unchanged-snapshot" };
+  const seen: string[] = [], roster = cards(input.count ?? 1);
+  const snapshot: TouchlineActiveRankingState = input.phase === "preseason" || roster.length === 0
+    ? TOUCHLINE_PRESEASON_RANKING_STATE
+    : {
+      ...TOUCHLINE_PRESEASON_RANKING_STATE, phase: "ranked", snapshotId: "unchanged-snapshot", seasonId: "season-2026",
+      scoringVersion: "player_scoring_v4", coverageStatus: "complete_for_scoring",
+      players: roster.map((card, index) => ({
+        playerId: card.canonicalPlayerId!, providerPlayerId: card.providerPlayerId,
+        totalRating: card.seasonTotalRating ?? null, minutesPlayed: 90, appearances: 1,
+        positionGroup: "centre-back", positionRank: index + 1, groupSize: roster.length,
+        tierKey: "diamond-gold", priceTc: 999,
+      })),
+    };
   const exactCardProps: Record<string, unknown>[] = [];
-  function Zoom(props: Record<string, unknown>) { return React.createElement("div", { "data-zoom": true }, props.children as React.ReactNode); }
+  let hookIndex = 0;
+  const hookStates: unknown[] = [];
+  function Zoom(props: Record<string, unknown>) { return React.createElement("div", { "data-zoom": props.presentationMode, "data-open": String(props.open) }, (props.presentationMode === "trigger-only" ? props.children : props.open ? props.expandedContent : null) as React.ReactNode); }
   function Card(props: Record<string, unknown>) { exactCardProps.push(props); return React.createElement("i", { "data-art-boundary": true }); }
   function Navigation() { return null; }
-  const modules = {
+  const modules: Record<string, unknown> = {
     "@/lib/touchlineArena/catalogue-locale": catalogueLocale,
     "@/lib/touchlineArena/auth-access": authAccess,
     "@supabase/supabase-js": { AuthSessionMissingError },
     "@/components/touchline/TouchlineBrandHeader": { default: () => null },
     "react/jsx-runtime": jsx,
+    react: { ...React, useState(initial: unknown) { const index = hookIndex++; if (!(index in hookStates)) hookStates[index] = initial; return [hookStates[index], (next: unknown) => { hookStates[index] = next; }]; } },
     "@/components/touchline/TouchlineClubPerimeterTrace": { default: () => null },
     "@/components/touchline/cards/TouchlineEliteExactCard": { default: Card },
     "@/components/touchline/cards/TouchlineCardZoom": { default: Zoom },
     "@/components/touchline/TouchlineGlobalNavigation": { default: Navigation },
     "@/components/touchline/TouchlineLivePresentationRefresh": { default: () => null },
-    "@/components/touchline/cards/TouchlineCardLeadershipProvider": { TouchlineCardLeadershipProvider: ({ children }: { children: React.ReactNode }) => children },
+    "@/components/touchline/cards/TouchlineCardLeadershipProvider": { TouchlineCardLeadershipProvider: ({ children }: { children: React.ReactNode }) => children, useTouchlineCardLeadershipAuthority: () => null },
     "@/lib/touchlineArena/card-leadership-authority": { buildTouchlineCardLeadershipValue: (state: unknown, coaches: unknown) => { assert.equal(state, snapshot); assert.equal(coaches, null); return {}; } },
     "@/lib/touchlineArena/position-labels": position,
     "@/lib/touchlineArena/position-aware-card-stats": positionKind,
@@ -127,6 +156,8 @@ function harness(input: { lang?: string; future?: boolean; sentinel?: boolean; c
     "@/lib/touchlineArena/card-ranking-server": { loadTouchLineActiveRanking: async () => { seen.push("ranking"); return snapshot; } },
     "@/lib/touchlineArena/ranked-card-catalog-server": { loadTouchLineRankedCardCatalog: async (state: unknown) => { assert.equal(state, snapshot); seen.push("catalogue"); return roster; } },
     "@/lib/touchlineArena/ranked-card-catalog": catalog,
+    "@/lib/touchlineArena/published-ranking-catalog": projection,
+    "@/lib/touchlineArena/touchline-ranking-zoom-selection": selectionHelpers,
     "@/lib/touchlineArena/i18n": i18n,
     "@/lib/touchlineArena/rankings-i18n": { getTouchLineRankingsCopy: (locale: string) => { assert.equal(locale, effective); seen.push("copy"); return { ...copy, ...(input.sentinel ? sentinels : {}) }; } },
     "@/lib/touchlineArena/arena-navigation": navigation,
@@ -138,8 +169,25 @@ function harness(input: { lang?: string; future?: boolean; sentinel?: boolean; c
     "@/lib/touchlineArena/global-navigation": globalNavigation,
     "@/lib/touchlineArena/card-engine-links": engineLinks,
   };
+  let publicationTree: React.ReactNode = null;
+  type PublicationProps = React.ComponentProps<typeof import("../components/touchline/TouchlinePlayerCardRankingsPublication.tsx").default>;
+  const Publication = compile(clientSource, modules).default as (props: PublicationProps) => React.ReactNode;
+  modules["@/components/touchline/TouchlinePlayerCardRankingsPublication"] = {
+    default: (props: PublicationProps) => {
+      hookIndex = 0;
+      publicationTree = Publication(props);
+      return publicationTree;
+    },
+  };
   const exports = compile(`${source}\nexport { renderPlayerCardRankings as testRender };`, modules);
-  return { seen, effective, copy, roster, sentinels, exactCardProps, Zoom, Navigation, exports, run: () => (exports.testRender as (props: object, flag: boolean) => Promise<Element>)({ searchParams: input.query ?? Promise.resolve({ lang: input.lang }) }, input.future ?? false) };
+  return { seen, effective, copy, roster, sentinels, exactCardProps, Zoom, Navigation, exports,
+    openCard: () => {
+      const trigger = nodes(publicationTree).find(node => node.type === Zoom && node.props.presentationMode === "trigger-only");
+      assert.ok(trigger, "a real published trigger must exist before selecting");
+      (trigger.props.onOpenChange as (open: boolean, trigger: HTMLElement | null) => void)(true, null);
+    },
+    renderedNodes: (tree: React.ReactNode) => [...nodes(tree), ...nodes(publicationTree)],
+    run: () => (exports.testRender as (props: object, flag: boolean) => Promise<Element>)({ searchParams: input.query ?? Promise.resolve({ lang: input.lang }) }, input.future ?? false) };
 }
 
 test("player ranking real page consumes all eight new copy bindings", async () => {
@@ -241,12 +289,12 @@ test("player ranking real output keeps EN/PT and isolated draft labels without p
 });
 
 test("player ranking actual sort, top3/top20, totals, links and inactive commercial paths remain unchanged", async () => {
-  const exactCardDeclarations = source.match(/<TouchlineEliteExactCard\b[^>]*>/g) ?? [];
-  assert.equal(exactCardDeclarations.length, 4);
+  const exactCardDeclarations = clientSource.match(/<TouchlineEliteExactCard\b[^>]*>/g) ?? [];
+  assert.equal(exactCardDeclarations.length, 3, "two visible surfaces and one selected expanded card declaration");
   assert.ok(exactCardDeclarations.every(declaration => /\bhideMarketValuePanel\b/.test(declaration)));
 
   for (const lang of ["en-GB", "pt-BR"]) for (const count of [0, 1, 3, 21]) {
-    const h = harness({ lang, count }); const tree = await h.run(), all = nodes(tree), html = renderToStaticMarkup(tree);
+    const h = harness({ lang, count }); const tree = await h.run(), html = renderToStaticMarkup(tree), all = h.renderedNodes(tree);
     const featured = all.filter(n => n.props.className === "tl-card-rankings-rank"), rows = all.filter(n => n.props.className === "tl-card-rankings-row");
     assert.equal(featured.length, Math.min(count, 3)); assert.equal(rows.length, Math.min(count, 20));
     assert.equal(h.exactCardProps.length, featured.length + rows.length);
@@ -257,17 +305,20 @@ test("player ranking actual sort, top3/top20, totals, links and inactive commerc
         "the presentation opt-in must preserve the card player data",
       );
     }
-    const ids = count === 0 ? [] : [...Array.from({ length: count - 1 }, (_, i) => `row-uuid-${count - 1 - i}`), "row-uuid-0"].slice(0, 20);
+    const order = count < 2 ? Array.from({ length: count }, (_, index) => index)
+      : [...Array.from({ length: count - 2 }, (_, index) => count - 1 - index), 0, 1];
+    const ids = order.slice(0, 20).map(index => `row-${h.roster[index].id}`);
     assert.deepEqual(rows.map(n => n.props.id), ids);
     const metrics = all.find(n => n.props.className === "tl-card-rankings-metrics")!;
     const values = nodes(metrics).filter(n => n.type === "strong").map(n => n.props.children);
-    assert.deepEqual(values.slice(0, 2), [count, count === 21 ? "190.00" : count === 3 ? "1.00" : "0.00"]);
-    for (const zoom of all.filter(n => n.type === h.Zoom)) {
+    assert.deepEqual(values.slice(0, 2), count === 0 ? ["—", "—"] : [count, count === 21 ? "190.00" : count === 3 ? "1.00" : "0.00"]);
+    const zooms = all.filter(n => n.type === h.Zoom);
+    assert.equal(zooms.length, featured.length + rows.length + 1, "one persistent host in addition to visible triggers");
+    assert.equal(zooms.filter(node => node.props.presentationMode === "dialog-only").length, 1);
+    for (const zoom of zooms) {
       assert.equal(zoom.props.contractHref, undefined); assert.equal(zoom.props.contractValue, undefined); assert.equal(zoom.props.contractTermLabel, undefined);
-      const details = zoom.props.details as { title: string; fields: Array<{ kind?: string; value: string }> };
-      const card = h.roster.find(card => card.name === details.title)!;
-      assert.ok(card);
-      assert.equal(details.fields.find(field => field.kind === "rating-total")?.value, card.seasonTotalRating == null ? "—" : String(card.seasonTotalRating));
+      assert.equal(zoom.props.open, false);
+      assert.equal(zoom.props.details, undefined, "details are supplied only to an actual selected host");
     }
     const hrefs = all.filter(n => n.type === "a").map(n => n.props.href as string);
     if (count) {
@@ -276,17 +327,39 @@ test("player ranking actual sort, top3/top20, totals, links and inactive commerc
       assert.ok(hrefs.some(href => href.startsWith("/touchline-clubs/") && href.endsWith(`?lang=${lang}`)));
     }
     assert.ok(!html.includes("Contract player")); assert.ok(!html.includes("Contratar"));
+    if (count) {
+      h.openCard();h.exactCardProps.length = 0;renderToStaticMarkup(tree);
+      const host = h.renderedNodes(tree).filter(node => node.type === h.Zoom && node.props.presentationMode === "dialog-only");
+      assert.equal(host.length, 1);assert.equal(host[0].props.open, true);
+      const details = host[0].props.details as { title: string; fields: Array<{ kind?: string; value: string }> };
+      const selectedCard = h.roster[order[0]];
+      assert.equal(details.title, selectedCard.name);
+      assert.equal(details.fields.find(field => field.kind === "rating-total")?.value, String(selectedCard.seasonTotalRating));
+      assert.equal(h.exactCardProps.length, featured.length + rows.length + 1);
+    }
   }
 });
 
 test("player ranking preseason, identity authority, metadata and query wait are unchanged", async () => {
   for (const user of [null, { email: "customer@example.test" }, { email: "owner@example.test" }]) {
-    const h = harness({ lang: "pt-BR", phase: "unavailable", user });
-    const tree = await h.run(); assert.ok(renderToStaticMarkup(tree).includes("Ordem neutra de pré-temporada"));
-    const all = nodes(tree), nav = all.find(n => n.type === h.Navigation)!;
+    const h = harness({ lang: "pt-BR", phase: "preseason", user });
+    const tree = await h.run(), html = renderToStaticMarkup(tree);
+    assert.ok(html.includes(text(exactCopy.getTouchlineExactCardCopy("pt-BR").pending)));
+    assert.ok(html.includes(text(h.copy.rankingPendingDescription)));
+    assert.ok(html.includes('data-ranking-publication="withdrawn"'));
+    const all = h.renderedNodes(tree), nav = all.find(n => n.type === h.Navigation)!;
     assert.equal(nav.props.surface, user?.email === "owner@example.test" ? "auth" : user ? "authenticated" : "public");
-    for (const zoom of all.filter(n => n.type === h.Zoom)) assert.equal(Boolean((zoom.props.details as { cardEngineHref?: string }).cardEngineHref), user?.email === "owner@example.test");
+    const emptyHosts = all.filter(n => n.type === h.Zoom);
+    assert.equal(emptyHosts.length, 1, "withdrawn publication retains only the closed host, not stale cards or winner");
+    assert.equal(emptyHosts[0].props.presentationMode, "dialog-only");assert.equal(emptyHosts[0].props.open, false);assert.equal(emptyHosts[0].props.details, undefined);
+    assert.equal(h.exactCardProps.length, 0);
     assert.equal(JSON.stringify(h.exports.metadata), JSON.stringify({ title: "TouchLine Player Cards Ranking" }));
+    const ranked = harness({ lang: "pt-BR", user });
+    const rankedTree = await ranked.run(); renderToStaticMarkup(rankedTree);
+    ranked.openCard();renderToStaticMarkup(rankedTree);
+    const zooms = ranked.renderedNodes(rankedTree).filter(n => n.type === ranked.Zoom && n.props.presentationMode === "dialog-only");
+    assert.equal(zooms.length, 1, "identity controls are exercised on the real selected host");
+    for (const zoom of zooms) assert.equal(Boolean((zoom.props.details as { cardEngineHref?: string }).cardEngineHref), user?.email === "owner@example.test");
   }
   let release!: (query: { lang?: string }) => void;
   const h = harness({ query: new Promise(resolve => { release = resolve; }) });

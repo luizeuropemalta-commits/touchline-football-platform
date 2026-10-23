@@ -57,14 +57,21 @@ test("preseason does not fetch a separately active selection", async () => {
 test("page passes the same ranking to the selection and card catalogue", () => {
   const page = readFileSync(new URL("../app/rankings/page.tsx", import.meta.url), "utf8");
   assert.match(page, /loadTouchLinePublishedTopEleven\(activeRanking\)/);
-  assert.match(page, /loadTouchLineRankedCardCatalog\(activeRanking\)/);
-  assert.match(page, /TouchlineCardLeadershipProvider value=\{buildTouchlineCardLeadershipValue\(activeRanking, coachRanking\)\}/);
+  // The awards catalogue deliberately includes verified goals-only candidates;
+  // the XI remains bound to its immutable selection above.
+  assert.match(page, /loadTouchLineRankedCardCatalog\(activeRanking, undefined, \{ includeGoalCandidates: true \}\)/);
+  assert.match(page, /TouchlineCardLeadershipProvider livePlayerUpdates liveCoachUpdates value=\{buildTouchlineCardLeadershipValue\(activeRanking, coachRanking\)\}/);
 });
 
 test("player profile and player ranking pin crown authority to their displayed ranking", () => {
-  for (const file of ["app/touchline-players/[player]/page.tsx", "app/touchline-player-card-rankings/page.tsx"]) {
-    const page = readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
-    assert.match(page, /TouchlineCardLeadershipProvider value=\{buildTouchlineCardLeadershipValue\(activeRanking, null\)\}/);
-    assert.match(page, /initialPlayerRankingSnapshotId=\{activeRanking.snapshotId\}/);
-  }
+  const playerProfile = readFileSync(new URL("../app/touchline-players/[player]/page.tsx", import.meta.url), "utf8");
+  assert.match(playerProfile, /const profileRanking = profileSeasonId && activeRanking\.seasonId === profileSeasonId/);
+  assert.match(playerProfile, /expectedSeasonId=\{profileSeasonId \?\? undefined\}/);
+  assert.match(playerProfile, /buildTouchlineCardLeadershipValue\(profileRanking, null\)/);
+  assert.match(playerProfile, /initialPlayerRankingSnapshotId=\{activeRanking\.snapshotId\}/);
+
+  const playerRanking = readFileSync(new URL("../app/touchline-player-card-rankings/page.tsx", import.meta.url), "utf8");
+  assert.match(playerRanking, /TouchlineCardLeadershipProvider value=\{buildTouchlineCardLeadershipValue\(activeRanking, null\)\} livePlayerUpdates/);
+  assert.match(playerRanking, /initialPlayerRankingSnapshotId=\{activeRanking\.snapshotId\}/);
+  assert.match(playerRanking, /<TouchlinePlayerCardRankingsPublication[\s\S]*?seedRanking=\{activeRanking\}/);
 });

@@ -93,6 +93,15 @@ export type TouchlineOfficialLeagueTable = Readonly<{
   coverage: TouchlineOfficialLeagueTableCoverage;
   rows: readonly TouchlineOfficialLeagueTableRow[];
   reason: string | null;
+  /** Public SSR baseline only, not an immutable member of the sports publication. */
+  liveProjectionSource?: TouchlineOfficialLeagueTableLiveSource;
+}>;
+
+export type TouchlineOfficialLeagueTableLiveSource = Readonly<{
+  competitionProviderId: string;
+  season: TouchlineOfficialLeagueTableSeason;
+  teams: readonly TouchlineOfficialLeagueTableTeam[];
+  fixtures: readonly TouchlineOfficialLeagueTableFixture[];
 }>;
 
 type ResolveInput = Readonly<{

@@ -93,7 +93,13 @@ test("ClubHub formation keeps each card as the single visible player identity su
 });
 
 test("ClubHub matchup keeps both crests and its score in a centered premium fixture group", () => {
-  assert.match(clubHubLineup, /<ClubHubLiveFixtureScore draftLocalesEnabled=\{draftLocalesEnabled\} fixtureId=\{matchup\.fixtureId\}/);
+  // The shared boundary gained an explicit live-update opt-in; props must not
+  // be coupled to JSX attribute order.
+  const score = clubHubLineup.match(/<ClubHubLiveFixtureScore[\s\S]*?\/>/)?.[0] ?? "";
+  assert.match(score, /fixtureId=\{matchup\.fixtureId\}/);
+  assert.match(score, /initialFixture=\{matchup\.initialFixture\}/);
+  assert.match(score, /draftLocalesEnabled=\{draftLocalesEnabled\}/);
+  assert.match(score, /liveUpdates=\{liveUpdates && !staticVisualQa\}/);
   assert.match(clubHubLineupCss, /grid-template-columns: minmax\(270px, 1fr\) minmax\(154px, \.48fr\)/);
   assert.match(clubHubLineupCss, /grid-template-columns: minmax\(0,1fr\) minmax\(54px, auto\) minmax\(0,1fr\)/);
   assert.match(clubHubLineupCss, /\.matchupTeams > b \{ min-width: 54px/);

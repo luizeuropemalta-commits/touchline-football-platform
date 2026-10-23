@@ -33,7 +33,7 @@ test("visible Rankings heading matches the navigation term while retaining Touch
 });
 
 test("external ranking links name ClubOwner and ClubHub without changing destinations", () => {
-  const playerPage = readFileSync(new URL("../app/touchline-player-card-rankings/page.tsx", import.meta.url), "utf8");
+  const playerPage = readFileSync(new URL("../components/touchline/TouchlinePlayerCardRankingsPublication.tsx", import.meta.url), "utf8");
   assert.match(playerPage, /touchlineArenaPanelHref\("market", locale, draftLocalesEnabled\)/);
   assert.match(playerPage, /href=\{marketTransferHref\(club\?\.slug\)\}>\{copy\.marketTransfer\}/);
   assert.match(playerPage, /href=\{`\/touchline-clubs\/\$\{club\.slug\}\?\$\{localeQuery\}`\}>\{copy\.clubHub\}/);
@@ -47,7 +47,7 @@ test("external ranking links name ClubOwner and ClubHub without changing destina
 test("TouchLine Tables never present demo data as an official competition ranking", () => {
   assert.doesNotMatch(page, /rankClubOwnerCards|buildDemoClubOwnerStandings|buildTouchlineRankingSnapshot/);
   assert.match(page, /loadTouchLineActiveRanking\(\)/);
-  assert.match(page, /loadTouchLineRankedCardCatalog\(activeRanking\)/);
+  assert.match(page, /loadTouchLineRankedCardCatalog\(activeRanking, undefined, \{ includeGoalCandidates: true \}\)/);
   assert.match(page, /loadClubOwnerStandings\(\)/);
   assert.match(page, /touchLineEnglandTable=\{standings.rows\}/);
   assert.doesNotMatch(page, /const touchLineEnglandTable: never\[\] = \[\]/);
@@ -71,7 +71,14 @@ test("TouchLine Tables shows one positional Best XI, coaches and the sporting Cl
   assert.match(page, /cardGoalsLeaderIds\(ranking\.cardGoals, ranking\.snapshotId\)/);
   assert.match(page, /highlights=\{highlights\}/);
   assert.doesNotMatch(page, /rosterCards=\{rankedCards\}/);
-  assert.match(page, /totalRankedCards=\{rankedCards\.length\}/);
+  assert.match(page, /const catalogueIndex = buildTouchlineRankingSummaryIndex\(rankedCards\)/);
+  assert.match(page, /const summary = projectTouchlinePublishedRankingSummary\(catalogueIndex, activeRanking\)/);
+  assert.match(page, /totalRankedCards=\{summary\.totalRankedCards\} catalogueIndex=\{catalogueIndex\}/);
+  assert.match(page, /<TouchlineRankingPodium\b[^>]*catalogue=\{rankedCards\} seedRanking=\{activeRanking\}/);
+  assert.match(client, /projectTouchlinePublishedRankingAwards\(catalogue, ranking\)/);
+  assert.match(client, /awards\.goldenBall\.status === "unique-leader"/);
+  assert.match(client, /awards\.goldenBoot\.contenders\.filter/);
+  assert.doesNotMatch(client, /goldenBootPreview|goldenBootState|Haaland/);
   assert.match(client, /presentationCopy\.podiumTitle/);
   assert.equal(getTouchlineTablesPresentationCopy("pt-BR").podiumTitle, "Prêmios da Temporada");
   assert.equal(getTouchlineTablesPresentationCopy("en-GB").podiumTitle, "Season Awards");
@@ -90,7 +97,10 @@ test("TouchLine Tables distinguishes every published card from the current eligi
   assert.match(client, /copy\.publishedCards/);
   assert.match(client, /totalPublishedCards \?\? "—"/);
   assert.match(client, /copy\.rankedCards/);
-  assert.match(client, /totalRankedCards/);
+  assert.match(client, /projectTouchlinePublishedRankingSummary\(catalogueIndex, authority\.playerRanking\)/);
+  assert.match(client, /const displayedRankedCards = summary === null \? totalRankedCards : summary\.totalRankedCards/);
+  assert.match(client, /displayedRankedCards \?\? "—"/);
+  assert.doesNotMatch(page, /totalRankedCards=\{rankedCards\.length\}/);
   assert.doesNotMatch(client, /copy\.clubOwners/);
 });
 

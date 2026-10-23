@@ -19,8 +19,8 @@ import {
   Sparkles,
   Trophy,
 } from "lucide-react";
-import TouchlineEliteExactCard from "@/components/touchline/cards/TouchlineEliteExactCard";
-import TouchlineCardZoom from "@/components/touchline/cards/TouchlineCardZoom";
+import { TouchlinePlayerSeasonScope, TouchlineSeasonValue, TouchlineSeasonStat, TouchlineSeasonExactCard as TouchlineEliteExactCard, TouchlineSeasonCardZoom as TouchlineCardZoom } from "@/components/touchline/cards/TouchlinePlayerSeasonScope";
+import TouchlinePlayerSeasonFeed from "@/components/touchline/TouchlinePlayerSeasonFeed";
 import { getTouchlineCardZoomCopy } from "@/lib/touchlineArena/card-zoom-i18n";
 import { getTouchlineExactCardCopy } from "@/lib/touchlineArena/exact-card-i18n";
 import { getTouchlineCardMatchFactLabels } from "@/lib/touchlineArena/card-match-fact-i18n";
@@ -62,7 +62,7 @@ import {
   type TouchLinePlayerStatisticsReadModel,
 } from "@/lib/touchlineArena/player-season-statistics";
 import { loadTouchLineActiveRanking } from "@/lib/touchlineArena/card-ranking-server";
-import { resolveTouchlineCardCompetition } from "@/lib/touchlineArena/card-ranking-live";
+import { resolveTouchlineCardCompetition, TOUCHLINE_PRESEASON_RANKING_STATE } from "@/lib/touchlineArena/card-ranking-live";
 import { TOUCHLINE_POSITION_RANKING_LABELS } from "@/lib/touchlineArena/card-ranking";
 import {
   touchlineArenaTierForKey,
@@ -90,7 +90,6 @@ import {
   touchlineCountryFlagUrl,
 } from "@/lib/touchlineArena/country-flags";
 import {
-  TouchlineSocialFeed,
   type TouchlineSocialPost,
 } from "@/components/touchline/social/TouchlineSocial";
 import TouchlinePlayerSocialActions from "@/components/touchline/social/TouchlinePlayerSocialActions";
@@ -609,6 +608,7 @@ function SeasonStatisticsPanel({
   text,
   locale,
   publishedTotalRating,
+  liveSeasonRating = false,
   draftLocalesEnabled = false,
 }: {
   title: string;
@@ -616,6 +616,7 @@ function SeasonStatisticsPanel({
   text: ProfileCopy;
   locale: string;
   publishedTotalRating?: number | null;
+  liveSeasonRating?: boolean;
   draftLocalesEnabled?: boolean;
 }) {
   const performanceCopy = getTouchlinePlayerPerformanceCopy(locale, draftLocalesEnabled);
@@ -635,7 +636,10 @@ function SeasonStatisticsPanel({
       {coverageMessage ? <p className={styles.partialData} data-partial-season-data>{coverageMessage}</p> : null}
       {hasStatistics ? (
         <div className={styles.officialStats} data-stat-count={entries.length}>
-          {entries.map(([label, value]) => (
+          {entries.map(([label, value], index) => liveSeasonRating && index === 7 ? (
+            <TouchlineSeasonStat key={label} label={String(label)} seed={value} expectedSeasonId={statistics.seasonId}
+              unavailable={text.unavailable} availableClassName={styles.primaryStat} unavailableClassName={styles.unavailableStat} />
+          ) : (
             <div key={label} className={value === null ? styles.unavailableStat : styles.primaryStat}>
               <small>{label}</small>
               <strong>{value === null ? text.unavailable : String(value)}</strong>
@@ -654,10 +658,16 @@ function SeasonStatisticsPanel({
           })}
         </div>
       ) : (
+        <>
+        {liveSeasonRating ? <div className={styles.officialStats} data-stat-count={1}>
+          <TouchlineSeasonStat label={String(entries[7][0])} seed={entries[7][1]} expectedSeasonId={statistics.seasonId}
+            unavailable={text.unavailable} availableClassName={styles.primaryStat} unavailableClassName={styles.unavailableStat} />
+        </div> : null}
         <div className={styles.pendingSync}>
           <Activity aria-hidden="true" size={22} />
           <div><strong>{text.unavailable}</strong><small>{performanceCopy.syncPending}</small></div>
         </div>
+        </>
       )}
       {Object.keys(statistics.positionStatistics).some(isSeasonPercentage) ? (
         <p className={styles.providerNote}>
@@ -894,8 +904,11 @@ async function renderPlayerProfilePage({
     : editorialCard.marketValueState === "provisional"
       ? "provisional"
       : "verified";
+  const profileSeasonId = playerStatistics.currentSeason.seasonId;
+  const profileRanking = profileSeasonId && activeRanking.seasonId === profileSeasonId
+    ? activeRanking : TOUCHLINE_PRESEASON_RANKING_STATE;
   const rankingCompetition = resolveTouchlineCardCompetition({
-    state: activeRanking,
+    state: profileRanking,
     playerId: canonicalPlayerId ?? card.id,
     providerPlayerId: canonicalProviderPlayerId,
   });
@@ -988,6 +1001,7 @@ async function renderPlayerProfilePage({
     ? touchlineArenaTierForKey(requestedPreviewTier)
       ?? touchlineArenaTierForKey(touchlineDemoTierForPlayer(card.id, exactPlayer.sportmonksPlayerId, card.name))
     : null;
+  const liveProfileSeason = !previewTier && Boolean(profileSeasonId);
   if (previewTier) {
     exactPlayer.cardTier = previewTier.key;
     exactPlayer.classificationState = "verified";
@@ -1004,6 +1018,13 @@ async function renderPlayerProfilePage({
   const hasActiveContractOffer = false;
   const hasPublishedEditorialCard = Boolean(editorialCard);
   const officialSyncTime = formatOfficialSyncTime(official.fetchedAt, locale, draftLocalesEnabled);
+  const rankingGroupLabels = Object.fromEntries(Object.keys(TOUCHLINE_POSITION_RANKING_LABELS).map(key => {
+    const group = key as keyof typeof TOUCHLINE_POSITION_RANKING_LABELS;
+    return [group, locale === "fr-FR" ? frenchPositionRankingLabels[group]
+      : locale === "ar-SA" ? arabicPositionRankingLabels[group]
+      : localizedProfileRankingGroup(group, locale, draftLocalesEnabled)
+        ?? TOUCHLINE_POSITION_RANKING_LABELS[group][locale === "pt-BR" ? "pt" : "en"]];
+  }));
   const rankingGroupLabel = competition.positionGroup
     ? locale === "fr-FR"
       ? frenchPositionRankingLabels[competition.positionGroup]
@@ -1248,7 +1269,8 @@ async function renderPlayerProfilePage({
     );
   }
   return (
-    <TouchlineCardLeadershipProvider value={buildTouchlineCardLeadershipValue(activeRanking, null)}>
+    <TouchlineCardLeadershipProvider livePlayerUpdates={liveProfileSeason} expectedSeasonId={profileSeasonId ?? undefined} value={buildTouchlineCardLeadershipValue(profileRanking, null)}>
+    <TouchlinePlayerSeasonScope enabled={liveProfileSeason} playerId={canonicalPlayerId} providerPlayerId={canonicalProviderPlayerId} seasonId={profileSeasonId}>
     <main className={styles.page} style={pageStyle} dir="ltr">
       <TouchlineBrandHeader href={profileHref} locale={locale} accountLocaleContext={accountLocaleContext} draftLocalesEnabled={draftLocalesEnabled} navigation={<TouchlineGlobalNavigation locale={locale} draftLocalesEnabled={draftLocalesEnabled} currentRoute="playerProfile" showAudioControl={false} surface={navigationSurface} />} />
       <TouchlineLivePresentationRefresh
@@ -1388,7 +1410,11 @@ async function renderPlayerProfilePage({
           </div>
         </section>
 
-        <TouchlineSocialFeed
+        <TouchlinePlayerSeasonFeed
+          ratingPostId={`card-status-${card.id}-${tier?.key ?? "unpublished"}`}
+          ratingHighlightIndex={tierDisplayName ? 1 : 0}
+          ratingBadgeSuffix={tierDisplayName ? undefined : feedCopy.totalRatingSuffix}
+          unavailable={text.unavailable}
           draftLocalesEnabled={draftLocalesEnabled}
           entityId={`athlete:${card.id}`}
           entityName={card.name}
@@ -1431,7 +1457,7 @@ async function renderPlayerProfilePage({
           </div>
           <div className={styles.officialGroups}>
             <SeasonStatisticsPanel title={performanceCopy.latestSeason} statistics={playerStatistics.previousCompletedSeason} text={text} locale={locale} draftLocalesEnabled={draftLocalesEnabled} />
-            <SeasonStatisticsPanel title={performanceCopy.currentSeason} statistics={playerStatistics.currentSeason} text={text} locale={locale} publishedTotalRating={totalRatingText} draftLocalesEnabled={draftLocalesEnabled} />
+            <SeasonStatisticsPanel title={performanceCopy.currentSeason} statistics={playerStatistics.currentSeason} text={text} locale={locale} publishedTotalRating={totalRatingText} liveSeasonRating={liveProfileSeason} draftLocalesEnabled={draftLocalesEnabled} />
           </div>
           <FixtureStatisticsPanel
             model={playerStatistics}
@@ -1456,17 +1482,17 @@ async function renderPlayerProfilePage({
           <div className={styles.metrics}>
             <div>
               <small>{text.points}</small>
-              <strong className={styles.numericMetric}>{cumulativeRatingText}</strong>
+              <strong className={styles.numericMetric}><TouchlineSeasonValue unavailable={text.unavailable}>{cumulativeRatingText}</TouchlineSeasonValue></strong>
             </div>
             <div>
               <small>{text.rank}</small>
               <strong>
-                {competition.positionRank ? `#${competition.positionRank}` : text.rankPending}
+                <TouchlineSeasonValue field="positionRank" unavailable={text.rankPending}>{competition.positionRank ? `#${competition.positionRank}` : text.rankPending}</TouchlineSeasonValue>
               </strong>
             </div>
             <div>
               <small>{text.rankGroup}</small>
-              <strong>{rankingGroupLabel}</strong>
+              <strong><TouchlineSeasonValue field="positionGroup" unavailable={text.rankPending} groupLabels={rankingGroupLabels}>{rankingGroupLabel}</TouchlineSeasonValue></strong>
             </div>
             {tierDisplayName ? (
               <div>
@@ -1534,6 +1560,7 @@ async function renderPlayerProfilePage({
         </section>
       </div>
     </main>
+    </TouchlinePlayerSeasonScope>
     </TouchlineCardLeadershipProvider>
   );
 }

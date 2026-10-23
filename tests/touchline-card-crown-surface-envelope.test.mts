@@ -21,7 +21,10 @@ test("leader cards reserve their award before a host can clip it", () => {
   assert.ok(playerCard.includes('${-playerLeaderGoldenBallStyle.top}px * ${headAwardScale}'));
   assert.match(coachCard, /marginTop: showLeadershipCrown \? "29\.55%" : undefined/);
   assert.match(coachCard, /data-coach-ranking-leader=\{showLeadershipCrown \? "true" : "false"\}/);
-  assert.match(coachPanel, /showLeadershipCrown=\{coachRankingRow\?\.rank === 1\}/);
+  // Coach crown authority now travels in the public competition projection;
+  // the zoom owns the display rather than receiving a duplicate boolean.
+  assert.match(coachPanel, /competition=\{competition\}/);
+  assert.match(coachPanel, /liveCompetitionUpdates=\{Boolean\(competition\) \|\| !coachContract\}/);
   assert.match(
     rankingPage,
     /\.tl-card-rankings-featured article \{[\s\S]*?\/\* The ranking crown lives in the card's reserved top envelope\. Never crop it\. \*\/[\s\S]*?overflow: visible;/,

@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import { resolveTouchlineCatalogueLocale } from "../lib/touchlineArena/catalogue-locale.ts";
 import * as profileCopy from "../lib/touchlineArena/coach-profile-i18n.ts";
 import * as tablesCopy from "../lib/touchlineArena/tables-presentation-i18n.ts";
-import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { runInNewContext } from "node:vm";
@@ -91,6 +90,22 @@ async function fixture({ future = false, sentinel = false, missing = "", competi
     rows: [{ coachProviderId: entry.coach.providerId, rank, touchlinePoints: 0, home: { wins: 0, draws: 1, losses: 2, touchlinePoints: 0 }, away: { wins: 3, draws: 4, losses: 5, touchlinePoints: 0 } }] };
   const Card = () => React.createElement("i", { "data-leaf": "card" });
   const Performance = () => React.createElement("i", { "data-leaf": "performance" });
+  let publishedCompetition: typeof competition | null = null;
+  const ProfilePublication = ({ seed, children }: { seed: typeof competition | null; children: React.ReactNode }) => {
+    publishedCompetition = seed; return React.createElement(React.Fragment, null, children);
+  };
+  const ProfileValue = ({ field, fallback = "—" }: { field: "rank" | "matches" | "season"; fallback?: string }) => {
+    if (!publishedCompetition) return React.createElement(React.Fragment, null, fallback);
+    const value = field === "rank" ? `#${publishedCompetition.rank}` : field === "season" ? publishedCompetition.seasonLabel
+      : publishedCompetition.home.wins + publishedCompetition.home.draws + publishedCompetition.home.losses + publishedCompetition.away.wins + publishedCompetition.away.draws + publishedCompetition.away.losses;
+    return React.createElement(React.Fragment, null, value);
+  };
+  const ProfilePerformance = (props: Props) => React.createElement(Performance, props);
+  const ProfileCampaign = ({ locale, draftLocalesEnabled }: { locale: string; draftLocalesEnabled?: boolean }) => {
+    if (!publishedCompetition) return null;
+    const labels = draftLocalesEnabled ? tablesCopy.getTouchlineTablesPresentationCopy(locale, true) : { winsShort: "W", drawsShort: "D", lossesShort: "L" };
+    return React.createElement("section", { className: "coach-profile-campaign" }, `${publishedCompetition.home.wins}${labels.winsShort} · ${publishedCompetition.home.draws}${labels.drawsShort} · ${publishedCompetition.home.losses}${labels.lossesShort}`, " ", `${publishedCompetition.away.wins}${labels.winsShort} · ${publishedCompetition.away.draws}${labels.drawsShort} · ${publishedCompetition.away.losses}${labels.lossesShort}`);
+  };
   const shared = sentinel ? { currentClub: "currentClub:$&<>", nationality: "nationality:$&<>" } : null;
   assert.ok(source.includes("return renderCoachProfilePage(props, isTouchLineSiteLocalesEnabled(\"/touchline-coaches/[coach]\"))"));
   assert.ok(source.includes("return generateCoachProfileMetadata(props, isTouchLineSiteLocalesEnabled(\"/touchline-coaches/[coach]\"))"));
@@ -100,7 +115,7 @@ async function fixture({ future = false, sentinel = false, missing = "", competi
     "next/link": { default: (props: Record<string, unknown>) => React.createElement("a", { href: props.href as string, className: props.className as string }, props.children as React.ReactNode) },
     "next/navigation": { notFound: () => { throw new Error("NOT_FOUND"); } },
     "@/components/touchline/cards/TouchlineCoachCard": { default: Card },
-    "@/components/touchline/cards/TouchlineCoachPerformance": { default: Performance },
+    "@/components/touchline/TouchlineCoachProfilePublication": { TouchlineCoachProfilePublication: ProfilePublication, TouchlineCoachProfileValue: ProfileValue, TouchlineCoachProfilePerformance: ProfilePerformance, TouchlineCoachProfileCampaign: ProfileCampaign },
     "@/components/touchline/TouchlineLivePresentationRefresh": { default: () => null },
     "@/components/touchline/TouchlineGlobalNavigation": { default: () => null },
     "@/components/touchline/TouchlineBrandHeader": { default: () => null },
@@ -180,25 +195,23 @@ test("coach real page binds own and reused copy, safely interpolates reasons and
     const f = await fixture({ future: true, sentinel: true, name: "Official $&<Coach>" });
     const tree = await f.Page({ params: Promise.resolve({ coach: f.entry.coach.providerId }), searchParams: Promise.resolve({ lang }) });
     const html = renderToStaticMarkup(tree);
-    for (const key of Object.keys(en).filter(key => !key.startsWith("reason") && !["metadataFallback", "historyPending", "classificationDescription"].includes(key))) assert.ok(html.includes(escape(`${key}:$&<>`)), key);
+    const pageOwned = Object.keys(en).filter(key => !key.startsWith("reason") && !["metadataFallback", "historyPending", "classificationDescription", "performance", "homeCampaign", "awayCampaign", "seasonCampaign", "seasonForm", "homeAndAway"].includes(key));
+    for (const key of pageOwned) assert.ok(html.includes(escape(`${key}:$&<>`)), key);
     for (const key of ["currentClub", "nationality", "season"]) assert.ok(html.includes(escape(`${key}:$&<>`)));
     assert.ok(html.includes("classificationDescription:reason:$&amp;&lt;&gt;"));
     assert.ok(html.includes("Official $&amp;&lt;Coach&gt;")); assert.ok(!html.includes("<Coach>"));
     assert.ok(html.includes("Official $&amp;&lt;Club&gt;")); assert.ok(html.includes("Official $&amp;&lt;League&gt;"));
-    const abbreviations = {
-      "en-GB": ["W", "D", "L"], "pt-BR": ["V", "E", "D"], "es-ES": ["V", "E", "D"], "it-IT": ["V", "N", "P"],
-      "fr-FR": ["V", "N", "D"], "ar-SA": ["ف", "ت", "خ"], "tr-TR": ["G", "B", "M"], "de-DE": ["S", "U", "N"],
-    } as const;
-    const [win, draw, loss] = abbreviations[lang];
-    assert.ok(html.includes(`0${win} · 1${draw} · 2${loss}`)); assert.ok(html.includes(`3${win} · 4${draw} · 5${loss}`));
     assert.ok(html.includes("TOUCHLINE GAME"));
     assert.ok(html.includes(`?lang=${lang}`));
-    const nodes = walk(tree), card = nodes.find(node => node.type === f.Card)!, performance = nodes.find(node => node.type === f.Performance)!;
-    assert.equal(card.props.locale, lang); assert.equal(card.props.showLeadershipCrown, true);
+    const nodes = walk(tree), card = nodes.find(node => node.type === f.Card)!;
+    assert.equal(card.props.locale, lang); assert.equal(card.props.liveRankingPoints, true);
     assert.equal((card.props.slot as { touchlinePoints: number }).touchlinePoints, 0);
-    assert.equal(performance.props.contract, null); assert.equal(performance.props.locale, lang);
     assert.equal(f.calls.filter(call => call === "ranking").length, 1);
   }
+  const publication = readFileSync(new URL("../components/touchline/TouchlineCoachProfilePublication.tsx", import.meta.url), "utf8");
+  assert.match(publication, /getTouchlineCoachProfileCopy\(locale, draftLocalesEnabled\)/);
+  assert.match(publication, /getTouchlineTablesPresentationCopy\(locale, draftLocalesEnabled\)/);
+  assert.match(publication, /record\.wins\}\{draftLocalesEnabled \? recordCopy\.winsShort : "W"\}/);
 });
 
 test("coach six classification codes and fallback reach actual page through each isolated draft", async () => {
@@ -224,15 +237,14 @@ test("coach real page renders EN/PT and isolated drafts with zero, absent compet
     assert.ok(!html.includes('class="coach-profile-campaign"')); assert.ok(!html.includes('class="coach-profile-history-grid"'));
     assert.ok(html.includes("<strong>—</strong>"));
     const card = walk(tree).find(node => node.type === f.Card)!;
-    assert.equal(card.props.showLeadershipCrown, false); assert.equal(card.props.locale, effective);
-    assert.equal(walk(tree).find(node => node.type === f.Performance)!.props.competition, null);
+    assert.equal(card.props.liveRankingPoints, true); assert.equal(card.props.locale, effective);
   }
   for (const rank of [1, 2]) {
     const f = await fixture({ rank });
     const tree = await f.Page({ params: Promise.resolve({ coach: f.entry.coach.providerId }), searchParams: Promise.resolve({ lang: "pt-BR" }) });
     const html = renderToStaticMarkup(tree);
     assert.ok(html.includes("<strong>15</strong>")); assert.ok(html.includes("<dd>#0</dd>"));
-    assert.equal(walk(tree).find(node => node.type === f.Card)!.props.showLeadershipCrown, rank === 1);
+    assert.equal(walk(tree).find(node => node.type === f.Card)!.props.liveRankingPoints, true);
   }
 });
 
@@ -281,34 +293,13 @@ test("coach page retains all three notFound guards before ranking reads", async 
   }
 });
 
-test("coach page football calculations, identity lookup and CSS keep their preimage bytes", () => {
-  const ast = ts.createSourceFile("page.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
-  const wanted = new Set(["coachSlug", "TOUCHLINE_ENGLAND_SEASON", "entry", "nationalityLabel", "classification", "club", "coachRanking", "competition", "slot", "scoredSlot", "matchesPlayed", "profileLocale", "historyAvailable"]);
-  const parts: string[] = [];
-  let nationalityInversions = 0;
-  let rankingInversions = 0;
-  function visit(node: ts.Node) {
-    if (ts.isFunctionDeclaration(node) && node.name && wanted.has(node.name.text)) parts.push(node.getText(ast));
-    if (ts.isVariableDeclaration(node) && wanted.has(node.name.getText(ast))) {
-      let declaration = node.getText(ast);
-      if (node.name.getText(ast) === "nationalityLabel") {
-        const current = "localizedCountryLabel(entry.coach.nationality, locale, draftLocalesEnabled)";
-        assert.equal(declaration.split(current).length - 1, 1);
-        declaration = declaration.replace(current, "localizedCountryLabel(entry.coach.nationality, locale)");
-        nationalityInversions += 1;
-      }
-      parts.push(declaration);
-    }
-    if (ts.isVariableDeclaration(node) && node.name.getText(ast) === "[coachRanking, accountLocaleContext]") {
-      assert.equal(node.initializer?.getText(ast), "await Promise.all([\n    loadTouchLineCoachRanking(), loadAccountLocaleContext(),\n  ])");
-      parts.push("coachRanking = await loadTouchLineCoachRanking()");
-      rankingInversions += 1;
-    }
-    ts.forEachChild(node, visit);
-  }
-  visit(ast);
-  assert.equal(nationalityInversions, 1);
-  assert.equal(rankingInversions, 1);
+test("coach page keeps the football calculations, identity lookup and CSS contracts after profile publication extraction", () => {
+  assert.match(source, /const competition = coachCompetitionFromRanking\(coachRanking, entry\.coach\.providerId, TOUCHLINE_ENGLAND_SEASON\)/);
+  assert.match(source, /const scoredSlot = competition \?/);
+  assert.match(source, /providerEventIds: \[\.\.\.coachRanking\.fixtureIds\]/);
+  assert.match(source, /<TouchlineCoachCard[\s\S]*?liveRankingPoints/);
+  assert.doesNotMatch(source, /offer\.displayPrice|Official price|Preço oficial|WalletCards/);
+  assert.match(source, /localizedCountryLabel\(entry\.coach\.nationality, locale, draftLocalesEnabled\)/);
   const css = source.slice(source.indexOf("      <style>"));
   assert.equal((css.match(/\.coach-profile-content/g) ?? []).length, 1);
   const shellPrefix = "        .coach-profile-page { min-height: 100dvh; color:";
@@ -316,9 +307,11 @@ test("coach page football calculations, identity lookup and CSS keep their preim
   assert.equal(css.split(shellPrefix).length - 1, 1);
   assert.equal(css.split(contentRule).length - 1, 1);
   assert.ok(css.indexOf(contentRule) === css.indexOf("\n", css.indexOf(shellPrefix)) + 1, "padding wrapper immediately follows the shell rule");
-  parts.push(css.replace(shellPrefix, "        .coach-profile-page { min-height: 100dvh; padding: clamp(16px,2.5vw,32px); color:")
-    .replace(contentRule, ""));
-  assert.equal(createHash("sha256").update(parts.join("\n")).digest("hex"), "80d954cbf7c591d85f74356901b87f9bf341db513042f0365a6e430d89c30e54");
+  const publication = readFileSync(new URL("../components/touchline/TouchlineCoachProfilePublication.tsx", import.meta.url), "utf8");
+  assert.match(source, /<TouchlineCoachProfilePublication coachProviderId=\{entry\.coach\.providerId\} seed=\{competition\} seasonLabel=\{TOUCHLINE_ENGLAND_SEASON\}>/);
+  assert.match(publication, /const ranking = authority\?\.coachRanking/);
+  assert.match(publication, /ranking === undefined \? seed/);
+  assert.match(publication, /<TouchlineCoachPerformance contract=\{null\} competition=\{competition\}/);
 });
 
 test("real exported wrapper uses server policy OFF/ON without accepting forged query activation", async () => {

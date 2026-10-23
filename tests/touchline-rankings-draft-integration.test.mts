@@ -22,6 +22,11 @@ import * as fixtureRound from "../lib/touchlineArena/arena-fixture-round.ts";
 import * as positionLabels from "../lib/touchlineArena/position-labels.ts";
 import * as profileMetrics from "../lib/touchlineArena/club-owner-profile-metrics.ts";
 import * as ownerStandings from "../lib/touchlineArena/club-owner-standings.ts";
+import { TOUCHLINE_PRESEASON_RANKING_STATE } from "../lib/touchlineArena/card-ranking-live.ts";
+import { projectTouchlinePublishedRankingAwards } from "../lib/touchlineArena/published-ranking-awards.ts";
+import * as rankingZoom from "../lib/touchlineArena/touchline-ranking-zoom-selection.ts";
+import * as rankingSummary from "../lib/touchlineArena/published-ranking-summary.ts";
+import { touchlinePlayerLeadershipScope } from "../lib/touchlineArena/player-ranking-leadership.ts";
 
 type Element = React.ReactElement<Record<string, unknown>>;
 const route = readFileSync(new URL("../app/rankings/page.tsx", import.meta.url), "utf8");
@@ -37,6 +42,10 @@ function compile(source: string, modules: Record<string, unknown> = {}) {
       if (name === "@/lib/touchlineArena/club-owner-standings-server") return { loadClubOwnerStandings: async () => ({status:"ready",rows:[]}) };
       if (name === "@/lib/touchlineArena/site-locales-release") return siteLocalePolicy;
       if (Object.hasOwn(modules, name)) return modules[name];
+      if (name === "@/components/touchline/cards/TouchlineCardLeadershipProvider") return { useTouchlineCardLeadershipAuthority: () => null };
+      if (name === "@/lib/touchlineArena/published-ranking-awards") return { projectTouchlinePublishedRankingAwards };
+      if (name === "@/lib/touchlineArena/touchline-ranking-zoom-selection") return rankingZoom;
+      if (name === "@/lib/touchlineArena/published-ranking-summary") return rankingSummary;
       if (name === "react") return React;
       if (name === "react/jsx-runtime") return jsx;
       if (name === "lucide-react") return icons;
@@ -58,6 +67,30 @@ function nodes(node: React.ReactNode): Element[] {
     ? [child, ...nodes(child.props.children as React.ReactNode), ...nodes(child.props.navigation as React.ReactNode)] : []);
 }
 
+function publishedPodiumFixture() {
+  const playerId = "a0000000-0000-4000-8000-000000000001";
+  const snapshotId = "published-locale-test";
+  return {
+    catalogue: [{ id: playerId, canonicalPlayerId: playerId, providerPlayerId: "101", name: "Official name", shortName: "Official name", clubName: "Official club", position: "GK",
+      editorialCard: { tierKey: "ruby-red", cardPrice: { amountMinor: 1500, currency: "TC" }, lastReviewedAt: "2026-10-01T00:00:00Z" } }],
+    seedRanking: { ...TOUCHLINE_PRESEASON_RANKING_STATE, phase: "ranked", snapshotId, seasonId: "season-2026",
+      scoringVersion: "player_scoring_v4", coverageStatus: "complete_for_scoring", publishedAt: "2026-10-23T10:00:00Z",
+      fixtureIds: ["fixture-1"], expectedFixtureIds: ["fixture-1"], totalScorePoints: 0,
+      players: [{ playerId, providerPlayerId: "101", totalRating: 10, minutesPlayed: 90, appearances: 1 }],
+      leadershipDecision: { status: "unique-leader", scope: touchlinePlayerLeadershipScope(snapshotId), leader: { subjectType: "player", subjectId: playerId } },
+      cardGoals: { source: "published-card-goals-v1", snapshotId, rows: [{ playerId, goals: 1 }] },
+    },
+  };
+}
+
+function capturePodium(Component: (props: object) => Element, props: object) {
+  let tree: Element | undefined;
+  function Capture() { tree = Component(props); return null; }
+  renderToStaticMarkup(React.createElement(Capture));
+  assert.ok(tree);
+  return tree;
+}
+
 test("actual Rankings panels propagate opt-in while default remains English", () => {
   const mod = compile(client);
   const Pending = mod.TouchlineRankingPodiumPending as (props: object) => Element;
@@ -65,10 +98,10 @@ test("actual Rankings panels propagate opt-in while default remains English", ()
     const opted = renderToStaticMarkup(Pending({ locale, draftLocalesEnabled: true }));
     assert.ok(opted.includes(expected));
     assert.ok(renderToStaticMarkup(Pending({ locale })).includes("Loading rankings…"));
-    const podium = (mod.TouchlineRankingPodium as (props: object) => Element)({
+    const podium = capturePodium(mod.TouchlineRankingPodium as (props: object) => Element, {
       locale, draftLocalesEnabled: true, canEditCardEngine: false,
       copy: rankings.getTouchLineRankingsCopy(locale, true),
-      highlights: { topPlayerCards: [{ id: "id", canonicalPlayerId: "canonical", shortName: "Official name", clubName: "Official club", position: "GK", editorialCard: null }] },
+      ...publishedPodiumFixture(),
     });
     const card = nodes(podium).find(node => node.props.card);
     assert.equal(card?.props.draftLocalesEnabled, true);
@@ -126,9 +159,13 @@ test("Rankings physical frame does not mirror leader decoration and preserves pi
 
 function internalFixture() {
   let authCalls = 0;
-  const active = { phase: "ranked", snapshotId: "player-snapshot" };
+  const published = publishedPodiumFixture();
+  const active = published.seedRanking;
   const coach = { phase: "ranked", snapshotId: "coach-snapshot" };
-  const cards = [{ id: "official-card", shortName: "Official Name" }];
+  const cards = [...published.catalogue, { ...published.catalogue[0],
+    id: "a0000000-0000-4000-8000-000000000002", canonicalPlayerId: "a0000000-0000-4000-8000-000000000002",
+    providerPlayerId: "102", shortName: "Verified scorer without rating", seasonTotalRating: null,
+  }];
   const highlights = Object.freeze({ sentinel: "real-projection-boundary" });
   const leafNames = ["TouchlineRankingsHero", "TouchlineFeaturedCoach", "TouchlineCoachRankingTable", "TouchlineRankingPodium", "TouchlineRankingPodiumPending", "TouchlineRankingEnding", "default"];
   const leaves = Object.fromEntries(leafNames.map(name => [name, function RankingLeaf() { return null; }]));
@@ -140,7 +177,11 @@ function internalFixture() {
     "@/lib/touchlineArena/global-navigation": { resolveTouchlineGlobalNavigationSurface: () => "public" },
     "@/lib/touchlineArena/ranking-load-diagnostics": { createRankingLoadDiagnostics: () => ({ measure: (_key: string, fn: () => unknown) => fn(), seal: () => undefined }) },
     "@/lib/touchlineArena/card-ranking-server": { loadTouchLineActiveRanking: async () => active, loadTouchLinePublishedTopEleven: async () => null },
-    "@/lib/touchlineArena/ranked-card-catalog-server": { loadTouchLineRankedCardCatalog: async () => cards },
+    "@/lib/touchlineArena/ranked-card-catalog-server": { loadTouchLineRankedCardCatalog: async (state: unknown, admin: unknown, options: unknown) => {
+      assert.equal(state, active); assert.equal(admin, undefined);
+      assert.equal(JSON.stringify(options), JSON.stringify({ includeGoalCandidates: true }));
+      return cards;
+    } },
     "@/lib/touchlineArena/coach-ranking-server": { loadTouchLineCoachRanking: async () => coach },
     "@/lib/touchlineArena/card-goals-leadership": { cardGoalsLeaderIds: () => [] },
     "@/lib/touchlineArena/card-publication-read-model": { countTouchlinePublishedPlayerCards: async () => 7 },
@@ -156,7 +197,7 @@ function internalFixture() {
     return await (mod[name] as (props: object, enabled?: boolean) => Element | Promise<Element>)(props, enabled);
   };
   const data = { complete: Promise.resolve([active, null, cards, coach, 7]), leadership: Promise.resolve([active, coach]), highlights: Promise.resolve(highlights) };
-  return { mod, leaves, invoke, data, highlights, authCalls: () => authCalls };
+  return { mod, leaves, invoke, data, active, coach, cards, highlights, authCalls: () => authCalls };
 }
 
 test("private Rankings renderer propagates all eight locales through the page and sporting frame", async () => {
@@ -188,9 +229,16 @@ test("private Rankings renderer propagates all eight locales through the page an
       if (section.props.section === "hero") {
         assert.equal(content.props.totalPublishedCards, 7);
         assert.equal(content.props.totalRankedCards, 1);
+        assert.deepEqual(content.props.catalogueIndex, h.cards.map(card => ({ playerId: card.id, providerPlayerId: card.providerPlayerId })));
       }
       if (section.props.section === "ending") assert.equal((content.props.touchLineEnglandTable as unknown[]).length, 0);
-      if (section.props.section === "overview" || section.props.section === "podium") assert.equal(content.props.highlights, h.highlights);
+      if (section.props.section === "overview") assert.equal(content.props.highlights, h.highlights);
+      if (section.props.section === "podium") {
+        assert.equal(content.props.highlights, undefined);
+        assert.equal(content.props.catalogue, h.cards);
+        assert.equal(content.props.seedRanking, h.active);
+        assert.equal(content.props.coachRanking, h.coach);
+      }
     }
     const suspense = frameNodes.filter(node => node.type === React.Suspense);
     const fallbacks = suspense.flatMap(node => nodes(node.props.fallback as React.ReactNode));

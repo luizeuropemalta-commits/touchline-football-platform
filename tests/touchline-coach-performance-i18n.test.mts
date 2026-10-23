@@ -125,9 +125,11 @@ test("coach performance public caller keeps contracts/history off and legacy dat
   assert.equal(hash(component.slice(component.indexOf("      {showHistory && contract ? ("))), "f39f189b94b11fa1ebdcd6c4269fe05a686d548af3fdef63916c68f5099f039c");
   assert.equal(hash(component.slice(component.indexOf("      ) : contract ? ("), component.indexOf("      ) : (\n        <p className"))), "7354e7da1bf6a4ee41af74fdb9498e35e6b411a455f5a0d15b5b27619049347a");
   const page = read("app/touchline-coaches/[coach]/page.tsx");
+  const publication = read("components/touchline/TouchlineCoachProfilePublication.tsx");
   assert.ok(page.includes("return renderCoachProfilePage(props, isTouchLineSiteLocalesEnabled(\"/touchline-coaches/[coach]\"))"));
   assert.match(page, /CoachProfilePageProps, draftLocalesEnabled = false/);
-  assert.match(page, /<TouchlineCoachPerformance contract=\{null\} competition=\{competition\} locale=\{locale\} draftLocalesEnabled=\{draftLocalesEnabled\} \/>/);
+  assert.match(page, /<TouchlineCoachProfilePerformance locale=\{locale\} draftLocalesEnabled=\{draftLocalesEnabled\} \/>/);
+  assert.match(publication, /<TouchlineCoachPerformance contract=\{null\} competition=\{competition\} locale=\{locale\} draftLocalesEnabled=\{draftLocalesEnabled\} \/>/);
   assert.match(component, /showHistory = false/); assert.match(component, /showHistory && contract/); assert.match(component, /showHistory && lifecycle\.length/);
   assert.match(component, /new Intl\.DateTimeFormat\(locale, \{ dateStyle: "medium" \}\)/);
   assert.match(component, /PRESERVED LIFECYCLE/); assert.match(component, /No eligible fixture has been completed during this contract/);

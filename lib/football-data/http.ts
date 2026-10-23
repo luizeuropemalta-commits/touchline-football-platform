@@ -480,6 +480,7 @@ export function resultError(
     retryAfterSeconds?: number;
     remaining?: number;
     requestedEntity?: string;
+    requestDisposition?: "deferred-before-http";
   } = {},
 ) {
   return {

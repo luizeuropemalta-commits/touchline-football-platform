@@ -163,8 +163,7 @@ export default function TouchlineCoachCategoryShowcase({ locale, playerCards, co
                         locale={effectiveLocale}
                         contract={null}
                         competition={competition}
-                        publishedTouchlinePoints={competition?.totalTouchlinePoints ?? null}
-                        showLeadershipCrown={competition?.rank === 1}
+                        liveCompetitionUpdates
                         profileHref={coachHref}
                         assetLoading="eager"
                         frameLoading="eager"

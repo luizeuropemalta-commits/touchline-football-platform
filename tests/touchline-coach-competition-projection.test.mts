@@ -34,7 +34,9 @@ test("gallery and profile both use canonical projection and pass it to their car
   const profile = readFileSync(new URL("../app/touchline-coaches/[coach]/page.tsx", import.meta.url), "utf8");
   assert.match(gallery, /coachCompetitionFromRanking\(/);
   assert.match(gallery, /competition=\{competition\}/);
-  assert.match(gallery, /publishedTouchlinePoints=\{competition\?\.totalTouchlinePoints \?\? null\}/);
-  assert.match(gallery, /showLeadershipCrown=\{competition\?\.rank === 1\}/);
+  assert.match(gallery, /competition=\{competition\}[\s\S]*?liveCompetitionUpdates/);
+  assert.doesNotMatch(gallery, /publishedTouchlinePoints=|showLeadershipCrown=/);
   assert.match(profile, /coachCompetitionFromRanking\(/);
+  assert.match(profile, /liveRankingPoints/);
+  assert.doesNotMatch(profile, /showLeadershipCrown=\{competition\?\.rank === 1\}/);
 });

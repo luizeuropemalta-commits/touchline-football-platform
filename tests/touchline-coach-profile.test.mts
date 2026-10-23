@@ -13,13 +13,15 @@ const source = readFileSync(
   new URL("../app/touchline-coaches/[coach]/page.tsx", import.meta.url),
   "utf8",
 );
+const publication = readFileSync(new URL("../components/touchline/TouchlineCoachProfilePublication.tsx", import.meta.url), "utf8");
 
 test("Coach Profile resolves the canonical live-coach registry and shared competition ranking", () => {
   assert.match(source, /TOUCHLINE_LIVE_COACHES/);
   assert.match(source, /touchlineCoachClassificationForProviderId/);
   assert.match(source, /loadTouchLineCoachRanking/);
-  assert.match(source, /coachCompetitionFromRanking\(coachRanking, entry\.coach\.providerId, TOUCHLINE_ENGLAND_SEASON\)/);
-  assert.match(source, /TouchlineCoachPerformance contract=\{null\} competition=\{competition\}/);
+  assert.match(source, /<TouchlineCoachProfilePublication coachProviderId=\{entry\.coach\.providerId\} seed=\{competition\} seasonLabel=\{TOUCHLINE_ENGLAND_SEASON\}>/);
+  assert.match(publication, /coachCompetitionFromRanking\(ranking, coachProviderId, seasonLabel\)/);
+  assert.match(publication, /<TouchlineCoachPerformance contract=\{null\} competition=\{competition\}/);
   assert.doesNotMatch(source, /offer\.displayPrice|Official price|Preço oficial|WalletCards/);
   assert.match(source, /notFound\(\)/);
 });
@@ -32,18 +34,20 @@ test("Coach Profile keeps unverified historical evidence explicit instead of inv
 });
 
 test("Coach Profile uses a balanced official-facts rail without repeating TouchLine points", () => {
+  const publication = readFileSync(new URL("../components/touchline/TouchlineCoachProfilePublication.tsx", import.meta.url), "utf8");
   assert.match(source, /coach-profile-facts/);
-  assert.match(source, /coach-profile-campaign/);
+  assert.match(source, /<TouchlineCoachProfileCampaign locale=\{locale\} draftLocalesEnabled=\{draftLocalesEnabled\}/);
+  assert.match(publication, /className="coach-profile-campaign"/);
   assert.match(source, /\{cardCopy\.currentClub\}/);
   assert.equal(getTouchlineCoachCardCopy("en-GB").currentClub, "Current club");
   assert.equal(getTouchlineCoachCardCopy("pt-BR").currentClub, "Clube atual");
-  assert.match(source, /label: copy\.homeCampaign/);
-  assert.match(source, /label: copy\.awayCampaign/);
+  assert.match(publication, /copy\.homeCampaign/);
+  assert.match(publication, /copy\.awayCampaign/);
   assert.equal(getTouchlineCoachProfileCopy("en-GB").homeCampaign, "Home campaign");
   assert.equal(getTouchlineCoachProfileCopy("pt-BR").homeCampaign, "Campanha em casa");
   assert.equal(getTouchlineCoachProfileCopy("en-GB").awayCampaign, "Away campaign");
   assert.equal(getTouchlineCoachProfileCopy("pt-BR").awayCampaign, "Campanha fora");
-  assert.doesNotMatch(source, /record\.touchlinePoints}L?\s*PTS/);
+  assert.doesNotMatch(publication, /record\.touchlinePoints}L?\s*PTS/);
 });
 
 test("Coach performance exposes yellow and red cards separately and never invents unavailable totals", () => {

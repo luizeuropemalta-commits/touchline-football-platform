@@ -25,6 +25,8 @@ type AdminClient = SupabaseClient;
 export type TouchlineOfficialLeagueTableRequest = Readonly<{
   /** Test-only dependency injection; it bypasses the Next cache. */
   providedAdmin?: ReturnType<typeof createAdminClient>;
+  /** Include the bounded public baseline only for live-enabled table consumers. */
+  includeLiveProjectionSource?: boolean;
 }>;
 
 type ScopeResult =
@@ -197,21 +199,60 @@ async function readOfficialLeagueTableForSeason(
   if (clubsResult.error || fixturesResult.error) return unavailableTable("league-table-query-failed");
 
   const fixtureRows = asRows(fixturesResult.data);
+  const teams = asRows(clubsResult.data)
+    .map(toTableTeam)
+    .filter((team): team is TouchlineOfficialLeagueTableTeam => Boolean(team));
   if (fixtureRows.length > MAX_SEASON_FIXTURES) {
     return resolveTouchlineOfficialLeagueTable({
       competitionProviderId: TOUCHLINE_ENGLAND_OFFICIAL_COMPETITION_PROVIDER_ID,
       season: scope.season,
-      teams: asRows(clubsResult.data).map(toTableTeam).filter((team): team is TouchlineOfficialLeagueTableTeam => Boolean(team)),
+      teams,
       fixtures: [],
     });
   }
-  return resolveTouchlineOfficialLeagueTable({
+  const fixtures = fixtureRows
+    .map(toTableFixture)
+    .filter((fixture): fixture is TouchlineOfficialLeagueTableFixture => Boolean(fixture));
+  const table = resolveTouchlineOfficialLeagueTable({
     competitionProviderId: TOUCHLINE_ENGLAND_OFFICIAL_COMPETITION_PROVIDER_ID,
     season: scope.season,
-    teams: asRows(clubsResult.data).map(toTableTeam).filter((team): team is TouchlineOfficialLeagueTableTeam => Boolean(team)),
-    fixtures: fixtureRows.map(toTableFixture).filter((fixture): fixture is TouchlineOfficialLeagueTableFixture => Boolean(fixture)),
+    teams,
+    fixtures,
     expectedClubCount: TOUCHLINE_ENGLAND_EXPECTED_CLUB_COUNT,
   });
+  // The public live baseline must be complete, even where the existing table
+  // resolver can still render a neutral/pending view after discarding a row.
+  // Reuse only these explicit public projections; never serialize DB rows.
+  const hasCompleteLiveSource = (table.state === "ready" || table.state === "pending_no_final")
+    && teams.length === TOUCHLINE_ENGLAND_EXPECTED_CLUB_COUNT
+    && Array.isArray(clubsResult.data)
+    && teams.length === clubsResult.data.length
+    && Array.isArray(fixturesResult.data)
+    && fixtures.length === fixturesResult.data.length
+    && fixtures.length <= MAX_SEASON_FIXTURES
+    && fixtures.every((fixture) => fixture.seasonId === scope.season.id)
+    && new Set(fixtures.map((fixture) => fixture.providerFixtureId)).size === fixtures.length;
+  if (!hasCompleteLiveSource) return table;
+  return {
+    ...table,
+    liveProjectionSource: {
+      competitionProviderId: TOUCHLINE_ENGLAND_OFFICIAL_COMPETITION_PROVIDER_ID,
+      season: scope.season,
+      teams,
+      fixtures,
+    },
+  };
+}
+
+function tableForRequest(
+  table: TouchlineOfficialLeagueTable,
+  request: TouchlineOfficialLeagueTableRequest,
+): TouchlineOfficialLeagueTable {
+  if (request.includeLiveProjectionSource === true || !("liveProjectionSource" in table)) return table;
+  // Keep the cached baseline intact for opted-in consumers sharing this key.
+  const publicTable = { ...table };
+  delete publicTable.liveProjectionSource;
+  return publicTable;
 }
 
 /**
@@ -235,7 +276,9 @@ export async function loadTouchlineOfficialLeagueTable(
       fixtures: [],
     });
   }
-  if (request.providedAdmin) return readOfficialLeagueTableForSeason(admin, scope.season.id);
+  if (request.providedAdmin) {
+    return tableForRequest(await readOfficialLeagueTableForSeason(admin, scope.season.id), request);
+  }
 
   const cached = unstable_cache(
     async () => {
@@ -247,13 +290,13 @@ export async function loadTouchlineOfficialLeagueTable(
     // Version the cached DTO whenever displayed-table semantics change. This
     // prevents a new deployment from serving one stale prior-shape response
     // while stale-while-revalidate refreshes the shared Data Cache.
-    ["touchline-official-league-table-v4", TOUCHLINE_ENGLAND_OFFICIAL_COMPETITION_PROVIDER_ID, scope.season.id],
+    ["touchline-official-league-table-v5", TOUCHLINE_ENGLAND_OFFICIAL_COMPETITION_PROVIDER_ID, scope.season.id],
     // The single table includes persisted live score facts provisionally.
     // Ten seconds bounds normal browser polling without requiring a manual
     // reload; a degraded provider leaves the last persisted fixture state.
     { revalidate: 10, tags: [tableCacheTag(scope.season.id)] },
   );
-  return cached();
+  return tableForRequest(await cached(), request);
 }
 
 /** Call only after an approved canonical fixture/result import succeeds. */

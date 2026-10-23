@@ -3,6 +3,7 @@ import type { TouchLineCoachRankingState } from "./coach-ranking-server";
 
 export type TouchlineCardLeadershipAuthority = Readonly<{
   playerRanking: TouchlineActiveRankingState | null;
+  coachRanking?: TouchLineCoachRankingState | null;
   coachLeader: Readonly<{ snapshotId: string; seasonId: string; coachProviderId: string }> | null;
 }>;
 
@@ -33,9 +34,18 @@ export function resetPlayerLeadershipSeed(seed: TouchlineActiveRankingState | nu
   return { current: seed, watermark: seed, revision, requestFloor };
 }
 
-export function advancePlayerLeadershipRead(previous: PlayerLeadershipReadState, read: { state: TouchlineActiveRankingState; revision: number; requestEpoch: number } | null): PlayerLeadershipReadState {
+export function advancePlayerLeadershipRead(previous: PlayerLeadershipReadState, read: { state: TouchlineActiveRankingState; revision: number; requestEpoch: number; publicationDigest?: string } | null): PlayerLeadershipReadState {
   if (!read || read.revision <= previous.revision || read.requestEpoch <= previous.requestFloor) return previous;
   if (read.state.phase === "preseason") return { ...previous, current: read.state, revision: read.revision };
+  if (read.publicationDigest && /^[0-9a-f]{32}$/.test(read.publicationDigest)) {
+    // The active shared publication can legitimately reactivate a deduplicated
+    // older snapshot after a VAR/reversal. Creation time is not activation order.
+    const seed = previous.watermark;
+    if (seed?.phase === "ranked" && (read.state.seasonId !== seed.seasonId || read.state.leagueKey !== seed.leagueKey)) {
+      return { ...previous, revision: read.revision };
+    }
+    return { ...previous, current: read.state, watermark: read.state, revision: read.revision };
+  }
   const selected = previous.watermark?.phase === "ranked"
     ? selectPlayerLeadershipPublication(previous.watermark, read.state)
     : read.state;
@@ -47,12 +57,69 @@ export function buildTouchlineCardLeadershipValue(
   playerRanking: TouchlineActiveRankingState | null,
   coaches: TouchLineCoachRankingState | null,
 ): TouchlineCardLeadershipAuthority {
-  const leaders = coaches?.phase === "ranked" ? coaches.rows.filter((row) => row.rank === 1) : [];
+  const verifiedCoaches = coaches?.phase === "ranked" && coaches.snapshotId && coaches.seasonId
+    && coaches.scoringVersion === "coach_scoring_v2"
+    && coaches.rows.every((row, index) => row.rank === index + 1 && row.coachProviderId && Number.isFinite(row.touchlinePoints))
+    && new Set(coaches.rows.map(row => row.coachProviderId)).size === coaches.rows.length ? coaches : null;
+  const leaders = verifiedCoaches?.rows.filter((row) => row.rank === 1) ?? [];
   const coachLeader = leaders.length === 1 && coaches?.snapshotId && coaches.seasonId
     && coaches.scoringVersion === "coach_scoring_v2" && leaders[0]!.coachProviderId
     ? { snapshotId: coaches.snapshotId, seasonId: coaches.seasonId, coachProviderId: leaders[0]!.coachProviderId }
     : null;
-  return { playerRanking, coachLeader };
+  return { playerRanking, coachLeader, coachRanking: verifiedCoaches };
+}
+
+export type CardLeadershipReadState = Readonly<{
+  current: TouchlineCardLeadershipAuthority;
+  seasonId: string | null;
+  leagueKey: string | null;
+  revision: number;
+  requestFloor: number;
+}>;
+
+export function resetCardLeadershipSeed(current: TouchlineCardLeadershipAuthority, revision: number, requestFloor: number): CardLeadershipReadState {
+  return { current, revision, requestFloor,
+    seasonId: current.playerRanking?.seasonId ?? current.coachRanking?.seasonId ?? current.coachLeader?.seasonId ?? null,
+    leagueKey: current.playerRanking?.leagueKey ?? null };
+}
+
+/** Accept player and coach facts together, in activation order, never one half of a publication. */
+export function advanceCardLeadershipRead(previous: CardLeadershipReadState, read: {
+  state: TouchlineActiveRankingState; coachRanking: TouchLineCoachRankingState | null;
+  revision: number; requestEpoch: number; publicationDigest: string;
+} | null): CardLeadershipReadState {
+  if (!read || read.revision <= previous.revision || read.requestEpoch <= previous.requestFloor
+    || !/^[0-9a-f]{32}$/.test(read.publicationDigest)) return previous;
+  const player = read.state.phase === "ranked" ? read.state : null;
+  const coach = read.coachRanking;
+  const seasonId = player?.seasonId ?? coach?.seasonId ?? null;
+  if ((coach && (coach.phase !== "ranked" || !coach.snapshotId || !coach.seasonId || coach.scoringVersion !== "coach_scoring_v2"))
+    || (player && coach && player.seasonId !== coach.seasonId)
+    || (seasonId && previous.seasonId && seasonId !== previous.seasonId)
+    || (player && previous.leagueKey && player.leagueKey !== previous.leagueKey)) return { ...previous, revision: read.revision };
+  return { ...previous, current: buildTouchlineCardLeadershipValue(read.state, coach), revision: read.revision,
+    seasonId: seasonId ?? previous.seasonId, leagueKey: player?.leagueKey ?? previous.leagueKey };
+}
+
+/** Public season points may change with a result/VAR; an explicit settled value never changes. */
+export function resolveCoachCardPoints(input: {
+  authority: TouchlineCardLeadershipAuthority | null;
+  coachProviderId?: string | null;
+  editable?: boolean;
+  liveRankingPoints?: boolean;
+  publishedTouchlinePoints?: number | null;
+  slotStatus: string;
+  slotPoints?: number | null;
+}): number | null {
+  if (input.publishedTouchlinePoints != null) return Number.isFinite(input.publishedTouchlinePoints) ? input.publishedTouchlinePoints : null;
+  if (input.liveRankingPoints && !input.editable && input.authority?.coachRanking !== undefined) {
+    const ranking = input.authority.coachRanking;
+    if (!ranking || ranking.phase !== "ranked" || !ranking.snapshotId || !ranking.seasonId
+      || ranking.scoringVersion !== "coach_scoring_v2" || !input.coachProviderId) return null;
+    const rows = ranking.rows.filter(row => row.coachProviderId === input.coachProviderId);
+    return rows.length === 1 && Number.isFinite(rows[0]!.touchlinePoints) ? rows[0]!.touchlinePoints : null;
+  }
+  return input.slotStatus === "audited" && Number.isFinite(input.slotPoints) ? input.slotPoints! : null;
 }
 
 export function allowsInheritedCardLeadership(pathname: string | null) {

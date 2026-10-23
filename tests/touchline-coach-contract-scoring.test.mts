@@ -34,6 +34,10 @@ const coachPerformance = await readFile(
   new URL("../components/touchline/cards/TouchlineCoachPerformance.tsx", import.meta.url),
   "utf8",
 );
+const coachProfilePublication = await readFile(
+  new URL("../components/touchline/TouchlineCoachProfilePublication.tsx", import.meta.url),
+  "utf8",
+);
 const coachZoom = await readFile(
   new URL("../components/touchline/cards/TouchlineCoachCardZoom.tsx", import.meta.url),
   "utf8",
@@ -229,7 +233,8 @@ test("public coach profile separates official coach context from the shared Touc
   assert.equal(getTouchlineCoachProfileCopy("pt-BR").coachContext, "Contexto do treinador");
   assert.match(coachProfile, /coach-profile-campaign/);
   assert.match(coachProfile, /loadTouchLineCoachRanking/);
-  assert.match(coachProfile, /TouchlineCoachPerformance contract=\{null\} competition=\{competition\}/);
+  assert.match(coachProfile, /<TouchlineCoachProfilePerformance locale=\{locale\} draftLocalesEnabled=\{draftLocalesEnabled\} \/>/);
+  assert.match(coachProfilePublication, /TouchlineCoachPerformance contract=\{null\} competition=\{competition\} locale=\{locale\} draftLocalesEnabled=\{draftLocalesEnabled\} \/>/);
   assert.match(coachPerformance, /data-coach-performance-source/);
   assert.match(coachPerformance, /competition\?\.home \?\? contract\?\.home/);
   assert.match(coachPerformance, /competition\?\.away \?\? contract\?\.away/);

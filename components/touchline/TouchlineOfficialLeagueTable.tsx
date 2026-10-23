@@ -2,11 +2,12 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import TouchlineLivePresentationRefresh from "@/components/touchline/TouchlineLivePresentationRefresh";
 
 import TouchlineClubPerimeterTrace from "@/components/touchline/TouchlineClubPerimeterTrace";
 import type { TouchlineOfficialLeagueTable } from "@/lib/football-data/official-league-table";
+import { useTouchlinePublishedOfficialTable } from "@/lib/touchlineArena/sports-publication-official-table-client";
 import { getTouchlineOfficialLeagueTableCopy, type TouchlineOfficialLeagueTableCopy as TableCopy } from "@/lib/touchlineArena/official-league-table-i18n";
 
 import styles from "./TouchlineOfficialLeagueTable.module.css";
@@ -15,6 +16,7 @@ type Props = Readonly<{
   table: TouchlineOfficialLeagueTable;
   locale: string;
   draftLocalesEnabled?: boolean;
+  liveReadsEnabled?: boolean;
   variant: "directory" | "profile" | "clubHubRail";
   currentTeamId?: string | null;
   action?: Readonly<{ href: string; label: string }> | null;
@@ -42,21 +44,23 @@ function seasonStatusCopy(
   return dictionary.seasonChecking;
 }
 
-/** Presentational only: all football data arrives in the canonical table DTO. */
+/** Public standings: SSR history plus identity-checked scores from the shared publication. */
 export default function TouchlineOfficialLeagueTable({
-  table,
+  table: baseline,
   locale,
   draftLocalesEnabled = false,
+  liveReadsEnabled = false,
   variant,
   currentTeamId = null,
   action = null,
   id,
   className,
 }: Props) {
+  const [isVisible, setVisible] = useState(false);
+  const table = useTouchlinePublishedOfficialTable(baseline, liveReadsEnabled, isVisible);
   const dictionary = getTouchlineOfficialLeagueTableCopy(locale, draftLocalesEnabled);
   const status = statusCopy(table.state, dictionary);
   const localeQuery = encodeURIComponent(locale);
-  const router = useRouter();
   const surface = useRef<HTMLElement>(null);
   const hasLiveFixture = table.rows.some((row) => Boolean(row.liveFixture));
   const seasonStatus = variant === "clubHubRail"
@@ -66,15 +70,11 @@ export default function TouchlineOfficialLeagueTable({
   const scrollLabel = dictionary.scrollLabel;
 
   useEffect(() => {
-    if (!hasLiveFixture) return;
-    let visible = false;
-    const observer = new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; });
+    if (!liveReadsEnabled) return;
+    const observer = new IntersectionObserver(([entry]) => { setVisible(entry.isIntersecting); });
     if (surface.current) observer.observe(surface.current);
-    const interval = window.setInterval(() => {
-      if (visible && !document.hidden) router.refresh();
-    }, 10_000);
-    return () => { observer.disconnect(); window.clearInterval(interval); };
-  }, [hasLiveFixture, router]);
+    return () => observer.disconnect();
+  }, [liveReadsEnabled]);
 
   return (
     <section
@@ -84,6 +84,7 @@ export default function TouchlineOfficialLeagueTable({
       data-state={table.state}
       aria-labelledby={id ? `${id}-title` : undefined}
     >
+      {liveReadsEnabled && isVisible ? <TouchlineLivePresentationRefresh serverRefreshAfterMs={hasLiveFixture ? 10_000 : null} /> : null}
       <header className={styles.header}>
         <div>
           <span className={styles.eyebrow}>{dictionary.eyebrow}</span>

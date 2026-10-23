@@ -13,6 +13,8 @@ import type { TouchlineCardZoomDetails } from "../components/touchline/cards/Tou
 import { squadCardToExactPlayer, type ClubOwnerSquadCard } from "../lib/touchlineArena/demo-data.ts";
 import { TOUCHLINE_EXACT_CARD_CATALOGUES, getTouchlineExactCardCopy } from "../lib/touchlineArena/exact-card-i18n.ts";
 import { isTouchLineLocaleComplete, TOUCHLINE_COMPLETE_LOCALES } from "../lib/touchlineArena/i18n.ts";
+import type { TouchlineCardLeadershipAuthority } from "../lib/touchlineArena/card-leadership-authority.ts";
+import { TOUCHLINE_PRESEASON_RANKING_STATE } from "../lib/touchlineArena/card-ranking-live.ts";
 
 type Props = Parameters<typeof import("../components/touchline/fantasy/TouchlineGameweekCard.tsx").default>[0];
 type ZoomProps = {
@@ -37,12 +39,14 @@ const card: ClubOwnerSquadCard = {
 // SSR runs no effects. Only route/ranking browser boundaries and CSS modules
 // are replaced; this is not DOM interaction, CSS-layout or RTL visual proof.
 function fixture(reviewLocale?: typeof locales[number]) {
+  let authority: TouchlineCardLeadershipAuthority | null = null;
   const requested: Array<string | null | undefined> = [];
   const cache = new Map<string, unknown>();
   const replacements: Record<string, unknown> = {
     "next/navigation": { usePathname: () => "/clubowner" },
     "@/lib/touchlineArena/card-ranking-client": { useTouchlineActiveRanking: () => null },
-    "./TouchlineCardLeadershipProvider": { useTouchlineCardLeadershipAuthority: () => null },
+    "./TouchlineCardLeadershipProvider": { useTouchlineCardLeadershipAuthority: () => authority },
+    "@/components/touchline/cards/TouchlineCardLeadershipProvider": { useTouchlineCardLeadershipAuthority: () => authority },
     "@/lib/touchlineArena/golden-boot-client": { useTouchlineGoldenBootPlayers: () => [] },
     "@/lib/touchlineArena/exact-card-i18n": { getTouchlineExactCardCopy: (locale?: string | null) => {
       requested.push(locale);
@@ -68,16 +72,47 @@ function fixture(reviewLocale?: typeof locales[number]) {
   const Gameweek = (load("@/components/touchline/fantasy/TouchlineGameweekCard", path.join(root, "fixture.ts")) as { default: (props: Props) => React.ReactElement<ZoomProps> }).default;
   const Panel = (load("@/components/touchline/cards/TouchlineCardZoom", path.join(root, "fixture.ts")) as { TouchlineCardZoomDetailsPanel: React.ComponentType<{ details: TouchlineCardZoomDetails; locale: string }> }).TouchlineCardZoomDetailsPanel;
   return {
+    setAuthority(value: TouchlineCardLeadershipAuthority | null) { authority = value; },
     requested,
     produce(locale: string, changes: Partial<ClubOwnerSquadCard> = {}, props: Partial<Props> = {}) {
       return Gameweek({ card: { ...card, ...changes }, locale, ...props });
     },
     render(element: React.ReactElement<ZoomProps>) {
-      return { card: renderToStaticMarkup(element), panel: renderToStaticMarkup(React.createElement(Panel, { details: element.props.details, locale: element.props.locale })) };
+      return { card: renderToStaticMarkup(element), expanded: renderToStaticMarkup(element.props.expandedContent), panel: renderToStaticMarkup(React.createElement(Panel, { details: element.props.details, locale: element.props.locale })) };
     },
   };
 }
 const escape = (value: string) => value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
+
+test("public season changes reach the real thumbnail, expanded card and detail total together; reviews stay pinned", () => {
+  const view = fixture();
+  const changes = { seasonTotalRating: 42 };
+  const original = JSON.stringify(card);
+  const authority = (totalRating: number | null): TouchlineCardLeadershipAuthority => ({ coachLeader: null, playerRanking: {
+    ...TOUCHLINE_PRESEASON_RANKING_STATE, phase: "ranked", seasonId: "season", snapshotId: "accepted", scoringVersion: "player_scoring_v4",
+    players: [{ playerId: card.canonicalPlayerId!, providerPlayerId: "123", positionGroup: "striker", positionRank: 1, groupSize: 1,
+      totalRating, minutesPlayed: 90, appearances: 1, tierKey: "radiant-gold", priceTc: 999 }],
+  } });
+  assert.equal((view.produce("en-GB", changes, { liveSeasonRating: true }).props.children.props.player as { totalRating: number }).totalRating, 42);
+  for (const total of [50, 49.5, 0, null, 50]) {
+    view.setAuthority(authority(total));
+    const element = view.produce("en-GB", changes, { liveSeasonRating: true });
+    const props = element.props;
+    assert.equal((props.children.props.player as { totalRating: unknown }).totalRating, total);
+    assert.equal((props.expandedContent.props.player as { totalRating: unknown }).totalRating, total);
+    assert.equal(props.details.fields.find(f => f.kind === "rating-total")?.value, total === null ? "—" : total.toFixed(2));
+    const rendered = view.render(element);
+    for (const html of [rendered.card, rendered.expanded]) {
+      const renderedTotal = html.match(/data-total-rating="([^"]+)"/)?.[1];
+      if (total === null) assert.equal(renderedTotal, undefined);
+      else assert.equal(Number(renderedTotal), total);
+    }
+    assert.equal((view.produce("en-GB", changes).props.children.props.player as { totalRating: number }).totalRating, 42);
+  }
+  view.setAuthority({ coachLeader: null, playerRanking: TOUCHLINE_PRESEASON_RANKING_STATE });
+  assert.equal((view.produce("en-GB", changes, { liveSeasonRating: true }).props.children.props.player as { totalRating: unknown }).totalRating, null);
+  assert.equal(JSON.stringify(card), original);
+});
 
 test("real Gameweek SSR uses canonical EN/PT ARIA and total labels, preserving literal player names", () => {
   const view = fixture();

@@ -29,6 +29,8 @@ export function confirmedAvailabilityFromSidelined(
 ): ConfirmedPlayerAvailability | null {
   if (item.provider !== "sportmonks" || item.fixtureId !== fixtureId
     || item.playerId !== playerId || item.completed !== false) return null;
+  if (!(["category", "typeName", "reason"] as const)
+    .every(key => item[key] === undefined || typeof item[key] === "string")) return null;
   const category = item.category?.trim().toLowerCase();
   if (category === "injury" || category === "illness") {
     return { source: "sportmonks", fixtureId, playerId, confirmed: true, reason: category };
@@ -78,13 +80,15 @@ export function availabilityBadgeForPlayer(
   fixtureId: string | null | undefined,
   playerId: string,
 ): PlayerAvailabilityBadge | null {
-  if (!fixtureId) return null;
-  for (const item of sidelined) {
-    const evidence = confirmedAvailabilityFromSidelined(item, fixtureId, playerId);
-    const badge = resolvePlayerAvailabilityBadge(evidence, fixtureId, playerId);
-    if (badge) return badge;
-  }
-  return null;
+  if (!fixtureId || !playerId) return null;
+  // A fixture feed must provide one unambiguous record for this player.
+  // Duplicates, completion corrections and cross-fixture contamination are
+  // uncertainty, not permission to select whichever active row appears first.
+  // This matches the private gameweek reader without borrowing private state.
+  const records = sidelined.filter(item => item?.playerId === playerId);
+  if (records.length !== 1) return null;
+  const evidence = confirmedAvailabilityFromSidelined(records[0], fixtureId, playerId);
+  return resolvePlayerAvailabilityBadge(evidence, fixtureId, playerId);
 }
 
 const LABELS = {

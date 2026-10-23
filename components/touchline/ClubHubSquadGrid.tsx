@@ -4,7 +4,7 @@ import { useMemo, useState, type CSSProperties } from "react";
 import TouchlineClubPerimeterTrace from "@/components/touchline/TouchlineClubPerimeterTrace";
 import styles from "./ClubHubSquadGrid.module.css";
 
-import TouchlineCardZoom from "@/components/touchline/cards/TouchlineCardZoom";
+import { TouchlinePlayerSeasonScope, TouchlineSeasonCardZoom as TouchlineCardZoom, TouchlineSeasonExactCard as TouchlineEliteExactCard } from "@/components/touchline/cards/TouchlinePlayerSeasonScope";
 import TouchlinePlayerAvailabilityBadge from "@/components/touchline/cards/TouchlinePlayerAvailabilityBadge";
 import type { TouchlineFantasySidelinedPlayer } from "@/lib/football-data/types";
 import { availabilityBadgeForPlayer } from "@/lib/touchlineArena/player-availability-badge";
@@ -12,7 +12,6 @@ import { getTouchlineCardZoomCopy } from "@/lib/touchlineArena/card-zoom-i18n";
 import { getTouchlineExactCardCopy } from "@/lib/touchlineArena/exact-card-i18n";
 import { getTouchlineClubHubRosterCopy, getTouchlineClubHubContractLabel } from "@/lib/touchlineArena/club-hub-roster-i18n";
 import { touchlinePlayerPositionKind } from "@/lib/touchlineArena/position-aware-card-stats";
-import TouchlineEliteExactCard from "@/components/touchline/cards/TouchlineEliteExactCard";
 import {
   TOUCHLINE_CARD_STUDIO_LAYOUT_KEY,
   findTouchLineClub,
@@ -43,6 +42,7 @@ type ClubHubSquadGridProps = {
   sidelinedFixtureId?: string | null;
   locale: TouchLineLocale;
   draftLocalesEnabled?: boolean;
+  liveSeasonRating?: boolean;
   labels: {
     nationality: string;
     points: string;
@@ -64,7 +64,7 @@ type ClubHubSquadGridProps = {
  * them. This preserves the canonical card component without hydrating 25–30
  * heavy products during the first mobile render.
  */
-export default function ClubHubSquadGrid({ cards, sidelined = [], sidelinedFixtureId = null, locale, labels, openProfileLabel, canEditCardEngine = false, initialCardCount = INITIAL_CARD_COUNT, cardRenderScale = 180 / 430, hideMarketValuePanel = false, className, draftLocalesEnabled = false }: ClubHubSquadGridProps) {
+export default function ClubHubSquadGrid({ cards, sidelined = [], sidelinedFixtureId = null, locale, labels, openProfileLabel, canEditCardEngine = false, initialCardCount = INITIAL_CARD_COUNT, cardRenderScale = 180 / 430, hideMarketValuePanel = false, className, draftLocalesEnabled = false, liveSeasonRating = false }: ClubHubSquadGridProps) {
   const [visibleCount, setVisibleCount] = useState(initialCardCount);
   // The footballer remains present on every Club Hub surface. Published
   // profiles render in colour; incomplete editorial inputs use the same
@@ -116,6 +116,7 @@ export default function ClubHubSquadGrid({ cards, sidelined = [], sidelinedFixtu
                 <TouchlinePlayerAvailabilityBadge badge={availabilityBadge} locale={locale} />
               </span> : null}
               <span className={`club-hub-rank ${styles.rank}`}>#{index + 1}</span>
+              <TouchlinePlayerSeasonScope enabled={liveSeasonRating} playerId={exactPlayer.canonicalPlayerId} providerPlayerId={exactPlayer.sportmonksPlayerId}>
               <TouchlineCardZoom draftLocalesEnabled={draftLocalesEnabled}
                 locale={locale}
                 ariaLabel={zoomCopy.expandCard.replace("{playerName}", () => card.name)}
@@ -191,6 +192,7 @@ export default function ClubHubSquadGrid({ cards, sidelined = [], sidelinedFixtu
                     showMatchRating
                 />
               </TouchlineCardZoom>
+              </TouchlinePlayerSeasonScope>
               <div className={`club-hub-card-meta ${styles.meta}`}>
                 <a href={profileHref} aria-label={`${openProfileLabel}: ${card.name}`}>{openProfileLabel}</a>
                 <small>{localizedPositionLabel(card.position, locale, draftLocalesEnabled)}</small>

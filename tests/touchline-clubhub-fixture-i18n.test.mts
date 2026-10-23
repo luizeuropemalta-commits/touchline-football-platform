@@ -60,14 +60,17 @@ function consumer(getCopy: (locale?: string | null, enabled?: boolean) => Copy, 
   const actualRail = rail(getCopy), images: Record<string, unknown>[] = [], effects: (() => undefined | (() => void))[] = [];
   const timers: { callback: () => void; ms: number }[] = [], cleared: number[] = [];
   let refreshes = 0;
+  const boundaries: { serverRefreshAfterMs: number | null; serverRefreshAt: number | null }[] = [];
   const icon = () => React.createElement("svg", { "aria-hidden": true });
   const component = evaluate<{ default: (props: Record<string, unknown>) => React.ReactElement | null }>(componentSource, {
-    "react": { ...React, useTransition: () => [false, (work: () => void) => work()], useMemo: (fn: () => unknown) => fn(), useEffect: (fn: () => undefined | (() => void)) => effects.push(fn), useSyncExternalStore: (_subscribe: unknown, readBrowser: () => string, readServer: () => string) => browserZone ? readBrowser() : readServer() },
+    "react": { ...React, useState: (initial: () => unknown) => [initial(), () => undefined], useTransition: () => [false, (work: () => void) => work()], useMemo: (fn: () => unknown) => fn(), useEffect: (fn: () => undefined | (() => void)) => effects.push(fn), useSyncExternalStore: (_subscribe: unknown, readBrowser: () => string, readServer: () => string) => browserZone ? readBrowser() : readServer() },
     "next/navigation": { useRouter: () => ({ refresh: () => { refreshes++; } }) },
     "next/image": { default: (props: Record<string, unknown>) => { images.push(props); return React.createElement("img", props); } },
     "next/link": { default: (props: Record<string, unknown>) => React.createElement("a", props, props.children as React.ReactNode) },
     "lucide-react": { CalendarDays: icon, MapPin: icon },
     "@/lib/touchlineArena/local-kickoff": kickoff,
+    "@/lib/touchlineArena/sports-publication-client": { useTouchlinePublishedLive: (fixtures: unknown[]) => ({ fixtures }) },
+    "@/components/touchline/TouchlineLivePresentationRefresh": { default: (props: { serverRefreshAfterMs: number | null; serverRefreshAt: number | null }) => { boundaries.push(props); return null; } },
     "@/lib/touchlineArena/match-centre": matchCentre,
     "@/lib/touchlineArena/club-hub-fixture-rail": unknownRail ? { ...actualRail, resolveClubHubFixtureRail: () => ({ state: "unknown", heading: "UNKNOWN_BOUNDARY", score: null, liveMinute: null }) } : actualRail,
     "@/lib/touchlineArena/club-hub-fixture-i18n": { getTouchlineClubHubFixtureCopy: getCopy },
@@ -76,8 +79,8 @@ function consumer(getCopy: (locale?: string | null, enabled?: boolean) => Copy, 
     Intl: { DateTimeFormat: function () { return { resolvedOptions: () => ({ timeZone: browserZone }) }; } },
     window: { setTimeout: (callback: () => void, ms: number) => { timers.push({ callback, ms }); return 7; }, clearTimeout: (id: number) => cleared.push(id) },
   }).default;
-  return { images, effects, timers, cleared, refreshes: () => refreshes, render(props: Record<string, unknown> = {}) {
-    images.length = 0; effects.length = 0;
+  return { images, effects, timers, cleared, boundaries, refreshes: () => refreshes, render(props: Record<string, unknown> = {}) {
+    images.length = 0; effects.length = 0; boundaries.length = 0;
     const input = { ...defaults, ...props }, before = JSON.stringify(input);
     const html = renderToStaticMarkup(component(input)); assert.equal(JSON.stringify(input), before); return html;
   } };
@@ -176,13 +179,21 @@ test("public card keeps gates and existing server/browser timezone plus refresh 
   }
   const f = consumer(mod.getTouchlineClubHubFixtureCopy);
   f.render({ status: "LIVE" }); assert.equal(f.timers.length, 0); assert.equal(f.refreshes(), 0);
-  const cleanup = f.effects[0](); assert.equal(f.timers[0].ms, 10_000); f.timers[0].callback(); assert.equal(f.refreshes(), 1);
-  cleanup?.(); assert.deepEqual(f.cleared, [7]);
+  assert.equal(f.effects.length, 0); assert.equal(f.boundaries.length, 0, "preview is isolated by default");
+  const initialFixture = { id: "100", providerId: "100", status: "LIVE", startsAt: defaults.startsAt,
+    homeTeam: { id: "1", providerId: "1", name: "Home" }, awayTeam: { id: "2", providerId: "2", name: "Away" } };
+  f.render({ initialFixture, liveUpdates: true });
+  assert.equal(f.boundaries.length, 1); assert.equal(f.boundaries[0].serverRefreshAfterMs, 10_000);
+  assert.equal(f.timers.length, 0); assert.equal(f.refreshes(), 0);
   const finished = consumer(mod.getTouchlineClubHubFixtureCopy); finished.render({ status: "Full Time" });
-  assert.equal(finished.effects[0](), undefined); assert.equal(finished.timers.length, 0);
+  assert.equal(finished.effects.length, 0); assert.equal(finished.timers.length, 0);
   const page = read("app/touchline-clubs/[club]/page.tsx");
   const callers = [...page.matchAll(/<ClubHubNextFixtureCard\b[\s\S]*?\n\s*\/>/g)];
-  assert.equal(callers.length, 2); for (const [caller] of callers) assert.match(caller, /previewHref=\{null\}/);
+  assert.equal(callers.length, 2); for (const [caller] of callers) {
+    assert.match(caller, /previewHref=\{null\}/);
+    assert.match(caller, /initialFixture=\{fixture\}/);
+    assert.match(caller, /liveUpdates=\{liveReadsEnabled\}/);
+  }
 });
 
 test("rail algorithm and component remain byte-identical outside admitted copy and refresh bindings", () => {
@@ -202,6 +213,45 @@ test("rail algorithm and component remain byte-identical outside admitted copy a
     .replace('heading: copy.matchUpdate', 'heading: portuguese ? "ATUALIZAÇÃO DA PARTIDA" : "MATCH UPDATE"');
   assert.equal(createHash("sha256").update(railRestored).digest("hex"), "bfafa9422d353c0ecc219570067440065ee2521529d51f50e96202937f2f8991");
   let componentBaseline = componentSource;
+  // This mission replaces only transport/lifecycle. Reverse that explicit
+  // delta before the previous copy-only inverse; historical hashes are kept.
+  componentBaseline = undoOnce(componentBaseline,
+    'import { useMemo, useState, useSyncExternalStore } from "react";',
+    'import { useRouter } from "next/navigation";\nimport { useEffect, useMemo, useSyncExternalStore, useTransition } from "react";');
+  // Preserve the original import ordering for the historical byte contract.
+  componentBaseline = componentBaseline.replace('import { useRouter } from "next/navigation";\n', '')
+    .replace('import { CalendarDays, MapPin } from "lucide-react";', 'import { useRouter } from "next/navigation";\nimport { CalendarDays, MapPin } from "lucide-react";');
+  for (const added of [
+    'import TouchlineLivePresentationRefresh from "@/components/touchline/TouchlineLivePresentationRefresh";\n',
+    'import { useTouchlinePublishedLive } from "@/lib/touchlineArena/sports-publication-client";\n',
+    'import type { TouchlinePublicFixture } from "@/lib/football-data/public-fixture";\n',
+    '  initialFixture?: TouchlinePublicFixture | null;\n',
+    '  liveUpdates?: boolean;\n',
+    '  initialFixture = null,\n',
+    '  liveUpdates = false,\n',
+  ]) componentBaseline = undoOnce(componentBaseline, added, '');
+  componentBaseline = undoOnce(componentBaseline,
+    '  const copy = getTouchlineClubHubFixtureCopy(locale, draftLocalesEnabled);\n',
+    '  const copy = getTouchlineClubHubFixtureCopy(locale, draftLocalesEnabled);\n  const router = useRouter();\n  const [isRefreshing, startRefresh] = useTransition();\n');
+  const admittedTransport = componentBaseline.match(/  const \[mountedAt\] = useState\(\(\) => Date\.now\(\)\);[\s\S]*?  const contextWake = [^\n]+;\n/);
+  assert.ok(admittedTransport);
+  componentBaseline = undoOnce(componentBaseline, admittedTransport[0], [
+    '  const rail = useMemo(',
+    '    () => resolveClubHubFixtureRail({ startsAt, status, homeScore, awayScore, liveMinute }, locale, undefined, draftLocalesEnabled),',
+    '    [awayScore, homeScore, liveMinute, locale, startsAt, status, draftLocalesEnabled],',
+    '  );',
+    '  const refreshMs = clubHubFixtureRailRefreshMs(rail, startsAt);',
+    '',
+    '  useEffect(() => {',
+    '    if (!refreshMs || isRefreshing) return undefined;',
+    '    const refresh = window.setTimeout(() => startRefresh(() => router.refresh()), refreshMs);',
+    '    return () => window.clearTimeout(refresh);',
+    '  }, [refreshMs, router, isRefreshing, startRefresh]);',
+    '',
+  ].join('\n'));
+  const admittedBoundary = componentBaseline.match(/      \{enabled \? <TouchlineLivePresentationRefresh[\s\S]*?      \/> : null\}\n/);
+  assert.ok(admittedBoundary);
+  componentBaseline = undoOnce(componentBaseline, admittedBoundary[0], '');
   // Refresh lifecycle has its own behavioral regression test; invert only its
   // exact approved delta here, retaining the original historical digest.
   for (const [added, previous] of [

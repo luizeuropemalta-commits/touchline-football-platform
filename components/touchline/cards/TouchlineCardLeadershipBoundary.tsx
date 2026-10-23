@@ -17,5 +17,5 @@ export default async function TouchlineCardLeadershipBoundary({ enabled, childre
     scope === "coach-only" ? Promise.resolve(null) : loadTouchLineActiveRanking().catch(() => null),
     loadTouchLineCoachRanking().catch(() => null),
   ]);
-  return <TouchlineCardLeadershipProvider livePlayerUpdates={scope === "all"} value={buildTouchlineCardLeadershipValue(playerRanking, coaches)}>{children}</TouchlineCardLeadershipProvider>;
+  return <TouchlineCardLeadershipProvider livePlayerUpdates={scope === "all"} liveCoachUpdates value={buildTouchlineCardLeadershipValue(playerRanking, coaches)}>{children}</TouchlineCardLeadershipProvider>;
 }

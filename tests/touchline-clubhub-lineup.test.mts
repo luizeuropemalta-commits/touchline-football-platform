@@ -434,12 +434,15 @@ test("ClubHub mobile captions are smaller and goalkeeper first-name leaves full 
 
 test("ClubHub keeps the field beside the premium table and the four leaders below the field", () => {
   const page = readFileSync(new URL("../app/touchline-clubs/[club]/page.tsx", import.meta.url), "utf8");
+  const leaders = readFileSync(new URL("../components/touchline/ClubHubPositionLeaders.tsx", import.meta.url), "utf8");
   const lineup = readFileSync(new URL("../components/touchline/ClubHubOfficialLineup.tsx", import.meta.url), "utf8");
   const technical = readFileSync(new URL("../components/touchline/ClubHubMatchdayTechnicalArea.tsx", import.meta.url), "utf8");
   const styles = readFileSync(new URL("../components/touchline/ClubHubOfficialLineup.module.css", import.meta.url), "utf8");
 
-  assert.match(page, /leaderCards=\{\(/);
-  assert.match(page, /displayWidth=\{112\}/);
+  assert.match(page, /import ClubHubPositionLeaders from "@\/components\/touchline\/ClubHubPositionLeaders"/);
+  assert.match(page, /leaderCards=\{<ClubHubPositionLeaders cards=\{presentation\.clubCards\} seed=\{activeRanking\} enabled=\{dataSource === "direct"\}/);
+  assert.match(leaders, /projectClubPositionLeaders\(cards, ranking\)/);
+  assert.match(leaders, /<TouchlineGameweekCard card=\{leader\.card\} locale=\{locale\} displayWidth=\{112\}/);
   assert.doesNotMatch(page, /ClubHubPremiumOverviewSection/);
   assert.match(lineup, /className=\{styles\.pitchAndLeaders\}/);
   assert.match(lineup, /className=\{styles\.positionLeaders\}/);

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import TouchlineCardZoom from "@/components/touchline/cards/TouchlineCardZoom";
+import { TouchlinePlayerSeasonScope, TouchlineSeasonCardZoom as TouchlineCardZoom, TouchlineSeasonExactCard as TouchlineEliteExactCard } from "@/components/touchline/cards/TouchlinePlayerSeasonScope";
 import TouchlinePlayerAvailabilityBadge from "@/components/touchline/cards/TouchlinePlayerAvailabilityBadge";
 import type { TouchlineFantasySidelinedPlayer } from "@/lib/football-data/types";
 import { availabilityBadgeForPlayer } from "@/lib/touchlineArena/player-availability-badge";
@@ -11,7 +11,6 @@ import { getTouchlineClubHubRosterCopy } from "@/lib/touchlineArena/club-hub-ros
 import { resolveTouchlineCoachZoomPresentation } from "@/lib/touchlineArena/coach-zoom-i18n";
 import { getTouchlineFantasyMarketWorkflowCopy } from "@/lib/touchlineFantasy/market-workflow-i18n";
 import { touchlinePlayerPositionKind } from "@/lib/touchlineArena/position-aware-card-stats";
-import TouchlineEliteExactCard from "@/components/touchline/cards/TouchlineEliteExactCard";
 import TouchlineClubPerimeterTrace from "@/components/touchline/TouchlineClubPerimeterTrace";
 import type { TouchLineClubMatchdayPresentation } from "@/lib/touchlineArena/club-lineup";
 import { squadCardToExactPlayer, findTouchLineClub } from "@/lib/touchlineArena/demo-data";
@@ -34,6 +33,7 @@ type ClubHubMatchdayTechnicalAreaProps = {
   sidelinedFixtureId?: string | null;
   locale: string;
   draftLocalesEnabled?: boolean;
+  liveSeasonRating?: boolean;
   coachCard: ReactNode;
   canEditCardEngine?: boolean;
   /** Public ClubHub pages suppress values without changing ClubOwner or QA defaults. */
@@ -58,6 +58,7 @@ export default function ClubHubMatchdayTechnicalArea({
   sidelinedFixtureId = null,
   locale,
   draftLocalesEnabled = false,
+  liveSeasonRating = false,
   coachCard,
   canEditCardEngine = false,
   hideMarketValuePanel = false,
@@ -139,7 +140,8 @@ export default function ClubHubMatchdayTechnicalArea({
                       <TouchlinePlayerAvailabilityBadge badge={availabilityBadge}
                         locale={resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled)} />
                     </span> : null}
-                    <TouchlineCardZoom draftLocalesEnabled={draftLocalesEnabled}
+                    <TouchlinePlayerSeasonScope enabled={liveSeasonRating} playerId={exactPlayer.canonicalPlayerId} providerPlayerId={exactPlayer.sportmonksPlayerId}>
+              <TouchlineCardZoom draftLocalesEnabled={draftLocalesEnabled}
                       locale={locale}
                       ariaLabel={zoomCopy.expandCard.replace("{playerName}", () => card.name)}
                       tierAccent={tierAccent}
@@ -214,6 +216,7 @@ export default function ClubHubMatchdayTechnicalArea({
                         showMatchRating
                       />
                     </TouchlineCardZoom>
+              </TouchlinePlayerSeasonScope>
                   </li>
                 );
               })}

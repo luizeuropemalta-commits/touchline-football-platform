@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import ts from "typescript";
 
 import {
   TOUCHLINE_SQUAD_RULES,
@@ -101,7 +102,26 @@ test("published catalogue candidates remain available without rendering a Market
 test("canonical XI cards retain the shared expanded card and suppress duplicate actions", async () => {
   const stage = await readFile(stagePath, "utf8");
   const card = await readFile(new URL("../components/touchline/fantasy/TouchlineGameweekCard.tsx", import.meta.url), "utf8");
-  assert.match(stage, /className=\{styles\.myClubTacticalSlot\}[\s\S]*?<TouchlineGameweekCard card=\{card\}/);
+  const tree = ts.createSourceFile("FantasyGameweekClient.tsx", stage, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const hasAttribute = (attributes: ts.JsxAttributes, name: string, value?: string) => attributes.properties.some((property) => {
+    if (!ts.isJsxAttribute(property) || property.name.text !== name) return false;
+    return value === undefined || property.initializer?.getText(tree) === value;
+  });
+  let tacticalSlot: ts.JsxElement | undefined;
+  const locateTacticalSlot = (node: ts.Node): void => {
+    if (ts.isJsxElement(node) && hasAttribute(node.openingElement.attributes, "className", "{styles.myClubTacticalSlot}")) tacticalSlot ??= node;
+    ts.forEachChild(node, locateTacticalSlot);
+  };
+  locateTacticalSlot(tree);
+  assert.ok(tacticalSlot, "the canonical tactical slot must exist");
+  let gameweekCard: ts.JsxSelfClosingElement | undefined;
+  const locateCard = (node: ts.Node): void => {
+    if (ts.isJsxSelfClosingElement(node) && node.tagName.getText(tree) === "TouchlineGameweekCard"
+      && hasAttribute(node.attributes, "card", "{card}")) gameweekCard ??= node;
+    ts.forEachChild(node, locateCard);
+  };
+  locateCard(tacticalSlot);
+  assert.ok(gameweekCard, "the tactical slot itself must render its selected card");
   assert.match(card, /<TouchlineCardZoom/);
   assert.match(card, /showCardActions=\{false\}/);
   assert.match(card, /showProfileAction=\{false\}/);

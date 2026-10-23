@@ -2,9 +2,11 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { CalendarDays, MapPin } from "lucide-react";
-import { useEffect, useMemo, useSyncExternalStore, useTransition } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
+import TouchlineLivePresentationRefresh from "@/components/touchline/TouchlineLivePresentationRefresh";
+import { useTouchlinePublishedLive } from "@/lib/touchlineArena/sports-publication-client";
+import type { TouchlinePublicFixture } from "@/lib/football-data/public-fixture";
 
 import { formatTouchlineLocalKickoff } from "@/lib/touchlineArena/local-kickoff";
 import { normalizeTouchlineMatchCentreTimeZone } from "@/lib/touchlineArena/match-centre";
@@ -22,6 +24,8 @@ type FixtureTeam = Readonly<{
 }>;
 
 type Props = Readonly<{
+  initialFixture?: TouchlinePublicFixture | null;
+  liveUpdates?: boolean;
   awayTeam: FixtureTeam;
   awayPosition: number | null;
   homeTeam: FixtureTeam;
@@ -52,6 +56,8 @@ function readBrowserTimeZone() {
 }
 
 export default function ClubHubNextFixtureCard({
+  initialFixture = null,
+  liveUpdates = false,
   awayTeam,
   awayPosition,
   homeTeam,
@@ -75,8 +81,6 @@ export default function ClubHubNextFixtureCard({
   showPositions = false,
 }: Props) {
   const copy = getTouchlineClubHubFixtureCopy(locale, draftLocalesEnabled);
-  const router = useRouter();
-  const [isRefreshing, startRefresh] = useTransition();
   const timeZone = useSyncExternalStore(
     subscribeToBrowserTimeZone,
     readBrowserTimeZone,
@@ -87,22 +91,27 @@ export default function ClubHubNextFixtureCard({
     () => formatTouchlineLocalKickoff(startsAt, timeZone, locale, draftLocalesEnabled),
     [locale, startsAt, timeZone, draftLocalesEnabled],
   );
-  const rail = useMemo(
-    () => resolveClubHubFixtureRail({ startsAt, status, homeScore, awayScore, liveMinute }, locale, undefined, draftLocalesEnabled),
-    [awayScore, homeScore, liveMinute, locale, startsAt, status, draftLocalesEnabled],
-  );
-  const refreshMs = clubHubFixtureRailRefreshMs(rail, startsAt);
-
-  useEffect(() => {
-    if (!refreshMs || isRefreshing) return undefined;
-    const refresh = window.setTimeout(() => startRefresh(() => router.refresh()), refreshMs);
-    return () => window.clearTimeout(refresh);
-  }, [refreshMs, router, isRefreshing, startRefresh]);
+  const [mountedAt] = useState(() => Date.now());
+  const enabled = liveUpdates && Boolean(initialFixture?.providerId && initialFixture.homeTeam?.providerId
+    && initialFixture.awayTeam?.providerId && initialFixture.startsAt === startsAt);
+  const { fixtures, receivedAt } = useTouchlinePublishedLive(initialFixture ? [initialFixture] : [], null, mountedAt, enabled);
+  const now = receivedAt ?? mountedAt;
+  const facts = enabled ? fixtures[0] : null;
+  const rail = resolveClubHubFixtureRail(facts
+    ? { startsAt, status: facts.status, homeScore: facts.homeScore, awayScore: facts.awayScore, liveMinute: facts.liveMinute }
+    : { startsAt, status, homeScore, awayScore, liveMinute }, locale, now, draftLocalesEnabled);
+  const refreshMs = clubHubFixtureRailRefreshMs(rail, startsAt, now);
+  const contextWake = rail.state === "upcoming" && Date.parse(startsAt) - now > 60 * 60 * 1_000;
 
   if (!localKickoff) return null;
 
   return (
     <article className={`${styles.nextFixtureCard} ${variant === "hero" ? styles.heroCompact : ""} ${className}`} data-state={rail.state}>
+      {enabled ? <TouchlineLivePresentationRefresh
+        serverRefreshScope={`${initialFixture?.providerId}:${startsAt}`}
+        serverRefreshAfterMs={contextWake ? null : refreshMs}
+        serverRefreshAt={contextWake && refreshMs !== null ? now + refreshMs : null}
+      /> : null}
       <div className={styles.nextFixtureHeading}>
         <CalendarDays aria-hidden="true" />
         <span>{rail.heading} · {roundName}</span>

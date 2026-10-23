@@ -109,7 +109,7 @@ test("eight real opt-in paths preserve canonical and demo data without synthesiz
 test("page forwards explicit flag to feed while keeping route gate off and name substitutions literal", () => {
   const feedNodes: ts.JsxSelfClosingElement[] = [];
   function visit(node: ts.Node) {
-    if (ts.isJsxSelfClosingElement(node) && node.tagName.getText(ast) === "TouchlineSocialFeed") feedNodes.push(node);
+    if (ts.isJsxSelfClosingElement(node) && node.tagName.getText(ast) === "TouchlinePlayerSeasonFeed") feedNodes.push(node);
     node.forEachChild(visit);
   }
   visit(ast); assert.equal(feedNodes.length, 1);
@@ -118,6 +118,9 @@ test("page forwards explicit flag to feed while keeping route gate off and name 
   assert.equal(flag.initializer.expression?.getText(ast), "draftLocalesEnabled");
   assert.ok(source.includes("return renderPlayerProfilePage(props, isTouchLineSiteLocalesEnabled(\"/touchline-players/[player]\"))"));
   assert.equal(route.parameters[1]?.initializer?.kind, ts.SyntaxKind.FalseKeyword);
+  const boundary = readFileSync(new URL("../components/touchline/TouchlinePlayerSeasonFeed.tsx", import.meta.url), "utf8");
+  assert.match(boundary, /useTouchlineSeasonPlayerFacts/);
+  assert.match(boundary, /posts\.map\(/);
   assert.equal(feed.formatTouchlinePlayerProfileFeedText("{playerName} / {clubName}", { playerName, clubName }), `${playerName} / ${clubName}`);
   assert.equal(feed.getTouchlinePlayerProfileFeedCopy("invalid", true), feed.getTouchlinePlayerProfileFeedCopy("en-GB"));
 });

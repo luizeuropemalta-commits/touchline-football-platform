@@ -15,6 +15,7 @@ import * as matchEvents from "../lib/touchlineArena/match-event-i18n.ts";
 import * as positions from "../lib/touchlineArena/position-labels.ts";
 import * as verifiedTimestamp from "../lib/touchlineArena/verified-timestamp-label.ts";
 import * as arabicDate from "../lib/touchlineArena/arabic-fixture-date.ts";
+import { loadSportsPublicationClientForSsr } from "./helpers/load-sports-publication-client.mts";
 
 const load = () => import("../lib/touchlineArena/match-centre-i18n.ts");
 const locales = ["en-GB", "pt-BR", "es-ES", "it-IT", "fr-FR", "ar-SA", "tr-TR", "de-DE"] as const;
@@ -122,11 +123,13 @@ test("every literal Match Centre key remains authored for each unpublished draft
 // selection and ordering helpers remain real. No browser/network/timers run.
 async function consumer(future = false) {
   const catalogue = await load();
+  const sportsClient = loadSportsPublicationClientForSsr();
   const captures: { kind: string; props: Record<string, unknown> }[] = [];
   const exports: { default?: React.ComponentType<Record<string, unknown>> } = {};
   runInNewContext(ts.transpileModule(componentSource, { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.React, target: ts.ScriptTarget.ES2022 } }).outputText, {
     exports, React, Intl, require: (name: string) => {
       if (name === "react") return React;
+      if (name === "@/lib/touchlineArena/sports-publication-client") return sportsClient;
       if (name === "lucide-react") return icons;
       if (name.endsWith(".css")) return { default: new Proxy({}, { get: (_, key) => String(key) }) };
       if (name === "@/lib/touchlineArena/i18n") return i18n;
@@ -144,6 +147,9 @@ async function consumer(future = false) {
       } };
       if (name === "@/components/touchline/TouchlineBrandHeader") return { default: (props: Record<string, unknown>) => {
         captures.push({ kind: name, props }); return React.createElement("header", null, props.navigation as React.ReactNode);
+      } };
+      if (name === "../TouchlineLivePresentationRefresh") return { default: (props: Record<string, unknown>) => {
+        captures.push({ kind: name, props }); return null;
       } };
       if (name.startsWith("@/components/") || name === "./TouchlineFixtureAlerts") return { default: (props: Record<string, unknown>) => {
         captures.push({ kind: name, props }); return React.createElement("span", { "data-child": name });

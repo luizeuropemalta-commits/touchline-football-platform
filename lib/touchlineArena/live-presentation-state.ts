@@ -7,6 +7,23 @@ export const TOUCHLINE_PREMATCH_PRESENTATION_WINDOW_MS = 60 * 60 * 1_000;
 // Match the publisher's recent-fixture window. This is a bounded read-retry
 // horizon, not permission to infer that an unconfirmed fixture is live.
 export const TOUCHLINE_LIVE_PRESENTATION_CATCHUP_WINDOW_MS = 4 * 60 * 60 * 1_000;
+export const TOUCHLINE_LIVE_SNAPSHOT_STALE_AFTER_MS = 5 * 60 * 1_000;
+
+export type TouchlineLiveFreshness = Readonly<{ fetchedAt: string; ageMs: number; degraded: boolean }>;
+
+/** Time-dependent health belongs to the signal, never to an immutable sports digest. */
+export function touchlineLiveFreshness(value: unknown, now: number): TouchlineLiveFreshness | null {
+  if (!value || typeof value !== "object") return null;
+  const payload = value as { fetchedAt?: unknown; storedAt?: unknown; fixtures?: unknown };
+  if (typeof payload.fetchedAt !== "string" || !Number.isFinite(Date.parse(payload.fetchedAt))
+    || typeof payload.storedAt !== "number" || !Number.isFinite(payload.storedAt) || payload.storedAt < 0
+    || !Array.isArray(payload.fixtures) || !Number.isFinite(now)) return null;
+  const fetchedAtMs = Date.parse(payload.fetchedAt);
+  const ageMs = Math.max(0, now - payload.storedAt, now - fetchedAtMs);
+  return { fetchedAt: payload.fetchedAt, ageMs,
+    degraded: !payload.fixtures.length || payload.storedAt > now || fetchedAtMs > now
+      || ageMs > TOUCHLINE_LIVE_SNAPSHOT_STALE_AFTER_MS };
+}
 
 export type TouchlineLivePresentationMode = "live" | "prematch" | "settling" | "idle";
 
@@ -16,6 +33,7 @@ export type TouchlineLivePresentationState = Readonly<{
   playerRankingSnapshotId: string | null;
   coachRankingSnapshotId: string | null;
   livePresentationSnapshotId?: string | null;
+  liveFreshness?: TouchlineLiveFreshness | null;
   mode: TouchlineLivePresentationMode;
   pollAfterMs: number | null;
   resumeAt: string | null;
@@ -74,6 +92,12 @@ export function parseTouchlineLivePresentationState(value: unknown): TouchlineLi
     || (candidate.livePresentationSnapshotId !== undefined
       && candidate.livePresentationSnapshotId !== null && !livePresentationSnapshotId)
     || (candidate.resumeAt !== null && !resumeAt)
+    || (candidate.liveFreshness != null && (
+      typeof candidate.liveFreshness.fetchedAt !== "string" || !Number.isFinite(Date.parse(candidate.liveFreshness.fetchedAt))
+      || typeof candidate.liveFreshness.ageMs !== "number" || !Number.isFinite(candidate.liveFreshness.ageMs) || candidate.liveFreshness.ageMs < 0
+      || typeof candidate.liveFreshness.degraded !== "boolean"
+      || (candidate.liveFreshness.ageMs > TOUCHLINE_LIVE_SNAPSHOT_STALE_AFTER_MS && !candidate.liveFreshness.degraded)
+    ))
     || !(
       pollAfterMs === null
       || pollAfterMs === TOUCHLINE_LIVE_PRESENTATION_POLL_MS
@@ -93,6 +117,9 @@ export function parseTouchlineLivePresentationState(value: unknown): TouchlineLi
     playerRankingSnapshotId,
     coachRankingSnapshotId,
     ...(livePresentationSnapshotId !== undefined ? { livePresentationSnapshotId } : {}),
+    ...(candidate.liveFreshness === undefined ? {} : { liveFreshness: candidate.liveFreshness === null ? null : {
+      fetchedAt: candidate.liveFreshness.fetchedAt, ageMs: candidate.liveFreshness.ageMs, degraded: candidate.liveFreshness.degraded,
+    } }),
     mode: mode as TouchlineLivePresentationMode,
     pollAfterMs,
     resumeAt,

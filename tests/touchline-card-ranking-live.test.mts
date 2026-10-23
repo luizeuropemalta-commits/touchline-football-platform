@@ -82,11 +82,11 @@ test("simulates 584 synthetic ranking records without duplicates or missing posi
 });
 
 test("the shared live ranking client refreshes without F5 and releases its timer", () => {
-  assert.match(clientSource, /window\.setTimeout\(\(\) => controller\.abort\(\), 8_000\)/);
-  assert.match(clientSource, /signal: controller\.signal/);
-  assert.match(clientSource, /\.finally\(\(\) => \{[\s\S]*window\.clearTimeout\(deadline\);[\s\S]*activeRequest = null;/);
-  assert.match(clientSource, /window\.setInterval\(loadActiveRanking, 45_000\)/);
-  assert.match(clientSource, /if \(!listeners\.size && refreshTimer !== null\)[\s\S]*window\.clearInterval\(refreshTimer\)/);
+  assert.match(clientSource, /touchlineLivePresentationStore\.subscribe\(read =>/);
+  assert.match(clientSource, /}, true\)/);
+  assert.match(clientSource, /publication\.publication\.contentDigest !== read\.state\.livePresentationSnapshotId/);
+  assert.match(clientSource, /stopShared\?\.\(\)/);
+  assert.doesNotMatch(clientSource, /fetch\(|setInterval|setTimeout|\/card-ranking\/active/);
 });
 
 test("a valid lower rating remains ordered as supplied rather than becoming a false zero", () => {

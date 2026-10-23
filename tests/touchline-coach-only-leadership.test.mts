@@ -56,6 +56,7 @@ test("coach-only ignores a never-resolving player read and preserves canonical c
   assert.equal(result.type, provider);
   assert.equal(result.props.children, children);
   assert.equal(result.props.livePlayerUpdates, false);
+  assert.equal(result.props.liveCoachUpdates, true, "coach-only shares live client updates without blocking SSR on players");
   assert.deepEqual(result.props.value, authority.buildTouchlineCardLeadershipValue(null, coaches));
 });
 
@@ -68,7 +69,7 @@ test("coach-only still waits for the coach snapshot; late failure withdraws auth
   assert.equal(settled, false);
   coach.reject(new Error("synthetic coach failure"));
   const result = await pending;
-  assert.deepEqual(result.props.value, authority.EMPTY_CARD_LEADERSHIP_AUTHORITY);
+  assert.deepEqual(result.props.value, authority.buildTouchlineCardLeadershipValue(null, null));
   assert.equal(result.props.livePlayerUpdates, false);
 });
 
@@ -92,16 +93,17 @@ test("disabled scope performs zero reads and preserves descendants", async () =>
     assert.equal(result.props.children, children);
     assert.deepEqual(result.props.value, authority.EMPTY_CARD_LEADERSHIP_AUTHORITY);
     assert.notEqual(result.props.livePlayerUpdates, true);
+    assert.notEqual(result.props.liveCoachUpdates, true);
   }
 });
 
 test("immediate read failures and unavailable or ambiguous coach publications fail closed", async () => {
   for (const state of [null, { ...coaches, phase: "unavailable" }, { ...coaches, snapshotId: null }, { ...coaches, rows: [...coaches.rows, { ...coaches.rows[0], coachProviderId: "43" }] }]) {
     const result = await boundary(async () => null, async () => state)({ enabled: true, scope: "coach-only", children });
-    assert.deepEqual(result.props.value, authority.EMPTY_CARD_LEADERSHIP_AUTHORITY);
+    assert.deepEqual(result.props.value, authority.buildTouchlineCardLeadershipValue(null, null));
   }
   const result = await boundary(async () => { throw Error("player"); }, async () => { throw Error("coach"); })({ enabled: true, children });
-  assert.deepEqual(result.props.value, authority.EMPTY_CARD_LEADERSHIP_AUTHORITY);
+  assert.deepEqual(result.props.value, authority.buildTouchlineCardLeadershipValue(null, null));
 });
 
 test("real coach family selects coach-only; shared layout keeps isolation and direct-source gates", async () => {

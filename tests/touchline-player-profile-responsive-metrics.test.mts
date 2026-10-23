@@ -32,7 +32,7 @@ test("phone and tablet metrics use content-sized tracks after landscape rules",(
 
 test("scores stay intact and retired card prices are absent without forcing metadata onto one line",()=>{
   assert.match(css,/\.metrics \.numericMetric\s*\{\s*white-space: nowrap/);
-  assert.match(page,/className=\{styles.numericMetric\}>\{cumulativeRatingText\}/);
+  assert.match(page,/className=\{styles.numericMetric\}><TouchlineSeasonValue unavailable=\{text.unavailable\}>\{cumulativeRatingText\}<\/TouchlineSeasonValue><\/strong>/);
   assert.doesNotMatch(page,/displayedPriceText/);
   assert.match(css,/\.fixtureRating\s*\{\s*grid-column: 1 \/ -1;\s*white-space: nowrap/);
   assert.match(page,/className=\{styles.fixtureRating\}/);

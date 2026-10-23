@@ -42,7 +42,7 @@ test("a published null total never becomes a newer mutable total in the ranked c
 });
 
 test("ClubHub uses the canonical published ranking comparator rather than UUID tie order", () => {
-  const source = readFileSync(new URL("../app/touchline-clubs/[club]/page.tsx", import.meta.url), "utf8");
+  const source = readFileSync(new URL("../lib/touchlineArena/club-position-leaders.ts", import.meta.url), "utf8");
   assert.match(source, /sort\(compareTouchlineRankingPlayers\)/);
   assert.doesNotMatch(source, /normalizedPlayerIdentity\(left\.playerId\)\.localeCompare/);
 });
@@ -51,8 +51,12 @@ test("profile card, summary, current-season panel and zoom share the published t
   const source = readFileSync(new URL("../app/touchline-players/[player]/page.tsx", import.meta.url), "utf8");
   assert.ok(source.includes("const totalRatingText = competition.totalRating;"), "Profile must not prefer mutable currentSeason");
   assert.ok(!source.includes("value: playerStatistics.currentSeason.summary.totalRating"), "Zoom must use the same published total");
-  assert.ok(source.includes("value: cumulativeRatingText"));
+  assert.match(source, /<TouchlineSeasonValue unavailable=\{text\.unavailable\}>\{cumulativeRatingText\}<\/TouchlineSeasonValue>/);
+  assert.match(source, /<TouchlinePlayerSeasonScope enabled=\{liveProfileSeason\}/);
   assert.ok(source.includes("publishedTotalRating={totalRatingText}"), "Current-season panel must not present a conflicting total");
+  const scope = readFileSync(new URL("../components/touchline/cards/TouchlinePlayerSeasonScope.tsx", import.meta.url), "utf8");
+  assert.match(scope, /totalRating: facts\?\.totalRating \?\? null/);
+  assert.match(scope, /field\.kind === "rating-total"/);
 });
 
 test("private weekly art card uses the same scoped rating as its headline, not the season total", () => {

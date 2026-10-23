@@ -28,6 +28,7 @@ import { createRankingLoadDiagnostics } from "@/lib/touchlineArena/ranking-load-
 import { projectTouchlineRankingsHighlights } from "@/lib/touchlineArena/rankings-highlight-projection";
 import { cardGoalsLeaderIds } from "@/lib/touchlineArena/card-goals-leadership";
 import { loadClubOwnerStandings } from "@/lib/touchlineArena/club-owner-standings-server";
+import { buildTouchlineRankingSummaryIndex, projectTouchlinePublishedRankingSummary } from "@/lib/touchlineArena/published-ranking-summary";
 
 export async function generateMetadata(props: RankingsPageProps) {
   return generateRankingsMetadata(props, isTouchLineSiteLocalesEnabled("/rankings"));
@@ -44,7 +45,10 @@ async function generateRankingsMetadata({ searchParams }: RankingsPageProps, dra
 function readSportingData(rankingPromise: ReturnType<typeof loadTouchLineActiveRanking>, diagnostics: ReturnType<typeof createRankingLoadDiagnostics>) {
   const owners = loadClubOwnerStandings();
   const topXI = diagnostics.measure("topXI", () => rankingPromise.then((activeRanking) => loadTouchLinePublishedTopEleven(activeRanking)));
-  const catalog = diagnostics.measure("catalog", () => rankingPromise.then((activeRanking) => loadTouchLineRankedCardCatalog(activeRanking)));
+  // The awards need the complete published catalogue, including a player who
+  // has a verified goals row but no current rating row. The XI keeps its own
+  // immutable selection payload below; it is never reconstructed from this.
+  const catalog = diagnostics.measure("catalog", () => rankingPromise.then((activeRanking) => loadTouchLineRankedCardCatalog(activeRanking, undefined, { includeGoalCandidates: true })));
   const coach = diagnostics.measure("coach", () => loadTouchLineCoachRanking());
   const count = diagnostics.measure("count", () => countTouchlinePublishedPlayerCards());
   const complete = Promise.all([
@@ -85,9 +89,16 @@ async function SportingContent({ data, locale, user, section, draftLocalesEnable
     return <TouchlineRankingEnding draftLocalesEnabled={draftLocalesEnabled} copy={copy} locale={locale} touchLineEnglandTable={standings.rows} ownerTableUnavailable={standings.status === "unavailable"} />;
   }
   const [activeRanking, , rankedCards, , publishedCardCount] = await data.complete;
-  if (section === "hero") return <TouchlineRankingsHero copy={copy} rankMode={activeRanking.phase === "ranked" ? copy.pointsMode : copy.marketMode} totalPublishedCards={publishedCardCount} totalRankedCards={rankedCards.length} />;
+  if (section === "hero") {
+    // Reuse the complete load, but send only public UUID/provider bindings to
+    // this summary. Goals-only extras never inflate ranking membership.
+    const catalogueIndex = buildTouchlineRankingSummaryIndex(rankedCards);
+    const summary = projectTouchlinePublishedRankingSummary(catalogueIndex, activeRanking);
+    return <TouchlineRankingsHero copy={copy} rankMode={activeRanking.phase === "ranked" ? copy.pointsMode : copy.marketMode}
+      totalPublishedCards={publishedCardCount} totalRankedCards={summary.totalRankedCards} catalogueIndex={catalogueIndex} />;
+  }
   const highlights = await data.highlights;
-  if (section === "podium") return <TouchlineRankingPodium draftLocalesEnabled={draftLocalesEnabled} copy={copy} locale={locale} highlights={highlights} coachRanking={(await data.leadership)[1]} canEditCardEngine={Boolean(user && isOwnerEmail(user.email))} />;
+  if (section === "podium") return <TouchlineRankingPodium draftLocalesEnabled={draftLocalesEnabled} copy={copy} locale={locale} catalogue={rankedCards} seedRanking={activeRanking} coachRanking={(await data.leadership)[1]} canEditCardEngine={Boolean(user && isOwnerEmail(user.email))} />;
 
   return (
       <TouchLineTablesClient draftLocalesEnabled={draftLocalesEnabled}
@@ -115,7 +126,7 @@ async function SportingFrame({ data, locale, user, draftLocalesEnabled = false }
   const [activeRanking, coachRanking] = await data.leadership;
   const copy = getTouchLineRankingsCopy(locale, draftLocalesEnabled);
   const presentationCopy = getTouchlineTablesPresentationCopy(locale, draftLocalesEnabled);
-  return <TouchlineCardLeadershipProvider value={buildTouchlineCardLeadershipValue(activeRanking, coachRanking)}>
+  return <TouchlineCardLeadershipProvider livePlayerUpdates liveCoachUpdates value={buildTouchlineCardLeadershipValue(activeRanking, coachRanking)}>
     <TouchlineLivePresentationRefresh initialCoachRankingSnapshotId={coachRanking.snapshotId} initialPlayerRankingSnapshotId={activeRanking.snapshotId} />
     <Suspense fallback={<TouchlineRankingsHero copy={copy} rankMode={activeRanking.phase === "ranked" ? copy.pointsMode : copy.marketMode} totalPublishedCards={null} totalRankedCards={null} />}><SportingContent data={data} locale={locale} user={user} section="hero" draftLocalesEnabled={draftLocalesEnabled} /></Suspense>
     <section className={styles.selectionSection} id="best-xi"><div className={styles.rankStage}>

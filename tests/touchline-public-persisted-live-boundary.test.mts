@@ -14,6 +14,10 @@ const matchCentre = readFileSync(
   new URL("../components/touchline/match-centre/TouchlineMatchCentre.tsx", import.meta.url),
   "utf8",
 );
+const sharedClient = readFileSync(new URL("../lib/touchlineArena/sports-publication-client.ts", import.meta.url), "utf8");
+const sharedStore = readFileSync(new URL("../lib/touchlineArena/live-presentation-client-store.ts", import.meta.url), "utf8");
+const sharedReader = readFileSync(new URL("../lib/touchlineArena/sports-publication-reader.ts", import.meta.url), "utf8");
+const sharedLiveView = readFileSync(new URL("../lib/touchlineArena/sports-publication-live-view.ts", import.meta.url), "utf8");
 
 test("live scores read one durable snapshot or honest partial schedule without ingress or writes", () => {
   assert.match(liveRoute, /readPersistedLiveScoreSnapshot/);
@@ -37,7 +41,15 @@ test("Live prefers a fresh snapshot and marks every non-live fallback degraded",
   assert.match(liveRoute, /if \(liveSnapshot\?\.fixtures\.length\) \{[\s\S]*?degraded: true/);
   assert.match(liveRoute, /degraded: true/);
   assert.match(matchCentre, /initialReadMetadata/);
-  assert.match(matchCentre, /isTouchlineLiveReadMetadata/);
+  // The metadata validator now lives at the shared publication boundary;
+  // requiring it inside each surface would restore independent live pollers.
+  assert.match(matchCentre, /useTouchlinePublishedLive\(initialFixtures, initialReadMetadata, now, liveUpdates\)/);
+  assert.match(sharedClient, /createTouchlinePublishedLiveReader\(touchlineLivePresentationStore, fixtures, initialMetadata\)/);
+  assert.match(sharedStore, /parseTouchlineSportsPublication\(/);
+  assert.match(sharedReader, /read\.state\.livePresentationSnapshotId !== publication\.publication\.contentDigest/);
+  assert.match(sharedReader, /read\.state\.liveFreshness\.fetchedAt !== publication\.live\.fetchedAt/);
+  assert.match(sharedLiveView, /freshness\.degraded[\s\S]*?freshness\.ageMs \+ Math\.max\(0, now - read\.receivedAt\) > TOUCHLINE_LIVE_SNAPSHOT_STALE_AFTER_MS/);
+  assert.match(sharedLiveView, /retainedLiveFacts[\s\S]*?degraded: true/);
   assert.match(matchCentre, /touchlineMatchCentreDisplayState\(fixture, readMetadata, now\) === "live"/);
   assert.match(matchCentre, /dictionary\.liveDataUpdating/);
   assert.match(matchCentre, /dictionary\.lastVerified/);

@@ -212,6 +212,7 @@ export class SportmonksFootballProvider implements FootballDataProvider {
   private providerFailure<T>(
     response: FootballDataHttpResponse<SportmonksEnvelope<unknown>>,
     fallbackMessage: string,
+    reportZeroHttpDenial = false,
   ): FootballDataResult<T> {
     const status = response.status || undefined;
     const rateLimit = response.data?.rate_limit;
@@ -237,6 +238,10 @@ export class SportmonksFootballProvider implements FootballDataProvider {
       retryAfterSeconds: asNumber(rateLimit?.resets_in_seconds),
       remaining: asNumber(rateLimit?.remaining),
       requestedEntity: asString(rateLimit?.requested_entity),
+      // Opt in only for one request operation. A later page/enrichment denial
+      // cannot prove that the overall multi-request read sent no HTTP.
+      ...(reportZeroHttpDenial && response.status === 0 && response.requestDisposition === "deferred-before-http"
+        ? { requestDisposition: "deferred-before-http" as const } : {}),
     });
   }
 
@@ -655,7 +660,7 @@ export class SportmonksFootballProvider implements FootballDataProvider {
     }, "live");
     if (!request.configured) return this.notConfigured<TouchlineFixture[]>();
     const { value, cached } = request;
-    if (!value.ok) return this.providerFailure<TouchlineFixture[]>(value, "Sportmonks livescores failed.");
+    if (!value.ok) return this.providerFailure<TouchlineFixture[]>(value, "Sportmonks livescores failed.", true);
     return resultOk(this.name, (value.data?.data ?? []).map((item) => this.mapFixture(item)).filter(Boolean) as TouchlineFixture[], value.data, cached, value.fetchedAt);
   }
 
@@ -665,7 +670,7 @@ export class SportmonksFootballProvider implements FootballDataProvider {
     }, "live");
     if (!request.configured) return this.notConfigured<TouchlineFixture[]>();
     const { value, cached } = request;
-    if (!value.ok) return this.providerFailure<TouchlineFixture[]>(value, "Sportmonks latest livescores failed.");
+    if (!value.ok) return this.providerFailure<TouchlineFixture[]>(value, "Sportmonks latest livescores failed.", true);
     return resultOk(this.name, (value.data?.data ?? []).map((item) => this.mapFixture(item)).filter(Boolean) as TouchlineFixture[], value.data, cached, value.fetchedAt);
   }
 

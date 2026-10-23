@@ -45,7 +45,16 @@ test("picker shares dialog access and canonical button styles without native top
 test("nested card dialog owns keyboard and can return focus inside the picker", () => {
   const dialog = source("components/touchline/a11y/TouchlineDialog.tsx");
   assert.match(dialog, /event\.target\.closest\('[^']+dialog-root[^']+'\) !== dialog/);
-  assert.match(dialog, /!anotherDialogIsOpen\.contains\(returnTarget\)/);
+  assert.match(dialog, /function hasInertAncestor\(element: HTMLElement\)/);
+  assert.match(dialog, /const isCoveredByAnotherDialog = \(\) =>/);
+  assert.match(dialog, /hasInertAncestor\(dialog\)/);
+  assert.match(dialog, /\[data-touchline-dialog-root="true"\]\[aria-modal="true"\]/);
+  assert.match(dialog, /isCoveredByAnotherDialog\(\)/);
+  // Open-dialog repair is separate from close restoration: returning into the
+  // surviving picker is allowed, but an unrelated modal's background is not.
+  assert.match(dialog, /const returnTarget = explicitReturnTarget \?\? previousFocusRef\.current/);
+  assert.match(dialog, /for \(const target of \[returnTarget, fallbackReturnTarget\]\)/);
+  assert.match(dialog, /if \(!target \|\| hasInertAncestor\(target\)\) continue;\s*if \(anotherDialogIsOpen && !anotherDialogIsOpen\.contains\(target\)\) continue;\s*if \(focusElement\(target\)\) return;/);
 });
 
 test("market field keeps direct mobile position actions unscaled and visible", () => {

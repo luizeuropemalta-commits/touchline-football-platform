@@ -80,11 +80,10 @@ test("presentation date helpers remain pure while polling keeps its existing bou
     node.forEachChild(visitCallback);
   }
   visitCallback(pollingCallbacks[0]);
-  assert.deepEqual(callbackCalls, ["load", "detailRefresh.current"], "one cadence dispatches snapshot and current selected detail exactly once");
-  assert.equal(fetches.length, 2);
+  assert.deepEqual(callbackCalls, ["detailRefresh.current"], "only protected detail retains its independent cadence");
+  assert.equal(fetches.length, 1);
   assert.ok(fetches[0].includes("/api/football-data/fantasy/fixture?fixtureId=${encodeURIComponent(requestedFixtureId)}"));
-  assert.equal(fetches[1], '"/api/football-data/fantasy/livescores?snapshot=1"');
-  assert.deepEqual(aborts, ["request.controller.abort", "currentRequest.controller.abort", "controller.abort"], "detail deadline, detail cleanup and snapshot cleanup all abort their own controller");
+  assert.deepEqual(aborts, ["request.controller.abort", "currentRequest.controller.abort"], "detail deadline and cleanup abort their controller; publication transport owns its lifecycle");
   assert.equal(deadlines.length, 1, "only one request deadline; no retry timer");
   assert.equal(deadlines[0].arguments[1].getText(ast), "8_000");
   assert.match(deadlines[0].arguments[0].getText(ast), /request\.controller\.abort\(\)/);

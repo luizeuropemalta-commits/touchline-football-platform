@@ -12,6 +12,7 @@ import { localizedCountryLabel } from "../lib/touchlineArena/country-labels.ts";
 import { resolveTouchLinePresentationLocale } from "../lib/touchlineArena/root-locale.ts";
 import { resolveTouchlineCatalogueLocale } from "../lib/touchlineArena/catalogue-locale.ts";
 import { getTouchlineCardZoomCopy } from "../lib/touchlineArena/card-zoom-i18n.ts";
+import { coachCompetitionFromRanking } from "../lib/touchlineArena/coach-competition-projection.ts";
 
 type CopyModule = typeof import("../lib/touchlineArena/coach-zoom-i18n.ts");
 const locales = ["en-GB", "pt-BR", "es-ES", "it-IT", "fr-FR", "ar-SA", "tr-TR", "de-DE"] as const;
@@ -26,6 +27,8 @@ type ZoomProps = { locale: string; details: TouchlineCardZoomDetails; ariaLabel:
 function fixture(copy?: Partial<CopyModule>) {
   const formatLocales: { kind: string; locale: string; options?: unknown }[] = [];
   const modules: Record<string, unknown> = {
+    "./TouchlineCardLeadershipProvider": { useTouchlineCardLeadershipAuthority: () => null },
+    "@/lib/touchlineArena/coach-competition-projection": { coachCompetitionFromRanking },
     "@/lib/touchlineArena/catalogue-locale": { resolveTouchlineCatalogueLocale },
     react: { ...React, useState: () => [true, () => {}] }, "react/jsx-runtime": jsxRuntime,
     "react-dom": { createPortal: (children: React.ReactNode) => children },

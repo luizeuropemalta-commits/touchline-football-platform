@@ -38,7 +38,7 @@ test("market and auth controls do not nest secondary controls inside labels", ()
 });
 
 test("player-card rankings link to the dedicated market and preserve the club", () => {
-  const rankingsPage = source("app/touchline-player-card-rankings/page.tsx");
+  const rankingsPage = source("components/touchline/TouchlinePlayerCardRankingsPublication.tsx");
   const marketLinks = rankingsPage.match(/href=\{marketTransferHref\(club\?\.slug\)\}/g) ?? [];
 
   assert.match(rankingsPage, /touchlineArenaPanelHref\("market", locale, draftLocalesEnabled\)/);

@@ -5,9 +5,11 @@
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent } from "react";
 import { verifiedTimestampLabel } from "@/lib/touchlineArena/verified-timestamp-label";
+import { useTouchlinePublishedLive } from "@/lib/touchlineArena/sports-publication-client";
 import { arabicFixtureDate } from "@/lib/touchlineArena/arabic-fixture-date";
 import { CalendarDays, Clock3, Crown, Goal, Landmark, ShieldCheck, Sparkles, Trophy, UsersRound } from "lucide-react";
 import TouchlineFixtureAlerts from "./TouchlineFixtureAlerts";
+import TouchlineLivePresentationRefresh from "../TouchlineLivePresentationRefresh";
 
 import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
 import TouchlineBrandHeader from "@/components/touchline/TouchlineBrandHeader";
@@ -28,8 +30,6 @@ import { touchlineMatchEventLabel, touchlineMatchEventRelatedPlayerLabel } from 
 import { getTouchlineMatchCentreCopy } from "@/lib/touchlineArena/match-centre-i18n";
 import { touchlineLiveCoachForTeam } from "@/lib/touchlineArena/live-coaches";
 import {
-  isTouchlineLiveReadMetadata,
-  mergeTouchlineLiveFixtures,
   orderTouchlineMatchEvents,
   orderTouchlineMatchRatings,
   selectTouchlineMatchCentreSchedule,
@@ -48,6 +48,8 @@ import sharedControls from "../TouchlineGlobalNavigation.module.css";
 
 type Props = {
   initialFixtures: TouchlinePublicFixture[];
+  /** Isolated audit fixtures must never be replaced with account/provider data. */
+  liveUpdates?: boolean;
   /** Reuse the Live rail in Arena without mounting the match detail. */
   railOnly?: boolean;
   hideRecentResults?: boolean;
@@ -299,6 +301,7 @@ function MatchTeamSheet({
 
 export default function TouchlineMatchCentre({
   initialFixtures,
+  liveUpdates = true,
   railOnly = false,
   hideRecentResults = false,
   initialFixtureId,
@@ -314,11 +317,10 @@ export default function TouchlineMatchCentre({
 }: Props) {
   const language = resolveTouchlineCatalogueLocale(initialLocale, draftLocalesEnabled);
   const textDirection = language === "ar-SA" ? "rtl" : "ltr";
-  const [fixtures, setFixtures] = useState(initialFixtures);
   const [selectedId, setSelectedId] = useState(initialFixtureId ?? null);
-  const [readMetadata, setReadMetadata] = useState<TouchlineLiveReadMetadata | null>(initialReadMetadata);
   const [matchDetail, setMatchDetail] = useState<TouchlinePublicFantasyFixtureMatchDetail | null>(initialMatchDetail);
   const [now, setNow] = useState(initialNow);
+  const { fixtures, metadata: readMetadata } = useTouchlinePublishedLive(initialFixtures, initialReadMetadata, now, liveUpdates);
   const [timeZone, setTimeZone] = useState(initialTimeZone);
   const dictionary = getTouchlineMatchCentreCopy(language, draftLocalesEnabled);
   const seasonLabel = matchCentreSeasonLabel(initialSeasonName, language, draftLocalesEnabled);
@@ -399,34 +401,13 @@ export default function TouchlineMatchCentre({
   }, [canReadMatchDetail, selected?.providerId, railOnly]);
 
   useEffect(() => {
-    const controller = new AbortController();
-    async function load() {
-      try {
-        const response = await fetch("/api/football-data/fantasy/livescores?snapshot=1", { signal: controller.signal, cache: "no-store" });
-        const payload = await response.json() as { ok?: boolean; data?: TouchlinePublicFixture[]; state?: unknown; degraded?: unknown; fetchedAt?: unknown };
-        const metadataCandidate = {
-          state: payload.state,
-          degraded: payload.degraded,
-          ...(payload.fetchedAt === undefined ? {} : { fetchedAt: payload.fetchedAt }),
-        };
-        const metadata = isTouchlineLiveReadMetadata(metadataCandidate) ? metadataCandidate : null;
-        const liveSnapshot = Array.isArray(payload.data) ? payload.data : null;
-        if (payload.ok && liveSnapshot && metadata) {
-          setFixtures((current) => mergeTouchlineLiveFixtures(current, liveSnapshot));
-          setReadMetadata(metadata);
-        }
-      } catch {
-        // The server-rendered canonical schedule remains useful during a transient outage.
-      }
-    }
-    void load();
-    // Share the existing cadence: at most 80 periodic persisted-detail reads/hour
-    // while visible, plus a selection's initial read; no provider request here.
+    // Protected detail is not part of the public publication yet. Keep its
+    // existing bounded read cadence; the public rail has no independent poller.
     const timer = window.setInterval(() => {
       if (document.hidden) return;
-      void load(); void detailRefresh.current?.();
+      void detailRefresh.current?.();
     }, 45_000);
-    return () => { controller.abort(); window.clearInterval(timer); };
+    return () => { window.clearInterval(timer); };
   }, []);
 
   const selectedDisplayState = selected ? touchlineMatchCentreDisplayState(selected, readMetadata, now) : null;
@@ -482,6 +463,7 @@ export default function TouchlineMatchCentre({
 
   const fixtureRail = (
         <aside className={`${styles.fixtureRail} ${railOnly ? styles.embeddedRail : ""}`} aria-label={dictionary.select}>
+          {liveUpdates ? <TouchlineLivePresentationRefresh /> : null}
           <div className={styles.railHeading}>
             <span className={styles.englandFlag} aria-label={dictionary.england} role="img" />
             <span className={styles.railLeague} dir={textDirection}><strong>{dictionary.league}</strong>{seasonLabel ? <small>{seasonLabel}</small> : null}</span>

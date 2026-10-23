@@ -20,8 +20,7 @@ import ClubHubCrestTrace from "@/components/touchline/ClubHubCrestTrace";
 import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
 import TouchlineOfficialLeagueTable from "@/components/touchline/TouchlineOfficialLeagueTable";
 import TouchlineClubPerimeterTrace from "@/components/touchline/TouchlineClubPerimeterTrace";
-import TouchlineGameweekCard from "@/components/touchline/fantasy/TouchlineGameweekCard";
-import { touchlineCardTierPalette } from "@/lib/touchlineArena/card-rules";
+import ClubHubPositionLeaders from "@/components/touchline/ClubHubPositionLeaders";
 import ClubHubNextFixtureCard from "@/components/touchline/club-hub/ClubHubNextFixtureCard";
 import ClubHubSectionNavigation from "@/components/touchline/club-hub/ClubHubSectionNavigation";
 import ClubHubFixtureStrip from "@/components/touchline/ClubHubFixtureStrip";
@@ -72,7 +71,6 @@ import { TOUCHLINE_DEFAULT_FORMATION_GEOMETRY_REGISTRY } from "@/lib/touchlineAr
 import { readTouchlineFormationGeometryRegistry } from "@/lib/touchlineArena/formation-geometry-server";
 import { TOUCHLINE_PRESEASON_RANKING_STATE } from "@/lib/touchlineArena/card-ranking-live";
 import { loadTouchLineActiveRanking } from "@/lib/touchlineArena/card-ranking-server";
-import { compareTouchlineRankingPlayers } from "@/lib/touchlineArena/card-ranking";
 import { normalizeTouchlineMatchCentreTimeZone, touchlineFixtureStatusLabel } from "@/lib/touchlineArena/match-centre";
 import {
   TOUCHLINE_STADIUM_CATALOG,
@@ -562,7 +560,7 @@ async function loadClubHubLeagueTable(
     // local database, SportMonks or demonstration standings.
     return loadTouchlineQaMirroredLeagueTable(club.teamId, mirrorResultPromise ?? undefined);
   }
-  return loadTouchlineOfficialLeagueTable();
+  return loadTouchlineOfficialLeagueTable({ includeLiveProjectionSource: true });
 }
 
 function ClubHubDeferredSection({ label, size }: { label: string; size: "lineup" | "panel" | "table" | "cards" }) {
@@ -648,36 +646,9 @@ async function ClubHubLineupSection({
     startsAt: matchPreview.startsAt,
     startsAtIso: matchSnapshot.publicFixture?.startsAt ?? null,
   };
-  const copy = getTouchlineClubHubProfileCopy(locale, draftLocalesEnabled);
-  const overallRanking = activeRanking.phase === "ranked"
-    ? [...activeRanking.players]
-      .filter((player) => player.totalRating !== null)
-      .sort(compareTouchlineRankingPlayers)
-    : [];
-  const rankedClubCards = presentation.clubCards.flatMap((card) => {
-    const cardIdentities = new Set([
-      normalizedPlayerIdentity(card.canonicalPlayerId),
-      normalizedPlayerIdentity(card.id),
-    ].filter(Boolean));
-    const ranking = overallRanking.find((candidate) => (
-      cardIdentities.has(normalizedPlayerIdentity(candidate.playerId))
-      || cardIdentities.has(normalizedPlayerIdentity(candidate.providerPlayerId))
-    ));
-    if (!ranking || ranking.totalRating === null) return [];
-    return [{
-      card: { ...card, seasonTotalRating: ranking.totalRating },
-      totalRating: ranking.totalRating,
-      overallRank: overallRanking.indexOf(ranking) + 1,
-      positionRank: ranking.positionRank,
-      positionGroup: ranking.positionGroup,
-    }];
-  }).sort((left, right) => left.overallRank - right.overallRank);
-  const clubPositionLeaders = CLUB_POSITION_LEADER_GROUPS.map((group) => ({
-    ...group,
-    leader: rankedClubCards.find((candidate) => (group.positionGroups as readonly string[]).includes(candidate.positionGroup)),
-  }));
   return (
-    <ClubHubOfficialLineup draftLocalesEnabled={draftLocalesEnabled}
+    <ClubHubOfficialLineup liveSeasonRating={dataSource === "direct"} draftLocalesEnabled={draftLocalesEnabled}
+      liveUpdates={dataSource === "direct"}
       clubName={club.name}
       lineup={matchdayPresentation.lineup}
       recordedXiWithoutCards={matchdayPresentation.recordedXiWithoutCards}
@@ -689,33 +660,7 @@ async function ClubHubLineupSection({
       labels={cardLabels}
       canEditCardEngine={viewerAccess.canEditCardEngine}
       hideMarketValuePanel={false}
-      leaderCards={(
-        <>
-          {clubPositionLeaders.map(({ key, copyKey, leader }) => {
-            const tierKey = leader?.card.editorialCard?.tierKey ?? null;
-            const tierAccent = tierKey ? touchlineCardTierPalette(tierKey).accent : "#9eaaa5";
-            return (
-            <article className={premiumStyles.lineupLeaderCard} data-clubhub-card-spotlight={`position-${key}`} key={key}
-              data-leader-tier-frame={tierKey ?? "unresolved"}
-              style={{ "--tier-accent": tierAccent } as CSSProperties}>
-              <TouchlineClubPerimeterTrace accent={tierKey ? tierAccent : undefined} className={premiumStyles.lineupLeaderTrace} />
-              <header>
-                <span>{copy[copyKey]}</span>
-                <strong>{leader?.card.name ?? (copy.awaitingRanking)}</strong>
-              </header>
-              {leader ? (
-                <div className={premiumStyles.lineupLeaderVisual}>
-                  <TouchlineGameweekCard draftLocalesEnabled={draftLocalesEnabled} card={leader.card} locale={locale} displayWidth={112} />
-                </div>
-              ) : (
-                <div className={premiumStyles.lineupLeaderAwaiting} role="status">—</div>
-              )}
-              <small>{leader ? `#${leader.positionRank}` : (copy.rankingChecking)}</small>
-            </article>
-            );
-          })}
-        </>
-      )}
+      leaderCards={<ClubHubPositionLeaders cards={presentation.clubCards} seed={activeRanking} enabled={dataSource === "direct"} locale={locale} draftLocalesEnabled={draftLocalesEnabled} />}
       matchup={lineupMatchup}
     />
   );
@@ -741,7 +686,7 @@ async function ClubHubTechnicalSections({
   const outsideMatchdayCards = presentation.outsideMatchdayCards;
   return (
     <>
-      <ClubHubMatchdayTechnicalArea draftLocalesEnabled={draftLocalesEnabled}
+      <ClubHubMatchdayTechnicalArea liveSeasonRating={dataSource === "direct"} draftLocalesEnabled={draftLocalesEnabled}
         clubName={club.name}
         technical={presentation.matchdayPresentation.technical}
         sidelined={presentation.matchSnapshot.sidelined}
@@ -762,7 +707,7 @@ async function ClubHubTechnicalSections({
           />
         ) : null}
       />
-      <ClubHubOutsideMatchRoster draftLocalesEnabled={draftLocalesEnabled}
+      <ClubHubOutsideMatchRoster liveSeasonRating={dataSource === "direct"} draftLocalesEnabled={draftLocalesEnabled}
         clubName={club.name}
         cards={outsideMatchdayCards}
         sidelined={presentation.matchSnapshot.sidelined}
@@ -782,7 +727,7 @@ async function ClubHubOfficialLeagueSection({
   club,
   locale,
   matchSnapshotPromise,
-  tablePromise, draftLocalesEnabled = false, fixtureOnly = false,
+  tablePromise, draftLocalesEnabled = false, fixtureOnly = false, liveReadsEnabled = false,
 }: {
   club: NonNullable<ReturnType<typeof findTouchLineClub>>;
   locale: TouchLineLocale;
@@ -790,6 +735,7 @@ async function ClubHubOfficialLeagueSection({
   tablePromise: ReturnType<typeof loadClubHubLeagueTable>;
   draftLocalesEnabled?: boolean;
   fixtureOnly?: boolean;
+  liveReadsEnabled?: boolean;
 }) {
   const [matchSnapshot, table] = await Promise.all([
     matchSnapshotPromise,
@@ -825,6 +771,8 @@ async function ClubHubOfficialLeagueSection({
         <TouchlineClubPerimeterTrace accent="#a3ff12" className={officialLeagueStyles.surfaceTrace} />
         {hasVerifiedFixture && fixture?.startsAt && homeClub?.logoUrl && awayClub?.logoUrl ? (
           <ClubHubNextFixtureCard draftLocalesEnabled={draftLocalesEnabled}
+            initialFixture={fixture}
+            liveUpdates={liveReadsEnabled}
             awayTeam={{ teamId: awayClub.teamId, name: fixture.awayTeam?.name ?? awayClub.name, shortCode: awayClub.shortCode, logoUrl: awayClub.logoUrl }}
             awayPosition={awayPosition}
             className={officialLeagueStyles.fixture}
@@ -862,6 +810,7 @@ async function ClubHubOfficialLeagueSection({
       {!fixtureOnly ? <div className={officialLeagueStyles.panel}>
         <TouchlineClubPerimeterTrace accent="#a3ff12" className={officialLeagueStyles.surfaceTrace} />
         <TouchlineOfficialLeagueTable draftLocalesEnabled={draftLocalesEnabled}
+          liveReadsEnabled={liveReadsEnabled}
           className={officialLeagueStyles.table}
           currentTeamId={club.teamId}
           id="club-table"
@@ -876,17 +825,19 @@ async function ClubHubOfficialLeagueSection({
 }
 
 async function ClubHubOfficialTablePanel({
-  club, locale, tablePromise, draftLocalesEnabled = false,
+  club, locale, tablePromise, draftLocalesEnabled = false, liveReadsEnabled = false,
 }: {
   club: NonNullable<ReturnType<typeof findTouchLineClub>>;
   locale: TouchLineLocale;
   tablePromise: ReturnType<typeof loadClubHubLeagueTable>;
   draftLocalesEnabled?: boolean;
+  liveReadsEnabled?: boolean;
 }) {
   const table = await tablePromise;
   return <aside className={officialLeagueStyles.panel} aria-label={getTouchlineClubHubProfileCopy(locale, draftLocalesEnabled).nextAndTable} data-clubhub-table-rail="true">
     <TouchlineClubPerimeterTrace accent="#a3ff12" className={officialLeagueStyles.surfaceTrace} />
     <TouchlineOfficialLeagueTable draftLocalesEnabled={draftLocalesEnabled}
+      liveReadsEnabled={liveReadsEnabled}
       className={officialLeagueStyles.table}
       currentTeamId={club.teamId}
       id="club-table"
@@ -899,11 +850,12 @@ async function ClubHubOfficialTablePanel({
 
 async function ClubHubHeroNextMatch({
   locale,
-  matchSnapshotPromise, draftLocalesEnabled = false,
+  matchSnapshotPromise, draftLocalesEnabled = false, liveReadsEnabled = false,
 }: {
   locale: TouchLineLocale;
   matchSnapshotPromise: Promise<ClubMatchSnapshot>;
   draftLocalesEnabled?: boolean;
+  liveReadsEnabled?: boolean;
 }) {
   const matchSnapshot = await matchSnapshotPromise;
   // The profile hero deliberately represents the next scheduled fixture. The
@@ -926,6 +878,8 @@ async function ClubHubHeroNextMatch({
 
   return (
     <ClubHubNextFixtureCard draftLocalesEnabled={draftLocalesEnabled}
+      initialFixture={fixture}
+      liveUpdates={liveReadsEnabled}
       awayTeam={{ teamId: awayClub.teamId, name: fixture.awayTeam?.name ?? awayClub.name, shortCode: awayClub.shortCode, logoUrl: awayClub.logoUrl }}
       awayPosition={null}
       className="club-hub-hero-next-match"
@@ -947,17 +901,6 @@ async function ClubHubHeroNextMatch({
     />
   );
 }
-
-function normalizedPlayerIdentity(value: string | number | null | undefined) {
-  return String(value ?? "").trim().toLowerCase();
-}
-
-const CLUB_POSITION_LEADER_GROUPS = [
-  { key: "centre-back", positionGroups: ["centre-back"], copyKey: "topCentreBack" },
-  { key: "full-back", positionGroups: ["full-back"], copyKey: "topFullBack" },
-  { key: "midfielder", positionGroups: ["midfielder"], copyKey: "topMidfielder" },
-  { key: "attacker", positionGroups: ["winger", "striker"], copyKey: "topAttacker" },
-] as const;
 
 /**
  * Permanent club ground, directly below the club name in the shared hero.
@@ -1130,6 +1073,7 @@ async function renderClubHubPage({ params, searchParams }: ClubHubPageProps, dra
               </div>
               <Suspense fallback={<ClubHubDeferredSection size="panel" label={copy.nextMatchChecking} />}>
                 <ClubHubOfficialLeagueSection draftLocalesEnabled={draftLocalesEnabled} fixtureOnly
+                  liveReadsEnabled={dataSource === "direct"}
                   club={club}
                   locale={locale}
                   matchSnapshotPromise={matchSnapshotPromise}
@@ -1137,7 +1081,7 @@ async function renderClubHubPage({ params, searchParams }: ClubHubPageProps, dra
                 />
               </Suspense>
               <Suspense fallback={<ClubHubDeferredSection size="table" label={copy.updatingLeague} />}>
-                <ClubHubOfficialTablePanel draftLocalesEnabled={draftLocalesEnabled} club={club} locale={locale} tablePromise={tablePromise} />
+                <ClubHubOfficialTablePanel liveReadsEnabled={dataSource === "direct"} draftLocalesEnabled={draftLocalesEnabled} club={club} locale={locale} tablePromise={tablePromise} />
               </Suspense>
             </div>
           </div>

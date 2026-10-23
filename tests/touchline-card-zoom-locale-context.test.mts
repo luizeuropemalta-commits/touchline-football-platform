@@ -16,6 +16,11 @@ import * as coachCopy from "../lib/touchlineArena/coach-zoom-i18n.ts";
 import { resolvePlayerSocialSubject } from "../lib/touchlineArena/player-social-client.ts";
 import { localizedCountryLabel } from "../lib/touchlineArena/country-labels.ts";
 import { touchlineCardTierName, touchlineCardTierPalette } from "../lib/touchlineArena/card-rules.ts";
+import * as seasonPresentation from "../lib/touchlineArena/player-season-presentation.ts";
+import * as coachCompetition from "../lib/touchlineArena/coach-competition-projection.ts";
+import * as cardDetails from "../lib/touchlineArena/card-zoom-details.ts";
+import { buildTouchlineCardLeadershipValue, type TouchlineCardLeadershipAuthority } from "../lib/touchlineArena/card-leadership-authority.ts";
+import { TOUCHLINE_PRESEASON_RANKING_STATE } from "../lib/touchlineArena/card-ranking-live.ts";
 
 type Component = React.ComponentType<Record<string, unknown>>;
 type Module = Record<string, Component>;
@@ -39,8 +44,9 @@ const detail = (performanceTitle?: string) => ({
 // Transpile the complete real components, not a reimplementation of locale
 // resolution. DOM portals, effects, icon artwork and social I/O are boundaries;
 // React creates and renders the actual JSX, panel and child prop handoffs.
-function fixture(options: { docLang?: string; forbidDocumentLanguage?: boolean; states?: boolean[]; noDocument?: boolean } = {}) {
+function fixture(options: { docLang?: string; forbidDocumentLanguage?: boolean; states?: boolean[]; noDocument?: boolean; authority?: TouchlineCardLeadershipAuthority | null } = {}) {
   let stateIndex = 0; const socialLocales: string[] = []; const zoomProps: Record<string, unknown>[] = [];
+  const playerArtwork: Record<string, unknown>[] = [], coachArtwork: Record<string, unknown>[] = [];
   const documentBoundary = {
     body: {}, documentElement: { get lang() { if (options.forbidDocumentLanguage) throw Error("explicit locale must not read document language"); return options.docLang ?? "en-GB"; } },
   };
@@ -68,12 +74,16 @@ function fixture(options: { docLang?: string; forbidDocumentLanguage?: boolean; 
     "@/lib/touchlineArena/coach-zoom-i18n": coachCopy,
     "@/lib/touchlineArena/card-rules": { touchlineCardTierName, touchlineCardTierPalette },
     "@/lib/touchlineArena/country-labels": { localizedCountryLabel },
-    "@/components/touchline/cards/TouchlineEliteExactCard": { default: () => null },
-    "./TouchlineCoachCard": { default: () => null },
+    "@/components/touchline/cards/TouchlineEliteExactCard": { default: (props: Record<string, unknown>) => { playerArtwork.push(props);return null; } },
+    "./TouchlineCoachCard": { default: (props: Record<string, unknown>) => { coachArtwork.push(props);return null; } },
+    "@/components/touchline/cards/TouchlineCardLeadershipProvider": { useTouchlineCardLeadershipAuthority: () => options.authority ?? null },
+    "./TouchlineCardLeadershipProvider": { useTouchlineCardLeadershipAuthority: () => options.authority ?? null },
+    "@/lib/touchlineArena/player-season-presentation": seasonPresentation,
+    "@/lib/touchlineArena/coach-competition-projection": coachCompetition,
     // The caller contract is independent of conversion of football records.
     "@/lib/touchlineArena/demo-data": { squadCardToExactPlayer: (card: Record<string, unknown>) => ({ ...card, sportmonksPlayerId: 123 }) },
     "@/lib/touchlineArena/player-links": { touchlinePlayerProfileHref: () => "/touchline-players/canonical?playerId=123" },
-    "@/lib/touchlineArena/card-zoom-details": { buildTouchlinePlayerCardZoomDetails: (input: Record<string, unknown>) => ({ ...detail("Performance"), title: input.name }) },
+    "@/lib/touchlineArena/card-zoom-details": cardDetails,
   };
   function compile(source: string): Module {
     const exports = {};
@@ -86,7 +96,7 @@ function fixture(options: { docLang?: string; forbidDocumentLanguage?: boolean; 
   modules["./TouchlineCardZoom"] = { default: ZoomBoundary };
   modules["@/components/touchline/cards/TouchlineCardZoom"] = { default: ZoomBoundary };
   return {
-    zoom, socialLocales, zoomProps,
+    zoom, socialLocales, zoomProps, playerArtwork, coachArtwork,
     renderZoom(props: Record<string, unknown>) {
       const { children = "Card artwork", ...zoomProps } = props;
       return renderToStaticMarkup(React.createElement(zoom.default, { ariaLabel: "Open canonical card", socialProviderId: "123", ...zoomProps }, children as React.ReactNode));
@@ -153,15 +163,41 @@ test("omitted locale preserves legacy independent title and document fallbacks",
 });
 
 test("actual player and coach JSX pass their locale explicitly without changing canonical identity/details", () => {
-  for (const locale of ["pt-BR", "en-GB", "ar-SA"]) {
-    const view = fixture({ docLang: locale === "pt-BR" ? "en-GB" : "pt-BR", states: [true, false] });
-    const html = view.renderCaller("player", { locale, card: { name: "Canonical Player", clubName: "Canonical Club", position: "Striker", seasonTotalRating: 0 } });
+  // A shared withdrawal must not affect callers whose live opt-in is omitted.
+  const authority = buildTouchlineCardLeadershipValue(TOUCHLINE_PRESEASON_RANKING_STATE, null);
+  for (const { code: locale } of TOUCHLINE_APPROVED_LOCALES) {
+    const view = fixture({ docLang: locale === "pt-BR" ? "en-GB" : "pt-BR", states: [true, false], authority });
+    const card = { id: "a0000000-0000-4000-8000-000000000123", canonicalPlayerId: "a0000000-0000-4000-8000-000000000123", providerPlayerId: "123", name: "Canonical Player", clubName: "Canonical Club", position: "Striker", seasonTotalRating: 0 };
+    const before = JSON.stringify(card);
+    const html = view.renderCaller("player", { locale, card });
+    assert.equal(view.zoomProps.length, 1);
     assert.equal(view.zoomProps[0].locale, locale);
+    assert.equal(view.zoomProps[0].presentationMode, undefined, "Gameweek keeps the combined default");
+    const details = view.zoomProps[0].details as ReturnType<typeof cardDetails.buildTouchlinePlayerCardZoomDetails>;
+    assert.equal(details.title, card.name);assert.ok(details.subtitle?.includes(card.clubName));
+    assert.equal(details.fields.find(field => field.kind === "rating-total")?.value, "0.00", "default stays pinned even when the shared season is withdrawn");
+    assert.equal(view.playerArtwork.length, 2);
+    for (const artwork of view.playerArtwork) {
+      const player = artwork.player as typeof card;
+      assert.equal(player.canonicalPlayerId, card.canonicalPlayerId);assert.equal(player.seasonTotalRating, 0);
+      assert.equal(artwork.runtimeLocaleOverride, locale);
+    }
+    assert.equal(JSON.stringify(card), before);
     assert.deepEqual(view.socialLocales, [resolveTouchLinePresentationLocale(locale)]);
     assert.ok(html.includes(locale === "pt-BR" ? "Fechar card" : "Close card"));
-    const coachView = fixture({ docLang: locale === "pt-BR" ? "en-GB" : "pt-BR", states: [true, false] });
-    const coachHtml = coachView.renderCaller("coach", { locale, coach: { displayName: "Canonical Coach" }, slot: { cardTier: "ruby-red" }, clubName: "Canonical Club", contract: null, profileHref: "/touchline-coaches/canonical" });
+    const coachView = fixture({ docLang: locale === "pt-BR" ? "en-GB" : "pt-BR", states: [true, false], authority });
+    const coach = { providerId: "coach-123", displayName: "Canonical Coach" };
+    const competition = { snapshotId: "frozen", seasonId: "season", seasonLabel: "2026/27", rank: 2, scoringVersion: "coach_scoring_v2", totalTouchlinePoints: 18,
+      home: { wins: 2, draws: 0, losses: 0, touchlinePoints: 6 }, away: { wins: 2, draws: 0, losses: 0, touchlinePoints: 12 } };
+    const coachBefore = JSON.stringify({ coach, competition });
+    const coachHtml = coachView.renderCaller("coach", { locale, coach, competition, slot: { cardTier: "ruby-red" }, clubName: "Canonical Club", contract: null, profileHref: "/touchline-coaches/canonical" });
+    assert.equal(coachView.zoomProps.length, 1);assert.equal(coachView.zoomProps[0].presentationMode, undefined, "coach keeps the combined default");
     assert.equal(coachView.zoomProps[0].locale, locale); assert.equal((coachView.zoomProps[0].details as { profileActionKind: string }).profileActionKind, "coach");
+    const coachDetails = coachView.zoomProps[0].details as ReturnType<typeof cardDetails.buildTouchlinePlayerCardZoomDetails>;
+    assert.equal(coachDetails.fields.find(field => field.kind === "rating-total")?.value, "18");
+    assert.equal(coachView.coachArtwork.length, 2);
+    for (const artwork of coachView.coachArtwork) { assert.equal(artwork.coach, coach);assert.equal(artwork.publishedTouchlinePoints, 18);assert.equal(artwork.liveRankingPoints, false);assert.equal(artwork.locale, locale); }
+    assert.equal(JSON.stringify({ coach, competition }), coachBefore);
     assert.deepEqual(coachView.socialLocales, []); assert.match(coachHtml, /Canonical Coach/); assert.match(coachHtml, /Canonical Club/);
     assert.ok(coachHtml.includes(locale === "pt-BR" ? "Fechar card" : "Close card"));
   }

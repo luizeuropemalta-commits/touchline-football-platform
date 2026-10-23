@@ -12,6 +12,8 @@ import { resolveTouchlineCoachZoomPresentation } from "@/lib/touchlineArena/coac
 
 import TouchlineCardZoom, { type TouchlineCardZoomDetails } from "./TouchlineCardZoom";
 import TouchlineCoachCard from "./TouchlineCoachCard";
+import { useTouchlineCardLeadershipAuthority } from "./TouchlineCardLeadershipProvider";
+import { coachCompetitionFromRanking } from "@/lib/touchlineArena/coach-competition-projection";
 
 type TouchlineCoachCardZoomProps = {
   coach: TouchlineCoach;
@@ -24,6 +26,8 @@ type TouchlineCoachCardZoomProps = {
   draftLocalesEnabled?: boolean;
   contract: TouchlineCoachContractSnapshot | null;
   competition?: TouchlineCoachCompetitionSnapshot | null;
+  /** Opt-in only for public current-season records, never settled/private contracts. */
+  liveCompetitionUpdates?: boolean;
   profileHref: string;
   compact?: boolean;
   cardClassName?: string;
@@ -66,7 +70,8 @@ export default function TouchlineCoachCardZoom({
   locale = "en-GB",
   draftLocalesEnabled = false,
   contract,
-  competition = null,
+  competition: initialCompetition = null,
+  liveCompetitionUpdates = false,
   profileHref,
   compact = true,
   cardClassName,
@@ -78,10 +83,19 @@ export default function TouchlineCoachCardZoom({
   frameDecoding,
   frameFetchPriority,
 }: TouchlineCoachCardZoomProps) {
+  const authority = useTouchlineCardLeadershipAuthority();
+  const sharedCompetition = liveCompetitionUpdates && publishedTouchlinePoints == null
+    && showLeadershipCrown === undefined && authority?.coachRanking !== undefined;
+  const competition = sharedCompetition
+    ? authority.coachRanking ? coachCompetitionFromRanking(authority.coachRanking, coach.providerId, initialCompetition?.seasonLabel) : null
+    : initialCompetition;
+  const cardPoints = sharedCompetition ? competition?.totalTouchlinePoints ?? null
+    : publishedTouchlinePoints ?? competition?.totalTouchlinePoints ?? contract?.totalTouchlinePoints ?? null;
+  const cardCrown = sharedCompetition ? competition?.rank === 1 : showLeadershipCrown;
   const { locale: presentationLocale, copy } = resolveTouchlineCoachZoomPresentation(locale, draftLocalesEnabled);
   const portuguese = presentationLocale === "pt-BR";
   const palette = touchlineCardTierPalette(slot.cardTier);
-  const verifiedRecord = competition ?? contract;
+  const verifiedRecord = sharedCompetition ? competition : competition ?? contract;
   const formattedDateOfBirth = formatVerifiedDateOfBirth(coach.dateOfBirth, presentationLocale);
   const identityFields: TouchlineCardZoomDetails["fields"] = [
     { label: copy.currentClub, value: clubName, icon: "coach-club", group: "identity" },
@@ -167,9 +181,10 @@ export default function TouchlineCoachCardZoom({
       frameDecoding={frameDecoding}
       frameFetchPriority={frameFetchPriority}
       fixtureContext={contract?.currentFixture?.context ?? null}
-      publishedTouchlinePoints={publishedTouchlinePoints}
+      publishedTouchlinePoints={cardPoints}
+      liveRankingPoints={liveCompetitionUpdates}
       acquisitionPrice={acquisitionPrice}
-      showLeadershipCrown={showLeadershipCrown}
+      showLeadershipCrown={cardCrown}
     />
   );
 
@@ -197,9 +212,10 @@ export default function TouchlineCoachCardZoom({
           frameDecoding={frameDecoding ?? "sync"}
           frameFetchPriority={frameFetchPriority ?? "high"}
           fixtureContext={contract?.currentFixture?.context ?? null}
-          publishedTouchlinePoints={publishedTouchlinePoints}
+          publishedTouchlinePoints={cardPoints}
+          liveRankingPoints={liveCompetitionUpdates}
           acquisitionPrice={acquisitionPrice}
-          showLeadershipCrown={showLeadershipCrown}
+          showLeadershipCrown={cardCrown}
         />
       }
       details={details}

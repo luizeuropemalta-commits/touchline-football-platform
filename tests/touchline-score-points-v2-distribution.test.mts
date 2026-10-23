@@ -8,12 +8,13 @@ import {
 } from "../lib/touchlineArena/player-ranking-eligibility.ts";
 
 const read = (path: string) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
-const [store, liveSync, authoritativeRoster, rankingRebuild, rankingPage, tablesPage, tablesClient, coachRanking, backup] = await Promise.all([
+const [store, liveSync, authoritativeRoster, rankingRebuild, rankingPage, rankingClient, tablesPage, tablesClient, coachRanking, backup] = await Promise.all([
   read("lib/football-data/player-season-statistics-store.ts"),
   read("lib/football-data/live-sync.ts"),
   read("lib/touchlineArena/authoritative-roster-server.ts"),
   read("lib/touchlineArena/player-ranking-rebuild-server.ts"),
   read("app/touchline-player-card-rankings/page.tsx"),
+  read("components/touchline/TouchlinePlayerCardRankingsPublication.tsx"),
   read("app/rankings/page.tsx"),
   read("app/rankings/touchline-tables-client.tsx"),
   read("lib/touchlineArena/coach-ranking-server.ts"),
@@ -98,15 +99,20 @@ test("ranking settlement eligibility requires a final fixture and complete scori
 test("ranking pages use the league-wide published catalogue, not a private owner roster", () => {
   assert.match(rankingPage, /loadTouchLineRankedCardCatalog\(activeRanking\)/);
   assert.doesNotMatch(rankingPage, /readAuthoritativeTouchlineRoster/);
-  assert.match(tablesPage, /loadTouchLineRankedCardCatalog\(activeRanking\)/);
+  assert.match(tablesPage, /loadTouchLineRankedCardCatalog\(activeRanking, undefined, \{ includeGoalCandidates: true \}\)/);
   assert.match(tablesPage, /complete\.then\(\(\[ranking, selection, cards\]\)/);
   assert.match(tablesPage, /projectTouchlineRankingsHighlights\(cards, selection,/);
   assert.match(tablesPage, /cardGoalsLeaderIds\(ranking\.cardGoals, ranking\.snapshotId\)/);
   assert.match(tablesPage, /highlights=\{highlights\}/);
-  assert.match(tablesPage, /totalRankedCards=\{rankedCards\.length\}/);
+  assert.match(tablesPage, /const catalogueIndex = buildTouchlineRankingSummaryIndex\(rankedCards\)/);
+  assert.match(tablesPage, /const summary = projectTouchlinePublishedRankingSummary\(catalogueIndex, activeRanking\)/);
+  assert.match(tablesPage, /totalRankedCards=\{summary\.totalRankedCards\} catalogueIndex=\{catalogueIndex\}/);
+  assert.doesNotMatch(tablesPage, /totalRankedCards=\{rankedCards\.length\}/);
+  assert.match(tablesPage, /<TouchlineRankingPodium\b[^>]*catalogue=\{rankedCards\} seedRanking=\{activeRanking\}/);
+  assert.match(tablesClient, /projectTouchlinePublishedRankingAwards\(catalogue, ranking\)/);
   assert.doesNotMatch(tablesPage, /cardPlayerRank/);
-  assert.match(rankingPage, /buildTouchlineVerifiedMatchFactFields/);
-  assert.doesNotMatch(rankingPage, /buildTouchlineMatchScoringBreakdownFields/);
+  assert.match(rankingClient, /buildTouchlineVerifiedMatchFactFields/);
+  assert.doesNotMatch(rankingPage + rankingClient, /buildTouchlineMatchScoringBreakdownFields/);
 });
 
 test("coach ranking stays separate and exposes no owner or contract identity", () => {

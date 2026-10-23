@@ -6,9 +6,11 @@ import { runInNewContext } from "node:vm";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import ts from "typescript";
+import { loadSportsPublicationClientForSsr } from "./helpers/load-sports-publication-client.mts";
 
 const require = createRequire(import.meta.url);
 const source = readFileSync(new URL("../components/touchline/match-centre/TouchlineMatchCentre.tsx", import.meta.url), "utf8");
+const sportsClient = loadSportsPublicationClientForSsr();
 const exports: { default?: React.ComponentType<Record<string, unknown>> } = {};
 runInNewContext(ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.React, target: ts.ScriptTarget.ES2022 } }).outputText, {
   exports, React, Intl,
@@ -16,9 +18,10 @@ runInNewContext(ts.transpileModule(source, { compilerOptions: { module: ts.Modul
     if (name === "react") return React;
     if (name === "lucide-react") return new Proxy({}, { get: () => () => null });
     if (name.endsWith(".css")) return { default: new Proxy({}, { get: (_, key) => String(key) }) };
+    if (name === "@/lib/touchlineArena/sports-publication-client") return sportsClient;
     if (name.startsWith("@/lib/")) return require(`../${name.slice(2)}.ts`);
     if (name === "@/components/logo") return { Logo: () => null };
-    if (name.startsWith("@/components/") || name === "./TouchlineFixtureAlerts") return { default: () => null };
+    if (name.startsWith("@/components/") || name === "./TouchlineFixtureAlerts" || name === "../TouchlineLivePresentationRefresh") return { default: () => null };
     assert.fail(`Unexpected import ${name}`);
   },
   fetch: () => assert.fail("SSR must not fetch"),

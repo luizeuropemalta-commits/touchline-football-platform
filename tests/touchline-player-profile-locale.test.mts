@@ -60,7 +60,8 @@ test("locale authorship does not open the EN/PT completeness gate or alter socia
   assert.ok(source.includes("return renderPlayerProfilePage(props, isTouchLineSiteLocalesEnabled(\"/touchline-players/[player]\"))"));
   assert.match(source, /PlayerProfilePageProps, draftLocalesEnabled = false/);
   assert.match(source, /const locale = resolveTouchlineCatalogueLocale\(/);
-  assert.match(source, /<TouchlineSocialFeed/);
+  assert.match(source, /<TouchlinePlayerSeasonScope enabled=\{liveProfileSeason\}/);
+  assert.match(source, /<TouchlinePlayerSeasonFeed/);
   assert.match(source, /posts=\{playerSocialPosts\}/);
 });
 

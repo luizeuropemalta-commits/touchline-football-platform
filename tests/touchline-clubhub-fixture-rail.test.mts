@@ -3,6 +3,7 @@ import test from "node:test";
 import { readFileSync } from "node:fs";
 
 import { clubHubFixtureRailRefreshMs, resolveClubHubFixtureRail } from "../lib/touchlineArena/club-hub-fixture-rail.ts";
+import { CLUB_POSITION_LEADER_GROUPS } from "../lib/touchlineArena/club-position-leaders.ts";
 
 const beforeKickoff = Date.parse("2026-09-05T12:00:00.000Z");
 const fixture = { startsAt: "2026-09-05T16:00:00.000Z" };
@@ -89,6 +90,7 @@ test("ClubHub outer frames use the standard TouchLine neon, not club-blue accent
   const lineupCss = readFileSync(new URL("../components/touchline/ClubHubOfficialLineup.module.css", import.meta.url), "utf8");
   const officialTable = readFileSync(new URL("../components/touchline/TouchlineOfficialLeagueTable.tsx", import.meta.url), "utf8");
   const officialTableCss = readFileSync(new URL("../components/touchline/TouchlineOfficialLeagueTable.module.css", import.meta.url), "utf8");
+  const leaders = readFileSync(new URL("../components/touchline/ClubHubPositionLeaders.tsx", import.meta.url), "utf8");
   assert.match(page, /TouchlineClubPerimeterTrace accent="#a3ff12"/);
   assert.match(railCss, /--touchline-perimeter-run-color:\s*#a3ff12/);
   assert.match(feedCss, /border: 1px solid rgba\(163, 255, 18, \.34\)/);
@@ -96,10 +98,10 @@ test("ClubHub outer frames use the standard TouchLine neon, not club-blue accent
   assert.match(lineupCss, /--touchline-perimeter-run-color:\s*#a3ff12/);
   assert.match(officialTable, /variant === "clubHubRail" \? <TouchlineClubPerimeterTrace accent="#a3ff12"/);
   assert.match(officialTableCss, /\.clubHubTableTrace\s*\{[\s\S]*?--touchline-perimeter-run-color:\s*#a3ff12/);
-  assert.match(page, /data-clubhub-card-spotlight=\{`position-\$\{key\}`\}[\s\S]*?<TouchlineClubPerimeterTrace accent="#a3ff12"/);
-  assert.match(page, /CLUB_POSITION_LEADER_GROUPS/);
-  assert.match(page, /positionGroups: \["centre-back"\]/);
-  assert.match(page, /positionGroups: \["full-back"\]/);
-  assert.match(page, /positionGroups: \["midfielder"\]/);
-  assert.match(page, /positionGroups: \["winger", "striker"\]/);
+  assert.match(page, /leaderCards=\{<ClubHubPositionLeaders/);
+  // Structural frames remain neon; the published card's frame follows its tier.
+  assert.match(leaders, /data-clubhub-card-spotlight=\{`position-\$\{key\}`\}[\s\S]*?<TouchlineClubPerimeterTrace accent=\{tierKey \? tierAccent : undefined\}/);
+  assert.deepEqual(CLUB_POSITION_LEADER_GROUPS.map(group => [...group.positionGroups]), [
+    ["centre-back"], ["full-back"], ["midfielder"], ["winger", "striker"],
+  ]);
 });

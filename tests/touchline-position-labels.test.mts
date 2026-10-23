@@ -92,7 +92,7 @@ test("ClubHub squad captions use the same position labels as the profile and zoo
 });
 
 test("both dedicated ranking summaries localise positions without changing data inputs", () => {
-  const page = readFileSync(new URL("../app/touchline-player-card-rankings/page.tsx", import.meta.url), "utf8");
+  const page = readFileSync(new URL("../components/touchline/TouchlinePlayerCardRankingsPublication.tsx", import.meta.url), "utf8");
   assert.equal(page.match(/localizedPositionLabel\(card\.position, locale, draftLocalesEnabled\)/g)?.length, 2);
   assert.match(page, /position: card\.position,/);
 });

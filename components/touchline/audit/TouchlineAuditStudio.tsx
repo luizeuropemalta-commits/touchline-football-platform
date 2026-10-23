@@ -219,6 +219,7 @@ function AuditMatchCentrePage({ route, matchState, language }: { route: Touchlin
     {route.id === "match-centre/invalid-fixture" ? <p className={styles.auditRouteNotice}>{pt ? "A partida solicitada não existe ou já não está disponível." : "The requested fixture does not exist or is no longer available."}</p> : null}
     {route.id === "match-centre/archive" ? <p className={styles.auditRouteNotice}>{pt ? "Arquivo de partidas encerradas." : "Finished match archive."}</p> : null}
     <TouchlineMatchCentre
+      liveUpdates={false}
       initialFixtures={fixtures}
       initialFixtureId={fixtures[0]?.id}
       initialLocale={language === "pt-BR" ? "pt-BR" : "en-GB"}

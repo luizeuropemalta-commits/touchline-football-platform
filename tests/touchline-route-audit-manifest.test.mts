@@ -19,11 +19,21 @@ test("inventories every page, API method, proxy, metadata route, and error bound
   assert.equal(rows.filter((item) => item.kind === "PAGE").length, 73);
   assert.equal(row("/account").data, "VERIFIED_AUTH_ROLE_REDIRECT_ONLY_NO_TEAM_WRITES");
   assert.equal(rows.some((item) => item.route === "/visual-qa/arena-main-field"), false);
-  assert.equal(rows.filter((item) => item.kind === "API").length, 107);
+  assert.equal(rows.filter((item) => item.kind === "API").length, 108);
   assert.equal(rows.filter((item) => item.kind === "BOUNDARY").length, 7);
   assert.equal(rows.filter((item) => item.kind === "METADATA").length, 3);
   assert.equal(rows.filter((item) => item.kind === "PROXY").length, 1);
   assert.equal(new Set(rows.map((item) => item.route)).size, rows.length);
+});
+
+test("shared sports publication is inventoried as public pinned read, not ingress or deployment approval", () => {
+  const publication = row("GET /api/touchline-arena/sports-publication");
+  assert.equal(publication.auth, "PUBLIC");
+  assert.equal(publication.role, "ANY");
+  assert.equal(publication.data, "PUBLIC_PINNED_SPORTS_PUBLICATION_READ_ONLY_NO_PROVIDER_OR_PRIVATE_STATE");
+  assert.equal(publication.browser, "HTTP_CONTRACT");
+  assert.equal(publication.status, "HTTP_CONTRACT_PENDING");
+  assert.equal(rows.filter(item => item.route.endsWith(" /api/touchline-arena/sports-publication")).length, 1);
 });
 
 test("method inventory includes named reexports and aliases alongside local handlers", () => {

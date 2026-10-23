@@ -8,11 +8,15 @@ import { squadCardToExactPlayer, type ClubOwnerSquadCard } from "@/lib/touchline
 import { touchlinePlayerProfileHref } from "@/lib/touchlineArena/player-links";
 import { getTouchlineExactCardCopy } from "@/lib/touchlineArena/exact-card-i18n";
 import { touchlinePlayerPositionKind } from "@/lib/touchlineArena/position-aware-card-stats";
+import { useTouchlineCardLeadershipAuthority } from "@/components/touchline/cards/TouchlineCardLeadershipProvider";
+import { projectTouchlineSeasonCard } from "@/lib/touchlineArena/player-season-presentation";
 
-export default function TouchlineGameweekCard({ card, locale, compact = false, displayWidth, fitContainer = false, draftLocalesEnabled = false, replacementAction, removalAction, releaseAction, signingActions, lockedReason }: {
+export default function TouchlineGameweekCard({ card, locale, compact = false, displayWidth, fitContainer = false, draftLocalesEnabled = false, liveSeasonRating = false, replacementAction, removalAction, releaseAction, signingActions, lockedReason }: {
   card: ClubOwnerSquadCard;
   locale: string;
   draftLocalesEnabled?: boolean;
+  /** Only current public season display; historical and contract reviews stay pinned. */
+  liveSeasonRating?: boolean;
   compact?: boolean;
   displayWidth?: number;
   /** Grid thumbnails follow their column; transformed pitch cards retain an explicit scale. */
@@ -24,8 +28,10 @@ export default function TouchlineGameweekCard({ card, locale, compact = false, d
   lockedReason?: string;
 }) {
   const copy = getTouchlineExactCardCopy(locale, draftLocalesEnabled);
+  const authority = useTouchlineCardLeadershipAuthority();
+  const displayCard = projectTouchlineSeasonCard(card, authority, liveSeasonRating);
   const positionKind = touchlinePlayerPositionKind(card.position);
-  const exact = squadCardToExactPlayer(card);
+  const exact = squadCardToExactPlayer(displayCard);
   const palette = touchlineCardTierPalette(card.editorialCard?.tierKey ?? null);
   // Public profile links use TouchLine presentation identity only. Provider
   // identifiers remain server-side and never leak into a card URL.
@@ -52,7 +58,7 @@ export default function TouchlineGameweekCard({ card, locale, compact = false, d
     marketValueState: card.marketValueState,
     extraFields: [{
       label: copy.totalRating,
-      value: card.seasonTotalRating == null ? "—" : card.seasonTotalRating.toFixed(2),
+      value: displayCard.seasonTotalRating == null ? "—" : displayCard.seasonTotalRating.toFixed(2),
       accent: true,
       primary: true,
       kind: "rating-total",

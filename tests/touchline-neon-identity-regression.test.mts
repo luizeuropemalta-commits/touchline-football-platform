@@ -6,6 +6,7 @@ import ts from "typescript";
 import { getTouchlineExactCardCopy } from "../lib/touchlineArena/exact-card-i18n.ts";
 import { getTouchLineRankingsCopy } from "../lib/touchlineArena/rankings-i18n.ts";
 import { getTouchlineClubHubLineupCopy } from "../lib/touchlineArena/club-hub-lineup-i18n.ts";
+import { getTouchlineClubHubContractLabel } from "../lib/touchlineArena/club-hub-roster-i18n.ts";
 import { getTouchlineCoachCardCopy } from "../lib/touchlineArena/coach-card-i18n.ts";
 import { getTouchlineCardZoomCopy } from "../lib/touchlineArena/card-zoom-i18n.ts";
 import { getTouchlinePlayerProfileFeedCopy } from "../lib/touchlineArena/player-profile-feed-i18n.ts";
@@ -144,7 +145,7 @@ test("card controls stay inside the master safe zone and contracting stays outsi
   const zoomCss = source("components/touchline/cards/TouchlineCardZoom.module.css");
   const zoomUsages = [
     source("app/touchline-clubs/[club]/page.tsx"),
-    source("app/touchline-player-card-rankings/page.tsx"),
+    source("components/touchline/TouchlinePlayerCardRankingsPublication.tsx"),
     source("app/touchline-players/[player]/page.tsx"),
     source("components/touchline/ClubHubOfficialLineup.tsx"),
   ].join("\n");
@@ -195,7 +196,29 @@ test("card controls stay inside the master safe zone and contracting stays outsi
   assert.match(zoom, /\{!details && tierLabel \? <strong>\{tierLabel\}<\/strong> : null\}/);
   assert.doesNotMatch(zoomUsages, /Comprar|Buy card/);
   assert.doesNotMatch(zoomUsages, /Sign player/);
-  assert.match(zoomUsages, /contractLabel=\{locale === "pt-BR" \? "Contratar"/);
+  const lineupSource = source("components/touchline/ClubHubOfficialLineup.tsx");
+  const lineupTree = ts.createSourceFile("ClubHubOfficialLineup.tsx", lineupSource, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const lineupZooms: ts.JsxOpeningElement[] = [];
+  function visitLineup(node: ts.Node) {
+    if (ts.isJsxOpeningElement(node) && node.tagName.getText(lineupTree) === "TouchlineCardZoom") lineupZooms.push(node);
+    ts.forEachChild(node, visitLineup);
+  }
+  visitLineup(lineupTree);
+  assert.equal(lineupZooms.length, 1, "the actual ClubHub caller keeps one combined Zoom");
+  const attributes = lineupZooms[0].attributes.properties.filter(ts.isJsxAttribute);
+  const label = attributes.find(attribute => attribute.name.getText(lineupTree) === "contractLabel")?.initializer;
+  assert.ok(label && ts.isJsxExpression(label) && label.expression && ts.isCallExpression(label.expression));
+  assert.equal(label.expression.expression.getText(lineupTree), "getTouchlineClubHubContractLabel");
+  assert.deepEqual(label.expression.arguments.map(argument => argument.getText(lineupTree)), ["locale", "draftLocalesEnabled"]);
+  assert.match(lineupSource, /import \{ getTouchlineClubHubContractLabel \} from "@\/lib\/touchlineArena\/club-hub-roster-i18n"/);
+  for (const name of ["contractHref", "contractValue", "contractTermLabel"]) {
+    assert.equal(attributes.find(attribute => attribute.name.getText(lineupTree) === name)?.initializer?.getText(lineupTree), "{undefined}", `${name}: translated labels must not activate contracting`);
+  }
+  const labels = { "en-GB": "Contract player", "pt-BR": "Contratar", "es-ES": "Contratar jugador", "it-IT": "Ingaggia giocatore", "fr-FR": "Recruter le joueur", "ar-SA": "التعاقد مع اللاعب", "tr-TR": "Oyuncuyla sözleşme yap", "de-DE": "Spieler verpflichten" };
+  for (const [locale, expected] of Object.entries(labels)) {
+    assert.equal(getTouchlineClubHubContractLabel(locale, true), expected);
+    assert.equal(getTouchlineClubHubContractLabel(locale), locale === "pt-BR" ? labels["pt-BR"] : labels["en-GB"], "non-opted-in callers retain the established public fallback");
+  }
   assert.match(zoomUsages, /Contrato · 1 temporada/);
   assert.match(zoomUsages, /const tierDisplayName = tier[\s\S]*?touchlineCardTierName\(tier\.key, locale, draftLocalesEnabled\)/);
   assert.match(zoomUsages, /tierLabel=\{tierDisplayName \?\? undefined\}/);
@@ -311,7 +334,7 @@ test("the positional Best XI uses player cards and one reversible zoom on every 
 });
 
 test("dedicated player-card ranking reuses the shared zoom and keeps compact cards free of internal controls", () => {
-  const rankingsSource = source("app/touchline-player-card-rankings/page.tsx");
+  const rankingsSource = source("components/touchline/TouchlinePlayerCardRankingsPublication.tsx");
 
   assert.match(rankingsSource, /import TouchlineCardZoom/);
   assert.match(rankingsSource, /<TouchlineCardZoom[\s\S]*?forceNeonActive/);

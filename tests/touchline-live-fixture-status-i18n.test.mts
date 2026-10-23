@@ -12,6 +12,7 @@ import * as catalogueLocale from "../lib/touchlineArena/catalogue-locale.ts";
 import * as matchCopy from "../lib/touchlineArena/match-centre-i18n.ts";
 import * as arabicDate from "../lib/touchlineArena/arabic-fixture-date.ts";
 import type { TouchlinePublicFixture } from "../lib/football-data/public-fixture.ts";
+import { loadSportsPublicationClientForSsr } from "./helpers/load-sports-publication-client.mts";
 
 const locales = ["en-GB", "pt-BR", "es-ES", "it-IT", "fr-FR", "ar-SA", "tr-TR", "de-DE"] as const;
 const aliases = {
@@ -87,15 +88,17 @@ test("real public helper cannot release six drafts; isolated future seam resolve
 
 function parentToChild(normalize: typeof i18n.normalizeTouchLineLocale, label: typeof matchCentre.touchlineFixtureStatusLabel, draftLocalesEnabled = false) {
   const childSource = readFileSync(new URL("../components/touchline/ClubHubLiveFixtureScore.tsx", import.meta.url), "utf8");
-  const effects: unknown[] = [], calls: { fixtureId: unknown; initialFixture: unknown; locale: unknown }[] = [];
-  const hooks = { ...React, useState: (initial: unknown) => [initial, () => assert.fail("Unexpected state write")],
-    useEffect: (effect: unknown) => { effects.push(effect); } };
+  const calls: { fixtureId: unknown; initialFixture: unknown; locale: unknown; liveUpdates: boolean }[] = [];
+  const refreshes: Array<{ serverRefreshAfterMs: number }> = [];
+  const sportsClient = loadSportsPublicationClientForSsr();
   const exports: { default?: React.ComponentType<Record<string, unknown>> } = {};
   runInNewContext(ts.transpileModule(childSource, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.React } }).outputText,
     { exports, React, require: (name: string) => {
-      if (name === "react") return hooks;
-      if (name === "next/navigation") return { useRouter: () => ({ refresh: () => assert.fail("Unexpected refresh") }) };
-      if (name === "@/lib/football-data/public-fixture-client") return { parseTouchlinePublicFixtures: () => assert.fail("Unexpected polling") };
+      if (name === "react") return React;
+      if (name === "@/lib/touchlineArena/sports-publication-client") return sportsClient;
+      if (name === "@/components/touchline/TouchlineLivePresentationRefresh") return { default: (props: { serverRefreshAfterMs: number }) => {
+        refreshes.push(props); return null;
+      } };
       if (name === "@/lib/touchlineArena/match-centre") return { ...matchCentre, touchlineFixtureStatusLabel: label };
       assert.fail(`Unexpected child import: ${name}`);
     } });
@@ -105,8 +108,10 @@ function parentToChild(normalize: typeof i18n.normalizeTouchLineLocale, label: t
   function visit(node: ts.Node) { if (ts.isJsxSelfClosingElement(node) && node.tagName.getText(ast) === "ClubHubLiveFixtureScore") binding = node; ts.forEachChild(node, visit); }
   visit(ast); assert.ok(binding);
   const js = ts.transpileModule(`(${binding.getText(ast)})`, { compilerOptions: { target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.React } }).outputText;
-  return { parentSource, effects, calls, render(locale: string, fixture: TouchlinePublicFixture | null) {
-    const html = runInNewContext(js, { React, locale, draftLocalesEnabled, matchup: { fixtureId: "canonical-fixture-id", initialFixture: fixture },
+  return { parentSource, calls, refreshes, render(locale: string, fixture: TouchlinePublicFixture | null, options: { liveUpdates?: boolean; staticVisualQa?: boolean } = {}) {
+    refreshes.length = 0;
+    const html = runInNewContext(js, { React, locale, draftLocalesEnabled, liveUpdates: options.liveUpdates ?? true, staticVisualQa: options.staticVisualQa ?? false,
+      matchup: { fixtureId: "canonical-fixture-id", initialFixture: fixture },
       resolveTouchlineCatalogueLocale: (value: string, flag: boolean) => { normalize(value); return catalogueLocale.resolveTouchlineCatalogueLocale(value, flag); },
       ClubHubLiveFixtureScore: (props: Record<string, unknown>) => {
         calls.push(props as typeof calls[number]); return React.createElement(exports.default!, props);
@@ -154,4 +159,20 @@ test("actual gated parent/child keeps zero/null/partial scores, minute zero, pre
     ] as const) assert.equal(view.render(locale, data), `<b aria-live="polite">${expected}</b>`);
     assert.equal(view.calls.at(-1)?.locale, locale === "pt-BR" ? "pt-BR" : "en-GB");
   }
+});
+
+test("real parent binding keeps static and disabled score projections isolated from the shared refresh boundary", () => {
+  const view = parentToChild(i18n.normalizeTouchLineLocale, matchCentre.touchlineFixtureStatusLabel);
+  const data = fixture({ providerId: "canonical-fixture-id" });
+  const before = JSON.stringify(data);
+  const live = view.render("en-GB", data);
+  assert.equal(view.calls.at(-1)?.liveUpdates, true);
+  assert.equal(view.refreshes.length, 1);
+  assert.equal(view.refreshes[0].serverRefreshAfterMs, 45_000);
+  for (const options of [{ liveUpdates: false }, { staticVisualQa: true }]) {
+    assert.equal(view.render("en-GB", data, options), live);
+    assert.equal(view.calls.at(-1)?.liveUpdates, false);
+    assert.equal(view.refreshes.length, 0);
+  }
+  assert.equal(JSON.stringify(data), before);
 });

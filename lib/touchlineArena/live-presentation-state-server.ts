@@ -9,6 +9,7 @@ import { readPublishedTouchlineLivePresentationInput } from "@/lib/touchlineAren
 import {
   TOUCHLINE_LIVE_PRESENTATION_STATE_VERSION,
   resolveTouchlineLivePresentationTiming,
+  touchlineLiveFreshness,
   type TouchlineLivePresentationState,
 } from "@/lib/touchlineArena/live-presentation-state";
 
@@ -24,7 +25,7 @@ const UNAVAILABLE_STATE: TouchlineLivePresentationState = Object.freeze({
 });
 
 export const TOUCHLINE_LIVE_PRESENTATION_SHARED_CACHE_SECONDS = 5;
-const SHARED_CACHE_KEY = "touchline-live-presentation-state-v2";
+const SHARED_CACHE_KEY = "touchline-live-presentation-state-v3";
 
 async function readUncachedTouchlineLivePresentationState(): Promise<TouchlineLivePresentationState> {
   const admin = createAdminClient();
@@ -53,6 +54,7 @@ async function readUncachedTouchlineLivePresentationState(): Promise<TouchlineLi
     playerRankingSnapshotId: input.playerRankingSnapshotId,
     coachRankingSnapshotId: input.coachRankingSnapshotId,
     livePresentationSnapshotId: input.contentDigest,
+    liveFreshness: touchlineLiveFreshness(input.liveScorePayload, now),
     ...timing,
   };
 }

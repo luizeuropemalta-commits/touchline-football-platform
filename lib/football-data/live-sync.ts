@@ -277,11 +277,14 @@ export async function syncSportmonksLiveState(
     const incoming: TouchlineFixture[] = [];
     if (liveResponse.ok) incoming.push(...liveResponse.data.filter((fixture) => recoveryFixtureMatches(fixture, scope)));
     else {
-      // Persist only bounded HTTP diagnostics, never provider messages or URLs.
+      // Persist only closed diagnostics, never provider messages or URLs. A
+      // pre-HTTP refusal remains an error, not a successful sync or quota reset.
       const status = liveResponse.error.status;
       const http = typeof status === "number" && Number.isInteger(status) && status >= 100 && status <= 599
         ? `:http_${status}` : "";
-      result.errors.push(`live-scores:${liveResponse.error.code}${http}`);
+      const admission = liveResponse.error.requestDisposition === "deferred-before-http"
+        && (status === undefined || status === 0) ? ":admission_denied_before_http" : "";
+      result.errors.push(`live-scores:${liveResponse.error.code}${http}${admission}`);
     }
 
     const candidateIds = new Set([

@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 
-import TouchlineCardZoom from "@/components/touchline/cards/TouchlineCardZoom";
+import { TouchlinePlayerSeasonScope, TouchlineSeasonCardZoom as TouchlineCardZoom, TouchlineSeasonExactCard as TouchlineEliteExactCard } from "@/components/touchline/cards/TouchlinePlayerSeasonScope";
 import TouchlinePlayerAvailabilityBadge from "@/components/touchline/cards/TouchlinePlayerAvailabilityBadge";
 import { getTouchlineCardZoomCopy } from "@/lib/touchlineArena/card-zoom-i18n";
 import { getTouchlineExactCardCopy } from "@/lib/touchlineArena/exact-card-i18n";
@@ -9,7 +9,6 @@ import { getTouchlineClubHubContractLabel } from "@/lib/touchlineArena/club-hub-
 import { getTouchlineFantasyMarketWorkflowCopy } from "@/lib/touchlineFantasy/market-workflow-i18n";
 import { resolveTouchlineCatalogueLocale } from "@/lib/touchlineArena/catalogue-locale";
 import { touchlinePlayerPositionKind } from "@/lib/touchlineArena/position-aware-card-stats";
-import TouchlineEliteExactCard from "@/components/touchline/cards/TouchlineEliteExactCard";
 import TouchlineGoalFacingPitchCard from "@/components/touchline/cards/TouchlineGoalFacingPitchCard";
 import TouchlinePitchSurface from "@/components/touchline/pitch/TouchlinePitchSurface";
 import ClubHubCrestTrace from "@/components/touchline/ClubHubCrestTrace";
@@ -47,8 +46,10 @@ type ClubHubOfficialLineupProps = {
   locale: string;
   officialChannels?: TouchlineClubOfficialChannels;
   draftLocalesEnabled?: boolean;
+  liveSeasonRating?: boolean;
   /** Isolates the static local visual fixture from card-ranking activity. */
   staticVisualQa?: boolean;
+  liveUpdates?: boolean;
   labels: {
     nationality: string;
     points: string;
@@ -81,7 +82,9 @@ export default function ClubHubOfficialLineup({
   locale,
   officialChannels = {},
   draftLocalesEnabled = false,
+  liveSeasonRating = false,
   staticVisualQa = false,
+  liveUpdates = true,
   labels,
   canEditCardEngine = false,
   hideMarketValuePanel = false,
@@ -166,7 +169,7 @@ export default function ClubHubOfficialLineup({
                   {matchup.home.logoUrl && matchup.home.accent ? <ClubHubCrestTrace accent={matchup.home.accent} className={styles.matchupCrest} src={matchup.home.logoUrl} /> : null}
                   <strong>{matchup.home.shortCode}</strong>
                 </div>
-                <ClubHubLiveFixtureScore draftLocalesEnabled={draftLocalesEnabled} fixtureId={matchup.fixtureId} initialFixture={matchup.initialFixture} locale={resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled)} />
+                <ClubHubLiveFixtureScore liveUpdates={liveUpdates && !staticVisualQa} draftLocalesEnabled={draftLocalesEnabled} fixtureId={matchup.fixtureId} initialFixture={matchup.initialFixture} locale={resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled)} />
                 <div className={!matchup.away.logoUrl ? styles.matchupTeamPending : undefined}>
                   {matchup.away.logoUrl && matchup.away.accent ? <ClubHubCrestTrace accent={matchup.away.accent} className={styles.matchupCrest} src={matchup.away.logoUrl} /> : null}
                   <strong>{matchup.away.shortCode}</strong>
@@ -256,7 +259,8 @@ export default function ClubHubOfficialLineup({
                 style={{ "--lineup-x": `${pitchPosition.x}%`, "--lineup-y": `${pitchPosition.y}%` } as CSSProperties}
               >
                 <TouchlineGoalFacingPitchCard className={styles.pitchCard} orientation="upright">
-                  <TouchlineCardZoom draftLocalesEnabled={draftLocalesEnabled}
+                  <TouchlinePlayerSeasonScope enabled={liveSeasonRating && !staticVisualQa} playerId={exactPlayer.canonicalPlayerId} providerPlayerId={exactPlayer.sportmonksPlayerId}>
+              <TouchlineCardZoom draftLocalesEnabled={draftLocalesEnabled}
                     locale={locale}
                     ariaLabel={zoomCopy.expandCard.replace("{playerName}", () => card.name)}
                     contractHref={undefined}
@@ -334,6 +338,7 @@ export default function ClubHubOfficialLineup({
                       showSocialMetrics={false}
                     />
                   </TouchlineCardZoom>
+              </TouchlinePlayerSeasonScope>
                 </TouchlineGoalFacingPitchCard>
                 <span className={styles.playerCaption} dir="auto" aria-label={playerName}>
                   {positionKind === "goalkeeper" ? <>

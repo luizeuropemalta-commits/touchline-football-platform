@@ -34,8 +34,9 @@ test("coach zoom preserves canonical unknown discipline and optional published p
   const zoom = source("components/touchline/cards/TouchlineCoachCardZoom.tsx");
   const card = source("components/touchline/cards/TouchlineCoachCard.tsx");
 
-  assert.match(zoom, /publishedTouchlinePoints=\{publishedTouchlinePoints\}/);
-  assert.match(zoom, /showLeadershipCrown=\{showLeadershipCrown\}/);
+  assert.match(zoom, /publishedTouchlinePoints=\{cardPoints\}/);
+  assert.match(zoom, /showLeadershipCrown=\{cardCrown\}/);
+  assert.match(zoom, /liveCompetitionUpdates = false/);
   assert.match(card, /yellowCards === null && redCards === null[\s\S]*?\? "—"/);
   assert.match(card, /data-coach-discipline-source=\{yellowCards === null && redCards === null \? "unavailable" : "canonical"\}/);
 });

@@ -9,6 +9,7 @@ import { createCompleteTouchlineCatalogueAdmin, loadCompleteTouchlineCataloguePr
 import { formatTouchlineMarketValueEur } from "./editorial-card-profile";
 import { hasTouchlineCountryFlag, normalizeTouchlineCountryCode3, touchlineCountryCode3FromName } from "./country-flags";
 import type { TouchlineActiveRankingState } from "./card-ranking-live";
+import { parseCardGoalsPublication } from "./card-goals-leadership";
 import type { ClubOwnerSquadCard } from "./demo-data";
 import { applyTouchlineSeasonPoints } from "./matchday-player-points";
 import { readPublicSeasonPlayerPoints } from "./public-season-player-points-server";
@@ -70,25 +71,32 @@ function verifiedMatchStats(row: Row | undefined, playerPosition: string) {
 function requireCompleteRankedSeasonProjection(
   playerIds: readonly string[],
   points: readonly { canonicalPlayerId: string }[],
+  allowedPlayerIds: readonly string[] = playerIds,
 ) {
   const expected = new Set(playerIds.map((playerId) => playerId.trim().toLowerCase()).filter(Boolean));
+  const allowed = new Set(allowedPlayerIds.map((playerId) => playerId.trim().toLowerCase()).filter(Boolean));
   const received = new Set<string>();
   for (const point of points) {
     const playerId = point.canonicalPlayerId.trim().toLowerCase();
-    if (!expected.has(playerId) || received.has(playerId)) {
+    if (!allowed.has(playerId) || received.has(playerId)) {
       throw new Error("TL_RANKED_CATALOGUE_SEASON_PROJECTION_INCOMPLETE");
     }
     received.add(playerId);
   }
-  if (received.size !== expected.size) {
+  if ([...expected].some((playerId) => !received.has(playerId))) {
     throw new Error("TL_RANKED_CATALOGUE_SEASON_PROJECTION_INCOMPLETE");
   }
 }
 
-/** Public published-card catalogue decorated from canonical Sportmonks ratings. */
+/**
+ * Public published-card catalogue decorated from canonical Sportmonks ratings.
+ * The opt-in union also resolves goals-only candidates from this exact
+ * publication; their identity/editorial card does not imply a published rating.
+ */
 export async function loadTouchLineRankedCardCatalog(
   state: TouchlineActiveRankingState,
   providedAdmin?: SupabaseClient | null,
+  options: Readonly<{ includeGoalCandidates?: boolean }> = {},
 ): Promise<ClubOwnerSquadCard[]> {
   if (state.phase !== "ranked" || state.scoringVersion !== "player_scoring_v4" || !state.seasonId || !state.players.length) return [];
   const seasonId = state.seasonId;
@@ -96,7 +104,14 @@ export async function loadTouchLineRankedCardCatalog(
   if (!admin) return [];
   const catalogueAdmin = createCompleteTouchlineCatalogueAdmin(admin);
   const diagnostics = createCatalogueLoadDiagnostics();
-  const playerIds = [...new Set(state.players.map((player) => String(player.playerId).trim().toLowerCase()).filter(Boolean))];
+  const rankedPlayerIds = [...new Set(state.players.map((player) => String(player.playerId).trim().toLowerCase()).filter(Boolean))];
+  const rankingByPlayerId = new Map(state.players.map((player) => [String(player.playerId).trim().toLowerCase(), player]));
+  const goals = options.includeGoalCandidates && state.snapshotId
+    ? parseCardGoalsPublication(state.cardGoals, state.snapshotId)
+    : null;
+  // Include every admitted goal row, including zero/null, so awards cannot
+  // silently omit a candidate. The default remains the rating-only catalogue.
+  const playerIds = [...new Set([...rankedPlayerIds, ...(goals?.rows.map((row) => row.playerId) ?? [])])];
   const playersPromise = (async () => {
     const { data } = await catalogueAdmin.from("football_players").select("id,provider_player_id,display_name,name,current_club_id,nationality,country_id,position,provider_position,detailed_position").in("id", playerIds);
     return rows(data);
@@ -123,7 +138,9 @@ export async function loadTouchLineRankedCardCatalog(
   ]);
   diagnostics.seal();
   const [{ players, clubData }, { data: squadData }, { data: fixtureData }, seasonPoints, published] = await branches;
-  requireCompleteRankedSeasonProjection(playerIds, seasonPoints);
+  // A goals-only player may have no season aggregate yet. That is an explicit
+  // absence, not missing rating evidence: only real ranking rows are required.
+  requireCompleteRankedSeasonProjection(rankedPlayerIds, seasonPoints, playerIds);
   const playerById = new Map(players.flatMap((row) => text(row.id) ? [[text(row.id)!, row] as const] : []));
   const clubById = new Map(rows(clubData).flatMap((row) => text(row.id) ? [[text(row.id)!, row] as const] : []));
   const squadByPlayerId = new Map<string, Row>();
@@ -142,11 +159,15 @@ export async function loadTouchLineRankedCardCatalog(
     }
   }
 
-  const cards = state.players.flatMap((ranking): ClubOwnerSquadCard[] => {
-    const playerId = String(ranking.playerId).toLowerCase();
+  const cards = playerIds.flatMap((playerId): ClubOwnerSquadCard[] => {
+    const ranking = rankingByPlayerId.get(playerId);
     const player = playerById.get(playerId);
     const editorialCard = published.get(playerId);
     if (!player || !editorialCard) return [];
+    const providerPlayerId = text(player.provider_player_id);
+    // A goals row proves only a canonical UUID. Its real provider identity
+    // must come from football_players, never a name or fabricated rating row.
+    if (!ranking && !providerPlayerId) return [];
     const squad = squadByPlayerId.get(playerId);
     const clubName = text(clubById.get(text(player.current_club_id) ?? "")?.name) ?? "Club pending";
     const name = text(player.display_name) ?? text(player.name);
@@ -155,7 +176,7 @@ export async function loadTouchLineRankedCardCatalog(
     const match = matchByPlayerId.get(playerId);
     return [{
       id: playerId,
-      providerPlayerId: text(player.provider_player_id),
+      providerPlayerId,
       canonicalPlayerId: playerId,
       name,
       shortName: makeArenaShortName(name),
@@ -183,7 +204,7 @@ export async function loadTouchLineRankedCardCatalog(
       touchlinePoints: 0,
       seasonTouchlinePoints: null,
       seasonTotalRating: null,
-      publishedRanking: state.snapshotId && state.publishedAt ? {
+      publishedRanking: ranking && state.snapshotId && state.publishedAt ? {
         snapshotId: state.snapshotId,
         providerPlayerId: ranking.providerPlayerId ?? null,
         totalRating: ranking.totalRating,
@@ -195,7 +216,9 @@ export async function loadTouchLineRankedCardCatalog(
     }];
   });
   return applyTouchlineSeasonPoints(cards, seasonPoints).map((card) => (
-    card.publishedRanking && card.publishedRanking.totalRating !== card.seasonTotalRating
+    !rankingByPlayerId.has(card.canonicalPlayerId ?? "")
+      ? { ...card, seasonTotalRating: null, publishedRanking: undefined }
+      : card.publishedRanking && card.publishedRanking.totalRating !== card.seasonTotalRating
       ? { ...card, publishedRanking: undefined }
       : card
   ));

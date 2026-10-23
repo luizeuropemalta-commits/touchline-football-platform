@@ -12,6 +12,7 @@ import * as catalogue from '../lib/touchlineArena/catalogue-locale.ts';
 import * as i18n from '../lib/touchlineArena/i18n.ts';
 import * as navigation from '../lib/touchlineArena/global-navigation.ts';
 import * as access from '../lib/touchlineArena/auth-access.ts';
+import * as rankingSummary from '../lib/touchlineArena/published-ranking-summary.ts';
 
 // Real server policy in an isolated environment; never inherit the host flag.
 const releaseEnv: Record<string, string | undefined> = {};
@@ -63,6 +64,7 @@ async function render(receipt: unknown, options: { authFailure?: Error; probe?: 
     '@/lib/football-data/fixture-schedule-store': { readPublicCompetitionFixtures: async () => [] },
     '@/lib/touchlineArena/rankings-highlight-projection': { projectTouchlineRankingsHighlights: () => ({}) },
     '@/lib/touchlineArena/card-goals-leadership': { cardGoalsLeaderIds: () => [] },
+    '@/lib/touchlineArena/published-ranking-summary': rankingSummary,
     '@/lib/touchlineArena/arena-fixture-round': { selectArenaFixtureRound: () => [] },
     '@/lib/touchlineArena/card-leadership-authority': { buildTouchlineCardLeadershipValue: () => ({}) },
     '@/components/touchline/cards/TouchlineCardLeadershipProvider': { TouchlineCardLeadershipProvider: leaf },

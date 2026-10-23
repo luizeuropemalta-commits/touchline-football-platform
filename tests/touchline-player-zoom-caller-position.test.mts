@@ -16,17 +16,19 @@ import { getTouchlineCardMatchFactLabels } from "../lib/touchlineArena/card-matc
 import { touchlineCardTierName, touchlineCardTierPalette } from "../lib/touchlineArena/card-rules.ts";
 import { resolveTouchLinePresentationLocale } from "../lib/touchlineArena/root-locale.ts";
 import { isTouchLineLocaleComplete, normalizeTouchLineLocale } from "../lib/touchlineArena/i18n.ts";
+import { projectTouchlineSeasonCard } from "../lib/touchlineArena/player-season-presentation.ts";
+import { touchlineRankingZoomSelectionForCard } from "../lib/touchlineArena/touchline-ranking-zoom-selection.ts";
 
 const callers = [
   ["components/touchline/ClubHubSquadGrid.tsx", 1],
   ["components/touchline/ClubHubOfficialLineup.tsx", 1],
   ["components/touchline/ClubHubMatchdayTechnicalArea.tsx", 1],
-  ["app/touchline-player-card-rankings/page.tsx", 2],
-  ["app/rankings/touchline-tables-client.tsx", 1],
+  ["components/touchline/TouchlinePlayerCardRankingsPublication.tsx", 3],
+  ["app/rankings/touchline-tables-client.tsx", 2],
   ["components/touchline/fantasy/TouchlineGameweekCard.tsx", 1],
 ] as const;
 type Details = ReturnType<typeof buildTouchlinePlayerCardZoomDetails>;
-type Props = { details: Details; locale: string; contractHref?: string };
+type Props = { details?: Details; locale: string; contractHref?: string; presentationMode?: string; children?: React.ReactElement; expandedContent?: React.ReactElement };
 const options = { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX };
 const compiled = new Map<string, string>();
 function evaluate(source: string, context: Record<string, unknown>) {
@@ -41,6 +43,7 @@ const expressions = callers.flatMap(([path, count]) => {
   function visit(node: ts.Node) {
     if (ts.isJsxElement(node) && node.openingElement.tagName.getText(source) === "TouchlineCardZoom") jsx.push(node);
     if (ts.isVariableDeclaration(node) && node.initializer) declarations.set(node.name.getText(source), node.initializer.getText(source));
+    if (ts.isFunctionDeclaration(node) && node.name) declarations.set(node.name.getText(source), node.getText(source));
     ts.forEachChild(node, visit);
   }
   visit(source);
@@ -50,14 +53,15 @@ const expressions = callers.flatMap(([path, count]) => {
 const statistics = { goals: 0, assists: null, defense: 9, cleanSheets: 1, saves: 4, penaltySaves: 0, goalsConceded: 2, yellowCards: 0, redCards: 0, ownGoals: 0, rating: 7, shotsOnTarget: 3, shotsOffTarget: 2, penaltiesMissed: 0 };
 const profileHref = "/canonical-player?keep=1#profile";
 
-// Execute the seven real JSX nodes, their real position initializer and the
+// Execute every real JSX node, its real position initializer and the
 // ranking closure. Only surrounding page loading and artwork are boundaries.
 function produce(expression: typeof expressions[number], locale: string, position: string | null | undefined) {
-  const card = { id: "canonical-id", canonicalPlayerId: "123", name: "Canonical $& Player", clubName: "Canonical Club", position, role: "CM", countryCode3: "ENG", editorialCard: null, seasonTotalRating: 0, matchRating: null, matchStats: statistics };
+  const card = { id: "a0000000-0000-4000-8000-000000000123", canonicalPlayerId: "a0000000-0000-4000-8000-000000000123", providerPlayerId: "123", name: "Canonical $& Player", clubName: "Canonical Club", position, role: "CM", countryCode3: "ENG", editorialCard: null, seasonTotalRating: 0, matchRating: null, matchStats: statistics };
   const context: Record<string, unknown> = {
     draftLocalesEnabled: false, getTouchlineClubHubContractLabel,
     card, exact: card, exactPlayer: card, locale, pt: locale === "pt-BR", isPortuguese: locale === "pt-BR",
     zoomCopy: getTouchlineCardZoomCopy(locale), exactCopy: getTouchlineExactCardCopy(locale), copy: getTouchlineExactCardCopy(locale),
+    getTouchlineCardZoomCopy, getTouchlineExactCardCopy,
     buildTouchlinePlayerCardZoomDetails, buildTouchlineVerifiedMatchFactFields, touchlinePlayerPositionKind,
     squadCardToExactPlayer: (value: unknown) => value, touchlinePlayerProfileHref: () => profileHref,
     touchlineCardTierName, touchlineCardTierPalette, TOUCHLINE_NEUTRAL_CARD_ACCENT: "#b8ff46",
@@ -80,12 +84,44 @@ function produce(expression: typeof expressions[number], locale: string, positio
   // positionKind, so the assertion fails on behavior, not a harness reference.
   const binding = expression.declarations.get("positionKind");
   if (binding) context.positionKind = evaluate(binding, context);
-  if (expression.path === "app/touchline-player-card-rankings/page.tsx") {
+  if (expression.path === "components/touchline/TouchlinePlayerCardRankingsPublication.tsx") {
     context.editorialPresentation = evaluate(expression.declarations.get("editorialPresentation")!, context);
-    const closure = evaluate(expression.declarations.get("zoomPresentation")!, context) as (input: unknown) => unknown;
-    context.zoom = closure(card);
+    context.cardPresentation = evaluate(expression.declarations.get("cardPresentation")!, context);
+    context.zoomPresentation = evaluate(expression.declarations.get("zoomPresentation")!, context);
+    context.zoom = (context.cardPresentation as (input: unknown) => unknown)(card);
+    Object.assign(context, { selected: { phase: "available", card }, selection: touchlineRankingZoomSelectionForCard(card as Parameters<typeof touchlineRankingZoomSelectionForCard>[0]), selectedSurface: "featured", touchlineRankingZoomSelectionForCard, selectedTriggerRef: { current: null }, headingRef: { current: null }, setSelection: () => {}, setSelectedSurface: () => {} });
+    for (const name of ["selectedCard", "selectedZoom", "isSelected", "openSelected"]) context[name] = evaluate(expression.declarations.get(name)!, context);
+  }
+  if (expression.path === "app/rankings/touchline-tables-client.tsx") {
+    Object.assign(context, {
+      presentationMode: undefined, open: undefined, onOpenChange: () => {}, returnFocusRef: { current: null }, returnFocusFallbackRef: { current: null },
+      selected: { phase: "available", card }, selection: touchlineRankingZoomSelectionForCard(card as Parameters<typeof touchlineRankingZoomSelectionForCard>[0]),
+      selectedTriggerRef: { current: null }, headingRef: { current: null }, setSelection: () => {}, setSelectedSurface: () => {},
+    });
+    const builder = expression.declarations.get("buildTablePlayerCardZoomPresentation");
+    assert.ok(builder, "both Tables hosts must execute the shared real presentation builder");
+    context.buildTablePlayerCardZoomPresentation = evaluate(builder, context);
+    if (expression.index === 0) {
+      const binding = expression.declarations.get("{ children, ...presentation }");
+      assert.ok(binding, "the combined wrapper spreads the real builder result");
+      const { children, ...presentation } = evaluate(binding, context) as Props;
+      Object.assign(context, { children, presentation });
+    } else {
+      for (const name of ["selectedCard", "selectedPresentation", "closeSelected"]) {
+        const binding = expression.declarations.get(name);
+        assert.ok(binding, `persistent host owns ${name}`);
+        context[name] = evaluate(binding, context);
+      }
+    }
   }
   if (expression.path === "components/touchline/fantasy/TouchlineGameweekCard.tsx") {
+    const displayBinding = expression.declarations.get("displayCard");
+    assert.ok(displayBinding, "actual Gameweek display projection initializer");
+    context.projectTouchlineSeasonCard = projectTouchlineSeasonCard;
+    context.authority = null;
+    context.liveSeasonRating = false;
+    context.displayCard = evaluate(displayBinding, context);
+    assert.equal(context.displayCard, card, "position-only fixture preserves the default pinned card");
     const detailsBinding = expression.declarations.get("details");
     assert.ok(detailsBinding, "actual Gameweek details initializer");
     context.details = evaluate(detailsBinding, context);
@@ -94,6 +130,13 @@ function produce(expression: typeof expressions[number], locale: string, positio
   const element = evaluate(expression.source, context) as React.ReactElement<Props>;
   assert.equal(JSON.stringify(card), before);
   assert.equal(element.props.locale, locale);
+  if (element.props.presentationMode === "trigger-only") {
+    assert.equal(element.props.details, undefined);
+    assert.equal(element.props.expandedContent, undefined);
+    assert.ok(element.props.children);
+    return null;
+  }
+  assert.ok(element.props.details, "combined callers and the selected dialog must contain actual details");
   assert.equal(element.props.details.title, card.name);
   assert.equal(element.props.details.profileHref, profileHref);
   assert.equal(element.props.contractHref, undefined);
@@ -129,6 +172,7 @@ const cases = [
 for (const expression of expressions) test(`${expression.path}#${expression.index + 1}: canonical position controls real zoom, unknown preserves legacy`, () => {
   for (const locale of locales) for (const { raw, kind } of cases) {
     const details = produce(expression, locale, raw);
+    if (!details) continue; // Trigger-only nodes were explicitly checked above; the persistent host owns details.
     assert.equal(details.positionKind, kind, `${locale}/${raw}: raw position, never the default CM role`);
     const gameweek = expression.path.includes("GameweekCard");
     const actualFacts = details.fields.filter((field) => field.group === "performance" && field.kind === "stat");
