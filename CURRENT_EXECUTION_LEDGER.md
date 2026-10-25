@@ -1,5 +1,30 @@
 # TouchLine Current Execution Ledger — Canonical Entry Point
 
+### 2026-10-25 06:36 UTC — corrected full local build PASS after reboot
+
+Full Next production build completed exit0 (1c0691), LOCAL_QA_BUILD_PASS_NOT_DEPLOYED. HEAD7f25cf58 plus the three reviewed correction files. PeakRSS1605MiB; finaldisk1.572GiB/pressure1; owned group empty, lock released. Log preserved in coordinator outputs/card-review-20260921/saved-evidence-20261024/qa-build-correction-pass-20261025.log. No additional cleanup. Earlier6502PASS/50SKIP, types/lint and independent review remain applicable; product source unchanged since those checks. No new remote build or Production action. Next: freeze correction manifest/commit, obtain additional QA build budget per policy, then exactSHA Git-native deployment and hosted verification. Hosted readiness remains RED.
+
+
+### 2026-10-25 — exact authorized cache removed; rebuild stopped again, reboot safe
+
+Owner approved only .next/cache/webpack. Exact path/realpath/uid501/no symlink/no lsof/build process revalidated. Removed1299832KiB; freebytes125837312→1461194752 (3971f6). No other path deleted.
+Rebuild21978 ran after three stable1.358GiB/pressure1 samples. Next compilation succeeded35.9s, then stopped during TypeScript at DISK_RESERVE:code143,free0.390682GiB,peak1637.03MiB,pressure2,ownprocessgroupempty/lockreleased,3fbcd7. Fullbuild NOTPASS; do not reuse earlier build as covering new product delta. Log saved in coordinator qa-build-correction-second-disk-stop-20261025.log.
+All correction files saved locally; corrected fullsuite6502PASS/0FAIL/50SKIP,types/lint/isolatedbrowser proofs retained. Failed remote7f25cf58 remains sole attempted deployment; no retry or new remote build. Production not touched. User asked about reboot: now safe because owned build stopped; reboot may release memory/swap but does not guarantee disk recovery. Next: fresh capacity inspection after reboot, complete build, freeze/commit corrected candidate, obtain additional build budget required by release policy, then exactQA deploy and smoke. No personal files or other caches deleted.
+
+
+### 2026-10-25 — QA attempt failed CI; local corrections verified, rebuild stopped at disk reserve
+
+SUPERSEDES pending publication status. Candidate7f25cf5838982817a923fd0611c4ce2d0cd34363 was committed clean and pushed to qa (c331d7). One Git-native build consumed. GitHub40166711860:6492total/6440PASS/2FAIL/50SKIP. Failures: WebKit390pt-BR focused Rankings clipped; WebKit390ar-SA carousel fixed observation window. VercelGXrPSX9HVZ5PGQxcVDmpjJyioDgX endedERROR/QA_CI_NOT_SUCCESSFUL after12m22s; NOT a new Ready publication. Production unchanged.
+
+🟢 1. Local correction: navigation reveals focus immediately and rechecks in existing RAF; synchronous regression added, keyboard/RTL/cleanup assertions retained. Carousel test now measures browser-clock frame motion with positive movement/30px-per-second cap/canonical seams/unchanged width. Independent QA_CI_CORRECTION_REVIEW_20261025.md found no P0/P1 in bounded correction.
+🟢 2. Corrected focused header1/1,carousel3/3,combined4/4PASS; typesPASSaf06e5;lintPASS4d0acf/0errors/9priorwarnings. Complete rerun c5004d/44a3a3:6552total,6502PASS,0FAIL,0CANCELLED,50SKIP,566741.617417ms. Original local hover resume failure retained; two later matrices passed, exact one-off cause unproven. Logs persisted in coordinator saved-evidence-20261024.
+🔴 3. Corrected build session57097 started with0.9246GiB after3stable samples and owner500MiB reserve. Stopped at0.142GiB DISK_RESERVE,code143,e53694; peak1301.86MiB,ownprocessgroupempty/lockreleased. This is NOT code-buildPASS. Log/private/tmp/touchline-qa-build-20261024-iqpcmD/build.log. No further heavy process started.
+🔴 4. Exact conditional cleanup proposed: this repository .next/cache/webpack,1299832KiB,realpath matches,uid501,not symlink,no lsof consumer,no build process. Awaiting owner approval for this exact cache; no deletion performed. Cache can be recreated by build, but recovery not yet tested.
+🔴 5. Corrections remain local WIP; new immutable SHA, successful build and new remote build authorization required before retry. Never retry unchanged failedSHA. Hosted smoke/alias/logs and remaining functional gates still pending.
+
+MISSION: RELEASE correction. FILES:NavigationRail and two browser tests plus checkpoints. QA target:qa only. Acceptance:exactSHA READY and public/customer smoke. Budget:1authorized/1consumed. Rollback:priorQA4pzGUi27KE3JdNoMJ8H99fKt4Hvp. No SQL/configuration/provider/financial transaction/notification activation. VISUAL:isolated browser matrices only,notwhole-site approval. SECURITY:secretsnotprinted. OBSERVABILITY:durableCIandlocal logs,coordinatorQA_DEPLOYMENT_20261025.md. PRODUCTION:NOTTOUCHED.
+
+
 ### 2026-10-25 — recovered full-suite PASS; QA application release preparation
 
 SUPERSEDES the prior ACTIVE suite and Safari authentication blocker only. Original session28558 terminal response recovered from original session record: exit0/chunk3a076d, counts fe1492:6552 total,6502PASS,0FAIL,0CANCELLED,50SKIP. Receipt preserved in coordinator outputs/card-review-20260921/saved-evidence-20261024/full-suite-terminal-recovered-20261025.json. Original temporary TAP log no longer exists; skipped tests are not PASS.

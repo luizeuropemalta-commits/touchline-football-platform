@@ -93,6 +93,10 @@ test("native hover predating overflow survives a seed update without remounting 
           await strip.evaluate(node => {
             (node as HTMLElement).dataset.instanceMarker = "original-instance";
             (node as HTMLElement).dataset.enters = "0";
+            (node as HTMLElement).dataset.leaves = "0";
+            node.addEventListener("pointerleave", () => {
+              const element = node as HTMLElement; element.dataset.leaves = String(Number(element.dataset.leaves) + 1);
+            });
             node.addEventListener("pointerenter", () => {
               const element = node as HTMLElement; element.dataset.enters = String(Number(element.dataset.enters) + 1);
             });
@@ -118,7 +122,19 @@ test("native hover predating overflow survives a seed update without remounting 
             await page.screenshot({ path: screenshot }); t.diagnostic(`Screenshot: ${screenshot}`);
           }
           await page.mouse.move(1, 240);
-          await expect.poll(() => rail.evaluate((node, offset) => node.scrollLeft !== offset, before.offset), { timeout: 2000, message: "leaving the same strip resumes autoplay" }).toBe(true);
+          try {
+            await expect.poll(() => rail.evaluate((node, offset) => node.scrollLeft !== offset, before.offset), { timeout: 2000, message: "leaving the same strip resumes autoplay" }).toBe(true);
+          } catch (error) {
+            t.diagnostic(`${engine.name()} ${width} ${locale}: resume failure ${JSON.stringify(await rail.evaluate(node => {
+              const strip = node.closest(".strip") as HTMLElement;
+              return { offset: node.scrollLeft, cycle: node.querySelector('[data-fixture-run="original"]')?.getBoundingClientRect().width,
+                hovered: strip.matches(":hover"), enters: strip.dataset.enters, leaves: strip.dataset.leaves,
+                focused: strip.contains(document.activeElement), active: document.activeElement?.outerHTML.slice(0, 200),
+                hidden: document.hidden, reducedMotion: matchMedia("(prefers-reduced-motion: reduce)").matches,
+                bounds: strip.getBoundingClientRect().toJSON(), viewport: { width: innerWidth, height: innerHeight } };
+            }))}; paused baseline=${before.offset}`);
+            throw error;
+          }
           assert.deepEqual(forbidden, []); assert.deepEqual(errors, []);
           t.diagnostic(`${engine.name()} ${width} ${locale}: native pre-overflow hover paused; leaving resumed`);
         } finally { await page.close(); }
@@ -242,13 +258,42 @@ test("compact strip loops smoothly, pauses for accessible interaction and preser
         await page.waitForTimeout(120);
         assert.equal(await stripOffset(), start, "reduced motion keeps strip still");
         await page.emulateMedia({ reducedMotion: "no-preference" });
-        await page.waitForTimeout(180);
-        await expect.poll(async () => {
-          const moving = await stripGeometry(); assertCanonical(moving);
-          assert.ok(Math.abs(moving.cycle - initialGeometry.cycle) < .01, "motion does not resize its own cycle");
-          const distance = forwardDistance(start, moving.offset, moving.cycle);
-          return distance > 3 && distance < 20;
-        }, { timeout: 1000, intervals: [50, 100], message: `${engine.name()} ${width} ${locale}: bounded forward motion across a possible loop seam` }).toBe(true);
+        // Measure motion in the browser clock. A host-side poll can first arrive
+        // after the fixed 3..20px window has already passed on a busy CI runner.
+        // Keep positive motion and the speed ceiling; do not relax either on retry.
+        const motion = await page.locator(".viewport").evaluate(node => new Promise<{
+          elapsed: number; distance: number; samples: Array<{ time: number; offset: number; cycle: number }>;
+          hidden: boolean; hovered: boolean; focused: boolean; reducedMotion: boolean;
+        }>(resolve => {
+          const samples: Array<{ time: number; offset: number; cycle: number }> = [];
+          const sample = (time: number) => {
+            const cycle = node.querySelector('[data-fixture-run="original"]')!.getBoundingClientRect().width;
+            samples.push({ time, offset: node.scrollLeft, cycle });
+            if (time - samples[0].time < 600) { requestAnimationFrame(sample); return; }
+            const distance = samples.slice(1).reduce((total, current, index) =>
+              total + ((current.offset - samples[index].offset) % current.cycle + current.cycle) % current.cycle, 0);
+            const strip = node.closest(".strip")!;
+            resolve({ elapsed: time - samples[0].time, distance, samples, hidden: document.hidden,
+              hovered: strip.matches(":hover"), focused: strip.contains(document.activeElement),
+              reducedMotion: matchMedia("(prefers-reduced-motion: reduce)").matches });
+          };
+          requestAnimationFrame(sample);
+        }));
+        const motionDiagnostic = `${engine.name()} ${width} ${locale}: ${JSON.stringify(motion)}`;
+        for (const sample of motion.samples) {
+          assertCanonical({ ...initialGeometry, ...sample });
+          assert.ok(Math.abs(sample.cycle - initialGeometry.cycle) < .01, `motion does not resize its own cycle: ${motionDiagnostic}`);
+        }
+        assert.ok(motion.distance > 3, `automatic forward motion must occur: ${motionDiagnostic}`);
+        // 30px/s is the product speed. Allow one pixel for quantized scrollLeft;
+        // long frames may slow movement, but must never cause catch-up jumps.
+        assert.ok(motion.distance <= motion.elapsed * .03 + 1, `bounded forward speed across loop seams: ${motionDiagnostic}`);
+        for (let index = 1; index < motion.samples.length; index++) {
+          const previous = motion.samples[index - 1], current = motion.samples[index];
+          const distance = forwardDistance(previous.offset, current.offset, current.cycle);
+          assert.ok(distance <= Math.min(current.time - previous.time, 50) * .03 + 1,
+            `bounded frame motion without catch-up jumps: ${motionDiagnostic}`);
+        }
         const focusedOriginal = page.locator('[data-fixture-run="original"] .fixture').first();
         await focusedOriginal.focus();
         await expect(focusedOriginal).toBeFocused();

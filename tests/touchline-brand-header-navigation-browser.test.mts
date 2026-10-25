@@ -152,14 +152,27 @@ test("real BrandHeader navigation endpoints remain reachable with visible keyboa
             window.cancelAnimationFrame = id => { if (pending.delete(id)) cancelled++; originalCancel(id); };
             try {
               const nav = document.querySelector("nav[data-touchline-navigation-surface]")!;
-              (nav.querySelector('[data-touchline-navigation-key="rankings"]') as HTMLElement).focus({ preventScroll: true });
+              const ranking = nav.querySelector('[data-touchline-navigation-key="rankings"]') as HTMLElement;
+              ranking.focus({ preventScroll: true });
+              // This synchronous sample runs before any queued animation frame:
+              // keyboard visibility must not rely on a promptly delivered rAF.
+              const controlBox = ranking.getBoundingClientRect();
+              const railNode = nav.parentElement!;
+              const railBox = railNode.getBoundingClientRect();
+              const railStyle = getComputedStyle(railNode);
+              const controlStyle = getComputedStyle(ranking);
+              const ring = Math.max(0, parseFloat(controlStyle.outlineWidth) + parseFloat(controlStyle.outlineOffset));
+              const clips = /auto|scroll|hidden|clip/.test(railStyle.overflowX);
+              const immediateVisible = controlBox.left - ring >= (clips ? railBox.left + railNode.clientLeft : 0) - 1
+                && controlBox.right + ring <= (clips ? railBox.left + railNode.clientLeft + railNode.clientWidth : innerWidth) + 1;
               const first = nav.querySelector(":scope > a") as HTMLElement;
               first.focus({ preventScroll: true });
               const focusStable = first === document.activeElement;
               (window as unknown as { unmountHeaderFixture: () => void }).unmountHeaderFixture();
-              return { requested, cancelled, pending: pending.size, focusStable };
+              return { requested, cancelled, pending: pending.size, focusStable, immediateVisible };
             } finally { window.requestAnimationFrame = originalRequest; window.cancelAnimationFrame = originalCancel; }
           });
+          assert.equal(cleanup.immediateVisible, true, "focus ring is fully revealed before the deferred frame runs");
           assert.equal(cleanup.requested, 2, "real focus capture schedules one frame per target");
           assert.equal(cleanup.cancelled, 2, "blur and real unmount cleanup cancel both pending focus frames");
           assert.equal(cleanup.pending, 0);

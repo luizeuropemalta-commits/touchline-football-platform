@@ -17,8 +17,7 @@ export default function TouchlineNavigationRail({ className, children }: { class
     cancelPendingFrame();
     const rail = event.currentTarget;
     const target = event.target;
-    pendingFrame.current = requestAnimationFrame(() => {
-      pendingFrame.current = null;
+    const reveal = () => {
       if (!rail.isConnected || !target.isConnected || target !== rail.ownerDocument.activeElement) return;
       const railStyle = getComputedStyle(rail);
       if (!/auto|scroll/.test(railStyle.overflowX) || rail.scrollWidth <= rail.clientWidth) return;
@@ -33,6 +32,13 @@ export default function TouchlineNavigationRail({ className, children }: { class
       // Physical bounds also support negative RTL scroll offsets. Never use
       // scrollIntoView: it can move the document or an ancestor vertically.
       if (delta) rail.scrollBy({ left: delta, behavior: "instant" });
+    };
+    // Reveal immediately even when the next animation frame is throttled.
+    // Recheck once after native keyboard scrolling has settled.
+    reveal();
+    pendingFrame.current = requestAnimationFrame(() => {
+      pendingFrame.current = null;
+      reveal();
     });
   }
 
