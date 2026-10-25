@@ -57,7 +57,7 @@ async function consumer(future: boolean, sentinel = false, controlled?: State) {
   const exports = compile(source, {
     react: controlled ? { ...React, useState: () => {
       const value = stateIndex++ === 0 ? controlled.visible : controlled.active; return [value, () => assert.fail("Effects are not executed in controlled-state rendering")];
-    }, useEffect: () => { effects++; } } : React,
+    }, useRef: (current: unknown) => ({ current }), useEffect: () => { effects++; } } : React,
     "lucide-react": icons,
     "@/lib/touchlineArena/club-hub-section-navigation-i18n": { getTouchlineClubHubSectionNavigationCopy: (locale: string) => {
       requests.push(locale);
@@ -127,7 +127,7 @@ test("unchanged actual top handler leaves reduced-motion native navigation and o
   assert.deepEqual(view.media, ["(prefers-reduced-motion: reduce)", "(prefers-reduced-motion: reduce)"]);
 });
 
-test("effects, link callback and top handler retain exact preimage bytes; the real page passes its full locale", () => {
+test("hero effect, link callback and top handler retain preimage bytes; the real page passes its full locale", () => {
   const ast = ts.createSourceFile("navigation.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
   const effects: string[] = [], callbacks: string[] = [];
   const hash = (value: string) => createHash("sha256").update(value).digest("hex");
@@ -138,7 +138,10 @@ test("effects, link callback and top handler retain exact preimage bytes; the re
     ts.forEachChild(node, visit);
   };
   visit(ast);
-  assert.deepEqual(effects, ["571f410db3b9ccdd16e74458e265065e470252d270245df9ddbfc17394106171", "b6868469c1c13145970f87eeb158142e4fecf6291123736527b452f06a217a8d"]);
+  assert.equal(effects.length, 2);
+  assert.equal(effects[0], "571f410db3b9ccdd16e74458e265065e470252d270245df9ddbfc17394106171");
+  // The second effect intentionally gained delayed-anchor recovery. Its actual
+  // behavior and cleanup are exercised by touchline-clubhub-deferred-anchor.test.
   assert.deepEqual(callbacks, ["bfad31bf91eb142100dde66a390175a64833b47fd41b625a9e4abb4f00fa6883", "9e2a7d7c9f120501e235047bc774ee5610fde66fc7991a7ee2ee50861539601d"]);
   const page = readFileSync(new URL("../app/touchline-clubs/[club]/page.tsx", import.meta.url), "utf8");
   const pageAst = ts.createSourceFile("page.tsx", page, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);

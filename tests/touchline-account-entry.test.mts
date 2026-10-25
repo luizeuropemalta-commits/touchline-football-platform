@@ -18,7 +18,7 @@ async function destination(result:AuthResult|null|Error,params:Record<string,str
     "@supabase/supabase-js":{AuthSessionMissingError:MissingSession},
     "@/lib/supabase/server":{createClient:async()=>({auth:{getUser:async()=>{authReads++;if(result instanceof Error)throw result;return result;}}})},
     "@/lib/admin/owner":{isOwnerEmail:(email:string)=>email==="admin@example.test"},
-    "@/lib/touchlineArena/server-read-deadline":{resolveServerReadWithin:async(promise:Promise<unknown>,fallback:unknown,deadline:number)=>{assert.equal(deadline,8000);assert.equal(fallback,null);return await promise;}},
+    "@/lib/touchlineArena/server-read-deadline":{resolveServerReadWithin:async(promise:Promise<unknown>,fallback:unknown,deadline:number)=>{assert.equal(deadline,8000);assert.equal(fallback,null);return await promise.catch(()=>fallback);}},
     "@/lib/touchlineArena/catalogue-locale":catalogue,
     "@/lib/touchlineArena/site-locales-release":{isTouchLineSiteLocalesEnabled:()=>false},
     "@/lib/touchlineArena/auth-i18n":authCopy,

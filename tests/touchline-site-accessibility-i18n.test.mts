@@ -11,11 +11,14 @@ import * as rootLocale from "../lib/touchlineArena/root-locale.ts";
 import * as authLocale from "../lib/touchlineArena/auth-i18n.ts";
 import * as canonicalLocale from "../lib/touchlineArena/i18n.ts";
 import * as accessibilityCopy from "../lib/touchlineArena/site-accessibility-i18n.ts";
+import * as catalogueLocale from "../lib/touchlineArena/catalogue-locale.ts";
 import { isTouchlineIsolatedPreviewRequest, TOUCHLINE_ISOLATED_PREVIEW_HEADER } from "../lib/touchlinePreview/isolation.ts";
 
 const nativeRequire = createRequire(import.meta.url);
 const source = readFileSync(new URL("../app/layout.tsx", import.meta.url), "utf8");
 const boundarySource = readFileSync(new URL("../components/touchline/TouchlineLandscapeBoundary.tsx", import.meta.url), "utf8");
+const footerSource = readFileSync(new URL("../components/touchline/TouchlineSiteFooter.tsx", import.meta.url), "utf8");
+const pageContentSource = readFileSync(new URL("../components/touchline/TouchlinePageContent.tsx", import.meta.url), "utf8");
 const locales = ["en-GB", "pt-BR", "es-ES", "it-IT", "fr-FR", "ar-SA", "tr-TR", "de-DE"] as const;
 const expected = {
   "en-GB": "Skip to main content", "pt-BR": "Pular para o conteúdo principal",
@@ -34,15 +37,31 @@ async function copyModule(): Promise<CopyModule> {
   return import("../lib/touchlineArena/site-accessibility-i18n.ts");
 }
 
-// Actual async layout, React JSX and landscape boundary are rendered. The
-// request/runtime and client leaf components are controlled boundaries; this
+// Actual async layout, React JSX, landscape boundary, route wrapper and footer
+// are rendered. Request/runtime and unrelated client leaves are boundaries; this
 // does not run effects, hydrate, exercise keyboard focus or change public gates.
 function fixture(options: { releaseFlag?: string; copy?: Pick<CopyModule, "getTouchlineSiteAccessibilityCopy">; orientationCopy?: Pick<CopyModule, "getTouchlineSiteAccessibilityCopy">; loginLocale?: string; futureLocale?: string; header?: Promise<{ get: (key: string) => string | null }> } = {}) {
-  const seen = { headerCalls: 0, keys: [] as string[], sync: [] as string[], activity: 0, audio: [] as boolean[], resolver: [] as unknown[], release: [] as boolean[] };
+  const seen = { headerCalls: 0, keys: [] as string[], sync: [] as string[], activity: 0, audio: [] as boolean[], resolver: [] as unknown[], release: [] as boolean[], footer: [] as { locale: string; draftLocalesEnabled?: boolean; instagramUrl?: string }[] };
   const policy = evaluate(readFileSync(new URL('../lib/touchlineArena/site-locales-release.ts', import.meta.url), 'utf8'), {}, { process: { env: { TOUCHLINE_SITE_LOCALES_ENABLED: options.releaseFlag } } });
   const jsx = nativeRequire("react/jsx-runtime");
   const forbidden = () => { throw Error("SSR must not invoke orientation effects"); };
   const icon = () => React.createElement("svg");
+  // Render both real leaves. Null navigation is an explicit SSR boundary:
+  // this verifies the server locale handoff, not client navigation/hydration.
+  const footer = evaluate<{ default: React.ComponentType<{ locale: string; draftLocalesEnabled?: boolean; instagramUrl?: string }> }>(footerSource, {
+    "react": React, "react/jsx-runtime": jsx, "lucide-react": { Instagram: icon },
+    "next/navigation": { usePathname: () => null, useSearchParams: () => null },
+    "@/lib/touchlineArena/catalogue-locale": catalogueLocale,
+    "@/lib/touchlineArena/auth-i18n": authLocale,
+    "@/lib/touchlineArena/root-locale": rootLocale,
+    "./SiteLocaleReleaseContext": { useSiteLocaleRelease: () => options.releaseFlag === "true" },
+    "./TouchlineGlobalNavigation.module.css": { __esModule: true, default: { link: "footer-link" } },
+    "./TouchlineSiteFooter.module.css": { __esModule: true, default: { footer: "site-footer", social: "social" } },
+  }).default;
+  const pageContent = evaluate<{ default: React.ComponentType<{ children: React.ReactNode }> }>(pageContentSource, {
+    "react/jsx-runtime": jsx,
+    "./TouchlinePageContent.module.css": { __esModule: true, default: { routeSpace: "route-space" } },
+  }).default;
   const boundary = evaluate<{ default: React.ComponentType<{ children: React.ReactNode; locale: string; skipLabel: string }> }>(boundarySource, {
     "react": React, "react/jsx-runtime": jsx, "lucide-react": { RotateCw: icon, Smartphone: icon },
     "next/image": { __esModule: true, default: (props: Record<string, unknown>) => { const imageProps = { ...props }; delete imageProps.unoptimized; return React.createElement("img", imageProps); } },
@@ -66,6 +85,8 @@ function fixture(options: { releaseFlag?: string; copy?: Pick<CopyModule, "getTo
       "next/headers": { headers: () => { seen.headerCalls++; return header; } },
       "@/components/touchline/DocumentLocaleSync": { __esModule: true, default: ({ initialLocale }: { initialLocale: string }) => { seen.sync.push(initialLocale); return null; } },
       "@/components/touchline/TouchlineLandscapeBoundary": { __esModule: true, default: boundary },
+      "@/components/touchline/TouchlinePageContent": { __esModule: true, default: pageContent },
+      "@/components/touchline/TouchlineSiteFooter": { __esModule: true, default: (props: { locale: string; draftLocalesEnabled?: boolean; instagramUrl?: string }) => { seen.footer.push(props); return React.createElement(footer, props); } },
       "@/components/touchline-activity-tracker": { TouchlineActivityTracker: () => { seen.activity++; return null; } },
       "@/components/touchline/TouchlineDecorationMotion": { __esModule: true, default: () => null },
       "@/components/auth-ambient-audio": { TouchlineAmbientAudioProvider: ({ children, enabled }: { children: React.ReactNode; enabled: boolean }) => { seen.audio.push(enabled); return children; } },
@@ -79,7 +100,7 @@ function fixture(options: { releaseFlag?: string; copy?: Pick<CopyModule, "getTo
       "@/lib/touchlineArena/site-accessibility-i18n": copy,
       "./globals.css": {}, "./touchline-crest-visibility.css": {},
     };
-    const layout = evaluate<{ default: (props: { children: React.ReactNode }) => Promise<React.ReactElement> }>(source, modules).default;
+    const layout = evaluate<{ default: (props: { children: React.ReactNode }) => Promise<React.ReactElement> }>(source, modules, { process: { env: { TOUCHLINE_OFFICIAL_INSTAGRAM: "https://www.instagram.com/fixture_touchline/" } } }).default;
     return renderToStaticMarkup(await layout({ children: React.createElement("main", { "data-child": "preserved" }, "Child <&>") }));
   } };
 }
@@ -111,6 +132,18 @@ test("real layout and skip anchor preserve request authority, public lang/dir, i
     assert.deepEqual(f.seen.sync, isolated ? [] : [resolved]);
     assert.equal(f.seen.activity, !isolated && source === "direct" ? 1 : 0);
     assert.deepEqual(f.seen.audio, [!isolated]);
+    assert.equal((html.match(/data-touchline-page-content="true"/g) ?? []).length, isolated ? 0 : 1);
+    assert.equal((html.match(/<footer /g) ?? []).length, isolated ? 0 : 1);
+    assert.equal((html.match(/<main[ >]/g) ?? []).length, 1, "route wrapper does not create another main landmark");
+    assert.equal(f.seen.footer.length, isolated ? 0 : 1);
+    if (!isolated) {
+      assert.equal(f.seen.footer[0].locale, resolved);
+      assert.equal(f.seen.footer[0].draftLocalesEnabled, false);
+      assert.equal(f.seen.footer[0].instagramUrl, "https://www.instagram.com/fixture_touchline/");
+      assert.ok(html.includes(`<footer class="site-footer" lang="${resolved}" dir="ltr">`));
+      assert.match(html, /<div class="route-space" data-touchline-page-content="true"><main data-child="preserved">Child &lt;&amp;&gt;<\/main><\/div>/);
+      assert.ok(html.indexOf('<main data-child="preserved">') < html.indexOf('<footer '));
+    }
   }
 });
 
@@ -137,6 +170,8 @@ test("exported root uses trusted runtime release for all eight locales and forwa
     assert.deepEqual(f.seen.release, [releaseFlag === "true"]);
     assert.equal(f.seen.activity, 1);
     assert.deepEqual(f.seen.audio, [true]);
+    assert.equal(f.seen.footer[0].locale, effective);
+    assert.equal(f.seen.footer[0].draftLocalesEnabled, releaseFlag === "true");
   }
 });
 
@@ -227,9 +262,10 @@ test("headers remain awaited; rejection does not fabricate a locale or mount cli
   const g = fixture({ header: Promise.reject(Error("headers unavailable")) });
   await assert.rejects(g.render(null, false, "direct"), /headers unavailable/);
   assert.equal(g.seen.resolver.length, 0); assert.equal(g.seen.audio.length, 0);
+  assert.equal(g.seen.footer.length, 0);
 });
 
-test("the complete layout baseline differs only by the admitted import and label binding", () => {
+test("the complete layout baseline differs only by admitted presentation bindings and route/footer leaves", () => {
   assert.match(source, /const skipLabel = getTouchlineSiteAccessibilityCopy\(locale, allowDraftPresentation\)\.skipToMainContent;/);
   // Reverse only the coordinated, false-default presentation seam before the
   // existing localization reversal. Keep the original whole-layout oracle so
@@ -244,7 +280,17 @@ test("the complete layout baseline differs only by the admitted import and label
   const crestLeaves = source.match(/        <svg width="0"[\s\S]*?        <\/svg>\n/g) ?? [];
   assert.equal(crestLeaves.length, 1);
   assert.equal(createHash("sha256").update(crestLeaves[0]).digest("hex"), "27fd8deea1b163a081d5a7f0d3cff82468a335cb6dbba3bc2cb7f01c97700eb9");
+  // Admit only the exact authorized wrapper and footer bindings. The real
+  // leaves and their isolation/locale/ordering are exercised above; unrelated
+  // changes still fail the ORIGINAL whole-layout hash below.
+  const pageBinding = '            {isIsolatedPreview ? children : <TouchlinePageContent>{children}</TouchlinePageContent>}';
+  const footerBinding = '            {!isIsolatedPreview ? <TouchlineSiteFooter locale={locale} draftLocalesEnabled={allowDraftPresentation} instagramUrl={process.env.TOUCHLINE_OFFICIAL_INSTAGRAM} /> : null}\n';
+  const pageImport = 'import TouchlinePageContent from "@/components/touchline/TouchlinePageContent";\n';
+  const footerImport = 'import TouchlineSiteFooter from "@/components/touchline/TouchlineSiteFooter";\n';
+  for (const admitted of [pageBinding, footerBinding, pageImport, footerImport]) assert.equal(source.split(admitted).length - 1, 1, admitted);
   const preCoordinated = source
+    .replace(pageImport, '').replace(footerImport, '')
+    .replace(pageBinding, '            {children}').replace(footerBinding, '')
     .replace(crestLeaves[0], '')
     .replace('import TouchlineDecorationMotion from "@/components/touchline/TouchlineDecorationMotion";\n', '')
     .replace('        <TouchlineDecorationMotion />\n', '')

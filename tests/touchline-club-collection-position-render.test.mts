@@ -13,6 +13,7 @@ import * as allocation from "../lib/touchlineFantasy/club-allocation.ts";
 import * as slotPlan from "../lib/touchlineFantasy/collection-slot-plan.ts";
 import * as primaryIndex from "../lib/touchlineFantasy/club-primary-position-index.ts";
 import * as primaryPolicy from "../lib/touchlineFantasy/club-primary-position-policy.ts";
+import * as swapPresentation from "../lib/touchlineFantasy/squad-swap-presentation.ts";
 const { collectionSlotPlan } = slotPlan;
 import { TOUCHLINE_DEFAULT_FORMATION_GEOMETRY_REGISTRY } from "../lib/touchlineArena/formation-geometry.ts";
 
@@ -49,6 +50,7 @@ function render(overrides: Props = {}) {
     "@/lib/touchlineFantasy/collection-slot-plan": slotPlan,
     "@/lib/touchlineFantasy/club-primary-position-index": primaryIndex,
     "@/lib/touchlineFantasy/club-primary-position-policy": primaryPolicy,
+    "@/lib/touchlineFantasy/squad-swap-presentation": swapPresentation,
     "@/components/touchline/a11y/TouchlineDialog": { useTouchlineDialog: unused, useTouchlineDialogScrollLock: unused },
     "./TouchlineGameweekCard": { __esModule: true, default: (props: Props) => {
       cards.push(props); const card = props.card as { canonicalPlayerId: string };
@@ -211,7 +213,7 @@ test("draft slot states distinguish pending from empty and retain action guards 
   const disabled = render({ ...base, enabled: false, onReleasePlayer: (id: string) => released.push(id) });
   for (const card of disabled.cards) {
     const field = card.replacementAction as { label: string; disabled: boolean; onSelect: () => void };
-    assert.equal(field.label, "Zur Startelf hinzufügen");
+    assert.equal(field.label, "Spieler ersetzen");
     assert.equal(field.disabled, true);
     field.onSelect();
     const release = card.releaseAction as { label: string; disabled: boolean; onSelect: () => void };
@@ -224,7 +226,7 @@ test("draft slot states distinguish pending from empty and retain action guards 
   const reserve = render({ ...base, area: "reserves", grouped: false, state: { players: [{ ...players[0], area: "reserves", slot: 0 }] }, onOutsidePlayer: () => {} });
   assert.match(reserve.html, /Ersatzspieler/);
   assert.equal((reserve.cards[0].replacementAction as { label: string }).label, "Spieler ersetzen");
-  assert.equal((reserve.cards[0].removalAction as { label: string }).label, "Aus dem Spieltagskader nehmen");
+  assert.equal(reserve.cards[0].removalAction, undefined, "Unified replacement must not expose a second removal action");
 });
 
 test("missing card remains in its real position group and reserve range preserves its start offset", () => {

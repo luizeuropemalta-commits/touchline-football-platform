@@ -56,7 +56,7 @@ test("real SQL persistence: atomic wallet+roster, retries, stale revision, rollb
     await db.exec(readFileSync(new URL('../supabase/migrations/20261017104205_club_collection_atomic_acquisition.sql', import.meta.url), 'utf8'));
     const initialize = (coach = initial.coach, plan = initial.plan) => db.query<{state: ClubAcquisitionState}>(
       'select touchline_club_initialize_collection($1,$2,$3,$4::jsonb) state', [uid,season,plan,JSON.stringify(coach)]);
-    await assert.rejects(() => initialize({ ...initial.coach,valueEur: 1 }), /CLUB_INITIAL_STATE_INVALID/);
+    await assert.rejects(() => initialize({ ...initial.coach!,valueEur: 1 }), /CLUB_INITIAL_STATE_INVALID/);
     await db.exec(`insert into touchline_card_contracts values('${uid}','active','${season}')`);
     await assert.rejects(() => initialize(), /CLUB_LEGACY_RESET_REQUIRED/);
     await db.exec(`delete from touchline_card_contracts;
@@ -69,7 +69,7 @@ test("real SQL persistence: atomic wallet+roster, retries, stale revision, rollb
     assert.deepEqual((await initialize()).rows[0].state, initial);
     assert.equal((await db.query('select count(*)::int n from touchline_fantasy_user_gameweek_selections')).rows[0].n,1,'historical season is retained and cannot block new ownership');
     assert.deepEqual((await initialize()).rows[0].state, initial, 'initialization never grants a second budget');
-    await assert.rejects(() => initialize({ ...initial.coach,id: 'other' }), /CLUB_COLLECTION_ALREADY_INITIALIZED/);
+    await assert.rejects(() => initialize({ ...initial.coach!,id: 'other' }), /CLUB_COLLECTION_ALREADY_INITIALIZED/);
     await db.exec('reset role');
     const store: ClubAcquisitionStore = {
       read: async (owner, sid) => (await db.query<{state: ClubAcquisitionState}>(

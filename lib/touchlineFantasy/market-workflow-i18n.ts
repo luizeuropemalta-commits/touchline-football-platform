@@ -136,7 +136,7 @@ export const TOUCHLINE_FANTASY_MARKET_WORKFLOW_CATALOGUES = {
     browsePosition: "Explore uma posição",
     openShort: "Vaga",
     openSlot: "Vaga aberta",
-    replace: "Trocar",
+    replace: "Substituir",
     choose: "Escolher",
     remove: "Retirar da escalação",
     technicalArea: "Área técnica",

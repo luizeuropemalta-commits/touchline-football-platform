@@ -132,7 +132,7 @@ test("actual role-aware navigation keeps admin away from customer game and prese
 test("current English navigation preserves visible labels, current state and canonical destinations", () => {
   const html = renderNavigation("en-GB");
   assert.match(html, /aria-label="TouchLine navigation"/);
-  for (const label of ["My account", "ClubHub", "Live", "Rankings", "More"]) assert.ok(html.includes(`>${label}<`), label);
+  for (const label of ["Club Owner", "ClubHub", "Live", "Rankings", "More"]) assert.ok(html.includes(`>${label}<`), label);
   for (const path of ["/account?lang=en-GB", "/touchline-clubs?lang=en-GB", "/live?lang=en-GB", "/rankings?lang=en-GB"]) {
     assert.ok(html.includes(`href="${path}"`), path);
   }
@@ -140,14 +140,15 @@ test("current English navigation preserves visible labels, current state and can
   assert.doesNotMatch(html, /club-owner\/me/);
 });
 
-test("current Portuguese navigation preserves the original copy and trusted club name", () => {
+test("current Portuguese navigation keeps shared labels and destinations independent of trusted club context", () => {
   const html = renderNavigation("pt-BR", { club: "Bodø/Glimt" });
   assert.match(html, /aria-label="Navegação TouchLine"/);
-  assert.match(html, /aria-label="Clube atual: Bodø\/Glimt"/);
-  for (const label of ["Minha conta", "Todos os clubes", "Ao vivo", "Rankings", "Mais", "Bodø/Glimt"]) {
+  assert.doesNotMatch(html, /Bodø\/Glimt|Clube atual:|>Todos os clubes</);
+  for (const label of ["Club Owner", "ClubHub", "Ao vivo", "Rankings", "Mais"]) {
     assert.ok(html.includes(`>${label}<`), label);
   }
   assert.ok(html.includes('href="/touchline-clubs?lang=pt-BR"'));
+  assert.ok(html.includes('href="/account?lang=pt-BR"'), "public entry still resolves the role on the server");
   assert.doesNotMatch(html, /synthetic-club\?lang/);
 });
 

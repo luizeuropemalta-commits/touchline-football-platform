@@ -1,7 +1,21 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { TOUCHLINE_CALIBRATED_FORMATION_CODES, resolveTouchlineFormationGeometry } from "../lib/touchlineArena/formation-geometry.ts";
-import { TOUCHLINE_FANTASY_BROWSE_POSITIONS, resolveTouchlineFantasyBrowseSlot, touchlineFantasyPitchCardWidth } from "../lib/touchlineFantasy/market-browser.ts";
+import { TOUCHLINE_FANTASY_BROWSE_POSITIONS, resolveTouchlineFantasyBrowseSlot, touchlineFantasyPitchCardWidth, touchlineFantasyTechnicalCardWidth } from "../lib/touchlineFantasy/market-browser.ts";
+
+test("technical row accounts for the larger coach and both uniform reserve banks", () => {
+  for (const available of [565, 568, 640, 760, 800, 844, 900, 1100, 1440, 2200]) {
+    const card = touchlineFantasyTechnicalCardWidth(available);
+    assert.ok(card >= 44);
+    const occupied = 10 * card + 1.3 * card + 8 * 4.4 + 2 * 8 + 2 * 8;
+    assert.ok(occupied <= available, `${available}: ${occupied} must fit`);
+    assert.ok(occupied + 11.3 > available, "largest whole-pixel width that fits");
+  }
+  assert.equal(touchlineFantasyTechnicalCardWidth(800), 64);
+  for (const unavailable of [NaN, Infinity, 0, -1, 320]) {
+    assert.equal(touchlineFantasyTechnicalCardWidth(unavailable), 44);
+  }
+});
 
 test("browsing exposes every classified football position, without the retired contract quotas", () => {
   assert.deepEqual(TOUCHLINE_FANTASY_BROWSE_POSITIONS.map((entry) => entry.code), ["GK", "CB", "RB", "LB", "CDM", "MID", "ATT", "ST"]);

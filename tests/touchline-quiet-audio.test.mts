@@ -19,7 +19,8 @@ test("one root-owned entry player survives auth route changes without competing 
   const layout = readFileSync(new URL("../app/layout.tsx", import.meta.url), "utf8");
   const control = source.slice(source.indexOf("export function AuthAmbientAudio"));
   assert.doesNotMatch(control, /<audio|createQuietAudio/);
-  assert.match(layout, /<TouchlineAmbientAudioProvider enabled=\{!isIsolatedPreview\}>\s*\{children\}/);
+  assert.equal((layout.match(/<TouchlineAmbientAudioProvider\b/g) ?? []).length, 1);
+  assert.match(layout, /<TouchlineAmbientAudioProvider enabled=\{!isIsolatedPreview\}>\s*\{isIsolatedPreview \? children : <TouchlinePageContent>\{children\}<\/TouchlinePageContent>\}/);
   assert.match(source, /touchlineAmbientAudioRoute\(pathname\)/);
   assert.match(source, /if \(!allowed \|\| introClaim.current\) \{ stop\(\); return; \}/);
   assert.doesNotMatch(source, /key=\{pathname\}/);

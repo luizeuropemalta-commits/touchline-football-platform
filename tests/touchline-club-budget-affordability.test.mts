@@ -68,3 +68,17 @@ test("complete collection costs zero; duplicate owned IDs fail closed", () => {
   assert.equal(result.minimumCost, 0);
   assert.equal(clubBudgetAffordability({ ...input, state: { ...input.state!, players: [...players, players[0]] } }).status, "indeterminate");
 });
+
+test("paid vacancy is explicit but cannot prove affordability without the future coach price", () => {
+  const input = fixture();
+  for (const plan of ["standard", "master", "vip"] as const) {
+    const state = { ...input.state!, plan, coach: null };
+    const before = structuredClone(state);
+    assert.deepEqual(clubBudgetAffordability({ ...input, state }), { status: "indeterminate", reason: "coach-vacant" });
+    assert.deepEqual(state, before);
+  }
+  for (const plan of ["beta", undefined] as const) {
+    assert.deepEqual(clubBudgetAffordability({ ...input, state: { ...input.state!, plan, coach: null } }), { status: "indeterminate", reason: "coach-unconfirmed" });
+  }
+  assert.deepEqual(clubBudgetAffordability({ ...input, state: { ...input.state!, plan: "vip", coach: undefined } as unknown as AffordabilityInput["state"] }), { status: "indeterminate", reason: "coach-unconfirmed" });
+});

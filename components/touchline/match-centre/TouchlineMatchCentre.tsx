@@ -3,7 +3,7 @@
 /* The provider owns crest URLs; this preserves the canonical source without a remote-image allowlist. */
 /* eslint-disable @next/next/no-img-element */
 
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { verifiedTimestampLabel } from "@/lib/touchlineArena/verified-timestamp-label";
 import { useTouchlinePublishedLive } from "@/lib/touchlineArena/sports-publication-client";
 import { arabicFixtureDate } from "@/lib/touchlineArena/arabic-fixture-date";
@@ -27,6 +27,7 @@ import { type TouchLineLocale } from "@/lib/touchlineArena/i18n";
 import { resolveTouchlineCatalogueLocale } from "@/lib/touchlineArena/catalogue-locale";
 import { localizedPositionLabel } from "@/lib/touchlineArena/position-labels";
 import { touchlineMatchEventLabel, touchlineMatchEventRelatedPlayerLabel } from "@/lib/touchlineArena/match-event-i18n";
+import { matchHeroScorers } from "@/lib/touchlineArena/match-hero-goals";
 import { getTouchlineMatchCentreCopy } from "@/lib/touchlineArena/match-centre-i18n";
 import { touchlineLiveCoachForTeam } from "@/lib/touchlineArena/live-coaches";
 import {
@@ -108,8 +109,8 @@ function browserTimeZone(fallback: string) {
 }
 
 function score(fixture: TouchlinePublicFixture, displayState: TouchlineMatchCentreDisplayState | null) {
-  if (Number.isFinite(fixture.homeScore) && Number.isFinite(fixture.awayScore)) return `${fixture.homeScore} — ${fixture.awayScore}`;
-  if (displayState === "live" && !Number.isFinite(fixture.homeScore) && !Number.isFinite(fixture.awayScore)) return "0 — 0";
+  if (Number.isFinite(fixture.homeScore) && Number.isFinite(fixture.awayScore)) return <><span>{fixture.homeScore}</span><span className={styles.scoreSeparator}>–</span><span>{fixture.awayScore}</span></>;
+  if (displayState === "live" && !Number.isFinite(fixture.homeScore) && !Number.isFinite(fixture.awayScore)) return <><span>0</span><span className={styles.scoreSeparator}>–</span><span>0</span></>;
   return "VS";
 }
 
@@ -258,17 +259,6 @@ function topRatedPlayers(detail: TouchlinePublicFantasyFixtureMatchDetail) {
     .slice(0, 3);
 }
 
-function openSelectedLineup(event: MouseEvent<HTMLAnchorElement>) {
-  // Modified clicks retain normal link behaviour. A normal click scrolls
-  // without adding history entries that could outlive the selected fixture.
-  if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-  const lineup = document.getElementById("touchline-match-lineups");
-  if (!lineup) return;
-  event.preventDefault();
-  lineup.focus({ preventScroll: true });
-  lineup.scrollIntoView({ block: "start" });
-}
-
 function MatchTeamSheet({
   detail,
   teamId,
@@ -411,27 +401,21 @@ export default function TouchlineMatchCentre({
   }, []);
 
   const selectedDisplayState = selected ? touchlineMatchCentreDisplayState(selected, readMetadata, now) : null;
-  const selectedCanonicalState = selected ? touchlineFixtureState(selected, now) : null;
   const verifiedDetail = matchDetail?.fixture.id === selected?.providerId ? matchDetail : null;
   const selectedHomeClub = TOUCHLINE_ENGLAND_CLUBS.find((club) => club.teamId === selected?.homeTeam?.providerId);
   const verifiedHomeAccent = selected?.venue ? selectedHomeClub?.accent : undefined;
-  // Stay with this fixture's verified teamsheet. ClubHub may already preview
-  // the next fixture, so its generic lineup anchor loses the selected match.
-  const homeLineupHref = selectedHomeClub
-    ? "#touchline-match-lineups"
-    : null;
-  const homeLineupAvailable = Boolean(
-    verifiedDetail?.lineupAvailableAt
-    && verifiedDetail.lineups.some((member) => member.teamId === selected?.homeTeam?.providerId)
-    && (selectedCanonicalState === "live" || selectedCanonicalState === "finished"),
-  );
-  // A line-up is only useful when the official match state can support one.
-  // Keep this neutral: every canonical home club receives the same verified
-  // call-to-action rather than giving one club a privileged hero treatment.
-  const showHomeLineupCallout = Boolean(
-    homeLineupHref
-    && (selectedCanonicalState === "live" || selectedCanonicalState === "finished"),
-  );
+  const lineupLabel = selected && touchlineFixtureState(selected, now) === "finished"
+    ? dictionary.matchLineup : dictionary.officialLineup;
+  const lineupLinks = selected ? [selected.homeTeam, selected.awayTeam].map((team) => {
+    const club = TOUCHLINE_ENGLAND_CLUBS.find((candidate) => candidate.teamId === team?.providerId);
+    // Historical canonical sheets can exist without a publication timestamp.
+    // The selected fixture's persisted teamsheet is the availability evidence.
+    const available = Boolean(verifiedDetail?.lineups.some((member) => member.teamId === team?.providerId));
+    return available && club ? {
+      name: team?.name ?? club.name,
+      href: `/touchline-clubs/${club.slug}?lang=${encodeURIComponent(language)}&fixtureId=${encodeURIComponent(selected.providerId)}#touchline-club-lineup`,
+    } : null;
+  }) : [];
   const bestCards = useMemo(() => verifiedDetail ? topRatedPlayers(verifiedDetail) : [], [verifiedDetail]);
   const bestCoach = useMemo(() => {
     if (!selected || touchlineFixtureState(selected, now) !== "finished") return null;
@@ -518,7 +502,7 @@ export default function TouchlineMatchCentre({
                     title={isResultSection ? dictionary.completed : dictionary.alertsSoon}
                     aria-label={isResultSection ? dictionary.completed : dictionary.alertsSoon}
                   ><Trophy size={13} aria-hidden="true" /></span> : null}
-                </button>{!isResultSection ? <TouchlineFixtureAlerts fixtureId={fixture.id} label={fixtureLabel(fixture, language, draftLocalesEnabled)} locale={language} draftLocalesEnabled={draftLocalesEnabled} /> : null}</div>;
+                </button>{!isResultSection ? <TouchlineFixtureAlerts fixtureId={fixture.id} label={fixtureLabel(fixture, language, draftLocalesEnabled)} locale={language} expectedAccountId={accountLocaleContext.mode === "account" ? accountLocaleContext.accountId : null} draftLocalesEnabled={draftLocalesEnabled} /> : null}</div>;
               })}</div>
               </section> : null;
             })}
@@ -537,7 +521,7 @@ export default function TouchlineMatchCentre({
         draftLocalesEnabled={draftLocalesEnabled}
         navigation={<TouchlineGlobalNavigation locale={language} currentRoute="live" surface="public" draftLocalesEnabled={draftLocalesEnabled} showAudioControl={false} />}
       />
-      <div className={styles.pageTitle} dir={textDirection}><span>{dictionary.official}</span><h1 className={styles.title}>{dictionary.title}</h1></div>
+      <h1 className="sr-only">{dictionary.title}</h1>
       <p className={styles.selectionAnnouncement} role="status" aria-live="polite" aria-atomic="true">
         {selected ? `${dictionary.selectedFixture}: ${fixtureLabel(selected, language, draftLocalesEnabled)} · ${status(selected, language, timeZone, readMetadata, now, draftLocalesEnabled)}` : dictionary.noFixtures}
       </p>
@@ -563,24 +547,36 @@ export default function TouchlineMatchCentre({
               <span className={styles.liveStatusDot} aria-hidden="true" />
               {dictionary.liveNow}
             </span> : null}
+            <div className={styles.heroTopbar}>
+              {lineupLinks.map((link, index) => <div key={index} style={{ gridColumn: index === 0 ? 1 : 3, gridRow: 1 }}>{link ? <a className={`${sharedControls.link} ${styles.homeLineupLink}`} href={link.href} aria-label={`${lineupLabel} · ${link.name}`}><UsersRound size={14} aria-hidden="true" /><span>{lineupLabel}<small>{link.name}</small></span></a> : null}</div>)}
+              <time className={styles.heroKickoff} dateTime={selected.startsAt}>
+                <span><CalendarDays size={14} aria-hidden="true" />{fixtureDate(selected, language, timeZone, { day: "numeric", month: "short", year: "numeric" }, draftLocalesEnabled)}</span>
+                <strong><Clock3 size={15} aria-hidden="true" />{fixtureDate(selected, language, timeZone, { hour: "2-digit", minute: "2-digit", hour12: false }, draftLocalesEnabled)}</strong>
+              </time>
+            </div>
             <div className={styles.heroTeams}>
               <div>
                 <TeamMark fixture={selected} side="home" />
                 <strong>{selected.homeTeam?.name ?? dictionary.homeFallback}</strong>
-                {showHomeLineupCallout ? <aside className={styles.homeLineupCallout} data-state={homeLineupAvailable ? "available" : "pending"}>
-                  {homeLineupAvailable && homeLineupHref
-                    ? <a className={`${sharedControls.link} ${styles.homeLineupLink}`} href={homeLineupHref} onClick={openSelectedLineup}><UsersRound size={14} aria-hidden="true" /> {dictionary.viewLineup}</a>
-                    : <><span>{dictionary.lineupPending}</span><small>{dictionary.lineupPendingCopy}</small></>}
-                </aside> : null}
               </div>
-              <b className={styles.score}>{score(selected, selectedDisplayState)}</b>
+              <div className={styles.scoreColumn}>
+                <b className={styles.score}>{score(selected, selectedDisplayState)}</b>
+                {selectedDisplayState === "finished" ? <span className={styles.scoreStatus}>{dictionary.completed}</span> : null}
+              </div>
               <div><TeamMark fixture={selected} side="away" /><strong>{selected.awayTeam?.name ?? dictionary.awayFallback}</strong></div>
             </div>
-            <time className={styles.heroKickoff} dateTime={selected.startsAt}>
-              <span><CalendarDays size={14} aria-hidden="true" />{fixtureDate(selected, language, timeZone, { weekday: "long", day: "numeric", month: "long", year: "numeric" }, draftLocalesEnabled)}</span>
-              <strong><Clock3 size={15} aria-hidden="true" />{fixtureDate(selected, language, timeZone, { hour: "2-digit", minute: "2-digit", hour12: false }, draftLocalesEnabled)}</strong>
-            </time>
-            {selectedDisplayState === "upcoming" ? <Countdown startsAt={selected.startsAt} language={language} initialNow={now} draftLocalesEnabled={draftLocalesEnabled} /> : <strong className={styles.countdown}>{selectedDisplayState === "awaiting-update" ? dictionary.awaitingOfficialUpdate : selectedDisplayState === "stale" ? dictionary.liveDataUpdating : touchlineFixtureStatusLabel(selected.status, language, draftLocalesEnabled) || dictionary.provider}</strong>}
+            <div className={styles.heroGoals} dir={textDirection}>
+              {[selected.homeTeam, selected.awayTeam].map((team, index) => {
+                const scorers = matchHeroScorers(verifiedDetail?.events ?? [], selected.providerId, team?.providerId);
+                return <ul className={scorers.length > 5 ? styles.goalColumns : undefined} key={team?.providerId ?? index} tabIndex={0} aria-label={team?.name} style={{ gridColumn: index === 0 ? 1 : 3 }}>
+                {scorers.map(scorer => <li key={scorer.key}>
+                  <strong>{scorer.playerName}</strong>
+                  <span className={styles.goalBalls}>{scorer.goals.map(goal => <span className={styles.goalMoment} key={goal.id}><time title={touchlineMatchEventLabel(goal.type, language, draftLocalesEnabled)} aria-label={`${touchlineMatchEventLabel(goal.type, language, draftLocalesEnabled)} ${eventMoment(goal)}`}>{eventMoment(goal)}</time><span aria-hidden="true">⚽</span></span>)}</span>
+                </li>)}
+              </ul>;
+              })}
+            </div>
+            {selectedDisplayState === "upcoming" ? <Countdown startsAt={selected.startsAt} language={language} initialNow={now} draftLocalesEnabled={draftLocalesEnabled} /> : selectedDisplayState !== "finished" ? <strong className={styles.countdown}>{selectedDisplayState === "awaiting-update" ? dictionary.awaitingOfficialUpdate : selectedDisplayState === "stale" ? dictionary.liveDataUpdating : touchlineFixtureStatusLabel(selected.status, language, draftLocalesEnabled) || dictionary.provider}</strong> : null}
           </div>
 
           <div className={styles.infoGrid}>

@@ -9,7 +9,7 @@ const fixtureRoute = await readFile(
 const liveScoresRoute = await readFile(
   new URL("../app/api/football-data/fantasy/livescores/route.ts", import.meta.url),
   "utf8",
-);
+) + await readFile(new URL("../lib/touchlineArena/persisted-live-rail-server.ts", import.meta.url), "utf8");
 
 test("fixture GET authenticates before reading a persisted fixture and never reaches a provider", () => {
   const getHandler = fixtureRoute.slice(

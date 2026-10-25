@@ -8,6 +8,8 @@ import ts from "typescript";
 import * as i18n from "../lib/touchlineArena/i18n.ts";
 import * as accountLocaleMenuCopy from "../lib/touchlineArena/account-locale-menu-i18n.ts";
 import { startAccountLocaleBrowser } from "../lib/touchlineArena/account-locale-browser.ts";
+import { startAccountLocaleIdentityObserver } from "../lib/touchlineArena/account-locale-identity-observer.ts";
+import * as publicErrorCopy from "../lib/touchlineArena/public-error-i18n.ts";
 
 const owner = "11111111-1111-4111-8111-111111111111";
 const markerKey = "touchline:presentation-locale-intent:v1";
@@ -71,8 +73,11 @@ function harness(storageAvailable = true, writesAvailable = true) {
         useLayoutEffect(callback: () => () => void) { if (!mounted) effect = callback; },
       },
       "next/navigation": { useRouter: () => ({ refresh() {} }) },
-      "@/lib/supabase/client": { createClient: () => ({ auth: { onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } }) } }) },
+      "@/lib/supabase/client": { createClient: () => ({ auth: { getUser: async () => ({ data: { user: { id: owner } }, error: null }), onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } }) } }) },
       "@/lib/touchlineArena/account-locale-browser": { startAccountLocaleBrowser },
+      "@/lib/touchlineArena/account-locale-identity-observer": { startAccountLocaleIdentityObserver },
+      "@/lib/touchlineArena/public-error-i18n": publicErrorCopy,
+      "./TouchlineGlobalNavigation.module.css": { default: { link: "shared-link" } },
       "@/lib/touchlineArena/account-locale-menu-i18n": accountLocaleMenuCopy,
       "@/lib/touchlineArena/i18n": i18n,
       "@/lib/touchlineArena/presentation-locale-intent": intent,

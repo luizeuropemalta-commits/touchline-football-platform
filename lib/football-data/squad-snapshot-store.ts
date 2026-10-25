@@ -75,10 +75,10 @@ function asNullableNumber(value: unknown) {
   return null;
 }
 
-function isFresh(capturedAt: string) {
+function isFresh(capturedAt: string, now: number) {
   const timestamp = Date.parse(capturedAt);
-  return Number.isFinite(timestamp)
-    && Date.now() - timestamp <= snapshotTtlSeconds() * 1000;
+  return Number.isFinite(timestamp) && Number.isFinite(now) && timestamp <= now
+    && now - timestamp <= snapshotTtlSeconds() * 1000;
 }
 
 function resolveSnapshotRevision(members: DatabaseRecord[]) {
@@ -111,6 +111,7 @@ function resolveSnapshotRevision(members: DatabaseRecord[]) {
 export async function readPersistedSquadSnapshot(
   teamId: string,
   providedAdmin?: SquadSnapshotAdminClient,
+  options: { now?: number } = {},
 ): Promise<PersistedSquadSnapshot | null> {
   const admin = providedAdmin ?? createAdminClient();
   if (!admin) return null;
@@ -209,7 +210,7 @@ export async function readPersistedSquadSnapshot(
   return {
     teamId,
     capturedAt: revision.capturedAt,
-    fresh: isFresh(revision.capturedAt),
+    fresh: isFresh(revision.capturedAt, options.now ?? Date.now()),
     players,
   };
 }

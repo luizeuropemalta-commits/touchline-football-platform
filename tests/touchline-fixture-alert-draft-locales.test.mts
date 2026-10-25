@@ -26,19 +26,29 @@ test("fixture alert catalogues require explicit draft opt-in and retain EN/PT de
 type Phase = "loading" | "saving" | "signed-out" | "disabled" | "error" | "ready";
 function renderFixture(locale: string, phase: Phase, subscribed: boolean | null, draftLocalesEnabled?: boolean) {
   // State fixture exercises the actual presentation branches, not subscription effects.
-  const states: unknown[] = [true, 0, subscribed, phase];
+  const accountId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+  const key = `/api/notifications/fixtures/fixture-test:${accountId}`;
+  const states: unknown[] = [true, 0, subscribed, phase, { key, epoch: 0 }, { key, epoch: 0, phase: "unconfirmed" }, 0, new Set(),
+    { key, accountId, open: true, retry: 0, epoch: 0, confirmed: true, invalid: false }];
   let index = 0;
+  let refIndex = 0;
   const forbidden = () => { throw Error("Presentation must not trigger requests or state mutations"); };
   const modules: Record<string, unknown> = {
     react: {
       useState: () => [states[index++], forbidden],
       useId: () => "fixture-alert-panel",
-      useRef: (current: unknown) => ({ current }),
+      useRef: (current: unknown) => ({ current: refIndex++ === 4 ? true : current }),
       useEffect: () => undefined,
+      useLayoutEffect: () => undefined,
     },
     "react/jsx-runtime": require("react/jsx-runtime"),
     "lucide-react": { Bell: () => createElement("span", { "data-icon": "bell" }) },
     "@/lib/touchlineArena/fixture-alert-i18n": copy,
+    "@/lib/touchlineArena/fixture-alert-readiness": {},
+    "@/lib/touchlineArena/fixture-alert-status-client": {},
+    "@/lib/touchlineArena/push-device-registration": {},
+    "@/lib/supabase/client": {},
+    "@/lib/touchlineArena/account-locale-identity-observer": {},
   };
   const exports: { default?: (props: Record<string, unknown>) => ReactNode } = {};
   runInNewContext(ts.transpileModule(source, { compilerOptions: {
@@ -50,7 +60,7 @@ function renderFixture(locale: string, phase: Phase, subscribed: boolean | null,
   } });
   assert.ok(exports.default);
   return renderToStaticMarkup(createElement(exports.default, {
-    fixtureId: "fixture-test", label: "Official Match", locale, draftLocalesEnabled,
+    fixtureId: "fixture-test", label: "Official Match", locale, draftLocalesEnabled, expectedAccountId: accountId,
   }));
 }
 

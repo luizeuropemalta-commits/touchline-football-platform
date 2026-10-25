@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { parseLiveScoreSnapshot, type PersistedLiveScoreSnapshot } from "./live-score-snapshot-contract";
 import { readPublishedTouchlineLivePresentationInput } from "@/lib/touchlineArena/live-presentation-read-model";
+import { touchlineLiveFreshness, TOUCHLINE_LIVE_SNAPSHOT_STALE_AFTER_MS } from "@/lib/touchlineArena/live-presentation-state";
 import type { TouchlineFixture } from "@/lib/football-data/types";
 
 const SNAPSHOT_KEY = "touchline-england-live";
@@ -32,8 +33,12 @@ export async function readPersistedLiveScoreSnapshot(options: { maxAgeMs?: numbe
   const parsed = parseLiveScoreSnapshot(payload);
   if (!parsed) return null;
   const now = options.now ?? Date.now();
-  const maxAgeMs = options.maxAgeMs ?? 5 * 60 * 1000;
-  if (now - parsed.storedAt > maxAgeMs) return null;
+  const maxAgeMs = options.maxAgeMs ?? TOUCHLINE_LIVE_SNAPSHOT_STALE_AFTER_MS;
+  const freshness = touchlineLiveFreshness(parsed, now);
+  // Future source clocks are invalid evidence, even for an unlimited-age LKG
+  // read. Do not rewrite timestamps or fall through to unpublished input.
+  if (!freshness || parsed.storedAt > now || Date.parse(parsed.fetchedAt) > now
+    || freshness.ageMs > maxAgeMs) return null;
   return parsed;
 }
 

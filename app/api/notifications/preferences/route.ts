@@ -106,17 +106,45 @@ async function userHasRegisteredPushDevice(supabase: NonNullable<Awaited<ReturnT
   })));
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const headers = { "Cache-Control": "private, no-store", "CDN-Cache-Control": "no-store", "Vercel-CDN-Cache-Control": "no-store" };
+  const unavailable = () => NextResponse.json({ ok: false, error: "Preferences unavailable." }, { status: 503, headers });
+  const controller = new AbortController();
+  const cancel = () => controller.abort();
+  request?.signal.addEventListener("abort", cancel, { once: true });
+  if (request?.signal.aborted) cancel();
+  const timer = setTimeout(cancel, 8_000);
+  // One budget for client creation, verified auth and the read. Auth does not
+  // accept this signal; fencing every continuation prevents late query work.
+  async function within<T>(read: () => PromiseLike<T>): Promise<T> {
+    controller.signal.throwIfAborted();
+    let onAbort: (() => void) | undefined;
+    try {
+      const value = await Promise.race([Promise.resolve().then(() => { controller.signal.throwIfAborted(); return read(); }), new Promise<never>((_resolve, reject) => {
+        onAbort = () => reject(new Error("preferences-read-unavailable"));
+        controller.signal.addEventListener("abort", onAbort, { once: true });
+        if (controller.signal.aborted) onAbort();
+      })]);
+      controller.signal.throwIfAborted();
+      return value;
+    } finally { if (onAbort) controller.signal.removeEventListener("abort", onAbort); }
+  }
   try {
-    const { supabase, user } = await currentUser();
-    if (!supabase || !user) return NextResponse.json({ ok: false, error: "Authentication required." }, { status: 401, headers });
+    const supabase = await within(() => createClient());
+    if (!supabase) return unavailable();
+    const auth = await within(() => supabase.auth.getUser());
+    // A generic upstream 401/403 is not proof that this browser signed out.
+    const signedOut = auth.error?.name === "AuthSessionMissingError";
+    if (auth.error !== null && !signedOut) return unavailable();
+    const user = auth.data.user;
+    if (auth.error || !user || !hasTouchLineArenaAccess(user)) return NextResponse.json({ ok: false, error: "Authentication required." }, { status: 401, headers });
 
-  const { data, error } = await supabase
+  const { data, error } = await within(() => supabase
     .from("notification_preferences")
     .select("settings, channels, frequency, quiet_hours, explicit_consent_at, updated_at, game_locale, game_locale_revision::text")
     .eq("user_id", user.id)
-    .maybeSingle();
+    .abortSignal(controller.signal)
+    .maybeSingle());
 
   if (error || (data !== null && (!data || typeof data !== "object" || Array.isArray(data)
     || !Object.hasOwn(data, "game_locale_revision") || !isGameLocaleRevision(data.game_locale_revision)))) {
@@ -138,7 +166,11 @@ export async function GET() {
     },
   }, { headers });
   } catch {
-    return NextResponse.json({ ok: false, error: "Preferences unavailable." }, { status: 503, headers });
+    return unavailable();
+  } finally {
+    clearTimeout(timer);
+    request?.signal.removeEventListener("abort", cancel);
+    controller.abort();
   }
 }
 

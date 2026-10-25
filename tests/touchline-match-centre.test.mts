@@ -1,8 +1,6 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { stripTypeScriptTypes } from "node:module";
 import test from "node:test";
-import { runInNewContext } from "node:vm";
 import { getTouchlineMatchCentreCopy } from "../lib/touchlineArena/match-centre-i18n.ts";
 import { touchlineDocumentDirection } from "../lib/touchlineArena/root-locale.ts";
 
@@ -310,7 +308,7 @@ test("Match Centre never invents a zero score when only one side is present", ()
   assert.doesNotMatch(scoreFunction, /\?\? 0/);
 });
 
-test("Match Centre keeps kickoff time only in the lower line and localizes the live state", () => {
+test("Match Centre puts kickoff time in the top bar and localizes the live state", () => {
   const source = readFileSync(
     new URL("../components/touchline/match-centre/TouchlineMatchCentre.tsx", import.meta.url),
     "utf8",
@@ -344,28 +342,30 @@ test("every canonical home hero exposes the same honest verified-lineup call to 
     "utf8",
   );
 
-  assert.match(source, /const showHomeLineupCallout = Boolean\([\s\S]*?homeLineupHref[\s\S]*?selectedCanonicalState === "live" \|\| selectedCanonicalState === "finished"/);
-  assert.match(source, /verifiedDetail\?\.lineupAvailableAt[\s\S]*?verifiedDetail\.lineups\.some\(\(member\) => member\.teamId === selected\?\.homeTeam\?\.providerId\)/);
-  assert.match(source, /selectedCanonicalState === "live" \|\| selectedCanonicalState === "finished"/);
+  assert.match(source, /const lineupLinks = selected \? \[selected\.homeTeam, selected\.awayTeam\]/);
+  assert.match(source, /verifiedDetail\?\.lineups\.some\(\(member\) => member\.teamId === team\?\.providerId\)/);
+  assert.doesNotMatch(source, /verifiedDetail\?\.lineupAvailableAt/);
+  assert.doesNotMatch(source, /selectedCanonicalState/);
   assert.equal(getTouchlineMatchCentreCopy("pt-BR").viewLineup, "VER ESCALAÇÃO");
   assert.equal(getTouchlineMatchCentreCopy("en-GB").viewLineup, "VIEW LINE-UP");
   assert.equal(getTouchlineMatchCentreCopy("pt-BR").lineupPending, "Escalação oficial ainda não disponível");
   assert.equal(getTouchlineMatchCentreCopy("pt-BR").lineupPendingCopy, "A escalação será exibida aqui quando estiver disponível e verificada.");
   assert.equal(getTouchlineMatchCentreCopy("en-GB").lineupPendingCopy, "The line-up will appear here when it is available and verified.");
   assert.match(source, /const dictionary = getTouchlineMatchCentreCopy\(language, draftLocalesEnabled\)/);
-  assert.match(source, /\{dictionary\.viewLineup\}/);
-  assert.match(source, /\{dictionary\.lineupPendingCopy\}/);
+  assert.match(source, /dictionary\.matchLineup : dictionary\.officialLineup/);
+  assert.doesNotMatch(source, /\{dictionary\.lineupPending(?:Copy)?\}/);
+  assert.match(source, /className=\{styles\.heroTopbar\}[\s\S]*?lineupLinks\.map[\s\S]*?className=\{styles\.heroKickoff\}[\s\S]*?className=\{styles\.heroTeams\}/);
+  assert.match(source, /\{lineupLabel\}<small>\{link\.name\}<\/small>/);
+  assert.match(styles, /\.scoreSeparator\s*\{[^}]*font-size:\s*\.48em/);
   const pendingCopy = ["en-GB", "pt-BR"].map((locale) => getTouchlineMatchCentreCopy(locale).lineupPendingCopy);
   assert.equal(pendingCopy.length, 2, "both supported locales retain pending-lineup copy");
   for (const copy of pendingCopy) {
     assert.doesNotMatch(copy, /notif|avis|alert/i, "pending lineups must not promise notification delivery");
   }
-  assert.match(source, /const homeLineupHref = selectedHomeClub\s*\? "#touchline-match-lineups"/);
+  assert.match(source, /fixtureId=\$\{encodeURIComponent\(selected\.providerId\)\}#touchline-club-lineup/);
   assert.match(source, /const verifiedDetail = matchDetail\?\.fixture\.id === selected\?\.providerId \? matchDetail : null/);
   assert.match(source, /<section id="touchline-match-lineups" className=\{styles\.lineupGrid\} aria-label=\{dictionary\.form\} tabIndex=\{-1\}>/);
-  assert.match(source, /href=\{homeLineupHref\} onClick=\{openSelectedLineup\}/);
-  assert.match(source, /function openSelectedLineup[\s\S]*?event\.defaultPrevented \|\| event\.button !== 0 \|\| event\.metaKey \|\| event\.ctrlKey \|\| event\.shiftKey \|\| event\.altKey/);
-  assert.match(source, /if \(!lineup\) return;\s*event\.preventDefault\(\);\s*lineup\.focus\(\{ preventScroll: true \}\);\s*lineup\.scrollIntoView\(\{ block: "start" \}\)/);
+  assert.match(source, /href=\{link\.href\} aria-label=\{`\$\{lineupLabel\} · \$\{link\.name\}`\}/);
   assert.doesNotMatch(source, /href=\{homeLineupHref\}[^\n]*target=/);
   assert.doesNotMatch(source, /`\/touchline-clubs\/\$\{selectedHomeClub\.slug\}\?lang=\$\{language\}#touchline-club-lineup`/);
   assert.doesNotMatch(source, /\/touchline-clubs\/manchester-united\?lang=pt-BR#touchline-club-lineup/);
@@ -376,58 +376,23 @@ test("every canonical home hero exposes the same honest verified-lineup call to 
   assert.match(clubHub, /<section id="touchline-club-lineup" className=\{styles\.shell\}/);
 });
 
-test("lineup click focuses and scrolls locally without adding history, while modified clicks keep their default", () => {
+test("lineup links use normal club navigation and retain the selected fixture", () => {
   const source = readFileSync(
     new URL("../components/touchline/match-centre/TouchlineMatchCentre.tsx", import.meta.url),
     "utf8",
   );
-  const handlerSource = source.match(/^function openSelectedLineup\b[\s\S]*?^}/m)?.[0];
-  assert.ok(handlerSource);
-  const calls: string[] = [];
-  let targetPresent = true;
-  const target = {
-    focus(options: { preventScroll: boolean }) {
-      assert.equal(options.preventScroll, true);
-      calls.push("focus");
-    },
-    scrollIntoView(options: { block: string }) {
-      assert.equal(options.block, "start");
-      calls.push("scroll");
-    },
-  };
-  // Execute the actual handler in a DOM stub with no history/window access.
-  // This verifies event behaviour, not rendered scrolling in Safari.
-  const event = {
-    defaultPrevented: false, button: 0,
-    metaKey: false, ctrlKey: false, shiftKey: false, altKey: false,
-    preventDefault() { calls.push("prevent-default"); },
-  };
-  const handler = runInNewContext(
-    `${stripTypeScriptTypes(handlerSource)}\nopenSelectedLineup;`,
-    { document: { getElementById(id: string) {
-      assert.equal(id, "touchline-match-lineups");
-      calls.push("find");
-      return targetPresent ? target : null;
-    } } },
-    { timeout: 1000 },
-  ) as (input: typeof event) => void;
-
-  handler(event);
-  assert.deepEqual(calls, ["find", "prevent-default", "focus", "scroll"]);
-  for (const modifier of ["metaKey", "ctrlKey", "shiftKey", "altKey", "defaultPrevented"] as const) {
-    calls.length = 0;
-    handler({ ...event, [modifier]: true });
-    assert.deepEqual(calls, [], modifier);
+  assert.doesNotMatch(source, /function openSelectedLineup/);
+  assert.match(source, /href: `\/touchline-clubs\/\$\{club\.slug\}\?lang=\$\{encodeURIComponent\(language\)\}&fixtureId=/);
+  const clubPage = readFileSync(new URL("../app/touchline-clubs/[club]/page.tsx", import.meta.url), "utf8");
+  assert.match(clubPage, /candidate\.providerId === requestedFixtureId && fixtureHasClub\(candidate, club\)/);
+  assert.match(clubPage, /if \(requestedFixtureId && !requestedFixture\) return empty/);
+  assert.match(clubPage, /lastCompletedXi: requestedFixtureId \? null/);
+  for (const locale of ["en-GB", "pt-BR", "es-ES", "it-IT", "fr-FR", "ar-SA", "tr-TR", "de-DE"]) {
+    const copy = getTouchlineMatchCentreCopy(locale, true);
+    assert.ok(copy.officialLineup);
+    assert.ok(copy.matchLineup);
+    assert.notEqual(copy.officialLineup, copy.matchLineup);
   }
-  for (const button of [1, 2]) {
-    calls.length = 0;
-    handler({ ...event, button });
-    assert.deepEqual(calls, []);
-  }
-  calls.length = 0;
-  targetPresent = false;
-  handler(event);
-  assert.deepEqual(calls, ["find"]);
 });
 
 test("a venue awaiting verification is not labelled as verified", () => {
@@ -437,6 +402,15 @@ test("a venue awaiting verification is not labelled as verified", () => {
   );
   assert.match(source, /<strong>\{dictionary\.venuePending\}<\/strong><small>\{dictionary\.official\}<\/small>/);
   assert.doesNotMatch(source, /<strong>\{dictionary\.venuePending\}<\/strong><small>\{dictionary\.provider\}<\/small>/);
+});
+
+test("completed status is centred below the score without repeating below kickoff", () => {
+  const source = readFileSync(new URL("../components/touchline/match-centre/TouchlineMatchCentre.tsx", import.meta.url), "utf8");
+  const css = readFileSync(new URL("../components/touchline/match-centre/touchline-match-centre.module.css", import.meta.url), "utf8");
+  assert.match(source, /className=\{styles\.scoreColumn\}[\s\S]*?className=\{styles\.score\}[\s\S]*?selectedDisplayState === "finished" \? <span className=\{styles\.scoreStatus\}>\{dictionary\.completed\}/);
+  assert.match(source, /selectedDisplayState !== "finished" \? <strong className=\{styles\.countdown\}/);
+  assert.match(css, /\.scoreStatus\s*\{[^}]*position: absolute;[^}]*top: 100%;[^}]*justify-items: center/);
+  assert.match(css, /\.scoreStatus::before\s*\{[^}]*width: 22px/);
 });
 
 test("Match Centre renders a verified stadium card and a premium kickoff treatment", () => {
@@ -508,7 +482,7 @@ test("Match Centre renders the optional home-stadium interior behind a strong re
   assert.match(component, /<HeroVenueArtwork venue=\{selected\.venue\} \/>/);
   assert.match(component, /onError=\{\(\) => setFailedInteriorImageUrl\(interiorImageUrl\)\}/);
   assert.match(styles, /\.heroVenueArtwork \{[^}]*position: absolute[^}]*object-fit: cover[^}]*pointer-events: none/);
-  assert.match(styles, /\.hero::after \{[^}]*linear-gradient\(180deg, rgba\(1,5,4,\.22\), rgba\(1,8,5,\.56\)\)[^}]*pointer-events: none/);
+  assert.match(styles, /\.hero::after \{[^}]*linear-gradient\(180deg, rgba\(1,5,4,\.28\), rgba\(1,8,5,\.62\)\)[^}]*pointer-events: none/);
   // Club crests retain neutral depth, without a coloured halo.
   assert.match(styles, /\.heroTeams \.teamMark \{[^}]*drop-shadow\(0 18px 28px rgba\(0,0,0,\.46\)\)/);
 });
@@ -617,7 +591,7 @@ test("Match Centre fixture rail presents each confrontation as a vertical score 
   assert.match(component, /className=\{styles\.fixtureDay\}/);
   assert.match(component, /className=\{styles\.fixtureKickoff\}/);
   assert.match(component, /className=\{styles\.fixtureScore\}/);
-  assert.match(component, /<TouchlineFixtureAlerts fixtureId=\{fixture\.id\} label=\{fixtureLabel\(fixture, language, draftLocalesEnabled\)\} locale=\{language\} draftLocalesEnabled=\{draftLocalesEnabled\}/);
+  assert.match(component, /<TouchlineFixtureAlerts fixtureId=\{fixture\.id\} label=\{fixtureLabel\(fixture, language, draftLocalesEnabled\)\} locale=\{language\} expectedAccountId=\{accountLocaleContext\.mode === "account" \? accountLocaleContext\.accountId : null\} draftLocalesEnabled=\{draftLocalesEnabled\}/);
   const alerts = readFileSync(new URL("../components/touchline/match-centre/TouchlineFixtureAlerts.tsx", import.meta.url), "utf8");
   assert.match(alerts, /<Bell size=\{18\}/);
   assert.doesNotMatch(alerts, /<BellRing/);

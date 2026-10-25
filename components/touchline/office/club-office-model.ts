@@ -39,7 +39,7 @@ export function summarizeOffice(collection: OfficeCollection) {
     outside: state.players.filter(player => player.area === "outside").length,
     balance: state.balanceEur,
     playersCost: state.players.reduce((sum, player) => sum + player.valueEur, 0),
-    coachCost: state.coach.valueEur,
+    coachCost: state.coach === null ? 0 : state.coach.valueEur,
   };
 }
 

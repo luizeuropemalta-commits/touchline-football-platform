@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-const liveRoute = readFileSync(
+const liveHandler = readFileSync(
   new URL("../app/api/football-data/fantasy/livescores/route.ts", import.meta.url),
   "utf8",
 );
@@ -10,6 +10,7 @@ const scheduleRoute = readFileSync(
   new URL("../app/api/football-data/fixture-schedule/route.ts", import.meta.url),
   "utf8",
 );
+const liveRoute = liveHandler + readFileSync(new URL("../lib/touchlineArena/persisted-live-rail-server.ts", import.meta.url), "utf8");
 const matchCentre = readFileSync(
   new URL("../components/touchline/match-centre/TouchlineMatchCentre.tsx", import.meta.url),
   "utf8",
@@ -20,13 +21,14 @@ const sharedReader = readFileSync(new URL("../lib/touchlineArena/sports-publicat
 const sharedLiveView = readFileSync(new URL("../lib/touchlineArena/sports-publication-live-view.ts", import.meta.url), "utf8");
 
 test("live scores read one durable snapshot or honest partial schedule without ingress or writes", () => {
+  assert.match(liveHandler, /await readPersistedLiveRail\(\)/);
   assert.match(liveRoute, /readPersistedLiveScoreSnapshot/);
   assert.match(liveRoute, /readPublicCompetitionFixtures/);
   assert.match(liveRoute, /persisted-live-snapshot/);
   assert.match(liveRoute, /partial-persisted-schedule/);
   assert.match(liveRoute, /persisted-live-data-unavailable/);
   assert.match(liveRoute, /liveSnapshot\?\.fixtures\.length/);
-  assert.match(liveRoute, /selectArenaFixtureRound\(schedule\)/);
+  assert.match(liveRoute, /selectArenaFixtureRound\(schedule, now \?\? Date\.now\(\)\)/);
   assert.doesNotMatch(liveRoute, /completeTouchlineOfficialFixtureSchedule/);
   assert.doesNotMatch(
     liveRoute,
@@ -35,7 +37,9 @@ test("live scores read one durable snapshot or honest partial schedule without i
 });
 
 test("Live prefers a fresh snapshot and marks every non-live fallback degraded", () => {
-  assert.match(liveRoute, /const snapshotIsFresh = Boolean\(/);
+  assert.match(liveRoute, /const snapshotReadNow = now \?\? Date\.now\(\)/);
+  assert.match(liveRoute, /const freshness = touchlineLiveFreshness\(liveSnapshot, snapshotReadNow\)/);
+  assert.match(liveRoute, /const snapshotIsFresh = freshness !== null && !freshness\.degraded/);
   assert.match(liveRoute, /liveSnapshot\?\.fixtures\.length && snapshotIsFresh/);
   assert.match(liveRoute, /state: "partial-persisted-schedule"[\s\S]*?degraded: true/);
   assert.match(liveRoute, /if \(liveSnapshot\?\.fixtures\.length\) \{[\s\S]*?degraded: true/);

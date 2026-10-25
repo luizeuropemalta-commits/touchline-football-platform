@@ -179,20 +179,21 @@
 .audioControl button { cursor: pointer; }
 
 @media (max-width: 880px) {
-  .navigation { flex-wrap: wrap; }
+  .navigation { flex-wrap: nowrap; }
   .arena { order: 0; }
   .context { order: 1; }
-  .links { order: 2; flex: 1 1 auto; overflow-x: auto; padding: 2px; scrollbar-width: none; }
+  .links { order: 2; flex: 0 0 auto; padding: 2px; }
   .links::-webkit-scrollbar { display: none; }
 }
 
 @media (max-width: 620px) {
-  .navigation { align-items: stretch; gap: 7px; }
-  .arena { width: 100%; justify-content: center; }
-  .context { order: 1; max-width: 100%; width: 100%; padding: 0; }
-  .links { order: 2; overflow: visible; flex: 1 1 auto; }
-  .desktopOnly { display: none; }
-  .more { display: block; order: 3; }
+  .navigation { align-items: center; gap: 4px; }
+  .arena { width: auto; min-height:44px; padding-inline:10px; font-size:11px; }
+  .context { display:none; }
+  .links { order: 2; overflow: visible; flex: 0 0 auto; gap:4px; }
+  .link { padding-inline:8px; font-size:11px; gap:5px; }
+  .desktopOnly { display: inline-flex; }
+  .more { display: none; }
   .morePanel { right: 0; }
 }
 

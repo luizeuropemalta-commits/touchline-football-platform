@@ -1,6 +1,26 @@
 // Explicit operator configuration only. No content database/env fallback.
 const unavailable = () => new Error('Recovery operator configuration unavailable.');
 const id = value => typeof value === 'string' && /^[a-z][a-z0-9_-]{0,63}$/.test(value);
+
+// Offline, presence-only diagnosis of THIS process, never of hosted QA.
+// Site API credentials are not SQL operator credentials and are not remapped.
+export function diagnoseRecoveryOperatorConfig(env) {
+  const required = ['OPERATOR_ENABLED', 'CENTRAL_PROJECT_REF', 'DB_MODE', 'DB_HOST',
+    'DB_PORT', 'DB_USER', 'DB_PASSWORD', 'ACCOUNT_SCOPE', 'SPORTMONKS_TOKEN']
+    .map(suffix => `TOUCHLINE_RECOVERY_${suffix}`);
+  const present = key => typeof env[key] === 'string' && env[key].length > 0;
+  const missing = required.filter(key => !present(key));
+  let configured = false;
+  try { readRecoveryOperatorConfig(env); configured = true; } catch { /* values stay private */ }
+  return Object.freeze({ scope: 'current-process-only', hostedConfiguration: 'not-inspected',
+    configured, connected: false, measured: false,
+    reason: configured ? 'configuration-valid-not-connected'
+      : missing.length ? 'operator-environment-incomplete' : 'operator-configuration-rejected',
+    missing, siteBindingsPresent: {
+      sportmonksApiToken: present('SPORTMONKS_API_TOKEN'),
+      supabaseServiceRoleKey: present('SUPABASE_SERVICE_ROLE_KEY'),
+    }, siteCredentialsUsedAsFallback: false });
+}
 export function readRecoveryOperatorConfig(env) {
   const projectRef = env.TOUCHLINE_RECOVERY_CENTRAL_PROJECT_REF;
   const host = env.TOUCHLINE_RECOVERY_DB_HOST;
@@ -33,6 +53,7 @@ export function readRecoveryOperatorConfig(env) {
 
 export function readRecoveryArguments(args) {
   if (args.length === 1 && args[0] === '--check') return Object.freeze({ mode: 'check' });
+  if (args.length === 1 && args[0] === '--diagnose') return Object.freeze({ mode: 'diagnose' });
   if (args.length !== 7 || args[0] !== '--measure-single' || args[1] !== '--case'
     || args[3] !== '--worker' || args[5] !== '--path'
     || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(args[2])

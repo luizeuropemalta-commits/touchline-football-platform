@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { parseClubHubStripSnapshot, clubHubStripState, clubHubStripScore } from "../lib/touchlineArena/club-hub-fixture-strip.ts";
+import { parseClubHubStripSnapshot, clubHubStripState, clubHubStripScore, clubHubStripSeedNeedsRecovery } from "../lib/touchlineArena/club-hub-fixture-strip.ts";
 import { CLUB_HUB_STRIP_COPY, getClubHubStripCopy } from "../lib/touchlineArena/club-hub-fixture-strip-i18n.ts";
+import { fixtureStripFrameDistance, wrapFixtureStripOffset } from "../lib/touchlineArena/fixture-strip-motion.ts";
 
 const fixture = { id: "123", providerId: "123", startsAt: "2026-10-01T12:00:00Z", status: "INPLAY_1ST_HALF", homeScore: 0, awayScore: 2,
   homeTeam: { id: "1", providerId: "1", name: "Home" }, awayTeam: { id: "2", providerId: "2", name: "Away" } };
@@ -39,11 +40,12 @@ test("live expires on clock advance independently of a new fetch", () => {
     assert.equal(clubHubStripState(fixture, { ...metadata, fetchedAt }, now), "stale");
   }
 });
-test("pause/resume available in all eight catalogues behind existing locale gate", () => {
+test("manual navigation is available in all eight catalogues behind existing locale gate", () => {
   assert.equal(Object.keys(CLUB_HUB_STRIP_COPY).length, 8);
   for (const locale of Object.keys(CLUB_HUB_STRIP_COPY)) {
     const copy = getClubHubStripCopy(locale, true);
-    assert.ok(copy.pause && copy.play && copy.pause !== copy.play);
+    assert.ok(copy.previous && copy.next && copy.previous !== copy.next);
+    assert.ok(copy.unavailable);
   }
 });
 test("component uses durable read only, cancellation, stable IDs and accessible motion", () => {
@@ -51,9 +53,37 @@ test("component uses durable read only, cancellation, stable IDs and accessible 
   assert.match(source, /api\/football-data\/fantasy\/livescores/);
   assert.doesNotMatch(source, /router\.refresh|sportmonks/);
   assert.match(source, /setInterval\(updateClock, 15_000\)/);
-  assert.match(source, /failed \|\| !snapshot \? copy.liveDataUpdating/);
-  for (const token of ["AbortController", 'document.hidden', 'visibilitychange', 'cancelAnimationFrame', 'prefers-reduced-motion', 'key={fixture.providerId}', 'aria-pressed={paused}', 'onFocusCapture', 'onPointerDown', 'controls.link']) assert.ok(source.includes(token), token);
+  assert.match(source, /failed \? motion.unavailable : !snapshot && needsInitialRead \? copy.liveDataUpdating/);
+  for (const token of ["AbortController", 'document.hidden', 'visibilitychange', 'cancelAnimationFrame', 'prefers-reduced-motion', 'key={fixture.providerId}', 'data-fixture-carousel="continuous"', 'aria-label={motion.previous}', 'aria-label={motion.next}', 'controls.link', 'useTouchlinePublishedLive', 'strip.contains(document.activeElement)', 'aria-hidden={run !== "original"', 'tabIndex={run === "original" ? undefined : -1}']) assert.ok(source.includes(token), token);
+  assert.doesNotMatch(source, /aria-pressed|motion\.pause|motion\.play/);
   const css = readFileSync(new URL("../components/touchline/ClubHubFixtureStrip.module.css", import.meta.url), "utf8");
   assert.match(css, /overflow-x: auto/);
   assert.doesNotMatch(css, /animation:|@keyframes/);
+});
+
+test("only an unavailable seed needs one recovery read; explicit empty is authoritative", () => {
+  assert.equal(clubHubStripSeedNeedsRecovery(undefined), true);
+  assert.equal(clubHubStripSeedNeedsRecovery(null), true);
+  assert.equal(clubHubStripSeedNeedsRecovery([]), false);
+  assert.equal(clubHubStripSeedNeedsRecovery([fixture]), false);
+  assert.equal(parseClubHubStripSnapshot({ ok: true, data: [], ...metadata })?.fixtures.length, 0);
+  const source = readFileSync(new URL("../components/touchline/ClubHubFixtureStrip.tsx", import.meta.url), "utf8");
+  assert.match(source, /if \(!needsInitialRead\) return/);
+  assert.match(source, /\}, \[needsInitialRead\]\)/);
+});
+
+test("continuous strip wraps both directions to an identical visual run without empty space", () => {
+  assert.equal(wrapFixtureStripOffset(100, 100), 100);
+  assert.equal(wrapFixtureStripOffset(199, 100), 199);
+  assert.equal(wrapFixtureStripOffset(200, 100), 100);
+  assert.equal(wrapFixtureStripOffset(99, 100), 199);
+  assert.equal(wrapFixtureStripOffset(-25, 100), 175);
+  assert.equal(wrapFixtureStripOffset(1, 0), 0);
+});
+
+test("continuous strip speed is elapsed-time based and never catches up after suspension", () => {
+  assert.ok(Math.abs(fixtureStripFrameDistance(1000 / 60) * 60 - 30) < 1e-9);
+  assert.ok(Math.abs(fixtureStripFrameDistance(1000 / 30) * 30 - 30) < 1e-9);
+  assert.equal(fixtureStripFrameDistance(10_000), 1.5);
+  assert.equal(fixtureStripFrameDistance(-1), 0);
 });

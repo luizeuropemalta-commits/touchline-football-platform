@@ -88,7 +88,9 @@ export default function TouchlineCoachCategoryShowcase({ locale, playerCards, co
                         player={exactPlayer}
                         imageLoading="lazy"
                         initialRenderScale={0.34}
-                        optimizeForLiveCompact
+                        // The responsive gallery can grow beyond thumbnail
+                        // dimensions, so retain the full-size card template.
+                        optimizeForLiveCompact={false}
                         runtimeLocaleOverride={effectiveLocale}
                         subscribeToRanking={false}
                         enableInteractiveNeon={false}

@@ -27,9 +27,10 @@ const player = {
 
 // Real component, hooks, JSX and pure collaborators. Only browser/network
 // ranking hooks and route context are replaced; SSR does not run effects.
-function fixture(copy?: Partial<CopyModule>) {
+function fixture(copy?: Partial<CopyModule>, hooks?: Partial<typeof React>) {
   const cache = new Map<string, unknown>();
   const replacements: Record<string, unknown> = {
+    ...(hooks ? { react: { ...React, ...hooks } } : {}),
     "next/navigation": { usePathname: () => "/fantasy" },
     "@/lib/touchlineArena/card-ranking-client": { useTouchlineActiveRanking: () => null },
     "./TouchlineCardLeadershipProvider": { useTouchlineCardLeadershipAuthority: () => null },
@@ -69,6 +70,21 @@ test("real ExactCard corrects Portuguese ARIA and keeps zero ratings, names and 
   assert.ok(en.includes('aria-label="Player &lt;&amp;&gt; $&amp; TouchLine card, total rating 0"'));
   assert.ok(en.includes('aria-label="Open Manchester City ClubHub"'));
   assert.doesNotMatch(en + pt, /Club Hub/);
+});
+
+test("a mounted static card follows the latest scale through Arena entry and exit", () => {
+  const state: unknown[] = [];
+  let cursor = 0;
+  const useState = ((initial: unknown) => {
+    const index = cursor++;
+    if (!(index in state)) state[index] = typeof initial === "function" ? initial() : initial;
+    return [state[index], (value: unknown) => { state[index] = typeof value === "function" ? value(state[index]) : value; }];
+  }) as typeof React.useState;
+  const render = fixture(undefined, { useState });
+  const atScale = (scale: number) => { cursor = 0; return render("pt-BR", {}, { staticRenderScale: scale }); };
+  assert.match(atScale(0.2), /scale\(var\(--touchline-card-static-scale, 0\.2\)\)/);
+  assert.match(atScale(0.05), /scale\(var\(--touchline-card-static-scale, 0\.05\)\)/);
+  assert.match(atScale(0.2), /scale\(var\(--touchline-card-static-scale, 0\.2\)\)/);
 });
 
 test("all twenty copy bindings reach real markup across public presentation states", () => {

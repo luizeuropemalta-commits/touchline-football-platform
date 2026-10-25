@@ -40,6 +40,8 @@ test("ClubOwner header plus real navigation uses one audio group; other navigati
   const brand = load("../components/touchline/TouchlineBrandHeader.tsx", {
     "@/components/logo": { Logo: () => React.createElement("span", { "data-logo": true }, "TouchLine") },
     "./TouchlinePageControls": { default: controls },
+    "./TouchlineNavigationRail": { default: load("../components/touchline/TouchlineNavigationRail.tsx", { react: React }) },
+    "./TouchlineSignOutButton": { default: () => React.createElement("button", { "data-sign-out": true }, "Sign out") },
   });
   const nav = load("../components/touchline/TouchlineGlobalNavigation.tsx", {
     "next/link": { default: ({ children, ...props }: React.ComponentProps<"a">) => React.createElement("a", props, children) },

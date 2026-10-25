@@ -49,17 +49,17 @@ test("real preference route allows paused empty channels with revoked consent; a
     const writes: Array<Record<string, unknown>> = [];
     const source = readFileSync(new URL("../app/api/notifications/preferences/route.ts", import.meta.url), "utf8").replace(/^import[\s\S]*?;\s*$/gm, "").replace(/^export /gm, "");
     const db = {
-      auth: { getUser: async () => ({ data: { user: { id: "synthetic" } } }) },
+      auth: { getUser: async () => ({ data: { user: { id: "synthetic" } }, error: null }) },
       from: (table: string) => {
         assert.equal(table, "notification_preferences", "pausing must not query devices");
-        return { select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: writes.length ? { ...writes.at(-1), game_locale_revision: "0" } : null, error: null }) }) }), upsert: (value: Record<string, unknown>) => {
+        return { select: () => ({ eq: () => ({ abortSignal: (signal: AbortSignal) => { assert.equal(signal.aborted, false); return { maybeSingle: async () => ({ data: writes.length ? { ...writes.at(-1), game_locale_revision: "0" } : null, error: null }) }; } }) }), upsert: (value: Record<string, unknown>) => {
           writes.push(value);
           return { select: () => ({ single: async () => ({ data: { ...value, updated_at: "now" }, error: null }) }) };
         } };
       },
     };
     const route = runInNewContext(ts.transpileModule(`${source}\n({ PUT, GET })`, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText, {
-      createClient: async () => db, hasTouchLineArenaAccess: () => true,
+      createClient: async () => db, hasTouchLineArenaAccess: () => true, AbortController, setTimeout, clearTimeout,
       URL,
       NextResponse: { json: (body: unknown, init?: { status: number }) => ({ body, status: init?.status ?? 200 }) },
       parseNotificationQuietHours: (value: unknown) => value,

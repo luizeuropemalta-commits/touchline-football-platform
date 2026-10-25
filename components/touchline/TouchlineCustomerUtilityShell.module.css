@@ -1,0 +1,49 @@
+.shell {
+  min-width: 0;
+  min-height: 100dvh;
+  color: #f6ffec;
+  background: #02080a;
+}
+
+.context,
+.content {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 1540px;
+  margin-inline: auto;
+  padding: 16px max(16px, env(safe-area-inset-right)) 24px max(16px, env(safe-area-inset-left));
+}
+
+.identity {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin: 0 0 12px;
+  overflow-wrap: anywhere;
+}
+
+.utilities {
+  display: flex;
+  flex-wrap: nowrap;
+  width: max-content;
+  align-items: center;
+  gap: 8px;
+}
+
+.utilitiesRail {
+  min-width: 0;
+  overflow-x: auto;
+  padding: 8px;
+  scroll-padding-inline: 8px;
+}
+
+.utilities > a {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.error {
+  max-width: 24rem;
+  margin: 8px 0 0;
+  overflow-wrap: anywhere;
+}

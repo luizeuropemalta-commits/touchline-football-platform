@@ -97,7 +97,7 @@ test("status rail uses verified coach and club-leading card instead of duplicati
   assert.match(component, /clubLeader\.totalRating\.toFixed\(2\)/);
   assert.match(component, /TouchlineCoachCardZoom/);
   assert.match(component, /TouchlineGameweekCard card=\{clubLeader\.card\}/);
-  assert.match(gameweekCard, /const useLiveCompactAsset = resolvedDisplayWidth <= 119/);
+  assert.match(gameweekCard, /const useLiveCompactAsset = !fitContainer && resolvedDisplayWidth <= 119/);
   assert.match(gameweekCard, /optimizeForLiveCompact=\{useLiveCompactAsset\}/);
   assert.match(gameweekCard, /Public profile links use TouchLine presentation identity only/);
   assert.doesNotMatch(gameweekCard, /touchlinePlayerProfileHref\(exact/);

@@ -31,6 +31,7 @@ export default async function ProtectedLayout({ children }: { children: React.Re
 
   return (
     <ArenaAdminShell
+      accountId={user.id}
       profileName={profileName}
       profileEmail={user.email ?? ""}
       isOwner={isOwner}

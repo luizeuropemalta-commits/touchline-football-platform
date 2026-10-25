@@ -14,6 +14,11 @@ vm.runInNewContext(ts.transpileModule(readFileSync(new URL("../lib/touchlineAren
 
 
 const require = createRequire(import.meta.url);
+const navigationRail: { default?: React.ComponentType<{className: string; children: React.ReactNode}> } = {};
+vm.runInNewContext(ts.transpileModule(readFileSync(new URL("../components/touchline/TouchlineNavigationRail.tsx", import.meta.url), "utf8"), {
+  compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX },
+}).outputText, { exports: navigationRail, require });
+const notificationStyles = Object.fromEntries(["contentRail", "canvas", "stats", "panels", "categories", "quietHours", "scopePanel", "scopes", "saveRow"].map(key => [key, `notifications-${key}`]));
 const source = readFileSync(new URL("../app/(app)/notifications/page.tsx", import.meta.url), "utf8");
 const compiled = ts.transpileModule(source, { compilerOptions: {
   module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX,
@@ -23,6 +28,9 @@ function render(lang: string) {
   const exports: { default?: React.ComponentType } = {};
   vm.runInNewContext(compiled, { exports, require(name: string) {
     if (name === "@/components/touchline/SiteLocaleReleaseContext") return { useSiteLocaleRelease: releasePolicy.isTouchLineSiteLocalesEnabled };
+    if (name === "@/components/touchline/TouchlineNavigationRail") return navigationRail;
+    if (name === "@/components/touchline/TouchlineGlobalNavigation.module.css") return { default: { link: "canonical-link" } };
+    if (name === "./NotificationsContent.module.css") return { default: notificationStyles };
     if (name === "next/navigation") return { useSearchParams: () => new URLSearchParams({ lang }) };
     if (name === "@/lib/touchlineArena/i18n") return { normalizeTouchLineLocale };
     if (name === "@/lib/touchlineArena/notification-centre-i18n") return notificationCopy;

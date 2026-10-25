@@ -11,16 +11,18 @@ async function read(data: unknown, options: { anonymous?: boolean; ineligible?: 
   const query = {
     select(columns: string) { calls.push(['select', columns]); return query; },
     eq(key: string, value: string) { calls.push(['eq', key, value]); return query; },
+    abortSignal(signal: AbortSignal) { assert.equal(signal.aborted, false); return query; },
     async maybeSingle() {
       if (options.throws) throw new Error('PRIVATE_DATABASE_DETAIL');
       return { data, error: options.error ? { message: 'PRIVATE_DATABASE_DETAIL' } : null };
     },
   };
   const api = runInNewContext(ts.transpileModule(`${source}\n({GET})`, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText, {
+    AbortController, setTimeout, clearTimeout,
     createClient: async () => options.unavailable ? null : ({
       auth: { getUser: async () => {
         if (options.authThrows) throw new Error('PRIVATE_AUTH_DETAIL');
-        return { data: { user: options.anonymous ? null : { id: 'owner' } } };
+        return { data: { user: options.anonymous ? null : { id: 'owner' } }, error: null };
       } },
       from(table: string) { calls.push(['from', table]); return query; },
     }),
@@ -86,7 +88,7 @@ test('GET rejects anonymous access before table reads and sanitizes failed reads
 });
 
 test('GET never accesses preferences when eligibility or authentication is unavailable', async () => {
-  for (const [options, status] of [[{ ineligible: true }, 401], [{ unavailable: true }, 401], [{ authThrows: true }, 503]] as const) {
+  for (const [options, status] of [[{ ineligible: true }, 401], [{ unavailable: true }, 503], [{ authThrows: true }, 503]] as const) {
     const { response, calls } = await read(null, options);
     assert.equal(response.status, status); assert.deepEqual(calls, []); privateResponse(response);
     assert.doesNotMatch(JSON.stringify(response.body), /PRIVATE_AUTH_DETAIL/);

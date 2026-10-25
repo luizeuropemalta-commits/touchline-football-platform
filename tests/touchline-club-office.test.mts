@@ -19,6 +19,17 @@ const state: ClubAcquisitionState = {
   ],
 };
 type Element = React.ReactElement<Record<string, unknown>>;
+
+test("explicit vacant coach has zero current contract cost without resetting confirmed roster or balance", () => {
+  const vacant = { ...state, coach: null };
+  const before = structuredClone(vacant);
+  const summary = model.summarizeOffice({ status: "ready", state: vacant });
+  assert.equal(summary?.coachCost, 0);
+  assert.equal(summary?.balance, state.balanceEur);
+  assert.equal(summary?.playersCost, 25_000_000);
+  assert.equal(summary?.playerCount, 2);
+  assert.deepEqual(vacant, before);
+});
 function nodes(value: unknown): Element[] {
   if (Array.isArray(value)) return value.flatMap(nodes);
   if (!React.isValidElement(value)) return [];

@@ -44,9 +44,8 @@ function fixture(options: { user?: User | null; configured?: boolean; rejectAuth
   const authentication = { data: { user }, error: null };
   const avatarContext = Object.freeze({ avatarUrl: "/confirmed-avatar.png" });
   const railFixtures = Object.freeze([{ id: "sportmonks:101", providerId: "101", status: "Not Started" }]);
-  const persistedFixtures = Object.freeze([{ id: "sportmonks:101" }]);
-  const scheduleCalls: Array<Record<string, unknown>> = [];
-  const projectorInputs: unknown[] = [];
+  const railMetadata = Object.freeze({ state: "persisted-live-snapshot", degraded: false, fetchedAt: "2030-10-24T12:00:00Z" });
+  let railReads = 0;
   const snapshot = Object.freeze({ sentinel: "canonical-snapshot", entitlementActive: true,
     marketAccess: marketPolicy.resolveTouchlineFantasyMarketAccess("standard"), config: { budgetEur: 500_000_000 }, userGameweek: { totalMarketValueEur: 120_000_000 } });
   // Leaf identities inspect the actual route's props without running browser
@@ -56,6 +55,7 @@ function fixture(options: { user?: User | null; configured?: boolean; rejectAuth
     process: { env: { TOUCHLINE_OWNER_EMAILS: "owner@example.test, admin@example.test" } },
   });
   const modules: Record<string, unknown> = {
+    "@supabase/supabase-js": { AuthSessionMissingError: class extends Error {} },
     "@/components/touchline/fantasy/ClubCollectionContext": { ClubCollectionProvider: React.Fragment },
     "@/lib/touchlineFantasy/club-collection-server": { clubCollectionEnabled: () => false },
     "@/lib/touchlineFantasy/club-collection-read-server": { readClubCollectionServer: async (accountId: string) => {
@@ -68,17 +68,13 @@ function fixture(options: { user?: User | null; configured?: boolean; rejectAuth
     "react/jsx-runtime": jsxRuntime,
     "next/headers": { headers: async () => ({ get: () => "Europe/Malta" }) },
     "@/lib/touchlineArena/match-centre": { normalizeTouchlineMatchCentreTimeZone },
-    "@/lib/football-data/fixture-schedule-store": { readPublicCompetitionFixtures: async (options: unknown) => {
+    "@/lib/touchlineArena/persisted-live-rail-server": { readPersistedLiveRailWithin: async () => {
       events.push("fixtures");
-      scheduleCalls.push(JSON.parse(JSON.stringify(options)));
-      if (rejectFixtures) throw new Error("fixtures unavailable");
-      return persistedFixtures;
-    } },
-    "@/lib/touchlineArena/stadium-catalog": { toTouchlineLiveFixtures: (input: unknown) => {
-      projectorInputs.push(input);
-      if (input === persistedFixtures) return railFixtures;
-      assert.ok(Array.isArray(input) && input.length === 0, "only the explicit empty fallback is accepted");
-      return [];
+      railReads++;
+      // The bounded production reader catches storage failure and returns
+      // unavailable; it does not reject the page's other parallel reads.
+      if (rejectFixtures) return null;
+      return { fixtures: railFixtures, metadata: railMetadata };
     } },
     "@/lib/touchlineArena/club-owner-profile-metrics": profileMetrics,
     "@/lib/touchlineFantasy/market-plan-policy": marketPolicy,
@@ -139,7 +135,7 @@ function fixture(options: { user?: User | null; configured?: boolean; rejectAuth
     assert.equal(typeof loaded.internalMetadata, "function", "private generateClubOwnerMetadata seam must exist");
     return (loaded.internalMetadata as (props: { searchParams: Promise<Params> }, enabled?: boolean) => Promise<{ title: string; description: string }>)({ searchParams: Promise.resolve(params) }, enabled);
   };
-  return { events, leaves, snapshot, avatarContext, railFixtures, persistedFixtures, scheduleCalls, projectorInputs, internalRoute, internalMetadata, route: (params: Params) => route({ searchParams: Promise.resolve(params) }), metadata: (params: Params) => metadata({ searchParams: Promise.resolve(params) }) };
+  return { events, leaves, snapshot, avatarContext, railFixtures, railMetadata, get railReads() { return railReads; }, internalRoute, internalMetadata, route: (params: Params) => route({ searchParams: Promise.resolve(params) }), metadata: (params: Params) => metadata({ searchParams: Promise.resolve(params) }) };
 }
 
 function descendants(node: React.ReactNode): Element[] {
@@ -147,33 +143,18 @@ function descendants(node: React.ReactNode): Element[] {
     ? [child, ...descendants(child.props.children as React.ReactNode), ...descendants(child.props.navigation as React.ReactNode)] : []);
 }
 
-test("route schedule window and projection distinguish persisted fixtures from the empty fallback", async () => {
-  const day = 86_400_000;
+test("route forwards the shared persisted selection and metadata, preserving unavailability", async () => {
   for (const rejectFixtures of [false, true]) {
     const h = fixture({ rejectFixtures });
-    const before = Date.now();
     const root = await h.route({ lang: "pt-BR" });
-    const after = Date.now();
-    assert.equal(h.scheduleCalls.length, 1);
-    const call = h.scheduleCalls[0];
-    assert.deepEqual(Object.keys(call).sort(), ["from", "includeHistorical", "limit", "through"]);
-    assert.equal(call.includeHistorical, true);
-    assert.equal(call.limit, 240);
-    assert.equal(typeof call.from, "string");
-    assert.equal(typeof call.through, "string");
-    const from = Date.parse(call.from as string), through = Date.parse(call.through as string);
-    assert.equal(new Date(from).toISOString(), call.from);
-    assert.equal(new Date(through).toISOString(), call.through);
-    assert.ok(from + 7 * day >= before && from + 7 * day <= after);
-    assert.equal(through - from, 21 * day);
-    assert.equal(h.projectorInputs.length, 1);
+    assert.equal(h.railReads, 1);
     const fantasy = descendants(root).find(element => element.type === h.leaves.fantasy)!;
     if (rejectFixtures) {
-      assert.ok(Array.isArray(h.projectorInputs[0]) && h.projectorInputs[0].length === 0);
-      assert.deepEqual(fantasy.props.initialLiveFixtures, []);
+      assert.equal(fantasy.props.initialLiveFixtures, null);
+      assert.equal(fantasy.props.initialLiveMetadata, null);
     } else {
-      assert.equal(h.projectorInputs[0], h.persistedFixtures);
       assert.equal(fantasy.props.initialLiveFixtures, h.railFixtures);
+      assert.equal(fantasy.props.initialLiveMetadata, h.railMetadata);
     }
   }
 });
@@ -233,7 +214,8 @@ test("missing auth, missing configuration and rejected auth redirect before prot
     await assert.rejects(h.route({ lang: "ar-SA" }), (error: unknown) => {
       const failure = error as { kind?: string; href?: string };
       assert.equal(failure.kind, "redirect");
-      assert.equal(failure.href, touchLineAuthEntryHref("/login", "en-GB", "/clubowner?lang=en-GB"));
+      assert.equal(failure.href, touchLineAuthEntryHref("/login", "en-GB", "/clubowner?lang=en-GB")
+        + (options.user === null ? "" : "&error=auth_unavailable"));
       return true;
     });
     assert.equal(h.events.includes("snapshot"), false);
@@ -408,7 +390,8 @@ test("unauthenticated redirect preserves all eight trusted locales and the exact
         assert.equal(target.pathname, "/login");
         assert.equal(target.searchParams.get("lang"), requested);
         assert.equal(target.searchParams.get("returnTo"), `/clubowner?lang=${requested}&club=${encodeURIComponent(club.slug)}`);
-        assert.deepEqual([...target.searchParams.keys()].sort(), ["lang", "returnTo"]);
+        assert.deepEqual([...target.searchParams.keys()].sort(), options.user === null ? ["lang", "returnTo"] : ["error", "lang", "returnTo"]);
+        assert.equal(target.searchParams.get("error"), options.user === null ? null : "auth_unavailable");
         return true;
       });
       assert.equal(h.events.includes("avatarRead"), false);

@@ -36,6 +36,8 @@ export function transpileFixtureModule(source: string, fileName: string) {
 
 export function bundleIsolatedBrowserFixture(options: {
   entryPath: string; requiredSources: readonly string[]; mountScript: string; cssPrefix?: string;
+  /** Additional real components composed by this fixture, using the same React. */
+  additionalEntryPaths?: readonly string[];
   /** Explicit synthetic boundary: records refresh intent, never proves a real RSC refresh. */
   allowSyntheticRouteRefresh?: boolean;
 }): BrowserFixtureBundle {
@@ -50,7 +52,7 @@ export function bundleIsolatedBrowserFixture(options: {
   const scope = require("next/dist/compiled/postcss-modules-scope");
   const boundaries: Record<string, string> = {
     "next/image": `const React=require('react'); module.exports=React.forwardRef(function Image(p,ref){const {unoptimized,priority,fill,quality,loader,placeholder,blurDataURL,onLoadingComplete,...rest}=p;return React.createElement('img',{...rest,ref});});`,
-    "next/link": `const React=require('react'); module.exports=React.forwardRef(function Link(p,ref){const {prefetch,replace,scroll,shallow,locale,legacyBehavior,passHref,...rest}=p;return React.createElement('a',{...rest,ref});});`,
+    "next/link": `const React=require('react'); module.exports=React.forwardRef(function Link(p,ref){const {prefetch,replace,scroll,shallow,locale,legacyBehavior,passHref,...rest}=p;return React.createElement('a',{...rest,ref});});module.exports.useLinkStatus=()=>({pending:false});`,
     "next/navigation": `const router={refresh(){${options.allowSyntheticRouteRefresh ? "if(typeof window.onFixtureRouteRefresh!=='function')throw Error('Missing synthetic refresh observer');window.onFixtureRouteRefresh();" : "throw Error('Unexpected Next refresh');"}},push(){throw Error('Unexpected Next navigation');},replace(){throw Error('Unexpected Next navigation');}};exports.usePathname=()=>location.pathname;exports.useRouter=()=>router;`,
     // Real createClient executes its missing-config branch in this credential-free
     // fixture. The SDK is a forbidden transport, not a fake authenticated session.
@@ -115,6 +117,11 @@ export function bundleIsolatedBrowserFixture(options: {
   const entry = path.join(root, options.entryPath);
   const react = require.resolve("react"), client = require.resolve("react-dom/client"), dom = require.resolve("react-dom");
   for (const id of [entry, react, client, dom]) add(id);
+  const additionalEntries = Object.fromEntries((options.additionalEntryPaths ?? []).map(relative => {
+    const id = path.resolve(root, relative);
+    assert.ok(id.startsWith(root), `Additional entry escaped repository: ${relative}`);
+    add(id); return [relative, id];
+  }));
   for (const required of options.requiredSources) assert.ok(sources.has(required), required);
   const definitions = [...modules].map(([id, mod]) => `${JSON.stringify(id)}:[function(module,exports,require){${mod.source}\n},${JSON.stringify(mod.imports)}]`).join(",");
   return { sources: [...sources].sort(), css: css.join("\n"), script: `
@@ -122,6 +129,7 @@ export function bundleIsolatedBrowserFixture(options: {
     function load(id){if(cache[id])return cache[id].exports;const definition=modules[id];if(!definition)throw Error('Missing bundled module');const module={exports:{}};cache[id]=module;definition[0](module,module.exports,name=>{if(!Object.hasOwn(definition[1],name))throw Error('Unmapped import '+name);return load(definition[1][name]);});return module.exports;}
     const React=load(${JSON.stringify(react)}),root=load(${JSON.stringify(client)}).createRoot(document.getElementById('root'));
     const flushSync=load(${JSON.stringify(dom)}).flushSync,loadEntry=()=>load(${JSON.stringify(entry)});
+    const additionalEntries=${JSON.stringify(additionalEntries)},loadAdditionalEntry=relative=>{if(!Object.hasOwn(additionalEntries,relative))throw Error('Unapproved additional entry');return load(additionalEntries[relative]);};
     ${options.mountScript}
   ` };
 }

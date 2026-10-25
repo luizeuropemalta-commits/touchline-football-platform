@@ -875,6 +875,9 @@ a, button { outline: none; }
   height: 100%;
   overflow: visible;
   color: var(--touchline-card-frame-color);
+  /* One restrained tier-coloured light for every shared player/coach card.
+     Glow only the perimeter, never the shirt, text or entire card bitmap. */
+  filter: drop-shadow(0 0 2px color-mix(in srgb, currentColor 32%, transparent));
   pointer-events: none;
   user-select: none;
 }
@@ -884,8 +887,9 @@ a, button { outline: none; }
   stroke: currentColor;
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-width: 1.35;
-  opacity: .34;
+  stroke-width: 1.2;
+  opacity: .24;
+  transition: opacity 240ms ease;
 }
 
 [data-touchline-card-neon-trace-run="true"] {
@@ -893,17 +897,63 @@ a, button { outline: none; }
   stroke: currentColor;
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-width: 3.1;
+  stroke-width: 2.2;
   stroke-dasharray: 16 84;
   stroke-dashoffset: 0;
-  opacity: .82;
+  opacity: .56;
+  transition: opacity 240ms ease;
   animation: touchline-card-perimeter-trace 3s linear infinite;
   animation-play-state: var(--touchline-decoration-motion, paused);
+}
+
+.touchline-card-surface:is(:hover, :focus-within, [data-neon-active="true"]) [data-touchline-card-neon-trace-base="true"] {
+  opacity: .4;
+}
+
+.touchline-card-surface:is(:hover, :focus-within, [data-neon-active="true"]) [data-touchline-card-neon-trace-run="true"] {
+  opacity: .68;
 }
 
 @keyframes touchline-card-perimeter-trace {
   from { stroke-dashoffset: 0; }
   to { stroke-dashoffset: -100; }
+}
+
+/* Product cards use the alpha silhouette of their original frame artwork.
+   The older geometric trace is not the irregular gem border: do not draw a
+   second polygon around it. Keep that geometry available only to fixtures. */
+.touchline-card-surface[data-card-motion="true"] [data-touchline-card-neon-trace="true"] {
+  display: none;
+}
+.touchline-card-surface[data-card-motion="true"] [data-touchline-card-neon-trace-run="true"] {
+  animation: none;
+}
+.touchline-card-surface[data-card-motion="true"]::before {
+  /* Outside the clipped/scaled 430px canvas: these are rendered CSS pixels.
+     Original field hover was 17px at .70; owner requested 15% less.
+     Reuse the exact transparent frame, not a rectangle or polygon. */
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  background-image: var(--touchline-card-neon-art, none);
+  background-position: center;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  transform: scale(var(--coach-art-scale, 1));
+  filter: drop-shadow(0 0 14.45px color-mix(in srgb, var(--touchline-card-frame-color) 59.5%, transparent));
+  opacity: 0;
+  transition: opacity 240ms ease;
+  pointer-events: none;
+}
+.touchline-card-surface[data-card-motion="true"]:is(:hover, :focus-within, [data-neon-active="true"])::before,
+[data-touchline-card-zoom="trigger"]:focus-visible .touchline-card-surface[data-card-motion="true"]::before {
+  opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .touchline-card-surface[data-card-motion="true"]::before {
+    transition: none;
+  }
 }
 
 [data-touchline-card-crest-host="true"] {
@@ -1001,13 +1051,15 @@ a, button { outline: none; }
   }
 
   [data-touchline-card-neon-trace-base="true"] {
-    stroke-width: 1.9;
-    opacity: .72;
+    stroke-width: 1.4;
+    opacity: .4;
+    transition: none;
   }
 
   [data-touchline-card-neon-trace-run="true"] {
     animation: none !important;
     opacity: 0 !important;
+    transition: none;
   }
 
 }

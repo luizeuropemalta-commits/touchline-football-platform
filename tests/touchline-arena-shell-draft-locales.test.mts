@@ -20,6 +20,8 @@ function render(locale: string, draftLocalesEnabled = false, isOwner = false, pa
     "next/navigation": { usePathname: () => pathname, useSearchParams: () => new URLSearchParams({ lang: locale }) },
     "lucide-react": Object.fromEntries(["Activity", "Bell", "CircleDollarSign", "Database", "Inbox", "Loader2", "LogOut", "Menu", "Search", "ShieldCheck", "Sparkles", "Trophy", "WalletCards", "X"].map(name => [name, empty])),
     "@/components/logo": { Logo: empty },
+    // Legacy callers have no verified accountId and must retain the old shell.
+    "@/components/touchline/TouchlineCustomerUtilityShell": { __esModule: true, default: () => { throw Error("Legacy fixture must not enter customer shell"); }, customerUtilityRoute: (path: string) => ["/notifications", "/inbox", "/football-search"].includes(path) ? "notifications" : null },
     "@/lib/supabase/client": { createClient: () => { throw Error("SSR must not authenticate or sign out"); } },
     "@/lib/touchlineArena/auth-i18n": auth,
     "@/lib/touchlineArena/i18n": { TOUCHLINE_LOCALE_STORAGE_KEY },

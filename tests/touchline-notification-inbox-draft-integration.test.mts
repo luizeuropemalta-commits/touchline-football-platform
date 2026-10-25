@@ -26,11 +26,13 @@ function evaluate<T>(source: string, dependencies: Record<string, unknown>): T {
   return exports as T;
 }
 const common = { react: React, "react/jsx-runtime": nativeRequire("react/jsx-runtime"),
+  "./TouchlineGlobalNavigation.module.css": { __esModule: true, default: { link: "canonical-navigation-link" } },
   "@/lib/touchlineArena/site-locales-release": { isTouchLineSiteLocalesEnabled: () => false },
   "@/lib/touchlineArena/catalogue-locale": { resolveTouchlineCatalogueLocale } };
 const list = evaluate<{ TouchlineInboxList: typeof TouchlineInboxList; visibleInboxEnum: (value: string, locale: string, draft?: boolean) => string }>(
   listSource + "\nexport { visibleInboxEnum };", common,
 );
+const rail = evaluate<{ default: React.ComponentType<{ className: string; children: React.ReactNode }> }>(read("components/touchline/TouchlineNavigationRail.tsx"), common);
 function fixture(mode: "ready" | "empty" | "unavailable" | "guest" = "ready") {
   let authReads = 0;
   const reads: string[] = [];
@@ -52,6 +54,9 @@ function fixture(mode: "ready" | "empty" | "unavailable" | "guest" = "ready") {
       "@/lib/supabase/server": { createClient: async () => ({ auth: { getUser: async () => { authReads++; return { data: { user: mode === "guest" ? null : { id: "account-1" } } }; } } }) },
       "@/lib/supabase/admin": { createAdminClient: () => mode === "unavailable" ? null : admin },
       "@/components/touchline/TouchlineInboxList": list,
+      "@/components/touchline/TouchlineNavigationRail": rail,
+      "@/components/touchline/TouchlineGlobalNavigation.module.css": { __esModule: true, default: { link: "canonical-navigation-link" } },
+      "./InboxContent.module.css": { __esModule: true, default: { inbox: "inbox", state: "state", listRail: "inbox-list-rail", canvas: "inbox-canvas", back: "back" } },
       "@/lib/touchlineArena/central-inbox": { resolveTouchlineCentralInbox },
     },
   );
@@ -72,10 +77,45 @@ test("real Inbox route and list render eight opt-in locales, literal editorial d
     assert.match(html, locale === "ar-SA" ? /dir="rtl"/ : /dir="ltr"/);
     assert.equal(f.authReads(), 1);
     assert.deepEqual(f.reads, ["touchline_central_messages", "touchline_central_inbox_receipts"]);
-    const linkText = html.match(/class="back"[^>]*>(.*?)<\/a>/)?.[1] ?? "";
+    const linkText = html.match(/class="canonical-navigation-link back"[^>]*>(.*?)<\/a>/)?.[1] ?? "";
     assert.ok(linkText.includes("ClubOwner"));
     const publicPage = fixture(); const publicHtml = await publicPage.render(locale);
     assert.ok(publicHtml.includes(`Canonical body ${locale === "pt-BR" ? "pt-BR" : "en-GB"}`));
+  }
+});
+
+test("Inbox presentation preserves side-by-side message/actions in a local real focus rail", async () => {
+  const f = fixture(); const html = await f.render("pt-BR", true);
+  assert.equal((html.match(/<main\b/g) ?? []).length, 1);
+  assert.equal((html.match(/class="inbox-list-rail"/g) ?? []).length, 1);
+  assert.equal((html.match(/class="inbox-canvas"/g) ?? []).length, 1);
+  assert.match(html, /<li><div>[\s\S]*<\/div><aside>/);
+  assert.match(html, /<button class="canonical-navigation-link" type="button"/);
+  assert.equal(f.authReads(), 1);
+  assert.deepEqual(f.reads, ["touchline_central_messages", "touchline_central_inbox_receipts"]);
+  const css = read("app/(app)/inbox/InboxContent.module.css");
+  assert.match(css, /\.listRail\s*\{[^}]*max-width:\s*100%;[^}]*overflow-x:\s*auto;/s);
+  assert.match(css, /\.canvas\s*\{[^}]*min-width:\s*760px;/s);
+  assert.match(css, /grid-template-columns:\s*minmax\(0, 1fr\) minmax\(200px, 240px\)/);
+  assert.match(css, /overflow-wrap:\s*anywhere/);
+  assert.doesNotMatch(css, /@media|text-overflow|zoom|transform/);
+  assert.doesNotMatch(inboxSource, /<style>|@media/);
+  assert.match(read("components/touchline/TouchlineGlobalNavigation.module.css"), /\.link,[\s\S]*?min-height:\s*44px;/);
+});
+
+test("both Inbox actions reuse canonical controls without changing or truncating message content", () => {
+  const title = "Long editorial title ".repeat(12), body = "UnbrokenCanonicalBody".repeat(40);
+  const labels = { read: "Read", unread: "Unread", open: "Open destination", markRead: "Mark as read", loading: "Loading", readFailed: "Read failed" };
+  for (const deepLink of [null, "/live?fixture=123#teamsheets"]) {
+    const html = renderToStaticMarkup(React.createElement(list.TouchlineInboxList, {
+      initialItems: [{ id: "synthetic", title, body, deepLink, category: "MAINTENANCE", lifecycleState: "ACTIVE", priority: "HIGH", readAt: null }],
+      locale: "en-GB", labels,
+    }));
+    assert.ok(html.includes(title)); assert.ok(html.includes(body));
+    assert.match(html, /<button class="canonical-navigation-link" type="button"/);
+    assert.ok(html.includes(deepLink ? labels.open : labels.markRead));
+    assert.equal((html.match(/<button\b/g) ?? []).length, 1);
+    assert.match(html, /aria-live="polite" role="status"/);
   }
 });
 

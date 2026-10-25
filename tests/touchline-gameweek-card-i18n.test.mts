@@ -18,6 +18,9 @@ import { TOUCHLINE_PRESEASON_RANKING_STATE } from "../lib/touchlineArena/card-ra
 
 type Props = Parameters<typeof import("../components/touchline/fantasy/TouchlineGameweekCard.tsx").default>[0];
 type ZoomProps = {
+  replacementAction?: Props["replacementAction"];
+  removalAction?: Props["removalAction"];
+  releaseAction?: Props["releaseAction"];
   locale: string; ariaLabel: string; socialProviderId: string; tierAccent: string;
   details: TouchlineCardZoomDetails;
   children: React.ReactElement<Record<string, unknown>>;
@@ -83,6 +86,23 @@ function fixture(reviewLocale?: typeof locales[number]) {
   };
 }
 const escape = (value: string) => value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
+
+test("real Gameweek card forwards one squad action and the independent contract release without invoking either", () => {
+  const view = fixture();
+  let calls = 0;
+  const replacementAction = { label: "Replace", disabled: true, onSelect: () => { calls++; } };
+  const removalAction = { label: "Remove", disabled: true, onSelect: () => { calls++; } };
+  const releaseAction = { label: "Release", disabled: true, onSelect: () => { calls++; } };
+  const unified = view.produce("en-GB", {}, { replacementAction, removalAction, releaseAction }).props;
+  assert.equal(unified.replacementAction, replacementAction);
+  assert.equal(unified.removalAction, undefined, "replacement already offers squad destinations");
+  assert.equal(unified.releaseAction, releaseAction, "contract release is a distinct guarded action");
+  const standalone = view.produce("pt-BR", {}, { removalAction, releaseAction }).props;
+  assert.equal(standalone.replacementAction, undefined);
+  assert.equal(standalone.removalAction, removalAction);
+  assert.equal(standalone.releaseAction, releaseAction);
+  assert.equal(calls, 0, "presentation never executes a roster or contract operation");
+});
 
 test("public season changes reach the real thumbnail, expanded card and detail total together; reviews stay pinned", () => {
   const view = fixture();
@@ -263,14 +283,29 @@ test("market value panel occupies visible card space at phone and desktop widths
 
 test("real conversion, profile URL, identity and all thumbnail/zoom layout props remain unchanged", () => {
   const view = fixture(), before = JSON.stringify(card), expectedPlayer = squadCardToExactPlayer(card);
-  for (const props of [{}, { compact: true }, { displayWidth: 119 }, { displayWidth: 120 }, { displayWidth: 116 }, { fitContainer: true }]) {
+  const cases = [
+    { props: {}, width: 132, fit: false, compactAsset: false },
+    { props: { compact: true }, width: 74, fit: false, compactAsset: true },
+    { props: { displayWidth: 119 }, width: 119, fit: false, compactAsset: true },
+    { props: { displayWidth: 120 }, width: 120, fit: false, compactAsset: false },
+    { props: { displayWidth: 116 }, width: 116, fit: false, compactAsset: true },
+    { props: { fitContainer: true }, width: 132, fit: true, compactAsset: false },
+    { props: { fitContainer: true, compact: true }, width: 74, fit: true, compactAsset: false },
+    { props: { fitContainer: true, displayWidth: 74 }, width: 74, fit: true, compactAsset: false },
+    { props: { fitContainer: true, displayWidth: 119 }, width: 119, fit: true, compactAsset: false },
+    { props: { fitContainer: true, displayWidth: 120 }, width: 120, fit: true, compactAsset: false },
+    { props: { fitContainer: false, compact: true }, width: 74, fit: false, compactAsset: true },
+    { props: { fitContainer: false, displayWidth: 119 }, width: 119, fit: false, compactAsset: true },
+  ];
+  for (const { props, width, fit, compactAsset } of cases) {
     const element = view.produce("pt-BR", {}, props), zoom = element.props, small = zoom.children.props, large = zoom.expandedContent.props;
-    const width = "displayWidth" in props ? props.displayWidth! : "compact" in props ? 74 : 132;
     assert.equal(zoom.locale, "pt-BR"); assert.equal(zoom.socialProviderId, "123"); assert.equal(zoom.tierAccent, "#ffd85e");
     assert.deepEqual(small.player, expectedPlayer); assert.deepEqual(large.player, expectedPlayer);
-    assert.equal(small.staticRenderScale, "fitContainer" in props ? undefined : width / 430);
-    assert.equal(small.optimizeForLiveCompact, width <= 119); assert.equal(large.staticRenderScale, 390 / 430);
-    for (const value of [small, large]) { assert.equal(value.runtimeLocaleOverride, "pt-BR"); assert.equal(value.subscribeToRanking, false); assert.equal(value.rankingMode, "preview"); assert.equal(value.forceNeonActive, true); }
+    assert.equal(small.staticRenderScale, fit ? undefined : width / 430);
+    assert.equal(small.optimizeForLiveCompact, compactAsset, `asset selection for ${JSON.stringify(props)}`); assert.equal(large.staticRenderScale, 390 / 430);
+    for (const value of [small, large]) { assert.equal(value.runtimeLocaleOverride, "pt-BR"); assert.equal(value.subscribeToRanking, false); assert.equal(value.rankingMode, "preview"); }
+    assert.equal(small.forceNeonActive, undefined, "compact cards light on hover instead of forcing every pitch card on");
+    assert.equal(large.forceNeonActive, true, "expanded card retains its spotlight");
     for (const key of ["enableInteractiveNeon", "showCardActions", "showProfileAction", "showSocialMetrics"]) assert.equal(small[key], false);
     assert.equal(large.playerProfileHref, zoom.details.profileHref);
     const url = new URL(zoom.details.profileHref!, "https://fixture.invalid");

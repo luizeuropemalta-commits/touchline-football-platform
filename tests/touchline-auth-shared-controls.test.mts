@@ -98,7 +98,7 @@ test("real auth layout composes one shared LTR group, preserving header, Arena l
         assert.match(html, /<main lang="ar-SA" dir="rtl"/);
         assert.match(html, /<div class="relative z-10" dir="rtl">/);
         assert.match(html, /<div dir="rtl" class="order-2 min-w-0 max-w-3xl xl:order-1">/);
-        assert.match(html, /<p dir="rtl" class="text-\[10px\] text-slate-500">/);
+        assert.doesNotMatch(html, /<p dir="rtl" class="text-\[10px\] text-slate-500">/, "copyright belongs to the shared site footer, not a duplicate auth footer");
         assert.match(html, /<div dir="rtl" class="hidden items-center gap-2 text-\[10px\] font-black text-slate-500 sm:flex">/);
         assert.match(html, /<div dir="rtl" class="relative z-10 mt-auto flex h-full flex-col justify-end">/);
       } else {

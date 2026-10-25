@@ -14,7 +14,32 @@ export const ALLOCATION_DIALOG_ROWS: Readonly<Record<TouchLineLocale, Strings<ty
   'tr-TR': ['Maç kadrosu dışına taşı', 'Oyuncuyu değiştir', 'İptal', 'Yalnızca kadrodaki yerler değişir. Sözleşmeler ve bakiye değişmez.', 'Kadro onayını bekleyin.', 'Değişikliği onayla', 'Yer değişikliğini onayla', 'Geri', 'Kadro değişti. Geri dönüp yeniden seçin.', 'Yedek kulübesi', 'Maç kadrosu dışında', 'Seç', 'Uyumlu oyuncu yok.', "İlk 11'e ekle", 'Kadro oyuncusu', 'Kadroya dön', 'Uyumlu bir pozisyon seçin. Sözleşmeler ve bakiye değişmez. Pozisyon doluysa oyuncular kadroda yer değiştirir.', 'Oynatılacağı pozisyon', 'Yerini alacağı oyuncu:', 'Yer değişikliği onaylansın mı?', 'Onayla', 'Bu dizilişte uyumlu pozisyon yok.', "Yedekler", "Kart kullanılamıyor", "Oyuncuyla sözleşme imzala", "Yer", "Değiştir", "Oyuncuyu değiştir", "Kadro onayı bekleniyor.", "Bu bölgede oyuncu yok.", "Atanmamış pozisyonlar"],
   'de-DE': ['Aus dem Spieltagskader nehmen', 'Spieler ersetzen', 'Abbrechen', 'Nur die Plätze im Kader ändern sich. Verträge und Guthaben bleiben unverändert.', 'Warte auf die Kaderbestätigung.', 'Änderung bestätigen', 'Platzwechsel bestätigen', 'Zurück', 'Der Kader hat sich geändert. Gehe zurück und wähle erneut.', 'Bank', 'Außerhalb des Spieltagskaders', 'Auswählen', 'Keine passenden Spieler.', 'Zur Startelf hinzufügen', 'Kaderspieler', 'Zurück zum Kader', 'Wähle eine passende Position. Verträge und Guthaben bleiben unverändert. Ist die Position besetzt, tauschen die Spieler ihre Plätze im Kader.', 'Aufstellen auf', 'anstelle von', 'Platzwechsel bestätigen?', 'Bestätigen', 'Keine passende Position in dieser Formation.', "Ersatzspieler", "Karte nicht verfügbar", "Spieler verpflichten", "Platz", "Ändern", "Spieler wechseln", "Kaderbestätigung ausstehend.", "Keine Spieler in diesem Bereich.", "Nicht zugewiesene Positionen"],
 };
-const catalogues = Object.fromEntries(Object.entries(ALLOCATION_DIALOG_ROWS).map(([locale, row]) => [locale, Object.fromEntries(ALLOCATION_DIALOG_KEYS.map((key, i) => [key, row[i]]))])) as Record<TouchLineLocale, Copy>;
+const substitutionCopy: Record<TouchLineLocale, Pick<Copy, 'swapInstruction' | 'confirmChange' | 'confirmSquadChange' | 'select'>> = {
+  'pt-BR': { swapInstruction: 'Escolha um jogador e revise os dois cards antes de confirmar. Apenas as posições no elenco mudam; contratos e saldo permanecem iguais.', confirmChange: 'Revisar substituição', confirmSquadChange: 'Confirmar substituição', select: 'Escolher jogador' },
+  'en-GB': { swapInstruction: 'Choose a player and review both cards before confirming. Only squad positions change; contracts and balance remain unchanged.', confirmChange: 'Review substitution', confirmSquadChange: 'Confirm substitution', select: 'Choose player' },
+  'es-ES': { swapInstruction: 'Elige un jugador y revisa ambas tarjetas antes de confirmar. Solo cambian las posiciones en la plantilla; los contratos y el saldo se mantienen.', confirmChange: 'Revisar sustitución', confirmSquadChange: 'Confirmar sustitución', select: 'Elegir jugador' },
+  'it-IT': { swapInstruction: 'Scegli un giocatore e controlla entrambe le carte prima di confermare. Cambiano solo le posizioni nella rosa; contratti e saldo restano invariati.', confirmChange: 'Rivedi sostituzione', confirmSquadChange: 'Conferma sostituzione', select: 'Scegli giocatore' },
+  'fr-FR': { swapInstruction: 'Choisissez un joueur et vérifiez les deux cartes avant de confirmer. Seules les positions dans l’effectif changent ; les contrats et le solde restent inchangés.', confirmChange: 'Vérifier le remplacement', confirmSquadChange: 'Confirmer le remplacement', select: 'Choisir un joueur' },
+  'ar-SA': { swapInstruction: 'اختر لاعبًا وراجع البطاقتين قبل التأكيد. تتغير مواقع اللاعبين في القائمة فقط، وتبقى العقود والرصيد دون تغيير.', confirmChange: 'مراجعة التبديل', confirmSquadChange: 'تأكيد التبديل', select: 'اختيار لاعب' },
+  'tr-TR': { swapInstruction: 'Bir oyuncu seçin ve onaylamadan önce iki kartı da inceleyin. Yalnızca kadrodaki yerler değişir; sözleşmeler ve bakiye aynı kalır.', confirmChange: 'Değişikliği incele', confirmSquadChange: 'Oyuncu değişikliğini onayla', select: 'Oyuncu seç' },
+  'de-DE': { swapInstruction: 'Wähle einen Spieler und prüfe beide Karten vor der Bestätigung. Nur die Positionen im Kader ändern sich; Verträge und Guthaben bleiben unverändert.', confirmChange: 'Wechsel prüfen', confirmSquadChange: 'Wechsel bestätigen', select: 'Spieler wählen' },
+};
+const catalogues = Object.fromEntries(Object.entries(ALLOCATION_DIALOG_ROWS).map(([locale, row]) => [locale, { ...Object.fromEntries(ALLOCATION_DIALOG_KEYS.map((key, i) => [key, row[i]])), ...substitutionCopy[locale as TouchLineLocale] }])) as Record<TouchLineLocale, Copy>;
 export function getAllocationDialogCopy(locale: string, draftLocalesEnabled = false): Copy {
   return catalogues[locale.startsWith('pt') ? 'pt-BR' : resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled)];
+}
+
+const swapLabels: Readonly<Record<TouchLineLocale, { starters: string; entering: string; leaving: string }>> = {
+  'en-GB': { starters: 'Starting XI', entering: 'In', leaving: 'Out' },
+  'pt-BR': { starters: 'Titulares', entering: 'Entra', leaving: 'Sai' },
+  'es-ES': { starters: 'Titulares', entering: 'Entra', leaving: 'Sale' },
+  'it-IT': { starters: 'Titolari', entering: 'Entra', leaving: 'Esce' },
+  'fr-FR': { starters: 'Titulaires', entering: 'Entre', leaving: 'Sort' },
+  'ar-SA': { starters: 'الأساسيون', entering: 'يدخل', leaving: 'يخرج' },
+  'tr-TR': { starters: 'İlk 11', entering: 'Giren', leaving: 'Çıkan' },
+  'de-DE': { starters: 'Startelf', entering: 'Ein', leaving: 'Aus' },
+};
+
+export function getAllocationSwapLabels(locale: string, draftLocalesEnabled = false) {
+  return swapLabels[locale.startsWith('pt') ? 'pt-BR' : resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled)];
 }

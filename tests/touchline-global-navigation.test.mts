@@ -77,7 +77,8 @@ test("Club Profile, Live and 404 use the shared public navigation without duplic
   assert.match(navigationStyles, /\.link:hover::after,[\s\S]*?\.arena:focus-visible::after \{[^}]*opacity: 1/);
   assert.match(navigationStyles, /\.link:focus-visible,[\s\S]*?\.arena:focus-visible \{[^}]*outline: 2px solid #efffd2[^}]*outline-offset: 3px/);
   assert.doesNotMatch(navigationStyles, /box-shadow: 0 0 10px rgba\(185, 255, 86, \.5\), 0 0 24px rgba\(185, 255, 86, \.18\)/);
-  assert.match(navigationStyles, /@media \(max-width: 620px\)[\s\S]*?\.more \{ display: block/);
+  assert.match(navigationStyles, /@media \(max-width: 620px\)[\s\S]*?\.more \{ display: none/);
+  assert.match(navigationStyles, /\.desktopOnly \{ display: inline-flex/);
   assert.match(player, /<TouchlineGlobalNavigation[\s\S]*?currentRoute="playerProfile"[\s\S]*?surface=\{navigationSurface\}/);
   assert.match(tables, /<TouchlineGlobalNavigation[\s\S]*?currentRoute="rankings"[\s\S]*?surface=\{navigationSurface\}/);
   assert.match(rankings, /<TouchlineGlobalNavigation[\s\S]*?currentRoute="rankings"[\s\S]*?surface=\{resolveTouchlineGlobalNavigationSurface\(/);

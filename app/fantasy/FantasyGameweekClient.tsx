@@ -5,7 +5,7 @@ import { getAllocationDialogCopy } from "@/lib/touchlineFantasy/allocation-dialo
 import { formatTouchlineFantasyStandaloneAlert, getTouchlineFantasyStandaloneBuilderCopy } from "@/lib/touchlineFantasy/standalone-builder-i18n";
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useEffectEvent, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useEffectEvent, useMemo, useRef, useState, type ComponentProps, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { BadgeCheck, CalendarClock, Check, ChevronRight, CircleAlert, Crown, House, LockKeyhole, PlaneTakeoff, Save, Search, Send, ShieldCheck, TimerReset, Trophy, Users, WalletCards } from "lucide-react";
 
@@ -20,10 +20,13 @@ import { clubPrimaryPositionIndex } from "@/lib/touchlineFantasy/club-primary-po
 import { primaryPositionFitsTacticalSlot } from "@/lib/touchlineFantasy/club-primary-position-policy";
 import { useClubCollection } from "@/components/touchline/fantasy/useClubCollection";
 import ClubOwnerBudgetCalculator from "@/components/touchline/fantasy/ClubOwnerBudgetCalculator";
+import ClubOwnerTechnicalRail from "@/components/touchline/fantasy/ClubOwnerTechnicalRail";
 import ClubOwnerValueSummary from "@/components/touchline/fantasy/ClubOwnerValueSummary";
 import financeStyles from "@/components/touchline/fantasy/ClubOwnerFinance.module.css";
 import type { ClubCollectionReadResult } from "@/lib/touchlineFantasy/club-collection-read-server";
 import { ClubOwnerReleaseDialog } from "@/components/touchline/fantasy/ClubOwnerReleaseDialog";
+import { ClubOwnerCoachReleaseDialog } from "@/components/touchline/fantasy/ClubOwnerCoachReleaseDialog";
+import { getCoachReleaseReviewCopy } from "@/lib/touchlineFantasy/coach-release-review-i18n";
 import { clubStarterSelections, type ClubAllocationCommand } from "@/lib/touchlineFantasy/club-allocation";
 import { canChooseGuidedSlot, nextGuidedChoice } from "@/lib/touchlineFantasy/next-guided-choice";
 import { resolveCoachSigningPricePresentation } from "@/lib/touchlineArena/coach-signing-price-i18n";
@@ -38,8 +41,9 @@ import TouchlineEliteExactCard from "@/components/touchline/cards/TouchlineElite
 import { squadCardToExactPlayer } from "@/lib/touchlineArena/demo-data";
 import { getTouchlineBetaEnrollmentCopy } from "@/lib/touchlineFantasy/beta-enrollment-i18n";
 import ClubOwnerPlanShowcase from "@/components/touchline/ClubOwnerPlanShowcase";
-import TouchlineMatchCentre from "@/components/touchline/match-centre/TouchlineMatchCentre";
+import ClubHubFixtureStrip from "@/components/touchline/ClubHubFixtureStrip";
 import type { TouchlinePublicFixture } from "@/lib/football-data/public-fixture";
+import type { TouchlineLiveReadMetadata } from "@/lib/touchlineArena/match-centre";
 import TouchlineMatchCardBadge from "@/components/touchline/cards/TouchlineMatchCardBadge";
 import TouchlinePlayerAvailabilityBadge from "@/components/touchline/cards/TouchlinePlayerAvailabilityBadge";
 import TouchlineClubPerimeterTrace from "@/components/touchline/TouchlineClubPerimeterTrace";
@@ -52,7 +56,7 @@ import { touchlineMarketPositionBucket, touchlineMarketPositionBucketLabel, type
 import { localizedPositionLabel } from "@/lib/touchlineArena/position-labels";
 import { assignTouchlineFantasyPlayerToFirstSlot, formatTouchlineFantasyDeadline, formatTouchlineFantasyMarketValue, removeTouchlineFantasyPlayerFromSlot, replaceTouchlineFantasyPlayerAtSlot, resolveTouchlineFantasyBuilderStep, resolveTouchlineFantasyMarketClock, touchlineFantasySlotAcceptsPlayer, validateTouchlineFantasyLineup, type TouchlineFantasyBuilderStep, type TouchlineFantasyEligiblePlayer, type TouchlineFantasySelection } from "@/lib/touchlineFantasy/domain";
 import type { TouchlineFantasyCoachView, TouchlineFantasySnapshot } from "@/lib/touchlineFantasy/server";
-import { TOUCHLINE_FANTASY_BROWSE_POSITIONS, resolveTouchlineFantasyBrowseSlot, touchlineFantasyPitchCardWidth } from "@/lib/touchlineFantasy/market-browser";
+import { TOUCHLINE_FANTASY_BROWSE_POSITIONS, resolveTouchlineFantasyBrowseSlot, touchlineFantasyPitchCardWidth, touchlineFantasyTechnicalCardWidth } from "@/lib/touchlineFantasy/market-browser";
 import { getTouchlineFantasyMarketStateCopy, touchlineFantasyLineupErrorCopy, touchlineFantasyStatusCopy, touchlineFantasyStepLabel } from "@/lib/touchlineFantasy/market-state-i18n";
 import { formatTouchlineFantasyClockUnit, getTouchlineFantasyMarketClockCopy } from "@/lib/touchlineFantasy/market-clock-i18n";
 import { getTouchlineFantasyMarketAccessCopy, getTouchlineFantasyMarketPlanLockCopy } from "@/lib/touchlineFantasy/market-access-i18n";
@@ -250,7 +254,7 @@ function CompactClubSelector({ selectedTeamId, onSelect, locale, draftLocalesEna
     })}
   </div>;
 }
-function FantasyCoachZoom({ entry, locale, eager = false, draftLocalesEnabled = false }: { entry: TouchlineFantasyCoachView; locale: string; eager?: boolean; draftLocalesEnabled?: boolean }) {
+function FantasyCoachZoom({ entry, locale, eager = false, draftLocalesEnabled = false, releaseAction }: { entry: TouchlineFantasyCoachView; locale: string; eager?: boolean; draftLocalesEnabled?: boolean; releaseAction?: ComponentProps<typeof TouchlineCoachCardZoom>["releaseAction"] }) {
   return <TouchlineCoachCardZoom
     coach={entry.coach}
     slot={entry.slot}
@@ -260,6 +264,7 @@ function FantasyCoachZoom({ entry, locale, eager = false, draftLocalesEnabled = 
     locale={locale}
     draftLocalesEnabled={draftLocalesEnabled}
     contract={null}
+    releaseAction={releaseAction}
     competition={entry.competition}
     liveCompetitionUpdates
     acquisitionPrice={{
@@ -313,7 +318,8 @@ export default function FantasyGameweekClient({
   draftLocalesEnabled = false,
   initialPlayerClubTeamId,
   liveTimeZone = "UTC",
-  initialLiveFixtures = [],
+  initialLiveFixtures,
+  initialLiveMetadata = { state: "partial-persisted-schedule", degraded: true },
   initialLiveNow = 0,
   clubOwner,
   initialCollectionRead,
@@ -322,8 +328,9 @@ export default function FantasyGameweekClient({
   initialCollectionRead?: ClubCollectionReadResult | null;
   locale: string;
   liveTimeZone?: string;
-  /** Server-rendered canonical schedule for the embedded Live rail. */
-  initialLiveFixtures?: TouchlinePublicFixture[];
+  /** Canonical schedule; null/undefined means unavailable, [] means an empty read. */
+  initialLiveFixtures?: TouchlinePublicFixture[] | null;
+  initialLiveMetadata?: TouchlineLiveReadMetadata | null;
   initialLiveNow?: number;
   /** The ClubOwner page owns the outer identity/navigation shell. */
   embedded?: boolean;
@@ -352,6 +359,7 @@ export default function FantasyGameweekClient({
   const [placementPlayerId, setPlacementPlayerId] = useState<string | null>(null);
   const [squadSwap, setSquadSwap] = useState<{ playerId: string; outsideOnly: boolean } | null>(null);
   const [releasePlayerId, setReleasePlayerId] = useState<string | null>(null);
+  const [coachReleaseReview, setCoachReleaseReview] = useState<{ id: string; accountId: string; seasonId: string } | null>(null);
   const [live, setLive] = useState<LiveState | null>(initialSnapshot);
   const [selectedCoachId, setSelectedCoachId] = useState<string | null>(initialSnapshot?.userGameweek?.selectedCoachId ?? null);
   const [formationCode, setFormationCode] = useState<string | null>(initialSnapshot?.userGameweek?.formationCode ?? null);
@@ -434,7 +442,7 @@ export default function FantasyGameweekClient({
   function applyCollectionSnapshot(owned: ClubAcquisitionState | null, open = marketOpen) {
     if(!collectionEnabled||!owned||!open)return;
     const projectionError = getClubCollectionBudgetCopy(locale, draftLocalesEnabled).savedFormationUnverified;
-    setSelectedCoachId(owned.coach.id);
+    setSelectedCoachId(owned.coach?.id ?? null);
     const shape=owned.formationCode?snapshot?.formationRegistry[owned.formationCode]:null;
     if (!shape) {
       // A missing registry entry is not a confirmed empty formation. Preserve
@@ -489,6 +497,20 @@ export default function FantasyGameweekClient({
   const lineupConfirmed = persistedUserGameweek?.state === "CONFIRMED" && !hasUnsavedChanges;
   const canonicalStep = resolveTouchlineFantasyBuilderStep({ editable, selectedCoachId, formationCode, selectedCount: selections.length, lineupValid: validation?.valid === true });
   const selectedCoach = snapshot?.coaches.find((entry) => entry.id === selectedCoachId) ?? null;
+  // Review is bound to the confirmed paid contract, never a catalogue selection.
+  // No command, wallet update or signing request is issued by this action.
+  const coachReleaseAction = collectionEnabled && marketPage && collection.ready
+    && collection.state?.plan !== "beta" && selectedCoach
+    && collection.state?.coach?.id === selectedCoach.id
+    ? {
+      label: getCoachReleaseReviewCopy(locale).releaseLabel,
+      disabled: !editable || saving || !collectionSlotsEditable,
+      onSelect: () => {
+        if (editable && !saving && collectionSlotsEditable && snapshot?.userId && collection.state) {
+          setCoachReleaseReview({ id: selectedCoach.id, accountId: snapshot.userId, seasonId: collection.state.seasonId });
+        }
+      },
+    } : undefined;
   // A complete XI must still expose a usable replacement market. Keep a real
   // position active whenever the chosen formation has slots.
   const activeSlot = geometry?.slots.find((slot) => slot.id === activeSlotId)
@@ -514,8 +536,8 @@ export default function FantasyGameweekClient({
     const resize = () => {
       const fieldWidth = touchlineFantasyPitchCardWidth(displayGeometry.slots, pitch.offsetWidth, pitch.offsetHeight, arenaOpen ? { labelHeight: editable ? 18 : 30, gap: 6 } : undefined);
       // Two equal wings reserve room for five cards each, even on the four-card side.
-      const technicalWidth = Math.floor(((pitchViewportRef.current?.clientWidth ?? pitch.offsetWidth) - 48) / 11.1);
-      setPitchCardWidth(showCollectionStructure && !arenaOpen ? Math.min(fieldWidth, Math.max(44, technicalWidth)) : fieldWidth);
+      const technicalWidth = touchlineFantasyTechnicalCardWidth(pitchViewportRef.current?.clientWidth ?? pitch.offsetWidth);
+      setPitchCardWidth(showCollectionStructure && !arenaOpen ? Math.min(fieldWidth, technicalWidth) : fieldWidth);
     };
     resize();
     const observer = new ResizeObserver(resize);
@@ -751,7 +773,9 @@ export default function FantasyGameweekClient({
   });
   const filteredCoaches = snapshot.coaches.filter((entry) => findTouchLineClub(entry.clubName)?.teamId === selectedCoachClub?.teamId
     && (!normalizedQuery || `${entry.coach.displayName} ${entry.clubName}`.toLowerCase().includes(normalizedQuery))
-    && (!collectionEnabled || !collection.state || entry.id === collection.state.coach.id));
+    // A confirmed vacancy must not fall through to the legacy checkout. The
+    // collection's dedicated coach command is required before offering a hire.
+    && (!collectionEnabled || !collection.state || entry.id === collection.state.coach?.id));
   // The review catalogue stays available when closed, including cards already
   // in the XI. Browsing never calls the lineup mutation functions.
   const browseCards = snapshot.catalogue.filter((card) => (
@@ -925,6 +949,14 @@ export default function FantasyGameweekClient({
         onClick={collection.retryPending}>{collectionBudgetCopy.confirmPendingOperation}</button> : null}
       {collectionEnabled && collection.state ? <output>{collectionBudgetCopy.squadBalance}: {new Intl.NumberFormat(locale).format(collection.state.balanceEur)} TC
         {collection.state.balanceEur<=1_000_000?<span role="status"> · {collectionBudgetCopy.lowBalance}</span>:null}</output>:null}
+      {coachReleaseAction && !coachReleaseAction.disabled && coachReleaseReview
+        && coachReleaseReview.accountId === snapshot.userId
+        && coachReleaseReview.seasonId === collection.state?.seasonId
+        && selectedCoach?.id === coachReleaseReview.id
+        && collection.state?.coach?.id === coachReleaseReview.id ? <ClubOwnerCoachReleaseDialog
+          key={`${coachReleaseReview.accountId}:${coachReleaseReview.seasonId}:${coachReleaseReview.id}`}
+          state={collection.state} coachName={selectedCoach.coach.displayName}
+          locale={locale} onClose={() => setCoachReleaseReview(null)} /> : null}
       {collectionEnabled && releasePlayerId && collection.state?.players.some(player => player.playerId === releasePlayerId) ? <ClubOwnerReleaseDialog
         key={releasePlayerId} state={collection.state} playerId={releasePlayerId}
         card={snapshot.catalogue.find(card => (card.canonicalPlayerId ?? card.id) === releasePlayerId)}
@@ -975,7 +1007,7 @@ export default function FantasyGameweekClient({
         <header><span>{workflowCopy.step2}</span><h2>{workflowCopy.chooseFormation}</h2><p>{workflowCopy.formationInstruction}</p></header>
         <div className={styles.myClubFieldCoach} aria-label={workflowCopy.technicalArea}>
           {selectedCoach ?
-          <div className={styles.technicalCoachCard} style={{ width: pitchCardWidth }}><FantasyCoachZoom entry={selectedCoach} locale={locale} draftLocalesEnabled={draftLocalesEnabled} eager /><span>{workflowCopy.coach}</span></div>
+          <div className={styles.technicalCoachCard} style={{ width: pitchCardWidth * 1.3 }}><FantasyCoachZoom entry={selectedCoach} locale={locale} draftLocalesEnabled={draftLocalesEnabled} eager /><span>{workflowCopy.coach}</span></div>
           : null}
           {formationPicker}
         </div>
@@ -995,23 +1027,28 @@ export default function FantasyGameweekClient({
           {arenaOpen || marketPage ? null : squadHeader}
           {<>
             <div className={styles.arenaBody}>
+            <div className={styles.arenaLiveRail} data-clubowner-live-position="above-reserves">
+              <ClubHubFixtureStrip initialFixtures={initialLiveFixtures} initialNow={initialLiveNow} initialTimeZone={liveTimeZone} locale={resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled)} draftLocalesEnabled={draftLocalesEnabled} initialMetadata={initialLiveMetadata} />
+            </div>
             <div className={styles.myClubPitchViewport} ref={pitchViewportRef}>
-              {!arenaOpen && (selectedCoach || marketPage) ? <div className={`${styles.myClubFieldCoach} ${showCollectionStructure ? collectionLayout.technicalRow : ""}`} aria-label={workflowCopy.technicalArea}>
+              {!arenaOpen && (selectedCoach || marketPage) ? <ClubOwnerTechnicalRail enabled={showCollectionStructure} cardWidth={pitchCardWidth} label={workflowCopy.technicalArea}>
+              <div className={`${styles.myClubFieldCoach} ${showCollectionStructure ? collectionLayout.technicalRow : ""}`} aria-label={workflowCopy.technicalArea}>
                 {showCollectionStructure ? <ClubOwnerCollectionSlots liveSeasonRating state={collection.state} catalogue={snapshot.catalogue} draftLocalesEnabled={draftLocalesEnabled}
                   slotPositions={CLUB_RESERVE_POSITIONS}
                   area="reserves" start={0} count={4} locale={locale} displayWidth={pitchCardWidth} guidedSlot={guidedChoice?.area === "reserves" ? guidedChoice.slot : undefined} enabled={editable && collectionSlotsEditable} onChoose={chooseCollectionPlace} onFieldPlayer={playerId => setSquadSwap({ playerId, outsideOnly: false })} onOutsidePlayer={playerId => setSquadSwap({ playerId, outsideOnly: true })} onReleasePlayer={setReleasePlayerId} /> : null}
-                <div className={styles.technicalCoachCard} style={{ width: pitchCardWidth * (marketPage ? 1.1 : 1) }}>{selectedCoach ? <FantasyCoachZoom entry={selectedCoach} locale={locale} draftLocalesEnabled={draftLocalesEnabled} eager /> : <button type="button" className={styles.emptyPosition} data-collection-placeholder="true" data-guided-action={editable && !saving && (!collectionEnabled || collection.canInitialize) ? "true" : undefined} disabled={!editable || saving || (collectionEnabled && !collection.canInitialize)} aria-label={workflowCopy.chooseCoach} aria-controls="my-club-player-selection" onClick={() => scrollToLineupSection("my-club-player-selection")}>+</button>}<span>{workflowCopy.coach}</span></div>
+                <div className={styles.technicalCoachCard} data-technical-coach="true" style={{ width: pitchCardWidth * 1.3 }}>{selectedCoach ? <FantasyCoachZoom entry={selectedCoach} locale={locale} draftLocalesEnabled={draftLocalesEnabled} releaseAction={coachReleaseAction} eager /> : <button type="button" className={styles.emptyPosition} data-collection-placeholder="true" data-guided-action={editable && !saving && (!collectionEnabled || collection.canInitialize) ? "true" : undefined} disabled={!editable || saving || (collectionEnabled && !collection.canInitialize)} aria-label={workflowCopy.chooseCoach} aria-controls="my-club-player-selection" onClick={() => scrollToLineupSection("my-club-player-selection")}>+</button>}<span>{workflowCopy.coach}</span></div>
                 {showCollectionStructure ? <ClubOwnerCollectionSlots liveSeasonRating state={collection.state} catalogue={snapshot.catalogue} draftLocalesEnabled={draftLocalesEnabled}
                   slotPositions={CLUB_RESERVE_POSITIONS}
                   area="reserves" start={4} count={5} locale={locale} displayWidth={pitchCardWidth} guidedSlot={guidedChoice?.area === "reserves" ? guidedChoice.slot : undefined} enabled={editable && collectionSlotsEditable} onChoose={chooseCollectionPlace} onFieldPlayer={playerId => setSquadSwap({ playerId, outsideOnly: false })} onOutsidePlayer={playerId => setSquadSwap({ playerId, outsideOnly: true })} onReleasePlayer={setReleasePlayerId} /> : null}
-                {!marketPage ? formationPicker : null}
-              </div> : null}
-              {!arenaOpen && (selectedCoach || marketPage) ? <div className={`${styles.myClubTechnicalLine} ${showCollectionStructure ? collectionLayout.technicalLine : ""}`} aria-label={workflowCopy.technicalArea}>
+                {!marketPage && !showCollectionStructure ? formationPicker : null}
+              </div>
+              <div className={`${styles.myClubTechnicalLine} ${showCollectionStructure ? collectionLayout.technicalLine : ""}`} aria-label={workflowCopy.technicalArea}>
                 <span>{workflowCopy.technicalArea}</span>
-              </div> : null}
+              </div>
+              </ClubOwnerTechnicalRail> : null}
+              {!arenaOpen && showCollectionStructure && !marketPage ? formationPicker : null}
               {marketPage && !arenaOpen ? squadHeader : null}
-              <TouchlinePitchSurface className={styles.myClubTacticalPitch} ariaLabel={workflowCopy.pitchAria} orientation="horizontal" surfaceVariant="smoked-glass">
-                {arenaOpen ? <>
+              {arenaOpen ? <div className={styles.arenaToolbar} data-arena-toolbar="true">
                   <div className={styles.arenaFormationControl} data-arena-formation="true">
                     {formationPicker}
                   </div>
@@ -1023,10 +1060,11 @@ export default function FantasyGameweekClient({
                     </output>
                   </div>
                   {selectedCoach ? <div className={styles.arenaCoach} data-arena-coach="true" aria-label={workflowCopy.technicalArea}>
-                    <div style={{ width: pitchCardWidth }}><FantasyCoachZoom entry={selectedCoach} locale={locale} draftLocalesEnabled={draftLocalesEnabled} eager /></div>
+                    <div style={{ width: pitchCardWidth }}><FantasyCoachZoom entry={selectedCoach} locale={locale} draftLocalesEnabled={draftLocalesEnabled} releaseAction={coachReleaseAction} eager /></div>
                     <span>{workflowCopy.coach}</span>
                   </div> : null}
-                </> : null}
+              </div> : null}
+              <TouchlinePitchSurface className={styles.myClubTacticalPitch} ariaLabel={workflowCopy.pitchAria} orientation="horizontal" surfaceVariant="smoked-glass">
                 {selectedCards.map(({ slot, selection }) => {
                 const card = selection ? catalogueById.get(selection.playerId) : null;
                 const availability = selection ? currentAvailability.filter((entry) => entry.playerId === selection.playerId) : [];
@@ -1050,14 +1088,11 @@ export default function FantasyGameweekClient({
                 <ClubOwnerCollectionSlots liveSeasonRating state={collection.state} catalogue={snapshot.catalogue} draftLocalesEnabled={draftLocalesEnabled} area="outside" count={15} grouped
                   slotPositions={collectionPlan?.outside}
                   guidedSlot={guidedChoice?.area === "outside" ? guidedChoice.slot : undefined}
-                  locale={locale} displayWidth={Math.max(70, pitchCardWidth)} enabled={editable && collectionSlotsEditable} onChoose={chooseCollectionPlace} onFieldPlayer={setPlacementPlayerId} onReleasePlayer={setReleasePlayerId} />
+                  locale={locale} displayWidth={Math.max(70, pitchCardWidth)} enabled={editable && collectionSlotsEditable} onChoose={chooseCollectionPlace} onFieldPlayer={playerId => setSquadSwap({ playerId, outsideOnly: false })} onReleasePlayer={setReleasePlayerId} />
                 <p>{collectionBudgetCopy.outsideSlotsExchangeNotice}</p>
                 </ClubOwnerNegotiationRoom>
               </section> : null}
             </div>
-            {(arenaOpen || marketPage) ? <div className={styles.arenaLiveRail}>
-              <TouchlineMatchCentre railOnly hideRecentResults={marketPage} initialFixtures={initialLiveFixtures} initialNow={initialLiveNow} initialTimeZone={liveTimeZone} initialLocale={resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled)} draftLocalesEnabled={draftLocalesEnabled} initialReadMetadata={{ state: "partial-persisted-schedule", degraded: true }} />
-            </div> : null}
             </div>
             <nav className={styles.myClubMobileSlotNav} aria-label={workflowCopy.browsePosition}>
               {selectedCards.map(({ slot, selection }) => {

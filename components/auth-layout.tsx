@@ -108,7 +108,6 @@ export function AuthLayout({
           {planGallery ? <div dir="ltr">{planGallery}</div> : null}
 
           <footer className="flex shrink-0 items-center justify-between gap-3">
-            <p dir={keepLoginLayoutStable && normalizedLocale === "ar-SA" ? "rtl" : undefined} className="text-[10px] text-slate-500">{copy.rights}</p>
             <div dir={keepLoginLayoutStable && normalizedLocale === "ar-SA" ? "rtl" : undefined} className="hidden items-center gap-2 text-[10px] font-black text-slate-500 sm:flex"><Radio size={12} className="text-[#a3ff12]"/> {copy.marketOnline}</div>
           </footer>
         </div>

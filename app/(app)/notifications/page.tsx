@@ -1,5 +1,8 @@
 "use client";
 import { useSiteLocaleRelease } from "@/components/touchline/SiteLocaleReleaseContext";
+import TouchlineNavigationRail from "@/components/touchline/TouchlineNavigationRail";
+import navigationStyles from "@/components/touchline/TouchlineGlobalNavigation.module.css";
+import styles from "./NotificationsContent.module.css";
 
 import {
   Bell,
@@ -115,7 +118,7 @@ function PanelHeading({
   return (
     <div className="flex items-start justify-between gap-3 border-b border-white/[.07] px-5 py-4">
       <div>
-        <p className="text-[8px] font-black uppercase tracking-[.18em] text-[#a3ff12]">{kicker}</p>
+        <p className="text-xs font-black uppercase tracking-[.18em] text-[#a3ff12]">{kicker}</p>
         <h2 className="mt-1 text-lg font-black text-white">{title}</h2>
       </div>
       <span className="grid size-9 place-items-center rounded-xl border border-cyan-300/15 bg-cyan-300/[.055] text-cyan-200">
@@ -323,17 +326,19 @@ function NotificationsContent({ draftLocalesEnabled = false }: { draftLocalesEna
   }
 
   return (
-    <div dir={locale === "ar-SA" ? "rtl" : "ltr"} className="mx-auto max-w-[1500px]">
+    <div dir={locale === "ar-SA" ? "rtl" : "ltr"} className="mx-auto min-w-0 w-full max-w-[1500px]">
+      <TouchlineNavigationRail className={styles.contentRail}>
+      <div className={styles.canvas}>
       <header className="mb-6">
         <div className="flex items-center gap-2">
-          <span className="rounded-full border border-[#a3ff12]/25 bg-[#a3ff12]/[.08] px-3 py-1.5 text-[8px] font-black uppercase tracking-[.18em] text-[#caff72]">
+          <span className="rounded-full border border-[#a3ff12]/25 bg-[#a3ff12]/[.08] px-3 py-1.5 text-xs font-black uppercase tracking-[.18em] text-[#caff72]">
             {copy.preferences}
           </span>
-          <span className="text-[8px] font-bold uppercase tracking-[.14em] text-slate-600">
+          <span className="text-xs font-bold uppercase tracking-[.14em] text-slate-600">
             {copy.consentFirst}
           </span>
         </div>
-        <h1 className="mt-4 text-3xl font-black italic text-white sm:text-[42px]">
+        <h1 className="mt-4 text-[42px] font-black italic text-white">
           {copy.title}
         </h1>
         <p className="mt-2 max-w-3xl text-xs leading-6 text-slate-500">
@@ -341,31 +346,31 @@ function NotificationsContent({ draftLocalesEnabled = false }: { draftLocalesEna
         </p>
       </header>
 
-      <div className="mb-5 grid gap-3 sm:grid-cols-3">
+      <div className={`mb-5 grid gap-3 ${styles.stats}`}>
         <div className="rounded-2xl border border-white/[.08] bg-white/[.025] p-4">
           <Bell size={16} className="text-cyan-200" />
-          <p className="mt-3 text-[8px] font-black uppercase tracking-[.15em] text-slate-600">{copy.categories}</p>
+          <p className="mt-3 text-xs font-black uppercase tracking-[.15em] text-slate-600">{copy.categories}</p>
           <p className="mt-1 text-2xl font-black text-white">{categories.length}</p>
         </div>
         <div className="rounded-2xl border border-white/[.08] bg-white/[.025] p-4">
           <ShieldCheck size={16} className="text-[#a3ff12]" />
-          <p className="mt-3 text-[8px] font-black uppercase tracking-[.15em] text-slate-600">{copy.consent}</p>
+          <p className="mt-3 text-xs font-black uppercase tracking-[.15em] text-slate-600">{copy.consent}</p>
           <p className="mt-1 text-2xl font-black text-white" aria-live="polite">{consentLabel}</p>
           <p className="mt-2 text-xs leading-6 text-slate-500">{copy.consentNotice}</p>
         </div>
         <div className="rounded-2xl border border-white/[.08] bg-white/[.025] p-4">
           <CheckCircle2 size={16} className="text-amber-200" />
-          <p className="mt-3 text-[8px] font-black uppercase tracking-[.15em] text-slate-600">{copy.status}</p>
-          <p className="mt-1 truncate text-sm font-black text-white" aria-live="polite">
+          <p className="mt-3 text-xs font-black uppercase tracking-[.15em] text-slate-600">{copy.status}</p>
+          <p className="mt-1 text-sm font-black text-white" aria-live="polite">
             {loading ? copy.loading : message}
           </p>
         </div>
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[1.1fr_.9fr]">
+      <div className={`grid gap-5 ${styles.panels}`}>
         <Panel>
           <PanelHeading kicker={copy.consentCenter} title={copy.notificationCategories} icon={Bell} />
-          <div className="grid gap-3 p-5 md:grid-cols-2">
+          <div className={`grid gap-3 p-5 ${styles.categories}`}>
             {categories.map((category) => (
               <label
                 key={category.key}
@@ -378,8 +383,8 @@ function NotificationsContent({ draftLocalesEnabled = false }: { draftLocalesEna
                   className="mt-1 size-4 accent-[#a3ff12]"
                 />
                 <span>
-                  <span className="block text-[10px] font-black text-white">{category.title}</span>
-                  <span className="mt-1 block text-[9px] leading-5 text-slate-500">{category.body}</span>
+                  <span className="block text-xs font-black text-white">{category.title}</span>
+                  <span className="mt-1 block text-xs leading-5 text-slate-500">{category.body}</span>
                 </span>
               </label>
             ))}
@@ -399,8 +404,8 @@ function NotificationsContent({ draftLocalesEnabled = false }: { draftLocalesEna
                     <Icon size={16} aria-hidden="true" />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[10px] font-black text-white">{title}</span>
-                    <span className="mt-1 block text-[9px] leading-5 text-slate-500">{body}</span>
+                    <span className="block text-xs font-black text-white">{title}</span>
+                    <span className="mt-1 block text-xs leading-5 text-slate-500">{body}</span>
                   </span>
                   <input
                     type="checkbox"
@@ -410,7 +415,7 @@ function NotificationsContent({ draftLocalesEnabled = false }: { draftLocalesEna
                   />
                 </label>
               ))}
-              <p className="rounded-2xl border border-amber-300/15 bg-amber-300/[.055] p-3 text-[10px] leading-5 text-amber-100/80">
+              <p className="rounded-2xl border border-amber-300/15 bg-amber-300/[.055] p-3 text-xs leading-5 text-amber-100/80">
                 {copy.pushNotice}
               </p>
             </div>
@@ -419,7 +424,7 @@ function NotificationsContent({ draftLocalesEnabled = false }: { draftLocalesEna
           <Panel>
             <PanelHeading kicker={copy.frequency} title={copy.quietTime} icon={Clock3} />
             <div className="grid gap-3 p-5">
-              <label className="grid gap-2 text-[8px] font-black uppercase tracking-[.12em] text-slate-500">
+              <label className="grid gap-2 text-xs font-black uppercase tracking-[.12em] text-slate-500">
                 {copy.deliveryFrequency}
                 <select
                   value={preferences.frequency}
@@ -436,7 +441,7 @@ function NotificationsContent({ draftLocalesEnabled = false }: { draftLocalesEna
                 </select>
               </label>
 
-              <label className="flex items-center gap-3 rounded-2xl border border-white/[.07] bg-black/20 p-4 text-[10px] font-black text-white">
+              <label className="flex items-center gap-3 rounded-2xl border border-white/[.07] bg-black/20 p-4 text-xs font-black text-white">
                 <input
                   type="checkbox"
                   checked={preferences.quietHours.enabled}
@@ -449,7 +454,7 @@ function NotificationsContent({ draftLocalesEnabled = false }: { draftLocalesEna
                 {copy.quietEnabled}
               </label>
 
-              <div className="grid gap-3 sm:grid-cols-3">
+              <div className={`grid gap-3 ${styles.quietHours}`}>
                 <input
                   aria-label={copy.quietStart}
                   type="time"
@@ -484,10 +489,10 @@ function NotificationsContent({ draftLocalesEnabled = false }: { draftLocalesEna
           </Panel>
         </div>
 
-        <Panel className="xl:col-span-2">
+        <Panel className={styles.scopePanel}>
           <PanelHeading kicker={copy.personalScope} title={copy.filters} icon={ShieldCheck} />
           <div className="p-5">
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <div className={`grid gap-3 ${styles.scopes}`}>
               <input
                 aria-label={copy.clubs}
                 value={joinScope(preferences.settings.scopes.clubs)}
@@ -518,10 +523,10 @@ function NotificationsContent({ draftLocalesEnabled = false }: { draftLocalesEna
               />
             </div>
 
-            <div className="mt-5 flex flex-col gap-3 rounded-2xl border border-white/[.07] bg-black/20 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className={`mt-5 flex items-center justify-between gap-3 rounded-2xl border border-white/[.07] bg-black/20 p-4 ${styles.saveRow}`}>
               <div>
-                <p className="text-[10px] font-black text-white">{formatTouchlineNotificationActiveCount(selectedCategories, locale, draftLocalesEnabled)}</p>
-                <p className="mt-1 text-[9px] leading-5 text-slate-500" aria-live="polite">
+                <p className="text-xs font-black text-white">{formatTouchlineNotificationActiveCount(selectedCategories, locale, draftLocalesEnabled)}</p>
+                <p className="mt-1 text-xs leading-5 text-slate-500" aria-live="polite">
                   {loading ? copy.loadingPreferences : message}
                 </p>
               </div>
@@ -529,7 +534,7 @@ function NotificationsContent({ draftLocalesEnabled = false }: { draftLocalesEna
                 type="button"
                 onClick={savePreferences}
                 disabled={saving || loading}
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-[#a3ff12] px-5 text-[9px] font-black text-[#071007] transition hover:bg-[#b5ff41] disabled:cursor-not-allowed disabled:opacity-50"
+                className={`${navigationStyles.link} disabled:cursor-not-allowed disabled:opacity-50`}
               >
                 {consentState === "recorded" ? <CheckCircle2 size={14} /> : <Save size={14} />}
                 {saving ? copy.saving : copy.save}
@@ -538,6 +543,8 @@ function NotificationsContent({ draftLocalesEnabled = false }: { draftLocalesEna
           </div>
         </Panel>
       </div>
+      </div>
+      </TouchlineNavigationRail>
     </div>
   );
 }

@@ -743,11 +743,14 @@ export function TouchlineEliteExactCard({
   const shirtNameMaskRef = useRef<HTMLDivElement | null>(null);
   const shouldUseStoredLayout = isEditable && !ignoreStoredLayout;
   const hasStaticRenderScale = typeof staticRenderScale === "number" && Number.isFinite(staticRenderScale);
-  const [scale, setScale] = useState(() => {
+  const [measuredScale, setScale] = useState(() => {
     if (hasStaticRenderScale) return Math.max(0, Math.min(1, staticRenderScale));
     if (typeof initialRenderScale !== "number" || !Number.isFinite(initialRenderScale)) return 0;
     return Math.max(0, Math.min(1, initialRenderScale));
   });
+  const scale = hasStaticRenderScale
+    ? Math.max(0, Math.min(1, staticRenderScale))
+    : measuredScale;
   const [layout, setLayout] = useState<CardLayout>(() => normalizeLayout());
   const [removalMarkers, setRemovalMarkers] = useState<RemovalMarker[]>([]);
   const [isLayoutLocked, setIsLayoutLocked] = useState(false);
@@ -1423,6 +1426,9 @@ export function TouchlineEliteExactCard({
         overflow: "visible",
         contain: shellExtraHeight ? undefined : "layout size",
         "--touchline-card-frame-color": cardTraceColor,
+        "--touchline-card-neon-art": versionedCardTemplateUrl
+          ? `url("${optimizeForLiveCompact ? touchlineLiveCompactFrameUrl(versionedCardTemplateUrl) : touchlineZoomFrameUrl(versionedCardTemplateUrl)}")`
+          : "none",
         "--touchline-club-crest-color": resolvedClub?.accent ?? cardTraceColor,
       } as React.CSSProperties}
     >
@@ -1717,7 +1723,7 @@ export function TouchlineEliteExactCard({
             placeItems: "center",
           }}
         >
-          <img data-live-card-asset="brand" src="/touchlineArena/brand/tl-shield-lime.svg" alt="TL" draggable={false} loading={imageLoading} style={{ width: "100%", height: "100%", objectFit: "contain", pointerEvents: "none", userSelect: "none", filter: "drop-shadow(0 0 8px rgba(163,255,18,.52)) drop-shadow(0 3px 8px rgba(0,0,0,.70))" }} />
+          <img data-live-card-asset="brand" src="/touchlineArena/brand/tl-shield-lime.svg" alt="TL" draggable={false} loading={imageLoading} style={{ width: "100%", height: "100%", objectFit: "contain", pointerEvents: "none", userSelect: "none", filter: "drop-shadow(0 0 3px rgba(163,255,18,.20)) drop-shadow(0 2px 4px rgba(0,0,0,.55))" }} />
         </div>
 
         <div

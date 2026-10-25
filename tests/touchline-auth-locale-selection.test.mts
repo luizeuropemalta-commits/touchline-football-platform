@@ -8,6 +8,7 @@ import * as jsxRuntime from "react/jsx-runtime";
 import ts from "typescript";
 import * as i18n from "../lib/touchlineArena/i18n.ts";
 import * as accountCopy from "../lib/touchlineArena/account-locale-menu-i18n.ts";
+import * as publicErrorCopy from "../lib/touchlineArena/public-error-i18n.ts";
 
 function compile(path: string) {
   return ts.transpileModule(readFileSync(new URL(path, import.meta.url), "utf8"), {
@@ -124,6 +125,9 @@ test("released account branch renders the real account menu with eight choices a
     "@/lib/touchlineArena/i18n": i18n,
     "@/lib/touchlineArena/account-locale-menu-i18n": accountCopy,
     "@/lib/touchlineArena/account-locale-browser": { startAccountLocaleBrowser: cannotWrite },
+    "@/lib/touchlineArena/account-locale-identity-observer": { startAccountLocaleIdentityObserver: cannotWrite },
+    "@/lib/touchlineArena/public-error-i18n": publicErrorCopy,
+    "./TouchlineGlobalNavigation.module.css": { default: { link: "shared-link" } },
     "@/lib/supabase/client": { createClient: cannotWrite },
     "@/lib/touchlineArena/browser-storage": { writeBrowserStorage: cannotWrite },
     "@/lib/touchlineArena/presentation-locale-intent": { rememberTouchlinePresentationLocaleIntent: cannotWrite, readTouchlinePresentationLocaleIntent: cannotWrite },

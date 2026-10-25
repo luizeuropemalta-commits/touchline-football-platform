@@ -55,36 +55,61 @@ test("Arena receives the same server time-zone policy as Live", () => {
   assert.match(page, /liveTimeZone=\{liveTimeZone\}/);
   assert.match(owner, /initialTimeZone=\{liveTimeZone\}/);
 });
-test("authenticated ClubOwner seeds the embedded Live rail from the complete persisted fixture schedule", () => {
+test("authenticated ClubOwner seeds the embedded Live rail from the same persisted selection as ClubHub", () => {
   const page = readFileSync(new URL("../app/clubowner/page.tsx", import.meta.url), "utf8");
-  assert.match(page, /if \(!user\) redirect\([\s\S]*?readPublicCompetitionFixtures\(\{\s*includeHistorical: true, limit: 240/);
-  assert.match(page, /from: new Date\(scheduleNow - 7 \* 86_400_000\)/);
-  assert.match(page, /through: new Date\(scheduleNow \+ 14 \* 86_400_000\)/);
+  assert.match(page, /if \(!user\) redirect\([\s\S]*?readPersistedLiveRailWithin\(\)/);
+  assert.doesNotMatch(page, /readPublicCompetitionFixtures|scheduleNow/);
   assert.match(owner, /state: "partial-persisted-schedule", degraded: true/);
   assert.match(page, /initialLiveFixtures=\{initialLiveFixtures\} initialLiveNow=\{initialLiveNow\}/);
   assert.match(owner, /initialFixtures=\{initialLiveFixtures\} initialNow=\{initialLiveNow\}/);
+  assert.match(owner, /initialMetadata=\{initialLiveMetadata\}/);
   assert.doesNotMatch(owner, /<TouchlineMatchCentre railOnly initialFixtures=\{\[\]\}/);
 });
-test("Arena and Live reuse one fixture rail and existing alerts, with detail disabled in Arena", () => {
+test("ClubOwner and Arena reuse one shared strip above reserves, without a second match centre", () => {
   assert.equal(source.match(/<TouchlineFixtureAlerts /g)?.length, 1);
   assert.equal(source.match(/className=\{styles.fixtureList\}/g)?.length, 1);
   assert.match(source, /if \(railOnly\) return fixtureRail/);
   assert.match(source, /if \(railOnly \|\| !canReadMatchDetail\) return/);
-  assert.match(owner, /\(arenaOpen \|\| marketPage\) \? <div className=\{styles.arenaLiveRail\}>/);
-  assert.match(owner, /<TouchlineMatchCentre railOnly/);
+  const ast = ts.createSourceFile("owner.tsx", owner, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const strips: ts.JsxSelfClosingElement[] = [];
+  const visit = (node: ts.Node) => {
+    if (ts.isJsxSelfClosingElement(node) && node.tagName.getText(ast) === "ClubHubFixtureStrip") strips.push(node);
+    node.forEachChild(visit);
+  };
+  visit(ast);
+  assert.equal(strips.length, 1, "Normal and Arena share a single instance");
+  const rail = strips[0].parent;
+  assert.ok(ts.isJsxElement(rail));
+  assert.match(rail.openingElement.getText(ast), /data-clubowner-live-position="above-reserves"/);
+  const body = rail.parent;
+  assert.ok(ts.isJsxElement(body));
+  assert.match(body.openingElement.getText(ast), /styles.arenaBody/);
+  const rows = body.children.filter(ts.isJsxElement);
+  assert.equal(rows[0], rail);
+  assert.match(rows[1].openingElement.getText(ast), /styles.myClubPitchViewport/);
+  assert.match(rows[1].getText(ast), /<ClubOwnerTechnicalRail[\s\S]*area="reserves"/);
+  assert.ok(owner.lastIndexOf("<ArenaView", strips[0].pos) >= 0, "Same rail belongs to the Arena subtree");
+  assert.doesNotMatch(owner, /<TouchlineMatchCentre\b/);
 });
-test("ClubOwner opts out of recent results while Live retains results and degraded feed notices", () => {
+test("Live retains results and feed notices while ClubOwner passes the shared degradation metadata", () => {
   assert.match(source, /hideRecentResults = false/);
   assert.match(source, /!hideRecentResults \? \[\{ id: "results" as const, label: dictionary\.recentResults, fixtures: schedule\.recentResults \}/);
-  assert.match(owner, /hideRecentResults=\{marketPage\}/);
+  assert.match(owner, /initialMetadata=\{initialLiveMetadata\}/);
+  const strip = readFileSync(new URL("../components/touchline/ClubHubFixtureStrip.tsx", import.meta.url), "utf8");
+  assert.match(strip, /const caution = failed \|\| metadata\?\.degraded/);
+  assert.match(strip, /caution \? <p[^>]+role="status">\{cautionText\}/);
+  assert.match(strip, /state === "partial-persisted-schedule" \? copy.partialScheduleCopy : copy.liveDataUpdatingCopy/);
   assert.doesNotMatch(source, /!railOnly \? <div><dt>\{dictionary\.recentResults\}/);
   assert.match(source, /railOnly && readMetadata\?\.degraded \? <p className=\{styles\.railFreshness\} role="status"/);
   assert.match(source, /readMetadata\.state === "partial-persisted-schedule" \? dictionary\.partialScheduleCopy : dictionary\.liveDataUpdatingCopy/);
 });
-test("the normal ClubOwner Live rail sits closer to the technical-area line without resizing the pitch", () => {
-  const normalRail = marketCss.match(/\.myClubCommand\[data-fantasy-context="market"\]:not\(\.arenaOverlay\) \.arenaLiveRail \{([^}]+)\}/)?.[1] ?? "";
-  assert.ok(normalRail.includes("margin-top: 88px"));
-  assert.ok(normalRail.includes("overflow: auto"));
+test("the shared strip owns a full-width row without shrinking the normal pitch", () => {
+  const sharedRail = marketCss.match(/\.myClubCommand\[data-fantasy-context="market"\] \.arenaLiveRail \{([^}]+)\}/)?.[1] ?? "";
+  assert.match(sharedRail, /width:\s*100%/);
+  assert.match(sharedRail, /min-width:\s*0/);
+  assert.match(sharedRail, /margin:\s*0/);
+  assert.match(sharedRail, /overflow:\s*visible/);
+  assert.match(marketCss, /\.myClubCommand\[data-fantasy-context="market"\] \.arenaBody \{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/);
   assert.match(marketCss, /\.myClubPitchViewport \.myClubTacticalPitch \{ width: calc\(100% - 32px\);[^}]+aspect-ratio: 105 \/ 68/);
 });
 test("Arena match click opens the selected Live fixture without changing the lineup", () => {

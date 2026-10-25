@@ -12,7 +12,7 @@ import { CLUB_ROSTER_CAPACITY, type ClubRosterEntry } from "../lib/touchlineFant
 
 const source = readFileSync(new URL("../components/touchline/market/ClubOwnerExchangeHub.tsx", import.meta.url), "utf8");
 const js = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText;
-function fixture(ready = true, locale = "en-GB", roster: readonly ClubRosterEntry[] | null = [{playerId:"one",area:"outside",slot:0}], plan = "vip", draftLocalesEnabled = false) {
+function fixture(ready = true, locale = "en-GB", roster: readonly ClubRosterEntry[] | null = [{playerId:"one",area:"outside",slot:0}], plan = "vip", draftLocalesEnabled = false, vacantCoach = false) {
   let panel: unknown = null;
   const exports: { default?: (props: Record<string, unknown>) => React.ReactNode } = {};
   const modules: Record<string, unknown> = {
@@ -27,7 +27,7 @@ function fixture(ready = true, locale = "en-GB", roster: readonly ClubRosterEntr
     if (name.endsWith(".css")) return { default: new Proxy({}, { get: (_, key) => String(key) }) };
     assert.ok(name in modules, name); return modules[name];
   } });
-  const state = roster === null ? null : { plan, balanceEur: 100, coach: { valueEur: 10 }, players: roster.map(p=>({...p,valueEur:40})), receipts: [{ key: "receipt-one", playerId: "one", valueEur: 40, revision: 1 }] };
+  const state = roster === null ? null : { plan, balanceEur: 100, coach: vacantCoach ? null : { valueEur: 10 }, players: roster.map(p=>({...p,valueEur:40})), receipts: [{ key: "receipt-one", playerId: "one", valueEur: 40, revision: 1 }] };
   const before = JSON.stringify(state);
   const props = { locale, draftLocalesEnabled, plan, ownerName: "Confirmed Owner", ready, state, catalogue: [{ id: "one", name: "Confirmed Athlete" }] };
   const tree = () => exports.default!(props) as React.ReactElement<{ children: React.ReactNode }>;
@@ -55,6 +55,13 @@ test("representative notice reports unavailable interests without a fake zero or
   }
 });
 const completeRoster = (["starters","reserves","outside"] as const).flatMap(area=>Array.from({length:CLUB_ROSTER_CAPACITY[area]},(_,slot)=>({playerId:`${area}-${slot}`,area,slot})));
+test("financial presentation safely handles explicit coach vacancy without changing the wallet or player values", () => {
+  const h = fixture(true, "en-GB", [{ playerId: "one", area: "outside", slot: 0 }], "vip", false, true);
+  const html = h.open(2);
+  assert.match(html, /<dd>100 TC<\/dd>/);
+  assert.match(html, /<dd>40 TC<\/dd>/);
+  assert.match(html, /<dd>0 TC<\/dd>/);
+});
 test("Exchange Hub catalogue has eight gated key sets and unchanged count tokens", () => {
   const locales = ['en-GB', 'pt-BR', 'es-ES', 'it-IT', 'fr-FR', 'ar-SA', 'tr-TR', 'de-DE'];
   assert.deepEqual(Object.keys(hubCopy.EXCHANGE_HUB_ROWS), locales);

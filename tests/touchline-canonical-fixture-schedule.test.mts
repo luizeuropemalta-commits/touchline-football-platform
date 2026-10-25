@@ -56,7 +56,9 @@ test("actual season lookup loop is serial and retains source order and failed re
 });
 
 test("public Live route consumes persisted fixtures without provider or persistence fallback", async () => {
-  const liveRoute = await readFile(new URL("../app/api/football-data/fantasy/livescores/route.ts", import.meta.url), "utf8");
+  const handler = await readFile(new URL("../app/api/football-data/fantasy/livescores/route.ts", import.meta.url), "utf8");
+  assert.match(handler, /await readPersistedLiveRail\(\)/);
+  const liveRoute = handler + await readFile(new URL("../lib/touchlineArena/persisted-live-rail-server.ts", import.meta.url), "utf8");
   assert.match(liveRoute, /readPublicCompetitionFixtures/);
   assert.match(liveRoute, /readPersistedLiveScoreSnapshot/);
   assert.doesNotMatch(liveRoute, /mergeCanonicalFixtures|createFootballDataProvider|persistLiveScoreSnapshot/);

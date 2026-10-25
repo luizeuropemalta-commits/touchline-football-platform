@@ -5,6 +5,7 @@ import { useState } from "react";
 import type { TouchlineCentralInboxItem } from "@/lib/touchlineArena/central-inbox";
 import type { TouchLineLocale } from "@/lib/touchlineArena/i18n";
 import { resolveTouchlineCatalogueLocale } from "@/lib/touchlineArena/catalogue-locale";
+import navigationStyles from "./TouchlineGlobalNavigation.module.css";
 
 type InboxEnumLabels = Readonly<Record<"LOW" | "NORMAL" | "HIGH" | "CRITICAL" | "MAINTENANCE" | "PAYMENT" | "CONTRACT" | "FUTURE_LEAGUE" | "ADMINISTRATIVE" | "COMING_SOON" | "PRE_REGISTRATION" | "OPEN" | "ACTIVE", string>>;
 
@@ -65,5 +66,5 @@ export function TouchlineInboxList({
     window.location.assign(`${destination.pathname}${destination.search}${destination.hash}`);
   }
 
-  return <><p aria-live="polite" role="status">{readFailure ? labels.readFailed : ""}</p><ol>{items.map((item) => <li key={item.id}><div><span>{visibleInboxEnum(item.priority, locale, draftLocalesEnabled)} · {visibleInboxEnum(item.category, locale, draftLocalesEnabled)}</span><h2>{item.title}</h2><p>{item.body}</p></div><aside><b>{item.readAt ? labels.read : labels.unread}</b><small>{visibleInboxEnum(item.lifecycleState, locale, draftLocalesEnabled)}</small>{item.deepLink ? <button type="button" disabled={pendingMessageId === item.id} onClick={() => void openDestination(item)}>{pendingMessageId === item.id ? labels.loading : labels.open}</button> : !item.readAt ? <button type="button" disabled={pendingMessageId === item.id} onClick={() => void markRead(item.id)}>{pendingMessageId === item.id ? labels.loading : labels.markRead}</button> : null}</aside></li>)}</ol></>;
+  return <><p aria-live="polite" role="status">{readFailure ? labels.readFailed : ""}</p><ol>{items.map((item) => <li key={item.id}><div><span>{visibleInboxEnum(item.priority, locale, draftLocalesEnabled)} · {visibleInboxEnum(item.category, locale, draftLocalesEnabled)}</span><h2>{item.title}</h2><p>{item.body}</p></div><aside><b>{item.readAt ? labels.read : labels.unread}</b><small>{visibleInboxEnum(item.lifecycleState, locale, draftLocalesEnabled)}</small>{item.deepLink ? <button className={navigationStyles.link} type="button" disabled={pendingMessageId === item.id} onClick={() => void openDestination(item)}>{pendingMessageId === item.id ? labels.loading : labels.open}</button> : !item.readAt ? <button className={navigationStyles.link} type="button" disabled={pendingMessageId === item.id} onClick={() => void markRead(item.id)}>{pendingMessageId === item.id ? labels.loading : labels.markRead}</button> : null}</aside></li>)}</ol></>;
 }

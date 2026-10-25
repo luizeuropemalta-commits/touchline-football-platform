@@ -16,8 +16,16 @@ test('allocation dialog copy has eight gated complete vocabularies without inter
   assert.equal(getAllocationDialogCopy('pt-PT'), getAllocationDialogCopy('pt-BR'));
   assert.equal(getAllocationDialogCopy('pt-BR').placementInstruction, 'Escolha uma posição compatível. Esta alteração não muda contratos nem saldo. Se a vaga estiver ocupada, os jogadores trocam de lugar no elenco.');
   assert.equal(getAllocationDialogCopy('en-GB').placementInstruction, 'Choose a compatible position. Contracts and balance stay unchanged. If the position is occupied, the players exchange places in your squad.');
-  assert.equal(getAllocationDialogCopy('pt-BR').swapInstruction, 'Só muda os lugares no elenco. Contratos e saldo não mudam.');
-  assert.equal(getAllocationDialogCopy('en-GB').swapInstruction, 'Only squad places change. Contracts and balance stay unchanged.');
+  assert.equal(getAllocationDialogCopy('pt-BR').confirmSquadChange, 'Confirmar substituição');
+  assert.match(getAllocationDialogCopy('pt-BR').swapInstruction, /revise os dois cards/);
+  assert.match(getAllocationDialogCopy('en-GB').swapInstruction, /review both cards/);
+});
+test('Portuguese swap guidance does not assume the selected counterpart enters or leaves', () => {
+  // Opening a reserve and choosing a starter selects the outgoing counterpart;
+  // opening a starter and choosing a reserve selects the incoming counterpart.
+  const instruction = getAllocationDialogCopy('pt-BR').swapInstruction;
+  assert.equal(instruction, 'Escolha um jogador e revise os dois cards antes de confirmar. Apenas as posições no elenco mudam; contratos e saldo permanecem iguais.');
+  assert.doesNotMatch(instruction, /escolha quem (?:entra|sai)/i);
 });
 test('allocation presentation opt-in leaves revision, busy, eligibility and callbacks intact', () => {
   // Static contract only; does not move players or exercise browser actions.

@@ -4,7 +4,7 @@ type Position = keyof typeof CLUB_POSITION_LIMITS;
 type Player = Readonly<{ playerId: string; position: Position }>;
 export type AffordabilityInput = Readonly<{
   verificationStatus: "confirmed" | "pending" | "unavailable";
-  state: Readonly<{ seasonId: string; revision: number; balanceEur: number; coach: { id: string } | null; players: readonly Player[] }> | null;
+  state: Readonly<{ seasonId: string; revision: number; balanceEur: number; plan?: "beta" | "standard" | "master" | "vip"; coach: { id: string } | null; players: readonly Player[] }> | null;
   catalogue: Readonly<{
     /** Must cover the entire candidate universe, not a page/club/filter result.
      * No production adapter currently establishes this proof. Never synthesize it. */
@@ -26,6 +26,10 @@ export function clubBudgetAffordability(input: AffordabilityInput): Result {
   const unknown = (reason: string): Result => ({ status: "indeterminate", reason });
   const { state, catalogue, nowMs } = input;
   if (input.verificationStatus !== "confirmed" || !state) return unknown("snapshot-unconfirmed");
+  // A known vacancy still lacks the price of a future coach. Never claim the
+  // player-only lower bound covers completing the whole club in that state.
+  if (Object.hasOwn(state, "coach") && state.coach === null
+    && (state.plan === "standard" || state.plan === "master" || state.plan === "vip")) return unknown("coach-vacant");
   if (!state.coach?.id) return unknown("coach-unconfirmed");
   if (!state.seasonId || !Number.isSafeInteger(state.revision) || state.revision < 0
     || !Number.isSafeInteger(state.balanceEur) || state.balanceEur < 0) return unknown("snapshot-invalid");

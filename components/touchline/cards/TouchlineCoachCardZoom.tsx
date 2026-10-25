@@ -35,6 +35,8 @@ type TouchlineCoachCardZoomProps = {
   showLeadershipCrown?: boolean;
   /** Game-only quotation; never inferred from real-world coach statistics. */
   acquisitionPrice?: { label: string; valueTc: number };
+  /** Owned-coach review only. Public/catalogue cards must not supply this action. */
+  releaseAction?: { label: string; onSelect: () => void; disabled?: boolean };
   /**
    * A coach card in the matchday technical area is immediately visible above
    * the fold. Safari can defer the two identity assets on a lazy compact card,
@@ -78,6 +80,7 @@ export default function TouchlineCoachCardZoom({
   publishedTouchlinePoints = null,
   showLeadershipCrown,
   acquisitionPrice,
+  releaseAction,
   assetLoading,
   frameLoading,
   frameDecoding,
@@ -219,6 +222,7 @@ export default function TouchlineCoachCardZoom({
         />
       }
       details={details}
+      releaseAction={releaseAction}
     >
       {card}
     </TouchlineCardZoom>

@@ -34,18 +34,24 @@
 .benchHeader { display: flex; align-items: start; justify-content: space-between; gap: 12px; margin-bottom: 13px; }
 .benchHeader p { margin: 5px 0 0; color: rgba(219, 255, 195, .58); font-size: 11px; font-weight: 750; }
 .benchHeader strong { color: rgba(235, 255, 222, .72); font-size: 11px; letter-spacing: .08em; }
-.cards { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 8px; margin: 0; padding: 8px 0; list-style: none; }
+.cards { display: grid; grid-template-columns: repeat(9, minmax(80px, 1fr)); gap: 8px; margin: 0; padding: 10px 8px 32px; list-style: none; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: thin; scroll-padding-inline: 8px; }
 .cards li { position: relative; min-width: 0; width: 100%; max-width: 104px; justify-self: center; padding-top: 2px; }
+.cards :global([data-touchline-card-zoom="trigger"] > [role="button"]) { scroll-margin-inline: 8px; }
 .availabilityBadge { position: absolute; z-index: 8; top: 0; right: 0; }
 .cardNumber { position: absolute; z-index: 2; top: 5px; inset-inline-start: 5px; display: grid; width: 18px; height: 18px; place-items: center; border: 1px solid rgba(163, 255, 18, .38); border-radius: 50%; color: #e9ffcb; background: rgba(2, 12, 9, .9); font-size: 8.8px; font-weight: 950; }
 .card { width: 100% !important; filter: drop-shadow(0 8px 12px rgba(0, 0, 0, .34)); transition: transform .18s ease, filter .18s ease; }
 .cards li:hover .card, .cards li:focus-within .card { transform: translateY(-4px); filter: drop-shadow(0 12px 16px rgba(0, 0, 0, .42)); }
+@media (prefers-reduced-motion: reduce) {
+  .cards .card { transition: none; }
+  .cards li:hover .card, .cards li:focus-within .card { transform: none; }
+}
 
-@container technical-bench (max-width: 720px) { .cards { grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: 14px; } }
+/* Keep the same coach + nine-card bench organization on smaller screens.
+   Only the bench scrolls when its readable cards cannot fit; no mobile cascade. */
 @media (max-width: 800px) {
-  .header { align-items: start; flex-direction: column; gap: 10px; padding: 15px 14px 13px; }
-  .status { max-width: none; text-align: start; }
-  .content { grid-template-columns: 1fr; }
+  .header { align-items: start; gap: 10px; padding: 15px 14px 13px; }
+  .header > :first-child { min-width: 0; }
+  .status { max-width: 45%; overflow-wrap: anywhere; text-align: start; }
   .coach, .bench { padding: 15px 14px; }
   .coach { justify-items: start; }
 }

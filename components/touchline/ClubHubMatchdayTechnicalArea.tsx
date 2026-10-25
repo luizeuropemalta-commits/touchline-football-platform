@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import ClubHubBenchScrollList from "@/components/touchline/ClubHubBenchScrollList";
 
 import { TouchlinePlayerSeasonScope, TouchlineSeasonCardZoom as TouchlineCardZoom, TouchlineSeasonExactCard as TouchlineEliteExactCard } from "@/components/touchline/cards/TouchlinePlayerSeasonScope";
 import TouchlinePlayerAvailabilityBadge from "@/components/touchline/cards/TouchlinePlayerAvailabilityBadge";
@@ -107,7 +108,7 @@ export default function ClubHubMatchdayTechnicalArea({
             <strong>{bench.length}/9</strong>
           </div>
           {bench.length ? (
-            <ol className={styles.cards}>
+            <ClubHubBenchScrollList className={styles.cards}>
               {bench.map((card, index) => {
                 const positionKind = touchlinePlayerPositionKind(card.position);
                 const cardReview = card.cardReview ?? evaluateTouchlineCardCompleteness({
@@ -220,7 +221,7 @@ export default function ClubHubMatchdayTechnicalArea({
                   </li>
                 );
               })}
-            </ol>
+            </ClubHubBenchScrollList>
           ) : <p className={styles.empty}>{rosterCopy.awaiting}</p>}
         </section>
       </div>

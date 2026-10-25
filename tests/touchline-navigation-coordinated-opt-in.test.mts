@@ -95,8 +95,9 @@ test("real global navigation forwards the same opted locale to destination helpe
       assert.equal(result.audio.length, 1);
       assert.equal(result.audio[0].locale, effective);
       assert.equal(result.audio[0].allowDraftLocale, flag ?? false);
-      assert.ok(result.html.includes("Official &lt;Club&gt;"));
-      assert.ok(result.html.includes(copy.TOUCHLINE_NAVIGATION_CATALOGUES[effective].allClubs));
+      assert.ok(!result.html.includes("Official &lt;Club&gt;"), "shared navigation must not add a page-specific club label");
+      assert.ok(result.html.includes(copy.TOUCHLINE_NAVIGATION_CATALOGUES[effective].clubHub));
+      assert.ok(!result.html.includes(copy.TOUCHLINE_NAVIGATION_CATALOGUES[effective].allClubs), "ClubHub label stays identical across club contexts");
       assert.ok(result.html.includes('aria-current="page"'));
       assert.ok(!result.hrefs.some(href => href.includes("not-a-generic-destination") || href.includes("/admin")));
     }

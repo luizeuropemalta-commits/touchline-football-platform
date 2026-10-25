@@ -2,10 +2,10 @@
 
 import { useMemo, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
-import { ArrowLeftRight } from "lucide-react";
+import { ArrowLeft, ArrowLeftRight, ArrowRight } from "lucide-react";
 import type { ClubOwnerSquadCard } from "@/lib/touchlineArena/demo-data";
 import type { ClubAcquisitionState } from "@/lib/touchlineFantasy/club-acquisition";
-import { getAllocationDialogCopy } from "@/lib/touchlineFantasy/allocation-dialog-i18n";
+import { getAllocationDialogCopy, getAllocationSwapLabels } from "@/lib/touchlineFantasy/allocation-dialog-i18n";
 import type { ClubRosterArea } from "@/lib/touchlineFantasy/club-roster";
 import { clubPlayerPosition } from "@/lib/touchlineFantasy/club-position";
 import { collectionPositionName, collectionGroupName, groupCollectionSlots } from "@/lib/touchlineFantasy/collection-position-display";
@@ -14,6 +14,7 @@ import { clubStarterDestinations } from "@/lib/touchlineFantasy/club-allocation"
 import { collectionSlotPlan, previewPlannedClubAllocation } from "@/lib/touchlineFantasy/collection-slot-plan";
 import { clubPrimaryPositionIndex } from "@/lib/touchlineFantasy/club-primary-position-index";
 import { primaryPositionFitsTacticalSlot } from "@/lib/touchlineFantasy/club-primary-position-policy";
+import { squadSwapComparisonPlayers } from "@/lib/touchlineFantasy/squad-swap-presentation";
 import type { TouchlineFormationGeometry } from "@/lib/touchlineArena/formation-geometry";
 import { useTouchlineDialog, useTouchlineDialogScrollLock } from "@/components/touchline/a11y/TouchlineDialog";
 import TouchlineGameweekCard from "./TouchlineGameweekCard";
@@ -32,32 +33,63 @@ export function ClubOwnerSquadSwapDialog({ state, playerId, outsideOnly = false,
 }) {
   const close = useRef<HTMLButtonElement>(null);
   const sending = useRef(false);
-  const [choice, setChoice] = useState<{ playerId: string; destination: CollectionDestination; revision: number; label: string } | null>(null);
+  const [choice, setChoice] = useState<{ playerId: string; counterpartId: string; destination: CollectionDestination; revision: number; label: string } | null>(null);
   const primaryDetails = useMemo(() => clubPrimaryPositionIndex(catalogue, { allowLegacyDisplay: true }), [catalogue]);
   const source = state.players.find(p => p.playerId === playerId);
   const copy = getAllocationDialogCopy(locale, draftLocalesEnabled);
+  const swapCopy = getAllocationSwapLabels(locale, draftLocalesEnabled);
+  const areaLabel = (area: ClubRosterArea) => area === "starters" ? swapCopy.starters : area === "reserves" ? copy.bench : copy.outside;
   const title = outsideOnly ? (copy.moveOutside) : (copy.replacePlayer);
   const { dialogProps } = useTouchlineDialog<HTMLDivElement>({ open: true, label: title, initialFocusRef: close,
     onDismiss: () => { if (!busy && !sending.current) onClose(); } });
   useTouchlineDialogScrollLock(true);
   const valid = (id: string, destination: CollectionDestination) => Boolean(source && previewPlannedClubAllocation(state,
     { action: "move", playerId: id, ...destination, expectedRevision: state.revision, idempotencyKey: "squad_swap_preview" }, geometry, primaryDetails));
-  const candidates = state.players.filter(p => p.playerId !== playerId && (p.area === "outside" || (!outsideOnly && p.area === "reserves")))
+  const candidates = state.players.filter(p => p.playerId !== playerId && p.area !== source?.area && (!outsideOnly || p.area === "outside"))
     .flatMap(p => {
       const card = catalogue.find(c => (c.canonicalPlayerId ?? c.id) === p.playerId);
       const id = outsideOnly ? playerId : p.playerId;
       const destination = outsideOnly ? { area: p.area, slot: p.slot } : source && { area: source.area, slot: source.slot };
-      return card && destination && valid(id, destination) ? [{ card, area: p.area, id, destination }] : [];
+      return card && destination && valid(id, destination) ? [{ card, area: p.area, id, counterpartId: p.playerId, destination }] : [];
     });
-  const choose = (id: string, destination: CollectionDestination, label: string) => {
-    if (enabled && !busy && valid(id, destination)) setChoice({ playerId: id, destination, revision: state.revision, label });
+  const choose = (id: string, counterpartId: string, destination: CollectionDestination, label: string) => {
+    if (enabled && !busy && valid(id, destination)) {
+      const dialog = close.current?.closest<HTMLElement>('[role="dialog"]');
+      if (dialog) dialog.scrollTop = 0;
+      close.current?.focus({ preventScroll: true });
+      setChoice({ playerId: id, counterpartId, destination, revision: state.revision, label });
+    }
   };
+  const counterpart = choice ? state.players.find(player => player.playerId === choice.counterpartId) : null;
+  // Approved comparison order: incoming left, outgoing right.
+  const comparisonPlayers = squadSwapComparisonPlayers(source, counterpart);
   return createPortal(<div className={layout.overlay}><div {...dialogProps} className={layout.dialog}>
     <header><h2>{title}</h2><button ref={close} type="button" className={controls.link} disabled={busy} onClick={() => { if (!sending.current) onClose(); }}>{copy.cancel}</button></header>
     <p>{copy.swapInstruction}</p>
     {error ? <p role="alert">{error}</p> : null}
     {!enabled ? <p role="status">{copy.waitForSquad}</p> : null}
-    {choice ? <section aria-label={copy.confirmChange}><p>{choice.label}</p>
+    {choice ? <section aria-label={copy.confirmChange}>
+      {source && counterpart ? <div className={layout.swapPreview}>
+        <div className={layout.swapSummary}>
+          {comparisonPlayers.map((player, index) => {
+            const card = catalogue.find(card => (card.canonicalPlayerId ?? card.id) === player.playerId);
+            const destination = comparisonPlayers[1 - index];
+            if (!destination) return null;
+            return <div key={player.playerId} className={index === 0 ? layout.swapEntering : layout.swapLeaving}>
+              {index === 0 ? <ArrowLeft aria-hidden="true" /> : <ArrowRight aria-hidden="true" />}
+              <strong>{index === 0 ? swapCopy.entering : swapCopy.leaving}</strong>
+              <span>{card?.name ?? copy.squadPlayer}</span>
+              <small>{areaLabel(player.area)} → {areaLabel(destination.area)}</small>
+            </div>;
+          })}
+        </div>
+        {comparisonPlayers.map((player, index) => {
+          const card = catalogue.find(card => (card.canonicalPlayerId ?? card.id) === player.playerId);
+          return <figure key={player.playerId} data-swap-player={player.playerId} data-swap-side={index === 0 ? "in" : "out"}>
+            {card ? <TouchlineGameweekCard card={card} locale={locale} draftLocalesEnabled={draftLocalesEnabled} liveSeasonRating={liveSeasonRating} compact fitContainer /> : <p role="status">{copy.cardUnavailable}</p>}
+          </figure>;
+        })}
+      </div> : null}
       <button type="button" className={controls.link} disabled={busy || !enabled || choice.revision !== state.revision}
         onClick={async () => {
           if (busy || !enabled || sending.current || choice.revision !== state.revision || !valid(choice.playerId, choice.destination)) return;
@@ -67,10 +99,10 @@ export function ClubOwnerSquadSwapDialog({ state, playerId, outsideOnly = false,
       <button type="button" className={controls.link} disabled={busy} onClick={() => { if (!sending.current) setChoice(null); }}>{copy.back}</button>
       {choice.revision !== state.revision ? <p role="status">{copy.squadChanged}</p> : null}
     </section> : <>
-      {(["reserves", "outside"] as const).filter(area => !outsideOnly || area === "outside").map(area => <section key={area}>
-        <h3>{area === "reserves" ? (copy.bench) : (copy.outside)}</h3>
+      {(["starters", "reserves", "outside"] as const).filter(area => area !== source?.area && (!outsideOnly || area === "outside")).map(area => <section key={area}>
+        <h3>{areaLabel(area)}</h3>
         <div className={`${styles.myClubMarketResults} ${layout.results}`}>{candidates.filter(p => p.area === area).map(p => <TouchlineMarketPlayerTile liveSeasonRating={liveSeasonRating} key={p.card.id} card={p.card} locale={locale} draftLocalesEnabled={draftLocalesEnabled}>
-          <button type="button" className={controls.link} disabled={busy || !enabled} onClick={() => choose(p.id, p.destination, p.card.name)}>{copy.select}</button>
+          <button type="button" className={controls.link} disabled={busy || !enabled} onClick={() => choose(p.id, p.counterpartId, p.destination, p.card.name)}>{copy.select}</button>
         </TouchlineMarketPlayerTile>)}</div>
         {!candidates.some(p => p.area === area) ? <p>{copy.noPlayers}</p> : null}
       </section>)}
@@ -79,7 +111,7 @@ export function ClubOwnerSquadSwapDialog({ state, playerId, outsideOnly = false,
 }
 
 /** Placement only. Card artwork, points, zoom and empty-slot button are canonical. */
-export function ClubOwnerCollectionSlots({ state, catalogue, area, start = 0, count, locale, liveSeasonRating = false, draftLocalesEnabled = false, enabled, displayWidth = 70, guidedSlot, onChoose, onFieldPlayer, onReleasePlayer, onOutsidePlayer, grouped = false, slotPositions }: {
+export function ClubOwnerCollectionSlots({ state, catalogue, area, start = 0, count, locale, liveSeasonRating = false, draftLocalesEnabled = false, enabled, displayWidth = 70, guidedSlot, onChoose, onFieldPlayer, onReleasePlayer, grouped = false, slotPositions }: {
   state: Pick<ClubAcquisitionState, "players"> | null; catalogue: readonly ClubOwnerSquadCard[]; area: ClubRosterArea;
   start?: number; count: number; locale: string; liveSeasonRating?: boolean; draftLocalesEnabled?: boolean; enabled: boolean; displayWidth?: number; guidedSlot?: number;
   onChoose: (destination: CollectionDestination) => void;
@@ -103,10 +135,8 @@ export function ClubOwnerCollectionSlots({ state, catalogue, area, start = 0, co
       const positionName = position ? collectionPositionName(position, locale, draftLocalesEnabled) : null;
       return <div className={layout.slot} key={slot} data-collection-slot={slot} data-position={position ?? undefined} data-owned={owned ? "true" : undefined}>
         {card ? <TouchlineGameweekCard liveSeasonRating={liveSeasonRating} card={card} locale={locale} draftLocalesEnabled={draftLocalesEnabled} compact displayWidth={displayWidth}
-          replacementAction={owned && onFieldPlayer ? { label: area === "reserves" ? (copy.replacePlayer) : (copy.addToXI), disabled: !enabled || !state,
+          replacementAction={owned && onFieldPlayer ? { label: copy.replacePlayer, disabled: !enabled || !state,
             onSelect: () => { if (enabled && state) onFieldPlayer(owned.playerId); } } : undefined}
-          removalAction={owned && area === "reserves" && onOutsidePlayer ? { label: copy.moveOutside, disabled: !enabled || !state,
-            onSelect: () => { if (enabled && state) onOutsidePlayer(owned.playerId); } } : undefined}
           releaseAction={owned && onReleasePlayer ? { label: pt ? "Liberar jogador" : "Release player", disabled: !enabled || !state,
             onSelect: () => { if (enabled && state) onReleasePlayer(owned.playerId); } } : undefined} />
           : owned ? <span role="status">{copy.cardUnavailable}</span>

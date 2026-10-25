@@ -44,6 +44,23 @@ function fixture(input: Partial<TouchlineOfficialLeagueTableFixture> = {}): Touc
   };
 }
 
+test("live table freshness rejects future updates and preserves the inclusive three-minute TTL and facts", () => {
+  const now = Date.parse("2030-10-24T12:00:00.000Z");
+  for (const age of [-86_400_000, -1, 0, 179_999, 180_000, 180_001]) {
+    const input = { season, teams: teams(), now, fixtures: [fixture({ status: "LIVE", homeScore: 2, awayScore: 1,
+      sourceUpdatedAt: new Date(now - age).toISOString() })] };
+    const before = structuredClone(input);
+    const result = resolveTouchlineOfficialLeagueTable(input);
+    assert.equal(result.state, "ready");
+    for (const [teamId, scoreFor, scoreAgainst, points] of [["1", 2, 1, 3], ["2", 1, 2, 0]] as const) {
+      const row = result.rows.find(row => row.team.providerTeamId === teamId)!;
+      assert.deepEqual(row.liveFixture, { providerFixtureId: "fixture-1", scoreFor, scoreAgainst, stale: age < 0 || age > 180_000 }, `age=${age}`);
+      assert.equal(row.points, points); assert.equal(row.played, 1);
+    }
+    assert.deepEqual(input, before, "Freshness classification must not rewrite match facts or timestamps");
+  }
+});
+
 test("official league table scopes fixtures to its canonical current season", () => {
   const result = resolveTouchlineOfficialLeagueTable({
     season,

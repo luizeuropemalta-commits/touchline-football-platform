@@ -6,7 +6,7 @@ type State = 'loading' | 'ready' | 'saving' | 'blocked';
 type Result = 'saved' | 'local' | 'busy' | 'unconfirmed' | 'invalid';
 type Context = { mode: 'account'; accountId: string } | { mode: 'guest' | 'demo' | 'unavailable' };
 type Request = (input: string, init: RequestInit) => Promise<Response>;
-type Observer = (callback: (accountId: string | null) => void) => () => void;
+type Observer = (callback: (accountId: string | null | undefined) => void) => () => void;
 type Adapter = { load(): Promise<void>; select(locale: unknown): Promise<Result>; invalidate(): void;
   dispose(): void; cleanup(): void; getState(): State };
 type Options = { context: Context; request: Request; apply(locale: Locale): void; restore?(locale: Locale): void; onChange(state: State): void;
@@ -54,7 +54,7 @@ async function harness(options: { context?: Context; request?: Request; observer
   const changes: State[] = [];
   const requests: Array<{ input: string; init: RequestInit }> = [];
   const timers = manualTimers();
-  let observer!: (accountId: string | null) => void;
+  let observer!: (accountId: string | null | undefined) => void;
   let subscriptions = 0, unsubscribes = 0, identityChanges = 0;
   const adapter = start({ context: options.context ?? account,
     request: async (input, init) => {
@@ -73,7 +73,7 @@ async function harness(options: { context?: Context; request?: Request; observer
     timeoutMs: options.timeoutMs, setTimer: timers.setTimer, clearTimer: timers.clearTimer,
   });
   return { adapter, events, requests, applied, changes, timers,
-    emit: (identity: string | null) => observer(identity),
+    emit: (identity: string | null | undefined) => observer(identity),
     counts: () => ({ subscriptions, unsubscribes, identityChanges }) };
 }
 
@@ -101,6 +101,41 @@ test('guest observes null identity and remains local; demo and unavailable never
     assert.equal(h.requests.length, 0); h.adapter.cleanup();
     assert.equal(h.counts().unsubscribes, mode === 'guest' ? 1 : 0);
   }
+});
+
+test('unknown identity fences pending read and only resolved same account re-reads authority', async () => {
+  const pending = deferred<Response>();
+  let reads = 0;
+  const h = await harness({ request: async () => ++reads === 1 ? pending.promise : json(readReceipt) });
+  h.emit(undefined);
+  assert.equal(h.adapter.getState(), 'blocked'); assert.equal(h.counts().identityChanges, 0);
+  assert.equal(h.requests[0].init.signal?.aborted, true);
+  h.emit(owner); await settle();
+  assert.equal(h.adapter.getState(), 'ready');
+  assert.deepEqual(h.requests.map(entry => entry.init.method), ['GET', 'GET']);
+  pending.resolve(json({ ...readReceipt, data: { ...readReceipt.data, accountId: other } })); await settle();
+  assert.equal(h.adapter.getState(), 'ready'); assert.deepEqual(h.applied, []); h.adapter.cleanup();
+});
+
+test('unknown then confirmed changed identity refreshes once and never resumes previous host', async () => {
+  const h = await harness(); await settle(); h.emit(undefined); h.emit(other); h.emit(owner);
+  assert.equal(h.adapter.getState(), 'blocked'); assert.equal(h.counts().identityChanges, 1);
+  assert.equal(h.requests.length, 1); h.adapter.cleanup();
+});
+
+test('explicit invalidation remains terminal even after unknown identity is resolved', async () => {
+  const h = await harness(); await settle(); h.emit(undefined); h.adapter.invalidate(); h.emit(owner);
+  assert.equal(h.adapter.getState(), 'blocked'); assert.equal(h.requests.length, 1);
+  assert.equal(await h.adapter.select('pt-BR'), 'unconfirmed'); h.adapter.cleanup();
+});
+
+test('unknown identity during PUT never automatically reconciles or replays the write', async () => {
+  const pending = deferred<Response>();
+  const h = await harness({ request: async (_input, init) => init.method === 'GET' ? json(readReceipt) : pending.promise });
+  await settle(); const result = h.adapter.select('pt-BR'); h.emit(undefined); h.emit(owner);
+  pending.resolve(json(writeReceipt)); assert.equal(await result, 'unconfirmed'); await settle();
+  assert.equal(h.adapter.getState(), 'blocked'); assert.deepEqual(h.applied, []);
+  assert.deepEqual(h.requests.map(entry => entry.init.method), ['GET', 'PUT']); h.adapter.cleanup();
 });
 
 test('changed account or guest identity invalidates synchronously before one notification, without fallback', async () => {

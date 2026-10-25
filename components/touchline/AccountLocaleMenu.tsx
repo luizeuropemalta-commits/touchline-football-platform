@@ -5,10 +5,13 @@ import { useRouter } from "next/navigation";
 import { Check, ChevronDown, Languages } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { startAccountLocaleBrowser } from "@/lib/touchlineArena/account-locale-browser";
+import { startAccountLocaleIdentityObserver } from "@/lib/touchlineArena/account-locale-identity-observer";
+import { getTouchlinePublicErrorCopy } from "@/lib/touchlineArena/public-error-i18n";
 import type { AccountLocaleContext } from "@/lib/touchlineArena/account-locale-context-server";
 import { TOUCHLINE_LOCALE_STORAGE_KEY, TOUCHLINE_APPROVED_LOCALES, isTouchLineLocaleApproved, type TouchLineLocale } from "@/lib/touchlineArena/i18n";
 import { getTouchlineAccountLocaleMenuCopy } from "@/lib/touchlineArena/account-locale-menu-i18n";
 import { readTouchlinePresentationLocaleIntent, rememberTouchlinePresentationLocaleIntent } from "@/lib/touchlineArena/presentation-locale-intent";
+import controls from "./TouchlineGlobalNavigation.module.css";
 
 type Locale = TouchLineLocale;
 type State = "loading" | "ready" | "saving" | "blocked";
@@ -20,6 +23,7 @@ export default function AccountLocaleMenu({ context, locale, menuClassName, pane
   const accountId = context.mode === "account" ? context.accountId : "";
   const identityKey = `${mode}:${accountId}`;
   const [snapshot, setSnapshot] = useState<{ key: string; state: State }>({ key: identityKey, state: "loading" });
+  const [recovery, setRecovery] = useState(0);
   const current = useRef<{ key: string; host: ReturnType<typeof startAccountLocaleBrowser> } | null>(null);
   const state = snapshot.key === identityKey ? snapshot.state : "loading";
   const portuguese = locale === "pt-BR";
@@ -51,17 +55,14 @@ export default function AccountLocaleMenu({ context, locale, menuClassName, pane
       observeIdentity(callback) {
         const client = createClient();
         if (!client) throw new Error("Account session unavailable");
-        const { data } = client.auth.onAuthStateChange((_event, session) => {
-          let observedAccountId: string | null = null;
-          try {
-            observedAccountId = session?.user?.id ?? null;
-          } catch {
-            // Token-only sessions can expose an unavailable-user proxy.
-            // An unreadable identity invalidates an account-bound host.
-          }
-          callback(observedAccountId);
+        return startAccountLocaleIdentityObserver({
+          onIdentity: callback,
+          readUser: () => client.auth.getUser(),
+          subscribe: observer => {
+            const { data } = client.auth.onAuthStateChange(observer);
+            return () => data.subscription.unsubscribe();
+          },
         });
-        return () => data.subscription.unsubscribe();
       },
       onIdentityChange() {
         // Never call auth methods or refresh inside the auth notification lock.
@@ -84,7 +85,20 @@ export default function AccountLocaleMenu({ context, locale, menuClassName, pane
       host.cleanup();
       if (current.current?.host === host) current.current = null;
     };
-  }, [mode, accountId, identityKey, router, draftLocalesEnabled]);
+  }, [mode, accountId, identityKey, router, draftLocalesEnabled, recovery]);
+
+  function retryRead() {
+    if (state !== "blocked") return;
+    // A fresh host re-reads authenticated account/revision authority. This
+    // never resends the previous selection or treats it as a failed write.
+    if (mode === "account" || mode === "guest") {
+      setSnapshot({ key: identityKey, state: "loading" });
+      setRecovery(value => value + 1);
+    } else if (mode === "unavailable") router.refresh();
+  }
+  const retry = state === "blocked" ? <button type="button" className={controls.link} onClick={retryRead}>
+    {getTouchlinePublicErrorCopy(locale, draftLocalesEnabled).error.retry}
+  </button> : null;
 
   function select(nextLocale: string) {
     if (!isTouchLineLocaleApproved(nextLocale)
@@ -115,7 +129,8 @@ export default function AccountLocaleMenu({ context, locale, menuClassName, pane
           </select>
           <ChevronDown className="auth-language-chevron" size={14} aria-hidden="true" />
         </label>
-        {message ? <p className={state === "loading" ? "sr-only" : undefined} role="status" aria-live="polite">{message}</p> : null}
+        {message ? <p className={state !== "saving" ? "sr-only" : undefined} role="status" aria-live="polite">{message}</p> : null}
+        {retry}
       </div>
     );
   }
@@ -134,7 +149,8 @@ export default function AccountLocaleMenu({ context, locale, menuClassName, pane
             <span>{label}</span>{locale === code ? <Check aria-hidden="true" /> : null}
           </a>
         ))}
-        {message ? <p className={state === "loading" ? "sr-only" : undefined} role="status" aria-live="polite">{message}</p> : null}
+        {message ? <p className={state !== "saving" ? "sr-only" : undefined} role="status" aria-live="polite">{message}</p> : null}
+        {retry}
       </div>
     </details>
   );

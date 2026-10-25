@@ -2,9 +2,12 @@ import Link from "next/link";
 import { isTouchLineSiteLocalesEnabled } from "@/lib/touchlineArena/site-locales-release";
 import { ArrowLeft, DatabaseZap } from "lucide-react";
 import { PlayerDatabaseSearch } from "@/components/player-database-search";
+import TouchlineNavigationRail from "@/components/touchline/TouchlineNavigationRail";
+import navigationStyles from "@/components/touchline/TouchlineGlobalNavigation.module.css";
 import { touchLineAuthHref } from "@/lib/touchlineArena/auth-i18n";
 import { resolveTouchlineCatalogueLocale } from "@/lib/touchlineArena/catalogue-locale";
 import { getTouchlineFootballSearchCopy } from "@/lib/touchlineArena/football-search-i18n";
+import styles from "./FootballSearchContent.module.css";
 
 type FootballSearchPageProps = {
   searchParams: Promise<{ lang?: string }>;
@@ -20,17 +23,19 @@ async function renderFootballSearchPage({ searchParams }: FootballSearchPageProp
   const copy = getTouchlineFootballSearchCopy(locale, draftLocalesEnabled);
 
   return (
-    <div dir={locale === "ar-SA" ? "rtl" : "ltr"} className="mx-auto max-w-[1760px] animate-in space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <Link href={touchLineAuthHref("/clubowner", locale, draftLocalesEnabled)} className="inline-flex items-center gap-2 text-[8px] font-black text-slate-600 hover:text-cyan-300">
-          <ArrowLeft size={12} className={locale === "ar-SA" ? "rotate-180" : undefined} />
-          {copy.back}
-        </Link>
-        <div className="inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/[.07] px-3 py-1.5 text-[8px] font-black text-cyan-100">
-          <DatabaseZap size={12} />
-          {copy.title}
+    <div dir={locale === "ar-SA" ? "rtl" : "ltr"} className="mx-auto min-w-0 w-full max-w-[1760px] animate-in space-y-6">
+      <TouchlineNavigationRail className={styles.headerRail}>
+        <div className={styles.headerRow}>
+          <Link href={touchLineAuthHref("/clubowner", locale, draftLocalesEnabled)} className={`${navigationStyles.link} ${styles.headerItem}`}>
+            <ArrowLeft aria-hidden="true" size={14} className={locale === "ar-SA" ? "rotate-180" : undefined} />
+            {copy.back}
+          </Link>
+          <div className={`${styles.headerItem} inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/[.07] px-3 py-1.5 text-xs font-black text-cyan-100`}>
+            <DatabaseZap aria-hidden="true" size={14} />
+            {copy.title}
+          </div>
         </div>
-      </div>
+      </TouchlineNavigationRail>
       <PlayerDatabaseSearch locale={locale} draftLocalesEnabled={draftLocalesEnabled} />
     </div>
   );

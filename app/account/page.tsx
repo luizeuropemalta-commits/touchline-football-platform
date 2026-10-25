@@ -19,14 +19,14 @@ export default async function AccountEntry({ searchParams }: {
   const locale = resolveTouchlineCatalogueLocale(lang, draftLocalesEnabled);
   const destination = `/account?lang=${encodeURIComponent(locale)}`;
   const login = touchLineAuthEntryHref("/login", locale, destination, draftLocalesEnabled);
-  const authentication = await (async () => {
-    try {
-      const client = await createClient();
-      return client ? await resolveServerReadWithin(client.auth.getUser(), null, 8_000) : null;
-    } catch {
-      return null;
-    }
-  })();
+  let authenticationReadActive = true;
+  const authentication = await resolveServerReadWithin((async () => {
+    const client = await createClient();
+    // Client setup shares the deadline; late setup must not start an Auth read.
+    if (!authenticationReadActive || !client) return null;
+    return client.auth.getUser();
+  })(), null, 8_000);
+  authenticationReadActive = false;
   if (!authentication) redirect(`${login}&error=auth_unavailable`);
   if (authentication.error instanceof AuthSessionMissingError) redirect(login);
   if (authentication.error !== null) {

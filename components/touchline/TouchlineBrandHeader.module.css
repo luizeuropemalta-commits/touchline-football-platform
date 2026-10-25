@@ -38,8 +38,14 @@
   .frame[data-centered-navigation="true"] .row { gap: 12px; grid-template-columns: minmax(0, 1fr) auto; }
   .frame[data-centered-navigation="true"] .row > :first-child { grid-column: 1; grid-row: 1; }
   .frame[data-centered-navigation="true"] .row > :last-child { grid-column: 2; grid-row: 1; min-width: 0; max-width: min(200px, 45vw); }
-  .navigationSlot { max-width: none; grid-column: 1 / -1; grid-row: 2; justify-self: stretch; }
+  .navigationSlot { max-width: none; grid-column: 1 / -1; grid-row: 2; justify-self: stretch; justify-content:flex-start; overflow-x:auto; padding:7px; scroll-padding:7px; scrollbar-width:thin; }
   .navigationSlot > nav { justify-content: center; }
+  .navigationSlot > * { flex-shrink:0; }
+  /* Auto margins centre only spare space. Unlike justify-content:center they
+     cannot place the first link before the scroll origin on a narrow screen. */
+  .navigationSlot > :first-child { margin-inline-start:auto; }
+  .navigationSlot > :last-child { margin-inline-end:auto; }
+  .navigationSlot :is(a, button) { scroll-margin-inline:7px; }
 }
 
 /* Match auth-entry-content spacing without adding page/content padding twice. */

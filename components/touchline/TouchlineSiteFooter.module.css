@@ -1,0 +1,4 @@
+.footer { box-sizing:border-box; width:100%; min-width:0; display:flex; align-items:center; justify-content:space-between; gap:20px; flex-wrap:nowrap; min-height:80px; padding:24px max(24px,env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom)) max(24px,env(safe-area-inset-left)); border-top:1px solid rgba(170,255,62,.15); color:#a9b6a8; background:#030c08; }
+.footer small { flex:1 1 0; min-width:0; overflow-wrap:anywhere; font-size:12px; line-height:1.5; }
+.footer .social { flex:0 0 44px; width:44px; min-height:44px; padding:0; }
+.footer .social svg { width:21px; height:21px; }

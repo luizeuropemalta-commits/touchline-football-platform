@@ -24,6 +24,9 @@ export type TouchlineGlobalNavigationRoute =
   | "myClub"
   | "clubOwnerHistory"
   | "clubOwnerRenewals"
+  | "notifications"
+  | "inbox"
+  | "footballSearch"
   | "notFound";
 
 export type TouchlineTrustedNavigationContext = Readonly<{

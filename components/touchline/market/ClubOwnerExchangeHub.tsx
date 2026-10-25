@@ -68,7 +68,7 @@ function ExchangePanel({ panel, title, locale, draftLocalesEnabled = false, plan
         <section className={styles.section}><h3>{copy.financialPosition}</h3><dl className={styles.amounts}>
           <dt>{copy.availableBalance}</dt><dd>{credits(state.balanceEur)}</dd>
           <dt>{copy.squadValue}</dt><dd>{credits(squadValue ?? NaN)}</dd>
-          <dt>{copy.coachValue}</dt><dd>{credits(state.coach.valueEur)}</dd>
+          <dt>{copy.coachValue}</dt><dd>{credits(state.coach === null ? 0 : state.coach.valueEur)}</dd>
         </dl><p>{copy.valuationDisclaimer}</p></section>
         <section className={styles.section}><h3>{copy.income}</h3><p role="status">{copy.statementUnavailable}</p></section>
       </>}

@@ -29,7 +29,7 @@ test("next-match hero waits only for the shared match snapshot, never squad or s
   const hero = declaration.getText(ast);
   assert.match(hero, /const matchSnapshot = await matchSnapshotPromise/);
   assert.doesNotMatch(hero, /presentationPromise/);
-  assert.equal((clubPage.match(/\(\) => loadClubMatchSnapshot\(club, locale, dataSource, mirrorResultPromise, draftLocalesEnabled\)/g) ?? []).length, 1);
+  assert.equal((clubPage.match(/\(\) => loadClubMatchSnapshot\(club, locale, dataSource, mirrorResultPromise, draftLocalesEnabled, requestedFixtureId\)/g) ?? []).length, 1);
   assert.match(clubPage, /loadClubHubPresentation\(club, locale, dataSource, matchSnapshotPromise, draftLocalesEnabled\)/);
 });
 const route = readFileSync(new URL("../app/api/football-data/premier-squad/route.ts", import.meta.url), "utf8");

@@ -142,6 +142,7 @@
 }
 
 .clubBadge [data-touchline-card-crest-host="true"] {
+  /* Public size uses the card's cqw; the editor preserves authored pixels. */
   position: relative;
   display: grid;
   width: var(--coach-crest-size, 132px);

@@ -8,21 +8,23 @@ import { renderToStaticMarkup } from "react-dom/server";
 import ts from "typescript";
 import { TOUCHLINE_PLAYER_SOCIAL_CATALOGUES } from "../lib/touchlineArena/player-social-i18n.ts";
 import { getTouchlineFixtureAlertCopy } from "../lib/touchlineArena/fixture-alert-i18n.ts";
+import { parseFixtureAlertSavedInterest } from "../lib/touchlineArena/fixture-alert-readiness.ts";
 
 const source = readFileSync(new URL("../components/touchline/match-centre/TouchlineFixtureAlerts.tsx", import.meta.url), "utf8");
 const locales = ["en-GB", "pt-BR", "es-ES", "it-IT", "fr-FR", "ar-SA", "tr-TR", "de-DE"] as const;
-const keys = ["alerts", "loading", "saving", "signedOut", "disabled", "error", "saved", "notSaved", "deliveryUnavailable", "removeMatch", "saveMatch", "signIn", "checkAgain"] as const;
+const keys = ["alerts", "loading", "saving", "signedOut", "disabled", "error", "saved", "notSaved", "deliveryUnavailable", "removeMatch", "saveMatch", "signIn", "checkAgain", "uncertain"] as const;
 const english = ["Alerts", "Checking preference…", "Saving preference…", "Sign in to Arena to follow this match.", "Match alerts have not been enabled yet.", "Alerts unavailable. Your preference could not be confirmed.", "Match added to your preferences.", "This match is not in your preferences yet.", "Mobile delivery is not available yet. Saving this match does not enable notifications.", "Remove match", "Save match", "Sign in", "Check again"];
 const portuguese = ["Alertas", "Consultando preferência…", "Salvando preferência…", "Entre na Arena para acompanhar esta partida.", "Os alertas desta partida ainda não foram ativados.", "Alertas indisponíveis. Não foi possível confirmar sua preferência.", "Partida adicionada às suas preferências.", "Esta partida ainda não está nas suas preferências.", "O envio para o celular ainda não está disponível. Salvar a partida não ativa notificações.", "Remover partida", "Salvar partida", "Entrar", "Consultar novamente"];
 type Copy = Record<typeof keys[number], string>;
 type Node = React.ReactElement<Record<string, unknown>>;
 const flush = () => new Promise<void>(resolve => setImmediate(resolve));
-const acknowledgement = (subscribed: boolean) => ({ ok: true, data: { subscribed }, delivery: "unavailable" });
+const owner = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+const acknowledgement = (subscribed: boolean, fixtureId = "12/3") => ({ ok: true, data: { accountId: owner, fixtureId, subscribed, revision: "0" }, delivery: "unavailable" });
 const catalogue = () => import("../lib/touchlineArena/fixture-alert-i18n.ts");
 
 // Independent text expectations, not computed from the production catalogue.
 // Draft wording is checked for correspondence, not linguistic/RTL approval.
-const draftText: Record<typeof locales[number], readonly string[]> = {
+const draftText: Record<typeof locales[number], string[]> = {
   "en-GB": english,
   "pt-BR": portuguese,
   "es-ES": ["Alertas", "Consultando preferencia…", "Guardando preferencia…", "Inicia sesión en Arena para seguir este partido.", "Las alertas de este partido aún no se han activado.", "Alertas no disponibles. No se pudo confirmar tu preferencia.", "Partido añadido a tus preferencias.", "Este partido aún no está en tus preferencias.", "El envío al móvil aún no está disponible. Guardar este partido no activa las notificaciones.", "Quitar partido", "Guardar partido", "Iniciar sesión", "Consultar de nuevo"],
@@ -32,6 +34,18 @@ const draftText: Record<typeof locales[number], readonly string[]> = {
   "tr-TR": ["Uyarılar", "Tercih kontrol ediliyor…", "Tercih kaydediliyor…", "Bu maçı takip etmek için Arena’ya giriş yapın.", "Bu maçın uyarıları henüz etkinleştirilmedi.", "Uyarılar kullanılamıyor. Tercihiniz doğrulanamadı.", "Maç tercihlerinize eklendi.", "Bu maç henüz tercihlerinizde değil.", "Telefona gönderim henüz kullanılamıyor. Bu maçı kaydetmek bildirimleri etkinleştirmez.", "Maçı kaldır", "Maçı kaydet", "Giriş yap", "Yeniden kontrol et"],
   "de-DE": ["Benachrichtigungen", "Einstellung wird geprüft…", "Einstellung wird gespeichert…", "Melde dich bei Arena an, um dieses Spiel zu verfolgen.", "Benachrichtigungen für dieses Spiel wurden noch nicht aktiviert.", "Benachrichtigungen nicht verfügbar. Deine Einstellung konnte nicht bestätigt werden.", "Spiel zu deinen Einstellungen hinzugefügt.", "Dieses Spiel ist noch nicht in deinen Einstellungen enthalten.", "Die Zustellung ans Handy ist noch nicht verfügbar. Das Speichern dieses Spiels aktiviert keine Benachrichtigungen.", "Spiel entfernen", "Spiel speichern", "Anmelden", "Erneut prüfen"],
 };
+
+const uncertainText = {
+  "en-GB": "Your change could not be confirmed. Further changes are paused to avoid conflicts. Checking again only reads the current preference.",
+  "pt-BR": "Não foi possível confirmar sua alteração. Novas alterações estão pausadas para evitar conflitos. Consultar novamente apenas lê a preferência atual.",
+  "es-ES": "No se pudo confirmar tu cambio. Los cambios adicionales están pausados para evitar conflictos. Volver a consultar solo lee la preferencia actual.",
+  "it-IT": "Non è stato possibile confermare la modifica. Ulteriori modifiche sono sospese per evitare conflitti. Una nuova verifica legge soltanto la preferenza attuale.",
+  "fr-FR": "Votre modification n’a pas pu être confirmée. Les modifications suivantes sont suspendues pour éviter les conflits. Une nouvelle vérification consulte uniquement la préférence actuelle.",
+  "ar-SA": "تعذّر تأكيد التغيير. تم إيقاف التغييرات الإضافية مؤقتًا لتجنب التعارض. التحقق مجددًا يقرأ التفضيل الحالي فقط.",
+  "tr-TR": "Değişikliğiniz doğrulanamadı. Çakışmaları önlemek için yeni değişiklikler duraklatıldı. Yeniden kontrol etmek yalnızca mevcut tercihi okur.",
+  "de-DE": "Deine Änderung konnte nicht bestätigt werden. Weitere Änderungen sind pausiert, um Konflikte zu vermeiden. Eine erneute Prüfung liest nur die aktuelle Einstellung.",
+};
+for (const locale of locales) draftText[locale].push(uncertainText[locale]);
 
 function optedInDraftGetter() {
   // Exercise the actual presentation opt-in without replacing the normalizer.
@@ -45,8 +59,9 @@ function assertAllDraftPhases(locale: string, getCopy: (locale: string) => Copy,
       ["loading", null, "loading", null], ["saving", false, "saving", "saveMatch"], ["saving", true, "saving", "removeMatch"],
       ["signed-out", null, "signedOut", "signIn"], ["disabled", null, "disabled", null],
       ["error", null, "error", "checkAgain"], ["ready", true, "saved", "removeMatch"], ["ready", false, "notSaved", "saveMatch"],
+      ["uncertain", null, "uncertain", "checkAgain"],
     ] as const) {
-      instance.state[0] = true; instance.state[2] = subscribed; instance.state[3] = phase;
+      instance.presentPhase(phase, subscribed);
       const tree = instance.render(), html = renderToStaticMarkup(tree), paragraphs = nodes(tree, "p"), buttons = nodes(tree, "button");
       assert.equal(paragraphs[0].props.children, expected[key], `${locale}/${phase}/${subscribed}/${key}`);
       assert.equal(paragraphs[0].props.role, "status");
@@ -107,20 +122,18 @@ function nodes(tree: unknown, type: string): Node[] {
 }
 
 function harness(getCopy: (locale: string) => Copy, locale = "en-GB", label = 'A <B> & "$&"') {
-  const state: unknown[] = [false, 0, null, "loading"];
-  const refs = [{ current: null }, { current: false }, { current: 0 }];
+  const state: unknown[] = [false, 0, null, "loading", `/api/notifications/fixtures/12%2F3:${owner}`, { key: "", phase: "unconfirmed" }, 0];
+  const refs = [{ current: null }, { current: false }, { current: 0 }, { current: false }, { current: true }, { current: owner }, { current: 0 }, { current: new Set<string>() }];
   const requests: { url: string; options: RequestInit; reply: (body: unknown, status?: number) => void; fail: () => void }[] = [];
   const timers = new Map<number, { action: () => void; delay: number }>();
-  let cursor = 0, refCursor = 0, timerId = 0;
-  let pendingEffect: (() => (() => void) | undefined) | undefined;
-  let cleanup: (() => void) | undefined;
-  let effectDeps: unknown[] | undefined;
+  let cursor = 0, refCursor = 0, effectCursor = 0, timerId = 0, renderAgain = false;
+  const effects: { deps: unknown[]; cleanup?: () => void; pending?: () => (() => void) | undefined }[] = [];
   const compiledModule: { default?: (props: object) => React.ReactElement } = {};
   vm.runInNewContext(ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText, {
     exports: compiledModule, AbortController,
     setTimeout: (action: () => void, delay: number) => { const id = ++timerId; timers.set(id, { action, delay }); return id; },
     clearTimeout: (id: number) => timers.delete(id),
-    fetch: (url: string, options: RequestInit) => new Promise((resolve, reject) => requests.push({ url, options,
+    fetch: (url: string, options: RequestInit) => url.endsWith("/readiness") ? Promise.resolve({ ok: false, status: 503, json: async () => ({}) }) : new Promise((resolve, reject) => requests.push({ url, options,
       reply: (body, status = 200) => resolve({ ok: status >= 200 && status < 300, status, json: async () => body }),
       fail: () => reject(new Error("response lost")),
     })),
@@ -128,23 +141,44 @@ function harness(getCopy: (locale: string) => Copy, locale = "en-GB", label = 'A
       if (name === "react/jsx-runtime") return jsxRuntime;
       if (name === "react") return {
         useId: () => "fixture-alert",
-        useState: () => { const index = cursor++; return [state[index], (value: unknown) => { state[index] = typeof value === "function" ? value(state[index]) : value; }]; },
+        useState: (initial: unknown) => { const index = cursor++; if (!(index in state)) state[index] = initial; return [state[index], (value: unknown) => { const next = typeof value === "function" ? value(state[index]) : value; if (state[index] !== next) { state[index] = next; renderAgain = true; } }]; },
         useRef: () => refs[refCursor++],
+        useLayoutEffect: () => undefined,
         useEffect: (action: () => (() => void) | undefined, deps: unknown[]) => {
-          if (!effectDeps || deps.some((value, index) => value !== effectDeps![index])) { pendingEffect = action; effectDeps = deps; }
+          const index = effectCursor++, prior = effects[index];
+          if (!prior || deps.some((value, i) => value !== prior.deps[i])) effects[index] = { deps, cleanup: prior?.cleanup, pending: action };
         },
       };
       if (name === "lucide-react") return { Bell: (props: object) => React.createElement("svg", { ...props, "data-icon": "Bell" }) };
       if (name.endsWith(".css")) return { default: { profileActions: "profileActions", trigger: "trigger", panel: "panel" } };
       if (name.endsWith("fixture-alert-i18n")) return { getTouchlineFixtureAlertCopy: getCopy };
+      if (name.endsWith("fixture-alert-readiness")) return { parseFixtureAlertSavedInterest };
+      if (name.endsWith("fixture-alert-status-client")) return {};
+      if (name.endsWith("push-device-registration")) return { readTouchlinePushInstallationId: () => null };
+      if (name === "@/lib/supabase/client") return { createClient: () => ({ auth: {} }) };
+      if (name.endsWith("account-locale-identity-observer")) return { startAccountLocaleIdentityObserver: ({ onIdentity }: { onIdentity: (id: string) => void }) => { onIdentity(owner); return () => {}; } };
       throw new Error(`Unexpected import: ${name}`);
     },
   });
-  const render = (fixtureId = "12/3") => { cursor = 0; refCursor = 0; return compiledModule.default!({ fixtureId, label, locale }); };
-  const commit = () => { if (pendingEffect) { cleanup?.(); const action = pendingEffect; pendingEffect = undefined; cleanup = action(); } };
+  const render = (fixtureId = "12/3") => {
+    for (let i = 0; i < 10; i++) {
+      cursor = 0; refCursor = 0; effectCursor = 0; renderAgain = false;
+      const tree = compiledModule.default!({ fixtureId, label, locale, expectedAccountId: owner });
+      if (!renderAgain) return tree;
+    }
+    throw Error("render-phase state adjustment did not converge");
+  };
+  const presentPhase = (phase: string, subscribed: boolean | null) => {
+    const key = `/api/notifications/fixtures/12%2F3:${owner}`;
+    state[0] = true; state[2] = subscribed; state[3] = phase === "uncertain" ? "ready" : phase;
+    state[4] = { key, epoch: 0 };
+    state[7] = new Set(phase === "uncertain" ? [key] : []);
+    state[8] = { key, accountId: owner, open: true, retry: 0, epoch: 0, confirmed: true, invalid: false };
+  };
+  const commit = () => { for (const effect of effects) if (effect.pending) { effect.cleanup?.(); const action = effect.pending; effect.pending = undefined; effect.cleanup = action(); } };
   const click = (node: Node) => (node.props.onClick as () => void)();
   const open = () => { click(nodes(render(), "button")[0]); const tree = render(); commit(); return tree; };
-  return { state, requests, timers, render, commit, click, open, dispose: () => cleanup?.(), expire: () => { for (const timer of timers.values()) timer.action(); } };
+  return { state, requests, timers, render, presentPhase, commit, click, open, dispose: () => effects.forEach(effect => effect.cleanup?.()), expire: () => { for (const timer of timers.values()) timer.action(); } };
 }
 
 test("real consumer forwards the full locale to the getter and renders its sentinel copy", () => {
@@ -153,7 +187,7 @@ test("real consumer forwards the full locale to the getter and renders its senti
   const instance = harness(locale => { seen.push(locale); return copy; }, "ar-SA");
   instance.open();
   const html = renderToStaticMarkup(instance.render());
-  assert.deepEqual(seen, ["ar-SA", "ar-SA", "ar-SA"]);
+  assert.deepEqual(seen, ["ar-SA", "ar-SA", "ar-SA", "ar-SA"]); // Opening resets the presentation before commit.
   assert.match(html, /sentinel-loading/);
   assert.match(html, /sentinel-deliveryUnavailable/);
   assert.match(html, /aria-label="sentinel-alerts: A &lt;B&gt; &amp; &quot;\$&amp;&quot;"/);
@@ -181,7 +215,7 @@ test("real JSX renders every state, neutral bell, exact labels, classes, escaped
   for (const locale of locales) {
     const copy = getCopy(locale), instance = harness(getCopy, locale);
     for (const [phase, subscribed, key] of [["loading", null, "loading"], ["saving", false, "saving"], ["signed-out", null, "signedOut"], ["disabled", null, "disabled"], ["error", null, "error"], ["ready", true, "saved"], ["ready", false, "notSaved"]] as const) {
-      instance.state[0] = true; instance.state[2] = subscribed; instance.state[3] = phase;
+      instance.presentPhase(phase, subscribed);
       const tree = instance.render(), html = renderToStaticMarkup(tree);
       assert.equal(nodes(tree, "p")[0].props.children, copy[key]);
       assert.equal(nodes(tree, "p")[1].props.children, copy.deliveryUnavailable);
@@ -200,7 +234,7 @@ test("real JSX renders every state, neutral bell, exact labels, classes, escaped
   }
 });
 
-test("real handlers perform GET before PUT, preserve payload, single saving and require fresh GET after uncertainty", async () => {
+test("real handlers preserve a single PUT; only explicit reread unlocks a new CAS intention", async () => {
   const { getTouchlineFixtureAlertCopy: getCopy } = await catalogue();
   const instance = harness(getCopy, "pt-BR");
   instance.render(); instance.commit(); assert.equal(instance.requests.length, 0);
@@ -211,18 +245,21 @@ test("real handlers perform GET before PUT, preserve payload, single saving and 
   const save = nodes(instance.render(), "button")[1]; instance.click(save); instance.click(save);
   assert.equal(instance.requests.length, 2); assert.equal(instance.state[3], "saving");
   assert.equal(nodes(instance.render(), "button")[1].props.disabled, true);
-  assert.equal(instance.requests[1].options.body, '{"active":true}');
-  assert.deepEqual(JSON.parse(JSON.stringify(instance.requests[1].options.headers)), { "Content-Type": "application/json" });
+  assert.equal(instance.requests[1].options.body, '{"active":true,"expectedRevision":"0"}');
+  assert.deepEqual(JSON.parse(JSON.stringify(instance.requests[1].options.headers)), { "Content-Type": "application/json", "X-Touchline-Expected-Account": owner });
   instance.requests[1].fail(); await flush();
-  assert.equal(instance.state[2], null); assert.equal(instance.state[3], "error");
-  const retry = nodes(instance.render(), "button")[1]; assert.equal(retry.props.children, getCopy("pt-BR").checkAgain);
-  instance.click(retry); instance.render(); instance.commit();
+  assert.equal(instance.state[2], null); assert.equal(instance.state[3], "loading");
+  instance.render(); instance.commit();
   assert.equal(instance.requests.length, 3); assert.equal(instance.state[3], "loading");
   instance.requests[2].reply(acknowledgement(true)); await flush();
-  instance.click(nodes(instance.render(), "button")[1]); assert.equal(instance.requests[3].options.body, '{"active":false}');
+  assert.equal(nodes(instance.render(), "p")[0].props.children, getCopy("pt-BR").uncertain);
+  instance.click(nodes(instance.render(), "button")[1]); instance.render(); instance.commit();
+  assert.equal(instance.requests[3].options.method, undefined);
+  assert.equal(instance.requests[3].options.body, undefined);
   instance.requests[3].reply(acknowledgement(false)); await flush();
   assert.equal(instance.state[3], "ready"); assert.equal(instance.state[2], false);
-  assert.deepEqual(instance.requests.map(request => request.options.method ?? "GET"), ["GET", "PUT", "GET", "PUT"]);
+  assert.equal(nodes(instance.render(), "p")[0].props.children, getCopy("pt-BR").notSaved);
+  assert.deepEqual(instance.requests.map(request => request.options.method ?? "GET"), ["GET", "PUT", "GET", "GET"]);
   for (const request of instance.requests) { assert.equal(request.options.credentials, "same-origin"); assert.ok(request.options.signal instanceof AbortSignal); }
   assert.equal(instance.timers.size, 0);
 });
@@ -233,7 +270,7 @@ test("GET and PUT reject unconfirmed outcomes, retain null, and expose auth/disa
     const instance = harness(getCopy); instance.open();
     if (method === "PUT") { instance.requests[0].reply(acknowledgement(false)); await flush(); instance.click(nodes(instance.render(), "button")[1]); }
     instance.requests.at(-1)!.reply(body, status); await flush();
-    assert.equal(instance.state[2], null); assert.equal(instance.state[3], phase);
+    assert.equal(instance.state[2], null); assert.equal(instance.state[3], method === "PUT" && phase === "error" ? "loading" : phase);
     assert.equal(nodes(instance.render(), "p")[1].props.children, getCopy("en-GB").deliveryUnavailable);
     assert.equal(instance.timers.size, 0);
   }
@@ -245,14 +282,15 @@ test("15-second abort and cleanup generation fence late GET/PUT and preserve a n
     const instance = harness(getCopy); instance.open();
     if (method === "PUT") { instance.requests[0].reply(acknowledgement(false)); await flush(); instance.click(nodes(instance.render(), "button")[1]); }
     const old = instance.requests.at(-1)!;
+    await flush(); // Independent readiness observation settles without another request.
     assert.deepEqual([...instance.timers.values()].map(timer => timer.delay), [15_000]);
     if (finish === "timeout") instance.expire();
     else if (finish === "dispose") instance.dispose();
-    else { instance.render("new-id"); instance.commit(); instance.requests.at(-1)!.reply(acknowledgement(false)); await flush(); }
+    else { instance.render("new-id"); instance.commit(); instance.requests.at(-1)!.reply(acknowledgement(false, "new-id")); await flush(); }
     assert.equal(old.options.signal?.aborted, true);
     const before = [...instance.state];
     old.reply(acknowledgement(true)); await flush();
-    if (finish === "timeout") { assert.equal(instance.state[3], "error"); assert.equal(instance.state[2], null); }
+    if (finish === "timeout") { assert.equal(instance.state[3], method === "PUT" ? "loading" : "error"); assert.equal(instance.state[2], null); }
     else assert.deepEqual(instance.state, before, "late old response must not change current state");
     assert.equal(instance.timers.size, 0);
   }

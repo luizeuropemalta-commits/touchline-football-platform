@@ -15,7 +15,7 @@ const css = read('app/globals.css') + read('components/touchline/pitch/Touchline
 const clubProfile = read('app/touchline-clubs/[club]/page.tsx');
 const pitchNeonOverrides = read('app/fantasy/fantasy.module.css').match(/[^{}]*\[data-touchline-card-neon-trace[^{}]*\{[^}]*\}/g)?.join('\n') ?? '';
 
-test('pitch neon remains visible in Market and portal Arena, preserving reduced motion', { timeout: 45_000 }, async () => {
+test('legacy decorative trace retains the approved subtle intensity in page and portal fixtures, preserving reduced motion', { timeout: 45_000 }, async () => {
   for (const engine of [chromium, webkit]) {
     const browser = await engine.launch();
     try {
@@ -49,7 +49,7 @@ test('pitch neon remains visible in Market and portal Arena, preserving reduced 
             return { opacity: Number(style.opacity), offset: parseFloat(style.strokeDashoffset), dash: style.strokeDasharray };
           });
         });
-        assert.ok(samples.every(sample => sample.opacity > .7), 'the glow never fades between laps');
+        assert.ok(samples.every(sample => Math.abs(sample.opacity - .56) < .001), 'the approved subtle glow stays constant between laps');
         assert.equal(new Set(samples.map(sample => sample.dash)).size, 1, 'the moving segment keeps its length');
         assert.ok(Math.abs(samples[1].offset + 25) < .2);
         assert.ok(Math.abs(samples[2].offset + 50) < .2);

@@ -221,9 +221,17 @@ export async function readPublicCompetitionFixtures(options: {
   now?: number;
   /** Match Centre uses the durable archive as well as the current schedule. */
   includeHistorical?: boolean;
+  /** Opt-in consumers must distinguish an unavailable read from a valid empty schedule. */
+  strictRead?: boolean;
 } = {}) {
+  const unavailable = (): TouchlineFixture[] => {
+    if (options.strictRead) throw new Error("FIXTURE_SCHEDULE_UNAVAILABLE");
+    return [];
+  };
+  const records = (value: unknown): value is DatabaseRecord[] => Array.isArray(value)
+    && value.every(row => row !== null && typeof row === "object" && !Array.isArray(row));
   const admin = options.providedAdmin ?? createAdminClient();
-  if (!admin) return [] as TouchlineFixture[];
+  if (!admin) return unavailable();
 
   const provider = options.provider ?? DEFAULT_PROVIDER;
   const competitionProviderId = options.competitionProviderId ?? DEFAULT_COMPETITION_PROVIDER_ID;
@@ -238,7 +246,8 @@ export async function readPublicCompetitionFixtures(options: {
     .eq("provider", provider)
     .eq("provider_competition_id", competitionProviderId)
     .maybeSingle();
-  if (competitionError || !competition?.id) return [] as TouchlineFixture[];
+  if (competitionError || !competition?.id) return unavailable();
+  if (options.strictRead && !asString(competition.id)) return unavailable();
 
   let fixtureQuery = admin
     .from("football_fixtures")
@@ -251,12 +260,14 @@ export async function readPublicCompetitionFixtures(options: {
   if (options.seasonId) fixtureQuery = fixtureQuery.eq("season_id", options.seasonId);
   if (options.through) fixtureQuery = fixtureQuery.lte("starts_at", options.through);
   const { data: fixtureRows, error: fixturesError } = await fixtureQuery;
-  if (fixturesError || !Array.isArray(fixtureRows) || !fixtureRows.length) return [] as TouchlineFixture[];
+  if (fixturesError || !Array.isArray(fixtureRows)) return unavailable();
+  if (!fixtureRows.length) return [] as TouchlineFixture[];
+  if (options.strictRead && !records(fixtureRows)) return unavailable();
 
   const clubIds = [...new Set((fixtureRows as FixtureRow[])
     .flatMap((row) => [asString(row.home_club_id), asString(row.away_club_id)])
     .filter((id): id is string => Boolean(id)))];
-  if (!clubIds.length) return [] as TouchlineFixture[];
+  if (!clubIds.length) return unavailable();
 
   const seasonIds = [...new Set((fixtureRows as FixtureRow[])
     .map((row) => asString(row.season_id))
@@ -284,7 +295,8 @@ export async function readPublicCompetitionFixtures(options: {
     || !Array.isArray(clubs)
     || !Array.isArray(seasonsResult.data)
     || !Array.isArray(roundsResult.data)
-  ) return [] as TouchlineFixture[];
+  ) return unavailable();
+  if (options.strictRead && (!records(clubs) || !records(seasonsResult.data) || !records(roundsResult.data))) return unavailable();
 
   const clubsById = new Map((clubs as DatabaseRecord[])
     .map((club) => [asString(club.id), club] as const)
@@ -295,9 +307,21 @@ export async function readPublicCompetitionFixtures(options: {
   const roundsById = new Map((roundsResult.data as DatabaseRecord[])
     .map((round) => [asString(round.id), round] as const)
     .filter((entry): entry is [string, DatabaseRecord] => Boolean(entry[0])));
-  return (fixtureRows as FixtureRow[])
+  if (options.strictRead && (fixtureRows as FixtureRow[]).some(row => {
+    const home = asString(row.home_club_id), away = asString(row.away_club_id);
+    const season = asString(row.season_id), round = asString(row.round_id);
+    return !home || !away || home === away || !asTimestamp(row.starts_at) || !asString(row.status)
+      || (season !== null && !asString(seasonsById.get(season)?.provider_season_id))
+      || (round !== null && !asString(roundsById.get(round)?.provider_round_id))
+      || [row.home_score, row.away_score].some(score => score != null && !Number.isSafeInteger(asNullableInteger(score)));
+  })) return unavailable();
+  const fixtures = (fixtureRows as FixtureRow[])
     .map((row) => fixtureFromRow(row, clubsById, seasonsById, roundsById, competitionProviderId))
     .filter((fixture): fixture is TouchlineFixture => Boolean(fixture));
+  if (options.strictRead && (fixtures.length !== fixtureRows.length
+    || new Set(fixtures.map(fixture => fixture.providerId)).size !== fixtures.length
+    || fixtures.some(fixture => fixture.homeTeam?.providerId === fixture.awayTeam?.providerId))) return unavailable();
+  return fixtures;
 }
 
 function uniqueTeams(fixtures: TouchlineFixture[]) {

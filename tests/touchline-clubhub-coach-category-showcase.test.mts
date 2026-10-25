@@ -12,6 +12,9 @@ import * as clubs from "../lib/touchlineArena/demo-data.ts";
 import * as workflow from "../lib/touchlineFantasy/market-workflow-i18n.ts";
 import * as catalogueLocale from "../lib/touchlineArena/catalogue-locale.ts";
 import * as menuCopy from "../lib/touchlineArena/account-locale-menu-i18n.ts";
+import * as publicErrorCopy from "../lib/touchlineArena/public-error-i18n.ts";
+import * as arenaShellCopy from "../lib/touchlineArena/arena-shell-i18n.ts";
+import * as authCopy from "../lib/touchlineArena/auth-i18n.ts";
 import * as intent from "../lib/touchlineArena/presentation-locale-intent.ts";
 import * as storage from "../lib/touchlineArena/browser-storage.ts";
 
@@ -85,6 +88,16 @@ function childElements(element: React.ReactElement<Record<string, unknown>>) {
 
 function realBrandHeader(menu: Record<string, unknown>) {
   const css = { default: new Proxy({}, { get: (_, key) => String(key) }) };
+  const signOut = compileMenuBoundary(readFileSync(new URL("../components/touchline/TouchlineSignOutButton.tsx", import.meta.url), "utf8"), {
+    react: React, "react/jsx-runtime": jsx, "lucide-react": icons,
+    "@/lib/supabase/client": { createClient: () => assert.fail("Header SSR must never start sign-out") },
+    "@/lib/touchlineArena/arena-shell-i18n": arenaShellCopy,
+    "@/lib/touchlineArena/auth-i18n": authCopy,
+    "./TouchlineGlobalNavigation.module.css": css,
+  });
+  const navigationRail = compileMenuBoundary(readFileSync(new URL("../components/touchline/TouchlineNavigationRail.tsx", import.meta.url), "utf8"), {
+    react: React, "react/jsx-runtime": jsx,
+  });
   const switcher = compileMenuBoundary(readFileSync(new URL("../components/auth-language-switcher.tsx", import.meta.url), "utf8"), {
     "react/jsx-runtime": jsx, "lucide-react": icons,
     "@/components/touchline/AccountLocaleMenu": menu,
@@ -103,6 +116,7 @@ function realBrandHeader(menu: Record<string, unknown>) {
   return compileMenuBoundary(readFileSync(new URL("../components/touchline/TouchlineBrandHeader.tsx", import.meta.url), "utf8"), {
     "react/jsx-runtime": jsx, "@/components/logo": { Logo: () => null },
     "./TouchlinePageControls": controls, "./TouchlineBrandHeader.module.css": css,
+    "./TouchlineSignOutButton": signOut, "./TouchlineNavigationRail": navigationRail,
   });
 }
 
@@ -114,6 +128,9 @@ test("the public ClubHub keeps language selection at the top and player borders 
     "next/navigation": { useRouter: () => ({ refresh: forbid }) },
     "@/lib/supabase/client": { createClient: forbid },
     "@/lib/touchlineArena/account-locale-browser": { startAccountLocaleBrowser: forbid },
+    "@/lib/touchlineArena/account-locale-identity-observer": { startAccountLocaleIdentityObserver: forbid },
+    "@/lib/touchlineArena/public-error-i18n": publicErrorCopy,
+    "./TouchlineGlobalNavigation.module.css": { default: { link: "shared-link" } },
     "@/lib/touchlineArena/i18n": i18n,
     "@/lib/touchlineArena/account-locale-menu-i18n": menuCopy,
     "@/lib/touchlineArena/presentation-locale-intent": intent,
@@ -150,6 +167,8 @@ test("the public ClubHub keeps language selection at the top and player borders 
     assert.equal(actual.props.accountLocaleContext, context, "pass the authoritative object without synthesizing a guest");
     assert.equal(actual.props.locale, effective);
     const html = renderToStaticMarkup(actual);
+    const signOutLabel = effective === "pt-BR" ? "Sair" : arenaShellCopy.getTouchlineArenaShellCopy(effective).signOut;
+    assert.equal(html.includes(`>${signOutLabel}</button>`), context.mode === "account", "sign-out requires the authoritative account context and never runs during SSR");
     assert.equal((html.match(/<select\b/g) ?? []).length, 1);
     assert.match(html, /<select[^>]*disabled=""/);
     assert.ok(html.includes("🇬🇧 English")); assert.ok(html.includes("🇧🇷 Português"));

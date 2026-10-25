@@ -15,6 +15,7 @@ import { getTouchlineFantasyStandaloneBuilderCopy, formatTouchlineFantasyStandal
 import { resolveTouchlineCatalogueLocale } from "../lib/touchlineArena/catalogue-locale.ts";
 import { getTouchlineFantasyMarketAccessCopy } from "../lib/touchlineFantasy/market-access-i18n.ts";
 import { getTouchlineFantasyMarketMetricsCopy } from "../lib/touchlineFantasy/market-metrics-i18n.ts";
+import { getCoachReleaseReviewCopy } from "../lib/touchlineFantasy/coach-release-review-i18n.ts";
 import { touchlineFantasyStatusCopy, touchlineFantasyLineupErrorCopy } from "../lib/touchlineFantasy/market-state-i18n.ts";
 import { touchlineMarketPositionBucket, touchlineMarketPositionBucketLabel } from "../lib/touchlineArena/position-eligibility.ts";
 import { localizedPositionLabel } from "../lib/touchlineArena/position-labels.ts";
@@ -27,7 +28,8 @@ runInNewContext(ts.transpileModule(readFileSync(new URL("../lib/touchlineArena/s
 const load = () => import("../lib/touchlineFantasy/market-workflow-i18n.ts");
 // EN/PT characterization; approved wording changes are STEP → Etapa,
 // GAMEWEEK → Rodada/Round, neutral count templates, search-aware empty copy,
-// and explicit lineup removal (not release/refund of the owned player).
+// explicit lineup removal (not release/refund of the owned player), and the
+// approved Portuguese football action "Substituir".
 const baseline = {
   "en-GB": {
     "metadataDescription": "Manage your TouchLine XI by position.",
@@ -153,7 +155,7 @@ const baseline = {
     "browsePosition": "Explore uma posição",
     "openShort": "Vaga",
     "openSlot": "Vaga aberta",
-    "replace": "Trocar",
+    "replace": "Substituir",
     "choose": "Escolher",
     "remove": "Retirar da escalação",
     "technicalArea": "Área técnica",
@@ -186,6 +188,7 @@ const baseline = {
 const source = readFileSync(new URL("../app/fantasy/FantasyGameweekClient.tsx", import.meta.url), "utf8");
 const ast = ts.createSourceFile("Fantasy.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
 const declarations = new Map<string, string>(); let embedded = ""; let getter = ""; let lockedReasonGetter = ""; let browseInitializer = ""; let targetSlotGetter = "";
+let coachReleaseGetter = "";
 let standalone = "";
 function visit(node: ts.Node) {
   if (ts.isReturnStatement(node) && node.expression && node.expression.getText(ast).startsWith('<div className={styles.shell} data-canonical-step=')) standalone = node.expression.getText(ast);
@@ -195,6 +198,7 @@ function visit(node: ts.Node) {
   if (ts.isVariableDeclaration(node) && node.name.getText(ast) === "lockedZoomReason") lockedReasonGetter = `const ${node.getText(ast)};`;
   if (ts.isVariableDeclaration(node) && node.name.getText(ast) === "browseCards") browseInitializer = node.initializer!.getText(ast);
   if (ts.isVariableDeclaration(node) && node.name.getText(ast) === "marketTargetSlot") targetSlotGetter = `const ${node.getText(ast)};`;
+  if (ts.isVariableDeclaration(node) && node.name.getText(ast) === "coachReleaseAction") coachReleaseGetter = `const ${node.getText(ast)};`;
   ts.forEachChild(node, visit);
 }
 visit(ast);
@@ -204,6 +208,7 @@ const card = { id: "player-1", canonicalPlayerId: "player-1", name: "Canonical P
 const coach = { id: "coach-1", coach: { displayName: "Canonical Coach" }, clubName: "Canonical Club", clubLogoUrl: null };
 const player = { playerId: "player-1", positionBucket: "striker", marketValueEur: 10, clubId: "club-1" };
 const icon = () => null;
+const fixtureStrip = () => null;
 const child = ({ children }: { children?: React.ReactNode }) => React.createElement("div", null, children);
 // Source is immutable for this test process; each execution still gets a fresh VM.
 const compiledConsumers = new Map<boolean, string>();
@@ -217,6 +222,7 @@ function actual(input: Record<string, unknown> = {}, getCopy: (locale: string, d
     collectionEnabled: false, showCollectionStructure: false, collectionStructureVisible: false,
     collection: { state: null, ready: false, busy: false, hasPending: false, canInitialize: false },
     collectionSlotsEditable: false, collectionDestination: null,
+    coachReleaseReview: null, getCoachReleaseReviewCopy,
     roundRecoveryPending: false, qaClubMarketOpen: false,
     displayGeometry: input.geometry ?? geometry, roundEditable: input.editable ?? true,
     canChooseGuidedSlot, nextGuidedChoice, CLUB_RESERVE_POSITIONS, collectionSlotPlan,
@@ -227,7 +233,7 @@ function actual(input: Record<string, unknown> = {}, getCopy: (locale: string, d
     CalendarClock: icon, ShieldCheck: icon, WalletCards: icon, Crown: icon, Check: icon, ChevronRight: icon, BadgeCheck: icon, Trophy: icon, House: icon, PlaneTakeoff: icon, Send: icon, Save: icon, LockKeyhole: icon, CircleAlert: icon, Users: icon,
     builderRef: { current: null }, guidePanelRef: { current: null }, currentAlerts: [], filtered: [], persistedUserGameweek: null, RankingTable: icon,
     stepLabel: (step: string) => step, formatTouchlineFantasyMarketValue: () => "100", formatTouchlineFantasyDeadline: () => "deadline", formatTouchlineFantasyBudgetAmount: () => "100", getTouchlineFantasyMarketBudgetCopy: () => ({ rule: "{budget}" }),
-    React, ArenaView: child, TouchlineMatchCentre: icon, resolveTouchlineCatalogueLocale, liveTimeZone: "UTC", initialLiveFixtures: [], initialLiveNow: 0, arenaOpen: false, ...domain, locale: "en-GB", draftLocalesEnabled, pt: false, marketPage: true, editable: true, saving: false,
+    React, ArenaView: child, ClubOwnerTechnicalRail: child, ClubHubFixtureStrip: fixtureStrip, resolveTouchlineCatalogueLocale, liveTimeZone: "UTC", initialLiveFixtures: [], initialLiveMetadata: { state: "partial-persisted-schedule", degraded: true }, initialLiveNow: 0, arenaOpen: false, ...domain, locale: "en-GB", draftLocalesEnabled, pt: false, marketPage: true, editable: true, saving: false,
     styles: new Proxy({}, { get: (_, key) => String(key) }), gameweeks: [], activeGameweek: { id: "round-7", number: 7, state: "MARKET_OPEN" },
     selectedCoach: coach, selectedCoachId: coach.id, formationCode: "4-3-3", geometry, selections: [], eligiblePlayers: [player],
     catalogueById: new Map([[card.id, card]]), browseCards: [card], filteredCoaches: [coach], selectedPlayerClub: { name: "Canonical Club", teamId: "club-1" }, selectedCoachClub: { teamId: "club-1" },
@@ -252,13 +258,13 @@ function actual(input: Record<string, unknown> = {}, getCopy: (locale: string, d
     loadPersistedLineup: async (fingerprint: string, state: string) => { calls.push(["verify", { fingerprint, state }]); return true; },
     ...input,
   };
-  for (const name of ["setArenaOpen", "setSelections", "setActiveSlotId", "setBrowsePosition", "setVisibleStep", "setSquadView", "setQuery", "setSelectedCoachId", "setCoachClubTeamId", "setPlayerClubTeamId", "setFormationCode", "setFeedback", "setSaving"]) {
+  for (const name of ["setArenaOpen", "setSelections", "setActiveSlotId", "setBrowsePosition", "setVisibleStep", "setSquadView", "setQuery", "setSelectedCoachId", "setCoachReleaseReview", "setCoachClubTeamId", "setPlayerClubTeamId", "setFormationCode", "setFeedback", "setSaving"]) {
     context[name] = (value: unknown) => calls.push([name, typeof value === "function" ? value(name === "setArenaOpen" ? context.arenaOpen : context.selections) : value]);
   }
   const functions = ["lineupFingerprint", "horizontalMyClubPitchPosition", "CompactClubSelector", "changeFormation", "addPlayer", "removePlayer", "save", "marketSlotAccepts", "slotAccepts", "canonicalRosterRole", "changeMarketQuery"].map(name => declarations.get(name)).join("\n");
   let js = compiledConsumers.get(standaloneMode);
   if (!js) {
-    js = ts.transpileModule(`(() => { ${getter} ${lockedReasonGetter} ${targetSlotGetter} ${functions} return { render: () => ${standaloneMode ? standalone : embedded}, save, addPlayer, removePlayer, changeFormation, CompactClubSelector }; })()`, { compilerOptions: { target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.React } }).outputText;
+    js = ts.transpileModule(`(() => { ${getter} ${lockedReasonGetter} ${targetSlotGetter} ${coachReleaseGetter} ${functions} return { render: () => ${standaloneMode ? standalone : embedded}, save, addPlayer, removePlayer, changeFormation, CompactClubSelector, coachReleaseAction }; })()`, { compilerOptions: { target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.React } }).outputText;
     compiledConsumers.set(standaloneMode, js);
   }
   const api = runInNewContext(js, context);
@@ -266,6 +272,38 @@ function actual(input: Record<string, unknown> = {}, getCopy: (locale: string, d
 }
 
 type Element = React.ReactElement<Record<string, unknown>>;
+test("real coach review action remains contract-bound and cannot dispatch a release", async () => {
+  const { getTouchlineFantasyMarketWorkflowCopy: getCopy } = await load();
+  assert.ok(coachReleaseGetter, "extract the real action initializer, not a substitute");
+  const owned = { seasonId: "season-1", plan: "vip", coach: { id: coach.id }, players: [], balanceEur: 100 };
+  const base = { collectionEnabled: true, collectionSlotsEditable: true, snapshot: { userId: "account-1" }, collection: { ready: true, state: owned } };
+  for (const override of [
+    { collectionEnabled: false }, { marketPage: false },
+    { collection: { ready: false, state: owned } },
+    { collection: { ready: true, state: { ...owned, plan: "beta" } } },
+    { collection: { ready: true, state: { ...owned, coach: null } } },
+    { collection: { ready: true, state: { ...owned, coach: { id: "other-coach" } } } },
+  ]) {
+    const view = actual({ ...base, ...override }, getCopy);
+    assert.equal(view.api.coachReleaseAction, undefined);
+    assert.deepEqual(view.calls, []);
+  }
+  for (const override of [{ editable: false }, { saving: true }, { collectionSlotsEditable: false }]) {
+    const view = actual({ ...base, ...override }, getCopy);
+    assert.equal(view.api.coachReleaseAction.disabled, true);
+    view.api.coachReleaseAction.onSelect();
+    assert.deepEqual(view.calls, [], "disabled review cannot mutate or send");
+  }
+  const before = structuredClone(owned);
+  const view = actual(base, getCopy);
+  assert.equal(view.api.coachReleaseAction.disabled, false);
+  view.api.coachReleaseAction.onSelect();
+  assert.equal(view.calls.length, 1);
+  assert.equal(view.calls[0][0], "setCoachReleaseReview");
+  assert.deepEqual(JSON.parse(JSON.stringify(view.calls[0][1])), { id: coach.id, accountId: "account-1", seasonId: "season-1" });
+  assert.deepEqual(owned, before, "opening review cannot alter contract or balance");
+});
+
 test("standalone real JSX renders all five steps in eight gated locales", async () => {
   const { getTouchlineFantasyMarketWorkflowCopy: getCopy } = await load();
   assert.ok(standalone);
@@ -325,10 +363,13 @@ test("Arena round points reuse the persisted live total, never draft or coach po
   for (const locale of ["en-GB", "pt-BR", "es-ES", "it-IT", "fr-FR", "ar-SA", "tr-TR", "de-DE"]) {
     for (const score of [0, 12.5, 98.25]) {
       const rendered = actual({ arenaOpen: true, locale, live: { gameweekScore: score, seasonScore: 999 }, hasUnsavedChanges: true, selectedCoach: { ...coach, points: 999 }, selections: [] }, getCopy, true);
-      const output = elements(rendered.api.render()).find(node => node.props["data-arena-round-points"] === "true");
+      const nodes = elements(rendered.api.render());
+      const output = nodes.find(node => node.props["data-arena-round-points"] === "true");
       assert.ok(output);
-      const pitch = elements(rendered.api.render()).find(node => node.props.className === "myClubTacticalPitch");
-      assert.ok(pitch && elements(pitch).some(node => node.props["data-arena-round-points"] === "true"), "points follow the pitch boundary, not the coach position");
+      const pitch = nodes.find(node => node.props.className === "myClubTacticalPitch");
+      const toolbar = nodes.find(node => node.props["data-arena-toolbar"] === "true");
+      assert.ok(pitch && toolbar && elements(toolbar).includes(output), "points belong to the toolbar above the field");
+      assert.ok(!elements(pitch).includes(output), "points never overlap player positions inside the pitch");
       assert.equal(output.props["aria-live"], "polite");
       const html = renderToStaticMarkup(output);
       assert.ok(html.includes(getTouchlineFantasyMarketMetricsCopy(locale, true).roundPoints));
@@ -355,11 +396,10 @@ test("Arena opens and closes with incomplete or locked XI without changing or sa
   }
 });
 
-test("Arena overlay anchors coach outside the pitch and offers only canonical formations without a locked-market mutation", async () => {
+test("Arena toolbar keeps coach outside the pitch and offers only canonical formations without a locked-market mutation", async () => {
   const { getTouchlineFantasyMarketWorkflowCopy: getCopy } = await load();
   const css = readFileSync(new URL("../app/fantasy/fantasy.module.css", import.meta.url), "utf8");
-  assert.match(css, /\.arenaCoach \{[^}]*top: -8px; left: 50%; transform: translate\(-50%, -100%\)/);
-  assert.match(css, /\.arenaFormationControl, \.arenaHudRight \{[^}]*bottom: calc\(100% \+ 10px\)/);
+  assert.match(css, /\.arenaFormationControl, \.arenaHudRight \{[^}]*position: relative/);
   const alternate = { ...geometry, code: "3-5-2" };
   for (const locale of ["en-GB", "pt-BR", "es-ES", "it-IT", "fr-FR", "ar-SA", "tr-TR", "de-DE"]) {
     for (const editable of [true, false]) {
@@ -369,7 +409,9 @@ test("Arena overlay anchors coach outside the pitch and offers only canonical fo
       }, getCopy, true);
       const pitch = elements(rendered.api.render()).find((node) => node.props.className === "myClubTacticalPitch");
       assert.ok(pitch);
-      const nodes = elements(pitch);
+      const toolbar = elements(rendered.api.render()).find(node => node.props["data-arena-toolbar"] === "true");
+      assert.ok(toolbar && !elements(pitch).includes(toolbar), "toolbar stays outside the playable field");
+      const nodes = elements(toolbar);
       const formation = nodes.find((node) => node.props["data-arena-formation"] === "true");
       const right = nodes.find((node) => node.props.className === "arenaHudRight");
       const coachNode = nodes.find((node) => node.props.className === "arenaCoach");
@@ -447,6 +489,28 @@ function elements(node: React.ReactNode): Element[] {
   const element = node as Element;
   return [element, ...elements(element.props.children as React.ReactNode)];
 }
+
+test("ClubOwner and Arena reuse one shared fixture strip above reserves with the canonical seed and locale", async () => {
+  const { getTouchlineFantasyMarketWorkflowCopy: getCopy } = await load();
+  const fixtures = [{ id: "fixture-seed", providerId: "fixture-seed" }];
+  for (const { code: locale } of TOUCHLINE_APPROVED_LOCALES) {
+    for (const marketPage of [false, true]) for (const arenaOpen of [false, true]) {
+      const view = actual({ locale, marketPage, arenaOpen, initialLiveFixtures: fixtures,
+        initialLiveNow: 123456, liveTimeZone: "Europe/Malta" }, getCopy, true);
+      const strips = elements(view.api.render()).filter(node => node.type === fixtureStrip);
+      assert.equal(strips.length, 1, `${locale}/${marketPage}/${arenaOpen}`);
+      if (strips[0]) {
+        assert.strictEqual(strips[0].props.initialFixtures, fixtures);
+        assert.equal(strips[0].props.initialNow, 123456);
+        assert.equal(strips[0].props.initialTimeZone, "Europe/Malta");
+        assert.equal(strips[0].props.locale, locale);
+        assert.equal(strips[0].props.draftLocalesEnabled, true);
+        assert.equal((strips[0].props.initialMetadata as { degraded: boolean }).degraded, true);
+      }
+      assert.deepEqual(view.calls, [], "rendering the strip cannot mutate or separately fetch the roster");
+    }
+  }
+});
 
 test("count summary is a complete neutral phrase for 0, 1, 2 and 11 in every catalogue", async () => {
   const mod = await load();

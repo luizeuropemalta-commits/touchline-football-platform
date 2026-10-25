@@ -15,6 +15,24 @@ function source(relativePath: string) {
   return readFileSync(path.join(process.cwd(), relativePath), "utf8");
 }
 
+test("pitch wrappers cannot replace the exact tier frame glow with a green halo", () => {
+  const css = source("app/globals.css");
+  const pitch = source("app/fantasy/fantasy.module.css");
+  const hoverRules = [...pitch.matchAll(/\.myClubTacticalSlot:not\(:disabled\):hover>span\{([^}]+)\}/g)];
+  assert.equal(hoverRules.length, 3);
+  for (const [, rule] of hoverRules) {
+    assert.doesNotMatch(rule, /rgba\(170,255,62|var\(--lime\)/);
+  }
+  assert.match(css, /\.touchline-card-surface\[data-card-motion="true"\] \[data-touchline-card-neon-trace="true"\] \{\s*display: none/);
+  assert.match(css, /\.touchline-card-surface\[data-card-motion="true"\] \[data-touchline-card-neon-trace-run="true"\] \{\s*animation: none/);
+  assert.match(css, /background-image: var\(--touchline-card-neon-art, none\)/);
+  assert.match(css, /drop-shadow\(0 0 14\.45px color-mix\(in srgb, var\(--touchline-card-frame-color\) 59\.5%, transparent\)\)/);
+  assert.match(css, /\[data-neon-active="true"\]\)::before,[\s\S]*?opacity: 1/);
+  for (const component of ["TouchlineEliteExactCard", "TouchlineCoachCard"]) {
+    assert.match(source(`components/touchline/cards/${component}.tsx`), /"--touchline-card-neon-art":/);
+  }
+});
+
 test("every TouchLine card keeps the permanent tier neon contract", () => {
   const globalCss = source("app/globals.css");
   const exactCard = source("components/touchline/cards/TouchlineEliteExactCard.tsx");
@@ -55,7 +73,13 @@ test("every TouchLine card keeps the permanent tier neon contract", () => {
   assert.match(traceCss, /@keyframes touchline-card-perimeter-trace \{\s*from \{ stroke-dashoffset: 0; \}\s*to \{ stroke-dashoffset: -100; \}\s*\}/);
   assert.doesNotMatch(traceCss, /1500ms cubic-bezier\(\.22,\.74,\.28,1\) both/);
   assert.match(traceCss, /stroke-dashoffset/);
-  assert.doesNotMatch(traceCss, /mask|clip-path|filter:|background:/);
+  assert.doesNotMatch(traceCss, /clip-path|background:/);
+  assert.match(traceCss, /filter: drop-shadow\(0 0 2px color-mix\(in srgb, currentColor 32%, transparent\)\)/);
+  assert.match(traceCss, /stroke-width: 2\.2;[\s\S]*?opacity: \.56/);
+  assert.match(traceCss, /transition: opacity 240ms ease/);
+  assert.doesNotMatch(traceCss, /rgba\(163|#a3ff12|brightness\(/);
+  assert.match(exactCard, /drop-shadow\(0 0 3px rgba\(163,255,18,\.20\)\)/);
+  assert.doesNotMatch(exactCard, /drop-shadow\(0 0 8px rgba\(163,255,18,\.52\)\)/);
   assert.doesNotMatch(traceCss, /overflow: hidden/);
   assert.match(exactCard, /touchlineCardTierPalette\(marketTier\.key\)\.accent/);
   assert.match(exactCard, /--touchline-card-frame-color": cardTraceColor/);
@@ -83,7 +107,7 @@ test("every TouchLine card keeps the permanent tier neon contract", () => {
   );
   assert.doesNotMatch(crestCss, /border-radius:\s*50%|outline:|radial-gradient\(circle/);
   assert.match(globalCss, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\[data-touchline-card-neon-trace-run="true"\][\s\S]*?animation: none !important/);
-  assert.match(globalCss, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\[data-touchline-card-neon-trace-base="true"\][\s\S]*?opacity: \.72/);
+  assert.match(globalCss, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\[data-touchline-card-neon-trace-base="true"\][\s\S]*?opacity: \.4/);
   assert.match(globalCss, /touch-action: manipulation/);
   assert.doesNotMatch(traceCss, /touch-action:\s*none/);
   assert.match(globalCss, /\[data-neon-active="true"\]/);

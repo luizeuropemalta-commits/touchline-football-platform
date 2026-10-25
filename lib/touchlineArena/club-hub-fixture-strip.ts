@@ -4,6 +4,11 @@ import { isTouchlineLiveReadMetadata, touchlineMatchCentreDisplayState, type Tou
 
 export type ClubHubStripSnapshot = { fixtures: TouchlinePublicFixture[]; metadata: TouchlineLiveReadMetadata };
 
+/** An explicit empty schedule is a result; a missing seed needs one durable read. */
+export function clubHubStripSeedNeedsRecovery(seed: readonly TouchlinePublicFixture[] | null | undefined) {
+  return seed == null;
+}
+
 export function parseClubHubStripSnapshot(value: unknown): ClubHubStripSnapshot | null {
   if (!value || typeof value !== "object") return null;
   const payload = value as Record<string, unknown>;

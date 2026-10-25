@@ -8,7 +8,7 @@ test("Club Hub uses the upcoming persisted fixture for its official pre-match sh
   assert.match(page, /const matchdayFeed = persistedFeeds\.find\(\(feed\) => feed\.fixture\.providerId === fixture\?\.providerId\)/);
   assert.match(page, /fixtureId: matchdayFeed\?\.fixture\.providerId \?\? null/);
   assert.match(page, /lineups: matchdayFeed\?\.lineups \?\? \[\]/);
-  assert.match(page, /formation = matchdayFeed\?\.formations/);
+  assert.match(page, /const formation = requestedFixtureId\s*\? selectClubHubRequestedFormation\(matchdayFeed\?\.formations \?\? \[\], requestedFixtureId, club\.teamId\)\s*: matchdayFeed\?\.formations\.find\(\(item\) => feedTeamBelongsToClub\(item\.teamId, item\.teamName, club\)\)\?\.formation \?\? null/);
 });
 
 test("Club Hub keeps scoring bound to a live or finished fixture independently of the next match", () => {

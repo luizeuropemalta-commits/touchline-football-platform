@@ -11,7 +11,8 @@ test("Match Centre exposes one page heading, a selected-fixture state and motion
   const styles = source("components/touchline/match-centre/touchline-match-centre.module.css");
 
   assert.equal((component.match(/<h1\b/g) ?? []).length, 1);
-  assert.match(component, /<h1 className=\{styles\.title\}>\{dictionary\.title\}<\/h1>/);
+  assert.match(component, /<h1 className="sr-only">\{dictionary\.title\}<\/h1>/);
+  assert.doesNotMatch(component, /className=\{styles\.pageTitle\}/, "the removed visible title is not reintroduced");
   assert.match(component, /role="status" aria-live="polite" aria-atomic="true"/);
   assert.match(component, /className=\{styles\.freshnessNotice\} role="status" aria-live="polite" aria-atomic="true"/);
   assert.match(component, /dictionary\.liveDataUpdating/);

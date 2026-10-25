@@ -1,3 +1,4 @@
+import { AuthSessionMissingError } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { hasTouchLineArenaAccess } from "@/lib/touchlineArena/auth-access";
@@ -13,9 +14,16 @@ async function handle(request: Request, context: { params: Promise<{ fixtureId: 
     enabled: enabled && Boolean(admin),
     actor: async () => {
       const client = await createClient();
-      if (!client) return null;
-      const { data, error } = await client.auth.getUser();
-      if (error || !data.user) return null;
+      if (!client) throw new Error("authentication-unavailable");
+      const receipt = await client.auth.getUser();
+      if (receipt?.error instanceof AuthSessionMissingError) return null;
+      // Only a verified absent session is a guest. A transport/configuration
+      // failure must not tell a signed-in user that they have signed out.
+      if (!receipt || receipt.error !== null || !receipt.data || receipt.data.user === undefined) {
+        throw new Error("authentication-unavailable");
+      }
+      const { data } = receipt;
+      if (data.user === null) return null;
       return { id: data.user.id, allowed: !data.user.is_anonymous && hasTouchLineArenaAccess(data.user) };
     },
     resolveFixture: async (providerId) => {
@@ -29,8 +37,8 @@ async function handle(request: Request, context: { params: Promise<{ fixtureId: 
       if (error) throw error;
       return data;
     },
-    write: async (id, userId, active) => {
-      const { data, error } = await admin!.rpc("touchline_set_fixture_alert_subscription", { p_fixture_id: id, p_user_id: userId, p_active: active });
+    write: async (id, userId, active, expectedRevision) => {
+      const { data, error } = await admin!.rpc("touchline_set_fixture_alert_subscription", { p_fixture_id: id, p_user_id: userId, p_active: active, p_expected_revision: expectedRevision });
       if (error) throw error;
       return data;
     },

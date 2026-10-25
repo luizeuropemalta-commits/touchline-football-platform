@@ -21,6 +21,8 @@ const locales = ["en-GB", "pt-BR", "es-ES", "it-IT", "fr-FR", "ar-SA", "tr-TR", 
 const read = (path: string) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 const componentPath = "components/player-database-search.tsx";
 const pagePath = "app/(app)/football-search/page.tsx";
+const railPath = "components/touchline/TouchlineNavigationRail.tsx";
+const contentCssPath = "app/(app)/football-search/FootballSearchContent.module.css";
 type NoticeProps = { locale?: string; mode?: string; draftLocalesEnabled?: boolean };
 function load<T>(path: string, modules: Record<string, unknown>, suffix = "") {
   modules["@/lib/touchlineArena/site-locales-release"] = siteLocalePolicy;
@@ -32,6 +34,7 @@ function load<T>(path: string, modules: Record<string, unknown>, suffix = "") {
 }
 function fixture(catalogue = copy) {
   const icon = () => React.createElement("svg");
+  const rail = load<{default: React.ComponentType<{className: string; children: React.ReactNode}>}>(railPath, { "react": React, "react/jsx-runtime": jsx });
   const Search = load<{PlayerDatabaseSearch: React.ComponentType<NoticeProps>}>(componentPath, { "react/jsx-runtime": jsx, "lucide-react": { ShieldCheck: icon }, "@/lib/touchlineArena/football-search-i18n": catalogue }).PlayerDatabaseSearch;
   const calls: NoticeProps[] = [];
   type Renderer = (props: {searchParams: Promise<{lang: string}>}, enabled?: boolean) => Promise<React.ReactNode>;
@@ -40,6 +43,9 @@ function fixture(catalogue = copy) {
     "next/link": { default: ({ children, ...props }: React.ComponentProps<"a">) => React.createElement("a", props, children) },
     "lucide-react": { ArrowLeft: icon, DatabaseZap: icon },
     "@/components/player-database-search": { PlayerDatabaseSearch: (props: NoticeProps) => { calls.push(props); return React.createElement(Search, props); } },
+    "@/components/touchline/TouchlineNavigationRail": rail,
+    "@/components/touchline/TouchlineGlobalNavigation.module.css": { default: { link: "canonical-navigation-link" } },
+    "./FootballSearchContent.module.css": { default: { headerRail: "search-header-rail", headerRow: "search-header-row", headerItem: "search-header-item" } },
     "@/lib/touchlineArena/auth-i18n": auth,
     "@/lib/touchlineArena/catalogue-locale": resolver,
     "@/lib/touchlineArena/football-search-i18n": catalogue,
@@ -47,6 +53,30 @@ function fixture(catalogue = copy) {
   return { Search, page: loaded.default, internal: loaded.internal, calls };
 }
 const encoded = (text: string) => renderToStaticMarkup(React.createElement("span", {}, text)).slice(6, -7);
+
+test("search header uses the real focus rail and canonical control without wrapping or truncating long labels", async () => {
+  const longBack = "Voltar ao ClubOwner — um nome de destino bastante comprido";
+  const longTitle = "Pesquisa de futebol TouchLine — catálogo de jogadores e clubes";
+  const f = fixture({ ...copy, getTouchlineFootballSearchCopy: () => ({ ...copy.getTouchlineFootballSearchCopy("pt-BR"), back: longBack, title: longTitle }) });
+  const html = renderToStaticMarkup(await f.page({ searchParams: Promise.resolve({ lang: "pt-BR" }) }));
+  assert.equal((html.match(/class="search-header-rail"/g) ?? []).length, 1);
+  assert.equal((html.match(/class="search-header-row"/g) ?? []).length, 1);
+  assert.match(html, /class="canonical-navigation-link search-header-item"/);
+  assert.ok(html.includes(encoded(longBack)));
+  assert.ok(html.includes(encoded(longTitle)));
+  assert.ok(html.indexOf(encoded(longBack)) < html.indexOf(encoded(longTitle)));
+  assert.equal((html.match(/<a\b/g) ?? []).length, 1);
+  assert.doesNotMatch(html, /<(?:main|header|input|button|form)\b/);
+  assert.equal(f.calls.length, 1);
+  assert.equal(f.calls[0].locale, "pt-BR");
+  const css = read(contentCssPath);
+  assert.match(css, /\.headerRail\s*\{[^}]*max-width:\s*100%;[^}]*overflow-x:\s*auto;/s);
+  assert.match(css, /\.headerRow\s*\{[^}]*flex-wrap:\s*nowrap;[^}]*width:\s*max-content;[^}]*min-width:\s*100%;/s);
+  assert.match(css, /\.headerItem\s*\{[^}]*flex:\s*0 0 auto;[^}]*white-space:\s*nowrap;/s);
+  assert.doesNotMatch(css, /text-overflow|font-size|transform|zoom|@media/);
+  assert.match(read("components/touchline/TouchlineGlobalNavigation.module.css"), /\.link,[\s\S]*?min-height:\s*44px;/);
+  assert.doesNotMatch(read(pagePath), /["']use client["']|fetch\(|localStorage|supabase|text-\[8px\]|flex-wrap/);
+});
 
 test("four complete draft strings name the actual ClubOwner destination and never open the global gates", () => {
   assert.deepEqual(Object.keys(copy.TOUCHLINE_FOOTBALL_SEARCH_CATALOGUES), locales);

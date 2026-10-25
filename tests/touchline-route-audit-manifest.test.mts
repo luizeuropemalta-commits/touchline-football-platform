@@ -19,11 +19,20 @@ test("inventories every page, API method, proxy, metadata route, and error bound
   assert.equal(rows.filter((item) => item.kind === "PAGE").length, 73);
   assert.equal(row("/account").data, "VERIFIED_AUTH_ROLE_REDIRECT_ONLY_NO_TEAM_WRITES");
   assert.equal(rows.some((item) => item.route === "/visual-qa/arena-main-field"), false);
-  assert.equal(rows.filter((item) => item.kind === "API").length, 108);
+  assert.equal(rows.filter((item) => item.kind === "API").length, 109);
   assert.equal(rows.filter((item) => item.kind === "BOUNDARY").length, 7);
   assert.equal(rows.filter((item) => item.kind === "METADATA").length, 3);
   assert.equal(rows.filter((item) => item.kind === "PROXY").length, 1);
   assert.equal(new Set(rows.map((item) => item.route)).size, rows.length);
+});
+
+test("fixture readiness is a private expected-account read, never delivery or activation proof", () => {
+  const readiness = row("GET /api/notifications/fixtures/[fixtureId]/readiness");
+  assert.equal(readiness.auth, "AUTHENTICATED_ARENA_ACCESS_EXPECTED_ACCOUNT");
+  assert.equal(readiness.role, "ARENA_USER");
+  assert.equal(readiness.data, "FLAG_GATED_SELF_SCOPED_READ_ONLY_PREREQUISITES_NO_DELIVERY");
+  assert.equal(readiness.status, "PENDING_AUTH_AND_DEVICE_QA");
+  assert.equal(rows.some(item => item.route === "POST /api/notifications/fixtures/[fixtureId]/readiness"), false);
 });
 
 test("shared sports publication is inventoried as public pinned read, not ingress or deployment approval", () => {
@@ -176,10 +185,12 @@ test("social and fixture interest policies retain pending schema and device gate
   assert.equal(row("POST /api/notifications/lineup-reminders/dispatch").status, "PENDING_SCHEMA_AND_DEVICE_QA");
   const fixture = "/api/notifications/fixtures/[fixtureId]";
   const social = "/api/touchline/players/[playerId]/social";
-  assert.equal(row(`GET ${fixture}`).auth, "AUTHENTICATED_ARENA_ACCESS");
+  assert.equal(row(`GET ${fixture}`).auth, "AUTHENTICATED_ARENA_ACCESS_EXPECTED_ACCOUNT");
   assert.equal(row(`GET ${social}`).auth, "PUBLIC_OPTIONAL_SESSION");
   for (const route of [fixture, social]) {
-    assert.equal(row(`PUT ${route}`).auth, "AUTHENTICATED_ARENA_ACCESS_SAME_ORIGIN");
+    assert.equal(row(`PUT ${route}`).auth, route === fixture
+      ? "AUTHENTICATED_ARENA_ACCESS_SAME_ORIGIN_EXPECTED_ACCOUNT"
+      : "AUTHENTICATED_ARENA_ACCESS_SAME_ORIGIN");
     assert.equal(row(`PUT ${route}`).role, "ARENA_USER");
     assert.match(row(`PUT ${route}`).status, /^PENDING_SCHEMA/);
     assert.match(row(`GET ${route}`).data, /^FLAG_GATED_/);

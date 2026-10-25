@@ -7,6 +7,8 @@ import * as jsx from 'react/jsx-runtime';
 import * as i18n from '../lib/touchlineArena/i18n.ts';
 import * as copy from '../lib/touchlineArena/account-locale-menu-i18n.ts';
 import {startAccountLocaleBrowser} from '../lib/touchlineArena/account-locale-browser.ts';
+import {startAccountLocaleIdentityObserver} from '../lib/touchlineArena/account-locale-identity-observer.ts';
+import * as publicErrorCopy from '../lib/touchlineArena/public-error-i18n.ts';
 import {createAccountLocaleSelection} from '../lib/touchlineArena/account-locale-selection.ts';
 import * as intent from '../lib/touchlineArena/presentation-locale-intent.ts';
 
@@ -40,8 +42,11 @@ function harness(locale:string,draftLocalesEnabled:boolean,savedLocale:string|nu
     react:{useState:(initial:unknown)=>{const index=cursor++;if(!(index in slots))slots[index]=initial;return [slots[index],(value:unknown)=>{slots[index]=value;}];},useRef:(initial:unknown)=>{const index=cursor++;if(!(index in slots))slots[index]={current:initial};return slots[index];},useLayoutEffect:(callback:()=>()=>void)=>{if(!mounted)effect=callback;}},
     'react/jsx-runtime':jsx,'next/navigation':{useRouter:()=>({refresh:()=>{}})},
     'lucide-react':{Check:()=>null,ChevronDown:()=>null,Languages:()=>null},
-    '@/lib/supabase/client':{createClient:()=>({auth:{onAuthStateChange:(callback:typeof observer)=>{observer=callback;return {data:{subscription:{unsubscribe:()=>{observer=undefined;}}}};}}})},
+    '@/lib/supabase/client':{createClient:()=>({auth:{getUser:async()=>({data:{user:{id:account}},error:null}),onAuthStateChange:(callback:typeof observer)=>{observer=callback;return {data:{subscription:{unsubscribe:()=>{observer=undefined;}}}};}}})},
     '@/lib/touchlineArena/account-locale-browser':{startAccountLocaleBrowser},
+    '@/lib/touchlineArena/account-locale-identity-observer':{startAccountLocaleIdentityObserver},
+    '@/lib/touchlineArena/public-error-i18n':publicErrorCopy,
+    './TouchlineGlobalNavigation.module.css':{default:{link:'shared-link'}},
     '@/lib/touchlineArena/i18n':i18n,'@/lib/touchlineArena/account-locale-menu-i18n':copy,
     '@/lib/touchlineArena/presentation-locale-intent':intentExports,
   };

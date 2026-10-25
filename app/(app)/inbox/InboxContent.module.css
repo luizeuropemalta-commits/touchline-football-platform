@@ -1,0 +1,65 @@
+.inbox {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 100%;
+  max-width: 980px;
+  margin: auto;
+  padding: 28px;
+  color: #efffd5;
+  overflow-wrap: anywhere;
+}
+
+.inbox header > span,
+.canvas li > div > span {
+  color: #b5ff4b;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .12em;
+}
+
+.inbox h1 {
+  margin: 7px 0;
+  font-size: clamp(32px, 5vw, 58px);
+  letter-spacing: -.055em;
+}
+
+.inbox header p,
+.canvas li p,
+.state p { color: #b8c9bc; line-height: 1.55; }
+
+.listRail {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-padding-inline: 8px;
+  padding: 8px;
+}
+
+/* Maintain the desktop message/actions arrangement. Narrow screens scroll
+   this local canvas instead of shrinking controls or stacking the aside. */
+.canvas { min-width: 760px; width: 100%; }
+.canvas ol { display: grid; gap: 12px; padding: 0; list-style: none; }
+.canvas li,
+.state {
+  border: 1px solid rgba(181,255,75,.19);
+  border-radius: 20px;
+  padding: 20px;
+  background: #07120e;
+}
+
+.canvas li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(200px, 240px);
+  gap: 20px;
+}
+.canvas li > div { min-width: 0; }
+.canvas li h2 { margin: 8px 0; font-size: 21px; }
+.canvas aside { display: grid; min-width: 0; align-content: start; gap: 8px; text-align: end; }
+.canvas aside b { color: #b5ff4b; font-size: 11px; }
+.canvas aside small { color: #b8c9bc; }
+.canvas aside button { white-space: normal; overflow-wrap: anywhere; }
+.back { margin-top: 24px; white-space: normal; }

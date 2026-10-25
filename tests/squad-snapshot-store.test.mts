@@ -445,7 +445,11 @@ test("an older concurrent persistence cannot reactivate a player removed by a ne
   pause.release();
   assert.deepEqual(await olderPersistence, { stored: false, reason: "snapshot-superseded" });
 
-  const snapshot = await readPersistedSquadSnapshot(clubA.teamId, adminForStore(admin));
+  // The fake database advances its clock on each revision; align this assertion
+  // with that committed revision instead of accidentally reading from its past.
+  const snapshot = await readPersistedSquadSnapshot(clubA.teamId, adminForStore(admin), {
+    now: Math.max(...admin.memberships.map(member => Date.parse(String(member.source_updated_at)))),
+  });
   assert.equal(snapshot?.players.length, 11);
   assert.equal(snapshot?.players.some((player) => player.providerId === playerP.providerId), false);
   assert.equal(snapshot?.fresh, true);
@@ -463,7 +467,9 @@ test("rolls its own revision back and keeps the previous coherent fallback when 
   const result = await persistSquadSnapshot(clubA, [playerQ, ...clubAFillers], adminForStore(admin));
   assert.deepEqual(result, { stored: false, reason: "stale membership cleanup failed" });
 
-  const snapshot = await readPersistedSquadSnapshot(clubA.teamId, adminForStore(admin));
+  const snapshot = await readPersistedSquadSnapshot(clubA.teamId, adminForStore(admin), {
+    now: Math.max(...admin.memberships.map(member => Date.parse(String(member.source_updated_at)))),
+  });
   assert.equal(snapshot?.players.length, 12);
   assert.equal(snapshot?.players.some((player) => player.providerId === playerP.providerId), true);
   assert.equal(snapshot?.capturedAt, previousSnapshot?.capturedAt);
@@ -483,4 +489,33 @@ test("rejects incomplete or duplicate provider payloads before touching membersh
     { stored: false, reason: "invalid-squad-identities" },
   );
   assert.equal(admin.memberships.length, 0);
+});
+
+test("squad freshness rejects future revisions without rewriting facts and preserves inclusive TTL", async () => {
+  const admin = new FakeAdminClient();
+  assert.deepEqual(await persistSquadSnapshot(clubA, [playerP, playerQ, ...clubAFillers], adminForStore(admin)), { stored: true });
+  const now = Date.parse("2030-10-24T12:00:00.000Z");
+  const priorTtl = process.env.FOOTBALL_SQUAD_SNAPSHOT_TTL_SECONDS;
+  try {
+    for (const configured of [undefined, "60"]) {
+      if (configured === undefined) delete process.env.FOOTBALL_SQUAD_SNAPSHOT_TTL_SECONDS;
+      else process.env.FOOTBALL_SQUAD_SNAPSHOT_TTL_SECONDS = configured;
+      const ttl = configured === undefined ? 86_400_000 : 60_000;
+      for (const age of [-86_400_000, -1, 0, ttl - 1, ttl, ttl + 1]) {
+        const revision = new Date(now - age).toISOString();
+        for (const member of admin.memberships) member.source_updated_at = revision;
+        const before = structuredClone({ clubs: admin.clubs, players: admin.players, memberships: admin.memberships });
+        const snapshot = await readPersistedSquadSnapshot(clubA.teamId, adminForStore(admin), { now });
+        assert.ok(snapshot, "Future/stale revision keeps the coherent persisted squad available, only degraded");
+        assert.equal(snapshot.fresh, age >= 0 && age <= ttl, `TTL=${ttl}; age=${age}`);
+        assert.equal(snapshot.capturedAt, revision);
+        assert.equal(snapshot.players.length, 12);
+        assert.ok(snapshot.players.every(player => player.sourceUpdatedAt === revision));
+        assert.deepEqual({ clubs: admin.clubs, players: admin.players, memberships: admin.memberships }, before, "Read must not normalize timestamps or change facts");
+      }
+    }
+  } finally {
+    if (priorTtl === undefined) delete process.env.FOOTBALL_SQUAD_SNAPSHOT_TTL_SECONDS;
+    else process.env.FOOTBALL_SQUAD_SNAPSHOT_TTL_SECONDS = priorTtl;
+  }
 });

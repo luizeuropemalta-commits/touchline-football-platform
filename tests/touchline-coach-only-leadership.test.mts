@@ -6,6 +6,7 @@ import { runInNewContext } from "node:vm";
 import { setImmediate } from "node:timers/promises";
 import ts from "typescript";
 import * as authority from "../lib/touchlineArena/card-leadership-authority.ts";
+import { resolveServerReadWithin } from "../lib/touchlineArena/server-read-deadline.ts";
 
 const require = createRequire(import.meta.url);
 type Element = { type: unknown; props: Record<string, unknown> };
@@ -38,6 +39,7 @@ function compile(path: string, imports: Record<string, unknown>, exportName = "d
 
 function boundary(player: () => Promise<unknown>, coach: () => Promise<unknown>) {
   return compile("components/touchline/cards/TouchlineCardLeadershipBoundary.tsx", {
+    "@/lib/touchlineArena/server-read-deadline": { resolveServerReadWithin },
     "@/lib/touchlineArena/card-ranking-server": { loadTouchLineActiveRanking: player },
     "@/lib/touchlineArena/coach-ranking-server": { loadTouchLineCoachRanking: coach },
     "@/lib/touchlineArena/card-leadership-authority": authority,

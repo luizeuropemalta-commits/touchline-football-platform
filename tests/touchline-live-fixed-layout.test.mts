@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import ts from "typescript";
 
 const css = readFileSync(new URL("../components/touchline/match-centre/touchline-match-centre.module.css", import.meta.url), "utf8");
 const component = readFileSync(new URL("../components/touchline/match-centre/TouchlineMatchCentre.tsx", import.meta.url), "utf8");
@@ -18,10 +19,16 @@ test("Live shell fixes physical LTR geometry without forcing character order", (
 });
 
 test("Live keeps home/away DOM order and text facts, not locale-conditioned swapping", () => {
-  const start = component.indexOf('<div className={styles.heroTeams}>');
-  const end = component.indexOf('<time className={styles.heroKickoff}', start);
-  assert.ok(start > 0 && end > start);
-  const hero = component.slice(start, end);
+  const ast = ts.createSourceFile("live.tsx", component, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const teams: ts.JsxElement[] = [];
+  function visit(node: ts.Node) {
+    if (ts.isJsxElement(node) && node.openingElement.attributes.properties.some(attr =>
+      ts.isJsxAttribute(attr) && attr.name.getText(ast) === "className" && attr.initializer?.getText(ast) === "{styles.heroTeams}")) teams.push(node);
+    node.forEachChild(visit);
+  }
+  visit(ast);
+  assert.equal(teams.length, 1, "the actual teams row is unique, independent of kickoff placement");
+  const hero = teams[0].getText(ast);
   assert.ok(hero.indexOf('side="home"') < hero.indexOf('side="away"'));
   assert.match(hero, /selected\.homeTeam\?\.name \?\? dictionary\.homeFallback/);
   assert.match(hero, /selected\.awayTeam\?\.name \?\? dictionary\.awayFallback/);

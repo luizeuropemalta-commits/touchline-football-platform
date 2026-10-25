@@ -23,11 +23,13 @@ const leaderProjection = readFileSync(new URL("../lib/touchlineArena/club-positi
 
 test("compact fixtures occupy the former stadium slot after navigation", () => {
   const navigation = page.indexOf("<ClubHubSectionNavigation");
-  const strip = page.indexOf("<ClubHubFixtureStrip");
+  const strip = page.indexOf("<ClubHubPersistedLiveRail");
   assert.ok(navigation > 0 && strip > navigation);
-  assert.match(page.slice(navigation, strip), /<ClubHubSectionNavigation[^>]*\/>\s*$/);
+  assert.match(page.slice(navigation, strip), /<ClubHubSectionNavigation[^>]*\/>\s*<Suspense fallback=/);
+  assert.doesNotMatch(page.slice(navigation, strip), /<ClubHubFixtureStrip/);
   assert.match(page.slice(strip, strip + 140), /draftLocalesEnabled=\{draftLocalesEnabled\} locale=\{locale\}/);
   assert.equal((page.match(/<ClubHubFixtureStrip/g) ?? []).length, 1);
+  assert.match(page, /<ClubHubFixtureStrip[^\n]+\n\s*initialFixtures=\{snapshot\?\.fixtures \?\? null\}/);
 });
 
 test("the Squad navigation anchor exists even for an empty or unavailable roster", () => {
@@ -50,6 +52,7 @@ test("section highlighting discovers streamed sections and cleans up listeners",
     const listeners = new Map<string, () => void>();
     const cleanup = runInNewContext(stripTypeScriptTypes(`(() => {${effect}})()`), {
       SECTION_TARGETS: ["club-table", "touchline-club-lineup", "club-squad"],
+      navigationRef: { current: null },
       setActiveTarget: (value: string | null) => { active = value; },
       document: { getElementById: (id: string) => sections.get(id), querySelector: () => ({}), documentElement: { scrollHeight: 1200 } },
       MutationObserver: class {
@@ -57,7 +60,7 @@ test("section highlighting discovers streamed sections and cleans up listeners",
         observe() {}
         disconnect() { disconnected = true; }
       },
-      window: { scrollY: 800, innerHeight: 600,
+      window: { scrollY: 800, innerHeight: 600, location: { hash: "" },
         requestAnimationFrame: (callback: () => void) => { pending = callback; return 1; },
         cancelAnimationFrame: () => { pending = null; },
         addEventListener: (event: string, callback: () => void) => listeners.set(event, callback),
@@ -252,10 +255,20 @@ test("the functional ClubHub places canonical positional leaders beside the matc
   assert.doesNotMatch(page, /qa-canonical-snapshot|NOT A FOOTBALL CLAIM|LOCAL DRAFT/);
 });
 
-test("ClubHub closes with a single professional localized rights footer", () => {
-  assert.match(page, /<footer className="club-hub-footer">/);
-  assert.deepEqual([...readFileSync(new URL("../lib/touchlineArena/club-hub-profile-i18n.ts", import.meta.url), "utf8").matchAll(/rights: "([^"]+)"/g)].slice(0, 2).map(match => match[1]), ["All rights reserved.", "Todos os direitos reservados."]);
-  assert.match(page, /<span>\{copy\.rights\}<\/span>/);
-  assert.match(page, /© \{copyrightYear\} TouchLine/);
-  assert.match(page, /\.club-hub-footer \{/);
+test("ClubHub inherits the single professional localized global rights footer", () => {
+  const layout = readFileSync(new URL("../app/layout.tsx", import.meta.url), "utf8");
+  const footer = readFileSync(new URL("../components/touchline/TouchlineSiteFooter.tsx", import.meta.url), "utf8");
+  const footerStyles = readFileSync(new URL("../components/touchline/TouchlineSiteFooter.module.css", import.meta.url), "utf8");
+  // The local duplicate is superseded; the document shell owns the footer.
+  assert.doesNotMatch(page, /<footer\b|<TouchlineSiteFooter\b|\{copy\.rights\}/);
+  assert.equal((layout.match(/<TouchlineSiteFooter\b/g) ?? []).length, 1);
+  assert.match(layout, /!isIsolatedPreview \? <TouchlineSiteFooter locale=\{locale\} draftLocalesEnabled=\{allowDraftPresentation\}/);
+  const contentEnd = layout.indexOf("</TouchlinePageContent>");
+  assert.ok(contentEnd > 0 && layout.indexOf("<TouchlineSiteFooter") > contentEnd);
+  assert.equal((footer.match(/<footer\b/g) ?? []).length, 1);
+  assert.match(footer, /<footer className=\{styles\.footer\} lang=\{language\}/);
+  assert.match(footer, /"en-GB": "All rights reserved\."/);
+  assert.match(footer, /"pt-BR": "Todos os direitos reservados\."/);
+  assert.match(footer, /© \{new Date\(\)\.getFullYear\(\)\} TouchLine\. \{rights\[language\]\}/);
+  assert.match(footerStyles, /\.footer\s*\{/);
 });

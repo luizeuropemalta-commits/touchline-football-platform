@@ -55,7 +55,8 @@ function labelFor(
   dictionary: TouchlineNavigationCopy,
   hasTrustedClubContext: boolean,
 ) {
-  if (key === "clubHub") return hasTrustedClubContext ? dictionary.allClubs : dictionary.clubHub;
+  void hasTrustedClubContext;
+  if (key === "clubHub") return dictionary.clubHub;
   return dictionary[key];
 }
 
@@ -120,16 +121,10 @@ export default function TouchlineGlobalNavigation({
       data-touchline-navigation-surface={surface}
       data-touchline-navigation-context={hasTrustedClubContext ? "club" : "none"}
     >
-      <Link className={styles.arena} href={touchlineGlobalNavigationEntryHref(effectiveLocale, surface, draftLocalesEnabled)}>
+      <Link className={styles.arena} href={touchlineGlobalNavigationEntryHref(effectiveLocale, surface, draftLocalesEnabled)} aria-current={surface === "authenticated" && currentRoute === "market" ? "page" : undefined}>
         <Goal aria-hidden="true" />
-        <TouchlineNavigationLabel label={surface === "auth" ? dictionary.admin : surface === "authenticated" ? dictionary.backToArena : dictionary.account} pendingLabel={`${dictionary.opening}…`} />
+        <TouchlineNavigationLabel label={surface === "auth" ? dictionary.admin : dictionary.backToArena} pendingLabel={`${dictionary.opening}…`} />
       </Link>
-
-      {trustedContext?.club ? (
-        <span className={styles.context} aria-label={`${dictionary.currentClub}: ${trustedContext.club.name}`}>
-          {trustedContext.club.name}
-        </span>
-      ) : null}
 
       <div className={styles.links}>
         {items.map((item) => (

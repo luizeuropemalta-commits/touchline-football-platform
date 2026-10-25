@@ -22,6 +22,7 @@ import {
 import { useState, type ReactNode } from "react";
 
 import { Logo } from "@/components/logo";
+import TouchlineCustomerUtilityShell, { customerUtilityRoute } from "@/components/touchline/TouchlineCustomerUtilityShell";
 import { createClient } from "@/lib/supabase/client";
 import {
   normalizeTouchLineAuthLocale,
@@ -164,12 +165,15 @@ function NavigationLink({
 
 export function ArenaAdminShell({
   children,
+  accountId,
   profileName,
   profileEmail,
   isOwner,
   draftLocalesEnabled = false,
 }: {
   children: ReactNode;
+  /** Forwarded only from the existing server-verified identity. */
+  accountId?: string;
   profileName: string;
   profileEmail: string;
   isOwner: boolean;
@@ -250,6 +254,24 @@ export function ArenaAdminShell({
       return;
     }
     window.location.assign(touchLineAuthHref("/login", locale));
+  }
+
+  // Presentation only: server guards above this shell remain the authority.
+  const customerRoute = customerUtilityRoute(pathname);
+  if (!isOwner && accountId && customerRoute) {
+    return <TouchlineCustomerUtilityShell
+      accountId={accountId}
+      currentRoute={customerRoute}
+      pathname={pathname}
+      locale={searchParams.get("lang")}
+      draftLocalesEnabled={customerDraftsEnabled}
+      profileName={profileName}
+      profileEmail={profileEmail}
+      signingOut={signingOut}
+      signOutError={signOutError}
+      onSignOut={signOut}
+      switchAccountHref={touchLineAuthEntryHref("/login", locale, currentAdminDestination)}
+    >{children}</TouchlineCustomerUtilityShell>;
   }
 
   const navigation = (

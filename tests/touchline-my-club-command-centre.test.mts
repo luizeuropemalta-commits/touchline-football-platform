@@ -10,6 +10,16 @@ const styles = readFileSync(new URL("../app/fantasy/fantasy.module.css", import.
 const socialStyles = readFileSync(new URL("../components/touchline/social/TouchlineSocial.module.css", import.meta.url), "utf8");
 const gameweekCard = readFileSync(new URL("../components/touchline/fantasy/TouchlineGameweekCard.tsx", import.meta.url), "utf8");
 
+test("one shared Live strip precedes reserves without a second Arena side column", () => {
+  assert.equal((client.match(/<ClubHubFixtureStrip\b/g) ?? []).length, 1);
+  const strip = client.indexOf('data-clubowner-live-position="above-reserves"');
+  const reserves = client.indexOf('area="reserves"', strip);
+  assert.ok(strip >= 0 && reserves > strip);
+  const bodyRule = styles.match(/\.arenaOverlay \.arenaBody\s*\{([^}]+)\}/)?.[1];
+  assert.ok(bodyRule);
+  assert.match(bodyRule, /grid-template-columns:\s*minmax\(0, 1fr\);/);
+});
+
 test("Arena preserves the football field proportion instead of stretching to the screen", () => {
   const rule = styles.match(/\.myClubCommand\.arenaOverlay\[data-fantasy-context="market"\] \.myClubPitchViewport \.myClubTacticalPitch\s*\{([^}]+)\}/)?.[1];
   assert.ok(rule);
@@ -22,9 +32,10 @@ test("Arena removes the decorative frame and background and reserves coach space
   assert.match(styles, /\.myClubCommand\.arenaOverlay\[data-fantasy-context="market"\] \.myClubTacticalPitch \{ border: 0; border-radius: 0; box-shadow: none; background: transparent !important; overflow: visible; \}/);
   assert.match(styles, /\.myClubCommand\.arenaOverlay\[data-fantasy-context="market"\] \.myClubTacticalPitch::after \{ content: none; display: none; \}/);
   assert.match(styles, /100dvh - 150px/);
-  assert.match(styles, /\.arenaOverlay \.myClubPitchViewport \{[^}]*padding-top: 60px/);
+  assert.match(styles, /\.arenaOverlay \.myClubPitchViewport \{[^}]*padding-top: 0/);
   assert.match(styles, /\.arenaOverlay \.myClubSquad \{[^}]*border: 1px solid #a3c94b/);
   assert.doesNotMatch(client, /styles\.arenaTechnicalArea/);
+  assert.match(client, /data-arena-toolbar="true"/);
 });
 
 test("Arena measures the pitch rather than the coach when sizing players", () => {

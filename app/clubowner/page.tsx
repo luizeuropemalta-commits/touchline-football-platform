@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { normalizeTouchlineMatchCentreTimeZone } from "@/lib/touchlineArena/match-centre";
 import { isTouchLineSiteLocalesEnabled } from "@/lib/touchlineArena/site-locales-release";
 import { redirect } from "next/navigation";
+import { AuthSessionMissingError } from "@supabase/supabase-js";
 import ClubOwnerMarketHeader from "@/components/touchline/ClubOwnerMarketHeader";
 import { ClubCollectionProvider } from "@/components/touchline/fantasy/ClubCollectionContext";
 import { clubOwnerRankingPosition } from "@/lib/touchlineArena/club-owner-profile-metrics";
@@ -14,8 +15,7 @@ import { createClient } from "@/lib/supabase/server";
 import { isOwnerEmail } from "@/lib/admin/owner";
 import { resolveTouchlineClubOwnerPageIdentity } from "@/lib/touchlineArena/club-owner-page-identity";
 import { createClubOwnerAvatarContextReader } from "@/lib/touchlineArena/club-owner-avatar-context-server";
-import { readPublicCompetitionFixtures } from "@/lib/football-data/fixture-schedule-store";
-import { toTouchlineLiveFixtures } from "@/lib/touchlineArena/stadium-catalog";
+import { readPersistedLiveRailWithin } from "@/lib/touchlineArena/persisted-live-rail-server";
 import { touchLineAuthEntryHref } from "@/lib/touchlineArena/auth-i18n";
 import { resolveServerReadWithin } from "@/lib/touchlineArena/server-read-deadline";
 import { loadTouchlineFantasyReadSnapshot } from "@/lib/touchlineFantasy/server";
@@ -74,32 +74,36 @@ async function renderClubOwnerPage({ searchParams }: ClubOwnerPageProps, draftLo
   const avatarSelectionEnabled = process.env.TOUCHLINE_CLUB_OWNER_AVATAR_SELECTION_ENABLED === "true";
   const retentionReady = process.env.TOUCHLINE_CLUB_OWNER_AVATAR_RETENTION_READY === "true";
   const readAvatarContext = createClubOwnerAvatarContextReader();
-  const supabase = await createClient();
-  const authentication = supabase ? await resolveServerReadWithin(
-    supabase.auth.getUser(), null, 8_000,
-  ) : null;
-  const user = authentication?.error === null ? authentication.data?.user ?? null : null;
+  const login = touchLineAuthEntryHref("/login", locale, destination, draftLocalesEnabled);
+  let authenticationReadActive = true;
+  const authentication = await resolveServerReadWithin((async () => {
+    const supabase = await createClient();
+    // A late client setup must not start another network read after timeout.
+    if (!authenticationReadActive || !supabase) return null;
+    return supabase.auth.getUser();
+  })(), null, 8_000);
+  authenticationReadActive = false;
+  if (!authentication) redirect(`${login}&error=auth_unavailable`);
+  if (authentication.error instanceof AuthSessionMissingError) redirect(login);
+  if (authentication.error !== null) redirect(`${login}&error=auth_unavailable`);
+  const user = authentication.data?.user ?? null;
   if (!user) redirect(touchLineAuthEntryHref("/login", locale, destination, draftLocalesEnabled));
   // Retain the existing customer-only boundary; never borrow a demo identity.
   if (isOwnerEmail(user.email)) redirect(touchLineAuthEntryHref("/admin", locale));
-  const scheduleNow = Date.now();
-  const [avatarContext, snapshot, persistedFixtures, collectionRead] = await Promise.all([
+  const [avatarContext, snapshot, liveRail, collectionRead] = await Promise.all([
     readAvatarContext(authentication, user.id),
     // The ClubOwner must not replace a real in-flight roster with the
     // unavailable state merely because a cold local read takes longer than
     // the generic auth deadline.
     resolveServerReadWithin(loadTouchlineFantasyReadSnapshot(user), null, 30_000),
-    resolveServerReadWithin(readPublicCompetitionFixtures({
-      includeHistorical: true, limit: 240,
-      from: new Date(scheduleNow - 7 * 86_400_000).toISOString(),
-      through: new Date(scheduleNow + 14 * 86_400_000).toISOString(),
-    }), [], 8_000),
+    readPersistedLiveRailWithin(),
     resolveServerReadWithin<ClubCollectionReadResult>(readClubCollectionServer(user.id),
       { status: "unavailable", error: "CLUB_STORAGE_UNAVAILABLE", httpStatus: 503 }, 8_000),
   ]);
   const clubOwner = resolveTouchlineClubOwnerPageIdentity(user, undefined, avatarContext?.avatarUrl);
   const liveTimeZone = normalizeTouchlineMatchCentreTimeZone((await headers()).get("x-vercel-ip-timezone"));
-  const initialLiveFixtures = toTouchlineLiveFixtures(persistedFixtures);
+  const initialLiveFixtures = liveRail?.fixtures ?? null;
+  const initialLiveMetadata = liveRail?.metadata ?? null;
   const initialLiveNow = Date.now();
   const marketAccess = snapshot && isTouchlineFantasyMarketAccess(snapshot.marketAccess) ? snapshot.marketAccess : null;
   const activePlanKey = snapshot?.entitlementActive === true && snapshot?.plan?.active === true
@@ -121,7 +125,7 @@ async function renderClubOwnerPage({ searchParams }: ClubOwnerPageProps, draftLo
         collectionEnabled={collectionAvailable}
         initialCollectionRead={collectionAvailable ? collectionRead : null}
         collectionStructureVisible={collectionStructureVisible}
-        initialLiveFixtures={initialLiveFixtures} initialLiveNow={initialLiveNow} initialPlayerClubTeamId={initialPlayerClubTeamId} clubOwner={clubOwner ? { name: clubOwner.name, avatarUrl: clubOwner.avatarUrl } : undefined} />
+        initialLiveFixtures={initialLiveFixtures} initialLiveNow={initialLiveNow} initialLiveMetadata={initialLiveMetadata} initialPlayerClubTeamId={initialPlayerClubTeamId} clubOwner={clubOwner ? { name: clubOwner.name, avatarUrl: clubOwner.avatarUrl } : undefined} />
       </ClubCollectionProvider>
     </div>
   </main>;

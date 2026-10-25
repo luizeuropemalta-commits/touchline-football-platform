@@ -4,6 +4,15 @@ import type { TouchlineFantasySelection } from "./domain.ts";
 
 type BrowsePosition = Exclude<TouchlineMarketPositionBucket, "outfield">;
 
+/** Two five-card wings, four 4.4px gaps per wing, two 8px centre gaps,
+ * two 8px focus gutters and
+ * the approved 130% coach. Below the minimum row width, preserve touch size;
+ * the host layout must provide overflow rather than shrink the 44px targets. */
+export function touchlineFantasyTechnicalCardWidth(availableWidth: number): number {
+  if (!Number.isFinite(availableWidth) || availableWidth <= 0) return 44;
+  return Math.max(44, Math.floor((availableWidth - 2 * 8 - 2 * 8 - 2 * 4 * 4.4) / (2 * 5 + 1.3)));
+}
+
 // Presentation categories only. This does not revive the retired 35-card quotas.
 export const TOUCHLINE_FANTASY_BROWSE_POSITIONS = [
   { code: "GK", bucket: "goalkeeper" },

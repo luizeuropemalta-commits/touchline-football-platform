@@ -30,6 +30,8 @@ function fixture(success = true) {
   const confirmations: [string, number][] = [];
   const refs: { current: unknown }[] = [];
   const modules: Record<string, unknown> = {
+    "lucide-react": require("lucide-react"),
+    "@/components/touchline/market/TouchlineMarketMarks": { TouchlineCoinMark: () => React.createElement("svg", { "data-touchline-coin": true }) },
     react: { ...React,
       useState(initial: unknown) {
         const index = cursor++;
@@ -101,9 +103,9 @@ test("release review renders paid45M/fee4.5M/refund40.5M with no opening or keep
     const h = fixture(), view = h.render({ locale });
     for (const value of [paid, fee, refund, "10%", keepLabel]) assert.ok(view.html.includes(value), value);
     assert.match(view.html, /role="dialog"/);
-    const headings = locale === "pt-BR" ? ["Seu clube", "Rescisão do contrato", "Saldo do clube"] : ["Your club", "Contract termination", "Club balance"];
+    const headings = locale === "pt-BR" ? ["Rescisão de contrato"] : ["Contract termination"];
     for (const heading of headings) assert.ok(view.html.includes(`aria-label="${heading}"`));
-    assert.equal((view.html.match(/<section /g) ?? []).length, 3);
+    assert.equal((view.html.match(/<section /g) ?? []).length, 1);
     assert.deepEqual(h.confirmations, []); assert.equal(h.closes, 0);
     await click(view.keep);
     assert.deepEqual(h.confirmations, []); assert.equal(h.closes, 1);
@@ -130,7 +132,7 @@ test("release review shows original matching card and confirmed/preview balances
   assert.match(view.html,/data-original-card="true"/);
   assert.match(view.html,/inert=""/);
   assert.match(view.html,/1,145,000,000 TC/);assert.match(view.html,/1,185,500,000 TC/);
-  assert.match(view.html,/90%/);assert.match(view.html,/preview does not change your balance/);
+  assert.match(view.html,/90%/);assert.match(view.html,/only after the release is confirmed/);
   assert.equal(view.confirm.props.disabled,true);assert.deepEqual(h.confirmations,[]);
   const stale=h.render({card,state:{...state,revision:2,balanceEur:1_000_000_000}});
   assert.match(stale.html,/1,000,000,000 TC/);assert.doesNotMatch(stale.html,/1,040,500,000 TC/);
@@ -138,17 +140,15 @@ test("release review shows original matching card and confirmed/preview balances
   assert.doesNotMatch(h.render({card:{...card,canonicalPlayerId:"another"}}).html,/data-original-card/);
 });
 
-test("release review identifies supplied ClubOwner and separates original player-contract total from cash and coach",()=>{
+test("release review removes club identity and contracted squad total while preserving cash",()=>{
   const h=fixture();
   const other={...state.players[0],playerId:"50000000-0000-4000-8000-000000000004",slot:1,valueEur:20_000_000};
   const view=h.render({ownerName:"Test ClubOwner",state:{...state,players:[...state.players,other]}});
-  assert.match(view.html,/ClubOwner · Test ClubOwner/);
-  assert.match(view.html,/Contracted squad value/);assert.match(view.html,/65,000,000 TC/);
+  assert.doesNotMatch(view.html,/ClubOwner · Test ClubOwner|Contracted squad value|65,000,000 TC/);
   assert.doesNotMatch(view.html,/75,000,000 TC/);
-  assert.match(view.html,/excluding the coach/);assert.match(view.html,/1,145,000,000 TC/);
+  assert.doesNotMatch(view.html,/excluding the coach/);assert.match(view.html,/1,145,000,000 TC/);
   assert.doesNotMatch(fixture().render().html,/ClubOwner ·/);
-  const huge={...other,valueEur:Number.MAX_SAFE_INTEGER};
-  assert.match(fixture().render({state:{...state,players:[...state.players,huge]}}).html,/Contracted squad value<\/dt><dd>—<\/dd>/);
+  assert.equal((view.html.match(/data-touchline-coin/g) ?? []).length, 5);
 });
 
 test("zero confirmed cash stays zero and release uses the original contract, not the card's current market value", async () => {
@@ -162,8 +162,10 @@ test("zero confirmed cash stays zero and release uses the original contract, not
       card: { id: "display-id", canonicalPlayerId: playerId, name: "Original athlete", marketValue: "€95M" } });
     assert.match(view.html, /data-original-card="true"/);
     for (const amount of [paid, fee, refund]) assert.ok(view.html.includes(amount), amount);
-    assert.ok(view.html.includes(`${currentLabel}</dt><dd>0 TC</dd>`));
-    assert.ok(view.html.includes(`${previewLabel}</dt><dd>${refund}</dd>`));
+    assert.ok(view.html.includes(`${currentLabel}</dt><dd>`));
+    assert.ok(view.html.includes('aria-label="0 TC"'));
+    assert.ok(view.html.includes(`${previewLabel}</dt><dd>`));
+    assert.ok(view.html.includes(`aria-label="${refund}"`));
     assert.doesNotMatch(view.html, /95[,.]000[,.]000 TC|9[,.]500[,.]000 TC|85[,.]500[,.]000 TC/);
     assert.equal(view.confirm.props.disabled, false, "a return does not require available cash for a new purchase");
     await click(view.keep);
@@ -172,13 +174,29 @@ test("zero confirmed cash stays zero and release uses the original contract, not
   }
 });
 
-test("contracted squad value includes starters, reserves and Exchange contracts, not only the active XI", () => {
+test("other contracts do not replace the selected player's quote or balance", () => {
   const starter = { ...state.players[0], playerId: "50000000-0000-4000-8000-000000000004", area: "starters" as const, slot: 0, valueEur: 20_000_000 };
   const reserve = { ...state.players[0], playerId: "50000000-0000-4000-8000-000000000005", area: "reserves" as const, slot: 0, valueEur: 10_000_000 };
   const view = fixture().render({ state: { ...state, players: [...state.players, starter, reserve] } });
-  assert.match(view.html, /Contracted squad value<\/dt><dd>75,000,000 TC<\/dd>/);
-  assert.match(view.html, /Current confirmed balance<\/dt><dd>1,145,000,000 TC<\/dd>/);
-  assert.match(view.html, /Balance after release · preview<\/dt><dd>1,185,500,000 TC<\/dd>/);
+  assert.doesNotMatch(view.html, /Contracted squad value|75,000,000 TC/);
+  assert.match(view.html, /aria-label="1,145,000,000 TC"/);
+  assert.match(view.html, /aria-label="1,185,500,000 TC"/);
+});
+
+test("full-screen review displays athlete record without inventing contract dates or months", () => {
+  const view = fixture().render({ locale: "pt-BR", card: { id: playerId, name: "Atleta" } });
+  assert.match(view.html, /fullscreenOverlay/);
+  assert.match(view.html, /Registro do atleta/);
+  assert.match(view.html, /Data não registrada/);
+  assert.match(view.html, /Prazo não informado/);
+  assert.doesNotMatch(view.html, /ID do atleta|Player ID/);
+  assert.doesNotMatch(view.html, /Seu clube|Valor do elenco contratado|Valores originais pagos/);
+  const css = readFileSync(new URL("../components/touchline/fantasy/ClubOwnerReleaseDialog.module.css", import.meta.url), "utf8");
+  assert.match(css, /height: 100dvh/);
+  assert.match(css, /border: 0; border-radius: 0/);
+  assert.match(css, /background: rgb\(4 11 8 \/ 82%\)/);
+  assert.match(css, /grid-auto-rows: minmax\(52px, auto\)/);
+  assert.match(css, /\.money strong \{ font-size: 20\.7px/);
 });
 
 test("missing or mismatched card uses the full-width review fallback", () => {
@@ -251,7 +269,7 @@ test("gate-off, pending, unavailable state and busy disable and guard confirmati
     } else {
       assert.equal(view.keep.props.disabled, false); await click(view.keep); assert.equal(h.closes, 1);
     }
-    if ("available" in override) assert.match(view.html, /Release is being validated/);
+    if ("available" in override) assert.match(view.html, /Confirmation unavailable/);
     if ("pending" in override) assert.match(view.html, /Confirmation is pending/);
   }
 });
@@ -264,9 +282,9 @@ test("rerendered revision/contract changes freeze quote and require a fresh revi
   updated.players = updated.players.map(player => ({ ...player, valueEur: 95_000_000 }));
   const view = h.render({ state: updated });
   assert.match(view.html, /45,000,000 TC/); assert.match(view.html, /40,500,000 TC/);
-  assert.match(view.html, /Original signing value<\/dt><dd>45,000,000 TC/);
-  assert.doesNotMatch(view.html, /Original signing value<\/dt><dd>95,000,000/);
-  assert.match(view.html, /Contracted squad value<\/dt><dd>95,000,000 TC/);
+  assert.match(view.html, /Signing value<\/dt><dd>.*?aria-label="45,000,000 TC"/);
+  assert.doesNotMatch(view.html, /aria-label="95,000,000 TC"/);
+  assert.doesNotMatch(view.html, /Contracted squad value/);
   assert.match(view.html, /Your squad changed/);
   assert.equal(view.confirm.props.disabled, true);
   await click(view.confirm); assert.deepEqual(h.confirmations, []);

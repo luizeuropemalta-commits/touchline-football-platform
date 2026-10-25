@@ -307,6 +307,7 @@ export default function TouchlineCoachCard({
     "--coach-tier-accent": tierPalette.accent,
     "--coach-tier-secondary": tierPalette.secondary,
     "--touchline-card-frame-color": tierPalette.accent,
+    "--touchline-card-neon-art": `url("${runtimeCardTemplateUrl}")`,
     "--touchline-club-crest-color": clubAccent,
     "--coach-nationality-x": `${layout.layers.nationality.x}%`,
     "--coach-nationality-y": `${layout.layers.nationality.y}%`,
@@ -329,7 +330,11 @@ export default function TouchlineCoachCard({
     "--coach-footer-w": `${layout.layers.footer.w}%`,
     "--coach-portrait-scale": String(layout.portraitScale),
     "--coach-name-size": `${layout.nameSize}cqw`,
-    "--coach-crest-size": `${Math.round(layout.crestSize * 3)}px`,
+    // Saved crest sizing was authored on a 300px card. Keep those exact
+    // editor pixels, but scale the public card's crest with its own container.
+    "--coach-crest-size": editable
+      ? `${Math.round(layout.crestSize * 3)}px`
+      : `${Math.round(layout.crestSize * 3) / 3}cqw`,
     "--coach-neon-alpha": String(Math.min(.92, .2 + layout.neonStrength * .3)),
     "--coach-neon-soft-alpha": String(Math.min(.88, .18 + layout.neonStrength * .3)),
     "--coach-art-scale": "1",

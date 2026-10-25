@@ -1,5 +1,795 @@
 # TouchLine Current State
 
+### 2026-10-25 — recovered full-suite PASS; QA application release preparation
+
+SUPERSEDES the prior ACTIVE suite and Safari authentication blocker only. Original session28558 terminal response recovered from original session record: exit0/chunk3a076d, counts fe1492:6552 total,6502PASS,0FAIL,0CANCELLED,50SKIP. Receipt preserved in coordinator outputs/card-review-20260921/saved-evidence-20261024/full-suite-terminal-recovered-20261025.json. Original temporary TAP log no longer exists; skipped tests are not PASS.
+
+🟢 1. Product and operation hashes unchanged from the approved local build f71108. Types/lint/focused checks and full suite retained; independent QA_RELEASE_RECHECK_20261025.md reviewed all278 paths and five later test-only changes, no new concrete P0/P1 found in inspected scope. Current diff and Vercel-input11 checks PASS.
+🟢 2. Owner restored normal Safari access as luizeuropemalta-commits to fifa-agent-plataform/touchline-arena-official. Connected Git repository confirmed, no deploy hooks. Preview/qa metadata confirmed for Supabase/auth/card-publication/locale/read and existing sync configuration; no values revealed. TOUCHLINE_FIXTURE_ALERTS_ENABLED and TOUCHLINE_CLUB_RELEASE_ENABLED absent. Connector403 is separate from recovered browser access.
+🔴 3. Freeze exact manifest and clean immutable commit, then one authorized Git-native push to refs/heads/qa. Budget1/consumed0 at this checkpoint. No CLI/redeploy/hook duplicate. Current remoteQA baseline b061753899767a4d805d5f37193d36bc673c18fd; last Ready QA rollback4pzGUi27KE3JdNoMJ8H99fKt4Hvp. Production437b318 unchanged.
+🔴 4. Await exact remote CI and Vercel READY, QA alias and customer/public smoke/runtime evidence. Local test/build is not hosted or whole-site visual approval.
+🔴 5. Not activated by this app-only release: coach financial transactions, hosted player release, real notification delivery, remote SQL migrations and Sportmonks recovery/ingestion. Existing disabled guards retained; operational SQL files are not executed by publication.
+
+MISSION: RELEASE. SCOPE: owner-approved278-path application repair batch, supporting tests/operations/docs; no unrelated files. QA target: qa on touchline-arena-official. ACCEPTANCE: exactSHA READY plus QA smoke. ROLLBACK: prior Ready QA deployment above; do not promote Production. FUNCTIONAL:6502PASS/50SKIP local. BUILD:localPASS. VISUAL/RESPONSIVE/ACCESSIBILITY: prior isolated evidence retained, hosted acceptance pending. SECURITY: secret values not read; no credentials/configuration/SQL mutations. OBSERVABILITY: durable recovered receipt and independent report. PRODUCTION: NOT TOUCHED.
+
+
+### 2026-10-24 — full suite ended with two stale assertions; correction verified, rerun active
+
+SUPERSEDES the pending status of session97357: release-tests-1792849322299.log ended exit1/88f0be with 6552 tests,6500 PASS,2 FAIL,0 CANCELLED,50 SKIP,744112.598ms. PeakRSS1449.86MiB; finaldisk2.369GiB/pressure2. This was NOT an all-green result. Fifty skips are49 opt-in browser/mount tests and1 opt-in Swift preflight, not executed by this suite.
+
+🟢 1. Both failures were outdated source assertions in tests/touchline-public-persisted-live-boundary.test.mts: explicit schedule clock and the shared freshness predicate replaced older source shapes. Updated those assertions, retaining no-write/no-provider/degraded-fallback guarantees. Focused real-reader + boundary run release-focused-1792852697988.log:24PASS/0FAIL/0SKIP,exit0/cacd4a. Independent test_workflow_review accepted the delta; no product code changed.
+🔴 2. Complete rerun session28558, log /private/tmp/touchline-pg-check.0XlpV6/release-tests-1792852739318.log,1098files,serial/heap1GiB,explicit local pressure2 and500MiB reserve. ACTIVE, NOT PASS until final receipt. Do not duplicate it.
+🟢 3. Existing local application build PASS f71108 remains scoped to unchanged product source; latest delta is test-only. git diff --check PASS,a638f6. HEADb061753899767a4d805d5f37193d36bc673c18fd;278WIP paths,not immutable candidate.
+🔴 4. Vercel authentication EXTERNAL blocker now directly observed: Safari says two-factor maximum attempts reached. ChatGPT connector teams empty; project403; team authorization404 by ID and slug. Do not use another account, disable 2FA, or circumvent this restriction. Recovery submission confirmed; owner-authorized reply sent to Vercel's existing case TNS_01SEA5jmVDIGysxA, Gmail sent ID1a16e4f5debbe49b. No credentials/codes sent.
+🔴 5. User requests QA deployment despite risk. No push/deploy performed: exact scope freeze/clean committed candidate, current QA name/scope/configuration proof, exclusivity and access needed for rollback remain unresolved. Existing Git integration does not by itself prove those gates. Budget1/consumed0. No remote SQL, Sportmonks HTTP, financial transaction, or Production change.
+
+MISSION: RELEASE preparation. SCOPE: two test assertions and checkpoints only. QA BRANCH: detached, intended remoteqa. QA COMMIT: baseline+WIP above. QA DEPLOYMENT/STABLEURL: unchanged prior baseline, not refreshed proof. FILES CHANGED: boundarytest plus currentstate/ledger. FUNCTIONAL:24focusedPASS; full rerunpending. VISUAL/RESPONSIVE/ACCESSIBILITY/BROWSER: no new product visual claim; earlier isolated evidence retained with gaps. SECURITY: no bypass, no secrets disclosed. BUILD: priorlocalPASS,notremote. OBSERVABILITY: logs/sessionIDs above. OPEN FINDINGS: fullsuite/currentconfig/immutablecandidate/access/release. PRODUCTION: NOT TOUCHED.
+
+### 2026-10-24 15:44 Malta — build PASS; suíte completa em execução
+
+SUPERSEDE apenas build pendente e limites anteriores: buildQA local terminou exit0/f71108 às13:37:50UTC, Next16.2.11/webpack compilou56s, TypeScript e geração de páginas completos. PicoRSS1801,39MiB; pressão1; discofinal2,304GiB; grupo próprio vazio/lockliberado. Log e recibo persistidos no coordenador em outputs/card-review-20260921/saved-evidence-20261024/qa-build-pass-133750.{log,json}. Não é deploy.
+Proprietário aceitou risco e ordenou reserva500MiB. Override explícito local Darwin/nãoCI, padrão10/5do build e5GiBdos testes preservados; opt-in buildstart1GiB/stop500MiB, testesstop500MiB, RSS/prazo/pressãocrítica mantidos. Revisão independente aceita; capacidade10/10PASS release-focused-1792849305455.log.
+Suíte integral1098arquivos iniciou sessão97357, log /private/tmp/touchline-pg-check.0XlpV6/release-tests-1792849322299.log, concorrência1/heap1GiB. RESULTADO PENDENTE; não aprovar antes do encerramento. Nenhum produto mudou após build, somente guardas de testes/checkpoints/coordenador.
+RemoteQA via git ls-remote continua b061753899767a4d805d5f37193d36bc673c18fd. Vercelconnector403; consentimento404; CLIsemcredentials, tentativaauto-login cancelada exit130. Usuário recebeu pergunta assíncrona para autorização deliberada. Nenhum push/buildremoto/deploy/migração/consumoprovider. Orçamento remoto1/consumido0. Revisores auditam diff sem alterar código em teste. Production NOT TOUCHED.
+
+### 2026-10-24 15:09 Malta — tentativa local com exceção de disco solicitada
+
+Proprietário explicitamente contestou o gate10GiB e pediu executar. Wrapper local ganhou --allow-low-disk: default10 preservado; exceçãoDarwin/nãoCI inicia>=5,25GiB, amostras3x30s/variação0,5 preservadas, parada<=5GiB/RSS4608MiB/deadline20min/pressãocrítica mantidas. 8asserções locaisPASS7f4d84; nenhuma política remota/produto alterada.
+Tentativa --build --allow-low-disk executada ce58df, exit1 antes do Next: QA_BUILD_REFUSED. Diagnóstico10ad2d confirmou identidadePASS/nenhumNextconcorrente/disco4,98294GiB/pressão1. --check24bfe4 confirmou ambienteQA válido sem imprimirvalores, disco4,98218GiB. Locknãoexiste; nenhum build ficouativo. Não é falha de compilação de produto nem buildPASS; reserva de disco insuficiente mesmo sob exceção. Build/suítecompleta/deploy continuamBLOCKED. Sem limpeza, providerHTTP, transações, migração ou alteraçõesProduction. Manifesto precisa incorporar este checkpoint antes de freeze.
+
+### 2026-10-24 — navegador focado aprovado; Safari encerrado por pedido do proprietário
+
+Reteste de cinco arquivos sociais históricos:26/26PASS, release-focused-1792846952517.log, exit0/pico170,70MiB/pressão1/disco5,873GiB. A cifra90PASS herdada sem recibo localizado NÃO é adotada; este resultado26 é prova direta. Fixtures privadas continuam excluídas da publicação. Não equivale à suíte completa.
+
+🟢 1. Matriz isolada carrossel/substituição: 4/4 PASS, zero FAIL/CANCEL/SKIP, 87,31s, log /private/tmp/touchline-pg-check.0XlpV6/release-focused-1792846210838.log. Chromium/WebKit, PT/AR e larguras descritas no log; não é prova do site inteiro nem conta real. Exceção local de pressão2 explicitamente registrada; pico próprio346MiB.
+🟢 2. git diff --check PASS nesta retomada; HEAD b061753899767a4d805d5f37193d36bc673c18fd, 279 entradas WIP preservadas. Lint pós-últimos testes PASS, exit0: release-lint-1792846721802.log, pico834,19MiB, pressão1, disco5,982GiB. Não é build nem suíte integral.
+🟢 3. Dashboard Vercel, metadados somente: QA dpl_4pzGUi27KE3JdNoMJ8H99fKt4Hvp Ready/b061753; filtro Production mostrou dpl_GDToS5PAGRRD7UhmNEZjKXAS8LzU Ready/437b318e08c04c1e11f8e290cf652482a4f6a98d/main, 1out2026 02:10CEST. Nenhum perfil público/provider aberto. Isso não prova token compartilhado nem exclusividade da assinatura.
+🟢 4. Safari encerrado por solicitação expressa e ausência confirmada no inventário de apps em execução. Nenhum outro aplicativo encerrado; nenhum arquivo apagado.
+🔴 5. Build completo e suíte integral seguem não aprovados. Disco ~6GiB, abaixo do gate inicial10GiB; fechar Safari libera RAM, não o espaço exigido. Proprietário não consegue liberar espaço; continuar somente tarefas independentes seguras. Não reutilizar tentativa integral interrompida como PASS.
+🔴 6. Drain/recuperação Sportmonks, manifesto congelado/árvore limpa, migraçãoQA, publicação e smoke autenticado permanecem pendentes. Sem deploy ou chamadas Sportmonks, sem transações do elenco ou push real. Production NOT TOUCHED.
+
+Revisores receberam cruzamento das falhas históricas com retestes e atualização do inventário de consumidores, sem processos pesados paralelos. Regras antigas abaixo que dizem navegador pendente são SUPERSEDED por esta prova focada; demais limites de aceitação continuam.
+
+Complemento: neon/movimento decorativo 2/2 PASS em Chromium/WebKit, release-focused-1792846874447.log, exit0/pico276,33MiB, exceção local de pressão2 registrada. Inclui reduced motion e pausa fora da tela; não equivale a aceite humano da página real. check:vercel-input PASS (11 entradas); check:release-readiness retornou LOCAL_CHECKLIST_READY_NOT_RELEASE_APPROVAL, sem valores runtime. Nenhum processo pesado restante desta rodada. Inventário LATEST precisa refletir este complemento antes de congelar.
+
+### Atualização 12:50 UTC — provas finais focadas e exceção local autorizada
+
+- Types pós-deltas PASS: release-types-1792845820580.log, exit0, pico1158,66MiB. Lint PASS: release-lint-1792845877608.log, exit0,0erros/9avisos preexistentes,pico807,94MiB.
+- Elenco/tabela/guardas leves:33/33PASS release-focused-1792845742337.log. Live com relógio medido após I/O:36/36PASS release-focused-1792845799169.log; publicação legítima ocorrida durante a leitura não é rejeitada.
+- CAS teve falhas reais de teste em release-focused-1792845978104.log: tabela history criada no mesmo batch de BEGIN foi revertida; integração não carregava o forward real de notification_devices. Corrigidos callers, sem alterar histórico/constraints. Migration CAS agora SEM BEGIN/COMMIT internos: executor controla DDL+history.
+- Nova rodada release-focused-1792846161226.log:11/11PASS (9capacity+2CAS). Integração usa migrations reais preferences/devices/interest/outbox/binding/kind/ledger/enrollment; prova preservação do upgrade/no-op, invalidação por remoção/re-add, conta isolada, falha de trigger/FK e cascata. Não prova admissão nem envio.
+- Nativo final87a77d:1/1PASS, três sessões distintas/socket local/PG17.11/fsync, rollback catálogo/history e disputa real;140,23MiB,zero processos restantes. Artefatos /private/tmp/touchline-pg-check.0XlpV6/controlled-run.gJZlQU. Nenhum SQL remoto.
+- Browser teve4FAIL por guarda de pressão2 (release-focused-1792845630447.log) e nova tentativa bloqueada pelo mesmo limite (release-focused-1792846044386.log). Não são PASS nem diagnóstico de layout. Uma matriz iniciou antes de atingir nível2.
+- Proprietário reiterou continuar com nível2. Exceção agora explícita LOCAL via --allow-moderate-pressure; default/CI/Linux preservados, pressão4/desconhecida recusada, disco>5GiB/%livre/RSS/deadline mantidos; logs capacityException obrigatórios. Navegador revalidando nessa modalidade (release-focused-1792846210838.log), resultado ainda pendente.
+- Inventário LATEST279WIP=159tracked+120untracked;next-env.d.ts excluído→278candidatos NÃO CONGELADOS. +11paths/+19hashes vs12:19. Mais edições de teste/capacidade e este checkpoint exigem atualizar hashes antes do freeze.
+- Build ainda NÃO executado, disco5,98GiB. Suíte integral, candidatura limpa, migraçãoQA e publicação continuam vermelhos. Não houve pausa de Produção nem remoção de arquivos.
+
+## 2026-10-24 — revisão local de contratos, frescor e concorrência (em andamento)
+
+SUPERSEDE as contagens parciais e o prazo global descritos na seção anterior. Nenhuma publicação nova; HEAD b061753899767a4d805d5f37193d36bc673c18fd + WIP preservado. Autorização: correções locais e preparação QA; Production não tocada.
+
+🟢 1. Regressões focadas anteriores: 90/90 PASS (release-focused-1792844085432.log), lint exit0/9 avisos preexistentes (release-lint-1792844128396.log), TypeScript exit0 (release-types-1792844240868.log). Esses dois últimos precedem os novos deltas abaixo e precisam ser repetidos.
+🟢 2. Treinador: recibo na revisão exata preserva plano, jogadores, recibos e formação; replay posterior continua permitido. 10/10 PASS, release-focused-1792844890735.log, revisão independente sem P1/P2. NÃO é autorização do botão nem transação real.
+🟢 3. Live: storedAt/fetchedAt futuros rejeitados; dados antigos continuam degradados sem fabricar horário. 33/33 PASS, release-focused-1792845300432.log. Não prova atualização no provedor.
+🟢 4. Sino: revisão durável por conta/partida, conflito explícito e RPC antiga sem CAS removida na migração LOCAL 20261024123038_touchline_fixture_alert_revision.sql. 55/55 PASS incluindo PGlite, release-focused-1792845411217.log. Prova nativa 330b4f: PostgreSQL17.11 isolado, três conexões, disputa confirmada, 1/1 PASS, pico139,20MiB, zero processos próprios restantes; artefatos /private/tmp/touchline-pg-check.0XlpV6/controlled-run.osPK8T. Nenhuma migração QA, inscrição ou push real.
+🟢 5. Matriz dos nove reservas: 1/1 PASS Chromium/WebKit, 36,5s (release-focused-1792845479125.log). Timeout120s agora é EXCLUSIVO desse teste, padrão global30s preservado. Oráculos não removidos. Matriz isolada não substitui Safari/site completo.
+🔴 6. Suíte integral ainda NÃO aprovada: tentativa release-tests-1792844295455.log interrompida deliberadamente para incorporar os defeitos encontrados, não PASS. Três falhas iniciais do carrossel não tiveram causa conclusiva; repetição isolada posterior 3/3 PASS (release-focused-1792844773263.log).
+🔴 7. Agentes corrigindo datas futuras na tabela/elenco e capacidade multiOS dos testes obrigatórios; revisão do CAS com enrollment/outbox em andamento. Repetir focados, lint/types e suíte integral depois de estabilizar os arquivos.
+🔴 8. Build completo continua bloqueado por disco ~6,21GiB, abaixo do gate10GiB. Configuração QA do arquivo privado existente foi validada OFFLINE por --check às12:24UTC (QA_BUILD_ENVIRONMENT_CHECKED_NOT_COMPILED), sem imprimir/copiar segredos. Conectividade não foi testada nessa checagem.
+🔴 9. Manifesto final, clean candidate/SHA, build, rollout/migração coordenados e smoke remoto ainda pendentes. Orçamento remoto até1 após gates, consumido0. Sem deploy, chamadas Sportmonks, transações de elenco, limpeza de disco ou mudanças de Produção.
+
+Escopo CRITICAL ENGINEERING/RELEASE: corrigir contratos e provas locais, não promover produto. Rollback: reverter somente deltas listados após revisão do WIP; migration não aplicada. API nova em DB antigo falha fechado; rollout exige gate OFF e migração/API coordenadas. Visual, persistência hospedada e notificações físicas permanecem pendentes. Ferramentas efetivamente usadas: shell/runtime monitorado, PGlite, PostgreSQL descartável, Chromium/WebKit isolados e revisão independente; conectores remotos não executados nesta rodada. Checkpoints não equivalem a aprovação geral do plano.
+
+## 2026-10-24 — resultado integral e correções de regressão de testes
+
+SUPERSEDE o estado “suíte ainda em execução” abaixo. Execução integral encerrada a0d579: 6488 testes, 6320 PASS, 117 FAIL, 1 CANCELLED, 50 SKIP; log /private/tmp/touchline-pg-check.0XlpV6/release-tests-1792842313805.log. Pico RSS próprio1417,67MiB, disco final6,980GiB, pressão1. Não é gate aprovado.
+
+Correções locais revisadas independentemente nos harnesses de idiomas/navegação, treinador, substituição, Live, Arena e preview. Preservadas asserções de identidade, contrato, saldo e ausência de transações. O teste técnico tinha28,4s de esperas explícitas sob limite30s: prazo por arquivo agora120s, concorrência1. Revalidação9d2a90:213testes,175PASS/38FAIL/0CANCEL/0SKIP; log /private/tmp/touchline-pg-check.0XlpV6/release-focused-1792843611759.log. Browser técnico e diálogo isolado passaram; isso não equivale a inspeção visual do site completo. Restaram importações do cabeçalho em VM e rótulos antigos nos testes. Nova rodada serial iniciada após correções.
+
+🔴 1. Finalizar correções residuais, recuperar somente fixtures históricos com hashes verificados e repetir suíte completa, lint e tipos.
+🔴 2. Build completo/manifesto imutável/árvore limpa ainda pendentes. Disco6,37GiB na rodada seguinte, abaixo do gate inicial10GiB. Sem apagar arquivos.
+🔴 3. Recuperação remota Sportmonks, dados atualizados e publicaçãoQA permanecem pendentes; nenhum consumo novo de provider ou build remoto. Production NOT TOUCHED.
+
+## 2026-10-24 — lint e tipos aprovados; suíte completa em diagnóstico
+
+SUPERSEDE o lint pendente da seção anterior: lint completo PASS 6a05d4, zero erros e nove avisos preexistentes documentados; typecheck completo PASS 841e92, heap2GiB, pico1185,78MiB. Correção do sino mantém referências imperativas de segurança separadas do estado React de apresentação, com contexto/época para impedir reaproveitamento de confirmação antiga. Revisão independente não encontrou novo P1/P2; isso não comprova entrega push ou validação visual.
+
+Teste de links de escalação11/11PASS56eba5. Focais do sino67PASS/2FAIL55c65f; os dois erros eram import ausente de AuthSessionMissingError no harness de servidor, corrigido e rerun desse arquivo9/9PASS9577fb. Não reportar execução única69/69. Suíte completa1096arquivos em série iniciada na sessão84578, log privado /private/tmp/touchline-pg-check.0XlpV6/release-tests-1792842313805.log, ainda em execução e já com falhas. Repo congelado para alterações de testes/produto até encerrar; revisores apenas diagnosticam.
+
+🔴 1. Corrigir falhas confirmadas da suíte completa e repetir gates. Harnesses de idioma/rodapé e imports dos componentes ficaram desatualizados; conferir stacks finais antes de modificar. Teste técnico tem28,4s de esperas explícitas e timeout30s insuficiente, precisa prazo supervisor compatível e rerun sem retirar asserções.
+🔴 2. Build completo não executado; wrapper privado preparado e em revisão, disco cerca6,9GiB abaixo do gate inicial10GiB. Nenhum arquivo apagado.
+🔴 3. Manifesto imutável/árvore limpa, recuperação remota Sportmonks, frescor e novo deployQA continuam pendentes. Budget remoto consumido0. Production NOT TOUCHED.
+
+
+## 2026-10-24 — gates locais retomados; QA existente confirmada no Safari
+
+SUPERSEDE somente o estado anterior de prova nativa pendente: PostgreSQL17.11 isolado compilado e instalado, teste nativo executado com 1PASS/0FAIL/0SKIP (820b58), incluindo falha antes do COMMIT com comparação de catálogo/dados e contenção entre sessões. Diretório /private/tmp/touchline-pg-check.0XlpV6/controlled-run.19tdvM preservado; pico146,06MiB e encerramento de todos processos próprios. Não é recuperação remota nem rollback pós-COMMIT.
+
+Proprietário autorizou continuar apesar do indicador de pressão nesta execução. Mantidos limites reais de RSS próprio, prazo e reserva de disco5GiB; sem limpeza ou encerramento de outros trabalhos. Typecheck1GiB sofreu OOM real (4fe52c); nova execução SOMENTE do typecheck com heap2GiB PASS04cfb5/pico1270,61MiB. Não alterar limite da candidata por inferência. Lint completo994c89 encontrou15erros+9avisos:14erros no estado visual do sino e1tipoFunction em teste. Tipo corrigido,11/11testes de links de escalaçãoPASS56eba5; correção do sino em revisão, não declarar lint aprovado ainda.
+
+Safari autenticado confirmou projeto touchline-arena-official na equipe Fifa Agent Plataform, sem exclusão/recriação. DeploymentQA dpl_4pzGUi27KE3JdNoMJ8H99fKt4Hvp está Ready, branchqa, commitb061753899767a4d805d5f37193d36bc673c18fd; alias permanenteQA apontado no painel. Esse é o baseline, NÃO contém o WIP atual. MCP403/autorizaçãoteam404 não significam projeto ausente. Produção continua no commit437b318 observado, sem ações nela.
+
+🟢 1. Conexão PostgreSQLQA privada/TLS já comprovada; valores não expostos.
+🟢 2. Prova nativa isolada de concorrência e rollback pré-COMMIT passou.
+🔴 3. Drain global da assinatura, protocolo remoto, consulta única/recibos e retomadaQA não realizados. SnapshotQA não prova exclusividade de todos consumidores.
+🔴 4. Correção lint em andamento; suíte completa, build, manifesto imutável, revisão final e novo deployQA pendentes.
+🔴 5. Frescor Live/cards/tabela e validação visual remota do WIP pendentes.
+🔴 6. Treinador continua review-only; liberação atleta hospedadaQA OFF/local-only; entrega push real não comprovada.
+
+MISSION:RELEASE/CRITICAL ENGINEERING. SCOPE:correções locais+gatesQA. QA BRANCH:detached atual, alvoqa. QA COMMIT:b061753+247WIP preservados. REMOTE BUILD BUDGET/CONSUMED:1apósgates/0. FUNCTIONAL:nativo e teste linksPASS, produto integral não aprovado. VISUAL/RESPONSIVE/ACCESSIBILITY:N/A correção de teste, revisão sino pendente. SECURITY:fences identidade preservadas; nenhuma mutação remota ouHTTPprovider. TESTS:IDsacima. BUILD:app não executado. OBSERVABILITY:logs privados por fase e leituraSafari. PRODUCTION:NOT TOUCHED.
+
+
+## 2026-10-24 — credenciais persistentes validadas após reinício; compilação nativa interrompida
+
+Proprietário autorizou armazenamento persistente e confirmou preenchimento. Fonte privada canônica agora /Users/luizlopez/.config/touchline-qa-operator/credenciais-qa.txt, diretório0700/arquivo0600, fora repo/iCloud; arquivo em texto com permissões restritas, não declarado criptografado. SUPERSEDE caminho temporário anterior perdido no reinício. Nunca copiar valores ao checkpoint, chat, repo ou logs. Validator coordenador outputs/card-review-20260921/validate-persistent-qa-credentials-20261024.mjs usa O_NOFOLLOW, UID/mode/nlink/tamanho e configuração explícita QA, sem ambiente do site. Formato/configuração PASS dce655; conexão real READ ONLY com TLS, postgres/db/sessionrole e fsync PASS292793/67f889. Token Sportmonks validado apenas em formato; nenhuma chamada ao provedor.
+
+Runtime isolado: PostgreSQL17.11 oficial com SHA256 verificado dada90; configurePASS6d7104; make-j1 interrompido pelo watchdog ebb19b, pressão2, pico próprio102.33MiB, swap65.19MiB, disco7.9646GiB. NÃO foi teste de concorrência executado nem OOM provado. Verificação posterior ff2095 manteve pressão2. Artefatos preservados /private/tmp/touchline-pg-check.0XlpV6; não apagar. Runners nativos preparados por revisor, syntaxPASS5acc6f; sem execução. Nenhum servidor nativo/site ligado nesta rodada.
+
+Auditoria independente:247WIP (132tracked/115untracked); manifestos23out são baseline dd24bf e não cobrem HEADb061753 atual. Não congelar/reutilizar manifesto antigo. Liberação atleta hospedadaQA continua OFF/local-only; deploy não a habilita. Native test fora suíte normal exige execução explícita. Gates leves governança/input/readiness PASS70f0f9, readiness apenas LOCAL_CHECKLIST_READY_NOT_RELEASE_APPROVAL.
+
+🟢 1. Arquivo persistente privado preenchido e conexão PostgreSQL QA/TLS validada.
+🔴 2. Prova nativa de concorrência pendente; compilação pausada por pressão de memória. Retomar incrementalmente somente com capacidade segura, preservando logs.
+🔴 3. Drain/protocolo/consulta única/recibos/retomada QA pendentes; sem resets ou ativação.
+🔴 4. Manifesto atual, revisão completa, suíte/build e deployQA pendentes; fullbuild exige gate de capacidade.
+🔴 5. Frescor Live/cards/tabela e validação visual remota não comprovados.
+
+MISSION:CRITICAL ENGINEERING/credenciais e gate nativo. SCOPE:validação privada e leituraQA; sem alterações produto/banco. QA BRANCH:detached. QA COMMIT:b061753899767a4d805d5f37193d36bc673c18fd+WIP. QA DEPLOYMENT/STABLE URL:inalterados. REMOTE BUILD BUDGET/CONSUMED:até1apósgates/0. FILES CHANGED:validator/runners coordenador/checkpoints; valores privados foraGit. FUNCTIONAL RESULT:auth/TLSPASS,recuperaçãoBLOCKED. VISUAL/RESPONSIVE/ACCESSIBILITY/BROWSER:N/A nesta validação. SECURITY:semsegredos em saída,READ ONLY,TLS,semprovider/escritas/rotação. TESTS:syntax/config/probePASS;native nãoexecutado. BUILD:configurePASS,compilaçãointerrompida. OBSERVABILITY:IDsacima,logsprivados preservados. OPEN FINDINGS:capacidade/protocolo/release/frescor. PRODUCTION:NOT TOUCHED.
+
+| TOOL / PLUGIN | RELEVANT | LOADED | EXECUTED | RESULT | EVIDENCE |
+|---|---|---|---|---|---|
+| Supabase skill + pg.Client | sim | sim | sim | QA READ ONLY/TLS PASS |292793/67f889|
+| Release skills + checks | sim | sim | sim | checklist local, não release |70f0f9|
+| Shell capacity/watchdog | sim | sim | sim | parada segura pressão2 |ebb19b/ff2095|
+| Revisores | sim | sim | sim | runner entregue, manifesto antigo insuficiente |entregas24out|
+
+## 2026-10-24 10:40 UTC — senha QA validada; transporte dedicado confirmado
+
+AUDIT/CRITICAL ENGINEERING, somente leitura remota. Proprietário forneceu explicitamente token Sportmonks e senha PostgreSQL no arquivo privado /private/tmp/touchline-qa-private.ElCmEl/credenciais-qa.txt; valores nunca retornados ao chat/logs. Diretório0700/arquivo0600, fora repo/iCloud. Launcher temporário validate-private.mjs exige FD O_NOFOLLOW, UID, modo privado, nlink1 e tamanho limitado; não herda ambiente do site nem imprime erros com segredos. Configuração canônica passou offline1a38ee. SUPERSEDE bloqueio de configuração privada/acesso SQL: não pedir novamente credenciais.
+
+Primeiro probecc4cca não autenticou porque driverpg ausente; NÃO foi senha recusada. Restaurado SOMENTE tools/quota-recovery/node_modules via npm ci --ignore-scripts --no-audit --no-fund --omit=optional, lockfile existente pg8.16.3,13pacotes/756KiB,de8084. package.json/lock semdiff. Probef950b2 confirmou autenticação/TLS. Audit0d5215 abriu duas pg.Client simultâneas: db/current_user/session_user postgres,fsync on,TLS e PIDs2375463/2375494 distintos. BEGIN READ ONLY/SELECT/ROLLBACK. Scope enabled=true,blocked_unknown=true,active_until16out15:32:14.534Z,1tentativa inconclusiva,0casos. NenhumHTTPprovider/escrita produto/novo loginCLI.
+
+Revisão independente aceita prova de transporte, não prova protocolo. Hardenings recomendados aplicados ao launcher: exigir exatamente1scope; end limitado1s porcliente. SyntaxPASS5a84a4; sem repetir consulta remota inalterada. Nota sobre rodada anterior: a inspeção do código CLI2.114.0 indica que preflight db query --linked pode emitir login temporário, mesmo com SQL READ ONLY; não tratar aquele comando como garantia de ausência de toda mutação administrativa. Nesta rodada usa-se senha fornecida+pg.Client, semCLI.
+
+🟢 1. Configuração privada recebida e formato validado (não validade do token no provedor).
+🟢 2. Transporte PostgreSQL QA dedicado/identidade/TLS confirmado.
+🔴 3. Prova nativa isolada de concorrência continua pendente; runtime ausente. Disco3.15GiB (21c1f6), sem instalação pesada/build.
+🔴 4. Drain, instalação/probe/recibo e retomada QA continuam pendentes. TokenSportmonks não usado.
+🔴 5. Frescor Live/cards/tabela e build/deploy não comprovados.
+
+MISSION: auditoria conexão privada. SCOPE: QA read-only/restauração dependência já fixada. QA BRANCH/COMMIT:detached b061753899767a4d805d5f37193d36bc673c18fd+WIP preservado. QA DEPLOYMENT/STABLE URL:inalterados. REMOTE BUILD BUDGET/CONSUMED:0/0. FILES:launcher temporário,dependências ignoradas,checkpoints; sem alteração fonteproduto. FUNCTIONAL:auth/TLS/doisbackendsPASS;recuperaçãoBLOCKED. VISUAL/RESPONSIVE/ACCESSIBILITY/BROWSER:N/A nesta auditoria. SECURITY:sem segredo em saída,semgrant/reset/rotação ou transação elenco. TESTS:syntax e verificação real read-only,revisão independente; nativo/fullsuite não executados. BUILD:não executado. OBSERVABILITY:1a38ee,cc4cca,de8084,f950b2,0d5215,21c1f6,5a84a4. OPEN FINDINGS:runtime/capacidade,protocolo/recibos/frescor. PRODUCTION:NOT TOUCHED. Arquivo privado permanece restrito para continuidade autorizada; não copiar para repo nem publicar.
+
+
+
+## 2026-10-24 09:56 UTC — CLI QA read-only comprovado; recuperação bloqueada
+
+Consulta CLI autenticada READ ONLY (298885) retornou exit0, database/role/session_role postgres, fsync on e PID2371850. CLI2.114.0 (28bbca). Sem senha fornecida ou impressa. Revisor independente não aprovou substituir pg.Client pelo Management API: faltam garantias de COMMIT, sessão observadora distinta, retries e cancelamento. Nenhum adapter, grant, SQL mutante, HTTP Sportmonks, build ou deploy. Tokens já cadastradosQA; pendência é ambiente privado do operador, não recriação. RuntimePG17 ausente e disco~4,18GiB; sem instalação pesada. BLOCKED EXTERNAL para recuperação real. WIP preservado; Production intocada. Relatório/mission gate completo no workspace coordenador: outputs/auditoria-mestre-20261021/SPORTMONKS_RECOVERY_BLOCKER_AND_DIAGNOSTICS_20261023.md, seção09:56UTC. Próximo: configuração privada autorizada e runtime isolado; manter gates de recuperação.
+
+
+## 2026-10-24 09:49 UTC — diagnóstico corrigido; ligação privada ainda não implementada
+
+CRITICAL ENGINEERING, delta local offline em tools/quota-recovery/config.mjs,measure.mjs,README.md e tests/touchline-recovery-diagnostics.test.mts. Novo --diagnose distingue presença no processo de cadastro remoto; lista somente nomes fixos/booleanos, valida configuração sem conectar, não herda nem remapeia segredos app. Configuração válida continua connected=false/measured=false; ausência local NÃO significa token ausenteQA.13testesPASS5343c7,lint/diffPASS,tscfocal+syntaxPASSfef642. Revisor independente não encontrouP1/P2. Não houve alteração em SQL/ACL/credenciais ou mecanismo de admissão.
+
+MCP QA read-only09:46UTC confirmou role/session_role=postgres,dbpostgres,fsyncon; não prova conexãoTLS/credenciais do processo operador.09:49:29UTC scopeenabled=true,blocked_unknown=true,active_until16out15:32:14;0recoverycases. --diagnose realffaf75 confirmou9variáveis ausentes no processo; tokensQA já foram vistos noSafari e não precisam recriação. Auditoria independente confirmou NÃO existir bridge implementado de injeção; docs antigos citavam mecanismo protegido sem concretizá-lo. Runbooknovo explicita essa lacuna e a ordem dos gates. Disco4.20GiB/memória41%livre; sem build/instalação pesada.
+
+🔴 1. Disponibilizar configuração privada ao executor por mecanismo autorizado; abertura deVercel não injeta segredos noMac.
+🔴 2. RuntimePGisolado/prova nativa de concorrência.
+🔴 3. Drain/aplicaçãoQA/consulta única/recibos/retomadagradual e frescor das superfícies.
+Nenhuma chamadaSportmonks,escritaDB,build,deploy,limpeza,transaçãoelenco ouProduction. Não anunciar trava removida. Rollback deste delta: apenas diagnóstico offline/README/teste; gates anteriores preservados.
+
+## 2026-10-24 — credenciais de ambos provedores confirmadas no Safari, Preview/qa
+
+AUDIT read-only via sessão Safari já aberta pelo proprietário. No projeto touchline-arena-official (prj_GtCzQlIE8AJdm0hSf7GB5yOWejmM), Settings > Environment Variables: busca SPORTMONKS mostrou SPORTMONKS_API_TOKEN como Secret, Preview qa, atualizado19set; CENTRAL_WORKER_TOKEN e demais bindings centrais também Preview qa. Busca SUPABASE mostrou SUPABASE_SERVICE_ROLE_KEY, ANON_KEY, URLs e QA_PROJECT_REF, todos Preview qa. Nenhum Reveal/Copy/Edit/Save usado; nenhum valor lido. SUPERSEDE a pendência de confirmar cadastro Sportmonks na Vercel. Ambos existem; validade operacional, acesso PostgreSQL do executor e recuperação real continuam não provados. Conector continua403; sessão Safari tem acesso normal. Não solicitar recriação de tokens. Nenhuma mudança remota, deploy ou Production; apenas navegação/filtro UI. Próxima ação técnica: tratar configuração explícita e acesso privilegiado do executor sem confundir chaveAPI com senhaSQL e sem contornar gates.
+
+## 2026-10-24 — auditoria de configuração existente QA, sem pedir novos tokens
+
+AUDIT somente leitura. SUPERSEDE a inferência de que ausência das variáveis locais significa credenciais ausentes na QA. Supabase CLI autenticada listou metadados do projeto xgxbwqxjssxxuihuwmgy: SUPABASE_SERVICE_ROLE_KEY, SUPABASE_DB_URL, ANON/URL e demais chaves cadastradas (97e2be); valores não recuperados, conexão SQL não testada. Executor measure.mjs lê process.env exclusivamente, config.mjs exige TOUCHLINE_RECOVERY_* e senha PostgreSQL; não carrega arquivos do site nem converte service-role em senha. Candidata local usa arquivo explicitamente fornecido; arquivos .env.development.local/.env.local/.env.qa.local e vínculo .vercel/project.json ausentes neste checkout (8d284d).
+
+Vercel metadados Preview/qa do projeto touchline-arena-official: conector retornou403 na equipe fifa-agent-plataform; autorização para teamID retornado deu404; list_teams vazio. Alternativa CLI explícita não tinha credenciais e iniciou device login; agente interrompeu com Ctrl-C (exit130) sem autorizar, alterar ou relinkar. Portanto token Sportmonks remoto não foi confirmado nesta rodada, NÃO declarado ausente/inválido. Supabase secrets não listou token Sportmonks nessa superfície, o que não cobre Vercel. OWNER NEXT: autorizar a conexão Vercel correta para consultar a configuração existente; não reenviar token ou redefinir senha. Nenhuma mudança em credenciais, fonte de produto, DB, sincronização, build ou deploy; Production intocada. Gates nativos e recuperação real anteriores permanecem pendentes.
+
+## 2026-10-24 09:13 UTC — gate nativo preparado; acesso protegido ainda ausente
+
+Revisão final: timeout global agora encerra somente as quatro conexões próprias via t.signal; listener removido após cleanup. Syntax/lint/diff PASS da30a5. Revisor independente aceitou delta sem novo achado; execução nativa continua pendente, não aprovada por leitura.
+
+Continuação autorizada da recuperação Sportmonks113532. Novo tests/native/touchline-controlled-probe-concurrency.test.mts exige PostgreSQL17 nativo isolado, socket Unix privado, identidade/data_directory atestados e quatro sessões distintas; prova contenção real, autorização/admissão únicas, visibilidade após COMMIT e bloqueio após recibo desconhecido. Revisão identificou isolamento incompleto e cleanup sem limite; corrigidos nesta rodada. Syntax, ESLint instalado diretamente e diff-check PASS (25c133/89c219). Não executado com banco: tentativa anterior falhou imediatamente por runtime ausente, 0PASS/1FAIL; NÃO declarar concorrência comprovada.
+
+Executor privado: nove variáveis TOUCHLINE_RECOVERY necessárias ausentes (somente presença consultada), --check exit1 sem tentativa de conexão. Runtime PG anterior em /tmp não existe após reinício. Disco aproximadamente3.0GiB, memória37% livre; sem Docker/instalação/build pesado. pnpm exec tentou verificação automática de dependências e falhou EPERM; substituído pelo ESLint já instalado, sem instalação. Testes114PASS da rodada anterior preservados, não repetidos nem promovidos a prova remota.
+
+🔴 1. Restaurar configuração protegida do executor por mecanismo autorizado, sem senhas no chat nem mudança de credenciais.
+🔴 2. Executar prova nativa em ambiente isolado com capacidade segura.
+🔴 3. Confirmar drain de todos os consumidores, instalar protocolo QA, realizar uma consulta autorizada por vez e validar recibos.
+🔴 4. Retomar sincronização gradualmente e comprovar Live/cards/tabela/gols; build/deployQA e validação visual continuam pendentes.
+
+MISSION:CRITICAL ENGINEERING/teste local. HEADb061753+WIP preservado; nenhum SQL remoto mutante, HTTP Sportmonks, transação elenco, build, deploy, limpeza ou alteração de Produção. Próxima ação depende de configuração privada e runtime seguro; reinício ou deploy frontend não substitui esses gates.
+
+## 2026-10-24 09:02 UTC — Sportmonks113532: recuperação controlada LOCAL, QA ainda bloqueado
+
+Pedido atual: resolver trava de16out, seguir resposta técnica Sportmonks no código, depois proprietário reinicia Mac e seguem build/deployQA. Resposta Ivan23out13:24UTC lida: limite por entidade, metadados rate_limit reais, consumidores pausados, UMA consulta, verificar recibo e retomada gradual. Não é atestado de reset nem autorização para inventar recibo.
+
+Read-only QA08:44UTC xgxbwqxjssxxuihuwmgy confirmou blocked_unknown=true,scopeenabled=true,lease16out expirada,1tentativaPlayer sem conclusão,0casos. Última hora08:47UTC:60errosLive+1schedule,0criados/atualizados. Nenhuma mutação/HTTPprovider nesta rodada.
+
+LOCAL: novo supabase/qa/20261024084850_touchline_controlled_quota_recovery_probe.sql, fora das migrations de app; novo tests/touchline-controlled-probe-recovery.test.mts. Modo controlado separa evidência de suporte/autorização de reset, exigeQA/drain/OFF/plano exato, preservaunknowns em quarentena, autorizaumaentidadeporvez. Recibo completo/temporal/ownership/latest e quota válida exigidos antes da próxima chamada. Fingerprints/owner/ACL de018+prepare/admit/finalize verificados; nenhum helper alternativo sem guard. Modo observado legado continua compatível. Consumidores permanecemOFF apósfinalize.
+
+EVIDÊNCIA:114PASS/0FAIL/0SKIP serial (31218/e7d450), node--check/diffcheckPASS, revisão independente final sem achado novo. Falha intermediária de delimitadorSQL corrigida; três achados de revisão corrigidos e retestados. Prova localPGlite e transporte simulado, NÃO concorrênciaPG/migração/recuperação remota. `measure.mjs --check` exit1 às09:01UTC: executor protegido não configurado no processo verificado; sem redefinição/leitura ampla de segredos. Native multissessão,drainexterno,instalação/probe/recibos/reiníciogradual ainda RED.
+
+MISSION/SCOPE:protocolo centralQA+teste+checkpoint;HEADb061753899767a4d805d5f37193d36bc673c18fd+WIPpreservado;REMOTEbudget0/0;sem fullsuite/build/deploy/Production/limpeza. Disco09:01UTC4.10GiB,sem buildpesado. Browser/persistênciaLive/cards/tabela/gols reais ainda pendentes. Relatório completo: coordinator outputs/auditoria-mestre-20261021/SPORTMONKS_RECOVERY_BLOCKER_AND_DIAGNOSTICS_20261023.md, seção24out. Próximo: runtimePGisolado e configuração privada protegida; não usarMCPmutante como atalho. ReinícioMac/frontenddeploy não resolve travaDB.
+
+## 2026-10-24 — recalibração de neon: referência original menos15%
+
+Proprietário rejeitou luz imperceptível. Fonte mostrou frame dentro de canvas430px escalado e overflow hidden: a sombra1,8px anterior era reduzida/recortada. SUPERSEDED esse filtro interno. Nova camada decorativa ::before no tamanho final reutiliza exatamente o asset transparente original, fora do canvas, sem nova geometria, recoloração da arte ou mudança de tamanho. Luz por tier14,45px/59,5% corresponde a17px/.70 menos15% nos parâmetros, não medida fotométrica. Transição240ms; reduced-motion sem transição; sem timers. Opt-in forçado removido somente do card compacto Gameweek para não acender todos; zoom continua destacado; foco de teclado do trigger também ativa.
+
+Safari real ClubOwner: zoom de Nico com halo dourado seguindo borda; após fechar, cursor sobre Nico confirmou halo dourado no card compacto enquanto demais cards ficam apagados. Alteração local, sem mutações no elenco ou publicação. Revisão React aplicada: valores derivados, CSS compartilhado, mesmos assets/cache, nenhum efeito/listener novo, decoração sem hit target. Gate estrutural/testes e limites desta rodada registrados no ledger; mobile/demais superfícies continuam pendentes. MISSION:DAILY/UI;HEADb061753+WIP;FILES:globals.css,ExactCard,CoachCard,GameweekCard,dois testes/checkpoints;QADEPLOYMENT/URL:inalterados;REMOTEbudget0/0;BUILD/TypeScriptglobal:não rodados;SECURITY:semDB;ROLLBACK:somente delta de luz desta rodada. PRODUCTION:NOT TOUCHED.
+
+## 2026-10-24 — correção do halo verde do campo e contorno geométrico
+
+Feedback do proprietário invalida aceite amplo anterior. Causa localizada em app/fantasy/fantasy.module.css: duas regras myClubTacticalSlot:hover aplicavam drop-shadow verde14px/.54 e17px/.7 ao wrapper inteiro, acima do neon compartilhado. Removidas as cores desses filtros (mantida apenas sombra preta de profundidade). Regra compartilhada agora ilumina a transparência da própria imagem original da borda com1,2px/35%, ativação1,8px/50% e240ms; traço poligonal externo ocultado e sua animação desativada nos cards de produto. Não foi reduzido/aumentado o tamanho dos cards. SUPERSEDED o uso visível do SVG geométrico da rodada anterior; geometria histórica permanece disponível, mas não ilumina os cards reais.
+
+29/29 focaisPASS e5190d. Safari desktop /clubowner mostrou por HMR os cards sem contorno poligonal externo, mantendo a borda original. Matriz mobile/hover em demais campos não validada; nenhuma aprovação global. Diff-check inicialmente apontou linha vazia EOF no ledger da rodada anterior, corrigida nesta rodada. MISSION/SCOPE:DAILY CSS global+wrappercampo+regressão/checkpoints;HEADb061753+WIP;QA/remote/Production:inalterados;budget0/0;sem transações,dados,credenciais,build ou TypeScriptglobal. ACCESSIBILITY:transição removida em reduced-motion;funcional/click não alterado. ROLLBACK:somente estes filtros/regras. OPEN:aceite usuário e demais viewports. PRODUCTION:NOT TOUCHED.
+
+## 2026-10-24 — neon discreto por tier, padrão compartilhado dos cards
+
+DAILY/UI local autorizado: proprietário pediu luz neon suave na cor de cada borda em todos os campos. Alteração no CSS global consumido pelos cards canônicos de jogador/treinador, não regras diferentes por página. Traço preserva geometria original, usa currentColor da paleta canônica; sombra limitada a2px/32%, opacidade base.24/trecho.56 e ativação suave.4/.68. Reduzido halo verde do símbolo TL interno de8px/.52 para3px/.20, sem recolorir marca/arte. Reduced-motion mantém luz estática e remove movimento/transições. Nenhuma alteração de tamanho, formação, imagens, contratos ou saldo.
+
+Evidência local:28/28 testes focados de identidade/perímetro/fixture PASS (1c94b7); diff-check PASS. Safari CUSTOMER /clubowner exibiu campo real após HMR, cards dourados/esmeraldas completos e neon nas cores respectivas, sem halo verde geral. Não é validação visual de todos os campos/mobile. Leitura atual também mostrou saldo1.254.350.000TC e elenco34/35, sem transação executada pelo agente nesta rodada; falha de idioma preexistente permanece fora deste escopo.
+
+MISSION:neon compartilhado. SCOPE:globals.css,TouchlineEliteExactCard.tsx,teste de identidade e checkpoints. QA BRANCH:detached;QA COMMIT:b061753899767a4d805d5f37193d36bc673c18fd+WIP;QA DEPLOYMENT/STABLE QA URL:inalterados;REMOTE BUILD BUDGET/CONSUMED:0/0. FUNCTIONAL:28 testesPASS;VISUAL:Safari desktop observado;RESPONSIVE:mobile/tablet e demais campos pendentes;ACCESSIBILITY:contrato reduced-motion/foco preservado;SECURITY:sem DB/credenciais;BROWSER MATRIX:Safari somente;BUILD/TypeScriptglobal:não executados nesta fatia CSS;OBSERVABILITY:HMR visível;OPEN FINDINGS:matriz visual completa e aceite do novo neon. ROLLBACK:reverter somente parâmetros de luz desta rodada, preservando WIP anterior. PRODUCTION:NOT TOUCHED.
+
+Ferramentas:terminal (fonte/testes/diff),apply_patch (delta local),CUA (Safari real) executados e resultados inspecionados. Sem ferramentas de deploy/DB/imagem:irrelevantes para esta fatia.
+
+## 2026-10-24 — liberação de atleta habilitada para teste manual na candidata
+
+Pedido explícito do usuário após aprovação do visual. Causa comprovada: launcher não encaminhava TOUCHLINE_CLUB_RELEASE_ENABLED e contrato de Preview rejeitava essa chave. Adicionado opt-in --club-release, dependente de --club-collection e --qa-market-context; admissão limitada a development sem VERCEL,branchqa,projetoQAcanônico. HostedQA/isolatedPreview continuam bloqueados; flag não herdada de host/env. Nenhuma regra de saldo/SQL alterada.
+
+QA somente leitura confirmou RPCinvoker hashc45f054dfb5b83bc509fdebb53107a7d,EXECUTE sóservice_role,receiptRLSon,SELECT/INSERTservice_role semUPDATE/DELETE/TRUNCATE,anon/authnegados. Cliente:rev58,35contratos,saldo1252100000,mercadoaberto,0recibos. Testes40config/rota/recoveryPASS e4495d;17isolamentoPASS e7f525;3SQLPGlite atomicidade/resposta perdida/duaschavesPASS4b655d;ACL1PASSa6789f;ESLint/diffPASS e0b18f. Não equivale a prova nativa multissessão: Docker indisponível; não iniciado. Consulta docsRPC/Supabase; changelogmarkdown webfalhoucontenttype. Nenhuma migração necessária/aplicada.
+
+Reinício apenas processo7377 da candidata, pressão recuperou1; nova sessão15040 preflightPASS Ready548ms. SafariCUSTOMER ClubOwner→PascalGroß→Liberar jogador→revisão: Confirmar liberação habilitado (AX659),sem aviso de indisponível. A confirmação final NÃO foi clicada. Esperado:250000TCmulta,2250000TCdevolução,saldo1254350000TC,34contratos se usuário confirmar e servidor aceitar. Persistência/recibo real/reload ainda pendentes. Logs carregamento trazem aviso hydrationmain e falha idioma preexistentes, não escondidos nem resolvidos nesta rodada.
+
+MISSION/SCOPE:configuração local autorizada;HEADb061753+WIP;FILES:launcher/environment,isolation,2testes,documento/checkpoints. FUNCTIONAL:habilitação/testes localPASS,transação realaguarda usuário;VISUAL:Safari botão habilitado;RESPONSIVE:sem novoPASS;ACCESSIBILITY:controle existente;SECURITY:auth/RLS/round/revision/idempotência preservados. BUILD/TypeScriptglobal:não executados;QADEPLOYMENT/STABLEQAURL:inalterados,REMOTEbudget0/0. OPEN:nativeconcurrency,liquidação real,idioma/hydration. ROLLBACK:reiniciar sem --club-release. PRODUCTION:NOT TOUCHED.
+
+
+## 2026-10-24 — aceite visual da rescisão e aumento tipográfico de 15%
+
+Usuário aprovou composição ("FICOU TOP") e pediu somente textos15% maiores. Fontes do título, registro, rótulos, valores e avisos multiplicadas1,15; valores uniformes20,7px. Card, fumê, ícones, divisórias e espaçamentos preservados; botões mantêm sistema compartilhado. Safari desktop real mostrou aumento e ações ainda inteiras sem rolar.21/21testesPASS43348f. Sem transação/deploy; gate disponível continuaOFF, datas/prazo reais e mobile ainda pendentes. EscopoDAILY/CSS local;HEADb061753+WIP,rollback somente delta tipográfico;sem build/TypeScriptglobal. PRODUCTION:NOT TOUCHED.
+
+
+## 2026-10-24 — refinamento da rescisão: fumê e razão financeiro uniforme
+
+DAILY/UI local, mesmo HEAD b061753+WIP. Regra visual solicitada: preservar fumê semitransparente nas telas relacionadas, não fundo opaco. Overlay82%/blur12px; card original240px elevado sem reduzir arte; ID retirado da interface (identidade interna preservada). Ícone FileSignature em verde TouchLine. Cinco valores reunidos em um único demonstrativo, linhas52px com divisórias contínuas e padding14px uniforme, fonte18px tabular em todos os valores, moeda compartilhada. Conteúdo/header/footer compactados; overflow continua auto por acessibilidade, não foi ocultado para mascarar corte.
+
+Evidência: Safari CUSTOMER localhost3100/clubowner, modal Pascal Groß, captura real mostrou card/registro/cinco linhas/ações completos no viewport desktop sem rolar; fumê e ícone verde visíveis.21/21 testesPASS ee3157; primeira execução20/21 por expectativa antiga de duas seções, atualizada para demonstrativo único; guards financeiros preservados. Nenhuma confirmação executada. Mobile/matriz navegadores/TypeScriptglobal/build não reexecutados; não declarar gate integral. Datas/prazo continuam indisponíveis na fonte, sem inventar. WIP preservado; sem commit/deploy/DB. PRODUCTION:NOT TOUCHED. Rollback somente delta de apresentação desta rodada.
+
+
+## 2026-10-24 — rescisão do atleta: apresentação fullscreen solicitada
+
+DAILY/UI local. Removido bloco Seu clube/valor agregado e explicação antiga. Título único verde Rescisão de contrato com ícone de saída; tela ocupa viewport sem borda; card original240px mais abaixo; registro do atleta sob card com ícone de contrato. Reutilizados TouchlineCoinMark e estilo marketPowerValue do plano para moeda/valores dourados, texto enxuto e hierarquia/espaçamento refinados. Fórmula, snapshot congelado, callback, disabled, saldo e gates não alterados. Estilo fullscreen próprio evita modificar diálogo do treinador.
+
+LIMITAÇÃO: ClubAcquisitionState/ClubOwnedPlayer fornecido à UI não contém data de contratação/vencimento. Campos exibem Data não registrada/Prazo não informado, não data fictícia ou meses inferidos. ID do atleta é playerId, não número de contrato. Integração desses dados permanece pendente; nenhum banco consultado ou migrado para esta alteração.
+
+EVIDÊNCIA:21/21testes confirmação/review/treinadorPASS a6f6d2 e rerun cc8f0d; lint3arquivos/diff-checkPASS. Safari CUSTOMER já aberto no modal PascalGroß atualizou por HMR: captura real topo mostra fullscreen/cardoriginal/título/valores; captura após scroll mostra registro e ações; Confirmar liberação desabilitado e nenhuma ação financeira executada. Mantidas duas ações e foco inicial no título. Teste browser isolado atualizado para novo título/colunas, mas não executado: pressão2/disco4968588KiB(9169f4), evitar carga adicional. Não declarar mobile/8idiomas completos: componente mantém PT/EN preexistentes. Suíteglobal/TypeScriptglobal/build não executados por capacidade.
+
+MISSION/SCOPE: apresentação do diálogo de rescisão de jogador. HEAD:b061753899767a4d805d5f37193d36bc673c18fd+WIP. FILES:ClubOwnerReleaseDialog.tsx/.module.css,dois testes e checkpoints. FUNCTIONAL:proteções/quote21PASS,sem transação real. VISUAL:Safari desktop inspecionado topo/rodapé;RESPONSIVE:fonte preparada,mobilependente;ACCESSIBILITY:foco/guards unitários,sem matriz nova. SECURITY:sem credenciais/DB/consentimento. QA DEPLOYMENT:inalterado;REMOTE BUILD BUDGET/CONSUMED:0/0. OPEN FINDINGS:datas/prazo reais e validação móvel. ROLLBACK:reverter somente esta apresentação preservando WIP anterior. PRODUCTION:NOT TOUCHED.
+
+## 2026-10-24 — aceite do usuário: substituição e carrossel na candidata local
+
+Usuário declarou: “a parte da subistituicao testei esta funcionando ficou legal” e “carrocel e essa parte ficaram top”. Registrar VERDE para experiência de substituição e carrossel que o usuário testou na candidata local; preservar apresentação aprovada. Evidência é aceite humano neste chat, não novo teste automatizado. Não inferir confirmação de persistência após reload, todas as posições, todos os idiomas/dispositivos, QA remoto ou liberação de treinador. Próxima revisão guiada: área técnica/treinador e espaçamento de reservas, um item por vez; esperar usuário antes de avançar. Nenhum código de produto/DB/deploy alterado nesta rodada.
+
+## 2026-10-24 — corte de disco local reduzido para 1 GiB por aprovação explícita
+
+Usuário confirmou que 1GiB se refere ao espaço livre mínimo, NÃO ao heap. Runtime agora para com disco<=1GiB; heap4096MiB,pressão crítica/QA/dotenv permanecem protegidos. Regra antiga5GiB SUPERSEDED somente para candidata local, não build completo.26/26testesPASS573fe2 incluindo limites exatos,NaN,pressão crítica; lint/diff-checkPASS. Capacidade948804:pressão1,disco7547248KiB,porta3100 livre. Queda anterior42523 comprovada por93e0f0:pressure2,availableKiB5235356 (<5GiB),não OOM nem erroLive; parada por disco. Sem limpeza/credenciais/transações/deploy.
+
+MISSION:configuração local autorizada;HEAD b061753899767a4d805d5f37193d36bc673c18fd+WIP. FILES:runtime,teste,documento e checkpoints. FUNCTIONAL:26testesPASS;VISUAL/RESPONSIVE/ACCESSIBILITY:não alteraUI,nova estabilidade pendente. BUILD/TypeScriptglobal:nãoexecutados. REMOTE BUILD BUDGET/CONSUMED:0/0. OPEN FINDINGS:pressão crítica ainda pode encerrar processo;1GiB reduz margem de segurança,não garante disponibilidade. ROLLBACK:restaurar somente limiar local5GiB se necessário.PRODUCTION:NOT TOUCHED.
+
+## 2026-10-24 — desligamento por WARN removido a pedido do usuário
+
+Última tentativa após recuperação pressão1 (26f8e1) e compilação Live prévia: sessão42523,preflightPASS/Ready299ms (8fed95),Live200em7,8s (15fd23). Safari confirmou Live renderizada e seletorPortuguês habilitado. RAM residente Next7039=1326304KiB (cb99e3),não equivale a footprint/heap total; não atribuir consumo exclusivo. Servidor ativo na última consulta, estabilidade prolongada ainda não aprovada. Proteção crítica continua ativa.
+
+ATUALIZAÇÃO MATERIAL: sessão56725 encerrou após Live200, agora com motivo comprovado c3ec87: pressure=4 (CRITICAL), availableKiB=6478684,allowWarning=true. Servidor novamenteOFF. Remover WARN não resolveu pressão crítica; não reiniciar inalterado nem declarar estabilidade. Nenhuma proteção crítica removida.
+
+Safari confirmou /live?lang=pt-BR renderizada após reinício, com confrontos e resultados reais persistidos. Ainda apareceu falha de confirmação de idioma com Tentar novamente: pendência separada, não declarar produto integralmente aprovado. Diff-check finalPASS d670b9. Abertura comprovada, estabilidade longa ainda não medida.
+
+DAILY: usuário relatou queda ao navegar para Live e pediu retirada da proteção. Sessão63754 terminou pelo monitor (0a922a), não OOM comprovado. Retirado timer60s de WARN; início exige pressão1, runtime aceita2 sem prazo. Mantidos parada crítica/desconhecida, disco<=5GiB, isolamentoQA/dotenv e limite4GiB. Agora parada de capacidade registra somente leituras numéricas para distinguir a causa. Nenhuma credencial é impressa.
+
+25/25testes focadosPASS a5cb64, lint exit0. Diff-check detectou linha em branco no fim do ledger, corrigida nesta rodada. Pressão1 (1c117d), disco7.516.404KiB. Sessão56725: preflightPASS,Ready267ms (95375c); Safari recarregado diretamente em /live?lang=pt-BR, compilação em andamento (664da3).
+
+MISSION/SCOPE: disponibilidade local; QA COMMIT:b061753899767a4d805d5f37193d36bc673c18fd+WIP. FILES:runtime,teste,documento/checkpoints. FUNCTIONAL:25testesPASS; browser ainda em validação. VISUAL/RESPONSIVE/ACCESSIBILITY:nenhum aceite global. BUILD/TypeScriptglobal:não executados; sem feature edit. SECURITY:nenhuma transação/credencial/consentimento alterado. QA DEPLOYMENT:inalterado;REMOTE BUILD BUDGET/CONSUMED:0/0. OBSERVABILITY:logs acima; OPEN FINDINGS:estabilidade integrada em validação, causa anterior genérica. ROLLBACK:restaurar somente timer se necessário;PRODUCTION:NOT TOUCHED.
+
+## 2026-10-24 — retomada da candidata solicitada pelo usuário
+
+RESULTADO: Safari normal voltou a renderizar ClubOwner no localhost:3100/clubowner?lang=pt-BR: XI11/11,9reservas,EnzoMaresca e15fora da partida (35contratos). Carrossel presente. AX confirmou dados; idioma/saldo ainda mostravam atualização na captura, portanto não são novos PASS funcionais. Somente abertura solicitada comprovada, sem aceite global/release.
+
+DAILY/local somente. Sessão anterior14030 terminou exit1 com `Local QA capacity/configuration monitor stopped its own process group.` (9eb56f); o registro não distingue pressão sustentada, disco ou configuração. Não atribuir a OOM. Pressão atual1 (3928e2), disco7.681.816KiB (4c7162), porta3100 sem listener antes da retomada. Mesma revisão b061753899767a4d805d5f37193d36bc673c18fd+WIP.
+
+Launcher existente reiniciado com --qa-market-context --club-collection; QA persona preflightPASS e Ready284ms (079f49), sessão63754. Safari normal recarregado na aba ClubOwner preservando sessão; compilação iniciada (acc96f). Limite4096MiB, paralelismo1 e proteções existentes preservados. Nenhuma mudança de produto/credencial/transação/commit/deploy. Abertura final será registrada após renderização; Ready não é prova do elenco.
+
+Reconciliação do checkpoint anterior: fonte atual já contém --club-collection explícito e monitor com início em pressão normal, tolerância de WARN por menos de60s, interrupção crítica/desconhecida ou disco<=5GiB. As entradas históricas que descrevem interrupção imediata em qualquer WARN estão SUPERSEDED pela fonte atual. Não desligar proteção para manter servidor aberto.
+
+MISSION/SCOPE: reiniciar candidata local existente. FILES: checkpoints somente. FUNCTIONAL: startupPASS, browser em validação. VISUAL/RESPONSIVE/ACCESSIBILITY: sem novo aceite. TESTS/BUILD: nenhum novo teste/build completo, sem alteração de código. QA DEPLOYMENT: inalterado; REMOTE BUILD BUDGET/CONSUMED:0/0. SECURITY: sessão preservada, sem mutações de elenco. OPEN FINDINGS: causa específica do monitor não registrada; aceites integrais anteriores permanecem pendentes. PRODUCTION:NOT TOUCHED.
+
+## 2026-10-24 — compilação local serializada; pressão do Mac permanece elevada
+
+DAILY, pedido de resolver abertura. Nenhum Next/Webpack antigo encontrado(b826f5). Next instalado suporta NEXT_WEBPACK_PARALLELISM em webpack-config.js706–716; launcher agora fixa1 somente no subprocessoNext, ignorando overridehost. Limite4096MiB e proteções de pressão/disco preservados. Não alterar Next publicado/Sentry/auth. Otimização webpackMemoryOptimizations avaliada e não adicionada: implementação inspecionada é de build, não evidência de ganho em dev.
+
+23/23 testes focados,ESLint,diff-checkPASS166e97; ganho de memória e abertura NÃO validados. vmmap879(614245) reportou footprint898,4MiB,pico1,2GiB,com aviso de análise incompleta PartitionAlloc; não atribuir toda pressão a esse processo. Sem compilação rodando,pressão2 continuou em2b429d,disco8.795.304KiB. Não repetir startup sob mesmo bloqueio. Nenhum app alheio fechado,cache apagado ou proteção removida.
+
+MISSION/SCOPE: configuração de concorrência local e diagnóstico. QA BRANCH/COMMIT:detached b061753899767a4d805d5f37193d36bc673c18fd+WIP. FILES:qa-candidate-environment.mts,teste correspondente,LOCAL_QA_CANDIDATE_RUNTIME.md e checkpoints. FUNCTIONAL:contrato/testesPASS;OPEN FINDINGS:pressão sistêmica e candidata indisponível,19aceites inalterados. VISUAL/RESPONSIVE/ACCESSIBILITY/BROWSER:semnovaaprovação. SECURITY:semcredenciais/DB/transações. TESTS:166e97. BUILD/TypeScriptglobal:nãoexecutados. QA DEPLOYMENT/STABLE QA URL:inalterados;REMOTE BUILD BUDGET/CONSUMED:0/0. OBSERVABILITY:fonteinstalada,ps,vmmap,sysctl. ROLLBACK:retirar somenteNEXT_WEBPACK_PARALLELISM e expectativas se necessário. PRODUCTION:NOT TOUCHED.
+
+
+
+## 2026-10-24 — tentativa real com 4 GiB interrompida por pressão de memória
+
+DAILY, solicitação de abrir candidata para apresentar mudanças da madrugada. Usados skills de verificação ponta a ponta, Supabase e ambiente para preservar QA/persona/credenciais; nenhuma implementação Supabase nesta rodada. Fluxo-alvo: launcherQA → preflight → Next local → Safari CUSTOMER → ClubOwner renderizado.
+
+- Capacidade inicial pressão1/disco8.641.124KiB,porta3100 sem listener (8d8625). Launcher real --start com configuração QA existente e --qa-market-context, limite4096MiB; preflightPASS,NextReady337ms (ba5f94), sessão67891.
+- Safari normal já estava em localhost:3100/clubowner?lang=pt-BR com erro de conexão. Reload uma vez; ClubOwner NÃO renderizou. Launcher encerrouexit1 (2598b9); pressão2,porta3100 sem listener,disco8.689.672KiB (42d2f9). Compatível com parada automática pelo gate durante o monitoramento; não houve log de OOM desta tentativa, portanto não atribuir falha a heap4GiB esgotado.
+- Memória pós-parada (1193d0): maiorRSS individual CodexRenderer780448KiB,CLI269632KiB,ChatGPT253952KiB; compressor167053páginas16KiB (~2,55GiB),wired123407 (~1,88GiB). RSS não inclui toda memória comprimida nem equivale a footprint; não inferir causa exclusiva. Pressão ainda2 (537b3c). Nenhum processo alheio fechado/arquivo apagado; Safari mantido. Não repetir carga sem mudança.
+- OPEN FINDINGS: candidata não disponível, apresentação visual das mudanças da madrugada bloqueada por capacidade.23testes da configuração continuamPASS;19aceites integrais não promovidos. Nenhuma prova de login/renderização nova.
+
+MISSION/SCOPE: execução local e diagnóstico somente leitura. QA BRANCH/COMMIT:detached b061753899767a4d805d5f37193d36bc673c18fd+WIP. QA DEPLOYMENT/STABLE QA URL:inalterados;REMOTE BUILD BUDGET/CONSUMED:0/0. FILES CHANGED:estes checkpoints. FUNCTIONAL:preflightPASS,servidor iniciou mas encerrou;VISUAL/RESPONSIVE/ACCESSIBILITY/BROWSER:Safari erro de conexão,nãoPASS. SECURITY:sem transação/envwrite/consentimento/push;configQA não impressa. BUILD:sem buildcompleto;compilaçãoClubOwner não comprovada. OBSERVABILITY:logs/capacidade/AX/RSSacima. PRODUCTION:NOT TOUCHED.
+
+| Ferramenta | Ação | Evidência |
+|---|---|---|
+| LauncherQA | Preflight e servidor4GiB |ba5f94,2598b9 |
+| CUA Safari | Reload na aba local existente | erroconexão |
+| sysctl/df/ps/vm_stat | Capacidade somenteleitura |42d2f9,1193d0 |
+
+
+
+## 2026-10-24 — limite de 4 GiB solicitado pelo usuário
+
+DAILY: autorização explícita “eu quero que vc aumente para 4 gigas”. Limite da candidata agora --max-old-space-size=4096; configuração3GiB anterior SUPERSEDED. Preflight leve permanece1024MiB. Guardas de pressão/disco intactos; não é teto total da RAM nem alocação antecipada.
+
+MISSION/SCOPE: ajuste local de limite e expectativas, sem produto/credenciais. QA BRANCH/COMMIT: detached b061753899767a4d805d5f37193d36bc673c18fd + WIP. FILES CHANGED: scripts/local/qa-candidate-environment.mts; tests/touchline-local-qa-environment.test.mts; docs/touchline/project-memory/LOCAL_QA_CANDIDATE_RUNTIME.md; CURRENT_STATE.md; CURRENT_EXECUTION_LEDGER.md. FUNCTIONAL/TESTS:23/23PASS; ESLint e diff-check exit0,30461a. VISUAL/RESPONSIVE/ACCESSIBILITY/BROWSER: não aplicável à configuração, nenhum browser iniciado. BUILD/TypeScript global: não executados. SECURITY: nenhuma credencial/rede/DB/transação. QA DEPLOYMENT/STABLE QA URL: inalterados; REMOTE BUILD BUDGET/CONSUMED:0/0. OBSERVABILITY: fonte e testes sintéticos, não compilação real. OPEN FINDINGS: iniciar e validar candidata com4GiB ainda pendente; não declarar OOM resolvido nem alterar19aceites. ROLLBACK: reverter somente literal4096 e testes mediante necessidade/autorização; preservar WIP. PRODUCTION: NOT TOUCHED.
+
+| Ferramenta | Ação real | Resultado |
+|---|---|---|
+| apply_patch | Limite, testes e documentação |4GiB gravado |
+| Node test | Ambiente e runtime simulados |23PASS |
+| ESLint/git | Lint/diff-check |exit0 |
+
+
+
+## 2026-10-24 — limite local de compilação aumentado por autorização do usuário
+
+DAILY: pedido explícito “entao aumenta pra 3 gigas”. Configuração da candidata alterada de --max-old-space-size=1024 para 3072 (3 GiB de old-space por processo Node, não limite total de RAM). Preflight leve permanece em1024. Guardas de pressão/disco e isolamento inalterados. A regra anterior de manter candidata em1GiB está SUPERSEDED; histórico do OOM preservado.
+
+MISSION/SCOPE: somente configuração local, teste e documentação; nenhum produto/credencial/DB alterado. QA BRANCH/COMMIT: detached b061753899767a4d805d5f37193d36bc673c18fd + WIP preservado. FILES: scripts/local/qa-candidate-environment.mts; tests/touchline-local-qa-environment.test.mts; docs/touchline/project-memory/LOCAL_QA_CANDIDATE_RUNTIME.md; estes dois checkpoints. FUNCTIONAL/TESTS:23/23 testes focados passaram, ESLint e diff-check exit0 (a2b472). VISUAL/RESPONSIVE/ACCESSIBILITY/BROWSER: não executados, alteração não toca UI; candidata não iniciada nesta rodada. BUILD/TypeScript global: não executados; não alegar OOM resolvido. SECURITY: sem acesso a credenciais, rede ou dados reais. QA DEPLOYMENT/STABLE QA URL: inalterados; REMOTE BUILD BUDGET/CONSUMED:0/0. OBSERVABILITY: leitura de fonte, patch, testes e lint locais. OPEN FINDINGS: inicialização e compilação reais com3GiB ainda pendentes; os19aceites de produto não mudam. ROLLBACK: restaurar apenas literal3072 para1024 e expectativa correspondente se solicitado, sem reverter WIP. PRODUCTION: NOT TOUCHED.
+
+| Ferramenta | Ação | Resultado |
+|---|---|---|
+| apply_patch | Configuração, teste, documentação | Limite3GiB gravado |
+| Node test | Ambiente/runtime simulados |23/23PASS |
+| ESLint/git diff --check | Verificação proporcional | exit0 |
+
+
+
+## 2026-10-24 — rodada das 07:50 CEST: evidência adicional de navegação e balanço reconciliado
+
+AUDIT local, sem alteração de código de produto. HEAD b061753899767a4d805d5f37193d36bc673c18fd + WIP preservado.19aceites integrais continuam vermelhos; o quadro vigente no plano foi reconciliado com revisão independente, sem transformar testes isolados em validação do cliente real.
+
+- Chromium844 user-changed-hash PASS5bb6e1: scroll14/hash#club-hub-top preservados após chegada tardia. Completa o caso isolado que restava desse tamanho, junto das provas anteriores; não repetir seus casos concluídos.
+- Chromium1280 conjunto completo PASS555f4e: cinco chegadas top84; troca dehash scroll38 e rolagem400 preservadas. PNG /private/tmp/touchline-lineup-anchor-CcyifG/chromium-1280-click-before-load.png inspecionado, início da seção visível; lineup vazia/sintética não comprova dados reais.
+- WebKit1280 observou as cinco chegadas top84, mas gate pressão2 interrompeu antes dos dois cancelamentos (72c513). NÃO PASS integral. PNG /private/tmp/touchline-lineup-anchor-lxsfEp/webkit-1280-click-before-load.png inspecionado. Próxima prova desse tamanho são os cancelamentos filtrados, sem necessidade de repetir as chegadas.
+- Capacidade inicial pressão1/disco9.024.540KiB (~8,61GiB),7b1df7; pós-encerramento voltou1/disco8.951.444KiB (~8,54GiB),ab8271. Recuperação ociosa não resolve picos sob carga. Porta3100 sem listener; candidata e Safari não iniciados; browsers headless próprios encerrados pelo finally. Nenhum novo ensaio pesado iniciado após o abort.
+- Revisão independente da fila confirmou bloqueios não relacionados só à RAM: item11 URL oficial Instagram ainda sem prova; item14 engenharia transacional/catálogo versionado faltante e confirmar desativado (fonte84 reconferida e49aa5); itens13/16 entrega no dispositivo, serviço e dados atuais não provados; item17 exige autorização/gates remotos próprios, orçamento0. Não afirmar que mais memória concluiria esses itens.
+- Próximos ensaios existentes: ArenaWebKit667/1024, faixa técnica844/1280, golsWebKit844, footer320PT e matriz8idiomas; fontes/testes estão preparados, ainda exigem capacidade e inspeção. Candidata real continua bloqueada pelo OOM1GiB não resolvido; não repetir startup inalterado.
+- Nenhuma credencial/DB/consentimento/transação/push/exclusão/commit/deploy. Agente concluiu auditoria e reportou ao root; sem duplicar execução nem criar tarefas vazias. Diff-checkab8271 passou. Ao alcançar08:00 não iniciar nova rodada; entregar balanço honesto deste quadro.
+
+MISSION: completar evidência isolada de anchor e reconciliar fila. SCOPE/FILES:três checkpoints, nenhum produto. QA BRANCH/COMMIT:detached/HEADacima. QA DEPLOYMENT/STABLE QA URL:inalterados,não validados. REMOTE BUILD BUDGET/CONSUMED:0/0. FUNCTIONAL:duas invocaçõesPASS,uma parcial abortada. VISUAL/RESPONSIVE/ACCESSIBILITY/BROWSER:Chromium844/1280 e WebKit1280 nos limites acima, não Safari nativo/NextRSC. SECURITY:dados sintéticos/GETHEAD isolados, nenhuma mutação real. TESTS:5bb6e1,555f4e,72c513. BUILD:não executado. OBSERVABILITY:PNGs e capacidade acima. OPEN FINDINGS:quadro19itens no plano. PRODUCTION:NOT TOUCHED.
+
+## 2026-10-24 07:38 CEST — cenários pendentes de escalação/carrossel verificados; vídeo parcial
+
+AUDIT local no HEAD b061753899767a4d805d5f37193d36bc673c18fd + WIP. Nenhum código de produto alterado nesta rodada. Quadro completo dos19aceites continua vermelho: provas abaixo são componentes reais em fixtures isoladas, não candidata autenticada/Next/Safari nem dados de futebol reais.
+
+- Capacidade recuperou no início: pressão1/disco8.426.740KiB (~8,04GiB),c2930a. Não repetida compilação Next com1GiB; somente um ensaio headless por vez. Candidata/Safari não iniciados.
+- Chromium844, caso antes bloqueado user-scrolled-away: PASS d86d6b. Scroll antes/depois400, amostras[400,400], hash preservado. PNG /private/tmp/touchline-lineup-anchor-q4BJu3/chromium-844-user-scrolled-away.png inspecionado; mostra espaço vazio intencional da fixture, não tela de produto nem layout aprovado.
+- WebKit844, conjunto completo preparado de anchor: PASS708fae; initial/reload/click-before/click-after/native-back chegaram ao top84; troca dehash permaneceu14; rolagem voluntária permaneceu400. PNG /private/tmp/touchline-lineup-anchor-WEsaD5/webkit-844-click-before-load.png inspecionado, título e início do campo visíveis. É lineup sem jogadores na fixture, portanto não comprova seleção de partida/dados nem navegação Next/RSC.
+- WebKit844, hover anterior ao overflow e atualização de seeds sem remount: PASS7936c0 em PT/AR, pausa ao hover e retomada ao sair. PNGs /private/tmp/touchline-0737-delayed-hover-webkit-844-{pt-BR,ar-SA}.png; AR inspecionado. Props sintéticas sem logos reais; não promover a aceite visual do strip completo. Complementa Chromium já registrado, sem repetir sua execução.
+- Vídeo de login: ensaio preparado executado pela primeira vez em WebKit (312267). MP4 real respondeu206, readyState4,1280x720,tempo0→0,5927,pausedfalse,semerror/forbidden: reprodução automática OBSERVADA. Teste integral FALHOU pelo gate de pressão2 antes do screenshot final/reduced-motion. PNG inicial /private/tmp/touchline-auth-playback-ZikEvS/webkit-844-initial.png inspecionado, sem Play visível nessa imagem. Não reproduziu nem resolveu o Play do Safari real; não chamar teste PASS nem repetir sob pressão.
+- Auditoria independente do grafo ClubOwner confirmou cliente eager~121.844bytes e candidatos de lazy import para onboarding/diálogos fechados. Não mediu heap por módulo; Webpack pode ainda compilar chunks dinâmicos. Sem evidência de ganho, nenhuma alteração especulativa foi feita nem Sentry desligado. OOM1GiB continua aberto.
+- Final2d5e1d: pressão2,disco8.824.636KiB (~8,42GiB),porta3100 sem listener,diff-checkexit0. Ensaios fecharam browsers pelo finally. Nenhuma exclusão/credencial/DB/transação/push/deploy; agentes entregaram ao root, sem trabalho pesado concorrente.
+- Próximos quando capacidade permitir: Chromium hash-changed e matriz desktop/portrait ainda não integralmente comprovados; reduced-motion/vídeo Safari nativo e candidata real/persona. Priorizar causa da compilação1GiB sem confundir heap, RAM física e disco. Não repetir auditoria sem mudança para aparentar avanço.
+
+MISSION: validação incremental proporcional. SCOPE/FILES:somente três checkpoints alterados. QA BRANCH/COMMIT:detached/HEADacima. QA DEPLOYMENT/STABLE QA URL:inalterados,não validados. REMOTE BUILD BUDGET/CONSUMED:0/0. FUNCTIONAL:três invocações browserPASS nos limites descritos;vídeoparcial abortado. VISUAL/RESPONSIVE/ACCESSIBILITY/BROWSER:Chromium/WebKit844 de fixtures, sem Safari nativo ou aceite global. SECURITY:rotas isoladasGET/HEAD, sem contas/dados remotos. BUILD:nãoexecutado. OBSERVABILITY:d86d6b,708fae,7936c0,312267,2d5e1d. OPEN FINDINGS:19aceites integrais,OOM,integração/capacidade. PRODUCTION:NOT TOUCHED.
+
+| Ferramenta | Ação real | Resultado/limite |
+|---|---|---|
+| Playwright isolado | Navegação tardia e carrossel | Cenários específicos PASS, não QA real |
+| Skill verification | Roteiro de reprodução do vídeo | Primeiro limite observado: pressão; sem correção especulativa |
+| PNGs | Inspeção humana-modelo das imagens citadas | Fixture distingue ausência de dados reais |
+| Agente/fonte | Auditoria do grafo inicial | Candidatos sem medição, não implementados |
+| Capacidade/checkpoints | Leituras e registro | Sem processos/deleções alheios |
+
+## 2026-10-24 07:30 CEST — launcher local recuperado em fonte durável; candidata permanece OFF
+
+AUDIT/DAILY local, HEAD b061753899767a4d805d5f37193d36bc673c18fd + WIP preservado. Os19aceites integrais do quadro permanecem vermelhos; esta entrega é infraestrutura local testada, não aceite do produto, login ou browser.
+
+- Os dois arquivos temporários do checkpoint anterior não estavam disponíveis nesta execução (217d3c). Nenhum arquivo foi apagado por esta rodada. Recuperação implementada no repositório: scripts/local/qa-candidate-environment.mts e qa-candidate-runtime.mts; testes correspondentes e docs/touchline/project-memory/LOCAL_QA_CANDIDATE_RUNTIME.md. Não presumir equivalência binária com o temporário ausente.
+- Auditoria root/agente confirmou contrato: modos QA pareados + VERCEL_ENV preview + hostname QA canônico para guard + URLs/project-ref QA exatos; VERCEL=1 não é herdado. TOUCHLINE_QA_BASE_URL fica exclusivamente no subprocesso preflight, pois sua presença no Next viola allowlist. Host fornece só PATH/HOME/TMPDIR/LANG; source fornece credenciais e somente quatro configurações já existentes (coleção, idiomas, publicação, temporada), sem habilitação por default. Nenhuma credencial real foi lida/modificada/copied nesta rodada.
+- Contexto de mercado anteriormente autorizado (histórico deste plano407) agora exige argumento explícito --qa-market-context; acrescenta metadado qa para guarda existente, sem mudar Git ou DB. Sem argumento permanece omitido. Não afirmar mercado aberto ou transações validadas.
+- Revisão independente encontrou que --hostname127.0.0.1 também pode compor initURL server-side do Next incompatível com política de cookie, mesmo quando navegador usa localhost. Launcher passa localhost; política de cookies não foi relaxada. Isto é correção de configuração por fonte/teste, NÃO prova de login Safari.
+- Launcher não executa ao importar; exige --check ou --start + caminho absoluto explícito da configuração QA já autorizada. --check não faz preflight remoto nem inicia servidor. Não executamos nenhum desses modos com credenciais reais. Recusa dotenv carregável no repo antes de iniciar e no monitor; Next vigia arquivos também, portanto permanece janela de corrida e NÃO é sandbox read-only.
+- Estágios próprios detached, preflight30s, monitor5s de pressão/disco/dotenv, TERM→KILL após5s somente para grupo criado. Saída inesperada0/null do Next é falha. Revisão encontrou retorno0 após falha de sinalização no preflight: corrigido signalFailure com teste EPERM; ESRCH não é erro de grupo já encerrado. Se sinalização falhar com processo vivo, encerramento segue não confirmado e launcher pode continuar esperando. Sem reinício automático.
+- Root25/25PASS af7a95 (~0,45s, dados/processos sintéticos), incluindo guard/cookie reais, env injection, CLI, capacidade antes/durante, timeout, sinais, cleanup e falha de shutdown. Lint4arquivos + diff-check3559d7 exit0. Transpile sintático4arquivos e3c7ae sem erros antes do último latch/teste; não TypeScript global. Nenhum teste de produto inalterado repetido para alegar avanço.
+- Última capacidade c07458: pressão2, disco9.219.820KiB (~8,79GiB), porta3100 sem listener. Limite1024MiB preservado; OOM anterior continua NÃO resolvido. Nenhuma candidata/Safari/build/DB/push/deploy/transação real iniciada; nenhum processo alheio fechado.
+- Próximos: quando capacidade mudar, validar fonte/configuração sem ativar flags novas; resolver demanda de compilação antes de repetir1GiB; retomar ensaios browser preparados e candidata real/persona. Treinador segue revisão com confirmação desativada, notificações sem entrega comprovada. Não transformar testes do launcher em verde de nenhuma das19tarefas.
+
+Revisão independente final do latch confirmou EPERM falha/ESRCH encerrado, sem novo bloqueante na fonte. node--check dos dois módulos e diff-check após checkpoints passaram70d7c8. Ainda não é integração real.
+
+MISSION: recuperar launcher e corrigir envelope local/observabilidade. SCOPE/FILES: dois módulos locais, dois testes, documento de operação e três checkpoints. QA BRANCH/COMMIT:detached/HEADacima. QA DEPLOYMENT/STABLE QA URL:inalterados,não validados. REMOTE BUILD BUDGET/CONSUMED:0/0. FUNCTIONAL:25PASSfocais simulados;produto pendente. VISUAL/RESPONSIVE/ACCESSIBILITY/BROWSER:nenhuma prova nova. SECURITY:nenhuma credencial real/DB/transação/push, sem sandbox somente leitura alegado. BUILD:não executado;OOM não resolvido. OBSERVABILITY:217d3c,af7a95,3559d7,c07458 e revisão independente. ROLLBACK:retirar somente os cinco arquivos novos desta rodada preservando WIP anterior, sem comando destrutivo. OPEN FINDINGS:19aceites,capacidade,integração real. PRODUCTION:NOT TOUCHED.
+
+| Ferramenta | Ação real | Evidência/limite |
+|---|---|---|
+| Fonte/Git/agente | Auditoria e patches locais revisados | Contrato e falhas delimitados, sem remoto |
+| Skills Supabase/ambiente | Instruções completas e docs oficiais consultadas | Changelog/SSR cookies; nenhuma query executada |
+| Testes/lint | Harness sintético e política pura |25PASS; não autentica cliente |
+| Capacidade | sysctl/df/listener somente leitura |pressão2, candidataOFF |
+| Checkpoints | Estado e plano sincronizados |19aceites preservados vermelhos |
+
+## 2026-10-24 07:14 CEST — chegada tardia da escalação corrigida localmente; validação parcial
+
+DAILY local no HEAD b061753899767a4d805d5f37193d36bc673c18fd + WIP. Fluxo desta rodada: link/hash de escalação → seção ClubHub carregada com atraso → posicionamento de leitura, sem alterar clube/confronto/dados. Nenhuma candidata Next/Safari iniciada; ensaios headless isolados não substituem revisão real. Quadro completo de19aceites permanece vermelho.
+
+- Carrossel, cenário preparado de hover anterior ao overflow: Chromium844 PT/AR passou (eb7825); PNGs /private/tmp/touchline-0708-delayed-hover-chromium-844-{pt-BR,ar-SA}.png inspecionados. WebKit844 PT observou pausa/retomada, mas execução abortou pelo gate de pressão2 antes do árabe (fed384). Não registrar WebKit como PASS integral. Fixture usa props sintéticas e não comprova logos/dados reais.
+- Ensaio de link detectou primeiro defeito no instrumento: extrator ignorava TemplateExpression com interpolação CSS da página (ecfd99). Corrigido no teste com allowlist estrita de8classes do right-rail NÃO montado, sem eval ou regras de scroll inventadas. Três testes puros preservam texto real e recusam interpolação arbitrária.
+- Instrumento corrigido reproduziu falha real do componente isolado: initial/reload/clique antes da chegada deixavam a escalação fora da viewport, top2200/1444; após carga, clique chegava a84px (a5ad98). Também corrigida precondição errada do teste que exigia scrollY0 para topo cujo layout real inicia14px.
+- ClubHubSectionNavigation.tsx agora registra hash de seção ausente e consome a intenção uma vez quando o observer existente encontra a seção. Wheel/touch/teclas de rolagem/hash diferente cancelam; clique explícito no mesmo hash pode rearmar. Cleanup remove listeners/frame; sem novo fetch, alteração de escudos, idioma, dados ou destino.
+- Reexecução Chromium844 após patch observou initial/reload/click-before/click-after/native-back todos top84 (473757); PNG /private/tmp/touchline-lineup-anchor-IXKJsy/chromium-844-click-before-load.png inspecionado, título e início do campo visíveis. Execução abortou por pressão2 antes dos cancelamentos: NÃO PASS integral. Caso isolado user-scrolled-away preparado via filtro novo também abortou por pressão2 antes de iniciar browser (fc78f5). Sem repetir carga nesta condição.
+- Novo teste touchline-clubhub-deferred-anchor.test.mts executa componente inteiro transpilado, não clone da lógica:19casos de decisão/consumo/cancelamento/rearme/cleanup. Root repetiu com regressões de layout/i18n:37/37PASS c707a6. Mocks antigos precisaram useRef/location/navigationRef; preservados hashes dos callbacks/efeito hero, retirado apenas hash obsoleto do efeito intencionalmente alterado. Revisão independente final não identificou regressão nem relaxamento indevido. Lint focal dos arquivos agente passou; diff-check root d5a649 sem erros. Não houve TypeScript global/build.
+- Filtro TOUCHLINE_LINEUP_ANCHOR_CASE=navigation|user-changed-hash|user-scrolled-away permite cargas menores; sem filtro roda tudo, diagnóstico identifica partial. Continuam pendentes cancelamentos no browser, outros tamanhos/engine, Next/RSC/autenticação e seleção real do confronto. A fixture vazia não comprova quem jogou a partida.
+- Capacidade: começou pressão1/disco~10,81GiB (905f3d); memória passou2 com WebKit e depois Chromium. Última pressão2 (6e1d6a); processos de teste terminaram com finally/sem listener candidato, nenhum pesado remanescente observado d5a649. Não excluir arquivos nem encerrar aplicativos. Limite1024 do runner continua inalterado; OOM da candidata não resolvido.
+- Pedido interativo “podemos começar/ok continue” recebido; informado que correção ainda estava em verificação, candidata desligada. Próximos: concluir casos cancelamento quando capacidade estável e revisar configuração QA do runner antes de nova abertura; histórico do plano registra modos qa-preview e VERCEL_GIT_COMMIT_REF=qa antes presentes, omitidos no runner reconstruído. Diagnóstico dessa diferença pendente, sem ativar flags por suposição.
+
+MISSION: correção do hash tardio e ensaios proporcionais. SCOPE/FILES: ClubHubSectionNavigation.tsx; teste browser de anchor; novo teste deferred-anchor; mocks nos testes profile-order/section-navigation-i18n; três checkpoints. QA BRANCH/COMMIT:detached/HEADacima. QA DEPLOYMENT/STABLE QA URL:inalterados,não validados. REMOTE BUILD BUDGET/CONSUMED:0/0. FUNCTIONAL:37PASSfocais, browserparcial. VISUAL/RESPONSIVE/ACCESSIBILITY/BROWSER:somente fixture844 descrita, não aceite global. SECURITY:sem dados/credenciais/transação/DB/push. BUILD:não executado. OBSERVABILITY:referências acima. ROLLBACK:reverter somente efeito/ref novos e testes correlatos preservando WIP anterior, sem comando destrutivo. OPEN FINDINGS:19aceites e limites acima. PRODUCTION:NOT TOUCHED.
+
+## 2026-10-24 06:58 CEST — memória/OOM sincronizados; saída falsa de sucesso tratada no runner
+
+AUDIT/DAILY local. HEAD b061753899767a4d805d5f37193d36bc673c18fd + WIP preservado. Esta rodada não iniciou candidata, Safari ou compilação. Os 19 aceites integrais do quadro continuam vermelhos; nenhuma validação visual nova.
+
+- Estado interativo posterior a 06:18 incorporado: exclusão autorizada apenas de .next/cache/webpack/client-production e server-production liberou ~1,21 GiB (22febc). Nenhuma exclusão adicional nesta rodada. O Mac tem 8 GiB de RAM; a amostra histórica de 06:36 atribuiu ~5,77 GiB ao grupo Codex/ChatGPT, incluindo memória comprimida/paginada. Não equivale a RAM residente. Os 52 auxiliares cua_node (~1,45 GiB atribuídos) não foram classificados como abandonados nem encerrados.
+- Tentativa explicitamente solicitada com --max-old-space-size=1024 passou no preflight/Ready (2fa44d), mas compilação ClubOwner terminou com FATAL ERROR JavaScript heap out of memory (d5c8ad). A medição concomitante tinha pressão2 e ~7,02 GiB em disco (966364): esta falha não foi falta de espaço. Candidata OFF, sem renderização final comprovada; não repetir configuração inalterada. Limite1024 preservado conforme pedido, não aumentado silenciosamente.
+- Revisão independente e leitura root do Next instalado (26f2d8) localizaram perda de informação de saída: next-dev.js301 ignora saída sinalizada do worker, e wrapper convertia null/zero em sucesso. Sinal exato do incidente não foi registrado, logo mecanismo compatível não é prova do sinal. Corrigido SOMENTE /private/tmp/touchline-local-qa-runtime.mjs: saída inesperada0/null torna-se1; códigos nãozero preservados; interrupções solicitadas130/143; timeout1 sem iniciar preview. Não alterado node_modules ou código do produto.
+- Novo harness temporário /private/tmp/touchline-local-qa-runtime.test.mjs substitui filesystem, ambiente, processos e timers: 11/11PASS + node--check (055a97), sem ler credenciais, rodar Next, abrir navegador ou consultar QA. Isso prova relato de término do wrapper, NÃO reduz consumo, corrige OOM ou valida a candidata. CLI que continuar vivo sem worker ainda exige diagnóstico externo. Revisão independente pós-patch não encontrou bloqueante adicional: códigos nãozero do filho têm precedência sobre130/143/1; esses valores de interrupção/timeout são o fallback para zero/null, não garantia universal. Harness não prova cancelamento real do timer, duração ou encerramento da árvore; preflight que ignorar SIGTERM ainda pode permanecer vivo. Não anunciar esses casos como resolvidos.
+- Capacidade atual: disco7.355.164KiB (~7,01GiB), porta3100 sem listener (6a3a8b); pressão1 confirmada em consulta somente leitura autorizada (cee0f3). Consulta inicial sandbox negada não foi interpretada como valor. Normalidade ociosa não prova orçamento para compilar. Não iniciar build completo.
+- Treinador continua revisão local com confirmação desabilitada, sem liberação/contratação operacional. Próximo gate: reduzir demanda real ou obter orçamento seguro e provar candidata autenticada, sem transações reais. Preservar os ensaios já preparados e não repetir auditorias inalteradas para simular progresso.
+
+MISSION: diagnóstico e observabilidade do launcher temporário. SCOPE: launcher/teste em tmp e três checkpoints; nenhum patch de produto. QA BRANCH/COMMIT: detached/HEAD acima. QA DEPLOYMENT/STABLE QA URL: inalterados, não validados. REMOTE BUILD BUDGET/CONSUMED:0/0. FUNCTIONAL:11 testes simulados do runner; produto pendente. VISUAL/RESPONSIVE/ACCESSIBILITY/BROWSER:nenhum novo PASS. SECURITY:nenhuma credencial modificada/exposta, DB/transação/push/deploy. BUILD:não executado, OOM anterior não resolvido. OBSERVABILITY:055a97,26f2d8,6a3a8b,cee0f3 e revisão independente. OPEN FINDINGS:19aceites, orçamento de compilação, autenticação/idioma/elenco e treinador operacional. PRODUCTION:NOT TOUCHED.
+
+## 2026-10-24 06:18 CEST — candidata parada confirmada; revisão de foco do treinador sem novo defeito
+
+AUDIT local, HEAD b061753899767a4d805d5f37193d36bc673c18fd + WIP preservado. Este registro atualiza o estado de execução, sem novo aceite funcional ou visual.
+
+- A tentativa interativa posterior ao checkpoint06:06 iniciou Next e abriu a aba Safari, mas NÃO concluiu ClubOwner. Conforme registro do plano: preflightQA f4c3bc passou, GET/account200, compilação /clubowner iniciada; sessão2202 interrompida por disco<5GiB (124508/968419). A afirmação anterior de runner não executado é histórica e foi superada por essa tentativa. Candidata permanece desligada, não conectada.
+- Rechecagem desta rodada: porta3100 sem listener; disco5.175.780KiB (~4,94GiB), pressão1 e memória livre71% (47c167). Memória recuperou, mas disco continua abaixo do mínimo acordado; não iniciar browser/build/candidata. Nenhum arquivo apagado ou aplicativo fechado.
+- Revisão independente adicional limitada ao foco/overlays da nova revisão do treinador: releaseAction fecha zoom com flushSync, foca cartão persistente e depois abre revisão (TouchlineCardZoom.tsx457–461). Hook compartilhado impede restauração para fundo inert e mantém contagem de scroll-lock. Root inspecionou o caminho e recebeu revisão sem defeito concreto. Isso é auditoria de fonte, NÃO prova de clique/Escape/foco no Safari.
+- Nenhum teste inalterado repetido. Diff-check ce5b0b exit0. Agentes entregaram; sem trabalho de implementação concorrente. Não criar tarefas repetidas para aparentar avanço. Próxima prova continua navegador autenticado/diálogo e ensaios preparados quando disco>5GiB e pressão normal; não ativar liberação/contratação real sem backend validado.
+
+MISSION: retomada e auditoria de foco. SCOPE: fonte/checkpoints. QA BRANCH/COMMIT:detached/HEADacima+WIP. QA DEPLOYMENT/STABLE QA URL:inalterados,não validados. REMOTE BUILD BUDGET/CONSUMED:0/0. FILES CHANGED:somente três checkpoints. FUNCTIONAL/VISUAL/RESPONSIVE/ACCESSIBILITY/BROWSER:sem novo PASS;19aceites integrais continuam vermelhos. SECURITY:sem credenciais,transações,DB,push ou deploy. TESTS:não repetidos. BUILD:bloqueado por disco. OBSERVABILITY:47c167,ce5b0b e revisão independente. OPEN FINDINGS:capacidade,19aceites e integração financeira do treinador. PRODUCTION:NOT TOUCHED.
+
+
+
+## 2026-10-24 06:06 CEST — botão do treinador ligado à revisão; confirmação financeira bloqueada
+
+DAILY local solicitado pelo usuário, HEAD b061753899767a4d805d5f37193d36bc673c18fd + WIP preservado. Escopo desta entrega parcial: abrir revisão da rescisão do treinador contratado, sem transação real. Não chamar isso de troca de treinador funcionando.
+
+- FantasyGameweekClient passa releaseAction apenas ao treinador confirmado de plano pago na faixa técnica/Arena. TouchlineCoachCardZoom encaminha ao botão canônico dos jogadores; catálogo/seleção inicial não ganham ação. Mercado, entitlement, prontidão, busy/pending e treinador contratado condicionam abertura. Diálogo também confere conta/temporada/ID; revisão independente apontou falta de nova checagem da elegibilidade durante diálogo aberto, corrigida usando o mesmo action&&!disabled.
+- Novo ClubOwnerCoachReleaseDialog reutiliza overlay, estilos, foco e scroll-lock. Congela contrato confirmado e quoteClubReturn ordinary10/90, exibe saldo confirmado/projetado, suprime cotação obsoleta, protege overflow, Beta/vacância e contratos inválidos. Copy em oito idiomas/RTL. Confirmar permanece disabled SEM callback financeiro. Nenhum hook, endpoint, RPC, flag ou DB foi ativado. Contratação segue não implementada operacionalmente.
+- Testes focais14/14PASS fc3e1d (cinco novos da revisão+regressões de zoom/superfícies); lint5arquivos af244a exit0; sintaxe transpile4arquivos f5b768 sem erros, NÃO TypeScript global. Diff-check01cc3e exit0. Prova isolada de markup, sem click/browser/foco reais;19aceites integrais continuam vermelhos.
+- Pedido atual do usuário é abrir candidata para revisar. Não iniciado: pressão2 persistente, última bcf54c memória41%/disco9,350,608KiB (~8.92GiB); porta3100 sem listener. Não houve compilação completa nem nova promessa de prévia aberta.
+- Runner temporário /private/tmp/touchline-local-qa-runtime.mjs reconstruído em rodada interativa, sem gravar valores de credenciais. Revisão independente identificou alias SUPABASE_URL ausente: agora ambos aliases apontam para QA validado. Acrescentados timeout30s do preflight, stopping latch e handlers de erro; node--check124c6d exit0. Não executado. Whitelist não impede Next de carregar futuros dotenv da candidata; verificar antes de lançamento. Heap2048 é por processo, não limite total. Esse runtime não é modo readonly do produto; nenhuma promessa de bloqueio de toda escrita incidental.
+- Agentes entregaram ao root. Sem trabalho pesado paralelo, exclusão, credenciais modificadas, operação financeira, push, commit ou deploy. Próxima execução: capacidade normal→preflightQA→candidata3100→Safari real e revisão visual. Para liberação/contratação ativa, resolver oferta durável/transação e gates do contrato prospectivo; não contornar com endpoint legado ou saldo otimista.
+
+MISSION/SCOPE: interface de revisão local, incompleta como operação. QA BRANCH/COMMIT:detached/HEADacima+WIP. QA DEPLOYMENT/STABLE QA URL:inalterados/não validados. REMOTE BUILD BUDGET/CONSUMED:0/0. FILES CHANGED:FantasyGameweekClient,TouchlineCoachCardZoom,novo diálogo/copy/teste,contrato e checkpoints;runner temporário separado. FUNCTIONAL:14PASSfocais,não transação. VISUAL/RESPONSIVE/ACCESSIBILITY/BROWSER:pendentes. SECURITY:confirmação desativada,sem API nova. TESTS/LINT:acima. BUILD:bloqueado capacidade. OBSERVABILITY:referências acima. OPEN FINDINGS:19aceites,treinador operacional e candidata não aberta. PRODUCTION:NOT TOUCHED.
+
+## 2026-10-24 05:48 CEST — gate de oferta do treinador revisado; capacidade ainda bloqueia browser
+
+AUDIT local, HEAD detached b061753899767a4d805d5f37193d36bc673c18fd reconfirmado nesta rodada67e4f3. Nenhum arquivo de produto ou teste alterado. Os19aceites integrais continuam vermelhos; preservar quadro e provas anteriores, sem promover validação de fonte a aceite visual.
+
+- Agente loading_locale_review concluiu auditoria delimitada e root conferiu fontes em a42ebf: competition-card-offer.ts oferece contrato canônico TS com subjectType coach, preço/moeda/tier, mas sem versão/registro persistido da oferta. GET app/api/touchline-arena/coach/route.ts resolve TOUCHLINE_LIVE_COACHES e classificação em memória; lib/touchlineFantasy/server.ts loadCoaches segue montagem com football_clubs. Não confundir catálogo calculado com publicação durável transacional.
+- Alternativas examinadas: migration051_touchline_manual_card_editorial_profiles.sql vincula touchline_card_publications exclusivamente a football_players; qa013touchline_coach_contracts guarda contrato do usuário, não oferta; qa017coach_ranking_snapshots contém pontuação/rastreabilidade, não elegibilidade comercial. initialize_collection em20261017104205 recebe p_coach e valida tiers/preços, mas não consulta publicação persistida do treinador. Ausência confirmada SOMENTE nas fontes inspecionadas, não no banco real (não consultado).
+- Gate14 segue BLOCKED: contrato local/recovery não ativado. Próxima ação de integração exige resolver ponte canônica versionada entre publicação e contratação, sem catálogo paralelo, e provar transação em banco local descartável antes de ativar fluxo. Nenhuma alteração de schema/adapter/RPC/flag foi feita nesta rodada; nenhuma taxa reaberta ou operação real executada.
+- Safari reapareceu externamente nesta rodada (PID20758, eddc97/5238c6); não foi iniciado nem fechado por esta execução, para preservar eventual trabalho alheio. Candidata/Playwright não encontrados. Não repetir estado antigo de Safari desligado.
+- Capacidade05:48: pressão2, livre39%, disco7,289,016KiB (~6.95GiB),5238c6. Primeira consulta limitada falhou por permissão do sandbox (fabc65); repetição somente leitura autorizada confirmou valores. Não iniciar navegador/build para contornar gate. Próximo ensaio continua delayed-hover Chromium844 quando pressão1 estável, seguido das provas já preparadas, uma carga por vez.
+- Nenhum teste foi executado nesta rodada. Diff-check inicialb8d2ac exit0. Não substituir ensaios pendentes por novas auditorias repetidas das mesmas fontes. Agente entregou ao root e não há implementação concorrente desta rodada; próxima atribuição depende de tarefa independente útil ou capacidade de validação.
+
+### Gate parcial
+MISSION: auditoria de dependência do treinador. SCOPE: fontes locais e checkpoints. QA BRANCH/COMMIT: detached/HEAD acima com WIP preservado. QA DEPLOYMENT/STABLE QA URL: inalterados, não validados. REMOTE BUILD BUDGET/CONSUMED:0/0. FILES CHANGED: somente CURRENT_STATE.md, CURRENT_EXECUTION_LEDGER.md e MOBILE_REPAIR_PLAN_20261023.md. FUNCTIONAL/VISUAL/RESPONSIVE/ACCESSIBILITY/BROWSER MATRIX: nenhum novo aceite. TESTS: não executados. BUILD: bloqueado capacidade. SECURITY: nenhuma credencial/DB/consentimento/transação/push. OBSERVABILITY: fontes e capacidade referenciadas acima. OPEN FINDINGS:19aceites integrais, oferta durável treinador e provas reais pendentes. PRODUCTION: NOT TOUCHED.
+
+| Ferramenta | Uso real | Resultado |
+|---|---|---|
+| Arquivos/Git/agente | Revisão independente e inspeção root | Dependência delimitada, sem patch especulativo |
+| Supabase skill | Orientações lidas para fronteira transacional | Nenhum CLI/MCP/query/DB executado |
+| Capacidade/processos | Consulta somente leitura | Pressão2; Safari externo preservado |
+| Checkpoints | Atualização documental | Sem conclusão de produto ou release |
+
+## 2026-10-24 05:34 CEST — diagnóstico do vídeo preparado; auditorias sem novo defeito confirmado
+
+AUDIT/DAILY local no HEAD detached b061753899767a4d805d5f37193d36bc673c18fd, reconfirmado e3e76e. Produto não alterado nesta rodada; WIP e quadro completo de19aceites vermelhos preservados. A preparação do ensaio não é correção nem prova visual.
+
+- Vídeo de fundo do login: fonte AuthCinematicMedia já usa muted/autoplay/loop/playsInline sem controls, mas não observa se realmente começou a reproduzir. Isso não comprova a origem do Play no Safari. Preparado tests/touchline-auth-cinematic-playback-browser.test.mts, único arquivo novo: componente/CSS/MP4/poster reais, origem isolada, GET/HEAD allowlist, Range fiel com leitura posicional e limite32MiB, eventos/amostras/PNG, sem play/seek/gesto/flag de autoplay. PASS futuro exige tempo avançando e amostra final não pausada/não encerrada, dimensões reais e readyState; erro de mídia, política bloqueada ou inatividade indeterminada não são PASS. Reduced-motion só será verificado se playback passar; não alegar cenário não executado.
+- Fonte revisada pelo root e por agente independente, sem bloqueante concreto. ESLint c2de2a exit0. Execução sem opt-in a6df06 confirmou carregamento do teste e SKIP:0PASS/1SKIP, nenhum navegador iniciado. Ensaio visual PENDENTE. Filtros: TOUCHLINE_RUN_AUTH_CINEMATIC_PLAYBACK_TESTS=1 e TOUCHLINE_AUTH_CINEMATIC_ENGINE=chromium|webkit. WebKit headless não é Safari nativo; o ícone Play requer inspeção do PNG e, depois, página real. Mídias locais observadas26MiB/330KiB (f1f1cb); não modificadas.
+- Gols: auditoria de matchHeroGoals/Scorers e caller não encontrou novo defeito canônico reproduzível. IDs de partida/clube/jogador, anulações, duplicados e ordenação preservados; detalhe limitado ao confronto selecionado. DTO não oferece ordinal de revisão: última ocorrência no snapshot não é reconciliação arbitrária de histórico. Nenhum produtor invertido comprovado; não aplicar patch especulativo.
+- Idiomas: literal cardLabels.cardPrice do ClubHub usa somente EN/PT, mas campo parece legado sem renderização atual nos consumidores examinados. Há traduções existentes em market-drafts; não foram ligados campos errados nem confundido preço do card com valor de mercado. Achado documental sem impacto visual confirmado; helper/patch adicional deliberadamente não criado.
+- Instagram: tentativa somente leitura de https://touchline.com.br retornou403 pelo leitor web; busca restrita ao domínio encontrou páginas indexadas, mas não comprovou endereço oficial do Instagram. Isso não prova ausência do perfil. Nenhuma URL foi inventada/configurada, nenhuma sessão/credencial acessada e nenhuma alteração pública realizada.
+
+Capacidade05:34: pressão2, livre43%, disco7,019,588KiB (~6.69GiB),5de45c. Candidata/Safari/Playwright ausentes; exit1 do pgrep significa sem correspondência. Diff-check28bafb exit0. Sem browser/build completo/TypeScript global, exclusão, DB/transação/push/commit/deploy. Agentes concluíram e entregaram ao root; nenhuma edição concorrente permanece.
+
+Próxima ação: mesma prioridade preservada, quando pressão1 estável executar UM delayed-hover Chromium844; depois provas já preparadas de anchor/footer/utility/gols e vídeo, sem paralelizar carga. Não substituir validação real por sucessivas auditorias de fontes inalteradas. Persistem gates externos de Instagram oficial, entrega push e integração real treinador/conta; prazo08:00Malta, não fim da noite.
+
+### Gate parcial
+MISSION/SCOPE: diagnóstico somente leitura e instrumento de playback. QA BRANCH/COMMIT: detached/HEAD acima, WIP não limpo. QA DEPLOYMENT/STABLE QA URL: inalterados/não validados. REMOTE BUILD BUDGET/CONSUMED:0/0. FILES CHANGED: somente novo teste de playback e checkpoints. FUNCTIONAL/TESTS: nenhum novo PASS funcional; carregamento com1SKIP e lintPASS. VISUAL/RESPONSIVE/ACCESSIBILITY/BROWSER MATRIX: não executados. SECURITY: rede do futuro ensaio restrita, sem auth/dados/consentimento. BUILD: bloqueado capacidade. OBSERVABILITY: guardas, referências acima e futuro diagnóstico de mídia. OPEN FINDINGS:19aceites integrais e causa do Play não comprovada. ROLLBACK: retirar somente instrumento novo desta rodada; produto intocado. PRODUCTION: NOT TOUCHED.
+
+| Ferramenta | Ação real | Evidência / decisão |
+|---|---|---|
+| Arquivos/Git/agentes | Auditorias, instrumento, revisão cruzada | Sem novo defeito de produto confirmado |
+| Verification skill | Cadeia montagem→asset→reprodução→imagem delimitada | Teste não força sucesso nem representa Safari real |
+| ESLint/runner | Lint e carregamento sem opt-in | c2de2aPASS; a6df06 SKIP, não playbackPASS |
+| Web | Consulta pública somente leitura |403 e índice sem URL oficial; bloqueio preservado |
+| Capacidade | Memória/disco/processos |5de45c; nenhum browser iniciado |
+
+
+## 2026-10-24 05:18 CEST — estado acessível do ClubOwner corrigido; ensaio de chegada à escalação fortalecido
+
+DAILY local no HEAD detached b061753899767a4d805d5f37193d36bc673c18fd, reconfirmado6b3d76. WIP preservado e quadro completo de19aceites permanece vermelho. Sem conclusão visual ou release.
+
+- Navegação: TouchlineGlobalNavigation agora marca o link principal com aria-current=page somente para surface=authenticated/currentRoute=market, par usado pelo ClubOwner real. Não alterados href, locale, sessão, CSS ou rótulos do produto. Revisão independente sem bloqueante. SSR cobre oito idiomas × sete contextos, negativos public/auth/outras páginas, destino e unicidade. Pacote inteiro navegação/cópia/utility14/14PASS345336; ESLint4arquivos63eee1 exit0.
+- Dois oráculos antigos de cópia foram atualizados conforme decisão já registrada em CURRENT_STATE: rótulo ClubHub fixo, sem nome/slug/id contextual. Cobertura de locale/áudio/destinos preservada; escaping de $& e markup testado em rótulo More real com cópia sintética exclusiva do teste. Primeira execuçãocce880 passou13e falhou1 por deepStrictEqual entre protótipos de VMs distintas, não erro do produto. Root passou a comparar todas as props enumeráveis em objetos host; repetição integral14/14PASS.
+- Ensaio delayed-lineup: revisão encontrou falso positivo possível, pois o clique nativo poderia rolar o menu vizinho para perto da escalação antes do hash funcionar. Somente teste e fixture alterados: separação1200px substitui conteúdo não relacionado; após clique/2RAF exige hash correto, âncora ausente e fallback inteiro abaixo do viewport, antes de resolver a promessa. Assim a chegada posterior não pode ser atribuída só ao auto-scroll do clique. Revisão cruzada sem bloqueante, lintPASS; browser NÃO executado por pressão2. Não houve correção especulativa no produto nem afirmação de chegada real.
+- Auditorias somente leitura: uma Live no ramo ClubOwner acima dos reservas e mesmo ramo no portal Arena; ClubHub mantém leitura compartilhada e ausência explícita em mirror. Nenhuma nova duplicação concreta encontrada. Cards de zoom/confirmação/ClubHub usam originais, compacto permanece limitado à miniatura; largura dos reservas recalculada e observador limpo ao alternar Arena. Nenhum novo defeito concreto identificado nessas fontes. Continua pendente sequência autenticada normal→Arena→normal com atualização dos jogos/recarga, inspeção real das artes e medidas; não inferir aprovação da auditoria.
+
+Capacidade05:18: pressão2, memória livre40%, disco7,020,400KiB (~6.70GiB), evidência9e5f13. Pgrep sem candidata/Safari/Playwright (exit1 significa ausência). Nenhum browser/teste pesado/build completo/TypeScript global iniciado, nenhum arquivo apagado, credencial/DB/transação/push/commit/deploy alterado. Diff-check90bc0b exit0. Três agentes concluídos, ownership root; não há trabalho duplicado em execução.
+
+Próxima rodada: medir capacidade; se pressão1 estável, executar somente delayed-hover Chromium844 preparado e inspecionar captura, depois os ensaios browser existentes em sequência. Se pressão2, não repetir auditorias já encerradas nem reexecutar PASSs inalterados: continuar apenas trabalho independente seguro com novo achado concreto. Anchor continua pendente de execução; Instagram oficial/push real/treinador real/conta autenticada e gates finais continuam abertos. Heartbeat existente permanece autorizado até08:00Malta.
+
+### Gate parcial
+MISSION/SCOPE: semântica acessível da navegação e confiabilidade da prova de âncora. QA BRANCH/COMMIT: detached/HEAD acima, WIP não limpo. QA DEPLOYMENT/STABLE QA URL: não alterados/não validados. REMOTE BUILD BUDGET/CONSUMED:0/0. FILES CHANGED: TouchlineGlobalNavigation.tsx, navigation-draft-copy.test.mts, delayed-lineup-anchor-browser.test.mts, fixture ClubHubDelayedLineupBrowserFixture.tsx e checkpoints. FUNCTIONAL/TESTS:14/14PASS após falha de harness documentada. VISUAL/RESPONSIVE/ACCESSIBILITY/BROWSER MATRIX: SSR comprova atributos, não uso assistivo nem layout renderizado; browser pendente. SECURITY: escaping preservado; sem alterações auth/dados/consentimento. BUILD/TypeScript: não executados por capacidade. OBSERVABILITY: outputs citados, pressão2. OPEN FINDINGS:19aceites integrais. ROLLBACK: remover somente atributo aria-current e deltas específicos de teste desta rodada, preservando WIP anterior. PRODUCTION: NOT TOUCHED.
+
+| Ferramenta | Ação real | Evidência / decisão |
+|---|---|---|
+| Arquivos/Git/apply_patch | Inspeção e correção delimitada | HEAD6b3d76, diff-check90bc0b |
+| Agentes | Três auditorias, patch e revisão cruzada | Entregas recebidas; fonte root |
+| React skill | Revisão declarativa/acessível sem hooks ou nova requisição | Atributo derivado das props, sem estado duplicado |
+| Testes/ESLint | Execução leve serial | cce880 falha de harness;345336/63eee1PASS |
+| Capacidade/processos | Somente leitura |9e5f13; browser não iniciado |
+| Browser/DB/deploy | Não executados | Nenhuma nova alegação visual/remota |
+
+
+## 2026-10-24 05:12 CEST — pausa da Live corrigida; streaming e timeline revisados, sem novo aceite visual
+
+DAILY local, HEAD detached b061753899767a4d805d5f37193d36bc673c18fd reconfirmado; WIP preservado. Todos os 19 aceites integrais do quadro vigente continuam vermelhos. Nenhum release ou conclusão da noite.
+
+- Live: ClubHubFixtureStrip preserva hover, toque e prazo de retomada em refs/listeners estáveis mesmo quando os dados chegam depois e canLoop muda. O efeito de movimento recebe sincronização com cerca de identidade e limpeza; não perde pausa ao ativar overflow nem acumula listeners em StrictMode. Quatro cenários novos cobrem hover anterior aos dados, ponteiro pressionado, cooldown de wheel e remontagem. Root executou 35/35 testes focais de movimento/foco/strip (b32b6d); revisão independente sem P1/P2 concreto. ESLint68dec8 exit0, com dois warnings preexistentes no-img-element, não lint sem avisos.
+- Timeline: removida somente a regra mobile que escondia o clube do evento abaixo650px em touchline-match-centre.module.css. Mantidas a segunda coluna e quebra de texto existentes. Quatro testes de binding/cascata passaram (bfeb82), larguras320/390/650/651/844/1280; isso é prova de fonte, não pixels.
+- ClubOwner: auditoria não identificou novo defeito concreto no layout/loading atual. Novo teste executa layout e fallback reais em streaming, substituindo apenas a leitura assíncrona por promessa controlada. Primeira execução022c42:5PASS e1cancelado por timeout com Suspense na raiz isolada. Harness corrigido para documento html externo, sem aumentar timeout nem adicionar Suspense: repetição a4ab32,6/6PASS; fallback antes da resolução, conteúdo depois e cleanup comprovados. Não representa Next/hydration/navegação Safari nem encerra a tela preta. Revisão independente sem bloqueante; se surgir fragmentação do primeiro chunk, aguardar marcador completo antes de resolver a promessa, sem enfraquecer a ordem do teste.
+- Preparado ensaio nativo delayed-hover no browser existente da Live: mesma instância React recebe seed1→10 mantendo ponteiro sobre a faixa; exige uma única entrada, identidade preservada, pausa350ms e retomada ao sair, PT/AR. Revisão independente concluída, lint1dd8e8 exit0. NÃO executado: pressão voltou a2 antes de abrir browser. Provas browser anteriores precedem esse delta e não substituem sua repetição.
+
+Capacidade05:09: pressão2, livre40%, disco7,056,156KiB (~6.73GiB); ebd8d9/bb8997. A leitura inicial sandbox não tinha acesso a sysctl/processos; repetida com permissão somente leitura. Encontrado apenas SafariPlatformSupport.Helper, não o aplicativo Safari nem candidata/Playwright. Nenhum browser iniciado nesta rodada, build completo, TypeScript global, exclusão, credencial, DB write, transação, push, commit ou deploy. Diff-check e6cefc exit0. Três agentes entregaram e devolveram ownership; ninguém permanece editando.
+
+Próxima ação exata: com pressão1 estável e guardas válidas, root executa apenas o caso “native hover predating” em Chromium844, captura PT/AR e inspeciona PNG; depois WebKit/Inbox/Notifications/Footer/Busca/anchor já preparados, um por vez. Não repetir pacotes inalterados. Candidata/Safari OFF. Integração real do treinador, entrega push, URL Instagram oficial, sessão real e gates finais continuam pendentes independentes; não habilitar operações para produzir aparência de sucesso. Continuidade pelo heartbeat existente até08:00Malta.
+
+### Gate parcial desta rodada
+MISSION/SCOPE: lifecycle da Live, identidade mobile dos eventos e prova isolada do carregamento. QA BRANCH/COMMIT: detached/HEAD acima, WIP não limpo. QA DEPLOYMENT/STABLE QA URL: não alterados/não validados. REMOTE BUILD BUDGET/CONSUMED:0/0. FILES CHANGED: ClubHubFixtureStrip.tsx, match-centre CSS, testes motion/mobile-layout/account-loading/strip-browser e checkpoints. FUNCTIONAL/TESTS:35/35,4/4,6/6PASS separados; falha inicial de harness preservada. VISUAL/RESPONSIVE/ACCESSIBILITY/BROWSER MATRIX: sem novo browser; fonte/testes não aprovam produto completo. SECURITY: dados/auth/consentimentos intactos. BUILD/TypeScript global: não executados por capacidade. OBSERVABILITY: outputs e guardas acima. OPEN FINDINGS:19aceites integrais. ROLLBACK: somente deltas descritos desta fatia, preservando WIP anterior. PRODUCTION: NOT TOUCHED.
+
+| Ferramenta | Ação executada | Evidência / decisão |
+|---|---|---|
+| Arquivos/Git/apply_patch | Implementação delimitada, revisão e checkpoint | HEAD/diff-check e6cefc |
+| Agentes | Implementação e revisão cruzada, sem testes simultâneos | Três entregas recebidas, ownership root |
+| Testes/ESLint | Execução leve serial, incluindo falha e correção do harness | b32b6d/bfeb82/022c42/a4ab32/68dec8/1dd8e8 |
+| Capacidade/processos | Medição antes do browser | Pressão2; ensaio visual não iniciado |
+| Browser/DB/deploy | Não executados | Nenhum novo PASS visual ou mutação remota |
+
+
+## 2026-10-24 04:55 CEST — Inbox, Notificações e rodapé ajustados; validação visual bloqueada por capacidade
+
+Fechamento desta rodada: revisão final de Notifications browser recebida, sem defeito material concreto por fonte. O ensaio usa foco programático, não Tab completo; scrollWidth do input não comprova legibilidade dos segmentos nativos, exigindo PNG. Todos os três agentes devolveram ownership; nenhum arquivo em edição ou teste em execução. As referências a revisão em conclusão no registro abaixo são o estado intermediário desta mesma rodada. A tentativa inicial de inserir esta nota não encontrou contexto e não alterou arquivos; este registro é a aplicação efetiva.
+
+DAILY local no HEAD detached b061753899767a4d805d5f37193d36bc673c18fd, WIP preservado. Todos os 19 aceites integrais continuam vermelhos; quadro completo e evidências anteriores preservados abaixo. Esta é uma entrega parcial de código/testes, não conclusão visual nem release.
+
+- Inbox: página usa NavigationRail real, InboxContent.module.css com canvas760 e mensagem/ações lado a lado. Controles Marcar/Ver e retorno usam estilo canônico44; textos longos podem quebrar sem truncar. Loader, autenticação, queries, handlers e idiomas preservados. 12/12 testes de rota/locale/integração passaram (5324a4); revisão independente sem P1/P2 concreto. Não é prova da conta real.
+- Notificações: canvas960/scroll local mantém grupos3/2/2/3/4 e faixa salvar horizontal, sem zoom global. Fontes8/9/10 substituídas por12 e status sem truncate. Root corrigiu botão Salvar para TouchlineGlobalNavigation.module.css, preservando disabled, handler e payload. Defaults, GET/PUT, consentimento e lifecycle fences intactos. Pacote centro/locale/Inbox19/19PASS e276b7; regressões shell/produto12/12PASS414352. Lint5arquivos exit0 5f94a7. Revisão independente do produto e botão sem novo defeito concreto; campos de horário nativos ainda precisam de prova visual, sobretudo painel estreito.
+- Rodapé: somente CSS nowrap e small flex:1 1 0, mantendo min-width0, quebra de texto, ícone44, cores, safeareas e validação de URL. 14/14PASS532f3a; revisão independente sem P1/P2 concreto. Isso não resolve a URL oficial do Instagram, que continua não comprovada; nenhum perfil sintético foi configurado no produto.
+- Novos ensaios isolados preparados, NÃO executados: Busca (24casos, catálogo/nomes longos), Inbox (12casos, leitura503 sintética, Tab/ShiftTab), Notifications (12casos, GET sintético somente e controles de horário), Footer (64casos, SSR real/oito idiomas/320–1280). Usam fontes/componentes/CSS reais, rede bloqueada/interceptada, filtros estritos, guardas pressão1/livre25/disco>5 e PNGs. Não são Next hydration, Safari nativo ou cliente autenticado. Busca ajustou oráculo de fonte para botão canônico mobile11 e título12, sem mudar CSS para satisfazer teste. Inbox revisão independente descobriu percurso Tab começando já revelado: root agora reinicia scrollLeft0 e exige ação cortada antes do percurso nativo, sem reposicionar os controles depois. Lint Inbox13d210, Notifications3d28e3 e Footer/Inbox5b49cd exit0. Nova revisão final de Notifications browser em conclusão; não iniciar execução até capacidade normal.
+- Ensaio anchor item18: revisão corrigiu casos frios para atravessar /elsewhere antes do target, evitando reutilizar Suspense já resolvida; reload/Back preservados. Lint10a816 exit0. Ainda NÃO executado; não há prova de chegada real ao clube/confronto.
+
+Capacidade04:54: pressão2 persistente, livre39%, disco6.96GiB (7,300,032KiB), evidência4fcf59. Safari/candidata/browser de testes ausentes47fa55. Nenhum browser foi iniciado nesta rodada; nenhum build completo, TypeScript global, exclusão, credencial, DB write, transação, entrega push, commit ou deploy. Diff-check282f7e exit0. Fonte e testes leves continuaram sem concorrência pesada. React/Supabase revisados para preservar hooks/boundaries; não alterados SDK, autenticação ou banco.
+
+Próxima ação: se pressão1 e demais guardas, executar UM caso filtrado curto (Footer Chromium320 PT ou Notifications Chromium844 PT), inspecionar PNG e registrar resultado real; depois Inbox/Busca/anchor e casos WebKit já pendentes. Não repetir PASSs inalterados nem abrir candidata por conveniência. Os arquivos preparados estão sob ownership do root; agentes de Inbox/rodapé entregaram, agente de revisão apenas termina leitura de Notifications, sem edição. Instagram requer URL oficial; push/treinador/conta real continuam gates independentes. Prazo08:00Malta permanece, não encerramento da noite.
+
+### Gate desta fatia — parcial
+MISSION/SCOPE: apresentação customer e preparação de provas locais. QA BRANCH/COMMIT: detached/HEAD acima, WIP não limpo. QA DEPLOYMENT/STABLE QA URL: não alterados/não validados. REMOTE BUILD BUDGET/CONSUMED:0/0. FILES CHANGED: páginas/CSS Inbox e Notifications, InboxList, CSS Footer, testes focais/ensaios mencionados e checkpoints. FUNCTIONAL: pacotes12/19/12/14 PASS separados, com sobreposição; não somar como testes únicos. VISUAL/RESPONSIVE/ACCESSIBILITY/BROWSER MATRIX: não executados nesta rodada, evidência anterior preservada; não PASS integral. SECURITY: nenhuma mutação real ou alteração de auth/consentimento. BUILD/TypeScript: bloqueados por capacidade. OBSERVABILITY: outputs citados, guardas e fontes. OPEN FINDINGS:19aceites integrais. ROLLBACK: somente deltas de apresentação desta fatia, preservando WIP anterior. PRODUCTION: NOT TOUCHED.
+
+| Ferramenta | Ação executada | Evidência / decisão |
+|---|---|---|
+| Git/leitura/apply_patch | Revisão e alterações locais delimitadas | HEAD/diff-check282f7e, fontes citadas |
+| Agentes | Implementação separada e revisão cruzada | Inbox/Notifications/Footer; sem testes concorrentes |
+| Runner/ESLint | Testes leves e lint serial | Resultados acima, sem alegação visual |
+| Capacidade/processos | Medições somente leitura | Pressão2; browser/candidata não iniciados |
+| Browser/DB/deploy | Não executados nesta rodada | Capacidade ou limites de autoridade preservados |
+
+## 2026-10-24 04:33 CEST — cabeçalho móvel PT/AR verificado isoladamente; Busca ajustada
+
+DAILY local, retomado sem duplicar agentes. Repo/HEAD reconfirmados b061753899767a4d805d5f37193d36bc673c18fd, detached e WIP preservado. Todos os 19 aceites integrais continuam vermelhos; o quadro completo e evidências anteriores permanecem abaixo.
+
+- Utility shell Chromium390: PT concluiu todas as assertions/captura, mas execução conjunta e7b29b FALHOU antes de AR por pressão2. AR repetido sozinho 5b23c3:1/1PASS. PNGs inspecionados pelo root: /private/tmp/touchline-utility-shell-adDdoV/chromium-390x844-pt-BR-notifications.png e /private/tmp/touchline-utility-shell-euToLv/chromium-390x844-ar-SA-notifications.png. Rails horizontais/foco verificados; captura é após navegação por teclado, portanto alguns controles estão fora do scrollport naquele instante, não foram escondidos por breakpoint. Não representa todas36combinações, Safari nativo ou conta real.
+- Regressão leve idioma/foco/utility:34/34PASS45c33f. Ajustado harness SSR para props children via jsx-runtime e conta ausente undefined, sem mudar produto. Primeira tentativa com createElement/childrenprops passou4testes mas lint rejeitou3no-children-prop (0ff7f8). Corrigido e repetido:4/4PASS e lint5arquivos exit0 e81371.
+- Busca: app/(app)/football-search/page.tsx agora usa TouchlineNavigationRail real e botão canônico; novo FootballSearchContent.module.css preserva linha sem empilhar e scroll apenas local. Removida fonte8px do cabeçalho interno; rótulo12px, botão44px, sem truncar texto. Destino/locale/aviso editorial/API não mudaram. tests/touchline-football-search-draft-locales.test.mts preserva6oráculos e adiciona composição/labels longos/CSS;7/7PASSba7f5e. Revisão independente sem P1/P2 concreto; geometria/foco real deste conteúdo ainda não testados.
+- Gols: novo filtro estrito TOUCHLINE_HERO_GOALS_SCENARIO=five|six|one-seven|long-names mantém todos por padrão e baseline five junto dos demais cenários. Lint4b7d73 exit0. WebKit844 one-seven+baseline tentado854675: FALHOU por pressão2 antes do primeiro cenário, sem PNG ou aprovação. Não repetir automaticamente o mesmo teste pesado enquanto pressão não estabilizar.
+- Item18: preparado tests/fixtures/ClubHubDelayedLineupBrowserFixture.tsx + tests/touchline-clubhub-delayed-lineup-anchor-browser.test.mts, ainda NÃO executados. Componentes reais OfficialLineup/SectionNavigation e fallback extraído da fonte, Suspense cliente controlada, entrada/reload/cliques antes/depois/Back nativos e dois negativos para não roubar scroll após usuário mudar hash/rolar. XI vazio sintético, APIs bloqueadas, asset realpath/isFile, diagnóstico por etapa, guards e capturas. Não prova Next/RSC/router.refresh nem seleção real do confronto; ausência temporária da âncora está confirmada por fonte, defeito de chegada ainda não confirmado. Filtros TOUCHLINE_RUN_LINEUP_ANCHOR_BROWSER_TESTS=1, TOUCHLINE_LINEUP_ANCHOR_ENGINE=chromium|webkit, TOUCHLINE_LINEUP_ANCHOR_WIDTH=390|844|1280.
+- Auditoria interna: Notificações ainda muda stats3→1/painéis2→1/filtros4→2→1; Inbox muda mensagem+aside para cascata abaixo620. Manifesto proposto de scrollport localizado mantendo estrutura e controles legíveis foi separado do header. NÃO implementado nesta rodada; não encolher site globalmente nem modificar consentimento/leituras.
+
+Capacidade04:33: pressão2, livre43%, disco6.79GiB (7,119,156KiB); candidata/Safari/Playwright ausentes (5a7bb7). Diff-check sem saída; exit1 combinado é pgrep sem correspondências, não falha do diff. Nenhuma exclusão, credencial, transação, push real, build completo, commit ou deploy. Todos três agentes entregaram, revisão recebida e ownership devolvido; nenhum arquivo em edição por agentes. Próxima rodada: preparar prova visual real do conteúdo Busca e ensaio anchor com capacidade normal; continuar casos WebKit/utility/técnica pendentes. Não duplicar provas inalteradas. Retomar Inbox/Notificações por manifestos isolados depois da apresentação atual. O prazo permanece08:00Malta; este checkpoint não declara encerramento.
+
+### Gate da fatia (parcial, não release)
+MISSION/SCOPE: apresentação local e provas isoladas; rollback só página/CSS Busca e deltas de testes descritos. QA BRANCH/COMMIT: detached/HEAD acima, não candidato limpo. QA DEPLOYMENT/STABLE QA URL: não alterados/não verificados. REMOTE BUILD BUDGET/CONSUMED:0/0. FUNCTIONAL:7Busca+34regressões+4harness PASS; VISUAL/RESPONSIVE/ACCESSIBILITY: somente utility390 PT/AR em Chromium isolado; demais pendentes. SECURITY: regras/credenciais/dados intactos, revisão React/Supabase preserva boundaries. BROWSER MATRIX: parcial; BUILD/TypeScript global: não executados, capacidade insuficiente. OBSERVABILITY: resultados e PNGs acima. OPEN FINDINGS:19aceites, URL Instagram, entrega push real, integração treinador, conta real e gates finais. PRODUCTION: NOT TOUCHED.
+
+| Ferramenta | Ação real | Evidência / decisão |
+|---|---|---|
+| Arquivos/Git/apply_patch | Fontes, manifesto, correção/testes e checkpoint | Deltas acima, WIP preservado |
+| Agentes | Auditoria, preparação e revisão independente | Três entregas revisadas, ownership root |
+| Runner local/ESLint | Testes focados e lint serial | PASSs e falhas discriminados |
+| Browser isolado/view_image | PT/AR390 e tentativa WebKit gols | PNGs inspecionados; WebKit interrompido, sem PASS |
+| Capacidade/processos | Pressão/disco/processos medidos | Não iniciar mais browser pesado em pressão2 |
+
+## 2026-10-24 04:25 CEST — foco da Live corrigido e cabeçalho customer integrado localmente
+
+Missão DAILY, checkout detached b061753899767a4d805d5f37193d36bc673c18fd com WIP preservado. Sem publicação. Todos os 19 aceites integrais continuam vermelhos; o quadro completo abaixo permanece válido. Provas isoladas não representam aprovação da candidata autenticada.
+
+### Alterações e evidência desta rodada
+
+- Live: navegação nativa por Tab revelou recorte de 34.94px do quarto jogo (218667; primeira falha f819f4). ClubHubFixtureStrip agora revela horizontalmente somente o controle original focado via RAF cancelável, sem mover documento nem focar clones. Oito testes do ciclo de foco passaram (50dfad); 23 de movimento/strip passaram (98e4e1). Browser Chromium1280 passou (6848e3); Chromium390 PT/AR passou (ec965a), incluindo Tab/ShiftTab por dez jogos, loop e clique real no clone com navegação interceptada. Falha intermediária0460c4 era baseline capturado antes do ajuste de foco de5px; teste agora espera geometria estável. WebKit1280 foi interrompido por pressão2 (1b320e), NÃO PASS.
+- Idioma: mensagem bloqueada nos oito catálogos agora orienta tentar novamente, em acordo com o controle de recuperação existente, sem solicitar recarga.22/22PASS4f4e81. Não comprova preferência persistida nem sessão real.
+- Navegação: novo TouchlineCustomerUtilityShell usa header/nav/rail canônicos somente em /notifications, /inbox e /football-search para customer não-owner com accountId já verificado no layout. Guard server, links admin, handler logout e política de troca de conta preservados; um único main inclusive Inbox. Revisões independentes não acharam P1/P2 de produto.13/13PASS83391b (anterior a975ed também PASS). Lint inicialmente falhou por quatro any no harness (7bd799); corrigidos para unknown e tipos reais, lint10arquivos8757f4 exit0.
+- Browser utility: Chromium1280 PT /notifications1/1PASS14d953. Root inspecionou /private/tmp/touchline-utility-shell-2jsp2i/chromium-1280x900-pt-BR-notifications.png: header/rails visíveis, sem sobreposição nesse caso. Conta, conteúdo e callback logout são sintéticos; não é Safari nativo, SSR hydration, conta autenticada ou prova de entrega. Matriz completa36casos NÃO executada. Revisão detectou fixture de troca de conta em árabe divergente do caller real; corrigidos somente fixture/oráculo para EN/PT operacional e returnTo exato. PT é equivalente; versão final precisa repetição browser, lint76e8cc exit0.
+- Faixa técnica: novo oráculo mede a arte renderizada dentro dos slots antes/depois da Arena, e não apenas slots. Contratos independentes jogador430×691 e coach envelope2:3/scale1, com pointer fora do coach. Chromium1280 corrigido1/1PASS0b2346; PNGs /private/tmp/touchline-technical-integration-Q1IXmi/{chromium-1280x900-before,chromium-1280x900-arena,chromium-1280x900-after}.png. Root inspecionou Arena atual e after da primeira rodada075457. Fixtures têm scroll/spacers intencionais, Live sem escudos e campo normal sem XI; não aprovar elenco real.
+- Gols: teste agora grava PNG também no Chromium. Tentativa WebKit844651336 interrompida por pressão2, sem prova completa. Nove focais de gols/layout/crest passaram (f5f0f3). Item18 leitura não encontrou href inequívoco errado, mas anchor só existe depois de Suspense: falta clique real com carregamento tardio e Back, sem confundir fonte com chegada comprovada.
+
+### Capacidade, ownership e próxima ação
+
+Última medição: pressão2 após browser curto, memória livre44%, disco6.90GiB (7,237,512KiB antes do ensaio). Candidata e Safari mantidos OFF; ensaios isolados fecham contextos/browser em finally. Nenhum build completo/TypeScript global, exclusão, credencial, banco, push real, transação, commit ou deploy. Supabase/React skills usadas para preservar identidade verificada, fronteiras e hooks; changelog markdown indisponível, sem mudança SDK/query/schema.
+
+Três agentes entregaram e ownership retornou ao root; nenhuma edição de agente em execução. Root mantém slot serial. Próximos: repetir utility browser final em Chromium390 PT/AR e WebKit quando pressão1, com TOUCHLINE_RUN_UTILITY_SHELL_BROWSER_TESTS=1 e filtros TOUCHLINE_UTILITY_SHELL_ENGINE/WIDTH/LOCALE/ROUTE; continuar WebKit da Live e gols e matriz técnica restante. Não duplicar os resultados já registrados. Conteúdo interno das três páginas ainda tem regras de cascata a revisar, separado do cabeçalho. Instagram ainda requer URL pública oficial; push requer entrega real; treinador permanece contrato local sem adapter transacional ativado. Rollback desta fatia deve reverter somente shell customer/wiring, copy de recuperação e efeito de foco descritos, preservando WIP anterior.
+
+## 2026-10-24 04:02 CEST — seleção da Live compartilhada e regressões verificadas localmente
+
+Missão DAILY local, sem publicação: revisão encontrou divergência real por fonte entre janela240jogos do ClubOwner e seleção de rodada/snapshot usada no ClubHub. Extraído lib/touchlineArena/persisted-live-rail-server.ts: mesma política fresh-live≤5min → rodada persistida/degraded → LKG stale/degraded → null. Endpoint mantém503/no-store. ClubOwner usa o mesmo leitor; ClubHub direct recebe seed SSR por fronteira Suspense independente, iniciada em paralelo, evitando que o client mantenha IDs antigos após router.refresh. Mirror continua sem leitura SSR direta adicionada. Metadata é encaminhada sem inventar frescura. Não é snapshot atômico entre requisições distintas, nem prova de atualização integrada em produção.
+
+Revisão React/Supabase preservou autenticação e limites: o wrapper8s marca a chamada inativa; uma leitura inicial que termina tarde não inicia a consulta seguinte de agenda. I/O já iniciado não é cancelado. GET conserva política anterior sem esse orçamento. Lint inicialmente apontou Date.now no JSX do wrapper (8fe559), corrigido passando instante serializado pelo loader; repetição128a7f exit0, somente warning preexistente ClubHubHeroNextMatch. Revisão independente final não encontrou outro defeito concreto; não substitui TypeScript global. Índice markdown do changelog Supabase não pôde ser lido pelo navegador; nenhum SDK/query/schema foi alterado.
+
+Provas executadas pelo root, serialmente:
+- Leitor/SSR/GET/deadline:13/13PASS9b784b.
+- Regressão11arquivos:87/87PASScbb2a2,9.61s. Primeira rodada993cd5 tinha oráculos/harnesses antigos (railOnly/footerlocal/authsemerror e mock que lançava em vez de retornar null); corrigidos mantendo cobertura e repetidos. Subconjuntos29/29PASS5ea030 e25/25PASSeabe20.
+- Cópia/escalação:10/10PASS5a32fe. PT agora “Escolha um jogador”, sem assumir se o selecionado entra ou sai. Harness passou a usar helper real de gols; antigos avisos e linkinterno viraram negativos explícitos e links por clube/fixture/idioma viraram positivos nos8catálogos. Tentativas anteriores57ff60 e0d8be7 registram falhas, não são PASS.
+- Consumidores AST/SSR e ciclo da faixa:41/41PASS0f5da7, incluindo footer global real nos8idiomas, seedsemfetch e ações/guardas existentes.
+- Arena WebKit667×375:1/1PASS53d75c; WebKit1024×768:1/1PASS1ec3be, após bloqueio inicial por pressão2(570d5f). Com evidência anterior, os seis casos possuem resultados individuais, mas não houve uma nova execução integral bem-sucedida da matriz; Safari nativo/fullscreen físico não provados.
+- Faixa técnica integrada WebKit844×390:1/1PASS21f062. Capturas before/arena/after em /private/tmp/touchline-technical-integration-MFoZH3 inspecionadas pelo root: nove reservas e treinador retornam preservados. Fixture tem área vazia intencional para scroll, Live sem escudos reais e campo normal sem XI; não é aprovação visual do elenco real, escudos ou formação completa.
+- GolsChromium844×390:1/1PASS935401, quatro cenários (5/6autores,7golsmesmojogador,nomeslongos), frame393.5625px estável e listas corretas por clube. Oráculos reforçados com nomes/minutos diferentes por lado e interseção lista∩moldura. Não houve PNG neste motor, nem aprovação humana do desenho. WebKit7a6369 passou só cenário5 e foi interrompido por pressão2 antes de6; conjunto WebKit continua pendente.
+
+Auditoria delimitada de molduras não achou miniatura119×192 ampliada nos pontos examinados. Coach tem arte distinta compact240×320/zoom810×1080; não confundir com jogador430×691. É leitura de fonte/metadados, não DPR/pixel real.
+
+Checkpoint04:01: pressão1, disco6.35GiB (6,663,896KiB), candidata/Safari/Playwright ausentes; caffeinate existente preservado. Sem build completo, exclusão, credencial, DB write, push, transação ou deploy. Todos19aceites continuam vermelhos; quadro integral preservado. Três agentes entregaram fontes e ownership voltou ao root, nenhum trabalho em execução para duplicar. Próximos: provas WebKit de gols e matriz técnica restante com capacidade estável; depois candidata/customer real quando seguro; TypeScript/build globais ainda bloqueados por capacidade. Instagram depende de URL oficial comprovada, push de recebimento real, treinador de integração transacional/versionamento de oferta. Rollback desta fatia: reverter somente extração leitor e wiring SSR/metadata descritos, preservando demais WIP e correções anteriores.
+
+## 2026-10-24 03:42 CEST — confirmação mobile corrigida; provas restantes fracionadas
+
+A inspeção humana da captura WebKit844×390 encontrou um defeito que o teste anterior não cobria: cards e ações ultrapassavam a tela baixa. Corrigido CSS apenas da confirmação em landscape curto, preservando arte original, comparação ENTRA esquerda/SAI direita e ações44px. Teste agora exige cards, resumo e ações dentro da área visível. Execução filtrada WebKit844:1/1PASS,5.808s (8e8f74); PNG inspecionado pelo root em /private/tmp/touchline-swap-review-v5Oe81/squad-swap-confirmation-in-outside-out-bench-webkit-844x390.png. Prova isolada sintética, não Safari nativo nem matriz completa. Retorno de foco é provado por abertura via teclado; clique pointer Safari não recebeu prova equivalente. Guard destination sugerido pela revisão independente foi aplicado depois;9/9focais PASS246ccb.
+
+Recuperação prospectiva do treinador ganhou decisão cliente pura que preserva estado confirmado mais novo e exige conta/temporada/geração/comando/recibo exatos. Pacote5arquivos44/44PASS (1017ee), sem endpoint, armazenamento durável ou capability ativada. Contrato atualizado em docs/touchline/project-memory/COACH_LIFECYCLE_LOCAL_CONTRACT_20261024.md. Fonte publicada/versionada da oferta de treinador ainda é lacuna para transação futura; nenhum SQL, saldo, elenco ou operação real alterados.
+
+Prova de gols tentou WebKit844 e foi interrompida pelo guard de pressão2 antes do primeiro cenário (23e204): NÃO PASS, sem captura. Faixa técnica integrada ampliada para Live real + reservas + campo/Arena está preparada, mas não executada. Arena global continua parcial: três Chromium e WebKit844 passaram antes da interrupção de capacidade; faltam WebKit667/1024. Filtros estritos adicionados sem remover matriz padrão ou assertions, permitindo rodadas curtas:
+- Arena: TOUCHLINE_RUN_ARENA_SCROLL_BROWSER_TESTS=1, TOUCHLINE_ARENA_SCROLL_ENGINE=webkit e TOUCHLINE_ARENA_SCROLL_VIEWPORT_WIDTH=667 ou1024.
+- Faixa técnica: TOUCHLINE_RUN_TECHNICAL_RAIL_BROWSER_TESTS=1, TOUCHLINE_TECHNICAL_RAIL_BROWSER_ENGINE=webkit, TOUCHLINE_TECHNICAL_RAIL_BROWSER_VIEWPORT=844x390 ou1280x900.
+- Gols: TOUCHLINE_RUN_HERO_GOALS_BROWSER_TESTS=1, TOUCHLINE_HERO_GOALS_BROWSER=webkit, TOUCHLINE_HERO_GOALS_WIDTH=844.
+Executar arquivos tests/touchline-clubowner-arena-scroll-browser.test.mts, tests/touchline-clubowner-technical-rail-browser.test.mts e tests/touchline-match-hero-goals-browser.test.mts com o runner local já validado, somente um por vez após nova medição.
+
+Os três agentes entregaram e fontes retornaram ao root. Auditoria manual não encontrou outro erro inequívoco, mas NÃO é TypeScript PASS. Próxima rodada: retomar casos faltantes com capacidade estável e depois validar fluxos reais locais; não duplicar provas anteriores. Disco último6.44GiB, pressão oscilando1→2 após browsers curtos: sem build completo. Candidata/Safari continuam OFF; nenhuma exclusão, publicação, credencial, push ou transação. Todos19aceites completos permanecem vermelhos; quadro integral abaixo preservado. Diff-check602502 exit0.
+
+## 2026-10-24 03:30 CEST — IN/OUT corrigido; capacidade interrompe ensaios maiores
+
+Confirmado P2 no par outside/reserva. Novo helper de apresentação ordena entrada para grupo mais ativo (titulares > reservas > outside), mantendo comando original. Matriz seis direções + vazância/wiring9PASS; revisão independente sem bloqueios. Novo recovery treinador somente leitura, capability OFF, contexto verificado separado, registro histórico único e timeout8s;9PASS. Pacote4arquivos35/35PASS9e1d8a após corrigir sintaxe inicial do harness (be7968:26PASS/1falha). ESLint focal3arquivos exit0 (7c8452). Nenhum adapter durável, endpoint, operação ou saldo real habilitado.
+
+Arena repetida99d16e: três cenários Chromium e WebKit844 passaram geometria/foco; guard interrompeu antes WebKit667 ao detectar pressão2. Resultado global FAIL por capacidade, não PASS. A falha anterior ao refocar botão já ativo foi corrigida no teste usando Tab real, sem alterar produto para esconder falha.
+
+Substituição WebKit/original f37eb4: confirmação desktop original430×691, bordas e IN/OUT passaram; teste final falhou no retorno de foco do novo gatilho aberto por pointer. Auditoria em curso da diferença nativa de foco Safari; não alterar produto sem confirmar. Root inspecionou PNG /private/tmp/touchline-swap-review-v5Oe81/squad-swap-confirmation-in-outside-out-bench-webkit-1280x800.png: entrada esquerda, saída direita, nomes/setas centrais, molduras alinhadas e sem legenda acima. Prova sintética isolada, não candidata/customer; mobile ainda não executado.
+
+Prova gols pronta com cenários cinco/seis autores, sete gols do mesmo jogador, nomes longos, screenshots e guard de capacidade; ainda não executada. Instagram continua dependente de URL pública oficial: identificador TOUCHLINE_OFFICIAL_INSTAGRAM do outbox não é URL, fixtures de teste não autorizam perfil. /notifications, /inbox e /football-search ainda usam shell próprio; requer separação cuidadosa do customer/admin, sem mudança cega de autorização.
+
+Pressão voltou2 após navegador; candidata/Safari seguem OFF, nenhuma exclusão/transação/deploy. Root mantém validação serial; agentes preparam delta puro de decisão cliente recovery, auditoria de tipos das fixtures e prova substituição corrigida. Todos19aceites vermelhos; TypeScript/build globais ainda pendentes por capacidade.
+
+## 2026-10-24 03:23 CEST — navegação e zoom isolados verificados; novas falhas registradas
+
+Header real hidratado passou Chromium/WebKit PT/DE/AR em320/390/844/1280, foco completo e documento imóvel,1/1PASS13.57s (b3320e). Árabe segue direction:ltr deliberado do produto; não é prova genérica de scroll RTL. Focais header/ClubOwner/ClubHub/Arena13/13PASS (adf00d); ESLint nav/header e diff-check exit0 (4ec857). Não prova todas páginas/autenticação.
+
+Zoom real jogador/treinador, duas paisagens e notch simulado à esquerda/direita:1/1PASS15.47s (d64258),16cenários, arte/coroa/close/foco/scroll. Não é notch físico ou Safari nativo. Primeira execução falhou por publicação sintética incompleta do harness (b88e60), corrigida preservando parser real; segunda cancelada por pressão2 (c46abf); terceira terminou exit0 antes da tentativa de interromper ao detectar pressão2. Nenhum processo de browser/candidata/Safari remanescente (ec7157); serviços auxiliares macOS não encerrados.
+
+Arena completa ainda NÃO PASS:909fde falhou ao refocar Close já ativo após scroll programático. Ensaio corrigido para sair/voltar por Tab real, congelado aguardando capacidade; largura campo/scroll/focus wrap reforçados. Fechar44 agora comum e mobile. Sem alteração adicional de produto para mascarar falha.
+
+Revisão substituição achou P2: origem outside contra reserva inverte IN/OUT, enquanto mesmo par aberto pelo reserva usa sentido correto. Pending corrige prioridade por área sem mudar comando financeiro. Carousel prepara recuperação somente leitura do treinador, capability OFF, registro histórico/revisão/conta/temporada exatos e deadline; nenhum adapter durável, endpoint ou transação. Loading prepara prova isolada de muitos autores/gols na moldura, sem dados reais.
+
+Capacidade03:22: pressão2, disco6.99GiB (14446d). Novos browsers/testes pesados pausados; somente revisão/código leve. Todos19aceites continuam vermelhos; candidata/Safari OFF, nenhum deploy/limpeza/credencial/push/transação.
+
+## 2026-10-24 03:14 CEST — revisão independente e provas isoladas; aceites ainda abertos
+
+Entrada account: orçamento de8s agora inclui criação do cliente e autenticação verificada, com guarda contra cliente tardio.9/9PASS (886e0a), revisão independente sem defeito material. Não comprova sessão/idioma real. Novo wrapper neutro de conteúdo mantém rodapé abaixo da altura da tela inclusive com conteúdo vazio:4/4PASS (fb630a), WebKit1/1PASS (d15a17). Não há URL oficial Instagram inventada.
+
+Faixa técnica real: browser Chromium/WebKit1/1PASS (757f5b,16.6s), nove reservas, treinador/coroa, foco, RTL e desmontagem/retorno Arena; prova isolada com identidades sintéticas, não candidata autenticada. Testes globais focais8arquivos63/63PASS (43df59) após reparar harness de acessibilidade desatualizado sem mudar hash/assertions históricos. ESLint focal account/layout/wrapper e Fantasy/faixa:exit0 (187388/087e20).
+
+Navegação teve12falhas persistentes de foco parcialmente recortado após correção de origem CSS; wrapper client de scroll horizontal agora preparado, ainda em validação. Pacote UI20/24PASS (26ecf7), quatro harnesses de imports em adaptação, não pacote verde. Fechar Arena mínimo44px mobile e6/6PASS (db46ce); desktop e prova Arena completa em revisão. Novo browser zoom preparado sem execução.
+
+Root mantém slot único de testes; agentes revisam independentemente nav/Arena/zoom sem sobreposição. TypeScript global permanece interrompido por pressão, sem gate atual. Pressão última1; disco6.47GiB em42cce3. Candidata e Safari OFF, sem build completo, limpeza, deploy, credenciais, push real ou transação de elenco. Todos19aceites permanecem vermelhos; resultados isolados não substituem validação integrada.
+
+## 2026-10-24 03:04 CEST — recorte confirmado e corrigido; capacidade limita tipos
+
+Ensaio real de CSS do campo FALHOU (ced4a6): em844/900px a largura100% mais margens16+16 excedia o viewport. Root corrigiu a regra normal para calc(100% - 32px), sem mudar Arena. Repetição Chromium/WebKit, quatro viewports e ambos modos: 1/1 PASS, 6,47s (f5a764). Não prova XI autenticado nem toda a Arena. Recuperação nova de seed indisponível: 1/1 PASS em ambos motores, 7,12s (7f7312), exatamente uma consulta; vazio confirmado não consulta. Provas isoladas, candidata/Safari permaneceram OFF.
+
+Menu do detalhe ClubHub agora passa pela prop navigation do BrandHeader no fallback e resolved, preservando destinos e contexto; 2/2 wiring PASS (2126ab). ESLint focal sete arquivos:0erros/1warning preexistente ClubHubHeroNextMatch confirmado no HEAD (52f0b9/51c450). Risco de recorte da navegação estreita ainda precisa browser; agente prepara prova com estilos/componentes reais.
+
+Segunda tentativa de TypeScript interrompida SIGINT/130 ao atingir pressão2 (a79583/ca48b8); não houve resultado aprovado e nenhum tsc/Next/Safari remanescente (1d8699). Não repetir carga global até capacidade estabilizar. Pressão depois retornou1; sem limpeza ou encerramento de aplicativos do usuário.
+
+Revisão técnica encontrou reservas em cascata abaixo548,4px. Agente loading prepara scrollport exclusivo com asas nowrap, treinador e linha técnica juntos, seletor fora; sem alterar campo. Root passou helper a incluir dois gutters de8px (mínimo564,4px), 5/5 focais PASS (9f8d35). Esse delta substitui o cálculo sem gutters do registro anterior; faixa e browser ainda em elaboração. Treinador tem contrato prospectivo documentado, sem transação ativada. Os19aceites continuam vermelhos; nenhum deploy nem dado real alterado.
+
+
+## 2026-10-24 03:00 CEST — revisão local em série, sem aceite final
+
+Banco: root repetiu ensaio Chromium/WebKit com seis larguras, RTL, página longa (scrollY 650) e reduced-motion: 1/1 PASS, 39,7s (063aeb). Não é Safari autenticado. Adaptadores auth, GET preferências e manifesto: 40/40 PASS, 2,119s (4b7bf8/08e7ec). Sino/nullable treinador/fixture: pacote 116/117 PASS; única falha era expectativa antiga que proibia treinador vago, corrigida e 8/8 lifecycle PASS (bf4d84), sem chamar o pacote inteiro de aprovado.
+
+Treinador nullable e consumers preparados sem habilitar operação. Validador prospectivo de recibo/estado por conta, temporada, revisão e contrato original adicionado, sem endpoint/RPC/UI. Taxas 10%/90% preservadas; replay com snapshot posterior não comprova saldo histórico. Root repetiu 19/19 testes de recibo, geometria técnica e schedule strict (baef1c), 0,665s. Helper técnico agora considera treinador 130%, duas asas equivalentes e gaps reais; revisão independente confirma cálculo, mas abaixo de 548,4px ainda exige prova visual.
+
+Links ClubHub: seleção explícita por confronto e clube, verificação cruzada de participantes e formação, sem fallback silencioso para outra partida; 11 casos no pacote acima. Revisão da navegação encontrou menu do detalhe fora do BrandHeader e Sair ausente; correção estreita delegada. Revisão antiga de scale(.4) foi RETRATADA: cascade já cancela transform. Possível excesso por margin horizontal só será corrigido se ensaio real confirmar.
+
+TypeScript global terminou com erro na assinatura opcional GET preferences; assinatura corrigida para NextRequest obrigatório, repetição pendente. Diff-check PASS (ec83be). Pressão oscilou 1→2; sem processo pesado remanescente. Última leitura 03:00: pressão1, disco6,87GiB. Candidata/Safari OFF, sem exclusão, build completo, deploy, credenciais ou transações. Pendentes browsers seed/pitch bounds, tipos/lint atuais e aceite integrado. Todos os 19 itens permanecem vermelhos até evidência de aceite, não apenas teste isolado.
+
+
+## 2026-10-24 02:41 CEST — deadlines e isolamento de conta; nova revisão em curso
+
+GET de preferências agora tem orçamento único de8s para cliente/auth/query, cancelamento e rejeição de resposta auth malformada; PUT não foi alterado. Ranking público do boundary tem deadline e a criação do cliente entra no orçamento auth do ClubOwner. Root69PASS/1skipSQL em13arquivos; repetição posterior56/57, única falha foi contagem antiga do inventário de rotas108→109, corrigida e21/21PASS. Agente repetiu8/8auth após incluir setup no prazo. ESLint focal3arquivos exit0. Não prova persistência de idioma no Safari.
+
+Banco: wrapper real de foco horizontal corrige o nono reserva; browser isolado do agente1/1PASS em Chromium/WebKit seis larguras+RTL. Extensão com página longa/scrollY650 e reduced-motion ainda não executada. Live: SSR indisponível agora é null, vazio confirmado é[]; reader strict opt-in preserva default e aciona uma única recuperação do strip.41/41focais do agente PASS; provas novas de browser ainda pendentes.
+
+Sino:41/41PASS para contrato esperado conta+partida, proxy SDK/unknown, logout e409sem replay. Revisão independente encontrou ausência de INITIAL_SESSION deixando ação sem efeito e risco de GET posterior preceder commit de PUT incerto. Correção em andamento: watchdog de identidade e bloqueio conservador de nova escrita, sem afirmar entrega. Item13 permanece vermelho. Treinador: inventário real concluído; tabela admite coach:null mas consumers/RPCs não oferecem liberar→contratar. Preparação nullable ainda pendente, operação permanece desligada; sem migração ou transação.
+
+Capacidade: pressão voltou a2, disco6.67GiB. Nenhum teste pesado/browser/typecheck será iniciado até pressão1; processos maiores são Codex/serviçosmacOS, nenhum encerrado. Candidata/Safari continuam desligados. Sem limpeza, build completo, deploy, credenciais ou dados reais alterados. Fila de19aceites segue vermelha no plano; resultados focais não são conclusão visual.
+
+## 2026-10-24 02:25 CEST — carrossel aprovado no teste isolado; recorte de foco em correção
+
+Root repetiu o navegador do carrossel: PASS em Chromium/WebKit, 1280pt/390pt/390ar, loop nos dois sentidos, movimento modular, pausa/foco, retomada, resize e setas externas (a3e118, 17.6s). Não equivale à validação Safari com conta real. Agente reescreveu lifecycle com efeitos reais:8/8PASS, incluindo callback tardio após cleanup e início fora da tela. GET readiness:9/9PASS após normalização exclusiva do harness cross-realm; nenhuma entrega push comprovada.
+
+Novo browser técnico FALHOU no nono card em1024px: contorno de foco fora do scrollport (2cc54b). Não enfraquecer a verificação; agente carousel_continuous recebeu correção e slot único de teste. loading_locale_review revisa transição vazia ClubOwner; pending_task_audit mapeia integração pontual do sino e idiomas. Revisão independente do domínio puro do treinador sem defeito material, mas persistência nullable/recibo/transação/UI permanecem pendentes.
+
+Capacidade confirmada:7.0GiB livres, pressão1; somente prevenção temporária de repouso ativa, Safari/Next ausentes. Sem build completo, exclusão de arquivos, deploy ou Production. Regras de silêncio/continuidade e heartbeat até08:00 preservadas.
+
+## 2026-10-24 02:23 CEST — revisão noturna: provas locais, visual ainda aberto
+
+Root repetiu19/19focais (loading, posiçãoLive, lifecycle),21/21(CSSClubHub/Arena/carrossel),102/102(idioma/identidade/host/seleção, domínio treinador, recibos sino). ESLint0erros/2avisosimg existentes. TypeScript sememissão/incrementalexit0 antes de congelar último endpointreadiness, portanto repetir ao estabilizar. Diferenças preservadas; sem commit/deploy. Macpressão1/disco6.4GiB após testes; Safari eNextseguemOFF.
+
+Idioma: proxy de usuário temporariamente indisponível agora é identidade desconhecida, não logout; confirmação getUser adiada e limitada, recupera apenas mesma conta com GET novo. Botão de retry explícito reutiliza rótulos8idiomas e nunca reenviaPUT. Invalidação explícita terminal. Sem prova de seleção+recibo+reload no cliente real ainda.
+
+Carrossel: primeiro lançamento automatizado bloqueado por sandbox, repetição autorizada rodou navegador e revelou assertionmonotônica inválida no árabe390px. Medido ciclo1655.265625/start3310/180ms1660: rollover legítimo de ciclo fracionário. Teste sob correção com deslocamento modular e regressão de focusout; não PASS de navegador. CSSClubHub está em revisão independente de gutters/sombras e alcance horizontal.
+
+Treinador: módulo prospectivo club-coach-lifecycle separa liberar→vago→contratar,8/8teste do agente repetidos dentro102root; taxa10%/retorno90% originais. Contrato persistido ainda exige treinador; NÃO há fluxo real, endpoint ou migração habilitados. Sino: parserreceipt estrito testado, novoGETreadiness somente observação em revisão, sem ativo/entrega inventados. Primeiro teste desseGET8/9passou; falha do harnesscrossrealm em correção. Root adicionou inventário da rota. ConfiguraçãoInstagram ausente noenvQAfonte (verificado apenas booleano); nenhum endereço inventado nem segredo exposto.
+
+## 2026-10-24 02:10 CEST — execução noturna local, em andamento
+
+Autorização humana: revisar toda a fila vermelha, executar correções locais com subagentes e redistribuir após revisão até a manhã. Candidata e Safari desligados enquanto houver trabalho de código; abrir somente para validação. Missão de engenharia de produto local, sem deploy/Production/transações reais/limpeza de arquivos. Preservar WIP. Aceite: testes proporcionais e revisão independente, depois render real quando capacidade permitir; rollback somente do delta da missão.
+
+Confirmado: Next pai3760 e filho3765 encerrados, porta3100 sem listener; Safari639 encerrado. Pressão caiu de2 para1, disco4.1→7.1GiB sem apagar arquivos. Prevenção temporária de repouso ativa até aproximadamente08:00; heartbeat deste chat atualizado para esta candidata, limitado até08:00Europe/Malta. Não implica execução ininterrupta nem conclusão automática. Builds completos continuam proibidos sem gate de capacidade.
+
+Regras antigas SUPERSEDED: carrossel apenas manual agora é movimento automático contínuo, loop sem vazio/piscar, setas fora dos escudos, mesma fonte/componente. Instância única movida acima dos reservas em FantasyGameweekClient e removida coluna lateral antiga da Arena. Mobile deve preservar organização horizontal desktop; não declarar site inteiro aprovado por esse delta.
+
+Agentes ativos: carousel_continuous (strip/helpers/testes), loading_locale_review (loading/idioma), pending_task_audit (auditoria e depois CSS ClubHub exclusivo). Root integra FantasyGameweekClient/CSS, revisa e mantém registros. Carregamento ClubOwner: Suspense externo agora cobre espera dos rankings;5/5 testes focados do agente PASS e diff-check PASS, revisão de fonte root feita. Visual ainda pendente. Idioma: recuperação em implementação, sem relaxar identidade/revisão. Sino real e integração transacional treinador ainda abertos; não declarar prontos. Rodapé Instagram depende de URL oficial verificada e configuração local.
+
+Próximo: concluir/revisar carrossel, idioma e paridade ClubHub, rodar verificações pequenas em série, avançar fila independente. Sem build completo, commit, push ou deploy nesta rodada. Quadro completo permanece no plano da auditoria; verde somente com evidência de aceite.
+
+## 2026-10-24 — idioma bloqueado: investigação local, NÃO concluído
+
+Pedido: remover aviso visual de idioma e restaurar troca funcional. AccountLocaleMenu mantém aviso loading/blocked somente para leitor de tela; saving permanece visível. Teste de wiring atualizado: 20/20 PASS, ESLint e diff-check PASS na rodada anterior. Persistência/auth/identidade/revisão não foram relaxadas. Safari ainda mostrou seletor desabilitado; não há PASS visual ou de gravação. Após reload houve fallback de erro da página, não apenas erro de idioma.
+
+Evidência atual: limite da leitura do idioma 15s; leitura do elenco expira em ~40s. Console Safari registrou Fast Refresh 161841ms e 239706ms, TypeError Load failed capturado por ErrorBoundary; a captura de rede iniciada depois da montagem não registrou preferences, portanto NÃO prova ausência da requisição. Logs finais /clubowner 43s e54s (aplicação42s e30.9s; proxy21.4s no segundo). Causa específica de preferences ainda não isolada; não atribuir a senha, banco ou identidade sem resposta real.
+
+BLOCKED capacidade: disco observado 2.2–4.2GiB; pressão de memória nível2. Processo exato Next local pai1603 validado e terminado por SIGTERM; sessão78363 encerrouexit0. Código e sessão Safari preservados; nenhum dado/credencial alterado. Sem novos builds, deploy ou Production. Próxima ação: recuperar capacidade com autorização delimitada, reiniciar runner QA existente, capturar GET preferences desde a montagem e validar seleção+recibo+reload na conta CUSTOMER QA, depois reverter ao português. Não anunciar idioma corrigido antes disso.
+
+## 2026-10-23 — novo lote mobile em implementação; não reutilizar aprovação anterior
+
+Base publicada b061753899767a4d805d5f37193d36bc673c18fd; WIP local novo preservado. Três agentes autorizados com arquivos exclusivos. Root revisou entregas e repetiu 12/12 testes de carrossel e 2/2 de galeria com componentes reais e dimensões; TypeScript sem erros no ponto executado e diff-check PASS. Galeria agora seleciona template 430×691 em vez de miniatura119×192; carrossel manual trata timeout, sem autoplay. Conflito de especificidade desktop removido por root; largura do treinador alinhada aos reservas. A revisão do zoom encontrou medição inline já existente: não há prova suficiente para atribuir overflow à escala CSS .85 isoladamente.
+
+Domínio puro de substituição do treinador e fallback de conta entregues, em revisão integrada. Troca do treinador ainda não tem endpoint/transação/UI; não tratar como pronta. Loading não prova ausência de tela preta antes de layouts assíncronos. Inspeção mobile real, matriz de idiomas, notificações reais, sincronização e gates de release continuam abertos. Nenhum build completo, commit, push, deploy, dado real, credencial ou Produção alterado neste lote. Quadro detalhado no MOBILE_REPAIR_PLAN_20261023.md da auditoria mestre.
+
 ## 2026-10-23 15:17 UTC — complete local release gates PASS, QA freeze next
 
 Canonical release verification completed:6082tests,6044PASS,0FAIL,38SKIP,0cancelled; suite384.55s. Governance,11Vercel documentation inputs, full no-output TypeScript, ESLint0errors/9pre-existing warnings, canonical release suite and readiness all exit0. Receipt /private/tmp/tl-verify-owner-20261023-r2lFHY/result.json;15:10:21.577–15:17:27.603UTC; no source/status/HEAD drift; final6.38GBfree/memory45%/pressure1.292/292 focused repaired contracts passed beforehand. Local buildPASS139pages/38.9s is reused only after proving all product source hashes unchanged; subsequent changes are tests, route inventory and these ledgers. Dependencies preserved; no install/purge.
@@ -5098,3 +5888,38 @@ Root inspected fresh canonical report and raw terminal log:2236/2236 passed,17su
 
 2026-10-14 — 🟢 ClubOwner/ClubHub local: o treinador escolhido agora aparece menor dentro do campo também no ClubOwner normal, sem segundo catálogo nem mutação de contrato; vagas restantes travam com cadeado ao esgotar o orçamento e oferecem somente revisão do XI ou comparação visual de plano. A galeria de treinadores passou a preencher as sete bordas, inclusive Ruby, pelo ranking salvo completo de 20 posições; se a leitura estiver parcial/ausente, mantém o último representante verificado em vez de inferir uma cor. As duas fileiras da galeria usam altura uniforme. Testes focados 51/51 e 19/19, TypeScript e `git diff --check` passaram. Prévia local disponível em `http://127.0.0.1:3321/rankings?lang=en-GB`; sem commit, deploy, escrita QA, Sportmonks ou Produção.
 2026-10-15 — 🟢 Candidata final local: suíte integral do release concluiu 5.284 testes, 5.270 aprovados, zero falhas e 14 skips explícitos (`/tmp/touchline-qa-release-suite-20261015.log`); TypeScript passou, lint sem erros (8 avisos conhecidos), diff-check e build local concluíram. Revisão independente fresca não encontrou P0/P1 no diff. Migração QA de orçamento finito `20261013173813` foi aplicada uma única vez em transação guardada no projeto QA, com hashes pós-aplicação e histórico verificados; confirmação de XI continuou em zero e Produção não foi alterada. O manifesto de candidata define as inclusões e exclui explicitamente somente `tsconfig.tsbuildinfo` gerado e a página local de manutenção não relacionada. Próximo: commit imutável, push Git-nativo para QA e validação remota após reabertura humana do firewall Preview.
+## 2026-10-23 — substituição com cards integrada ao QA local
+
+### 24/10 — Live → ClubHub por confronto (LOCAL, validação pendente)
+
+- Conferidos no Safari os dez resultados encerrados disponíveis, envolvendo os vinte clubes: Coventry/Newcastle 4–1; Liverpool/City 0–3; Hull/Everton 2–2; Palace/Forest 3–1; United/Spurs 1–1; Villa/Brentford 2–2; Chelsea/Bournemouth 5–1; Ipswich/Fulham 2–1; Sunderland/Brighton 0–2; Arsenal/Leeds 2–1. Dados do snapshot QA, sem ingestão nova nem validação externa. Não confundir dez partidas/20 clubes com vinte partidas históricas. Exemplo de dois gols deixado no Chelsea; agrupamento 2′/70′ e 46′/67′. Requisições de detalhe 200. Mobile e destinos ClubHub ainda pendentes.
+
+- Agrupamento aprovado: uma linha por playerId, bolinha por gol e todos os minutos; homônimos não são unidos. Lista com altura limitada/rolagem interna preserva moldura (SUPERSEDED expansão do frame abaixo). 3 testes do seletor/agrupamento PASS, incluindo sete gols, anulação, IDs e minutos; ESLint e diff check PASS. Candidata reiniciada na porta 3100 após preflight QA PASS; Safari normal preservou sessão. Exemplo conferido do snapshot QA: Chelsea × Bournemouth 5–1, João Pedro 46′/67′ e Jordan Henderson 2′/70′ com duas bolinhas cada. Sem afirmar veracidade externa além do snapshot QA. Compactação do espaçamento permite três autores no espaço reservado; revisão visual final em curso. Nenhuma publicação.
+
+- Lista de gols implementada (substitui pendência de implementação abaixo): eventos canônicos da partida selecionada alimentam duas colunas sob seus clubes, com ⚽, autor, tipo de gol traduzido e minuto/acréscimos; sem assistência no hero. Sem limite de cinco, altura mínima preserva frame e conteúdo pode ampliar a base. Eventos de outra partida, anulados e pênaltis perdidos excluídos; IDs duplicados não repetem gol. Reutiliza atualização de detalhes existente, sem consultas extras ao provedor. Safari confirmou quatro gols no Aston Villa × Brentford. 34 testes PASS, ESLint direto PASS, diff check PASS. pnpm exec tentou instalação automática e falhou EPERM; usado ESLint já instalado sem instalar dependências. Auditoria dos demais jogos e mobile em andamento; sem deploy.
+
+- Correção de aceitação: SUPERSEDED o padding inferior reduzido da rodada anterior, que encolheu indevidamente o frame. Restaurado o espaço vertical original transferindo o recuo superior para a base (inclui compensação da margem dos escudos); conteúdo segue no topo. Fumê reajustado para opacidade intermediária .58 nos links/.52 na data. Safari desktop confirmou frame alto novamente e espaço sob cada clube destinado a minutos/autores dos gols. Lista de gols ainda pendente; diff check PASS, sem deploy.
+
+- Refinamento local por voz: conteúdo do hero ancorado no topo, padding superior 16px (12px no breakpoint pequeno), distância até escudos reduzida. Fumê dos links de escalação e data translúcido para revelar torcida, com sombra de texto para leitura. Safari desktop real mostrou mudança aplicada por hot reload; 33 testes focados e diff check PASS. Mobile, destinos ClubHub e faixa de gols seguem pendentes; sem build/deploy. Rollback desta fatia: reverter somente os ajustes CSS de alinhamento, padding e transparência, preservando WIP anterior.
+
+- Nova disposição aprovada: links com nome do clube e data/horário movidos ao topo interno da moldura, antes de escudos/placar. Safari desktop confirmou ambos os nomes nos botões, data centralizada e status final sob os números. Área inferior liberada para futura apresentação de gols/minuto/autor; essa faixa de gols NÃO foi implementada neste ajuste. Click-through e mobile continuam pendentes.
+
+- Ajuste adicional autorizado: status final centralizado sob os números, com traço de 22px, removido de baixo da data. Inspeção real no Safari confirmou “ENCERRADO” sob 2–2 no Aston Villa × Brentford; escudos e botões preservados. Novo teste de contrato cobre posição e ausência da duplicação; landscape e deploy continuam pendentes.
+
+- Evidência posterior no Safari: Aston Villa × Brentford 2–2 carregado, ambos os links “Escalação da partida” visíveis abaixo dos clubes e AX com destinos ClubHub de Aston Villa/Brentford, ambos com fixtureId 19722152. Corrigida a disponibilidade histórica: a teamsheet persistida verificada basta; timestamp de publicação ausente não deve esconder escalação existente. 32 testes repetidos PASS. Click-through e mobile ainda NÃO validados: disco caiu a 3,6 GiB; novas compilações suspensas por capacidade. Não houve deploy.
+
+- Regra final do proprietário: links dos dois clubes abaixo dos escudos; “Escalação oficial” antes/durante e “Escalação da partida” após o jogo, nos oito catálogos. Regras anteriores de ocultação ao iniciar foram SUPERSEDED.
+- Implementado no código: links condicionados à escalação verificada de cada equipe, levando ao ClubHub com `fixtureId` e âncora da escalação. O leitor do ClubHub seleciona somente confronto pertencente ao clube; não substitui por outro jogo se a referência não existir. Nenhuma ingestão ou escrita de dados.
+- 32 testes focados PASS; ESLint sem erros (warning preexistente ClubHubHeroNextMatch); diff check PASS. Revisão React aplicada: estado derivado, links nativos, componentes e fonte persistida existentes.
+- Candidata reaberta em localhost:3100; preflight de persona QA PASS. Safari ainda carregando /live; NÃO há PASS visual, de clique, histórico, mobile, TypeScript completo, build ou deploy desta alteração.
+- Disco: 7,7 GiB ao reiniciar, 5,8 GiB durante compilação inicial. Nenhum build de produção disparado. Production NOT TOUCHED.
+
+Live, refinamento por voz 24/10: nome antes dos gols, minuto acima de cada bola com gap3px, bolas10px/minutos8px, nome preservado12px e deslocado3px para baixo. Lista compacta240px, bolas próximas ao nome. Regra final solicitada: até5 autores por clube por coluna, sexto inicia coluna lateral de5 linhas dentro da moldura fixa; largura insuficiente permite rolagem horizontal. Safari local conferido em Chelsea5–1Bournemouth (autores repetidos) e Coventry4–1Newcastle (4 autores na mesma coluna após revisão final; cenário de6 ainda não renderizado). São dados persistidos de QA, não verificação independente da partida real. Topo com links menores e data/hora no mesmo pill fino; fundo escurecido6p.p.; faixa superior reserva74px para preservar altura da moldura. Usuário aprovou visual desktop por voz e pediu retorno ao ClubOwner.3testes de dadosPASS, ESLint componentePASS, diff-checkPASS. Mobile/nomes extremos e destino ClubHub ainda pendentes; nenhum deploy/mutação de dados.
+
+Navegação: proprietário determinou menu global idêntico em aparelhos. CSS mantém sequência visível também mobile; Header usa Sair somente com contexto account e sem duplicação; ClubOwner/ClubHub têm rótulos estáveis sem badge contextual na fileira. Destinos/admin preservados.10focaisPASS; matriz visual global ainda aberta, não declarar conclusão do pedido em todo o site.
+
+Reservas: espaçamento compartilhado4px→4.4px (+10%), mesmas medidas nas duas fileiras, tamanho dos cards preservado.4testes focadosPASS e diff-checkPASS. Local apenas.
+
+Refinamento posterior do proprietário: ENTRA esquerda / SAI direita; nomes e setas verde/vermelha no centro de três colunas, sem legendas acima dos cards. Área técnica com linhas flex centradas e treinador30%maior.5testes focados PASS; sem mutação de elenco. Inspeção final desses refinamentos pendente: usuário navegava no Safari, ações interrompidas pela proteção de concorrência; não forçar nem declarar novo aceite visual.
+
+DAILY UI: entrada Fora da partida agora usa ClubOwnerSquadSwapDialog, compartilhado com titulares/reservas, em vez do seletor textual legado. Revisão exibe dois cards canônicos SAI/ENTRA; fluid cards não ampliam moldura compacta119px e comparação reserva folga igual para prêmios. Textos de substituição refinados nos oito idiomas. Safari real: Cole Palmer → seleção Rayan Cherki → revisão com dois cards, bordas nítidas e alinhadas após remount. Nenhum clique Confirmar/mutação realizado.13testes focados PASS, TypeScript PASS, lint escopado0, diff-checkPASS. Verificação mobile final, persistência da operação e publicação ainda pendentes; sem build completo/deploy/Produção. Screenshot na pasta de visualizações da conversa; relatório no MOBILE_REPAIR_PLAN_20261023.md da auditoria mestre.

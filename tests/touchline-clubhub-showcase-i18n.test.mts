@@ -271,7 +271,7 @@ test("real JSX renders promotion and position evidence with synthetic records on
   }
 });
 
-test("showcase JSX, tier styling and evidence logic retain the admitted preimage except approved locale, value, pending-state and live-publication changes", () => {
+test("showcase JSX, tier styling and evidence logic retain the admitted preimage except approved locale, value, pending-state, live-publication and full-size frame changes", () => {
   const expected: Record<string, string> = { tierStyle: "9a8dfb2be2686c166f3cf1b0016a95addb3b8fd40434a314f11e2e26c314a8eb", coachEvidenceLabel: "dfadad058ffafad7a157dc1a1600e7b7a35cc408013cd3d5bb84ec5584478d4f" };
   for (const node of ast.statements) if (ts.isFunctionDeclaration(node)) {
     if (node.name?.text === "TouchlineCoachCategoryShowcase") {
@@ -284,6 +284,7 @@ test("showcase JSX, tier styling and evidence logic retain the admitted preimage
         ['<TouchlineEliteExactCard draftLocalesEnabled={draftLocalesEnabled}', '<TouchlineEliteExactCard', 1],
         ['<TouchlineCoachCardZoom draftLocalesEnabled={draftLocalesEnabled}', '<TouchlineCoachCardZoom', 1],
         ['hideMarketValuePanel={false}', 'hideMarketValuePanel', 1],
+        ['                        // The responsive gallery can grow beyond thumbnail\n                        // dimensions, so retain the full-size card template.\n                        optimizeForLiveCompact={false}', '                        optimizeForLiveCompact', 1],
         ['                        liveCompetitionUpdates\n', '                        publishedTouchlinePoints={competition?.totalTouchlinePoints ?? null}\n                        showLeadershipCrown={competition?.rank === 1}\n', 1],
       ] as const) {
         assert.equal(preimage.split(added).length - 1, count, `exact authorized delta: ${added}`);

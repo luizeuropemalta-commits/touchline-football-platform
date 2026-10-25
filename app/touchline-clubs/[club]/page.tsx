@@ -9,7 +9,7 @@ import { hasTouchLineArenaAccess } from "@/lib/touchlineArena/auth-access";
 import { getTouchlineClubHubProfileCopy, touchlineClubHubText } from "@/lib/touchlineArena/club-hub-profile-i18n";
 import { getTouchlineExactCardCopy } from "@/lib/touchlineArena/exact-card-i18n";
 import { getTouchlineClubHubSectionNavigationCopy } from "@/lib/touchlineArena/club-hub-section-navigation-i18n";
-import { Suspense, type CSSProperties } from "react";
+import { Suspense, type CSSProperties, type ReactNode } from "react";
 import Image from "next/image";
 import ClubTrophyCarousel from "@/components/touchline/ClubTrophyCarousel";
 import ClubHubMatchdayTechnicalArea from "@/components/touchline/ClubHubMatchdayTechnicalArea";
@@ -24,6 +24,9 @@ import ClubHubPositionLeaders from "@/components/touchline/ClubHubPositionLeader
 import ClubHubNextFixtureCard from "@/components/touchline/club-hub/ClubHubNextFixtureCard";
 import ClubHubSectionNavigation from "@/components/touchline/club-hub/ClubHubSectionNavigation";
 import ClubHubFixtureStrip from "@/components/touchline/ClubHubFixtureStrip";
+import fixtureStripStyles from "@/components/touchline/ClubHubFixtureStrip.module.css";
+import { getTouchlineMatchCentreCopy } from "@/lib/touchlineArena/match-centre-i18n";
+import { readPersistedLiveRailWithin, type PersistedLiveRail } from "@/lib/touchlineArena/persisted-live-rail-server";
 import ClubHubOfficialChannel from "@/components/touchline/ClubHubOfficialChannel";
 import { getTouchlineOfficialClubChannels, type TouchlineClubOfficialChannels } from "@/lib/touchlineArena/club-official-channels";
 import officialLeagueStyles from "@/components/touchline/club-hub/ClubHubOfficialLeague.module.css";
@@ -42,10 +45,11 @@ import {
   readPersistedSquadSnapshot,
   type PersistedSquadPlayer,
 } from "@/lib/football-data/squad-snapshot-store";
-import { readPublicFantasyFixtureSnapshots } from "@/lib/football-data/public-fantasy-snapshot";
+import { readPersistedFantasyFixtureFeedResult, readPublicFantasyFixtureSnapshots } from "@/lib/football-data/public-fantasy-snapshot";
 import { readPublicFantasyFixtureMatchDetail } from "@/lib/football-data/public-fixture-match-detail-server";
 import { toPublicFantasyFixtureFeed, type TouchlinePublicFixturePlayerStatistics } from "@/lib/football-data/public-fantasy-fixture";
-import { readPublicCompetitionFixtures } from "@/lib/football-data/fixture-schedule-store";
+import { readPublicCompetitionFixtureByProviderId, readPublicCompetitionFixtures } from "@/lib/football-data/fixture-schedule-store";
+import { parseClubHubFixtureQuery, readClubHubRequestedFixture, selectClubHubRequestedFormation } from "@/lib/touchlineArena/club-hub-requested-fixture";
 import { loadTouchlineOfficialLeagueTable } from "@/lib/football-data/official-league-table-server";
 import { selectPublicClubFixture } from "@/lib/football-data/public-fixture-selection";
 import { buildTouchLineClubMatchdayPresentation } from "@/lib/touchlineArena/club-lineup";
@@ -96,6 +100,7 @@ type ClubHubPageProps = {
   }>;
   searchParams: Promise<{
     lang?: string;
+    fixtureId?: string | string[];
   }>;
 };
 
@@ -304,6 +309,7 @@ async function loadClubMatchSnapshot(
   locale: TouchLineLocale,
   dataSource: ReturnType<typeof resolveTouchlineClubHubDataSource>,
   mirrorResultPromise: Promise<TouchlineQaClubHubMirrorReadResult> | null, draftLocalesEnabled = false,
+  requestedFixtureId?: string,
 ): Promise<ClubMatchSnapshot> {
   const empty = {
     preview: fallbackClubMatch(club, locale, draftLocalesEnabled),
@@ -320,6 +326,7 @@ async function loadClubMatchSnapshot(
   };
 
   if (dataSource !== "direct") {
+    if (requestedFixtureId) return empty;
     const mirrorResult = mirrorResultPromise ? await mirrorResultPromise : null;
     if (mirrorResult?.state !== "ready") return empty;
     const fixture = mirrorDtoToPublicFixture(mirrorResult.data);
@@ -347,16 +354,24 @@ async function loadClubMatchSnapshot(
   }
 
   try {
-    const [persistedFeeds, scheduledFixtures] = await Promise.all([
-      readPublicFantasyFixtureSnapshots(),
-      readPublicCompetitionFixtures(),
-    ]);
+    const { persistedFeeds, scheduledFixtures } = requestedFixtureId
+      ? await readClubHubRequestedFixture(requestedFixtureId, (candidate) => [candidate.homeTeam?.providerId, candidate.awayTeam?.providerId].includes(club.teamId), {
+        readFeed: readPersistedFantasyFixtureFeedResult,
+        readFixture: readPublicCompetitionFixtureByProviderId,
+      })
+      : await Promise.all([readPublicFantasyFixtureSnapshots(), readPublicCompetitionFixtures()])
+        .then(([persistedFeeds, scheduledFixtures]) => ({ persistedFeeds, scheduledFixtures }));
     const persistedFixtures = persistedFeeds.map((feed) => feed.fixture);
-    const fixture = selectPublicClubFixture(
+    const requestedFixture = requestedFixtureId
+      ? [...persistedFixtures, ...scheduledFixtures].find((candidate) => candidate.providerId === requestedFixtureId && fixtureHasClub(candidate, club))
+      : null;
+    // An explicit historical link must never silently fall back to another game.
+    if (requestedFixtureId && !requestedFixture) return empty;
+    const fixture = requestedFixture ?? selectPublicClubFixture(
       [...persistedFixtures, ...scheduledFixtures],
       (candidate) => fixtureHasClub(candidate, club),
     );
-    const scoringFixture = selectPublicClubScoringFixture(persistedFixtures, (candidate) => fixtureHasClub(candidate, club));
+    const scoringFixture = requestedFixture ?? selectPublicClubScoringFixture(persistedFixtures, (candidate) => fixtureHasClub(candidate, club));
     const previewFixture = fixture ?? scoringFixture;
     if (!previewFixture) return empty;
     // The upcoming fixture owns its official matchday sheet. Scoring can
@@ -368,7 +383,9 @@ async function loadClubMatchSnapshot(
     const matchDetail = publicFeed && scoringFixture?.providerId
       ? await readPublicFantasyFixtureMatchDetail(scoringFixture.providerId, publicFeed)
       : null;
-    const formation = matchdayFeed?.formations.find((item) => feedTeamBelongsToClub(item.teamId, item.teamName, club))?.formation ?? null;
+    const formation = requestedFixtureId
+      ? selectClubHubRequestedFormation(matchdayFeed?.formations ?? [], requestedFixtureId, club.teamId)
+      : matchdayFeed?.formations.find((item) => feedTeamBelongsToClub(item.teamId, item.teamName, club))?.formation ?? null;
     return {
       preview: {
         home: resolveTouchlineClubMatchPreviewTeam(previewFixture.homeTeam, club, locale, draftLocalesEnabled),
@@ -382,7 +399,7 @@ async function loadClubMatchSnapshot(
       previewFixtureId: previewFixture.providerId,
       fixtureId: matchdayFeed?.fixture.providerId ?? null,
       lineups: matchdayFeed?.lineups ?? [],
-      lastCompletedXi: selectTouchlineLastCompletedXi(persistedFeeds, club.teamId, fixture?.startsAt ?? null),
+      lastCompletedXi: requestedFixtureId ? null : selectTouchlineLastCompletedXi(persistedFeeds, club.teamId, fixture?.startsAt ?? null),
       sidelined: matchdayFeed?.sidelined ?? [],
       formation,
       coach: null,
@@ -463,14 +480,15 @@ async function loadClubHubViewerAccess(
   ]);
 }
 
-async function ClubHubBrandHeader({ locale, href, viewerAccessPromise, draftLocalesEnabled = false }: {
+async function ClubHubBrandHeader({ locale, href, viewerAccessPromise, navigation, draftLocalesEnabled = false }: {
   locale: TouchLineLocale;
   href: string;
   viewerAccessPromise: Promise<ClubHubViewerAccess>;
+  navigation: ReactNode;
   draftLocalesEnabled?: boolean;
 }) {
   const viewer = await viewerAccessPromise;
-  return <TouchlineBrandHeader draftLocalesEnabled={draftLocalesEnabled} href={href} locale={locale} accountLocaleContext={viewer.accountLocaleContext} />;
+  return <TouchlineBrandHeader draftLocalesEnabled={draftLocalesEnabled} href={href} locale={locale} accountLocaleContext={viewer.accountLocaleContext} navigation={navigation} />;
 }
 
 async function loadClubHubPresentation(
@@ -937,10 +955,12 @@ export default async function ClubHubPage(props: ClubHubPageProps) {
 }
 
 async function renderClubHubPage({ params, searchParams }: ClubHubPageProps, draftLocalesEnabled = false) {
-  const [{ club: clubParam }, { lang }] = await Promise.all([params, searchParams]);
+  const [{ club: clubParam }, { lang, fixtureId }] = await Promise.all([params, searchParams]);
+  const fixtureQuery = parseClubHubFixtureQuery(fixtureId);
+  if (fixtureQuery.state === "invalid") notFound();
+  const requestedFixtureId = fixtureQuery.state === "requested" ? fixtureQuery.fixtureId : undefined;
   const locale = resolveTouchlineCatalogueLocale(lang, draftLocalesEnabled);
   const copy = getTouchlineClubHubProfileCopy(locale, draftLocalesEnabled);
-  const copyrightYear = new Date().getUTCFullYear();
   const t = (key: TouchLineTranslationKey) => touchlineClubHubText(locale, key, draftLocalesEnabled);
   const cardLabels = {
     nationality: t("nationalityShort"),
@@ -955,12 +975,18 @@ async function renderClubHubPage({ params, searchParams }: ClubHubPageProps, dra
 
   const clubHonours = loadClubTrophyAssets(club);
   const dataSource = resolveTouchlineClubHubDataSource();
+  // Start alongside the independent club reads, and stream this rail behind
+  // its own boundary. Mirror mode must never acquire a direct database read.
+  const liveRailPromise = dataSource === "direct"
+    ? readPersistedLiveRailWithin()
+    : Promise.resolve(null);
+  const liveRailNow = Date.now();
   const mirrorResultPromise = dataSource === "direct" ? null : loadTouchlineQaClubHubMirror(club.teamId);
   const homeStadium = resolveTouchlineClubHomeStadium(club.teamId);
   const matchSnapshotPromise = traceClubHubLoader(
     club.slug,
     "match-snapshot",
-    () => loadClubMatchSnapshot(club, locale, dataSource, mirrorResultPromise, draftLocalesEnabled),
+    () => loadClubMatchSnapshot(club, locale, dataSource, mirrorResultPromise, draftLocalesEnabled, requestedFixtureId),
   );
   const presentationPromise = loadClubHubPresentation(club, locale, dataSource, matchSnapshotPromise, draftLocalesEnabled);
   const viewerAccessPromise = loadClubHubViewerAccess(club.slug, dataSource);
@@ -969,26 +995,26 @@ async function renderClubHubPage({ params, searchParams }: ClubHubPageProps, dra
     "league-table",
     () => loadClubHubLeagueTable(club, dataSource, mirrorResultPromise),
   );
+  const navigation = <TouchlineGlobalNavigation draftLocalesEnabled={draftLocalesEnabled}
+    locale={locale}
+    currentRoute="clubProfile"
+    surface="public"
+    showAudioControl={false}
+    trustedContext={{
+      club: {
+        teamId: club.teamId,
+        slug: club.slug,
+        name: club.name,
+      },
+    }}
+  />;
   return (
     <main dir="ltr" className="club-hub" style={{ "--club-accent": club.accent, "--club-secondary": club.secondaryAccent, "--clubhub-accent": club.accent } as CSSProperties}>
-      <Suspense fallback={<TouchlineBrandHeader draftLocalesEnabled={draftLocalesEnabled} href={`/touchline-clubs/${club.slug}?lang=${encodeURIComponent(locale)}`} locale={locale} accountLocaleContext={{ mode: "unavailable" }} />}>
-        <ClubHubBrandHeader draftLocalesEnabled={draftLocalesEnabled} href={`/touchline-clubs/${club.slug}?lang=${encodeURIComponent(locale)}`} locale={locale} viewerAccessPromise={viewerAccessPromise} />
+      <Suspense fallback={<TouchlineBrandHeader draftLocalesEnabled={draftLocalesEnabled} href={`/touchline-clubs/${club.slug}?lang=${encodeURIComponent(locale)}`} locale={locale} accountLocaleContext={{ mode: "unavailable" }} navigation={navigation} />}>
+        <ClubHubBrandHeader draftLocalesEnabled={draftLocalesEnabled} href={`/touchline-clubs/${club.slug}?lang=${encodeURIComponent(locale)}`} locale={locale} viewerAccessPromise={viewerAccessPromise} navigation={navigation} />
       </Suspense>
       <div className="club-hub-content">
       <span id="club-hub-top" className="club-hub-top-anchor" aria-hidden="true" />
-      <TouchlineGlobalNavigation draftLocalesEnabled={draftLocalesEnabled}
-        locale={locale}
-        currentRoute="clubProfile"
-        surface="public"
-        showAudioControl={false}
-        trustedContext={{
-          club: {
-            teamId: club.teamId,
-            slug: club.slug,
-            name: club.name,
-          },
-        }}
-      />
       <section className="club-hub-shell">
         <header className="club-hub-hero" data-touchline-decoration-motion="club-cover">
           <svg className="club-hub-neon-frame" aria-hidden="true" focusable="false">
@@ -1047,7 +1073,9 @@ async function renderClubHubPage({ params, searchParams }: ClubHubPageProps, dra
           </div>
         </header>
         <ClubHubSectionNavigation draftLocalesEnabled={draftLocalesEnabled} locale={locale} />
-        <ClubHubFixtureStrip draftLocalesEnabled={draftLocalesEnabled} locale={locale} />
+        <Suspense fallback={<section className={fixtureStripStyles.strip} aria-busy="true" role="status"><p className={fixtureStripStyles.empty}>{getTouchlineMatchCentreCopy(locale, draftLocalesEnabled).liveDataUpdating}</p></section>}>
+          <ClubHubPersistedLiveRail draftLocalesEnabled={draftLocalesEnabled} locale={locale} snapshotPromise={liveRailPromise} initialNow={liveRailNow} />
+        </Suspense>
 
         <div className="club-hub-chapter club-hub-matchday-chapter">
           <ClubHubChapterMarker
@@ -1099,11 +1127,6 @@ async function renderClubHubPage({ params, searchParams }: ClubHubPageProps, dra
             </Suspense>
           </div>
         </div>
-
-        <footer className="club-hub-footer">
-          <span>© {copyrightYear} TouchLine</span>
-          <span>{copy.rights}</span>
-        </footer>
 
       </section>
 
@@ -2226,4 +2249,15 @@ async function renderClubHubPage({ params, searchParams }: ClubHubPageProps, dra
       `}</style>
     </main>
   );
+}
+
+async function ClubHubPersistedLiveRail({ snapshotPromise, locale, initialNow, draftLocalesEnabled = false }: {
+  snapshotPromise: Promise<PersistedLiveRail | null>;
+  initialNow: number;
+  locale: TouchLineLocale;
+  draftLocalesEnabled?: boolean;
+}) {
+  const snapshot = await snapshotPromise;
+  return <ClubHubFixtureStrip draftLocalesEnabled={draftLocalesEnabled} locale={locale}
+    initialFixtures={snapshot?.fixtures ?? null} initialMetadata={snapshot?.metadata ?? null} initialNow={initialNow} />;
 }

@@ -4,6 +4,13 @@
   grid-template-columns: repeat(auto-fill, minmax(218px, 1fr));
   gap: 14px;
   padding-top: 22px;
+  /* Scrollports clip both axes: reserve edge/focus and lower shadow clearance. */
+  padding-inline: 8px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  padding-bottom: 32px;
+  scroll-padding-inline: 8px;
 }
 .controls {
   display: flex;
@@ -20,6 +27,7 @@
   font-weight: 850;
 }
 .controls button {
+  flex-shrink: 0;
   min-height: 44px;
   border: 1px solid rgba(181,255,75,.48);
   border-radius: 999px;
@@ -122,9 +130,9 @@
 
 /* The card tier, not its club, owns this frame's colour. */
 @media (max-width: 720px) {
-  .grid { grid-template-columns: 1fr; gap: 12px; }
-  .controls { align-items: stretch; flex-direction: column; }
-  .artwork { width: min(100%, 190px) !important; }
+  /* Keep a desktop-style row; readable original cards scroll horizontally. */
+  .grid { grid-template-columns: repeat(4, minmax(218px, 1fr)); }
+  .controls { min-width: 0; overflow-x: auto; overscroll-behavior-x: contain; }
 }
 
 .frame:global(.club-hub-card)::before {

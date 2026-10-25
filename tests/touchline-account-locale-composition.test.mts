@@ -42,7 +42,7 @@ test('account locale controller composes with actual route and revision SQL with
     let writes = 0;
     let loseResponse = false;
     const sdk = {
-      auth: { getUser: async () => ({ data: { user: { id: owner } } }) },
+      auth: { getUser: async () => ({ data: { user: { id: owner } }, error: null }) },
       from(table: string) {
         assert.equal(table, 'notification_preferences');
         const query = {
@@ -51,6 +51,7 @@ test('account locale controller composes with actual route and revision SQL with
             return query;
           },
           eq(key: string, value: string) { assert.equal(key, 'user_id'); assert.equal(value, owner); return query; },
+          abortSignal(signal: AbortSignal) { assert.equal(signal.aborted, false); return query; },
           async maybeSingle() {
             const rows = (await db.query(`select settings,channels,frequency,quiet_hours,explicit_consent_at,
               updated_at,game_locale,game_locale_revision::text from public.notification_preferences where user_id=$1`, [owner])).rows;
@@ -78,7 +79,7 @@ test('account locale controller composes with actual route and revision SQL with
     const route = runInNewContext(ts.transpileModule(`${routeSource}\n({GET,PUT})`, {
       compilerOptions: { target: ts.ScriptTarget.ES2022 },
     }).outputText, {
-      createClient: async () => sdk, hasTouchLineArenaAccess: () => true, URL,
+      createClient: async () => sdk, hasTouchLineArenaAccess: () => true, URL, AbortController, setTimeout, clearTimeout,
       NextResponse: { json: (body: unknown, init: ResponseInit = {}) => new Response(JSON.stringify(body), {
         ...init, headers: { ...init.headers, 'content-type': 'application/json' },
       }) },

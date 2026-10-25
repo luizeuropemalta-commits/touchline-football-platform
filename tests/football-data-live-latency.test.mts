@@ -17,7 +17,7 @@ import type { TouchlineFixture } from "../lib/football-data/types.ts";
 const liveScoresRouteSource = readFileSync(
   new URL("../app/api/football-data/fantasy/livescores/route.ts", import.meta.url),
   "utf8",
-);
+) + readFileSync(new URL("../lib/touchlineArena/persisted-live-rail-server.ts", import.meta.url), "utf8");
 const premierSquadReaderSource = readFileSync(
   new URL("../lib/football-data/public-premier-squad-server.ts", import.meta.url),
   "utf8",

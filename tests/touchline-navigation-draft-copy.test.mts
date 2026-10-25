@@ -27,11 +27,18 @@ test("navigation copy opt-in selects authored languages without releasing public
   }
 });
 
-function renderNavigation(locale: string, draftLocalesEnabled?: boolean) {
+function renderNavigation(locale: string, draftLocalesEnabled?: boolean, {
+  currentRoute = "market", surface = "authenticated", moreLabel,
+}: { currentRoute?: navigation.TouchlineGlobalNavigationRoute; surface?: navigation.TouchlineGlobalNavigationSurface; moreLabel?: string } = {}) {
   const audio: Array<{ locale: string; allowDraftLocale?: boolean }> = [];
   const modules: Record<string, unknown> = {
     "@/lib/touchlineArena/global-navigation": navigation,
-    "@/lib/touchlineArena/navigation-i18n": copy,
+    "@/lib/touchlineArena/navigation-i18n": moreLabel === undefined ? copy : {
+      ...copy,
+      getTouchlineNavigationCopy: (locale?: string | null, enabled = false) => ({
+        ...copy.getTouchlineNavigationCopy(locale, enabled), more: moreLabel,
+      }),
+    },
     "@/lib/touchlineArena/catalogue-locale": catalogueLocale,
     "@/lib/touchlineArena/root-locale": rootLocale,
     "next/link": { default: ({ children, ...props }: { children: ReactNode }) => createElement("a", props, children) },
@@ -50,9 +57,35 @@ function renderNavigation(locale: string, draftLocalesEnabled?: boolean) {
     throw Error(`Unexpected navigation dependency: ${name}`);
   } });
   assert.ok(exports.default);
-  const html = renderToStaticMarkup(exports.default({ locale, draftLocalesEnabled, currentRoute: "market", surface: "authenticated", trustedContext: { club: { teamId: "official-id", slug: "official-club", name: "Official $& Club" } } }));
+  const html = renderToStaticMarkup(exports.default({ locale, draftLocalesEnabled, currentRoute, surface, trustedContext: { club: { teamId: "official-id", slug: "official-club", name: "Official $& Club" } } }));
   return { html, audio, hrefs: Array.from(html.matchAll(/href="([^"]+)"/g), match => match[1]) };
 }
+
+test("primary ClubOwner link announces current page only for authenticated market in all eight locales", () => {
+  const cases = [
+    { surface: "authenticated", currentRoute: "market", current: true },
+    { surface: "public", currentRoute: "market", current: false },
+    { surface: "auth", currentRoute: "market", current: false },
+    { surface: "authenticated", currentRoute: "live", current: false },
+    { surface: "authenticated", currentRoute: "clubProfile", current: false },
+    { surface: "authenticated", currentRoute: "rankings", current: false },
+    { surface: "authenticated", currentRoute: "inbox", current: false },
+  ] as const;
+  for (const locale of ["en-GB", "pt-BR", ...drafts]) for (const scenario of cases) {
+    const { html, hrefs } = renderNavigation(locale, true, scenario);
+    const primary = html.match(/<a\b[^>]*>/)?.[0];
+    assert.ok(primary, `${locale}/${scenario.surface}/${scenario.currentRoute}: primary link exists`);
+    assert.equal(primary.includes('aria-current="page"'), scenario.current);
+    if (!scenario.current) assert.doesNotMatch(primary, /aria-current=/);
+    const destination = scenario.surface === "public" ? "account" : scenario.surface === "auth" ? "admin" : "clubowner";
+    const language = scenario.surface === "auth" && locale !== "pt-BR" ? "en-GB" : locale;
+    assert.equal(hrefs[0], `/${destination}?lang=${language}`, "current-state semantics never change destination or locale");
+    assert.equal(hrefs.filter(href => href === hrefs[0]).length, 1, "primary destination stays unique");
+    if (scenario.currentRoute === "market") {
+      assert.equal((html.match(/aria-current="page"/g) ?? []).length, scenario.current ? 1 : 0);
+    }
+  }
+});
 
 test("actual navigation coordinates opted copy, audio and links while default URLs stay gated", () => {
   for (const locale of drafts) {
@@ -62,10 +95,13 @@ test("actual navigation coordinates opted copy, audio and links while default UR
     assert.deepEqual(renderNavigation(locale, false).hrefs, fallback.hrefs);
     assert.ok(fallback.hrefs.every(href => href.includes("lang=en-GB")));
     assert.deepEqual(opted.hrefs, fallback.hrefs.map(href => href.replace("lang=en-GB", `lang=${locale}`)));
-    for (const text of [dictionary.ariaLabel, dictionary.allClubs, dictionary.more, dictionary.opening]) {
+    // SUPERSEDED: the global row now names the generic ClubHub, not an
+    // all-clubs/contextual-club badge (CURRENT_STATE navigation decision).
+    for (const text of [dictionary.ariaLabel, dictionary.clubHub, dictionary.more, dictionary.opening]) {
       assert.ok(opted.html.includes(text), `${locale}: ${text}`);
     }
-    assert.ok(opted.html.includes("Official $&amp; Club"));
+    assert.doesNotMatch(opted.html, /Official \$&(?:amp;)? Club|official-club|official-id/);
+    assert.ok(opted.hrefs.includes(`/touchline-clubs?lang=${locale}`));
     assert.equal(opted.audio[0].locale, locale);
     assert.equal(opted.audio[0].allowDraftLocale, true);
     assert.equal(fallback.audio[0].locale, "en-GB");
@@ -74,4 +110,18 @@ test("actual navigation coordinates opted copy, audio and links while default UR
   for (const locale of ["en-GB", "pt-BR"]) {
     assert.equal(renderNavigation(locale, true).html, renderNavigation(locale).html);
   }
+});
+
+test("a retained navigation label escapes markup while preserving literal dollar-ampersand text", () => {
+  // Synthetic copy exercises the real summary span, not a retired contextual
+  // club badge. This does not modify a published catalogue or destination.
+  const label = 'More $& <img src=x onerror="unsafe()">';
+  const baseline = renderNavigation("pt-BR", true);
+  const rendered = renderNavigation("pt-BR", true, { moreLabel: label });
+  assert.ok(rendered.html.includes('<span>More $&amp; &lt;img src=x onerror=&quot;unsafe()&quot;&gt;</span>'));
+  assert.doesNotMatch(rendered.html, /<img\b|<script\b/);
+  assert.deepEqual(rendered.hrefs, baseline.hrefs);
+  // Each render uses a separate VM realm. Compare all enumerable props in
+  // host objects instead of treating distinct realm prototypes as a change.
+  assert.deepEqual(rendered.audio.map(props => ({ ...props })), baseline.audio.map(props => ({ ...props })));
 });

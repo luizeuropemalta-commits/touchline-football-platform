@@ -4,6 +4,9 @@ import { isTouchLineSiteLocalesEnabled } from "@/lib/touchlineArena/site-locales
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { TouchlineInboxList } from "@/components/touchline/TouchlineInboxList";
+import TouchlineNavigationRail from "@/components/touchline/TouchlineNavigationRail";
+import navigationStyles from "@/components/touchline/TouchlineGlobalNavigation.module.css";
+import styles from "./InboxContent.module.css";
 import {
   resolveTouchlineCentralInbox,
   type TouchlineCentralMessage,
@@ -139,5 +142,15 @@ async function renderTouchlineInboxPage({ searchParams }: InboxPageProps, draftL
       });
     }
   }
-  return <main dir={locale === "ar-SA" ? "rtl" : "ltr"} className="inbox"><header><span>TOUCHLINE CENTRAL</span><h1>{copy.title}</h1><p>{copy.subtitle}</p></header>{unavailable ? <section className="state"><h2>{copy.unavailable}</h2><p>{copy.unavailableCopy}</p></section> : items.length ? <TouchlineInboxList draftLocalesEnabled={draftLocalesEnabled} initialItems={items} locale={locale} labels={copy} /> : <section className="state"><h2>{copy.empty}</h2></section>}<Link className="back" href={`/clubowner?lang=${encodeURIComponent(locale)}`}>{locale === "ar-SA" ? "→" : "←"} {copy.back}</Link><style>{`.inbox{min-height:100%;max-width:980px;margin:auto;padding:28px;color:#efffd5}.inbox header span,.inbox li>div>span{color:#b5ff4b;font-size:10px;font-weight:900;letter-spacing:.12em}.inbox h1{margin:7px 0;font-size:clamp(32px,5vw,58px);letter-spacing:-.055em}.inbox header p,.inbox li p,.state p{color:#b8c9bc;line-height:1.55}.inbox ol{display:grid;gap:12px;padding:0;list-style:none}.inbox li,.state{display:flex;justify-content:space-between;gap:20px;border:1px solid rgba(181,255,75,.19);border-radius:20px;padding:20px;background:#07120e}.inbox li h2{margin:8px 0;font-size:21px}.inbox aside{display:grid;align-content:start;gap:8px;text-align:end}.inbox aside b{color:#b5ff4b;font-size:11px}.inbox aside small{color:#b8c9bc}.inbox a,.inbox button{color:#efffd5;font-weight:800}.inbox button{border:0;background:transparent;padding:0;text-decoration:underline;cursor:pointer}.back{display:inline-block;margin-top:24px}@media(max-width:620px){.inbox li{display:grid}.inbox aside{text-align:start}}`}</style></main>;
+  return <main dir={locale === "ar-SA" ? "rtl" : "ltr"} className={styles.inbox}>
+    <header><span>TOUCHLINE CENTRAL</span><h1>{copy.title}</h1><p>{copy.subtitle}</p></header>
+    {unavailable ? <section className={styles.state}><h2>{copy.unavailable}</h2><p>{copy.unavailableCopy}</p></section>
+      : items.length ? <TouchlineNavigationRail className={styles.listRail}>
+        <div className={styles.canvas}>
+          <TouchlineInboxList draftLocalesEnabled={draftLocalesEnabled} initialItems={items} locale={locale} labels={copy} />
+        </div>
+      </TouchlineNavigationRail>
+        : <section className={styles.state}><h2>{copy.empty}</h2></section>}
+    <Link className={`${navigationStyles.link} ${styles.back}`} href={`/clubowner?lang=${encodeURIComponent(locale)}`}>{locale === "ar-SA" ? "→" : "←"} {copy.back}</Link>
+  </main>;
 }

@@ -31,6 +31,10 @@ function evaluate<T>(source: string, dependencies: Record<string, unknown>, glob
     { exports, ...globals, require: (id: string) => { assert.ok(Object.hasOwn(dependencies, id), id); return dependencies[id]; } });
   return exports as T;
 }
+const notificationStyles = Object.fromEntries(["contentRail", "canvas", "stats", "panels", "categories", "quietHours", "scopePanel", "scopes", "saveRow"].map(key => [key, `notifications-${key}`]));
+const navigationRail = evaluate<{ default: React.ComponentType<{ className: string; children: React.ReactNode }> }>(
+  read("components/touchline/TouchlineNavigationRail.tsx"), { react: React, "react/jsx-runtime": nativeRequire("react/jsx-runtime") },
+);
 type CopyModule = { getTouchlineNotificationCentreCopy: (locale?: string | null, draft?: boolean) => Record<string, string>; formatTouchlineNotificationActiveCount: (count: number, locale?: string | null, draft?: boolean) => string; TOUCHLINE_NOTIFICATION_CENTRE_CATALOGUES: Record<string, Record<string, string>>; TOUCHLINE_NOTIFICATION_CENTRE_DRAFT_STATUS: string; TOUCHLINE_NOTIFICATION_CENTRE_DRAFT_LOCALES: readonly string[] };
 async function catalogue(): Promise<CopyModule> {
   return import("../lib/touchlineArena/notification-centre-i18n.ts");
@@ -58,6 +62,9 @@ function fixture(copy?: CopyModule, initialLocale = "en-GB", future = false, rel
   const mod = evaluate<{ default: () => Element; NotificationsContent: (props: { draftLocalesEnabled: boolean }) => React.ReactNode; validNotificationConsentTimestamp: (value: unknown) => boolean }>(read(path) + "\nexport { validNotificationConsentTimestamp, NotificationsContent };", {
     react: hooks, "react/jsx-runtime": nativeRequire("react/jsx-runtime"),
     "@/components/touchline/SiteLocaleReleaseContext": { useSiteLocaleRelease: () => policy.isTouchLineSiteLocalesEnabled() },
+    "@/components/touchline/TouchlineNavigationRail": navigationRail,
+    "@/components/touchline/TouchlineGlobalNavigation.module.css": { __esModule: true, default: { link: "canonical-link" } },
+    "./NotificationsContent.module.css": { __esModule: true, default: notificationStyles },
     "next/navigation": { useSearchParams: () => new URLSearchParams({ lang: locale }) },
     "lucide-react": { Bell: Icon, CheckCircle2: Icon, Clock3: Icon, Mail: Icon, Radio: Icon, Save: Icon, ShieldCheck: Icon, Smartphone: Icon },
     "@/lib/touchlineArena/auth-i18n": { normalizeTouchLineAuthLocale },
@@ -191,6 +198,32 @@ test("domain defaults, API handlers and key order remain intact outside the expl
   assert.deepEqual([...source.matchAll(/key: "(playerRumours|availability|confirmedLineup|goalsAndEvents|selectedLiveMatches|leagueLeadership|transfersAndOffers|creditsPromotionsRewards|accountSecurity|generalComms)"/g)].map(match => match[1]), categories);
   const defaults = source.slice(source.indexOf("const DEFAULT_PREFERENCES"), source.indexOf("const DEFAULT_PREFERENCES") + source.slice(source.indexOf("const DEFAULT_PREFERENCES")).indexOf("\n};") + 3);
   assert.equal(createHash("sha256").update(defaults).digest("hex"), "ff36a5aa7c92f7cd2ef8e3670a1322142800bef512abfb2f1d2b1198ed353827");
+});
+
+test("presentation keeps fixed desktop groups inside one real focus rail without changing preference requests", async () => {
+  const f = fixture(await catalogue(), "pt-BR");
+  const { html } = f.start();
+  assert.equal((html.match(/class="notifications-contentRail"/g) ?? []).length, 1);
+  assert.equal((html.match(/class="notifications-canvas"/g) ?? []).length, 1);
+  for (const key of ["stats", "panels", "categories", "quietHours", "scopePanel", "scopes", "saveRow"]) assert.ok(html.includes(`notifications-${key}`), key);
+  assert.equal(f.requests.length, 1);
+  assert.equal(f.requests[0].url, "/api/notifications/preferences");
+  assert.equal(f.requests[0].options.method ?? "GET", "GET");
+  assert.equal((html.match(/<button\b/g) ?? []).length, 1);
+  assert.match(html, /class="canonical-link disabled:cursor-not-allowed disabled:opacity-50"/);
+  assert.match(html, /Consultando registro/);
+  const css = read("app/(app)/notifications/NotificationsContent.module.css");
+  assert.match(css, /\.contentRail\s*\{[^}]*max-width:\s*100%;[^}]*overflow-x:\s*auto;/s);
+  assert.match(css, /\.canvas\s*\{[^}]*min-width:\s*960px;/s);
+  assert.match(css, /\.stats,\s*\.quietHours\s*\{\s*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/);
+  assert.match(css, /\.panels\s*\{\s*grid-template-columns:\s*minmax\(0, 1\.1fr\) minmax\(0, \.9fr\)/);
+  assert.match(css, /\.categories\s*\{\s*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/);
+  assert.match(css, /\.scopes\s*\{\s*grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\)/);
+  assert.match(css, /\.scopePanel\s*\{\s*grid-column:\s*1 \/ -1;/);
+  assert.match(css, /\.saveRow\s*\{\s*flex-wrap:\s*nowrap;/);
+  assert.doesNotMatch(css, /@media|zoom|transform|font-size/);
+  assert.doesNotMatch(read(path), /(?:sm|md|xl):(?:grid-cols|col-span|flex-row)|flex-col|text-\[(?:8|9|10)px\]|truncate/);
+  f.unmount();
 });
 
 test("exported notifications page forwards server context release without changing request or consent behavior", async () => {

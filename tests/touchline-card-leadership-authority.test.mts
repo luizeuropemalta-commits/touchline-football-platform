@@ -77,7 +77,7 @@ test("editor, audit, isolated and social-studio paths do not inherit public awar
 
 test("source contract guards loaders, seeds provider and reuses only the existing singleton feed", () => {
   const boundary = source("components/touchline/cards/TouchlineCardLeadershipBoundary.tsx");
-  assert.ok(boundary.indexOf("if (!enabled)") < boundary.indexOf("loadTouchLineActiveRanking()."));
+  assert.ok(boundary.indexOf("if (!enabled)") < boundary.indexOf("resolveServerReadWithin(loadTouchLineActiveRanking()"));
   assert.doesNotMatch(source("app/layout.tsx"), /TouchlineCardLeadershipBoundary/);
   assert.match(source("components/touchline/cards/TouchlineCardLeadershipLayout.tsx"), /enabled=\{!isIsolatedPreview && dataSource === "direct"\}/);
   for (const family of ["arena", "my-club", "clubowner", "touchline-clubs", "touchline-coaches"]) {

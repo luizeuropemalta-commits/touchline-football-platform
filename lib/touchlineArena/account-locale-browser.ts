@@ -2,7 +2,7 @@ import { createAccountLocaleHost } from "./account-locale-host.ts";
 
 type HostOptions = Parameters<typeof createAccountLocaleHost>[0];
 type Options = HostOptions & {
-  observeIdentity: (callback: (accountId: string | null) => void) => () => void;
+  observeIdentity: (callback: (accountId: string | null | undefined) => void) => () => void;
   onIdentityChange: () => void;
   timeoutMs?: number;
   setTimer?: (callback: () => void, delayMs: number) => unknown;
@@ -21,12 +21,16 @@ export function startAccountLocaleBrowser({ context, request, apply, restore, on
   clearTimer = handle => clearTimeout(handle as ReturnType<typeof setTimeout>),
 }: Options) {
   let stopped = false;
+  let invalidated = false;
   let identityChanged = false;
+  let identityUnknown = false;
+  let attemptedWrite = false;
   let unsubscribe: (() => void) | undefined;
   const cancellations = new Set<() => void>();
   const deadline = Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : 15_000;
 
   const boundedRequest: HostOptions["request"] = (input, init) => new Promise((resolve, reject) => {
+    if (init.method === "PUT") attemptedWrite = true;
     let finished = false;
     const transport = new AbortController();
     const finish = (error?: Error, response?: Response) => {
@@ -56,13 +60,18 @@ export function startAccountLocaleBrowser({ context, request, apply, restore, on
       }
     })();
   });
-  const host = createAccountLocaleHost({ context, request: boundedRequest, apply, onChange, draftLocalesEnabled,
-    restore: locale => { if (!stopped && !identityChanged) restore?.(locale); },
+  const newHost = () => createAccountLocaleHost({ context, request: boundedRequest, apply, onChange, draftLocalesEnabled,
+    restore: locale => { if (!stopped && !identityChanged && !identityUnknown) restore?.(locale); },
   });
+  let host = newHost();
   const expectedIdentity = context.mode === "account" ? context.accountId : null;
-  function invalidate() {
+  function fence() {
     host.invalidate();
     for (const cancel of cancellations) cancel();
+  }
+  function invalidate() {
+    invalidated = true;
+    fence();
   }
   function cleanup() {
     if (stopped) return;
@@ -75,7 +84,23 @@ export function startAccountLocaleBrowser({ context, request, apply, restore, on
   if (context.mode === "account" || context.mode === "guest") {
     try {
       unsubscribe = observeIdentity(identity => {
-        if (stopped || identityChanged || identity === expectedIdentity) return;
+        if (stopped || invalidated || identityChanged) return;
+        if (identity === undefined) {
+          identityUnknown = true;
+          fence();
+          return;
+        }
+        if (identity === expectedIdentity) {
+          // Only an independently resolved same-account identity can recover
+          // an unknown observation. Never replay or implicitly reconcile PUT.
+          if (identityUnknown && !attemptedWrite) {
+            identityUnknown = false;
+            host = newHost();
+            onChange(host.getState());
+            void host.load();
+          }
+          return;
+        }
         identityChanged = true;
         invalidate();
         onIdentityChange();
@@ -85,5 +110,6 @@ export function startAccountLocaleBrowser({ context, request, apply, restore, on
     }
   }
   void host.load();
-  return { ...host, invalidate, dispose: cleanup, cleanup };
+  return { getState: () => host.getState(), load: () => host.load(), select: (locale: unknown) => host.select(locale),
+    invalidate, dispose: cleanup, cleanup };
 }

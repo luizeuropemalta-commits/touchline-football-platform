@@ -6,6 +6,8 @@ import { Suspense } from "react";
 
 import DocumentLocaleSync from "@/components/touchline/DocumentLocaleSync";
 import TouchlineLandscapeBoundary from "@/components/touchline/TouchlineLandscapeBoundary";
+import TouchlineSiteFooter from "@/components/touchline/TouchlineSiteFooter";
+import TouchlinePageContent from "@/components/touchline/TouchlinePageContent";
 import TouchlineDecorationMotion from "@/components/touchline/TouchlineDecorationMotion";
 import { TouchlineActivityTracker } from "@/components/touchline-activity-tracker";
 import { TouchlineAmbientAudioProvider } from "@/components/auth-ambient-audio";
@@ -122,7 +124,8 @@ async function renderRootLayout({ children }: Readonly<{ children: React.ReactNo
         */}
         <TouchlineLandscapeBoundary skipLabel={skipLabel} locale={locale} draftLocalesEnabled={allowDraftPresentation}>
           <TouchlineAmbientAudioProvider enabled={!isIsolatedPreview}>
-            {children}
+            {isIsolatedPreview ? children : <TouchlinePageContent>{children}</TouchlinePageContent>}
+            {!isIsolatedPreview ? <TouchlineSiteFooter locale={locale} draftLocalesEnabled={allowDraftPresentation} instagramUrl={process.env.TOUCHLINE_OFFICIAL_INSTAGRAM} /> : null}
           </TouchlineAmbientAudioProvider>
         </TouchlineLandscapeBoundary>
         </SiteLocaleReleaseProvider>

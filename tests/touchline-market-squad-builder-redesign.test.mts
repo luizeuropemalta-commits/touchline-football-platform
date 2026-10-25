@@ -75,9 +75,19 @@ test("coach remains a dedicated entity outside every player slot", async () => {
   assert.match(coachCardStyles, /width: clamp\(9px, 16cqw, 28px\)/);
   const pitch = source.match(/<TouchlinePitchSurface className=\{styles\.myClubTacticalPitch\}[\s\S]*?<\/TouchlinePitchSurface>/)?.[0] ?? "";
   assert.match(pitch, /selectedCards\.map/);
-  // Coach now anchors to the pitch container but remains outside the grass;
-  // the rendered browser geometry test proves its bounds at every viewport.
-  assert.match(pitch, /data-arena-coach="true"/);
+  // The coach anchors in the Arena toolbar, outside the playable field. The
+  // rendered workflow test also proves this parentage in all eight locales.
+  const tree = ts.createSourceFile("FantasyGameweekClient.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  let toolbar: ts.JsxElement | undefined;
+  const findToolbar = (node: ts.Node) => {
+    if (ts.isJsxElement(node) && node.openingElement.attributes.properties.some(property =>
+      ts.isJsxAttribute(property) && property.name.text === "data-arena-toolbar" && property.initializer?.getText(tree) === '"true"')) toolbar = node;
+    ts.forEachChild(node, findToolbar);
+  };
+  findToolbar(tree);
+  assert.ok(toolbar, "Arena retains its dedicated control row");
+  assert.match(toolbar.getText(tree), /data-arena-coach="true"[\s\S]*?<FantasyCoachZoom entry=\{selectedCoach\}/);
+  assert.doesNotMatch(pitch, /data-arena-coach="true"|FantasyCoachZoom|TouchlineCoachCardZoom/);
   const playerSlots = pitch.slice(pitch.indexOf("selectedCards.map"));
   assert.doesNotMatch(playerSlots, /FantasyCoachZoom|TouchlineCoachCardZoom/);
   assert.match(source, /<FantasyCoachZoom entry=\{selectedCoach\}/);

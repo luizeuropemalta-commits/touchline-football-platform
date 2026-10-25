@@ -69,7 +69,7 @@ test("isolated Release review: original card, no-write cancel/Escape, focus and 
         const open = async () => {
           await trigger.click();
           await page.getByRole("button", {name:releaseLabel,exact:true}).click();
-          const dialog = page.getByRole("dialog", {name:`${releaseLabel} · Atleta Sintético de Validação`,exact:true});
+          const dialog = page.getByRole("dialog", {name:`${pt ? "Rescisão de contrato" : "Contract termination"} · Atleta Sintético de Validação`,exact:true});
           await expect(dialog).toBeVisible();
           await expect(dialog.getByRole("heading",{level:2})).toBeFocused();
           return dialog;
@@ -94,7 +94,7 @@ test("isolated Release review: original card, no-write cancel/Escape, focus and 
         });
         assert.ok(geometry.x>=0 && geometry.y>=0 && geometry.x+geometry.width<=scenario.width+1 && geometry.y+geometry.height<=scenario.height+1);
         assert.equal(geometry.overflow,false); assert.equal(geometry.initialScroll,0); assert.equal(geometry.rootInert,true);
-        assert.equal(geometry.columns.split(" ").length,scenario.width<=600 ? 1 : 2);
+        assert.equal(geometry.columns.split(" ").length,scenario.width<=600 && scenario.height>scenario.width ? 1 : 2);
         if (process.env.TOUCHLINE_RELEASE_CAPTURE_PREFIX) await page.screenshot({path:`${process.env.TOUCHLINE_RELEASE_CAPTURE_PREFIX}-${engineName}-${scenario.width}-${scenario.locale}-${scenario.available ? "ready" : "off"}-top.png`});
         await page.keyboard.press("Tab"); await expect(keep).toBeFocused(); await expect(keep).toBeInViewport({ ratio: 1 });
         await page.keyboard.press("Shift+Tab"); await expect(scenario.available ? confirm : keep).toBeFocused();

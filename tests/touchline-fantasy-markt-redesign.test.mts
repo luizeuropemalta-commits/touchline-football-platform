@@ -63,7 +63,7 @@ test("the My Club presentation keeps the guided coach-first Gameweek flow", asyn
   assert.match(client, /filteredCoaches\.map[\s\S]*?<CompactClubIdentity clubName=\{entry\.clubName\} clubLogoUrl=\{entry\.clubLogoUrl/);
   // Legacy browsing stays club-scoped; the funded collection can only display
   // its owned coach until an audited paid coach-change flow is available.
-  assert.match(client, /filteredCoaches = snapshot\.coaches\.filter\(\(entry\) => findTouchLineClub\(entry\.clubName\)\?\.teamId === selectedCoachClub\?\.teamId\s*&& \(!normalizedQuery \|\| `\$\{entry\.coach\.displayName\} \$\{entry\.clubName\}`\.toLowerCase\(\)\.includes\(normalizedQuery\)\)\s*&& \(!collectionEnabled \|\| !collection\.state \|\| entry\.id === collection\.state\.coach\.id\)\)/);
+  assert.match(client, /filteredCoaches = snapshot\.coaches\.filter\(\(entry\) => findTouchLineClub\(entry\.clubName\)\?\.teamId === selectedCoachClub\?\.teamId\s*&& \(!normalizedQuery \|\| `\$\{entry\.coach\.displayName\} \$\{entry\.clubName\}`\.toLowerCase\(\)\.includes\(normalizedQuery\)\)\s*(?:\/\/[^\n]*\n\s*)*&& \(!collectionEnabled \|\| !collection\.state \|\| entry\.id === collection\.state\.coach\?\.id\)\)/);
   assert.match(client, /builderCopy\.hireCoach/);
   assert.match(client, /entry\.competition\?\.home\.touchlinePoints[\s\S]*?entry\.competition\?\.away\.touchlinePoints/);
   assert.match(client, /<aside className=\{styles\.guidePanel\} ref=\{guidePanelRef\} data-guide-step=\{visibleStep\} tabIndex=\{0\}[^>]*onPointerDown=\{\(event\) => \{ if \(event\.target === event\.currentTarget\) event\.currentTarget\.focus\(\{ preventScroll: true \}\); \}\}/);

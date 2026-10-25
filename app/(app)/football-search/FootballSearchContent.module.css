@@ -1,0 +1,25 @@
+.headerRail {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-padding-inline: 8px;
+  padding: 8px;
+}
+
+.headerRow {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: max-content;
+  min-width: 100%;
+}
+
+.headerItem {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}

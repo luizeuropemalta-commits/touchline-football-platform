@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { resolveTouchlineCatalogueLocale } from "../lib/touchlineArena/catalogue-locale.ts";
 import { touchlineFixtureStatusLabel } from "../lib/touchlineArena/match-centre.ts";
 import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import test from "node:test";
 import { runInNewContext } from "node:vm";
 import React from "react";
@@ -12,6 +13,10 @@ import * as exact from "../lib/touchlineArena/exact-card-i18n.ts";
 import * as navigation from "../lib/touchlineArena/club-hub-section-navigation-i18n.ts";
 import { compareTouchlineRankingPlayers } from "../lib/touchlineArena/card-ranking.ts";
 import { projectClubPositionLeaders } from "../lib/touchlineArena/club-position-leaders.ts";
+import { parseClubHubFixtureQuery } from "../lib/touchlineArena/club-hub-requested-fixture.ts";
+import { getTouchlineMatchCentreCopy } from "../lib/touchlineArena/match-centre-i18n.ts";
+import { normalizeTouchLineAuthReturnTo, normalizeTouchLineLoginLocale } from "../lib/touchlineArena/auth-i18n.ts";
+import { resolveTouchLinePresentationLocale } from "../lib/touchlineArena/root-locale.ts";
 
 // Real server policy in an isolated environment; never inherit the host flag.
 const releaseEnv: Record<string, string | undefined> = {};
@@ -23,6 +28,34 @@ runInNewContext(ts.transpileModule(readFileSync(new URL("../lib/touchlineArena/s
 
 const load = () => import("../lib/touchlineArena/club-hub-profile-i18n.ts");
 const locales = ["en-GB", "pt-BR", "es-ES", "it-IT", "fr-FR", "ar-SA", "tr-TR", "de-DE"] as const;
+const globalRights = {
+  "en-GB": "All rights reserved.", "pt-BR": "Todos os direitos reservados.",
+  "es-ES": "Todos los derechos reservados.", "it-IT": "Tutti i diritti riservati.",
+  "fr-FR": "Tous droits réservés.", "ar-SA": "جميع الحقوق محفوظة.",
+  "tr-TR": "Tüm hakları saklıdır.", "de-DE": "Alle Rechte vorbehalten.",
+};
+const footerExports: { default?: React.ComponentType<Record<string, unknown>> } = {};
+const require = createRequire(import.meta.url);
+runInNewContext(ts.transpileModule(readFileSync(new URL("../components/touchline/TouchlineSiteFooter.tsx", import.meta.url), "utf8"), {
+  compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX },
+}).outputText, {
+  exports: footerExports, URL,
+  require: (id: string) => id.endsWith(".css")
+    ? { default: new Proxy({}, { get: (_target, key) => key }) }
+    : id.endsWith("catalogue-locale") ? { resolveTouchlineCatalogueLocale }
+    : id.endsWith("auth-i18n") ? { normalizeTouchLineAuthReturnTo, normalizeTouchLineLoginLocale }
+    : id.endsWith("root-locale") ? { resolveTouchLinePresentationLocale }
+    : id.endsWith("SiteLocaleReleaseContext") ? { useSiteLocaleRelease: () => false }
+    : id === "next/navigation" ? { usePathname: () => null, useSearchParams: () => null }
+    : require(id),
+});
+function assertGlobalFooter(locale: keyof typeof globalRights, draftLocalesEnabled: boolean) {
+  assert.ok(footerExports.default);
+  const html = renderToStaticMarkup(React.createElement(footerExports.default, { locale, draftLocalesEnabled }));
+  assert.equal((html.match(/<footer\b/g) ?? []).length, 1);
+  assert.ok(html.includes(globalRights[locale]), locale);
+  assert.match(html, new RegExp(`lang="${locale}" dir="${locale === "ar-SA" ? "rtl" : "ltr"}"`));
+}
 const baseline = {
   "en-GB": {
     topCentreBack: "Top centre-back", topFullBack: "Top full-back", topMidfielder: "Top midfielder", topAttacker: "Top attacker",
@@ -63,7 +96,7 @@ type Copy = Record<keyof typeof baseline["en-GB"], string>;
 type Props = Record<string, unknown>;
 const source = readFileSync(new URL("../app/touchline-clubs/[club]/page.tsx", import.meta.url), "utf8");
 const ast = ts.createSourceFile("page.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
-const names = ["localizedFixtureStatus", "ClubHubLineupSection", "ClubHubOfficialLeagueSection", "ClubHubOfficialTablePanel", "ClubHubHeroNextMatch", "ClubHubHomeStadiumIdentity", "ClubHubDeferredSection", "ClubHubChapterMarker", "ClubHubPage", "renderClubHubPage"];
+const names = ["localizedFixtureStatus", "ClubHubLineupSection", "ClubHubOfficialLeagueSection", "ClubHubOfficialTablePanel", "ClubHubHeroNextMatch", "ClubHubHomeStadiumIdentity", "ClubHubDeferredSection", "ClubHubChapterMarker", "ClubHubPersistedLiveRail", "ClubHubPage", "renderClubHubPage"];
 const selected = ast.statements.filter(node => (ts.isFunctionDeclaration(node) && names.includes(node.name?.text ?? ""))
   );
 const declarations = selected.map(node => node.getText(ast).replace(/^export default /, "")).join("\n");
@@ -124,6 +157,8 @@ async function fixture(locale: string, options: { future?: boolean; sentinel?: b
   const css = new Proxy({}, { get: (_, key) => String(key) });
   const context: Props = {
     normalizeTouchLineLocale: normalize, resolveTouchlineCatalogueLocale, touchlineFixtureStatusLabel,
+    parseClubHubFixtureQuery, getTouchlineMatchCentreCopy,
+    readPersistedLiveRailWithin: async () => null,
     touchlineClubHubText: (value: string, key: Parameters<typeof mod.touchlineClubHubText>[1], enabled = false) => mod.touchlineClubHubText(value, key, enabled),
     getTouchlineClubHubProfileCopy: () => copy,
     getTouchlineExactCardCopy: (value: string) => options.sentinel ? { currentClub: "EXACT:" + value } : exact.getTouchlineExactCardCopy(value),
@@ -140,14 +175,28 @@ async function fixture(locale: string, options: { future?: boolean; sentinel?: b
     readTouchlineClubSocialFeed: (props: Props) => { calls.push({ kind: "feed-read", props }); return Promise.resolve({ state: "ready", items: [] }); },
     loadTouchlineQaMirroredSocialFeed: () => { throw new Error("unexpected mirror"); },
     normalizeTouchlineMatchCentreTimeZone: (value: string) => value, TOUCHLINE_STADIUM_CATALOG: [],
-    premiumStyles: css, officialLeagueStyles: css, compareTouchlineRankingPlayers,
+    premiumStyles: css, officialLeagueStyles: css, fixtureStripStyles: css, compareTouchlineRankingPlayers,
     TOUCHLINE_PRESEASON_RANKING_STATE: { phase: "pending" }, loadTouchLineActiveRanking: () => Promise.resolve({ phase: "ranked", players: options.ranking ?? [] }),
     touchlineCardTierPalette: () => ({ accent: "#abc" }),
     Suspense: (props: Props) => React.createElement(React.Fragment, null, props.fallback as React.ReactNode),
   };
   for (const name of ["TouchlineBrandHeader", "ClubHubBrandHeader", "Image", "ClubTrophyCarousel", "ClubHubCrestTrace", "TouchlineGlobalNavigation", "ClubHubSectionNavigation", "ClubHubFixtureStrip", "ClubHubNextFixtureCard", "TouchlineClubPerimeterTrace", "TouchlineClubSocialFeed", "TouchlineOfficialLeagueTable", "TouchlineGameweekCard", "ClubHubPositionLeaders", "ClubHubOfficialLineup", "ClubHubTechnicalSections", "ClubHubOfficialChannel"]) context[name] = leaf(name);
   const exports = compile(declarations + "\nObject.assign(exports, {" + names.join(",") + "});", context);
-  const invoke = async (name: string, props: Props) => (exports[name === "ClubHubPage" && options.future ? "renderClubHubPage" : name] as (props: Props, enabled?: boolean) => Promise<React.ReactElement> | React.ReactElement)({ ...props, draftLocalesEnabled: options.future ?? false }, options.future ?? false);
+  // Resolve only the newly streamed rail with the real extracted server
+  // wrapper. Keep all other deliberately deferred football/viewer fallbacks.
+  const resolveRail = async (node: React.ReactNode): Promise<React.ReactNode> => {
+    if (Array.isArray(node)) return Promise.all(node.map(resolveRail));
+    if (!React.isValidElement<Props>(node)) return node;
+    if (node.type === exports.ClubHubPersistedLiveRail) {
+      return (exports.ClubHubPersistedLiveRail as (props: Props) => Promise<React.ReactElement>)(node.props);
+    }
+    const child = node.props.children as React.ReactNode;
+    if (node.type === context.Suspense && React.isValidElement(child) && child.type === exports.ClubHubPersistedLiveRail) return resolveRail(child);
+    if (child === undefined) return node;
+    const resolved = await resolveRail(child);
+    return Array.isArray(resolved) ? React.cloneElement(node, undefined, ...resolved) : React.cloneElement(node, undefined, resolved);
+  };
+  const invoke = async (name: string, props: Props) => resolveRail(await (exports[name === "ClubHubPage" && options.future ? "renderClubHubPage" : name] as (props: Props, enabled?: boolean) => Promise<React.ReactElement> | React.ReactElement)({ ...props, draftLocalesEnabled: options.future ?? false }, options.future ?? false)) as Promise<React.ReactElement>;
   return { mod, exports, invoke, copy, calls, reads, club, context };
 }
 
@@ -200,7 +249,10 @@ test("ClubHub real page keeps async lookup, deferred reads, official identities,
     assert.equal(strips[0].props.locale, locale);
     assert.equal(strips[0].props.draftLocalesEnabled, false);
     const expected = baseline[locale as keyof typeof baseline];
-    for (const key of ["officialProfile", "rights", "updatingLeague", "preparingLineup", "preparingTechnical", "lineupCoachBench"] as const) assert.ok(html.includes(esc(expected[key])), key);
+    for (const key of ["officialProfile", "updatingLeague", "preparingLineup", "preparingTechnical", "lineupCoachBench"] as const) assert.ok(html.includes(esc(expected[key])), key);
+    assert.doesNotMatch(html, /<footer\b/);
+    assert.equal(html.includes(esc(expected.rights)), false);
+    assertGlobalFooter(locale as keyof typeof baseline, false);
     assert.ok(html.includes(esc(f.club.name))); assert.ok(html.includes(esc(expected.trophyCabinet.replace("{name}", () => f.club.name))));
     assert.equal(f.calls.find(call => call.kind === "ClubHubCrestTrace")?.props.ariaLabel, expected.clubLogo.replace("{name}", () => f.club.name));
     if (honours) assert.equal(f.calls.find(call => call.kind === "ClubTrophyCarousel")?.props.ariaLabel, expected.trophyCarousel.replace("{name}", () => f.club.name));
@@ -268,7 +320,10 @@ test("ClubHub draft consumer seams expose active texts and existing authorities 
     renderToStaticMarkup(await f.invoke("ClubHubOfficialLeagueSection", { ...base, matchSnapshotPromise: Promise.resolve({ railFixture: match }) }));
     renderToStaticMarkup(await f.invoke("ClubHubHeroNextMatch", { locale, matchSnapshotPromise: Promise.resolve({ publicFixture: match }) }));
     const output = chunks.join("") + JSON.stringify(f.calls);
-    for (const key of Object.keys(baseline["en-GB"]).filter(key => !["scheduled", "live", "finished", "postponed", "cancelled", "leagueAndChannel", "squadUnavailable", "sourceUnavailable"].includes(key))) assert.ok(output.includes(`${locale}:${key}:`), key);
+    for (const key of Object.keys(baseline["en-GB"]).filter(key => !["scheduled", "live", "finished", "postponed", "cancelled", "leagueAndChannel", "squadUnavailable", "sourceUnavailable", "rights"].includes(key))) assert.ok(output.includes(`${locale}:${key}:`), key);
+    assert.equal(output.includes(`${locale}:rights:`), false);
+    assert.doesNotMatch(chunks[0], /<footer\b/);
+    assertGlobalFooter(locale, true);
     assert.ok(!output.includes(`${locale}:leagueAndChannel:`));
     assert.ok(output.includes("NAV:" + locale));
     const status = f.exports.localizedFixtureStatus as (value: string, locale: string, enabled?: boolean) => string;

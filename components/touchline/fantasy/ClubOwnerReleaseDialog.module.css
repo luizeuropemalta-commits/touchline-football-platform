@@ -1,4 +1,42 @@
 .dialog { width: min(900px, 100%); }
+.fullscreenOverlay { padding: 0; background: rgb(4 11 8 / 82%); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+.fullscreen { box-sizing: border-box; width: 100%; height: 100dvh; overflow: auto; border: 0; border-radius: 0; padding: 20px clamp(20px, 4vw, 48px); color: #f7fff2; background: transparent; }
+.releaseHeader { display: flex; flex-direction: column; align-items: center; gap: 8px; color: var(--lime, #aaff3e); margin: 0 auto 18px; }
+.releaseHeader h2 { margin: 0; font-size: clamp(23px, 2.3vw, 29.9px); line-height: 1.15; letter-spacing: -.035em; font-weight: 500; text-align: center; }
+.releaseHeader h2:focus { outline: none; }
+.fullscreen .fullscreenReview { width: min(1120px, 100%); margin-inline: auto; grid-template-columns: minmax(240px, .75fr) minmax(0, 1.25fr); gap: clamp(32px, 6vw, 96px); }
+.fullscreen .fullscreenReview[data-has-card="false"] { grid-template-columns: minmax(0, 1fr); }
+.athlete { min-width: 0; padding-top: 0; }
+.athleteCard { width: 240px; margin-inline: auto; pointer-events: none; }
+.contractRecord { display: grid; justify-items: center; gap: 6px; margin: 12px auto 0; max-width: 300px; text-align: center; }
+.contractRecord > svg { color: var(--lime, #aaff3e); }
+.contractRecord h3 { font-size: 23px; font-weight: 500; letter-spacing: -.025em; margin: 0; overflow-wrap: anywhere; max-width: 100%; }
+.contractRecord dl { display: grid; gap: 4px; margin: 0; }
+.contractRecord dt { font-size: 11.5px; text-transform: uppercase; letter-spacing: .13em; color: #92a498; margin-top: 4px; }
+.contractRecord dd { font-size: 14.95px; margin: 0; color: #c9d5cc; }
+.introduction { color: #aebeb3; font-size: 16.1px; line-height: 1.5; max-width: 42ch; margin: 0 0 12px; }
+.financialSection { margin: 0; }
+.fullscreen .financialAmounts { column-gap: 0; row-gap: 0; align-items: stretch; grid-auto-rows: minmax(52px, auto); }
+.financialAmounts dd { display: flex; justify-content: flex-end; align-items: center; }
+.financialAmounts dt, .financialAmounts dd { padding-block: 14px; border-bottom: 1px solid rgb(255 255 255 / 12%); }
+.financialAmounts dt { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; padding-inline-end: 24px; font-size: 14.95px; color: #c5d2c9; }
+.financialAmounts dt small { font-size: 12.65px; color: #8fa396; letter-spacing: .04em; }
+.financialAmounts dt[data-refund] { color: #edf6ef; }
+.money { margin: 0; gap: 6px; }
+.money strong { font-size: 20.7px; line-height: 1.3; font-weight: 500; font-variant-numeric: tabular-nums; }
+.money small { font-size: 11.5px; }
+.settlementNote { font-size: 12.65px; color: #92a498; margin: 12px 0 0; }
+.releaseFooter { max-width: 1120px; margin: 18px auto 0; display: grid; justify-items: end; gap: 8px; }
+.releaseFooter .safety { border: 0; margin: 0; font-size: 13.8px; color: #b5c4ba; text-align: end; }
+.releaseFooter .safety p { margin: 0; }
+@media (max-width: 760px) and (orientation: landscape) {
+  .fullscreen { padding: 20px; }
+  .fullscreen .fullscreenReview { grid-template-columns: 240px minmax(0, 1fr); gap: 24px; }
+  .fullscreen .financialAmounts { grid-template-columns: minmax(0, 1fr); }
+  .financialAmounts dt { padding: 16px 0 6px; border: 0; }
+  .financialAmounts dd { padding: 0 0 16px; text-align: start; justify-content: flex-start; }
+  .money { justify-content: flex-start; }
+}
 .review { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: clamp(16px, 3vw, 32px); align-items: start; }
 .review[data-has-card="false"] { grid-template-columns: minmax(0, 1fr); }
 .dialog h2, .owner, .safety { overflow-wrap: anywhere; }
@@ -19,4 +57,9 @@
   .review { grid-template-columns: minmax(0, 1fr); }
   .amounts { grid-template-columns: minmax(0, 1fr); gap: 4px; }
   .amounts dd { text-align: start; margin-bottom: 8px; }
+}
+@media (max-width: 600px) and (orientation: portrait) {
+  .fullscreen .fullscreenReview { grid-template-columns: minmax(0, 1fr); }
+  .releaseFooter { justify-items: stretch; }
+  .releaseFooter .safety { text-align: start; }
 }

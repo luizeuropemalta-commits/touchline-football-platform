@@ -13,6 +13,7 @@ import * as allocation from "../lib/touchlineFantasy/club-allocation.ts";
 import * as slotPlan from "../lib/touchlineFantasy/collection-slot-plan.ts";
 import * as primaryIndex from "../lib/touchlineFantasy/club-primary-position-index.ts";
 import * as primaryPolicy from "../lib/touchlineFantasy/club-primary-position-policy.ts";
+import * as swapPresentation from "../lib/touchlineFantasy/squad-swap-presentation.ts";
 import { CLUB_POSITION_LIMITS, type ClubAcquisitionState, type ClubOwnedPlayer } from "../lib/touchlineFantasy/club-acquisition.ts";
 import { TOUCHLINE_DEFAULT_FORMATION_GEOMETRY_REGISTRY as formations } from "../lib/touchlineArena/formation-geometry.ts";
 
@@ -28,7 +29,8 @@ function render(props:Props, component="ClubOwnerCollectionPicker", buttons: Pro
   const modules:Record<string,unknown>={
     "@/lib/touchlineFantasy/allocation-dialog-i18n":allocationCopy,
     react:{...React,...hooks},"react/jsx-runtime":{...runtime,jsx,jsxs},"react-dom":{createPortal:(node:React.ReactNode)=>node},
-    "lucide-react":{ArrowLeftRight:()=>null},
+    "lucide-react":{ArrowLeftRight:()=>null,ArrowLeft:()=>null,ArrowRight:()=>null},
+    "@/lib/touchlineFantasy/squad-swap-presentation":swapPresentation,
     "@/lib/touchlineFantasy/club-position":position,"@/lib/touchlineFantasy/collection-position-display":positionDisplay,
     "@/lib/touchlineFantasy/club-allocation":allocation,"@/lib/touchlineFantasy/collection-slot-plan":slotPlan,
     "@/lib/touchlineFantasy/club-primary-position-index":primaryIndex,"@/lib/touchlineFantasy/club-primary-position-policy":primaryPolicy,
@@ -104,9 +106,32 @@ test("internal swap lists contracted bench/outside only; choosing and cancelling
   assert.match(html,/Bench/);assert.match(html,/Outside match squad/);
   assert.match(html,/data-card="bench"/);assert.match(html,/data-card="outside"/);
   assert.doesNotMatch(html,/data-card="starter"|data-card="unowned"|TouchLine Markt Transfer|>Sign</);
-  await h.click("Select");assert.equal(h.moves,0);h.draw();await h.click("Back");h.draw();
+  await h.click("Choose player");assert.equal(h.moves,0);h.draw();await h.click("Back");h.draw();
   await h.click("Cancel");assert.equal(h.moves,0);assert.equal(h.closed,1);
 });
+
+for (const [source, expected, absent] of [
+  ["starter", ["bench", "outside"], "starter"],
+  ["bench", ["starter", "outside"], "bench"],
+  ["outside", ["starter", "bench"], "outside"],
+] as const) {
+  test(`unified substitution from ${source} offers exactly the other two groups`, async () => {
+    const h = swapHarness({ playerId: source });
+    const html = h.draw();
+    for (const id of expected) assert.match(html, new RegExp(`data-card="${id}"`));
+    assert.doesNotMatch(html, new RegExp(`data-card="${absent}"`));
+    const target = expected[0];
+    await h.click("Choose player");
+    const confirmation = h.draw();
+    assert.match(confirmation, new RegExp(`data-swap-player="${source}"`));
+    assert.match(confirmation, new RegExp(`data-swap-player="${target}"`));
+    assert.equal(h.moves, 0);
+    await h.click("Confirm substitution");
+    const before = h.input.state as ClubAcquisitionState;
+    const origin = before.players.find(player => player.playerId === source)!;
+    assert.equal(JSON.stringify(h.moveArgs), JSON.stringify([[target, { area: origin.area, slot: origin.slot }]]));
+  });
+}
 
 const fullDetails:Record<ClubOwnedPlayer["position"],string>={GK:"Goalkeeper",CB:"Centre Back",RB:"Right Back",LB:"Left Back",DM:"Defensive Midfield",MID:"Central Midfield",RW:"Right Wing",LW:"Left Wing",CF:"Centre Forward"};
 function full35State():ClubAcquisitionState {
@@ -135,9 +160,9 @@ for(const position of Object.keys(fullDetails) as ClubOwnedPlayer["position"][])
     const h=swapHarness({state:before,playerId:source.playerId,catalogue});
     const rendered=h.draw();const ids=[...rendered.matchAll(/data-card="([^"]+)"/g)].map(m=>m[1]);
     const index=ids.indexOf(target.playerId);assert.ok(index>=0,`${target.playerId} must be offered`);
-    await h.click("Select",index);assert.equal(h.moves,0);h.draw();await h.click("Cancel");
+    await h.click("Choose player",index);assert.equal(h.moves,0);h.draw();await h.click("Cancel");
     assert.deepEqual(before,snapshot);assert.deepEqual(h.moveArgs,[]);
-    const confirm=swapHarness({state:before,playerId:source.playerId,catalogue});confirm.draw();await confirm.click("Select",index);confirm.draw();await confirm.click("Confirm squad change");
+    const confirm=swapHarness({state:before,playerId:source.playerId,catalogue});confirm.draw();await confirm.click("Choose player",index);confirm.draw();await confirm.click("Confirm substitution");
     assert.equal(JSON.stringify(confirm.moveArgs),JSON.stringify([[target.playerId,{area:source.area,slot:source.slot}]]));
     const command={action:"move" as const,playerId:target.playerId,area:source.area,slot:source.slot,expectedRevision:before.revision,idempotencyKey:`full35_${position}_${area}`};
     const preview=slotPlan.previewPlannedClubAllocation(before,command,formations["4-3-3"]);assert.ok(preview);
@@ -158,13 +183,13 @@ test("full35 rejects displaced MID into fixed DM bench and wrong-wing detail",()
   assert.deepEqual(before,snapshot);
 });
 test("internal swap needs explicit confirmation and rejects stale revision",async()=>{
-  const h=swapHarness();h.draw();await h.click("Select");h.draw();await h.click("Confirm squad change");assert.equal(h.moves,1);assert.equal(h.closed,1);
+  const h=swapHarness();h.draw();await h.click("Choose player");h.draw();await h.click("Confirm substitution");assert.equal(h.moves,1);assert.equal(h.closed,1);
   assert.equal(JSON.stringify(h.moveArgs),JSON.stringify([["bench",{area:"starters",slot:8}]]));
-  const stale=swapHarness();stale.draw();await stale.click("Select");
-  stale.input.state={...(stale.input.state as object),revision:1};stale.draw();await stale.click("Confirm squad change");assert.equal(stale.moves,0);
+  const stale=swapHarness();stale.draw();await stale.click("Choose player");
+  stale.input.state={...(stale.input.state as object),revision:1};stale.draw();await stale.click("Confirm substitution");assert.equal(stale.moves,0);
 });
 test("internal swap disabled guard prevents selection even if handler is invoked",async()=>{
-  const h=swapHarness({enabled:false});h.draw();await h.click("Select");assert.equal(h.moves,0);assert.doesNotMatch(h.draw(),/>Confirm squad change</);
+  const h=swapHarness({enabled:false});h.draw();await h.click("Choose player");assert.equal(h.moves,0);assert.doesNotMatch(h.draw(),/>Confirm substitution</);
 });
 test("outside-only action excludes bench and offers compatible outside places without immediate mutation",()=>{
   const h=swapHarness({outsideOnly:true});const html=h.draw();
@@ -173,8 +198,8 @@ test("outside-only action excludes bench and offers compatible outside places wi
 test("synchronous repeated confirmation cannot dispatch a second pending move",async()=>{
   let calls=0,finish:()=>void=()=>{};
   const h=swapHarness({onMove:()=>{calls++;return new Promise<boolean>(resolve=>{finish=()=>resolve(true);});}});
-  h.draw();await h.click("Select");h.draw();const pending=h.click("Confirm squad change");
-  await h.click("Confirm squad change");assert.equal(calls,1);finish();await pending;
+  h.draw();await h.click("Choose player");h.draw();const pending=h.click("Confirm substitution");
+  await h.click("Confirm substitution");assert.equal(calls,1);finish();await pending;
 });
 test("both sides are validated: central starter cannot displace into incompatible fixed DM bench",()=>{
   const players=[{playerId:"starter",area:"starters",slot:5,position:"MID",primaryDetail:"Central Midfield"},
@@ -193,14 +218,14 @@ test("incomplete squad cannot move starter outside without a contracted substitu
   const h=swapHarness({outsideOnly:true});
   h.input.state={...(h.input.state as typeof state),players:(h.input.state as typeof state).players.filter(p=>p.playerId==="starter")};
   const html=h.draw();
-  assert.match(html,/No compatible players/);assert.doesNotMatch(html,/Vacant slot|>Select<|>Confirm squad change</);
+  assert.match(html,/No compatible players/);assert.doesNotMatch(html,/Vacant slot|>Choose player<|>Confirm substitution</);
   await h.click("Cancel");assert.deepEqual(h.moveArgs,[]);
 });
 test("outside replacement swaps exact contracted identities and destinations",async()=>{
-  const out=swapHarness({outsideOnly:true});out.draw();await out.click("Select");out.draw();await out.click("Confirm squad change");
+  const out=swapHarness({outsideOnly:true});out.draw();await out.click("Choose player");out.draw();await out.click("Confirm substitution");
   assert.equal(JSON.stringify(out.moveArgs),JSON.stringify([["starter",{area:"outside",slot:0}]]));
-  const occupied=swapHarness({playerId:"outside"});occupied.draw();await occupied.click("Select");occupied.draw();await occupied.click("Confirm squad change");
-  assert.equal(JSON.stringify(occupied.moveArgs),JSON.stringify([["bench",{area:"outside",slot:0}]]));
+  const occupied=swapHarness({playerId:"outside"});occupied.draw();await occupied.click("Choose player");occupied.draw();await occupied.click("Confirm substitution");
+  assert.equal(JSON.stringify(occupied.moveArgs),JSON.stringify([["starter",{area:"outside",slot:0}]]));
 });
 test("outside slot integration routes occupied to squad swap and only empty to purchase",()=>{
   const source=readFileSync(new URL("../app/fantasy/FantasyGameweekClient.tsx",import.meta.url),"utf8");

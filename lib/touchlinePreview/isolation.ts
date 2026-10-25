@@ -84,7 +84,7 @@ export const TOUCHLINE_QA_PREVIEW_ALLOWED_APPLICATION_ENVIRONMENT_KEYS = [
   "TOUCHLINE_SITE_LOCALES_ENABLED",
   // Owner-approved collection activation in functional QA only. Admission of
   // this private name does not bypass collection auth/entitlement or enable
-  // termination; the separate release flag remains deliberately excluded.
+  // termination; hosted QA still excludes the separate release flag.
   "TOUCHLINE_CLUB_COLLECTION_ENABLED",
   // Server-only social gate. Runtime policy remains fail-closed in its route.
   "TOUCHLINE_PLAYER_SOCIAL_ENABLED",
@@ -265,6 +265,14 @@ export function inspectTouchlineIsolatedPreviewEnvironment(
     Object.keys(environment)
       .filter(isTouchlineApplicationEnvironmentKey)
       .filter((name) => !allowedQaApplicationEnvironmentKeys.has(name))
+      // Owner-authorized candidate test only. Never admits this switch in
+      // hosted QA, isolated Preview or a noncanonical database environment.
+      .filter((name) => !(name === "TOUCHLINE_CLUB_RELEASE_ENABLED"
+        && environment.NODE_ENV === "development" && environment.VERCEL === undefined
+        && environment.VERCEL_GIT_COMMIT_REF === "qa"
+        && environment.TOUCHLINE_QA_SUPABASE_PROJECT_REF === "xgxbwqxjssxxuihuwmgy"
+        && environment.TOUCHLINE_CLUB_COLLECTION_ENABLED === "true"
+        && environment[name] === "true"))
       .filter((name) => !allowedQaPlatformRuntimeEnvironmentKeys.has(name))
       .filter((name) => !name.startsWith("VERCEL_") && !name.startsWith("NEXT_PUBLIC_VERCEL_"))
       .sort()

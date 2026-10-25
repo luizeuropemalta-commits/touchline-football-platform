@@ -18,7 +18,7 @@ function load(relative: string, modules: Record<string, unknown>): Record<string
     module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX,
   } }).outputText, { exports, require(name: string) {
     if (name in modules) return modules[name];
-    if (name === "react/jsx-runtime") return require(name);
+    if (name === "react" || name === "react/jsx-runtime") return require(name);
     if (name.endsWith(".css")) return { default: { frame: "brand-frame", column: "brand-column", row: "brand-row", controls: "page-controls" } };
     throw Error(`Unexpected brand header dependency: ${name}`);
   } });
@@ -48,9 +48,24 @@ function fixture() {
   const header = load("../components/touchline/TouchlineBrandHeader.tsx", {
     "@/components/logo": { Logo: (props: Record<string, unknown>) => { logoProps.push(props); return React.createElement(logo, props); } },
     "./TouchlinePageControls": { default: controls },
+    "./TouchlineNavigationRail": load("../components/touchline/TouchlineNavigationRail.tsx", {}),
+    "./TouchlineSignOutButton": { default: () => React.createElement("button", { "data-sign-out": true }, "Sign out") },
   }).default;
   return { logoProps, audio, language, render: (props: Record<string, unknown>) => renderToStaticMarkup(React.createElement(header, props)) };
 }
+
+test("shared header keeps sign-out consistent without duplicating it or showing it to guests", () => {
+  const navigation = React.createElement('nav', null, 'Club Owner · ClubHub · Live · Rankings');
+  const base = { href: '/clubowner', locale: 'pt-BR', navigation };
+  const account = fixture().render({ ...base, accountLocaleContext: { mode: 'account', accountId: 'canonical-account' } });
+  assert.equal((account.match(/data-sign-out/g) ?? []).length, 1);
+  for (const mode of ['guest', 'demo', 'unavailable']) {
+    assert.doesNotMatch(fixture().render({ ...base, accountLocaleContext: { mode } }), /data-sign-out/);
+  }
+  const existing = fixture().render({ ...base, accountLocaleContext: { mode: 'account', accountId: 'canonical-account' }, navigationAccessory: React.createElement('button', null, 'Existing sign-out') });
+  assert.doesNotMatch(existing, /data-sign-out/);
+  assert.match(existing, /Existing sign-out/);
+});
 
 test("brand shell composes one existing official login Logo and one LTR controls group", () => {
   for (const { code } of TOUCHLINE_APPROVED_LOCALES) {

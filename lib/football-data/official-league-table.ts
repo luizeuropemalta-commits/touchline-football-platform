@@ -216,7 +216,7 @@ function liveFixtureForClub(
     providerFixtureId: fixture.providerFixtureId,
     scoreFor: home ? fixture.homeScore : fixture.awayScore,
     scoreAgainst: home ? fixture.awayScore : fixture.homeScore,
-    stale: !Number.isFinite(sourceUpdatedAt) || now - sourceUpdatedAt > LIVE_FIXTURE_STALE_MS,
+    stale: !Number.isFinite(sourceUpdatedAt) || sourceUpdatedAt > now || now - sourceUpdatedAt > LIVE_FIXTURE_STALE_MS,
   };
 }
 

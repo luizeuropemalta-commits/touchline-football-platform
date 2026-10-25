@@ -20,7 +20,8 @@ export type ClubAcquisitionState = Readonly<{
   plan: Plan;
   /** Verified plan credit allocation, not legacy purchased TC. */
   balanceEur: number;
-  coach: Readonly<{ id: string; tier: CoachTier; valueEur: number }>;
+  /** Explicit vacancy is valid only for paid plans; omitted is never a vacancy. */
+  coach: Readonly<{ id: string; tier: CoachTier; valueEur: number }> | null;
   formationCode?: string;
   players: readonly ClubOwnedPlayer[];
   receipts: readonly Readonly<{ key: string; playerId: string; area: ClubRosterEntry["area"]; slot: number; valueEur: number; revision: number }>[];
@@ -40,9 +41,15 @@ export function inspectClubAcquisition(state: ClubAcquisitionState) {
   ensure(Number.isSafeInteger(state.revision) && state.revision >= 0, "CLUB_REVISION_INVALID");
   ensure(money(state.balanceEur), "CLUB_BALANCE_INVALID");
   ensure(state.formationCode === undefined || /^[0-9]+(?:-[0-9]+){1,4}$/.test(state.formationCode), "CLUB_FORMATION_INVALID");
-  ensure(state.coach.id && Object.hasOwn(CLUB_COACH_VALUES, state.coach.tier)
-    && state.coach.valueEur === CLUB_COACH_VALUES[state.coach.tier], "CLUB_COACH_INVALID");
-  ensure(state.plan !== "beta" || state.coach.tier === "ruby-red", "CLUB_BETA_COACH_REQUIRED");
+  ensure(Object.hasOwn(state, "coach") && state.coach !== undefined, "CLUB_COACH_INVALID");
+  if (state.coach === null) ensure(state.plan !== "beta", "CLUB_BETA_COACH_REQUIRED");
+  else {
+    ensure(typeof state.coach === "object" && !Array.isArray(state.coach)
+      && typeof state.coach.id === "string" && state.coach.id.trim()
+      && Object.hasOwn(CLUB_COACH_VALUES, state.coach.tier)
+      && state.coach.valueEur === CLUB_COACH_VALUES[state.coach.tier], "CLUB_COACH_INVALID");
+    ensure(state.plan !== "beta" || state.coach.tier === "ruby-red", "CLUB_BETA_COACH_REQUIRED");
+  }
   ensure(validateClubRoster(state.players).length === 0, "CLUB_ROSTER_INVALID");
   inspectClubQuota(state.players, state.plan, state.seasonId);
   const counts = new Map<Position, number>();

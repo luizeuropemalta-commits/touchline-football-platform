@@ -15,6 +15,26 @@ const command: ClubAcquisitionCommand = { playerId: offer.playerId, area: "outsi
 const context = { marketOpen: true, offer, allowedClubIds: null };
 const reject = (fn: () => unknown, code: string) => assert.throws(fn, error => error instanceof Error && error.message === code);
 
+test("only explicit paid-plan coach vacancy is valid; missing or malformed coach stays invalid", () => {
+  for (const plan of ["standard", "master", "vip"] as const) {
+    const vacant: ClubAcquisitionState = { ...state(), plan, coach: null };
+    const original = structuredClone(vacant);
+    assert.equal(inspectClubAcquisition(vacant).vacantCount, 35);
+    assert.deepEqual(vacant, original);
+    const purchased = acquireClubPlayer(vacant, command, context);
+    assert.equal(purchased.state.coach, null);
+    assert.equal(purchased.state.balanceEur, vacant.balanceEur - offer.valueEur);
+    assert.deepEqual(purchased.receipt, { key: command.idempotencyKey, playerId: offer.playerId, area: command.area, slot: command.slot, valueEur: offer.valueEur, revision: 1 });
+    reject(() => acquireClubPlayer(vacant, command, { ...context, marketOpen: false }), "CLUB_MARKET_CLOSED");
+  }
+  reject(() => inspectClubAcquisition({ ...state(), plan: "beta", coach: null }), "CLUB_BETA_COACH_REQUIRED");
+  const missing: Record<string, unknown> = { ...state() }; delete missing.coach;
+  reject(() => inspectClubAcquisition(missing as unknown as ClubAcquisitionState), "CLUB_COACH_INVALID");
+  for (const coach of [undefined, false, 0, "", [], {}, { id: " ", tier: "ruby-red", valueEur: 5_000_000 }, { id: 1, tier: "ruby-red", valueEur: 5_000_000 }]) {
+    reject(() => inspectClubAcquisition({ ...state(), coach } as unknown as ClubAcquisitionState), "CLUB_COACH_INVALID");
+  }
+});
+
 test("approved four budgets, seven coach prices, nine exact position quotas total 35", () => {
   assert.deepEqual(CLUB_ACQUISITION_BUDGETS, { beta: 100_000_000, standard: 750_000_000, master: 1_500_000_000, vip: 3_000_000_000 });
   assert.deepEqual(Object.values(CLUB_COACH_VALUES), [5, 10, 15, 25, 35, 50, 70].map(n => n * 1_000_000));
@@ -115,7 +135,7 @@ test("fill all 35 from one real club within budgets and reject the 36th; slots r
 test("corrupt revision, receipt, coach cost and wallet are rejected", () => {
   reject(() => inspectClubAcquisition({ ...state(), revision: -1 }), "CLUB_REVISION_INVALID");
   reject(() => inspectClubAcquisition({ ...state(), balanceEur: NaN }), "CLUB_BALANCE_INVALID");
-  reject(() => inspectClubAcquisition({ ...state(), coach: { ...state().coach, valueEur: 1 } }), "CLUB_COACH_INVALID");
+  reject(() => inspectClubAcquisition({ ...state(), coach: { ...state().coach!, valueEur: 1 } }), "CLUB_COACH_INVALID");
   const acquired = acquireClubPlayer(state(), command, context).state;
   reject(() => inspectClubAcquisition({ ...acquired, receipts: [...acquired.receipts, ...acquired.receipts] }), "CLUB_RECEIPTS_INVALID");
   reject(() => inspectClubAcquisition({ ...acquired, receipts: [{ ...acquired.receipts[0], revision: 2 }] }), "CLUB_RECEIPTS_INVALID");

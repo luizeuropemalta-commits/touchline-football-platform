@@ -31,6 +31,7 @@ runInNewContext(ts.transpileModule(read("lib/admin/owner.ts"), { compilerOptions
 });
 const ownerPolicy = ownerExports.isOwnerEmail as (email: string | null | undefined) => boolean;
 const user = (email: string) => ({ id: "11111111-1111-4111-8111-111111111111", email });
+class MissingSession extends Error {}
 class Navigation extends Error {
   readonly destination: string;
   constructor(destination: string) {
@@ -38,7 +39,7 @@ class Navigation extends Error {
     this.destination = destination;
   }
 }
-function fixture(getUser: () => Promise<unknown>) {
+function fixture(getUser: () => Promise<unknown>, clientFailure = false, clientWait?: Promise<void>) {
   const calls: string[] = [];
   const timers = new Map<number, () => void>();
   let sequence = 0;
@@ -51,6 +52,7 @@ function fixture(getUser: () => Promise<unknown>) {
     clearTimeout: (id: number) => timers.delete(id),
   });
   const modules: Record<string, unknown> = {
+    "@supabase/supabase-js": { AuthSessionMissingError: MissingSession },
     "@/lib/touchlineFantasy/club-collection-server": { clubCollectionEnabled: () => false },
     "@/lib/touchlineFantasy/club-collection-read-server": { readClubCollectionServer: async (accountId: string) => {
       assert.equal(accountId, user("customer@example.test").id);
@@ -64,10 +66,14 @@ function fixture(getUser: () => Promise<unknown>) {
     "next/headers": { headers: async () => new Headers({ "x-vercel-ip-timezone": "Europe/Malta" }) },
     "@/lib/touchlineArena/match-centre": { normalizeTouchlineMatchCentreTimeZone },
     "@/lib/touchlineArena/stadium-catalog": { toTouchlineLiveFixtures },
-    "@/lib/football-data/fixture-schedule-store": { readPublicCompetitionFixtures: async () => { calls.push("public-fixtures"); return []; } },
+    "@/lib/touchlineArena/persisted-live-rail-server": { readPersistedLiveRailWithin: async () => { calls.push("public-fixtures"); return null; } },
     "@/lib/touchlineArena/club-owner-profile-metrics": profileMetrics,
     "next/navigation": { redirect: (href: string) => { throw new Navigation(href); }, notFound: () => { throw new Navigation("not-found"); } },
-    "@/lib/supabase/server": { createClient: async () => ({ auth: { getUser: () => { calls.push("auth"); return getUser(); } } }) },
+    "@/lib/supabase/server": { createClient: async () => {
+      if (clientFailure) throw new Error("PRIVATE_CLIENT_FAILURE");
+      if (clientWait) await clientWait;
+      return { auth: { getUser: () => { calls.push("auth"); return getUser(); } } };
+    } },
     "@/lib/admin/owner": { isOwnerEmail: (email: string) => { calls.push("owner-policy"); return ownerPolicy(email); } },
     "@/lib/touchlineArena/server-read-deadline": deadline,
     "@/lib/touchlineArena/auth-i18n": authCopy,
@@ -110,7 +116,11 @@ for (const email of ["owner@example.test", "customer@example.test"]) {
   test(`ClubOwner never trusts an error-bearing ${email} identity`, async () => {
     const h = fixture(async () => ({ data: { user: user(email) }, error: new Error("PRIVATE_AUTH_ERROR") }));
     let returned: unknown;
-    try { returned = await h.run(); } catch (error) { assert.ok(error instanceof Navigation); }
+    try { returned = await h.run(); } catch (error) {
+      assert.ok(error instanceof Navigation);
+      assert.match(error.destination, /&error=auth_unavailable$/);
+      assert.doesNotMatch(error.destination, /PRIVATE_AUTH_ERROR/);
+    }
     assert.deepEqual(h.calls, ["auth"], "unverified identity must not reach owner policy, avatar, snapshot or identity projection");
     assert.equal(returned, undefined, "no account context or authenticated navigation may be rendered");
   });
@@ -130,28 +140,52 @@ test("ClubOwner preserves verified customer rendering and verified owner exclusi
   assert.deepEqual(owner.calls, ["auth", "owner-policy"]);
 });
 
-test("ClubOwner treats absent receipts and missing error verification as unauthenticated", async () => {
+test("ClubOwner distinguishes unavailable receipts from confirmed guests", async () => {
   for (const receipt of [null, undefined, { data: { user: user("owner@example.test") } }, { data: { user: user("customer@example.test") } }]) {
     const h = fixture(async () => receipt);
     await assert.rejects(h.run(), error => error instanceof Navigation
-      && error.destination === "/login?lang=pt-BR&returnTo=%2Fclubowner%3Flang%3Dpt-BR");
+      && error.destination === "/login?lang=pt-BR&returnTo=%2Fclubowner%3Flang%3Dpt-BR&error=auth_unavailable");
     assert.deepEqual(h.calls, ["auth"]);
   }
 });
 
-test("ClubOwner keeps existing guest, rejected-read and timeout login recovery", async () => {
-  for (const getUser of [
-    async () => ({ data: { user: null }, error: null }),
-    async () => { throw new Error("READ_REJECTION"); },
-    () => new Promise<unknown>(() => {}),
-  ]) {
+test("ClubOwner keeps guest recovery distinct from rejected and timed-out reads", async () => {
+  for (const [getUser, unavailable] of [
+    [async () => ({ data: { user: null }, error: null }), false],
+    [async () => ({ data: { user: user("owner@example.test") }, error: new MissingSession() }), false],
+    [async () => { throw new Error("READ_REJECTION"); }, true],
+    [() => new Promise<unknown>(() => {}), true],
+  ] as const) {
     const h = fixture(getUser);
     const pending = h.run();
     const rejected = assert.rejects(pending, error => error instanceof Navigation
-      && error.destination === "/login?lang=pt-BR&returnTo=%2Fclubowner%3Flang%3Dpt-BR");
+      && error.destination === `/login?lang=pt-BR&returnTo=%2Fclubowner%3Flang%3Dpt-BR${unavailable ? "&error=auth_unavailable" : ""}`);
     await new Promise<void>(resolve => setImmediate(resolve));
     h.expire();
     await rejected;
     assert.deepEqual(h.calls, ["auth"]);
   }
+});
+
+test("ClubOwner client setup failure is unavailable and never exposes provider details", async () => {
+  const h = fixture(async () => assert.fail("no auth call after client failure"), true);
+  await assert.rejects(h.run(), error => error instanceof Navigation
+    && error.destination === "/login?lang=pt-BR&returnTo=%2Fclubowner%3Flang%3Dpt-BR&error=auth_unavailable");
+  assert.deepEqual(h.calls, []);
+});
+
+test("ClubOwner deadline includes client setup and fences a late client before auth starts", async () => {
+  let finish!: () => void;
+  const clientWait = new Promise<void>(resolve => { finish = resolve; });
+  const h = fixture(async () => ({ data: { user: user("customer@example.test") }, error: null }), false, clientWait);
+  const pending = h.run();
+  const rejected = assert.rejects(pending, error => error instanceof Navigation
+    && error.destination === "/login?lang=pt-BR&returnTo=%2Fclubowner%3Flang%3Dpt-BR&error=auth_unavailable");
+  await new Promise<void>(resolve => setImmediate(resolve));
+  h.expire();
+  await rejected;
+  assert.deepEqual(h.calls, [], "unresolved setup must not authenticate or read account data");
+  finish();
+  await new Promise<void>(resolve => setImmediate(resolve));
+  assert.deepEqual(h.calls, [], "late setup must not start authentication after the deadline");
 });

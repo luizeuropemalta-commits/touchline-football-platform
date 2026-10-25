@@ -17,6 +17,7 @@ function fixture(environment: string, patch: Record<string, unknown> = {}) {
   const snapshot = Object.freeze({ entitlementActive: true, marketAccess: marketPolicy.resolveTouchlineFantasyMarketAccess("standard"),
     config: { budgetEur: 500_000_000 }, userGameweek: { totalMarketValueEur: 379_000_000 }, plan, ...patch });
   const dependencies: Record<string, unknown> = {
+    "@supabase/supabase-js": { AuthSessionMissingError: class extends Error {} },
     "@/lib/touchlineFantasy/club-collection-server": { clubCollectionEnabled: () => false },
     "@/lib/touchlineFantasy/club-collection-read-server": { readClubCollectionServer: async (accountId: string) => {
       assert.equal(accountId, user.id);
@@ -27,7 +28,7 @@ function fixture(environment: string, patch: Record<string, unknown> = {}) {
     "next/headers": { headers: async () => ({ get: () => null }) },
     "next/navigation": { redirect: () => assert.fail("Customer must remain signed in"), notFound: () => assert.fail("Customer must remain allowed") },
     "@/lib/touchlineArena/match-centre": { normalizeTouchlineMatchCentreTimeZone: () => "Europe/London" },
-    "@/lib/football-data/fixture-schedule-store": { readPublicCompetitionFixtures: async () => [] },
+    "@/lib/touchlineArena/persisted-live-rail-server": { readPersistedLiveRailWithin: async () => null },
     "@/lib/touchlineArena/stadium-catalog": { toTouchlineLiveFixtures: () => [] },
     "@/lib/touchlineArena/site-locales-release": { isTouchLineSiteLocalesEnabled: () => false },
     "@/lib/touchlineArena/club-owner-profile-metrics": { clubOwnerRankingPosition: () => 1 },
@@ -35,7 +36,7 @@ function fixture(environment: string, patch: Record<string, unknown> = {}) {
     "@/lib/admin/owner": { isOwnerEmail: () => false },
     "@/lib/touchlineArena/club-owner-page-identity": { resolveTouchlineClubOwnerPageIdentity: () => ({ isAuthenticatedClubOwner: true, name: "Customer", avatarUrl: "" }) },
     "@/lib/touchlineArena/club-owner-avatar-context-server": { createClubOwnerAvatarContextReader: () => async () => null },
-    "@/lib/touchlineArena/auth-i18n": { touchLineAuthEntryHref: () => assert.fail("No login navigation expected") },
+    "@/lib/touchlineArena/auth-i18n": { touchLineAuthEntryHref: () => "/login?lang=pt-BR" },
     "@/lib/touchlineArena/server-read-deadline": { resolveServerReadWithin: (read: unknown) => read },
     "@/lib/touchlineFantasy/server": { loadTouchlineFantasyReadSnapshot: async () => snapshot },
     "@/lib/touchlineFantasy/market-plan-policy": marketPolicy,

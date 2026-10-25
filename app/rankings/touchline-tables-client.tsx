@@ -6,7 +6,6 @@ import { useRef, useState, type CSSProperties, type RefObject } from "react";
 import {
   Crown,
   Footprints,
-  Trophy,
 } from "lucide-react";
 import TouchlineEliteExactCard from "@/components/touchline/cards/TouchlineEliteExactCard";
 import TouchlineCardZoom from "@/components/touchline/cards/TouchlineCardZoom";
@@ -598,9 +597,5 @@ export function TouchlineRankingEnding({ copy, locale, touchLineEnglandTable, ow
         </div>
       </section>
 
-      <footer className={styles.footer}>
-        <Trophy aria-hidden="true" size={19} />
-        <span>{copy.connectedDescription}</span>
-      </footer>
   </>);
 }

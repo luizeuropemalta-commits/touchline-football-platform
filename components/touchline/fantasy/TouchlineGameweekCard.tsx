@@ -44,7 +44,9 @@ export default function TouchlineGameweekCard({ card, locale, compact = false, d
     countryCode3: exact.countryCode3,
   }, locale, { previewTier: exact.cardTier });
   const resolvedDisplayWidth = displayWidth ?? (compact ? 74 : 132);
-  const useLiveCompactAsset = resolvedDisplayWidth <= 119;
+  // Fluid comparison/gallery cards can grow beyond thumbnail size. Preserve
+  // the original frame instead of stretching the 119px live asset.
+  const useLiveCompactAsset = !fitContainer && resolvedDisplayWidth <= 119;
   const details = buildTouchlinePlayerCardZoomDetails({
     locale,
     draftLocalesEnabled,
@@ -67,7 +69,7 @@ export default function TouchlineGameweekCard({ card, locale, compact = false, d
   });
   return <TouchlineCardZoom
     replacementAction={replacementAction}
-    removalAction={removalAction}
+    removalAction={replacementAction ? undefined : removalAction}
     releaseAction={releaseAction}
     signingActions={signingActions}
     lockedReason={lockedReason}
@@ -102,7 +104,6 @@ export default function TouchlineGameweekCard({ card, locale, compact = false, d
       showProfileAction={false}
       showSocialMetrics={false}
       rankingMode="preview"
-      forceNeonActive
     />
   </TouchlineCardZoom>;
 }

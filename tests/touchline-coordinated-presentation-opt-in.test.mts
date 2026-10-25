@@ -168,6 +168,8 @@ async function rootLayout(enabled:boolean, publicRelease = false) {
     resolveTouchlineDataSource:()=>"direct",Suspense:"suspense",DocumentLocaleSync:"document-sync",
     TouchlineActivityTracker:"activity",TouchlineLandscapeBoundary:"landscape",TouchlineAmbientAudioProvider:"audio",
     TouchlineDecorationMotion:"decoration-motion",
+    TouchlinePageContent:"page-content",TouchlineSiteFooter:"site-footer",
+    process:{env:{TOUCHLINE_OFFICIAL_INSTAGRAM:"https://www.instagram.com/touchline-test/"}},
     require:(name:string)=>{assert.equal(name,"react/jsx-runtime");return jsx;},
   });
   return enabled?exports.internal!({children:null},true):exports.default!({children:null});
@@ -179,8 +181,18 @@ test("root SSR and document receive the same trusted opt-in; exported layout rem
   assert.equal(sync.props.initialLocale,"ar-SA");assert.equal(sync.props.draftLocalesEnabled,true);
   const boundary=tree.find(node=>node.type==="landscape")!;
   assert.equal(boundary.props.locale,"ar-SA");assert.equal(boundary.props.draftLocalesEnabled,true);
-  assert.equal(elements(await rootLayout(false))[0].props.lang,"en-GB");
+  const footer=tree.find(node=>node.type==="site-footer")!;
+  assert.equal(footer.props.locale,"ar-SA");assert.equal(footer.props.draftLocalesEnabled,true);
+  assert.equal(footer.props.instagramUrl,"https://www.instagram.com/touchline-test/");
+  assert.equal(tree.filter(node=>node.type==="page-content").length,1);
+  assert.equal(tree.filter(node=>node.type==="site-footer").length,1);
+  const defaultTree=elements(await rootLayout(false));
+  assert.equal(defaultTree[0].props.lang,"en-GB");
+  assert.equal(defaultTree.find(node=>node.type==="site-footer")!.props.locale,"en-GB");
+  assert.equal(defaultTree.find(node=>node.type==="site-footer")!.props.draftLocalesEnabled,false);
   const publicTree=elements(await rootLayout(false,true));
   assert.equal(publicTree[0].props.lang,"ar-SA");
   assert.equal(publicTree.find(node=>node.type==="locale-release")!.props.enabled,true);
+  assert.equal(publicTree.find(node=>node.type==="site-footer")!.props.locale,"ar-SA");
+  assert.equal(publicTree.find(node=>node.type==="site-footer")!.props.draftLocalesEnabled,true);
 });

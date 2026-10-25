@@ -2,6 +2,8 @@ import { Logo } from "@/components/logo";
 import type { ReactNode } from "react";
 import type { AccountLocaleContext } from "@/lib/touchlineArena/account-locale-context-server";
 import TouchlinePageControls from "./TouchlinePageControls";
+import TouchlineSignOutButton from "./TouchlineSignOutButton";
+import TouchlineNavigationRail from "./TouchlineNavigationRail";
 import styles from "./TouchlineBrandHeader.module.css";
 
 type Props = Readonly<{
@@ -25,7 +27,7 @@ export default function TouchlineBrandHeader({ href, locale, accountLocaleContex
     <div className={styles.column}>
       <div className={styles.row}>
         {brandAccessory ? <div className={styles.brandGroup}>{logo}<div className={styles.brandAccessory}>{brandAccessory}</div></div> : logo}
-        {navigation ? <div className={styles.navigationSlot}>{navigation}{navigationAccessory}</div> : null}
+        {navigation ? <TouchlineNavigationRail className={styles.navigationSlot}>{navigation}{navigationAccessory ?? (accountLocaleContext.mode === "account" ? <TouchlineSignOutButton compact locale={locale} draftLocalesEnabled={draftLocalesEnabled} /> : null)}</TouchlineNavigationRail> : null}
         <TouchlinePageControls locale={locale} accountLocaleContext={accountLocaleContext} draftLocalesEnabled={draftLocalesEnabled} />
       </div>
     </div>

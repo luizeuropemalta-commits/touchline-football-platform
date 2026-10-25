@@ -1,0 +1,50 @@
+.contentRail {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-padding-inline: 8px;
+  padding: 8px;
+}
+
+.canvas {
+  min-width: 960px;
+  overflow-wrap: anywhere;
+}
+
+.stats,
+.quietHours {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.panels {
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr);
+}
+
+.categories {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.scopePanel {
+  grid-column: 1 / -1;
+}
+
+.scopes {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.saveRow {
+  flex-wrap: nowrap;
+}
+
+.canvas input,
+.canvas select,
+.canvas label > span {
+  min-width: 0;
+}
+
+.canvas input[type="checkbox"] {
+  flex-shrink: 0;
+}

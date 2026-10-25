@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowUp, CalendarDays, TableProperties, UsersRound } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getTouchlineClubHubSectionNavigationCopy } from "@/lib/touchlineArena/club-hub-section-navigation-i18n";
 
 import globalNavigationStyles from "../TouchlineGlobalNavigation.module.css";
@@ -18,6 +18,7 @@ export default function ClubHubSectionNavigation({ locale, draftLocalesEnabled =
   const copy = getTouchlineClubHubSectionNavigationCopy(locale, draftLocalesEnabled);
   const [showBackToTop, setShowBackToTop] = useState(false);
   const [activeTarget, setActiveTarget] = useState<string | null>(null);
+  const navigationRef = useRef<HTMLElement>(null);
 
   const items = [
     { target: "club-table", label: copy.table, icon: TableProperties },
@@ -39,8 +40,29 @@ export default function ClubHubSectionNavigation({ locale, draftLocalesEnabled =
 
   useEffect(() => {
     let frame: number | null = null;
+    let pendingTarget: string | null = null;
+    let lastHash = window.location.hash;
+    const requestMissingTarget = (hash: string) => {
+      const target = SECTION_TARGETS.find(id => hash === `#${id}`);
+      pendingTarget = target && !document.getElementById(target) ? target : null;
+    };
+    const cancelPendingTarget = () => { pendingTarget = null; };
+    requestMissingTarget(lastHash);
     const syncActiveTarget = () => {
       frame = null;
+      if (pendingTarget) {
+        if (window.location.hash !== `#${pendingTarget}`) {
+          cancelPendingTarget();
+        } else {
+          const target = document.getElementById(pendingTarget);
+          if (target) {
+            // Native fragment navigation cannot find a section still suspended.
+            // Consume this intent once; subsequent mutations must not steal scroll.
+            cancelPendingTarget();
+            target.scrollIntoView({ block: "start", inline: "nearest", behavior: "instant" });
+          }
+        }
+      }
       // Suspense streams each chapter independently. Resolve current elements
       // on every geometry read rather than retaining the initial partial DOM.
       const targets = SECTION_TARGETS
@@ -61,17 +83,51 @@ export default function ClubHubSectionNavigation({ locale, draftLocalesEnabled =
       if (frame !== null) return;
       frame = window.requestAnimationFrame(syncActiveTarget);
     };
+    const syncHash = () => {
+      // A queued event for an already observed hash must not rearm an intent
+      // cancelled by user input. An explicit same-hash click can rearm below.
+      if (lastHash === window.location.hash) return;
+      lastHash = window.location.hash;
+      requestMissingTarget(lastHash);
+      scheduleSync();
+    };
+    const requestClickedTarget = (event: MouseEvent) => {
+      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      const link = event.target instanceof Element ? event.target.closest("a[href]") : null;
+      if (!link || !navigationRef.current?.contains(link)) return;
+      const hash = link.getAttribute("href") ?? "";
+      // Remember the click before its native hashchange event is delivered,
+      // so intervening user input can cancel it without the event rearming it.
+      lastHash = hash;
+      requestMissingTarget(hash);
+    };
+    const cancelOnScrollKey = (event: KeyboardEvent) => {
+      if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "PageUp", "PageDown", "Home", "End", " "].includes(event.key)) {
+        cancelPendingTarget();
+      }
+    };
 
     syncActiveTarget();
+    const navigation = navigationRef.current;
     const scope = document.querySelector(".club-hub-shell");
     const observer = new MutationObserver(scheduleSync);
     if (scope) observer.observe(scope, { childList: true, subtree: true });
     window.addEventListener("scroll", scheduleSync, { passive: true });
     window.addEventListener("resize", scheduleSync);
+    window.addEventListener("hashchange", syncHash);
+    window.addEventListener("wheel", cancelPendingTarget, { passive: true });
+    window.addEventListener("touchstart", cancelPendingTarget, { passive: true });
+    window.addEventListener("keydown", cancelOnScrollKey);
+    navigation?.addEventListener("click", requestClickedTarget);
     return () => {
       observer.disconnect();
       window.removeEventListener("scroll", scheduleSync);
       window.removeEventListener("resize", scheduleSync);
+      window.removeEventListener("hashchange", syncHash);
+      window.removeEventListener("wheel", cancelPendingTarget);
+      window.removeEventListener("touchstart", cancelPendingTarget);
+      window.removeEventListener("keydown", cancelOnScrollKey);
+      navigation?.removeEventListener("click", requestClickedTarget);
       if (frame !== null) window.cancelAnimationFrame(frame);
     };
   }, []);
@@ -79,7 +135,7 @@ export default function ClubHubSectionNavigation({ locale, draftLocalesEnabled =
   const sharedLinkClassName = globalNavigationStyles.link;
 
   return (
-    <nav className={styles.navigation} aria-label={copy.sectionsAria}>
+    <nav ref={navigationRef} className={styles.navigation} aria-label={copy.sectionsAria}>
       {items.map(({ target, label, icon: Icon }) => (
         <a
           aria-current={activeTarget === target ? "location" : undefined}

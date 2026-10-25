@@ -7,6 +7,8 @@ import * as jsx from 'react/jsx-runtime';
 import { startAccountLocaleBrowser } from '../lib/touchlineArena/account-locale-browser.ts';
 import * as i18n from '../lib/touchlineArena/i18n.ts';
 import * as menuCopy from '../lib/touchlineArena/account-locale-menu-i18n.ts';
+import * as publicErrorCopy from '../lib/touchlineArena/public-error-i18n.ts';
+import { startAccountLocaleIdentityObserver } from '../lib/touchlineArena/account-locale-identity-observer.ts';
 
 const owner = '11111111-1111-4111-8111-111111111111';
 const context = { mode: 'account', accountId: owner };
@@ -23,6 +25,8 @@ function harness(mode = context, request = async (_url: string, init: RequestIni
   let cursor = 0, effect: (() => (() => void)) | undefined, mounted = false, phase = '';
   const slots: unknown[] = [], calls: RequestInit[] = [], navigations: string[] = [], storageWrites: Array<[string, string]> = [];
   let authCalls = 0, unsubscribes = 0, refreshes = 0;
+  let timerSerial = 0;
+  const timers = new Map<number, { callback: () => void; delay: number }>();
   let identity: (_event: string, session: { user: { id: string } } | null) => void;
   const window = { location: { href: initialHref, assign: (url: string) => navigations.push(url) }, localStorage: { setItem(key: string, value: string) { storageWrites.push([key, value]); } } };
   const document = { cookie: '' };
@@ -37,10 +41,19 @@ function harness(mode = context, request = async (_url: string, init: RequestIni
     'next/navigation': { useRouter: () => ({ refresh: () => { refreshes++; } }) },
     'lucide-react': { Check: () => null, ChevronDown: () => null, Languages: () => null },
     '@/lib/touchlineArena/account-locale-browser': { startAccountLocaleBrowser },
+    '@/lib/touchlineArena/account-locale-identity-observer': { startAccountLocaleIdentityObserver: (options: Parameters<typeof startAccountLocaleIdentityObserver>[0]) => startAccountLocaleIdentityObserver({ ...options,
+      setTimer: (callback, delay) => { timers.set(++timerSerial, { callback, delay }); return timerSerial; },
+      clearTimer: handle => { timers.delete(handle as number); },
+    }) },
+    '@/lib/touchlineArena/public-error-i18n': publicErrorCopy,
+    './TouchlineGlobalNavigation.module.css': { default: { link: 'shared-control' } },
     '@/lib/touchlineArena/presentation-locale-intent': { readTouchlinePresentationLocaleIntent: () => null, rememberTouchlinePresentationLocaleIntent: () => false },
     '@/lib/touchlineArena/i18n': i18n,
     '@/lib/touchlineArena/account-locale-menu-i18n': menuCopy,
-    '@/lib/supabase/client': { createClient: () => { authCalls++; return { auth: { onAuthStateChange: (callback: typeof identity) => { identity = callback; return { data: { subscription: { unsubscribe: () => { unsubscribes++; } } } }; } } }; } },
+    '@/lib/supabase/client': { createClient: () => { authCalls++; return { auth: {
+      getUser: async () => ({ data: { user: { id: owner } }, error: null }),
+      onAuthStateChange: (callback: typeof identity) => { identity = callback; return { data: { subscription: { unsubscribe: () => { unsubscribes++; } } } }; },
+    } }; } },
   };
   const exports: { default?: (props: unknown) => unknown } = {};
   runInNewContext(output, { exports, URL, document, window, queueMicrotask,
@@ -50,6 +63,11 @@ function harness(mode = context, request = async (_url: string, init: RequestIni
   render();
   let cleanup = effect!(); mounted = true;
   return { render, cleanup: () => cleanup(), calls, navigations, document, storageWrites,
+    runIdentityRead() {
+      const entry = [...timers].find(([, timer]) => timer.delay === 0); assert.ok(entry);
+      timers.delete(entry[0]); entry[1].callback();
+    },
+    commitRecovery() { mounted = false; render(); mounted = true; cleanup(); cleanup = effect!(); },
     changeContextBeforePassive(next: typeof mode) {
       mode = next; mounted = false; render(); mounted = true;
       // Model commit layout phase only: passive cleanup has not run yet.
@@ -59,7 +77,25 @@ function harness(mode = context, request = async (_url: string, init: RequestIni
     emit: (id: string | null) => identity!('SIGNED_IN', id === null ? null : { user: { id } }), counts: () => ({ authCalls, unsubscribes, refreshes }) };
 }
 type Element = { type: unknown; props: Record<string, unknown> };
-test('locale loading stays accessible without visible text flash; blocked feedback remains visible', async () => {
+test('blocked language copy offers retry in eight locales without requiring a page reload', () => {
+  const expected = {
+    'en-GB': 'Language could not be confirmed. Try again.',
+    'pt-BR': 'Não foi possível confirmar o idioma. Tente novamente.',
+    'es-ES': 'No se pudo confirmar el idioma. Vuelve a intentarlo.',
+    'it-IT': 'Impossibile confermare la lingua. Riprova.',
+    'fr-FR': 'La langue n’a pas pu être confirmée. Réessayez.',
+    'ar-SA': 'تعذّر تأكيد اللغة. حاول مرة أخرى.',
+    'tr-TR': 'Dil doğrulanamadı. Tekrar deneyin.',
+    'de-DE': 'Die Sprache konnte nicht bestätigt werden. Versuche es erneut.',
+  };
+  assert.deepEqual(Object.keys(expected), i18n.TOUCHLINE_APPROVED_LOCALES.map(entry => entry.code));
+  for (const [locale, message] of Object.entries(expected)) {
+    assert.equal(menuCopy.getTouchlineAccountLocaleMenuCopy(locale, true).blocked, message);
+    assert.equal(menuCopy.getTouchlineAccountLocaleMenuCopy(locale).blocked,
+      locale === 'pt-BR' ? expected['pt-BR'] : expected['en-GB']);
+  }
+});
+test('locale loading and blocked feedback stay accessible without visible header notices', async () => {
   for (const variant of ['select', 'menu']) {
     const pending = deferred<Response>();
     const h = harness(context, async () => pending.promise, variant);
@@ -71,8 +107,13 @@ test('locale loading stays accessible without visible text flash; blocked feedba
     pending.resolve(new Response('{}', { status: 503 }));
     await settle();
     const blocked = elements(h.render(), 'p')[0];
-    assert.notEqual(blocked.props.className, 'sr-only');
-    assert.ok(blocked.props.children);
+    assert.equal(blocked.props.className, 'sr-only');
+    assert.equal(blocked.props.role, 'status');
+    assert.equal(blocked.props['aria-live'], 'polite');
+    assert.equal(blocked.props.children, 'Language could not be confirmed. Try again.');
+    const retry = elements(h.render(), 'button')[0];
+    assert.equal(retry.props.children, 'Try again');
+    assert.equal(retry.props.className, 'shared-control');
     assert.deepEqual(h.navigations, []);
     h.cleanup();
   }
@@ -125,7 +166,7 @@ test('identity switch and cleanup fence late save and unsubscribe', async () => 
   assert.equal(h.counts().refreshes, 1); pending.resolve(json(saved)); await settle();
   assert.deepEqual(h.navigations, []); h.cleanup(); assert.equal(h.counts().unsubscribes, 1);
 });
-test('unavailable session user never escapes the auth callback and blocks account preference effects', async () => {
+test('unavailable session user blocks until separate same-account verification and fresh receipt', async () => {
   for (const variant of ['menu', 'select']) {
     const h = harness(context, undefined, variant);
     await settle();
@@ -146,11 +187,12 @@ test('unavailable session user never escapes the auth callback and blocks accoun
       assert.equal(elements(blocked, 'select')[0].props.disabled, true);
     }
     await settle();
-    assert.equal(h.counts().refreshes, 1, 'retain existing single identity-change refresh');
-    h.emit(owner); h.emitSession({ user });
-    await settle();
-    assert.equal(h.counts().refreshes, 1, 'no repeat notification or implicit recovery');
-    assert.deepEqual(h.calls.map(call => call.method), ['GET']);
+    assert.equal(h.counts().refreshes, 0, 'unknown is not signed out');
+    h.runIdentityRead(); await settle();
+    assert.equal(h.counts().refreshes, 0, 'same verified identity needs no route refresh');
+    if (variant === 'menu') assert.ok(elements(h.render(), 'a').every(anchor => anchor.props['aria-disabled'] === false));
+    else assert.equal(elements(h.render(), 'select')[0].props.disabled, false);
+    assert.deepEqual(h.calls.map(call => call.method), ['GET', 'GET']);
     assert.deepEqual(h.navigations, []);
     assert.deepEqual(h.storageWrites, []);
     assert.equal(h.document.cookie, '');
@@ -175,7 +217,7 @@ test('null and different account sessions remain blocked without preference writ
     h.cleanup();
   }
 });
-test('unavailable user in guest context preserves local-only behavior without auth refresh', async () => {
+test('unavailable user in guest context is blocked until identity is resolved', async () => {
   const h = harness({ mode: 'guest', accountId: '' });
   await settle();
   const user = new Proxy({ id: owner }, {
@@ -183,13 +225,31 @@ test('unavailable user in guest context preserves local-only behavior without au
   });
   assert.doesNotThrow(() => h.emitSession({ user }));
   await settle();
-  assert.ok(elements(h.render(), 'a').every(anchor => anchor.props['aria-disabled'] === false));
+  assert.ok(elements(h.render(), 'a').every(anchor => anchor.props['aria-disabled'] === true));
   assert.equal(h.counts().refreshes, 0);
   assert.deepEqual(h.calls, []);
   assert.deepEqual(h.navigations, []);
   assert.deepEqual(h.storageWrites, []);
   assert.equal(h.document.cookie, '');
   h.cleanup();
+});
+
+test('explicit retry creates one fresh authenticated read and never replays a failed selection', async () => {
+  let reads = 0;
+  const h = harness(context, async (_url, init) => {
+    if (init.method === 'PUT') return new Response('{}', { status: 503 });
+    reads++; return reads === 1 ? new Response('{}', { status: 503 }) : json(receipt);
+  });
+  await settle(); assert.equal(reads, 1);
+  const retry = elements(h.render(), 'button')[0];
+  assert.equal(retry.props.children, 'Try again'); assert.equal(retry.props.className, 'shared-control');
+  (retry.props.onClick as () => void)(); h.commitRecovery(); await settle();
+  assert.equal(reads, 2); assert.equal(elements(h.render(), 'a')[0].props['aria-disabled'], false);
+  click(elements(h.render(), 'a')[1]); await settle();
+  (elements(h.render(), 'button')[0].props.onClick as () => void)(); h.commitRecovery(); await settle();
+  assert.deepEqual(h.calls.map(call => call.method), ['GET', 'GET', 'PUT', 'GET']);
+  assert.deepEqual(h.navigations, []); assert.deepEqual(h.storageWrites, []);
+  assert.equal(h.document.cookie, ''); h.cleanup();
 });
 test('demo and unavailable instantiate no browser auth client or account request', async () => {
   for (const mode of ['demo', 'unavailable']) {

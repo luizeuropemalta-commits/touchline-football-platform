@@ -48,7 +48,7 @@ function fixture(patch: Record<string, string | undefined> = {}) {
       if (name === "@/lib/touchlineArena/server-read-deadline") return { resolveServerReadWithin: async <T>(value: Promise<T>, fallback: T) => { try { return await value; } catch { return fallback; } } };
       if (name === "@/lib/touchlineFantasy/market-plan-policy") return { isTouchlineFantasyMarketAccess: () => false };
       if (name === "@/lib/touchlineFantasy/market-workflow-i18n") return { getTouchlineFantasyMarketWorkflowCopy: () => ({ metadataDescription: "fixture" }) };
-      if (name === "@/lib/football-data/fixture-schedule-store") return { readPublicCompetitionFixtures: async () => { calls.push("public-fixtures"); return []; } };
+      if (name === "@/lib/touchlineArena/persisted-live-rail-server") return { readPersistedLiveRailWithin: async () => { calls.push("public-fixtures"); return null; } };
       if (name === "next/headers") return { headers: async () => {
         calls.push("headers"); await state.headersWait;
         return { get: (key: string) => key === "host" ? state.host : key === "x-touchline-isolated-preview" ? state.isolated : null };
@@ -250,7 +250,9 @@ test("real page forwards independent exact private selection/readiness flags wit
 test("real page rejects error-bearing identity before avatar admission or account snapshot", async () => {
   const h = fixture();
   h.state.authentication = { ...auth(), error: { message: "PRIVATE_AUTH" } };
-  await assert.rejects(h.page(), { message: "REDIRECT:/login?lang=en-GB&returnTo=%2Fclubowner%3Flang%3Den-GB" });
+  // An unverified error-bearing identity is unavailable, not a verified logout.
+  // Only the sanitized state is exposed; no customer reads are admitted below.
+  await assert.rejects(h.page(), { message: "REDIRECT:/login?lang=en-GB&returnTo=%2Fclubowner%3Flang%3Den-GB&error=auth_unavailable" });
   assert.equal(h.calls.filter(call => call === "getUser").length, 1);
   for (const call of ["privileged", "status", "readCurrent", "fantasy"]) assert.ok(!h.calls.includes(call), call);
   assert.deepEqual(h.accounts, []);
