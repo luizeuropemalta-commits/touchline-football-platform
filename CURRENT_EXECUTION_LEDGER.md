@@ -1,5 +1,20 @@
 # TouchLine Current Execution Ledger — Canonical Entry Point
 
+### 2026-10-25 07:07 UTC — fractional carousel seam corrected; full local verification PASS
+
+Remote20d1a827 attempt failed:GitHub40169811632=6492total/6441PASS/1FAIL/50SKIP; Vercel6Sy2B8RWdyidsZJM8iUovhnL8NyU ERROR QA_CI_NOT_SUCCESSFUL12m21s. Navigation correction passed. Remaining failure exposed native WebKit390ar-SA rounding:cycle1473.4375,offset1473/2946 feedback between animation and scroll normalization.
+
+Native-scroll normalization now tolerates1px around canonical boundaries; exact wrap/30px-per-second/fractional frame remainder unchanged. Independent review /root/review_strip_quantization found no actionable issue and added actual-effect floor/round60/120Hz queued-scroll regressions. Four code/test paths plus checkpoints only. No runtime/provider/data/config writes.
+
+🟢 1. Pure feedback11/11PASS09c782; actual-effect16/16PASS reviewed; browser3/3PASS Chromium/WebKit PT/AR390/844/1280 e8c59b. TypesPASS1e9b5a;lintPASS73c7be (0errors/9existingwarnings);diffcheck and Vercel11inputPASS30307a.
+🟢 2. New fullsuite6557total/6507PASS/0FAIL/0CANCELLED/50SKIP,510665ms,exit0/9434ab,b7f871. Logrelease-tests-1792911407286.log copied to coordinator saved-evidence-20261024.
+🟢 3. New local fullbuildPASS0c1d5c at07:07:20UTC,peak1997.70MiB,finaldisk1.7656GiB/pressure1,ownedgroupempty/lockreleased. Logqa-build-carousel-quantization-pass-20261025.log saved in coordinator. No new remote retry.
+🔴 4. The50 skipped cases are49 opt-in browser/DOM/mount cases and1Darwin Swift preflight, not PASS. Exact inventory QA_SKIPPED_TESTS_20261025.md; limited historical evidence is not current coverage. Hosted customer/mobile/alias/log checks remain pending.
+🔴 5. Additional remote build requires owner budget under cost policy; current authorized attempt consumed1. PriorReadyQA4pzGUi27KE3JdNoMJ8H99fKt4Hvp remains rollback target. Production untouched.
+
+MISSION: RELEASE correction. Acceptance: exactnewSHA READY then QA smoke. Local verified only. No financial/notification activation, remoteSQL, or provider ingestion. All working files/evidence preserved.
+
+
 ### 2026-10-25 06:36 UTC — corrected full local build PASS after reboot
 
 Full Next production build completed exit0 (1c0691), LOCAL_QA_BUILD_PASS_NOT_DEPLOYED. HEAD7f25cf58 plus the three reviewed correction files. PeakRSS1605MiB; finaldisk1.572GiB/pressure1; owned group empty, lock released. Log preserved in coordinator outputs/card-review-20260921/saved-evidence-20261024/qa-build-correction-pass-20261025.log. No additional cleanup. Earlier6502PASS/50SKIP, types/lint and independent review remain applicable; product source unchanged since those checks. No new remote build or Production action. Next: freeze correction manifest/commit, obtain additional QA build budget per policy, then exactSHA Git-native deployment and hosted verification. Hosted readiness remains RED.

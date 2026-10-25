@@ -9,7 +9,7 @@ import { getTouchlineMatchCentreCopy } from "@/lib/touchlineArena/match-centre-i
 import { formatTouchlineLocalKickoff } from "@/lib/touchlineArena/local-kickoff";
 import { getClubHubStripCopy } from "@/lib/touchlineArena/club-hub-fixture-strip-i18n";
 import { clubHubStripScore, clubHubStripState, clubHubStripSeedNeedsRecovery, parseClubHubStripSnapshot, type ClubHubStripSnapshot } from "@/lib/touchlineArena/club-hub-fixture-strip";
-import { fixtureStripFrameDistance, wrapFixtureStripOffset } from "@/lib/touchlineArena/fixture-strip-motion";
+import { fixtureStripFrameDistance, wrapFixtureStripOffset, normalizeFixtureStripScrollOffset } from "@/lib/touchlineArena/fixture-strip-motion";
 import controls from "./TouchlineGlobalNavigation.module.css";
 import styles from "./ClubHubFixtureStrip.module.css";
 
@@ -212,7 +212,7 @@ export default function ClubHubFixtureStrip({ locale, draftLocalesEnabled = fals
     const normalize = () => {
       // Do not scroll a keyboard user's focused original link out of view.
       if (originalRun.current?.contains(document.activeElement) || !cycleWidth.current) return;
-      const next = wrapFixtureStripOffset(node.scrollLeft, cycleWidth.current);
+      const next = normalizeFixtureStripScrollOffset(node.scrollLeft, cycleWidth.current);
       if (Math.abs(next - node.scrollLeft) > 1) node.scrollLeft = next;
     };
     synchronizeMotion.current = synchronize;

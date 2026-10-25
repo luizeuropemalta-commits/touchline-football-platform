@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import { parseClubHubStripSnapshot, clubHubStripState, clubHubStripScore, clubHubStripSeedNeedsRecovery } from "../lib/touchlineArena/club-hub-fixture-strip.ts";
 import { CLUB_HUB_STRIP_COPY, getClubHubStripCopy } from "../lib/touchlineArena/club-hub-fixture-strip-i18n.ts";
-import { fixtureStripFrameDistance, wrapFixtureStripOffset } from "../lib/touchlineArena/fixture-strip-motion.ts";
+import { fixtureStripFrameDistance, wrapFixtureStripOffset, normalizeFixtureStripScrollOffset } from "../lib/touchlineArena/fixture-strip-motion.ts";
 
 const fixture = { id: "123", providerId: "123", startsAt: "2026-10-01T12:00:00Z", status: "INPLAY_1ST_HALF", homeScore: 0, awayScore: 2,
   homeTeam: { id: "1", providerId: "1", name: "Home" }, awayTeam: { id: "2", providerId: "2", name: "Away" } };
@@ -86,4 +86,34 @@ test("continuous strip speed is elapsed-time based and never catches up after su
   assert.ok(Math.abs(fixtureStripFrameDistance(1000 / 30) * 30 - 30) < 1e-9);
   assert.equal(fixtureStripFrameDistance(10_000), 1.5);
   assert.equal(fixtureStripFrameDistance(-1), 0);
+});
+
+
+test("integer native scroll feedback cannot oscillate at fractional loop seams", () => {
+  // CI WebKit exposed 1473 / 2946 for a 1473.4375px run. Exercise the
+  // animation write followed by its native scroll event, including rounding
+  // policies that differ across browsers. This must retain forward motion.
+  for (const cycle of [1473.4375, 1473.75, 1473]) {
+    for (const quantize of [Math.floor, Math.round, Math.ceil]) {
+      let offset = quantize(2 * cycle - 2);
+      let distance = 0;
+      for (let frame = 0; frame < 120; frame++) {
+        const before = offset;
+        offset = quantize(wrapFixtureStripOffset(offset + 1, cycle));
+        const normalized = normalizeFixtureStripScrollOffset(offset, cycle);
+        assert.equal(normalized, offset, "an animation write must not trigger a second seam jump");
+        offset = quantize(normalized);
+        const step = ((offset - before) % cycle + cycle) % cycle;
+        assert.ok(step > 0 && step <= 2, `bounded forward step: ${cycle} ${before} -> ${offset}`);
+        distance += step;
+      }
+      assert.ok(Math.abs(distance - 120) <= 1, "one seam may round by less than one pixel");
+      for (const external of [0, cycle - 10, 2 * cycle + 10, 3 * cycle]) {
+        const corrected = quantize(normalizeFixtureStripScrollOffset(external, cycle));
+        assert.equal(normalizeFixtureStripScrollOffset(corrected, cycle), corrected,
+          "external scrolling normalizes once and then settles");
+        assert.ok(corrected >= cycle - 1 && corrected < 2 * cycle + 1);
+      }
+    }
+  }
 });

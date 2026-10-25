@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import vm from "node:vm";
 import ts from "typescript";
-import { fixtureStripFrameDistance, wrapFixtureStripOffset } from "../lib/touchlineArena/fixture-strip-motion.ts";
+import { fixtureStripFrameDistance, wrapFixtureStripOffset, normalizeFixtureStripScrollOffset } from "../lib/touchlineArena/fixture-strip-motion.ts";
 
 const source = readFileSync(new URL("../components/touchline/ClubHubFixtureStrip.tsx", import.meta.url), "utf8");
 const ast = ts.createSourceFile("strip.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
@@ -32,7 +32,7 @@ function eventTarget() {
     count: () => [...listeners.values()].reduce((sum, set) => sum + set.size, 0),
   };
 }
-function setup(options: { width?: number; reduced?: boolean; intersectionObserver?: boolean } = {}) {
+function setup(options: { width?: number; reduced?: boolean; intersectionObserver?: boolean; quantize?: (offset: number) => number } = {}) {
   let width = options.width ?? 1000, viewportWidth = 200, left = 1000, now = 100;
   let reads = 0, writes = 0, serial = 0, disconnected = 0, looping = width > viewportWidth;
   const frames = new Map<number, (time: number) => void>();
@@ -40,13 +40,19 @@ function setup(options: { width?: number; reduced?: boolean; intersectionObserve
   const microtasks: Array<() => void> = [];
   const documentEvents = eventTarget(), windowEvents = eventTarget(), stripEvents = eventTarget(), nodeEvents = eventTarget(), mediaEvents = eventTarget();
   const originalFocus = {}, arrowFocus = {};
+  let pendingScroll = false;
   const document = { ...documentEvents, hidden: false, activeElement: null as object | null };
   const reduced = { ...mediaEvents, matches: options.reduced ?? false };
   const strip = { ...stripEvents, contains: (element: unknown) => element === originalFocus || element === arrowFocus };
   const run = { getBoundingClientRect: () => { reads++; return { width }; }, contains: (element: unknown) => element === originalFocus };
   const node = { ...nodeEvents, parentElement: strip,
     get clientWidth() { reads++; return viewportWidth; },
-    get scrollLeft() { return left; }, set scrollLeft(value: number) { writes++; left = value; },
+    get scrollLeft() { return left; }, set scrollLeft(value: number) {
+      writes++;
+      const next = options.quantize ? options.quantize(value) : value;
+      if (next !== left && options.quantize) pendingScroll = true;
+      left = next;
+    },
   };
   const cycleWidth = { current: looping ? width : 0 };
   const interaction = { current: { hovered: false, touching: false, resumeAfter: 0 } };
@@ -55,7 +61,7 @@ function setup(options: { width?: number; reduced?: boolean; intersectionObserve
   const context = vm.createContext({
     viewport: { current: node }, originalRun: { current: run }, cycleWidth, interaction, synchronizeMotion, canLoop: looping,
     setCanLoop: (value: boolean) => { looping = value; }, document,
-    fixtureStripFrameDistance, wrapFixtureStripOffset, performance: { now: () => now },
+    fixtureStripFrameDistance, wrapFixtureStripOffset, normalizeFixtureStripScrollOffset, performance: { now: () => now },
     queueMicrotask: (callback: () => void) => microtasks.push(callback),
     window: { ...windowEvents, matchMedia: () => reduced,
       setTimeout: (callback: () => void, delay: number) => { timers.set(++serial, { callback, due: now + delay }); return serial; },
@@ -100,7 +106,18 @@ function setup(options: { width?: number; reduced?: boolean; intersectionObserve
     hover: (value: boolean) => stripEvents.emit(value ? "pointerenter" : "pointerleave", { pointerType: "mouse" }),
     touch: (value: boolean) => value ? stripEvents.emit("pointerdown") : windowEvents.emit("pointerup"),
     wheel: () => nodeEvents.emit("wheel"),
-    scroll: (value: number) => { node.scrollLeft = value; nodeEvents.emit("scroll"); },
+    scroll: (value: number) => { node.scrollLeft = value; if (!options.quantize) nodeEvents.emit("scroll"); },
+    flushScroll: () => {
+      // Browser scroll events are queued and coalesced, not dispatched by the
+      // setter. Include feedback writes from normalization without recursion.
+      let events = 0;
+      while (pendingScroll) {
+        assert.ok(events++ < 10, "native scroll feedback must settle");
+        pendingScroll = false;
+        nodeEvents.emit("scroll");
+      }
+      return events;
+    },
     tick: (time: number) => { now = time; const callbacks = [...frames.values()]; frames.clear(); callbacks.forEach(callback => callback(time)); },
     advance: (time: number) => { now = time; for (const [id, timer] of [...timers]) if (timer.due <= time) { timers.delete(id); timer.callback(); } },
   };
@@ -216,3 +233,54 @@ test("StrictMode effect replay retains interaction without duplicate listeners o
   assert.deepEqual(h.interaction.current, before);
   assert.equal(h.frames.size, 0); assert.equal(h.timers.size, 0);
 });
+
+for (const [rounding, quantize] of [["floor", Math.floor], ["round", Math.round]] as const) {
+  for (const fps of [60, 120]) {
+    test(`actual animation crosses fractional seams at ${fps}Hz with ${rounding} native scroll feedback`, () => {
+      const width = 1473.4375;
+      const h = setup({ width, quantize, reduced: true });
+      h.intersect(true);
+      h.scroll(width);
+      const reducedPosition = h.node.scrollLeft, reducedWrites = h.stats().writes;
+      h.flushScroll(); h.tick(100); h.tick(200);
+      assert.equal(h.node.scrollLeft, reducedPosition, "reduced motion stays still at the quantized lower seam");
+      assert.equal(h.stats().writes, reducedWrites, "normalization must not move a native reading within one pixel of the seam");
+      assert.equal(h.frames.size, 0);
+
+      h.scroll(2 * width - 2); h.flushScroll();
+      h.reduce(false); h.tick(200);
+      let distance = 0, crossings = 0;
+      const reads = h.stats().reads;
+      for (let frame = 1; frame <= 2 * fps; frame++) {
+        const before = h.node.scrollLeft;
+        h.tick(200 + frame * 1000 / fps);
+        const animated = h.node.scrollLeft;
+        h.flushScroll();
+        assert.equal(h.node.scrollLeft, animated, "queued normalization must preserve the animation write");
+        const step = ((animated - before) % width + width) % width;
+        assert.ok(step >= 0 && step <= 2, `bounded frame movement: ${before} -> ${animated}`);
+        distance += step;
+        if (animated < before) crossings++;
+      }
+      assert.equal(crossings, 1, "the real animation crosses the upper seam once");
+      // Less than one pixel can remain in the fractional frame accumulator,
+      // and the single seam can lose/gain less than one native pixel.
+      assert.ok(Math.abs(distance - 60) < 2, `fractional frame accumulation preserves 30px/s: ${distance}`);
+      assert.equal(h.stats().reads, reads, "animation performs no geometry reads");
+
+      h.reduce(true);
+      const paused = h.node.scrollLeft;
+      h.tick(10_000); h.flushScroll();
+      assert.equal(h.node.scrollLeft, paused); assert.equal(h.frames.size, 0);
+      h.reduce(false); h.tick(20_000); h.flushScroll();
+      assert.equal(h.node.scrollLeft, paused, "resume does not catch up suspended time");
+      h.scroll(width - 5);
+      const beforeCleanup = h.stats().writes;
+      h.cleanup();
+      assert.equal(h.flushScroll(), 1, "deliver a native event already queued before cleanup");
+      h.tick(30_000);
+      assert.equal(h.stats().writes, beforeCleanup, "queued events cannot normalize after cleanup");
+      assert.equal(h.listeners(), 0); assert.equal(h.frames.size, 0); assert.equal(h.timers.size, 0);
+    });
+  }
+}
