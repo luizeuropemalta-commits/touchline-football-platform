@@ -1,3 +1,11 @@
+### 2026-10-27 — QA b5775031 failed CI; previous QA preserved
+
+Supersedes the pending-publication entry below. One authorized Git-native build was consumed: dpl_s3kj7PhNBZt9rwMkcq1LcfBcYsBs ERROR. CI 40491648878: 6939 total, 6873 PASS, 1 FAIL, 65 opt-in SKIP. Failure: isolated frame-density test extracted the real error handler but omitted its new setFailedFrameUrl closure dependency. Stable QA alias still resolves to dpl_6QdczpKTobSjdVHPHWbgtd1t5HEf (0b2ed346); no alias rollback needed, no Production changes.
+
+Local test-only correction injects a strict callback and asserts the original failed-art identity on both error calls. Existing fallback/srcset/no-loop assertions preserved. Focused independent review:7/7 PASS; TypeScript and full ESLint PASS (0 errors,10 existing warnings). Fresh local production build PASS,exit0,138/138 pages. Product/config/dependencies are unchanged from b5775031. Initial local rerun encountered22 sandbox startup/loopback denials. Full rerun with permitted execution completed:6939 total,6874 PASS,0 FAIL,65 opt-in SKIP,exit0 (295466ms). These skips remain separate and are not physical-device approval. No new remote build started or authorized.
+
+Queue unchanged: real contract acquisition/season-end dates and native iPhone page-pinch crash remain unresolved. Evidence: coordinator outputs/preqa-20261027/third-ci-failure.log, fourth-suite.log, fourth-browser-retry.log, USER_REVIEW_QUEUE_20261027.json.
+
 ### 2026-10-27 — Single QA deploy authorized; neon batch and explicit follow-up queue
 
 Owner authorized one QA Git-native deployment and then added neon/hover corrections to the same batch. No new remote build has been consumed yet. Production/main untouched. Scope: coach crest/caption, V4 absence revalidation, ClubOwner read/prefetch, art-aligned hover-only neon. Original image assets unchanged; 140 player/7 coach source contours verified. General suite:6939 total/6874 PASS/0 FAIL/65 opt-in skipped; dedicated real-component neon matrix passed separately (Chromium/WebKit, seven tiers, non-Arsenal examples, zoom, reduced motion, touch landscape). TypeScript passed. Local production build PASS (exit0); final compact geometry/browser proof PASS with exact real-caller scale. Remote build/smoke remain pending at this checkpoint.

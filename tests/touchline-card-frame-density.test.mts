@@ -30,8 +30,8 @@ function execute(code: string, values: Record<string, unknown>): Frame {
   runInNewContext(code, { exports, ...values, require(name: string) { assert.equal(name, "react/jsx-runtime"); return jsx; } });
   return exports.render();
 }
-function playerFrame(compact: boolean, source = "/touchlineArena/cards/templates/clubs/Arsenal%20FC/market-tiers/ruby-red.png?v=fixture") {
-  return execute(playerCode, { versionedCardTemplateUrl: source, optimizeForLiveCompact: compact, imageLoading: "eager" });
+function playerFrame(compact: boolean, source = "/touchlineArena/cards/templates/clubs/Arsenal%20FC/market-tiers/ruby-red.png?v=fixture", onFrameFailure: (url: string) => void = () => assert.fail("unexpected frame failure")) {
+  return execute(playerCode, { versionedCardTemplateUrl: source, optimizeForLiveCompact: compact, imageLoading: "eager", setFailedFrameUrl: onFrameFailure });
 }
 
 test("player frame offers native density candidates without viewport-derived sizing or changing canvas", () => {
@@ -50,16 +50,20 @@ test("player frame offers native density candidates without viewport-derived siz
 });
 
 test("player fallback recovers when failed currentSrc is the dense candidate while src already names the fallback", () => {
-  const frame = playerFrame(true, "/touchlineArena/cards/templates/clubs/Manchester%20City/market-tiers/diamond-gold.png").props;
+  const source = "/touchlineArena/cards/templates/clubs/Manchester%20City/market-tiers/diamond-gold.png";
+  const failures: string[] = [];
+  const frame = playerFrame(true, source, (url) => failures.push(url)).props;
   const dense = frame.srcSet!.split(", ")[1].split(" ")[0];
   let assignments = 0;
   const image = { currentSrc: `https://fixture.invalid${dense}`, srcset: frame.srcSet!,
     get src() { return `https://fixture.invalid${frame.src}`; }, set src(value: string) { assert.equal(value, frame.src); assignments++; } };
   frame.onError!({ currentTarget: image });
   assert.equal(assignments, 1); assert.equal(image.srcset, "");
+  assert.deepEqual(failures, [source], "failed original art disables its neon contour");
   image.currentSrc = `https://fixture.invalid${frame.src}`;
   frame.onError!({ currentTarget: image });
   assert.equal(assignments, 1, "failed fallback must not loop");
+  assert.deepEqual(failures, [source, source], "fallback failure retains the original failed-art identity");
 });
 
 const coachSource = readFileSync(new URL("../components/touchline/cards/TouchlineCoachCard.tsx", import.meta.url), "utf8");
