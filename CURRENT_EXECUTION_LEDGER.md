@@ -1,5 +1,20 @@
 # TouchLine Current Execution Ledger — Canonical Entry Point
 
+### 2026-10-27 — QA 0b2ed346 published; post-deployment corrections LOCAL
+
+Supersedes prior pending publication status for 0b2ed346. Authorized second total Git-native build consumed: Vercel dpl_6QdczpKTobSjdVHPHWbgtd1t5HEf READY; exact SHA 0b2ed346271d52805932968b546303aa64c14cb4 and stable QA alias verified. CI 40474813996 SUCCESS: 6885 total, 6822 passed, 0 failed, 63 opt-in skipped (not blanket approval).
+
+- QA URL: https://touchline-arena-official-git-qa-fifa-agent-plataform.vercel.app
+- Pascal fixture19722126/player31504: normal QA ingestion changed stored7.19 to provider-imported6.37; repeating kept6.37 and two history rows, without duplication. Safari Live displayed6.37 and OG/Gol contra. No arbitrary score write; old baseline is not original-provider-response proof.
+- Public smoke18cases: Chromium/WebKit/Firefox, desktop/landscape, intro/register/ClubHub. HTTP200, no page errors/broken images/horizontal overflow. Navigation-aborted requests recorded; this is not full-site or physical-device approval.
+- Native Safari customer coach zoom rendered correctly once Safari was brought forward; prior black background capture was not a reproduced crash. Single frame and enlarged crest observed. User now requests zoom crest to match player crest; local adjustment passed six real-component browser cases.
+- OPEN: five stale V4 null absence records prevent round1 lifecycle closure. Safe local revalidation patch passed103 focused tests; independent review passed; complete local suite6927total/6863PASS/0FAIL/64SKIP. No users have gameweeks tied to this round. Do not manually invent ratings/refresh timestamps.
+- OPEN: coach price/technical-caption overlap corrected locally,14 browser scenarios passed; not published. Coach zoom crest now matches player image size:73.125px at390px card, verified in six real-component browser cases; normal/compact/editor preserved.
+- No third build authorized, no Production changes. Current worktree has local postdeploy changes, not the immutable published version. Preserve original source WIP.
+
+Evidence: coordinator outputs/preqa-20261027/REMOTE_RELEASE_STATUS.json; vercel-second-detail.json; vercel-second-alias.json; ci-second-result.json; qa-pascal-after-replay.json; safari-live-updated-rating.json; published-smoke/results.json; safari-coach-zoom-frontmost.png; coach-caption-regression-after.log; v4-absence-revalidation-focused.log. Full postdeploy suite passed (postdeploy-release-suite-final.log); TypeScript and ESLint passed (10 existing warnings). Local production build PASS, exit0 (compiled29.5s; TypeScript22.7s). No further remote build authorized. Local postdeploy candidate ready for commit, not published.
+
+
 ### 2026-10-25 — QA df29cf17 READY; hosted smoke partial, sports data stale
 
 SUPERSEDES previous awaiting-budget/publication status for df29cf17 only. Owner authorized one new QA Git-native attempt; push0acff3 consumed1/1. GitHub40171729205 SUCCESS:6497total/6447PASS/0FAIL/50SKIP (ce6aa6). VercelGsRnQvGT1vSAJypwyGtVPyysQeUB Ready14m56s; authenticated Safari dashboard verified exactSHA df29cf1785fde301878895539ef202a456229334,Preview/qa and stableQAalias.

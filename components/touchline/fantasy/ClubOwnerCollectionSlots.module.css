@@ -9,7 +9,8 @@
 .technicalRow .slot > button:not(:first-child) { grid-row:2; }
 .technicalRow > :nth-child(2) { grid-template-columns:minmax(0,1fr); }
 .technicalRow > :nth-child(2) > span { grid-row:1; }
-.technicalLine.technicalLine { height:auto; margin:-8px auto 0; }
+/* Keep the title below the coach's in-shell signing caption, including focus. */
+.technicalLine.technicalLine { height:auto; margin:8px auto 0; }
 /* 2 five-card wings + 130% coach + 8*4.4px + 2*8px + 2*8px focus
    gutters: minimum 564.4px. Only this area scrolls, never the pitch/picker. */
 .technicalRail { width:100%; max-width:100%; min-width:0; overflow-x:auto; overscroll-behavior-x:contain; scroll-behavior:auto; scrollbar-width:thin; scrollbar-color:rgba(170,255,62,.5) transparent; }

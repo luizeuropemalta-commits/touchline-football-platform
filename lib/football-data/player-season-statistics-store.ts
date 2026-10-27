@@ -29,10 +29,10 @@ type MembershipRow = {
   source_synced_at?: string | null;
   /** In-memory evidence only, never persisted as a season-wide membership. */
   sidelineFixtureIds?: Set<string>;
-  football_players?: { provider?: string; provider_player_id?: string; provider_position?: string | null; position?: string | null } | null;
+  football_players?: { id?: string; provider?: string; provider_player_id?: string; provider_position?: string | null; position?: string | null } | null;
   football_seasons?: { name?: string | null } | null;
   football_competitions?: { name?: string | null } | null;
-  football_clubs?: { name?: string | null } | null;
+  football_clubs?: { id?: string; provider?: string; provider_team_id?: string; name?: string | null } | null;
 };
 type FixtureRow = {
   id: string;
@@ -45,6 +45,8 @@ type FixtureRow = {
   status: string | null;
   home_score: number | null;
   away_score: number | null;
+  football_seasons?: { provider?: string; provider_season_id?: string } | null;
+  football_competitions?: { provider?: string; provider_competition_id?: string } | null;
 };
 type FeedRow = {
   provider: string;
@@ -134,6 +136,7 @@ async function readCompleteStatisticsInput(
   table: string,
   columns: string,
   filter?: { column: string; values: string[] },
+  equalities: readonly { column: string; value: string }[] = [],
 ) {
   const rows: Record<string, unknown>[] = [];
   const seen = new Set<string>();
@@ -148,6 +151,7 @@ async function readCompleteStatisticsInput(
         .order("id", { ascending: true })
         .range(offset, offset + 499);
       if (filter && chunk) query = query.eq("provider", "sportmonks").in(filter.column, chunk);
+      for (const { column, value } of equalities) query = query.eq(column, value);
       const { data, error, count } = await query;
       const fail = (code: string) => ({ data: null, error: { message: `${table}:${code}` } });
       if (error || !Array.isArray(data) || !Number.isSafeInteger(count) || count === null || count < 0) return fail("read-unavailable");
@@ -190,7 +194,7 @@ export async function syncTouchLinePlayerSeasonStatistics(admin: SupabaseClient,
     missingSettlementFixtureIds: [],
   };
   const { data: fixtures, error: fixturesError } = await readCompleteStatisticsInput(admin,"football_fixtures",
-    "id,provider,provider_fixture_id,competition_id,season_id,home_club_id,away_club_id,status,home_score,away_score,football_seasons(name),football_competitions(name)");
+    "id,provider,provider_fixture_id,competition_id,season_id,home_club_id,away_club_id,status,home_score,away_score,football_seasons(name,provider,provider_season_id),football_competitions(name,provider,provider_competition_id)");
   if (fixturesError || !Array.isArray(fixtures)) {
     result.errors.push(fixturesError?.message ?? "fixtures-unavailable");
     return result;
@@ -265,8 +269,76 @@ export async function syncTouchLinePlayerSeasonStatistics(admin: SupabaseClient,
       return [{ fixture, feed, member }];
     });
   });
-  const providerPlayerIds = [...new Set([...lineupFacts, ...sidelineFacts].map(({ member }) => String(member.playerId)))];
-  const providerTeamIds = [...new Set([...lineupFacts, ...sidelineFacts].map(({ member }) => String(member.teamId)))];
+  // A later complete final feed can omit an old sideline. Retain the already
+  // materialized fixture identity, but require new evidence of nonparticipation
+  // before advancing its timestamp. This never establishes season membership.
+  const { data: priorAbsences, error: priorAbsencesError } = await readCompleteStatisticsInput(admin,
+    "touchline_player_fixture_score_settlements",
+    "id,football_player_id,fixture_id,competition_id,season_id,club_id,scoring_version,appearance_status,settlement_status,minutes_played,rating,touchline_points,source_synced_at,football_players(id,provider,provider_player_id,provider_position,position),football_clubs(id,provider,provider_team_id)",
+    undefined, [{ column: "scoring_version", value: "player_scoring_v4" },
+      { column: "appearance_status", value: "absent" }, { column: "settlement_status", value: "final" }]);
+  if (priorAbsencesError || !priorAbsences) {
+    result.errors.push(priorAbsencesError?.message ?? "prior-v4-absences-unavailable");
+    return result;
+  }
+  const priorAbsenceCounts = new Map<string, number>();
+  for (const row of priorAbsences) {
+    const key = `${row.football_player_id}:${row.fixture_id}`;
+    priorAbsenceCounts.set(key, (priorAbsenceCounts.get(key) ?? 0) + 1);
+  }
+  const revalidatedAbsences = priorAbsences.flatMap((prior) => {
+    if (prior.scoring_version !== "player_scoring_v4" || prior.appearance_status !== "absent"
+      || prior.settlement_status !== "final" || prior.minutes_played !== null
+      || prior.rating !== null || prior.touchline_points !== null
+      || priorAbsenceCounts.get(`${prior.football_player_id}:${prior.fixture_id}`) !== 1) return [];
+    const matchingFixtures = (fixtures as FixtureRow[]).filter((row) => row.id === prior.fixture_id);
+    if (matchingFixtures.length !== 1) return [];
+    const fixture = matchingFixtures[0];
+    const matchingFeeds = (feeds as FeedRow[]).filter((row) => row.provider === fixture.provider && row.provider_fixture_id === fixture.provider_fixture_id);
+    if (matchingFeeds.length !== 1 || (fixtures as FixtureRow[]).filter((row) => row.provider === fixture.provider && row.provider_fixture_id === fixture.provider_fixture_id).length !== 1) return [];
+    const feed = matchingFeeds[0];
+    const payload = feed.fixture_payload as TouchlineFantasyFixtureFeed["fixture"] | null;
+    const player = prior.football_players as MembershipRow["football_players"];
+    const club = prior.football_clubs as MembershipRow["football_clubs"];
+    if (fixture.provider !== "sportmonks" || !isTouchLineSettledFixtureStatus(fixture.status)
+      || !fixture.season_id || prior.season_id !== fixture.season_id
+      || !fixture.competition_id || prior.competition_id !== fixture.competition_id
+      || !payload || payload.provider !== fixture.provider || payload.providerId !== fixture.provider_fixture_id
+      || !isTouchLineSettledFixtureStatus(payload.status)
+      || fixture.football_seasons?.provider !== fixture.provider || !payload.seasonId
+      || payload.seasonId !== fixture.football_seasons.provider_season_id
+      || fixture.football_competitions?.provider !== fixture.provider || !payload.competitionId
+      || payload.competitionId !== fixture.football_competitions.provider_competition_id
+      || player?.id !== prior.football_player_id || player?.provider !== fixture.provider
+      || !/^\d+$/.test(player?.provider_player_id ?? "")
+      || club?.id !== prior.club_id || club?.provider !== fixture.provider
+      || !/^\d+$/.test(club?.provider_team_id ?? "")
+      || !Number.isFinite(Date.parse(String(prior.source_synced_at ?? "")))
+      || !Number.isFinite(Date.parse(feed.last_synced_at ?? ""))
+      || Date.parse(feed.last_synced_at!) < Date.parse(String(prior.source_synced_at))
+      || !Array.isArray(feed.lineups_payload) || !Array.isArray(feed.events_payload) || !Array.isArray(feed.sidelined_payload)) return [];
+    const expectedTeam = prior.club_id === fixture.home_club_id ? payload.homeTeam?.providerId
+      : prior.club_id === fixture.away_club_id ? payload.awayTeam?.providerId : null;
+    if (club.provider_team_id !== expectedTeam) return [];
+    const lineups = feed.lineups_payload as TouchlineFantasyLineupMember[];
+    const events = feed.events_payload as TouchlineFantasyEvent[];
+    if (lineups.length !== 40 || new Set(lineups.map((row) => String(row.playerId))).size !== 40
+      || lineups.some((row) => String(row.playerId) === player.provider_player_id
+        || ![payload.homeTeam?.providerId, payload.awayTeam?.providerId].includes(String(row.teamId)))
+      || events.some((row) => !row || row.provider !== fixture.provider || row.fixtureId !== fixture.provider_fixture_id
+        || String(row.playerId) === player.provider_player_id || String(row.relatedPlayerId) === player.provider_player_id)
+      || (feed.sidelined_payload as TouchlineFantasySidelinedPlayer[]).some((row) => String(row?.playerId) === player.provider_player_id
+        && (row.provider !== fixture.provider || row.fixtureId !== fixture.provider_fixture_id || row.teamId !== expectedTeam))) return [];
+    const officialFeed: TouchlineFantasyFixtureFeed = {
+      fixture: payload, lineups, events, sidelined: [], formations: [], fetchedAt: feed.last_synced_at!,
+      mediaPolicy: { officialMediaExposed: false, note: "Revalidated existing fixture absence" },
+    };
+    if (!inspectTouchlineOfficialTeamSheet(officialFeed).completeTeamSheetsReady) return [];
+    return [{ fixture, feed, providerPlayerId: player.provider_player_id!, providerTeamId: club.provider_team_id!,
+      expectedPlayerId: String(prior.football_player_id), expectedClubId: String(prior.club_id) }];
+  });
+  const providerPlayerIds = [...new Set([...lineupFacts, ...sidelineFacts].map(({ member }) => String(member.playerId)).concat(revalidatedAbsences.map((row) => row.providerPlayerId)))];
+  const providerTeamIds = [...new Set([...lineupFacts, ...sidelineFacts].map(({ member }) => String(member.teamId)).concat(revalidatedAbsences.map((row) => row.providerTeamId)))];
   const [{ data: playerRows, error: playerRowsError }, { data: clubRows, error: clubRowsError }] = await Promise.all([
     providerPlayerIds.length
       ? readCompleteStatisticsInput(admin,"football_players","id,provider,provider_player_id,provider_position,position", {column:"provider_player_id",values:providerPlayerIds})
@@ -402,13 +474,24 @@ export async function syncTouchLinePlayerSeasonStatistics(admin: SupabaseClient,
   result.membershipsRead = memberships.length;
   const persistedKeys = new Set((memberships as MembershipRow[]).map(membershipKey));
   const scopedMemberships = new Map<string, MembershipRow>();
-  for (const { fixture, feed, member } of sidelineFacts) {
-    const matchingPlayers = playerRows.filter((row) => String(row.provider_player_id) === String(member.playerId));
-    const matchingClubs = clubRows.filter((row) => String(row.provider_team_id) === String(member.teamId));
+  const scopedAbsenceFacts = [...sidelineFacts.map(({ fixture, feed, member }) => ({
+    fixture, feed, providerPlayerId: String(member.playerId), providerTeamId: String(member.teamId),
+    expectedPlayerId: null as string | null, expectedClubId: null as string | null,
+  })), ...revalidatedAbsences];
+  for (const { fixture, feed, providerPlayerId, providerTeamId, expectedPlayerId, expectedClubId } of scopedAbsenceFacts) {
+    const matchingPlayers = playerRows.filter((row) => String(row.provider_player_id) === providerPlayerId);
+    const matchingClubs = clubRows.filter((row) => String(row.provider_team_id) === providerTeamId);
     if (matchingPlayers.length !== 1 || matchingClubs.length !== 1) continue;
     const player = matchingPlayers[0];
     const clubId = String(matchingClubs[0].id);
-    if (!player || !clubId || (clubId !== fixture.home_club_id && clubId !== fixture.away_club_id)) continue;
+    if (!player || !clubId || (clubId !== fixture.home_club_id && clubId !== fixture.away_club_id)
+      || (expectedPlayerId !== null && player.id !== expectedPlayerId)
+      || (expectedClubId !== null && clubId !== expectedClubId)) continue;
+    if (expectedPlayerId !== null) {
+      const payload = feed.fixture_payload as TouchlineFantasyFixtureFeed["fixture"];
+      if (clubIdByProviderId.get(String(payload.homeTeam?.providerId)) !== fixture.home_club_id
+        || clubIdByProviderId.get(String(payload.awayTeam?.providerId)) !== fixture.away_club_id) continue;
+    }
     const row: MembershipRow = {
       football_player_id: String(player.id), competition_id: fixture.competition_id,
       season_id: fixture.season_id, club_id: clubId, source_synced_at: feed.last_synced_at,

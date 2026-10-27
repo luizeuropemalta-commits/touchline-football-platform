@@ -69,7 +69,21 @@ test("custom editor sizing and placement remain unchanged while public sizes sta
   }
 });
 
-test("compact keeps its bounded crest while zoom inherits canonical public sizing", () => {
+test("zoom alone matches the visible player crest without changing normal or editor sizing", () => {
+  const render = fixture();
+  const zoom = render({ displayMode: "zoom" });
+  const value = Number(zoom.match(/--coach-crest-size:([\d.]+)cqw/)?.[1]);
+  assert.ok(Number.isFinite(value));
+  for (const width of [290, 300, 390]) {
+    assert.ok(Math.abs(value * width / 100 - 80.64 * width / 430) < .001);
+  }
+  assert.ok(zoom.includes('data-coach-card-display="zoom"'));
+  assert.ok(render({ editable: true, displayMode: "zoom" }).includes("--coach-crest-size:92px"));
+  const wrapper = readFileSync(new URL("../components/touchline/cards/TouchlineCoachCardZoom.tsx", import.meta.url), "utf8");
+  assert.match(wrapper, /expandedContent=\{[\s\S]*displayMode="zoom"/);
+});
+
+test("compact keeps its bounded crest without global zoom overrides", () => {
   const compact = fixture()({ displayMode: "compact" });
   assert.ok(compact.includes('data-coach-card-display="compact"'));
   const css = readFileSync(new URL("../components/touchline/cards/TouchlineCoachCard.module.css", import.meta.url), "utf8");

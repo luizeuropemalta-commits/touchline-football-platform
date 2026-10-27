@@ -66,7 +66,7 @@ type TouchlineCoachCardProps = {
   layoutOverride?: TouchlineCoachCardLayout;
   onLayoutChange?: (layout: TouchlineCoachCardLayout) => void;
   editableLayers?: TouchlineCoachLayerKey[];
-  displayMode?: "default" | "compact";
+  displayMode?: "default" | "compact" | "zoom";
   optimizeForLiveCompact?: boolean;
   /** Layout-owned CSS width; omit when container sizing is not known. Never used to resize the card. */
   frameDisplayWidth?: number;
@@ -340,11 +340,14 @@ export default function TouchlineCoachCard({
     "--coach-footer-w": `${layout.layers.footer.w}%`,
     "--coach-portrait-scale": String(layout.portraitScale),
     "--coach-name-size": `${layout.nameSize}cqw`,
-    // Saved crest sizing was authored on a 300px card. Keep those exact
-    // editor pixels, but scale the public card's crest with its own container.
+    // Keep saved editor/normal sizing. Zoom matches the player card's visible
+    // crest: 42px field × master scale 2.4 × image scale .8 / 430px canvas.
+    // Size the image itself; the narrower positioning anchor must not clip it.
     "--coach-crest-size": editable
       ? `${Math.round(layout.crestSize * 3)}px`
-      : `${Math.round(layout.crestSize * 3) / 3}cqw`,
+      : displayMode === "zoom"
+        ? `${42 * 2.4 * .8 / 430 * 100}cqw`
+        : `${Math.round(layout.crestSize * 3) / 3}cqw`,
     "--coach-neon-alpha": String(Math.min(.92, .2 + layout.neonStrength * .3)),
     "--coach-neon-soft-alpha": String(Math.min(.88, .18 + layout.neonStrength * .3)),
     "--coach-art-scale": "1",

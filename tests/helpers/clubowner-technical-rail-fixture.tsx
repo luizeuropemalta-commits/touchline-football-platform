@@ -59,7 +59,8 @@ export default function TechnicalRailFixture({ width, direction = "ltr", enabled
           <div className={fantasy.technicalCoachCard} data-technical-coach="true" style={{ width: width * 1.3 }}>
             <TouchlineCoachCardZoom coach={coach} slot={createTouchlineArenaCoachSlot(coach, 1, "sapphire-blue")}
               clubName="Arsenal" locale="en-GB" contract={null} competition={null} liveCompetitionUpdates
-              profileHref="/touchline-coaches/990001?lang=en-GB" assetLoading="eager" showLeadershipCrown />
+              profileHref="/touchline-coaches/990001?lang=en-GB" assetLoading="eager" showLeadershipCrown
+              acquisitionPrice={{ label: "Signing value", valueTc: 10_000_000 }} />
             <span>Coach</span>
           </div>
           <ClubOwnerCollectionSlots state={state} catalogue={catalogue} area="reserves" start={4} count={5} locale="en-GB" displayWidth={width} enabled onChoose={noop} />

@@ -186,6 +186,12 @@ test("ClubOwner technical rail preserves nine real cards, coach crown and horizo
         };
         const compositionBefore = await inspectComposition("before");
         const artworkBefore = await measureArtwork();
+        const captionGap = () => rail.evaluate(node => {
+          const price = node.querySelector('[data-coach-signing-value]')!.getBoundingClientRect();
+          const title = node.querySelector('[data-technical-test-line] > span')!.getBoundingClientRect();
+          return title.top - price.bottom;
+        });
+        assert.ok(await captionGap() >= 6, "coach signing amount remains separated from the technical-area title");
         await expect(page.locator('[data-collection-slot]')).toHaveCount(9);
         await expect(page.locator('[data-touchline-coach-leader-crown="true"]')).toHaveCount(1);
         assert.equal(await page.locator('[data-test-formation]').count(), 1);
@@ -218,6 +224,7 @@ test("ClubOwner technical rail preserves nine real cards, coach crown and horizo
         const coachTarget = await coachTrigger.boundingBox();
         assert.ok(coachTarget && coachTarget.width >= 44 && coachTarget.height >= 44, "real coach zoom retains a touch target");
         await coachTrigger.focus();
+        await expect.poll(captionGap, { message: "coach keyboard focus cannot overlap the signing amount and technical title" }).toBeGreaterThanOrEqual(4);
         await expect.poll(() => page.locator('[data-touchline-coach-leader-crown]').evaluate(node => {
           const crown = node.getBoundingClientRect(), rail = node.closest('[data-clubowner-technical-rail]')!.getBoundingClientRect();
           return crown.top >= rail.top && crown.left >= rail.left && crown.right <= rail.right && crown.bottom <= rail.bottom;

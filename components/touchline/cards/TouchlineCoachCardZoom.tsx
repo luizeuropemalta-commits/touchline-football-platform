@@ -217,6 +217,7 @@ export default function TouchlineCoachCardZoom({
           locale={locale}
           draftLocalesEnabled={draftLocalesEnabled}
           forceNeonActive
+          displayMode="zoom"
           enableInteractiveNeon={false}
           assetLoading="eager"
           frameLoading={frameLoading ?? "eager"}
