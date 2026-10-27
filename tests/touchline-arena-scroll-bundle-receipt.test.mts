@@ -5,11 +5,11 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSyn
 import path from "node:path";
 import { runInNewContext } from "node:vm";
 import { stripTypeScriptTypes } from "node:module";
-import { arenaRequiredSources, readArenaScrollBundle } from "./helpers/touchline-arena-scroll-bundle-receipt.mts";
+import { arenaRequiredSources, arenaTemporaryRoot, readArenaScrollBundle } from "./helpers/touchline-arena-scroll-bundle-receipt.mts";
 
 function fixture(t: TestContext) {
-  const root = mkdtempSync("/private/tmp/touchline-arena-receipt-source-");
-  const directory = mkdtempSync("/private/tmp/touchline-arena-scroll-");
+  const root = mkdtempSync(path.join(arenaTemporaryRoot, "touchline-arena-receipt-source-"));
+  const directory = mkdtempSync(path.join(arenaTemporaryRoot, "touchline-arena-scroll-"));
   t.after(() => { rmSync(directory, { recursive: true }); rmSync(root, { recursive: true }); });
   const sha256: Record<string, string> = {};
   const digest = (value: string) => createHash("sha256").update(value).digest("hex");
@@ -50,7 +50,7 @@ test("Arena reuse rejects missing required source provenance", t => {
 test("Arena reuse rejects aliases, output symlinks and source traversal", t => {
   const f = fixture(t);
   assert.throws(() => readArenaScrollBundle(f.root, `${f.directory}/../${path.basename(f.directory)}`));
-  assert.throws(() => readArenaScrollBundle(f.root, f.directory.replace("/private/tmp", "/tmp")));
+  assert.throws(() => readArenaScrollBundle(f.root, path.join(arenaTemporaryRoot, "nested", path.basename(f.directory))));
   const alias = `${f.directory}Alias`; symlinkSync(f.directory, alias);
   t.after(() => rmSync(alias));
   assert.throws(() => readArenaScrollBundle(f.root, alias), /exact real path/);

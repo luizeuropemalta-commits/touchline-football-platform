@@ -2,6 +2,9 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { lstatSync, readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
+import { tmpdir } from "node:os";
+
+export const arenaTemporaryRoot = realpathSync(tmpdir());
 
 export const arenaRequiredSources = [
   "app/fantasy/FantasyGameweekClient.tsx", "app/fantasy/fantasy.module.css", "app/globals.css",
@@ -10,11 +13,12 @@ export const arenaRequiredSources = [
   "components/touchline/fantasy/TouchlineGameweekCard.tsx", "components/touchline/pitch/TouchlinePitchSurface.tsx",
   "node_modules/tailwindcss/preflight.css", "tests/helpers/touchline-arena-scroll-compile-worker.mts",
   "tests/helpers/touchline-isolated-browser-bundle.mts",
+  "tests/helpers/touchline-arena-scroll-bundle-receipt.mts",
 ] as const;
 
 /** Read bytes once and validate them before use. No compiler, browser or fallback rebuild. */
 export function readArenaScrollBundle(rootPath: string, directory: string) {
-  assert.equal(path.dirname(directory), "/private/tmp", "Arena bundle must be an explicit /private/tmp directory");
+  assert.equal(path.dirname(directory), arenaTemporaryRoot, "Arena bundle must be inside the canonical OS temporary directory");
   assert.match(path.basename(directory), /^touchline-arena-scroll-[A-Za-z0-9]+$/);
   assert.equal(realpathSync(directory), directory, "Arena bundle must use its exact real path, never an alias or symlink");
   assert.ok(lstatSync(directory).isDirectory());

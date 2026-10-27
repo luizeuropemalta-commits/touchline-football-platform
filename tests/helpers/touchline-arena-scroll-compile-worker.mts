@@ -3,13 +3,14 @@ import { createHash } from "node:crypto";
 import { readFileSync, realpathSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import ts from "typescript";
+import { arenaRequiredSources, arenaTemporaryRoot } from "./touchline-arena-scroll-bundle-receipt.mts";
 import { bundleIsolatedBrowserFixture } from "./touchline-isolated-browser-bundle.mts";
 
 // Compile only. The parent waits for close to release compiler caches before
 // opening a browser; this worker never launches browsers or performs network IO.
 assert.equal(process.argv.length, 3, "Expected one test-owned temporary directory");
 const output = realpathSync(process.argv[2]);
-assert.equal(path.dirname(output), "/private/tmp");
+assert.equal(path.dirname(output), arenaTemporaryRoot);
 assert.match(path.basename(output), /^touchline-arena-scroll-[A-Za-z0-9]+$/);
 const rootPath = path.resolve(import.meta.dirname, "../..");
 const source = readFileSync(path.join(rootPath, "app/fantasy/FantasyGameweekClient.tsx"), "utf8");
@@ -29,9 +30,7 @@ const bundle = bundleIsolatedBrowserFixture({ entryPath: "tests/fixtures/ClubOwn
 const globals = readFileSync(path.join(rootPath, "app/globals.css"), "utf8").replace(/^@(import|source)[^;]*;\s*/gm, "");
 const preflight = readFileSync(path.join(rootPath, "node_modules/tailwindcss/preflight.css"), "utf8");
 const css = `${preflight}\n${globals}\n${bundle.css}`;
-const sources = [...new Set([...bundle.sources, "app/fantasy/FantasyGameweekClient.tsx", "app/globals.css",
-  "node_modules/tailwindcss/preflight.css", "tests/helpers/touchline-arena-scroll-compile-worker.mts",
-  "tests/helpers/touchline-isolated-browser-bundle.mts"])].sort();
+const sources = [...new Set([...bundle.sources, ...arenaRequiredSources])].sort();
 const digest = (value: string | Buffer) => createHash("sha256").update(value).digest("hex");
 const sha256 = Object.fromEntries(sources.map(source => [source, digest(readFileSync(path.join(rootPath, source)))]));
 writeFileSync(path.join(output, "fixture.js"), bundle.script, { flag: "wx" });

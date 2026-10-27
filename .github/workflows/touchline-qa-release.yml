@@ -17,8 +17,15 @@ jobs:
     # Browser binaries and OS libraries are preinstalled; avoid runner apt mirrors.
     container:
       image: mcr.microsoft.com/playwright:v1.62.1-noble@sha256:dcc5531e97840b9b5e794f2814476b21571c5124a3fca2267d73041f56e7580e
+      # Match GitHub runner ownership; Firefox rejects root in a pwuser session.
+      options: --user 1001
     timeout-minutes: 25
     steps:
+      - name: Verify non-root browser session
+        run: |
+          set -eu
+          test "$(id -u)" -eq 1001
+          test "$(stat -c %u "$HOME")" -eq "$(id -u)"
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           persist-credentials: false

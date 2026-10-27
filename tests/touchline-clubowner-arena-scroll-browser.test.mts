@@ -6,7 +6,7 @@ import { spawn } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium, webkit, expect } from "@playwright/test";
-import { readArenaScrollBundle } from "./helpers/touchline-arena-scroll-bundle-receipt.mts";
+import { arenaTemporaryRoot, readArenaScrollBundle } from "./helpers/touchline-arena-scroll-bundle-receipt.mts";
 
 const rootPath = fileURLToPath(new URL("../", import.meta.url));
 test("real Arena portal scrolls a full-width pitch without trapping controls below the viewport", {
@@ -28,7 +28,7 @@ test("real Arena portal scrolls a full-width pitch without trapping controls bel
   capacity();
   t.signal.throwIfAborted();
   const reuseDirectory = process.env.TOUCHLINE_ARENA_SCROLL_BUNDLE_DIR;
-  const directory = reuseDirectory ?? mkdtempSync("/private/tmp/touchline-arena-scroll-");
+  const directory = reuseDirectory ?? mkdtempSync(path.join(arenaTemporaryRoot, "touchline-arena-scroll-"));
   if (reuseDirectory === undefined) await new Promise<void>((resolve, reject) => {
     const child = spawn(process.execPath, ["--experimental-strip-types",
       path.join(rootPath, "tests/helpers/touchline-arena-scroll-compile-worker.mts"), directory], {

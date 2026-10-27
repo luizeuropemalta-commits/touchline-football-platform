@@ -49,6 +49,8 @@ test("QA workflow uses pinned preinstalled Ubuntu browsers and executes the comp
   assert.ok(workflow.includes("-noble@sha256:dcc5531e97840b9b5e794f2814476b21571c5124a3fca2267d73041f56e7580e"), "release image must retain the reviewed immutable digest");
   assert.doesNotMatch(workflow, /playwright install|apt-get|apt install/, "browser OS setup must not depend on runner package mirrors");
   assert.match(workflow, /run: pnpm run verify:release/);
+  assert.match(workflow, /options: --user 1001/);
+  assert.doesNotMatch(workflow, /HOME\s*[:=]|--privileged|--no-sandbox|MOZ_DISABLE_CONTENT_SANDBOX/, "browser ownership must be corrected without weakening isolation or replacing HOME");
   assert.match(workflow, /git -c safe\.directory="\$GITHUB_WORKSPACE" -C "\$GITHUB_WORKSPACE" diff --check/);
   assert.match(workflow, /repo_status=\$\(git -c safe\.directory="\$GITHUB_WORKSPACE" -C "\$GITHUB_WORKSPACE" status --porcelain\)/);
   assert.match(workflow, /test -z "\$repo_status"/);
@@ -96,4 +98,30 @@ esac
   } finally {
     await rm(fixture, { recursive: true, force: true });
   }
+});
+
+
+test("QA browser session preflight rejects root, mismatched home ownership and failed OS reads", async () => {
+  const workflow = await readFile(new URL("../.github/workflows/touchline-qa-release.yml", import.meta.url), "utf8");
+  const block = workflow.split("      - name: Verify non-root browser session\n        run: |\n")[1]?.split(/\n      - /)[0];
+  assert.ok(block, "browser ownership must fail before installing or running the full suite");
+  const script = block.split("\n").map(line => line.replace(/^          /, "")).join("\n");
+  const fixture = await mkdtemp(join(tmpdir(), "touchline-ci-browser-user-"));
+  try {
+    await writeFile(join(fixture, "id"), `#!/bin/sh
+[ "$1" = '-u' ] || exit 91
+[ "$CI_USER_CASE" != 'id-error' ] || exit 92
+if [ "$CI_USER_CASE" = 'root' ]; then printf '0\\n'; else printf '1001\\n'; fi
+`, { mode: 0o700 });
+    await writeFile(join(fixture, "stat"), `#!/bin/sh
+[ "$1" = '-c' ] && [ "$2" = '%u' ] && [ "$3" = "$HOME" ] || exit 93
+[ "$CI_USER_CASE" != 'stat-error' ] || exit 94
+if [ "$CI_USER_CASE" = 'wrong-owner' ]; then printf '0\\n'; else printf '1001\\n'; fi
+`, { mode: 0o700 });
+    const run = (scenario: string) => spawnSync("/bin/sh", ["-e", "-c", script], {
+      env: { ...process.env, PATH: `${fixture}:${process.env.PATH ?? ""}`, CI_USER_CASE: scenario }, encoding: "utf8",
+    });
+    assert.equal(run("correct-owner").status, 0);
+    for (const scenario of ["root", "wrong-owner", "id-error", "stat-error"]) assert.notEqual(run(scenario).status, 0, scenario);
+  } finally { await rm(fixture, { recursive: true, force: true }); }
 });
