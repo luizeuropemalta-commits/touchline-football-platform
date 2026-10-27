@@ -1,3 +1,4 @@
+import { CARD_ART_PERIMETER_PATHS, resolvePlayerCardArtPerimeterPath } from "@/lib/touchlineArena/card-art-perimeter-paths";
 /**
  * The card frame artwork stays untouched. This overlay supplies the one
  * continuous, tier-coloured perimeter trace above it, outside any cropped
@@ -72,8 +73,12 @@ export function touchlineCardPerimeterPath(
 export function TouchlineCardPerimeterTrace({
   tier,
   variant = "player",
-}: Readonly<{ tier?: string | null; variant?: TouchlineCardPerimeterVariant }>) {
-  const path = touchlineCardPerimeterPath(tier, variant);
+  frameUrl,
+}: Readonly<{ tier?: string | null; variant?: TouchlineCardPerimeterVariant; frameUrl?: string | null }>) {
+  const path = variant === "player"
+    ? resolvePlayerCardArtPerimeterPath(frameUrl)
+    : isPerimeterTier(tier) ? CARD_ART_PERIMETER_PATHS.coach[tier] : null;
+  if (!path) return null;
   const isCoach = variant === "coach";
   return (
     <svg
@@ -83,7 +88,7 @@ export function TouchlineCardPerimeterTrace({
       aria-hidden="true"
       focusable="false"
       viewBox={isCoach ? "0 0 810 1080" : "0 0 430 691"}
-      preserveAspectRatio="none"
+      preserveAspectRatio={isCoach ? "xMidYMid meet" : "none"}
     >
       <path
         data-touchline-card-neon-trace-base="true"

@@ -121,7 +121,10 @@ export default function TouchlineGlobalNavigation({
       data-touchline-navigation-surface={surface}
       data-touchline-navigation-context={hasTrustedClubContext ? "club" : "none"}
     >
-      <Link className={styles.arena} href={touchlineGlobalNavigationEntryHref(effectiveLocale, surface, draftLocalesEnabled)} aria-current={surface === "authenticated" && currentRoute === "market" ? "page" : undefined}>
+      {/* ClubOwner is dynamic: automatic prefetch stops at loading.tsx. Prepare
+          the complete read-only destination, not only its loading shell. Keep
+          the Admin destination on its existing policy and server auth intact. */}
+      <Link className={styles.arena} href={touchlineGlobalNavigationEntryHref(effectiveLocale, surface, draftLocalesEnabled)} prefetch={surface === "auth" ? undefined : true} aria-current={surface === "authenticated" && currentRoute === "market" ? "page" : undefined}>
         <Goal aria-hidden="true" />
         <TouchlineNavigationLabel label={surface === "auth" ? dictionary.admin : dictionary.backToArena} pendingLabel={`${dictionary.opening}…`} />
       </Link>

@@ -921,45 +921,16 @@ a, button { outline: none; }
   to { stroke-dashoffset: -100; }
 }
 
-/* Product cards use the alpha silhouette of their original frame artwork.
-   The older geometric trace is not the irregular gem border: do not draw a
-   second polygon around it. Keep that geometry available only to fixtures. */
+/* Keep the original animated perimeter; never duplicate the frame bitmap.
+   A zoomed/selected/focused card stays unlit until a real hover pointer enters.
+   Keyboard focus remains represented by the zoom trigger's focus marker. */
 .touchline-card-surface[data-card-motion="true"] [data-touchline-card-neon-trace="true"] {
-  display: none;
-}
-.touchline-card-surface[data-card-motion="true"] [data-touchline-card-neon-trace-run="true"] {
-  animation: none;
-}
-.touchline-card-surface[data-card-motion="true"]::before {
-  /* Outside the clipped/scaled 430px canvas: these are rendered CSS pixels.
-     Original field hover was 17px at .70; owner requested 15% less.
-     Reuse the exact transparent frame, not a rectangle or polygon. */
-  content: "";
-  position: absolute;
-  z-index: 0;
-  inset: 0;
-  background-image: var(--touchline-card-neon-art, none);
-  background-position: center;
-  background-size: 100% 100%;
-  background-repeat: no-repeat;
-  transform: scale(var(--coach-art-scale, 1));
-  filter: drop-shadow(0 0 14.45px color-mix(in srgb, var(--touchline-card-frame-color) 59.5%, transparent));
   opacity: 0;
-  transition: opacity 240ms ease;
-  pointer-events: none;
+  transition: opacity 180ms ease;
 }
-/* Coach artwork is 3:4 inside a 2:3 host. Match the frame's object-fit;
-   stretching this duplicate produces a second border instead of a perimeter glow. */
-.touchline-card-surface[data-card-motion="true"][data-coach-card-art="official-coach-tier"]::before {
-  background-size: contain;
-}
-.touchline-card-surface[data-card-motion="true"]:is(:hover, :focus-within, [data-neon-active="true"])::before,
-[data-touchline-card-zoom="trigger"]:focus-visible .touchline-card-surface[data-card-motion="true"]::before {
-  opacity: 1;
-}
-@media (prefers-reduced-motion: reduce) {
-  .touchline-card-surface[data-card-motion="true"]::before {
-    transition: none;
+@media (hover: hover) and (pointer: fine) {
+  .touchline-card-surface[data-card-motion="true"]:hover [data-touchline-card-neon-trace="true"] {
+    opacity: 1;
   }
 }
 

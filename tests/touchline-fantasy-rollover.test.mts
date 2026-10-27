@@ -3,17 +3,46 @@ import { readFileSync } from "node:fs";
 import { stripTypeScriptTypes } from "node:module";
 import test from "node:test";
 import { runInNewContext } from "node:vm";
+import ts from "typescript";
 import { resolveTouchlineFantasyMarketAccess } from "../lib/touchlineFantasy/market-plan-policy.ts";
 
 // Execute the snapshot's real lifecycle up to the independent catalogue reads.
 // Persistence is the boundary fake: preparing a round copies only locked XI,
 // just as the deployed SQL contract does, and never replaces an existing draft.
-const source = stripTypeScriptTypes(readFileSync(new URL("../lib/touchlineFantasy/server.ts", import.meta.url), "utf8"));
-const start = source.indexOf("async function loadFantasySnapshotCore");
-const end = source.indexOf("  const catalogueRead = loadCatalogue(admin);", start);
-assert.ok(start >= 0 && end > start, "real lifecycle boundary must be present");
-const lifecycleSource = source.slice(start, end).replace("export ", "")
-  + "return { gameweeks, activeGameweek }; }\nloadFantasySnapshotCore;";
+const source = ts.createSourceFile("server.ts", readFileSync(new URL("../lib/touchlineFantasy/server.ts", import.meta.url), "utf8"),
+  ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+const implementation = source.statements.find((node): node is ts.FunctionDeclaration =>
+  ts.isFunctionDeclaration(node) && node.name?.text === "loadFantasySnapshotCore" && node.body !== undefined);
+assert.ok(implementation, "real snapshot implementation must be present");
+let boundaryCount = 0;
+const extracted = ts.transform(implementation, [context => {
+  const visit: ts.Visitor = node => {
+    if (ts.isBlock(node)) {
+      const boundary = node.statements.findIndex(statement => ts.isVariableStatement(statement)
+        && statement.declarationList.declarations.some(declaration => ts.isIdentifier(declaration.name)
+          && declaration.name.text === "catalogueRead" && declaration.initializer
+          && ts.isCallExpression(declaration.initializer) && ts.isIdentifier(declaration.initializer.expression)
+          && declaration.initializer.expression.text === "loadCatalogue"));
+      if (boundary >= 0) {
+        boundaryCount += 1;
+        // Replace only the rest of this lexical block. Preserve any surrounding
+        // async branch and its completion/error join instead of guessing braces.
+        return ts.factory.updateBlock(node, [...node.statements.slice(0, boundary),
+          ts.factory.createReturnStatement(ts.factory.createObjectLiteralExpression([
+            ts.factory.createShorthandPropertyAssignment("gameweeks"),
+            ts.factory.createShorthandPropertyAssignment("activeGameweek"),
+          ])),
+        ]);
+      }
+    }
+    return ts.visitEachChild(node, visit, context);
+  };
+  return node => ts.visitNode(node, visit) as ts.FunctionDeclaration;
+}]);
+assert.equal(boundaryCount, 1, "exactly one real lifecycle boundary must be present");
+const lifecycleSource = stripTypeScriptTypes(ts.createPrinter().printNode(ts.EmitHint.Unspecified, extracted.transformed[0], source))
+  + "\nloadFantasySnapshotCore;";
+extracted.dispose();
 const helperSource = stripTypeScriptTypes(readFileSync(new URL("../lib/touchlineFantasy/gameweek-lifecycle.ts", import.meta.url), "utf8"))
   .replace(/^import[^;]*;\s*$/gm, "").replace(/^export /gm, "");
 const reconcileTouchlineFantasyGameweeks = runInNewContext(`${helperSource}\nreconcileTouchlineFantasyGameweeks;`);

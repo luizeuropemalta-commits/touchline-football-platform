@@ -23,11 +23,7 @@ test("pitch wrappers cannot replace the exact tier frame glow with a green halo"
   for (const [, rule] of hoverRules) {
     assert.doesNotMatch(rule, /rgba\(170,255,62|var\(--lime\)/);
   }
-  assert.match(css, /\.touchline-card-surface\[data-card-motion="true"\] \[data-touchline-card-neon-trace="true"\] \{\s*display: none/);
-  assert.match(css, /\.touchline-card-surface\[data-card-motion="true"\] \[data-touchline-card-neon-trace-run="true"\] \{\s*animation: none/);
-  assert.match(css, /background-image: var\(--touchline-card-neon-art, none\)/);
-  assert.match(css, /drop-shadow\(0 0 14\.45px color-mix\(in srgb, var\(--touchline-card-frame-color\) 59\.5%, transparent\)\)/);
-  assert.match(css, /\[data-neon-active="true"\]\)::before,[\s\S]*?opacity: 1/);
+  assert.doesNotMatch(css, /background-image: var\(--touchline-card-neon-art, none\)/);
   for (const component of ["TouchlineEliteExactCard", "TouchlineCoachCard"]) {
     assert.match(source(`components/touchline/cards/${component}.tsx`), /"--touchline-card-neon-art":/);
   }
@@ -86,7 +82,7 @@ test("every TouchLine card keeps the permanent tier neon contract", () => {
   assert.match(exactCard, /--touchline-club-crest-color": resolvedClub\?\.accent \?\? cardTraceColor/);
   assert.match(coachCard, /--touchline-card-frame-color": tierPalette\.accent/);
   assert.match(coachCard, /--touchline-club-crest-color": clubAccent/);
-  assert.match(exactCard, /<TouchlineCardPerimeterTrace tier=\{marketTier\?\.key \?\? "neutral"\} \/>/);
+  assert.match(exactCard, /<TouchlineCardPerimeterTrace tier=\{marketTier\?\.key \?\? "neutral"\} frameUrl=\{failedFrameUrl === versionedCardTemplateUrl \? null : versionedCardTemplateUrl\} \/>/);
   assert.match(coachCard, /<TouchlineCardPerimeterTrace tier=\{slot\.cardTier\} variant="coach" \/>/);
   assert.doesNotMatch(exactCard, /TouchlineClubCrestPerimeterTrace|crest-trace/);
   assert.doesNotMatch(coachCard, /TouchlineClubCrestPerimeterTrace|crest-trace/);

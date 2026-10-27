@@ -769,6 +769,7 @@ export function TouchlineEliteExactCard({
   const [isFollowing, setIsFollowing] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
   const [isNeonActive, setIsNeonActive] = useState(false);
+  const [failedFrameUrl, setFailedFrameUrl] = useState<string | null>(null);
   const leadershipAuthority = useTouchlineCardLeadershipAuthority();
   const fallbackRanking = useTouchlineActiveRanking(!leadershipAuthority && subscribeToRanking);
   const inheritedRanking = leadershipAuthority ? leadershipAuthority.playerRanking : fallbackRanking;
@@ -1118,6 +1119,7 @@ export function TouchlineEliteExactCard({
     const liveCompactFallbackUrl = touchlineLiveCompactFrameUrl(DEFAULT_CLUB_TEMPLATE_URL);
     const zoomFallbackUrl = touchlineZoomFrameUrl(DEFAULT_CLUB_TEMPLATE_URL);
     const handleFrameError = (image: HTMLImageElement, fallbackUrl: string) => {
+      setFailedFrameUrl(versionedCardTemplateUrl);
       // A failed density candidate can differ from src (the 1x fallback).
       const failedSource = image.currentSrc || image.src;
       image.srcset = "";
@@ -1486,7 +1488,7 @@ export function TouchlineEliteExactCard({
           transform: hasGoldenBall ? "translateX(7%)" : "translateX(-50%)",
           transformOrigin: "bottom center" }}
       /> : null}
-      <TouchlineCardPerimeterTrace tier={marketTier?.key ?? "neutral"} />
+      <TouchlineCardPerimeterTrace tier={marketTier?.key ?? "neutral"} frameUrl={failedFrameUrl === versionedCardTemplateUrl ? null : versionedCardTemplateUrl} />
       {neutralIdentity ? (
         <div
           aria-label={publicationPending

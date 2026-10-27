@@ -419,7 +419,7 @@
 .myClubTacticalSlot>button:disabled{cursor:default;opacity:.6}
 .myClubTacticalSlot>span [data-touchline-card-zoom=trigger]{transform-origin:center;transition:transform 180ms cubic-bezier(.2,.8,.2,1),filter 180ms ease}
 .myClubTacticalSlot:has([data-touchline-card-zoom=trigger]:hover){z-index:8}
-.myClubTacticalSlot>span [data-touchline-card-zoom=trigger]:hover{transform:translateY(-5px) scale(1.14);filter:drop-shadow(0 12px 18px rgba(0,0,0,.5))}
+.myClubTacticalSlot>span [data-touchline-card-zoom=trigger]:hover{transform:translateY(-5px) scale(1.14);filter:none}
 .myClubCardRows article{justify-items:center}
 .myClubSelect{justify-self:center;min-height:29px;margin-top:5px;padding:4px 9px;border:1px solid rgba(170,255,62,.45);border-radius:7px;color:#eaffd6;background:rgba(170,255,62,.08);font:inherit;font-size:.56rem;font-weight:900;cursor:pointer}
 .myClubSelect:not(:disabled):hover,.myClubSelect:not(:disabled):focus-visible{border-color:var(--lime);color:#071007;background:var(--lime);outline:none}

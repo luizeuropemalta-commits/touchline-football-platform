@@ -1,3 +1,15 @@
+### 2026-10-27 — Single QA deploy authorized; neon batch and explicit follow-up queue
+
+Owner authorized one QA Git-native deployment and then added neon/hover corrections to the same batch. No new remote build has been consumed yet. Production/main untouched. Scope: coach crest/caption, V4 absence revalidation, ClubOwner read/prefetch, art-aligned hover-only neon. Original image assets unchanged; 140 player/7 coach source contours verified. General suite:6939 total/6874 PASS/0 FAIL/65 opt-in skipped; dedicated real-component neon matrix passed separately (Chromium/WebKit, seven tiers, non-Arsenal examples, zoom, reduced motion, touch landscape). TypeScript passed. Local production build PASS (exit0); final compact geometry/browser proof PASS with exact real-caller scale. Remote build/smoke remain pending at this checkpoint.
+
+QUEUED BY OWNER, NOT FIXED OR CLOSED: (1) player acquisition date and remaining contract time must reflect real transaction and season end; no fabricated date/duration. (2) native iPhone PAGE pinch-zoom crash on /rankings?lang=pt-BR, high priority, cause not yet established; card-modal zoom/WebKit tests are not acceptance evidence. Owner explicitly said to queue these and continue current work. Evidence: outputs/preqa-20261027/USER_REVIEW_QUEUE_20261027.json. This release must not be described as resolving native pinch or every historical site issue.
+
+### 2026-10-27 — ClubOwner return loading: reproduced, local fix verified, publication paused
+
+Published QA 0b2ed346 reproduced ClubHub → ClubOwner: loading shell at 295 ms, content at 3163 ms. Local changes over e446c398 prepare the complete ClubOwner route and remove the independent formation registry barrier from read-only round/squad reads. Writer ordering and authorization are preserved; collection revalidates on mount with pending verification. Combined focused tests: 28 PASS, 0 FAIL, 0 SKIP. Full TypeScript and scoped ESLint passed; independent reviews passed. This is NOT a measured hosted improvement. Full-prefetch client-cache freshness and immediate-click/warm-click timings still require hosted validation. New patch has not received a complete release suite/build. No new push/build/deploy: owner paused publication to review published QA and prohibited opening local UI. Price/caption and coach zoom corrections remain local in e446c398.
+
+Evidence: outputs/preqa-20261027/clubowner-return-published-before.json; clubowner-return-combined.log; CLUBOWNER_FORMATION_DAG_FIX.md; CLUBOWNER_RETURN_CHECKPOINT.json.
+
 # TouchLine Current State
 
 ### 2026-10-27 — QA 0b2ed346 published; post-deployment corrections LOCAL
