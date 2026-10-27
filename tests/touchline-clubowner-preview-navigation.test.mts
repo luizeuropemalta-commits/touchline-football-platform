@@ -1,3 +1,6 @@
+import React from "react";
+import { resolveClubOwnerShell } from "./helpers/touchline-resolve-clubowner-shell.mts";
+import { createLocalReadTiming } from "../lib/touchlineArena/local-read-timing.ts";
 import assert from "node:assert/strict";
 import { clubCollectionPresentationEnabled } from "../lib/touchlineFantasy/club-collection-presentation.ts";
 import { readFileSync } from "node:fs";
@@ -24,6 +27,9 @@ function fixture(environment: string, patch: Record<string, unknown> = {}) {
       return { status: "unavailable", error: "CLUB_COLLECTION_UNAVAILABLE", httpStatus: 503 };
     } },
     "@/lib/touchlineFantasy/club-collection-presentation": { clubCollectionPresentationEnabled },
+    react: React,
+    "@/components/touchline/TouchlineAccountLoading": { default: "account-loading" },
+    "@/components/touchline/cards/TouchlineCardLeadershipLayout": { default: "leadership-boundary" },
     "react/jsx-runtime": jsxRuntime,
     "next/headers": { headers: async () => ({ get: () => null }) },
     "next/navigation": { redirect: () => assert.fail("Customer must remain signed in"), notFound: () => assert.fail("Customer must remain allowed") },
@@ -37,6 +43,7 @@ function fixture(environment: string, patch: Record<string, unknown> = {}) {
     "@/lib/touchlineArena/club-owner-page-identity": { resolveTouchlineClubOwnerPageIdentity: () => ({ isAuthenticatedClubOwner: true, name: "Customer", avatarUrl: "" }) },
     "@/lib/touchlineArena/club-owner-avatar-context-server": { createClubOwnerAvatarContextReader: () => async () => null },
     "@/lib/touchlineArena/auth-i18n": { touchLineAuthEntryHref: () => "/login?lang=pt-BR" },
+    "@/lib/touchlineArena/local-read-timing": { createLocalReadTiming: () => createLocalReadTiming({}) },
     "@/lib/touchlineArena/server-read-deadline": { resolveServerReadWithin: (read: unknown) => read },
     "@/lib/touchlineFantasy/server": { loadTouchlineFantasyReadSnapshot: async () => snapshot },
     "@/lib/touchlineFantasy/market-plan-policy": marketPolicy,
@@ -55,7 +62,7 @@ function fixture(environment: string, patch: Record<string, unknown> = {}) {
     require(name: string) { assert.ok(Object.hasOwn(dependencies, name), `Unexpected dependency: ${name}`); return dependencies[name]; },
   });
   return { plan, async render(params: Params) {
-    const root = await exports.default!({ searchParams: Promise.resolve(params) });
+    const root = await resolveClubOwnerShell(await exports.default!({ searchParams: Promise.resolve(params) }) as React.ReactElement) as React.ReactElement<Record<string, unknown>>;
     const [brand, content] = root.props.children as Element[];
     const provider = content.props.children as Element;
     const [header, fantasy] = provider.props.children as Element[];

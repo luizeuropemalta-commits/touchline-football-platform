@@ -1,8 +1,9 @@
 import "server-only";
 
-import { readPublicCompetitionFixtures } from "@/lib/football-data/fixture-schedule-store";
+import { readCurrentPublicCompetitionSeasonTarget, readPublicCompetitionFixtures } from "@/lib/football-data/fixture-schedule-store";
+import type { TouchlineLiveAdmissionScope } from "./sports-publication-live-view";
 import { readPersistedLiveScoreSnapshot } from "@/lib/football-data/live-score-persistence";
-import { selectArenaFixtureRound } from "./arena-fixture-round";
+import { selectCarouselFixtureRound } from "./carousel-fixture-round";
 import { toTouchlineLiveFixtures } from "./stadium-catalog";
 import type { TouchlineLiveReadMetadata } from "./match-centre";
 import { resolveServerReadWithin } from "./server-read-deadline";
@@ -11,6 +12,7 @@ import { touchlineLiveFreshness } from "./live-presentation-state";
 export type PersistedLiveRail = {
   fixtures: ReturnType<typeof toTouchlineLiveFixtures>;
   metadata: TouchlineLiveReadMetadata;
+  admissionScope: TouchlineLiveAdmissionScope | null;
 };
 
 /**
@@ -20,6 +22,9 @@ export type PersistedLiveRail = {
  */
 export async function readPersistedLiveRail({ isActive = () => true, now }: { isActive?: () => boolean; now?: number } = {}): Promise<PersistedLiveRail | null> {
   if (!isActive() || (now !== undefined && !Number.isFinite(now))) return null;
+  const seasonTarget = await readCurrentPublicCompetitionSeasonTarget({ isActive });
+  if (!isActive() || !seasonTarget) return null;
+  const { admissionScope } = seasonTarget;
   let liveSnapshot;
   try {
     // Production persistence samples its own clock after storage completes.
@@ -35,37 +40,50 @@ export async function readPersistedLiveRail({ isActive = () => true, now }: { is
   const freshness = touchlineLiveFreshness(liveSnapshot, snapshotReadNow);
   // Invalid/future evidence must never be reused as a stale fallback either.
   if (!freshness || (liveSnapshot && (liveSnapshot.storedAt > snapshotReadNow || Date.parse(liveSnapshot.fetchedAt) > snapshotReadNow))) liveSnapshot = null;
-  const snapshotIsFresh = freshness !== null && !freshness.degraded;
-  if (liveSnapshot?.fixtures.length && snapshotIsFresh) {
-    return {
-      fixtures: toTouchlineLiveFixtures(liveSnapshot.fixtures),
-      metadata: { state: "persisted-live-snapshot", fetchedAt: liveSnapshot.fetchedAt, degraded: false },
-    };
-  }
-
   let schedule = [] as Awaited<ReturnType<typeof readPublicCompetitionFixtures>>;
+  let scheduleConfirmed = false;
   try {
-    schedule = await readPublicCompetitionFixtures();
+    schedule = await readPublicCompetitionFixtures({ seasonId: seasonTarget.storageSeasonId, includeHistorical: true, readAllPages: true, strictRead: true, isActive });
+    scheduleConfirmed = true;
   } catch {
     schedule = [];
   }
-  const weeklySchedule = selectArenaFixtureRound(schedule, now ?? Date.now());
   if (!isActive()) return null;
-  if (weeklySchedule.length) {
+  const selectionNow = now ?? Date.now();
+  const completedFreshness = touchlineLiveFreshness(liveSnapshot, selectionNow);
+  const snapshotIsFresh = completedFreshness !== null && !completedFreshness.degraded;
+  // Current canonical rows win over an older snapshot. Historical reads never
+  // contact the provider and do not enlarge the writer's cadence window.
+  // The rail retains the scoped season catalogue so a mounted client can
+  // advance to the next complete round without another provider request.
+  // Scope uses provider IDs; the storage reader's seasonId uses internal UUIDs.
+  const belongs = (fixture: { competitionId?: string; seasonId?: string }) =>
+    fixture.competitionId === admissionScope.competitionId && fixture.seasonId === admissionScope.seasonId;
+  const canonical = [...new Map([...(liveSnapshot?.fixtures ?? []), ...schedule]
+    .filter(belongs).map(fixture => [fixture.providerId, fixture])).values()];
+  const fixtures = toTouchlineLiveFixtures(canonical);
+  const selected = selectCarouselFixtureRound(fixtures, selectionNow, admissionScope);
+  if (fixtures.length) {
+    const freshById = new Map((liveSnapshot?.fixtures ?? []).filter(belongs).map(fixture => [fixture.providerId, fixture]));
+    const allSelectedCovered = selected.length > 0 && selected.every(fixture => {
+      const published = freshById.get(fixture.providerId);
+      return published && published.homeTeam?.providerId === fixture.homeTeam?.providerId
+        && published.awayTeam?.providerId === fixture.awayTeam?.providerId
+        && published.status === fixture.status
+        && published.homeScore === fixture.homeScore && published.awayScore === fixture.awayScore
+        && published.liveMinute === fixture.liveMinute;
+    });
     return {
-      fixtures: toTouchlineLiveFixtures(weeklySchedule),
-      // No coherent run/version exists for schedule rows. Never fabricate
-      // request-time freshness or promote these facts to a fresh live feed.
-      metadata: { state: "partial-persisted-schedule", degraded: true },
+      fixtures,
+      admissionScope,
+      metadata: liveSnapshot && (!schedule.length || (snapshotIsFresh && allSelectedCovered))
+        ? { state: "persisted-live-snapshot", fetchedAt: liveSnapshot.fetchedAt, degraded: !snapshotIsFresh || !allSelectedCovered }
+        : { state: "partial-persisted-schedule", degraded: true },
     };
   }
-  if (liveSnapshot?.fixtures.length) {
-    return {
-      fixtures: toTouchlineLiveFixtures(liveSnapshot.fixtures),
-      metadata: { state: "persisted-live-snapshot", fetchedAt: liveSnapshot.fetchedAt, degraded: true },
-    };
-  }
-  return null;
+  return scheduleConfirmed
+    ? { fixtures: [], admissionScope, metadata: { state: "partial-persisted-schedule", degraded: true } }
+    : null;
 }
 
 /** Per-request SSR budget. GET retains its existing unbounded reader policy. */

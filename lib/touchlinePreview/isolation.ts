@@ -86,6 +86,9 @@ export const TOUCHLINE_QA_PREVIEW_ALLOWED_APPLICATION_ENVIRONMENT_KEYS = [
   // this private name does not bypass collection auth/entitlement or enable
   // termination; hosted QA still excludes the separate release flag.
   "TOUCHLINE_CLUB_COLLECTION_ENABLED",
+  // Private Exchange name only; both collection and Exchange runtime gates remain mandatory.
+  // This does not enable Exchange or admit it in inert isolated previews.
+  "TOUCHLINE_CLUB_EXCHANGE_ENABLED",
   // Server-only social gate. Runtime policy remains fail-closed in its route.
   "TOUCHLINE_PLAYER_SOCIAL_ENABLED",
   // Exact server-only award switches and worker bearer. Route gates and
@@ -109,6 +112,19 @@ export const TOUCHLINE_QA_PREVIEW_ALLOWED_APPLICATION_ENVIRONMENT_KEYS = [
   "TOUCHLINE_MATCH_PUSH_WORKER_ENABLED",
   "TOUCHLINE_MATCH_PUSH_WORKER_SECRET",
   "TOUCHLINE_MATCH_PUSH_SOURCE_AGE_POLICY",
+  // Exact fixture-interest and lineup-reminder controls for functional QA.
+  // Name admission does not enable either route: their explicit true gates,
+  // account/fixture checks, worker bearer and bounded policy remain mandatory.
+  "TOUCHLINE_FIXTURE_ALERTS_ENABLED",
+  "TOUCHLINE_LINEUP_REMINDER_WORKER_ENABLED",
+  "TOUCHLINE_LINEUP_REMINDER_WORKER_SECRET",
+  "TOUCHLINE_LINEUP_REMINDER_MAXIMUM_AGE_MS",
+  "TOUCHLINE_LINEUP_REMINDER_LEASE_SECONDS",
+  "TOUCHLINE_LINEUP_REMINDER_COMPETITION_ID",
+  "TOUCHLINE_LINEUP_REMINDER_SEASON_ID",
+  "TOUCHLINE_LINEUP_REMINDER_LEAD_SECONDS",
+  "TOUCHLINE_LINEUP_REMINDER_PAGE_SIZE",
+  "TOUCHLINE_LINEUP_REMINDER_RETRY_SECONDS",
   "TOUCHLINE_OWNER_EMAILS",
   // Private avatar preparation only. Name admission never enables a route,
   // selects an account, installs a schema/bucket or grants upload consent.
@@ -273,6 +289,13 @@ export function inspectTouchlineIsolatedPreviewEnvironment(
         && environment.TOUCHLINE_QA_SUPABASE_PROJECT_REF === "xgxbwqxjssxxuihuwmgy"
         && environment.TOUCHLINE_CLUB_COLLECTION_ENABLED === "true"
         && environment[name] === "true"))
+      // Request timing is diagnostic only and must never be admitted to hosted
+      // QA/Production or an isolated Preview. It logs no payload or identity.
+      .filter((name) => !(name === "TOUCHLINE_LOCAL_READ_TIMING"
+        && environment.NODE_ENV === "development" && environment.VERCEL === undefined
+        && environment.VERCEL_GIT_COMMIT_REF === "qa"
+        && environment.TOUCHLINE_QA_SUPABASE_PROJECT_REF === "xgxbwqxjssxxuihuwmgy"
+        && environment[name] === "1"))
       .filter((name) => !allowedQaPlatformRuntimeEnvironmentKeys.has(name))
       .filter((name) => !name.startsWith("VERCEL_") && !name.startsWith("NEXT_PUBLIC_VERCEL_"))
       .sort()

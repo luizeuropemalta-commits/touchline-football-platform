@@ -39,38 +39,9 @@ export default function DocumentLocaleSync({ initialLocale, draftLocalesEnabled 
     // Only explicit selectors persist the browser preference.
   }, [initialLocale, pathname, searchParams, draftLocalesEnabled]);
 
-  useEffect(() => {
-    const fallback = document.querySelector<HTMLElement>("[data-touchline-main-content-fallback]");
-    if (!fallback) return;
-
-    const main = fallback.querySelector<HTMLElement>("main");
-    const previousManagedTarget = document.querySelector<HTMLElement>(
-      '[data-touchline-main-target-managed="true"]',
-    );
-
-    if (!main) {
-      // Error/loading boundaries may not have a semantic main of their own.
-      // Keep a stable focus destination until the route renders one.
-      fallback.id = "touchline-main-content";
-      fallback.tabIndex = -1;
-      return;
-    }
-
-    if (previousManagedTarget && previousManagedTarget !== main) {
-      previousManagedTarget.removeAttribute("id");
-      previousManagedTarget.removeAttribute("tabindex");
-      previousManagedTarget.removeAttribute("data-touchline-main-target-managed");
-    }
-
-    // The SSR wrapper is a short-lived fallback so the skip link also works
-    // before hydration. Once interactive, the target is the real semantic
-    // main landmark rather than a nested or duplicate landmark.
-    fallback.removeAttribute("id");
-    fallback.removeAttribute("tabindex");
-    main.id = "touchline-main-content";
-    main.tabIndex = -1;
-    main.dataset.touchlineMainTargetManaged = "true";
-  }, [pathname, searchParams]);
+  // Keep the SSR skip-link target on TouchlineLandscapeBoundary. Moving its
+  // attributes onto a streamed route's <main> can run before that subtree
+  // hydrates, creating server/client mismatches on reload and navigation.
 
   return null;
 }

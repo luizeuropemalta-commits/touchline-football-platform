@@ -4,14 +4,17 @@ import { CLUB_ROSTER_CAPACITY, CLUB_ROSTER_SHOWCASE_LIMIT, validateClubRoster, t
 export const EXCHANGE_POSITIONS = ["GK", "CB", "RB", "LB", "DM", "MID", "RW", "LW", "CF"] as const;
 export type ExchangePosition = typeof EXCHANGE_POSITIONS[number];
 export type ExchangePlayer = ClubRosterEntry & Readonly<{ position: ExchangePosition | null }>;
-const paidExchangePlans = ["standard", "master", "vip"] as const;
+const approvedExchangePlans = ["beta", "standard", "master", "vip"] as const;
+// All approved plans share the collection. Runtime API gates and settlement
+// still authorize writes and enforce the receiving club allowlist.
+const availableCollectionPlans = approvedExchangePlans;
 
 /** Presentation prerequisite only. A complete roster NEVER authorizes proposals;
  * the unavailable transaction service must eventually validate both owners. */
 export function projectExchangeReadiness(state: Readonly<{ plan: string; players: readonly ClubRosterEntry[] }> | null, confirmed: boolean) {
   const base = { requiredCount: CLUB_ROSTER_CAPACITY.total, proposalsAvailable: false as const };
   if (!confirmed || !state) return { ...base, status: "unconfirmed" as const, ownedCount: null, missingCount: null };
-  if (!paidExchangePlans.some(plan => plan === state.plan)) return { ...base, status: "plan-unavailable" as const, ownedCount: null, missingCount: null };
+  if (!availableCollectionPlans.some(plan => plan === state.plan)) return { ...base, status: "plan-unavailable" as const, ownedCount: null, missingCount: null };
   if (validateClubRoster(state.players).length) return { ...base, status: "invalid" as const, ownedCount: null, missingCount: null };
   const ownedCount = state.players.length;
   return { ...base, status: ownedCount === CLUB_ROSTER_CAPACITY.total ? "complete" as const : "incomplete" as const,
@@ -45,7 +48,9 @@ export function assertExchangeCapacity(listedIds: readonly string[], reservedIds
  */
 export function inspectExchangeAllocation(state: ExchangeAllocation) {
   requireRule(state.ownerId.trim().length > 0, "OWNER_REQUIRED");
-  requireRule(paidExchangePlans.some(plan => plan === state.plan), "PAID_PLAN_REQUIRED");
+  requireRule(approvedExchangePlans.some(plan => plan === state.plan), "EXCHANGE_PLAN_REQUIRED");
+  // Club eligibility is revalidated against each receiving owner's approved
+  // allowlist by the settlement boundary; allocation alone never authorizes it.
   requireRule(state.players.length === CLUB_ROSTER_CAPACITY.total && validateClubRoster(state.players).length === 0, "COMPLETE_ROSTER_REQUIRED");
   const byId = new Map(state.players.map(player => [player.playerId, player]));
   const outside = state.players.filter(player => player.area === "outside");

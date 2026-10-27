@@ -178,11 +178,14 @@ test("excluded requests never reach locale fallback for invalid or draft queries
   }
 });
 
-function syncDocument(query: string, initialLocale: string, storageAvailable: boolean, pathname = "/intro") {
+function syncDocument(query: string, initialLocale: string, storageAvailable: boolean, pathname = "/intro", forbidRouteMutation = false) {
   const document = {
     cookie: "touchline:locale:v1=en-GB",
     documentElement: { lang: initialLocale as string, dir: "ltr" },
-    querySelector: () => null,
+    querySelector: () => {
+      assert.equal(forbidRouteMutation, false, "locale effect must not touch an unhydrated route subtree");
+      return null;
+    },
   };
   const writes: string[] = [];
   const modules: Record<string, unknown> = {
@@ -256,4 +259,12 @@ test("navigation without explicit language retains SSR language without overwrit
   assert.equal(result.document.documentElement.lang, "pt-BR");
   assert.equal(result.document.cookie, "touchline:locale:v1=en-GB");
   assert.deepEqual(result.writes, []);
+});
+
+ test("locale synchronization leaves streamed route and skip-target attributes owned by React", () => {
+  for (const path of ["/clubowner", "/live", "/rankings"]) {
+    const result = syncDocument("lang=pt-BR", "en-GB", true, path, true);
+    assert.equal(result.document.documentElement.lang, "pt-BR");
+    assert.deepEqual(result.writes, []);
+  }
 });

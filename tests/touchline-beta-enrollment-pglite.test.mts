@@ -45,7 +45,9 @@ test("Beta self-enrollment executes actual SQL without billing, downgrades or du
       assert.deepEqual(await apply(),receipt);const first=await snapshot();const entitlement=first[0].row as Row;
       assert.equal(entitlement.user_id,member);assert.equal(entitlement.source,"beta_free");assert.equal(entitlement.current_period_end,null);
       assert.equal(entitlement.provider_customer_reference,null);assert.equal(entitlement.provider_subscription_reference,null);
-      assert.deepEqual(resolveTouchlineFantasyMarketAccess(entitlement.plan_key),{planKey:"beta",budgetEur:50000000,allowedClubTeamIds:receipt.allowedClubTeamIds});
+      // This test intentionally exercises the historical four-club migration. Current policy is verified by the forward-migration test.
+      assert.equal(resolveTouchlineFantasyMarketAccess(entitlement.plan_key)?.budgetEur,100000000);
+      assert.equal(receipt.budgetEur,50000000); // Historical receipt remains immutable.
       assert.deepEqual(await apply(),receipt);assert.deepEqual(await snapshot(),first);
       assert.equal((await db.query("select count(*)::int as n from public.touchline_fantasy_beta_enrollments")).rows[0].n,1);
       assert.deepEqual((await db.query("select to_jsonb(a) as row from auth.users a order by id")).rows,authBefore);

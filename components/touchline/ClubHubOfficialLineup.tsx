@@ -175,7 +175,7 @@ export default function ClubHubOfficialLineup({
                   <strong>{matchup.away.shortCode}</strong>
                 </div>
               </div>
-              <small>{matchup.status ? `${matchup.status} · ` : null}<ClubHubLocalKickoff startsAt={matchup.startsAtIso} locale={locale} draftLocalesEnabled={draftLocalesEnabled} fallback={matchup.startsAt} /></small>
+              <small><ClubHubLocalKickoff startsAt={matchup.startsAtIso} locale={locale} draftLocalesEnabled={draftLocalesEnabled} fallback={matchup.startsAt} /></small>
             </aside>
           ) : null}
           <div className={styles.formationPanel}>

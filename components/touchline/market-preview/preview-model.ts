@@ -93,16 +93,15 @@ export function marketQuote(balance: number, outgoing: number, incoming: number,
   return { ...quote, balance, final: checkedCredits(BigInt(balance) + BigInt(quote.refund) - BigInt(incoming)) };
 }
 export function exchangeQuote(balance: number, outgoing: number, incoming: number, plan: PreviewPlan,
-  otherPlan: Exclude<PreviewPlan, "beta">, direction: "outgoing" | "incoming" = "outgoing") {
+  otherPlan: PreviewPlan, direction: "outgoing" | "incoming" = "outgoing") {
   assertCredits(balance, outgoing, incoming);
   if (!["standard", "master", "vip"].includes(otherPlan)) throw new RangeError("Counterparty must have an eligible plan");
-  if (plan === "beta") return null;
   const ownProposes = direction === "outgoing";
   const q = quoteClubExchange(ownProposes ? outgoing : incoming, ownProposes ? incoming : outgoing, ownProposes ? plan : otherPlan);
   const fee = ownProposes ? q.fee : 0, otherFee = ownProposes ? 0 : q.fee;
   const bonus = ownProposes ? 0 : q.bonus, otherBonus = ownProposes ? q.bonus : 0;
   const compensation = checkedCredits(BigInt(outgoing) - BigInt(incoming));
-  return { rate: ownProposes ? q.rate : 0, fee, otherRate: ownProposes ? 0 : q.rate,
+  return { feeBase: q.feeBase, rate: ownProposes ? q.rate : 0, fee, otherRate: ownProposes ? 0 : q.rate,
     otherFee, bonus, otherBonus, retired: q.retired, compensation, balance,
     final: checkedCredits(BigInt(balance) + BigInt(compensation) - BigInt(fee) + BigInt(bonus)) };
 }

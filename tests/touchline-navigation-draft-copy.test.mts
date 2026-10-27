@@ -77,7 +77,7 @@ test("primary ClubOwner link announces current page only for authenticated marke
     assert.ok(primary, `${locale}/${scenario.surface}/${scenario.currentRoute}: primary link exists`);
     assert.equal(primary.includes('aria-current="page"'), scenario.current);
     if (!scenario.current) assert.doesNotMatch(primary, /aria-current=/);
-    const destination = scenario.surface === "public" ? "account" : scenario.surface === "auth" ? "admin" : "clubowner";
+    const destination = scenario.surface === "auth" ? "admin" : "clubowner";
     const language = scenario.surface === "auth" && locale !== "pt-BR" ? "en-GB" : locale;
     assert.equal(hrefs[0], `/${destination}?lang=${language}`, "current-state semantics never change destination or locale");
     assert.equal(hrefs.filter(href => href === hrefs[0]).length, 1, "primary destination stays unique");

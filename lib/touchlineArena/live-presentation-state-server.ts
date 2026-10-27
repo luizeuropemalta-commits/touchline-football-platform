@@ -3,7 +3,7 @@ import { unstable_cache } from "next/cache";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isTouchLineSettledFixtureStatus } from "@/lib/football-data/fixture-settlement";
-import { touchlineFixtureState } from "@/lib/touchlineArena/match-centre";
+import { touchlineFixtureState } from "./fixture-state";
 import { createTouchlineSharedCoalescer } from "@/lib/touchlineArena/live-presentation-coalescer";
 import { readPublishedTouchlineLivePresentationInput } from "@/lib/touchlineArena/live-presentation-read-model";
 import {

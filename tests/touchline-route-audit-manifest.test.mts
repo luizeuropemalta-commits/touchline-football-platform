@@ -16,10 +16,10 @@ function row(route: string) {
 }
 
 test("inventories every page, API method, proxy, metadata route, and error boundary", () => {
-  assert.equal(rows.filter((item) => item.kind === "PAGE").length, 73);
+  assert.equal(rows.filter((item) => item.kind === "PAGE").length, 74);
   assert.equal(row("/account").data, "VERIFIED_AUTH_ROLE_REDIRECT_ONLY_NO_TEAM_WRITES");
   assert.equal(rows.some((item) => item.route === "/visual-qa/arena-main-field"), false);
-  assert.equal(rows.filter((item) => item.kind === "API").length, 109);
+  assert.equal(rows.filter((item) => item.kind === "API").length, 120);
   assert.equal(rows.filter((item) => item.kind === "BOUNDARY").length, 7);
   assert.equal(rows.filter((item) => item.kind === "METADATA").length, 3);
   assert.equal(rows.filter((item) => item.kind === "PROXY").length, 1);
@@ -315,4 +315,33 @@ test("renders the canonical six-column audit table", () => {
   assert.match(markdown, /Production was not changed/);
   assert.match(markdown, /Server Actions were not found/);
   assert.match(markdown, /\/clubowner/);
+});
+
+test("release recovery is inventoried as verified self-scoped read without command replay", () => {
+  const recovery = row("GET /api/touchline-fantasy/collection/release/recovery");
+  assert.equal(recovery.auth, "VERIFIED_AUTH_SAME_ORIGIN_EXPECTED_ACCOUNT");
+  assert.equal(recovery.role, "AUTHENTICATED_OWNER_SELF");
+  assert.equal(recovery.data, "PRIVATE_OWNER_SEASON_KEY_RELEASE_RECEIPT_READ_ONLY_NO_REPLAY");
+  assert.equal(recovery.status, "PENDING_AUTHENTICATED_RECOVERY_QA");
+  assert.equal(rows.some(item => item.route === "POST /api/touchline-fantasy/collection/release/recovery"), false);
+});
+
+
+test("company finance, private documents and PNG admin routes retain explicit owner scope and pending integration", () => {
+ for (const path of ["GET /api/admin/company-finance", "POST /api/admin/company-finance", "GET /api/admin/company-finance/documents", "POST /api/admin/company-finance/documents", "GET /api/admin/social-publications/studio/png"]) {
+  assert.equal(row(path).role, "OWNER_ADMIN");
+  assert.match(row(path).status, /^PENDING_/);
+ }
+ assert.match(row("POST /api/admin/company-finance").data, /NO_PAYMENT_EXECUTION/);
+ assert.match(row("POST /api/admin/company-finance/documents").data, /CREATE_ONLY_CHECKSUM_IDEMPOTENT_AUDITED_LINK/);
+ assert.match(row("GET /api/admin/company-finance/documents").data, /VERIFIED_ATTACHMENT/);
+ assert.match(row("GET /api/admin/social-publications/studio/png").data, /NO_PUBLICATION/);
+ assert.equal(row("/admin/company-finance").role, "OWNER_ADMIN");
+});
+test("coach and Exchange routes distinguish mutations, durable recovery and self-scoped history", () => {
+ for (const path of ["GET /api/touchline-fantasy/collection/coach", "POST /api/touchline-fantasy/collection/coach", "GET /api/touchline-fantasy/exchange", "POST /api/touchline-fantasy/exchange", "GET /api/touchline-fantasy/exchange/history"]) assert.equal(row(path).role,"COLLECTION_CUSTOMER_SELF_NO_ADMIN");
+ assert.match(row("POST /api/touchline-fantasy/collection/coach").data,/MUTATION_DURABLE_RECEIPT/);
+ assert.match(row("GET /api/touchline-fantasy/collection/coach").data,/RECOVERY_READ_NO_MUTATION/);
+ assert.match(row("POST /api/touchline-fantasy/exchange").data,/MUTATION_SCOPED_ACK/);
+ assert.match(row("GET /api/touchline-fantasy/exchange/history").data,/NO_COUNTERPART_WALLET/);
 });

@@ -10,6 +10,7 @@ import { touchlineFixtureRailDateLabel } from "../lib/touchlineArena/match-centr
 import * as rounds from "../lib/touchlineArena/arena-fixture-round.ts";
 import * as i18n from "../lib/touchlineArena/i18n.ts";
 import * as copy from "../lib/touchlineArena/match-centre-i18n.ts";
+import * as fixtureState from "../lib/touchlineArena/fixture-state.ts";
 import * as arabicDate from "../lib/touchlineArena/arabic-fixture-date.ts";
 
 const locales = ["en-GB", "pt-BR", "es-ES", "it-IT", "fr-FR", "ar-SA", "tr-TR", "de-DE"] as const;
@@ -35,6 +36,7 @@ function isolated(future: boolean) {
     exports: fixtureModule, Intl: isolatedIntl,
     require: (name: string) => {
       if (name === "./catalogue-locale.ts") return { resolveTouchlineCatalogueLocale };
+      if (name === "./fixture-state.ts") return fixtureState;
       if (name === "./arena-fixture-round.ts") return rounds;
       if (name === "./arabic-fixture-date.ts") return arabicDate;
       if (name === "./match-centre-i18n.ts") return { getTouchlineMatchCentreCopy: (locale: string, enabled = false) => { seen.push(locale); return (catalogueModule.getTouchlineMatchCentreCopy as typeof copy.getTouchlineMatchCentreCopy)(locale, enabled); } };

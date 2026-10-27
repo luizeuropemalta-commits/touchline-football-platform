@@ -23,7 +23,7 @@ test('uncontracted coach has an explicit signing and cancellation step beside th
   assert.match(code, /!collection.canInitialize/);
   assert.match(code, /setSelectedCoachId\(null\)/);
   assert.match(code, /CLUB_COACH_VALUES/);
-  assert.match(text, /collectionEnabled && selectedCoach && !collection.state/);
+  assert.match(text, /collectionEnabled && selectedCoach && \(!collection.state \|\| collection.state.coach === null\)/);
 });
 
 test('ClubOwner has one shared search and club selector, not a separate coach market', () => {
@@ -46,8 +46,8 @@ test('cancel selection only clears local draft and stays blocked during uncertai
     && node.getText(source).includes('setSelectedCoachId(null)'));
   assert.equal(cancel.length, 1);
   const code = cancel[0].getText(source);
-  assert.match(code, /disabled=\{collection.busy \|\| !collection.canInitialize\}/);
-  assert.match(code, /if \(!collection.canInitialize\) return;/);
+  assert.match(code, /disabled=\{collection.busy \|\| \(!collection.canInitialize && !collection.canHireCoach\)\}/);
+  assert.match(code, /if \(!collection.canInitialize && !collection.canHireCoach\) return;/);
   assert.match(code, /setVisibleStep\("coach"\)/);
   assert.doesNotMatch(code, /fetch\(|collection\.(initialize|acquire|allocate|retry)|balanceEur|refund|delete/i);
 });
@@ -58,7 +58,7 @@ test('coach results retain the original card and closed/read-failure guards', ()
   assert.ok(results);
   const code = results.getText(source);
   assert.match(code, /<FantasyCoachZoom entry=\{entry\}/);
-  assert.match(code, /!editable \|\| saving \|\| \(collectionEnabled && !collection.canInitialize\)/);
+  assert.match(code, /!editable \|\| saving \|\| \(collectionEnabled && !collection.canInitialize && !collection.canHireCoach\)/);
   assert.match(code, /setSelectedCoachId\(entry.id\)/);
   assert.match(code, /setQuery\(""\)/);
   assert.match(code, /scrollToLineupSection\("my-club-xi-pitch"\)/);

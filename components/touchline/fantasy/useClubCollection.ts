@@ -10,6 +10,10 @@ import { parseClubCommandAuthority, clubCommandMatchesAuthority, type ClubComman
 import { parseClubInitialBudget, type ClubInitialBudget } from "@/lib/touchlineFantasy/club-initial-budget";
 import { isClubReleaseReceipt, type ClubReleaseCommand } from "@/lib/touchlineFantasy/club-release";
 import type { ClubCollectionReadResult } from "@/lib/touchlineFantasy/club-collection-read-server";
+import { createClubReleaseBrowserRecovery } from "@/lib/touchlineFantasy/club-release-browser-recovery";
+import { getClubCollectionBudgetCopy } from "@/lib/touchlineFantasy/market-budget-i18n";
+import { createClubCoachBrowserRecovery } from "@/lib/touchlineFantasy/club-coach-browser-recovery";
+import type { ClubCoachLifecycleCommand } from "@/lib/touchlineFantasy/club-coach-lifecycle";
 import { confirmedCollectionBootstrap } from "@/lib/touchlineFantasy/club-collection-bootstrap";
 
 /** No local wallet persistence or optimistic debit; the response owns all money/state. */
@@ -31,12 +35,25 @@ export function useClubCollection(enabled: boolean, locale: string, expectedCont
   const [state, setState] = useState<ClubAcquisitionState | null>(bootstrap?.state ?? null);
   const [ready, setReady] = useState(bootstrap !== null);
   const [releaseAvailable, setReleaseAvailable] = useState(bootstrap?.releaseAvailable === true);
+  const [coachAvailable, setCoachAvailable] = useState(bootstrap?.coachLifecycleAvailable === true);
+  const [coachJournalReady, setCoachJournalReady] = useState(false);
+  const [coachPending, setCoachPending] = useState(false);
+  const coachRecovery = useRef<ReturnType<typeof createClubCoachBrowserRecovery> | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reload, setReload] = useState(0);
   const inFlight = useRef(false);
   const pending = useRef<ClubAcquisitionCommand | ClubAllocationCommand | ClubReleaseCommand | null>(null);
   const [hasPending, setHasPending] = useState(false);
+  const recovery = useRef<ReturnType<typeof createClubReleaseBrowserRecovery> | null>(null);
+  const recoveryPreparing = useRef(false);
+  const [recoveryReady, setRecoveryReady] = useState(false);
+  const [recoveryPending, setRecoveryPending] = useState(false);
+  const recoveryUnresolved = useRef(false);
+  const [recoveryFailed, setRecoveryFailed] = useState(false);
+  const [recoveryRetry, setRecoveryRetry] = useState(0);
+  const [recoveryReferenceCount, setRecoveryReferenceCount] = useState(0);
+  const recoveryReading = useRef(false);
   function rememberPending(command: ClubAcquisitionCommand | ClubAllocationCommand | ClubReleaseCommand | null) {
     pending.current = command; setHasPending(command !== null);
   }
@@ -69,8 +86,117 @@ export function useClubCollection(enabled: boolean, locale: string, expectedCont
     if (incoming) confirmInitialBudget(null);
     setState(incoming); publish(incoming); snapshotListener.current?.(incoming);
   }, [publish, confirmInitialBudget]);
+  useEffect(() => {
+    const authority = pageAuthority.current;
+    if (!enabled || !authority) return;
+    const controller = new AbortController();
+    let active = true;
+    let session: ReturnType<typeof createClubReleaseBrowserRecovery> | undefined;
+    setRecoveryReady(false); setRecoveryFailed(false); recoveryReading.current = true;
+    // Construction executes immediately; its synchronous failure becomes an
+    // observed rejection handled by the same active-generation fence as reads.
+    void (async () => {
+      session = createClubReleaseBrowserRecovery(authority);
+      recovery.current = session;
+      return session.recover(controller.signal);
+    })().then(result => {
+      if (!active) return;
+      // Historical evidence can acknowledge the exact operation; the ordinary
+      // authenticated GET still owns current write availability and capabilities.
+      for (const confirmation of result.confirmed) {
+        if (confirmation.resolved && confirmation.snapshot) acceptSnapshot(confirmation.snapshot);
+      }
+      const unresolved = result.pending.length > 0;
+      recoveryUnresolved.current = unresolved;
+      setRecoveryPending(unresolved); setRecoveryReferenceCount(result.pending.length);
+      if (!unresolved && pending.current && "action" in pending.current && pending.current.action === "release") rememberPending(null);
+      if (result.pending.length === 1) {
+        const ref = result.pending[0];
+        rememberPending({ action: "release", playerId: ref.playerId, expectedRevision: ref.expectedRevision, idempotencyKey: ref.idempotencyKey });
+      }
+      setRecoveryReady(true);
+      if (unresolved) publishVerificationStatus("unavailable");
+      else if (recoveryRetry > 0) {
+        // A receipt confirms history, not current session/capabilities. Fence any
+        // concurrent older GET and require a fresh authenticated current read.
+        ++readEpoch.current;
+        readEpoch.background = false;
+        setReady(false); setReleaseAvailable(false); confirmInitialBudget(null);
+        publishVerificationStatus("pending"); setReload(n => n + 1);
+      }
+    }).catch(() => {
+      if (!active) return;
+      setRecoveryFailed(true); setReady(false); publishVerificationStatus("unavailable");
+    }).finally(() => { if (active) recoveryReading.current = false; });
+    return () => { active = false; controller.abort(); session?.close(); if (recovery.current === session) recovery.current = null; };
+  }, [enabled, acceptSnapshot, publishVerificationStatus, confirmInitialBudget, recoveryRetry]);
   const pt = locale.startsWith("pt");
   const unavailable = pt ? "Não foi possível confirmar o elenco. Tente novamente." : "Unable to confirm the squad. Please retry.";
+  useEffect(() => {
+    if (!enabled || !pageAuthority.current) return;
+    let session: ReturnType<typeof createClubCoachBrowserRecovery> | null = null;
+    let active = true;
+    setCoachJournalReady(false);
+    try {
+      session = createClubCoachBrowserRecovery(pageAuthority.current, window.sessionStorage);
+      coachRecovery.current = session;
+      const pendingCoach = session.hasPending();
+      setCoachPending(pendingCoach); setCoachJournalReady(true);
+      if (pendingCoach) {
+        publishVerificationStatus("unavailable");
+        void session.recover().then(result => {
+          if (!active || coachRecovery.current !== session) return;
+          setCoachPending(session!.hasPending());
+          if (result.status === "committed") {
+            // Recovery owns an historical snapshot. Refresh current state instead
+            // of overwriting a newer wallet or lineup with that old revision.
+            ++readEpoch.current; setReady(false); setReload(n => n + 1);
+          }
+        }).catch(() => { if (active) { setCoachJournalReady(false); setError(unavailable); } });
+      }
+    } catch { setCoachJournalReady(false); setCoachPending(true); setError(unavailable); }
+    return () => { active = false; session?.close(); if (coachRecovery.current === session) coachRecovery.current = null; };
+  }, [enabled, unavailable, publishVerificationStatus]);
+  async function recoverCoach() {
+    const session = coachRecovery.current;
+    if (!session || inFlight.current) return false;
+    inFlight.current = true; setBusy(true);
+    try {
+      let result = await session.recover();
+      // This path is the user's explicit pending-operation button. Mount recovery
+      // above remains GET-only; an unobserved command retries its ORIGINAL key.
+      if (result.status === "not_observed" && coachRecovery.current === session) result = await session.retryPending();
+      if (coachRecovery.current !== session) return false;
+      setCoachPending(session.hasPending()); setCoachJournalReady(true);
+      if (result.status === "committed" || result.status === "empty" || result.status === "rejected") {
+        ++readEpoch.current; setReady(false); setReload(n => n + 1); return true;
+      }
+      setError(unavailable); return false;
+    } catch { setCoachJournalReady(false); setError(unavailable); return false; }
+    finally { inFlight.current = false; setBusy(false); }
+  }
+  async function changeCoach(action: "release-coach" | "hire-coach", coachId: string, revision: number) {
+    const before = confirmedSnapshot.current, session = coachRecovery.current;
+    if (!enabled || !ready || !recoveryReady || !coachJournalReady || !coachAvailable || coachPending || pending.current
+      || recoveryPending || recoveryPreparing.current || inFlight.current || !before || !session || before.revision !== revision) return false;
+    const command: ClubCoachLifecycleCommand = action === "release-coach"
+      ? { action, currentCoachId: coachId, expectedRevision: revision, idempotencyKey: crypto.randomUUID() }
+      : { action, incomingCoachId: coachId, expectedRevision: revision, idempotencyKey: crypto.randomUUID() };
+    ++readEpoch.current; readEpoch.reading = false; inFlight.current = true; setBusy(true); setCoachPending(true); setError(null);
+    publishVerificationStatus("pending");
+    try {
+      const result = await session.submit(command, before);
+      if (coachRecovery.current !== session) return false;
+      setCoachPending(session.hasPending());
+      if (result.status === "committed" || result.status === "rejected") {
+        setReady(false); setReload(n => n + 1);
+        if (result.status === "rejected") setError(unavailable);
+        return result.status === "committed";
+      }
+      setError(unavailable); publishVerificationStatus("unavailable"); return false;
+    } catch { setCoachJournalReady(false); setError(unavailable); publishVerificationStatus("unavailable"); return false; }
+    finally { inFlight.current = false; setBusy(false); }
+  }
   useEffect(() => {
     if (!enabled || inFlight.current) return;
     let active = true;
@@ -107,8 +233,9 @@ export function useClubCollection(enabled: boolean, locale: string, expectedCont
             receipt.key === command.idempotencyKey && receipt.playerId === command.playerId && receipt.area === command.area && receipt.slot === command.slot)) rememberPending(null);
           setReady(true);
           setReleaseAvailable(payload.releaseAvailable === true);
+          setCoachAvailable(payload.coachLifecycleAvailable === true);
           setError(null);
-          publishVerificationStatus(pending.current ? "unavailable" : "confirmed");
+          publishVerificationStatus(pending.current || recoveryUnresolved.current || coachRecovery.current?.hasPending() ? "unavailable" : "confirmed");
         } })
       .catch(error => {
         if (!active || epoch !== readEpoch.current) return;
@@ -130,7 +257,7 @@ export function useClubCollection(enabled: boolean, locale: string, expectedCont
   }, [enabled, unavailable, reload, acceptSnapshot, pt, confirmInitialBudget, bootstrap, publishVerificationStatus]);
 
   async function submit(path: string, body: unknown) {
-    if (!enabled || !ready || !pageAuthority.current || inFlight.current) return false;
+    if (!enabled || !ready || !coachJournalReady || coachPending || !recoveryReady || recoveryPreparing.current || !pageAuthority.current || inFlight.current) return false;
     const operationStartedAt = Date.now();
     ++readEpoch.current;
     readEpoch.reading = false;
@@ -166,8 +293,17 @@ export function useClubCollection(enabled: boolean, locale: string, expectedCont
         setError(messages[payload.error] ?? unavailable);
         if (payload.error === "CLUB_CONTEXT_CHANGED") setReady(false);
         // Keep the same request on ambiguous transport/storage failures.
-        if (response.status < 500) rememberPending(null);
-        publishVerificationStatus(response.status >= 500 || payload.error === "CLUB_CONTEXT_CHANGED" || payload.error === "CLUB_STALE_REVISION" ? "unavailable" : "confirmed");
+        if (response.status < 500 && !(pending.current && "action" in pending.current && pending.current.action === "release"
+          && (response.status === 401 || response.status === 403 || payload.error === "CLUB_CONTEXT_CHANGED"))) {
+          const command = pending.current;
+          if (command && "action" in command && command.action === "release") {
+            await recovery.current?.settle(command);
+            recoveryUnresolved.current = false; setRecoveryPending(false); setRecoveryReferenceCount(0);
+          }
+          rememberPending(null);
+        }
+        const unresolvedRelease = pending.current && "action" in pending.current && pending.current.action === "release";
+        publishVerificationStatus(unresolvedRelease || response.status >= 500 || payload.error === "CLUB_CONTEXT_CHANGED" || payload.error === "CLUB_STALE_REVISION" ? "unavailable" : "confirmed");
         return false;
       }
       if (payload.state == null) {
@@ -177,23 +313,45 @@ export function useClubCollection(enabled: boolean, locale: string, expectedCont
       const current = pending.current;
       if (current && "action" in current && current.action === "release"
         && (!isClubReleaseReceipt(payload.receipt, current) || typeof payload.replayed !== "boolean")) throw new Error("CLUB_COLLECTION_UNCONFIRMED");
+      if (current && "action" in current && current.action === "release") {
+        // Do not erase the durable reference if the reported current state is
+        // malformed or belongs to a different season, even with a valid receipt.
+        inspectClubAcquisition(payload.state);
+        if (payload.state.seasonId !== pageAuthority.current.expectedSeasonId) throw new Error("CLUB_CONTEXT_CHANGED");
+        if (!recovery.current) throw new Error("CLUB_COLLECTION_UNCONFIRMED");
+        await recovery.current.settle(current);
+        recoveryUnresolved.current = false; setRecoveryPending(false); setRecoveryReferenceCount(0);
+      }
       acceptSnapshot(payload.state); rememberPending(null); publishVerificationStatus("confirmed"); return true;
     } catch { setError(unavailable); publishVerificationStatus("unavailable"); return false; }
     finally { inFlight.current = false; setBusy(false); }
   }
   async function release(playerId: string, expectedRevision: number) {
-    if (!enabled || !ready || !releaseAvailable || !state || inFlight.current) return false;
+    if (!enabled || !ready || !coachJournalReady || coachPending || !recoveryReady || recoveryPreparing.current || !recovery.current || !releaseAvailable || !state || inFlight.current) return false;
     const retry = pending.current;
     if (retry && (!("action" in retry) || retry.action !== "release" || retry.playerId !== playerId || retry.expectedRevision !== expectedRevision)) return false;
     if (!retry && (state.revision !== expectedRevision || !state.players.some(player => player.playerId === playerId))) {
       setError(pt ? "O elenco mudou. Revise a liberação antes de confirmar." : "The squad changed. Review the release before confirming."); return false;
     }
     const command: ClubReleaseCommand = (retry as ClubReleaseCommand | null) ?? { action: "release", playerId, expectedRevision, idempotencyKey: crypto.randomUUID() };
+    return submitRelease(command);
+  }
+  async function submitRelease(command: ClubReleaseCommand) {
+    // An explicit retry retains the historical command and may recover a prior
+    // commit even after the current release capability/market has closed.
+    if (!enabled || !ready || !recoveryReady || recoveryPreparing.current || inFlight.current || !recovery.current) return false;
     rememberPending(command);
+    const session = recovery.current;
+    recoveryPreparing.current = true; setBusy(true);
+    try { await session.prepare(command); }
+    catch { setRecoveryPending(true); setError(unavailable); publishVerificationStatus("unavailable"); return false; }
+    finally { recoveryPreparing.current = false; setBusy(false); }
+    if (recovery.current !== session) return false;
+    setRecoveryPending(true);
     return submit("/api/touchline-fantasy/collection/release", command);
   }
   async function purchase(playerId: string, destination: CollectionDestination) {
-    if (!enabled || !ready || !state || inFlight.current) return false;
+    if (!enabled || !ready || !coachJournalReady || coachPending || !recoveryReady || recoveryPending || recoveryPreparing.current || !state || inFlight.current) return false;
     const retry = pending.current;
     if (retry && ("action" in retry || retry.playerId !== playerId || retry.area !== destination.area || retry.slot !== destination.slot)) {
       setError(pt ? "Confirme a contratação anterior antes de iniciar outra." : "Resolve the previous purchase before starting another."); return false;
@@ -203,7 +361,7 @@ export function useClubCollection(enabled: boolean, locale: string, expectedCont
     return submit("/api/touchline-fantasy/collection", command);
   }
   async function allocate(intent: {action:"formation";formationCode:string}|({action:"move";playerId:string}&CollectionDestination)) {
-    if(!enabled || !ready || !state || inFlight.current)return false;
+    if(!enabled || !ready || !coachJournalReady || coachPending || !recoveryReady || recoveryPending || recoveryPreparing.current || !state || inFlight.current)return false;
     const retry=pending.current;
     const sameIntent=retry&&"action" in retry&&Object.entries(intent).every(([k,v])=>retry[k as keyof typeof retry]===v);
     if(retry&&!sameIntent){setError(pt?"Confirme a operação anterior antes de continuar.":"Resolve the previous operation before continuing.");return false;}
@@ -211,11 +369,19 @@ export function useClubCollection(enabled: boolean, locale: string, expectedCont
     rememberPending(command);
     return submit("/api/touchline-fantasy/collection/allocation",command);
   }
-  const canInitialize = enabled && ready && !busy && !state && initialBudget !== null;
-  return { state, ready, busy, error, purchase, allocate, release, releaseAvailable, hasPending, canInitialize,
+  const canInitialize = enabled && ready && coachJournalReady && !coachPending && recoveryReady && !recoveryPending && !busy && !state && initialBudget !== null;
+  return { state, ready: ready && recoveryReady && coachJournalReady, coachLifecycleAvailable: coachAvailable && coachJournalReady, canHireCoach: coachAvailable && coachJournalReady && ready && recoveryReady && !busy && !coachPending && !hasPending && !recoveryPending && state?.coach === null, changeCoach, busy, error: recoveryFailed ? getClubCollectionBudgetCopy(locale, true).pendingRecoveryUnavailable : error, purchase, allocate, release, releaseAvailable: releaseAvailable && recoveryReady, hasPending: hasPending || recoveryPending || coachPending, pendingRecoveryOnly: recoveryReferenceCount > 1, canInitialize,
     retryPending: () => {
+      if (coachPending || !coachJournalReady) return recoverCoach();
+      if (recoveryReferenceCount > 1) {
+        if (!inFlight.current && !recoveryReading.current) {
+          recoveryReading.current = true; setRecoveryReady(false); setRecoveryRetry(n => n + 1);
+        }
+        return Promise.resolve(false); // Observation only; no command is selected from multiple references.
+      }
       const command = pending.current;
-      return command ? submit("action" in command ? (command.action === "release" ? "/api/touchline-fantasy/collection/release" : "/api/touchline-fantasy/collection/allocation") : "/api/touchline-fantasy/collection", command) : Promise.resolve(false);
+      if (command && "action" in command && command.action === "release") return submitRelease(command);
+      return command ? submit("action" in command ? "/api/touchline-fantasy/collection/allocation" : "/api/touchline-fantasy/collection", command) : Promise.resolve(false);
     },
     getConfirmedState: () => confirmedSnapshot.current,
     revalidate: () => {
@@ -228,7 +394,7 @@ export function useClubCollection(enabled: boolean, locale: string, expectedCont
       readEpoch.background = true;
       setReload(n => n + 1);
     },
-    reload: () => {if(!inFlight.current){readEpoch.background=false;setReady(false);setReleaseAvailable(false);confirmInitialBudget(null);setError(null);setReload(n=>n+1);}},
+    reload: () => {if(!inFlight.current && !recoveryPreparing.current){if((recoveryFailed || recoveryReferenceCount > 1) && !recoveryReading.current){recoveryReading.current=true;setRecoveryReady(false);setRecoveryRetry(n=>n+1);}readEpoch.background=false;setReady(false);setReleaseAvailable(false);confirmInitialBudget(null);setError(null);setReload(n=>n+1);}},
     initialize: async (coachId: string) => {
       if (!canInitialize || !initialBudgetRef.current || inFlight.current) return false;
       confirmInitialBudget(null);

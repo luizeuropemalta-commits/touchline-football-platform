@@ -11,10 +11,11 @@ const loadingCopy = {
   "de-DE": "Dein Konto wird geladen…",
 } as const;
 
-export default function TouchlineAccountLoading() {
-  return <main className={styles.loading} aria-busy="true" aria-label="TouchLine">
+export default function TouchlineAccountLoading({ contentOnly = false }: { contentOnly?: boolean } = {}) {
+  const Container = contentOnly ? "div" : "main";
+  return <Container className={contentOnly ? `${styles.loading} ${styles.contentLoading}` : styles.loading} aria-busy="true" aria-label="TouchLine">
     <div className={styles.brand} role="status" aria-live="polite" aria-atomic="true">
-      <strong>TouchLine</strong>
+      {!contentOnly ? <strong>TouchLine</strong> : null}
       {/* The root document already owns the current locale. CSS selects one
           message immediately, without fetching or delaying this fallback. */}
       {Object.entries(loadingCopy).map(([locale, label]) => <span key={locale}
@@ -23,5 +24,5 @@ export default function TouchlineAccountLoading() {
     <div className={styles.header} aria-hidden="true" />
     <div className={styles.cards} aria-hidden="true">{Array.from({ length: 5 }, (_, index) => <span key={index} />)}</div>
     <div className={styles.pitch} aria-hidden="true" />
-  </main>;
+  </Container>;
 }

@@ -10,17 +10,24 @@
 }
 
 .canvas {
-  min-width: 960px;
+  /* Preserve the two-panel layout while the rail owns narrow-screen scroll. */
+  min-width: 1160px;
   overflow-wrap: anywhere;
 }
 
-.stats,
-.quietHours {
+.stats {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.quietHours {
+  /* Native time editors need room for their controls; IANA identifiers need
+     a wider text field (for example America/Argentina/ComodRivadavia). */
+  grid-template-columns: repeat(2, minmax(9rem, 1fr)) minmax(20rem, 1.5fr);
+}
+
 .panels {
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr);
+  /* 38rem of controls + 24px row gaps + 40px panel padding + 2px border. */
+  grid-template-columns: minmax(0, 1.1fr) minmax(calc(38rem + 66px), .9fr);
 }
 
 .categories {
@@ -47,4 +54,11 @@
 
 .canvas input[type="checkbox"] {
   flex-shrink: 0;
+}
+
+/* WebKit's native time editor can hold keyboard focus without matching
+   :focus-visible. Retain the shared input focus indicator in that state. */
+.canvas input[type="time"]:focus {
+  outline: 1px solid rgba(34, 211, 238, .7);
+  outline-offset: 3px;
 }

@@ -116,6 +116,69 @@ test("Fixture account scope admits only its exact private name in the complete Q
   assert.deepEqual(environment, before);
 });
 
+test("fixture interests and lineup reminders admit only their exact private names in canonical QA", () => {
+  const settings = {
+    TOUCHLINE_FIXTURE_ALERTS_ENABLED: "false",
+    TOUCHLINE_LINEUP_REMINDER_WORKER_ENABLED: "false",
+    TOUCHLINE_LINEUP_REMINDER_WORKER_SECRET: "synthetic-worker-secret-not-a-real-credential",
+    TOUCHLINE_LINEUP_REMINDER_MAXIMUM_AGE_MS: "300000",
+    TOUCHLINE_LINEUP_REMINDER_LEASE_SECONDS: "30",
+    TOUCHLINE_LINEUP_REMINDER_COMPETITION_ID: "11111111-1111-4111-8111-111111111111",
+    TOUCHLINE_LINEUP_REMINDER_SEASON_ID: "22222222-2222-4222-8222-222222222222",
+    TOUCHLINE_LINEUP_REMINDER_LEAD_SECONDS: "3600",
+    TOUCHLINE_LINEUP_REMINDER_PAGE_SIZE: "10",
+    TOUCHLINE_LINEUP_REMINDER_RETRY_SECONDS: "60",
+  };
+  const environment = Object.freeze(qaEnvironment({
+    VERCEL_GIT_COMMIT_REF: "qa", VERCEL_BRANCH_URL: TOUCHLINE_QA_HOSTNAME,
+    NEXT_PUBLIC_TOUCHLINE_AUTH_ORIGIN: TOUCHLINE_QA_ORIGIN,
+    NEXT_PUBLIC_SUPABASE_URL: "https://xgxbwqxjssxxuihuwmgy.supabase.co",
+    SUPABASE_URL: "https://xgxbwqxjssxxuihuwmgy.supabase.co",
+    TOUCHLINE_QA_SUPABASE_PROJECT_REF: "xgxbwqxjssxxuihuwmgy",
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: "synthetic-qa-anon-not-a-real-credential",
+    SUPABASE_SERVICE_ROLE_KEY: "synthetic-qa-service-not-a-real-credential",
+    ...settings,
+  }));
+  const before = { ...environment };
+  const verify = (snapshot: Readonly<Record<string, string | undefined>>) =>
+    inspectTouchlineQaVercelEnvironment({ environment: snapshot, requestHostname: TOUCHLINE_QA_HOSTNAME });
+  for (const enabled of ["false", "true"]) {
+    const snapshot = { ...environment, TOUCHLINE_FIXTURE_ALERTS_ENABLED: enabled,
+      TOUCHLINE_LINEUP_REMINDER_WORKER_ENABLED: enabled };
+    assert.deepEqual(verify(snapshot), { status: "PASS", reason: "QA_ENVIRONMENT_CONFIGURATION_COHERENT" });
+    for (const path of ["/api/notifications/fixtures/19722126", "/api/notifications/lineup-reminders/dispatch"]) {
+      assert.deepEqual(resolveTouchlineIsolatedPreviewRoutePolicy(path, snapshot), { status: "inactive" });
+    }
+  }
+  for (const [key, value] of Object.entries(settings)) {
+    assert.equal(inspectTouchlineIsolatedPreviewEnvironment(isolatedEnvironment({ [key]: value })).status, "invalid", key);
+    for (const forbidden of [`NEXT_PUBLIC_${key}`, `${key}_OTHER`]) {
+      const snapshot = { ...environment, [forbidden]: "synthetic-forbidden-value" };
+      const result = inspectTouchlineIsolatedPreviewEnvironment(snapshot);
+      assert.equal(result.status, "invalid", forbidden);
+      assert.ok(result.reasons.includes(`forbidden-qa-environment-key:${forbidden}`));
+      assert.ok(result.reasons.every(reason => !reason.includes("synthetic-forbidden-value")));
+      assert.equal(verify(snapshot).status, "FAIL");
+    }
+  }
+  for (const patch of [
+    { VERCEL_ENV: "production" }, { VERCEL_GIT_COMMIT_REF: "main" },
+    { VERCEL_BRANCH_URL: "other.vercel.app" }, { SUPABASE_URL: "https://other.supabase.co" },
+    { NEXT_PUBLIC_SUPABASE_URL: "https://other.supabase.co" }, { TOUCHLINE_QA_SUPABASE_PROJECT_REF: "other" },
+    { NEXT_PUBLIC_TOUCHLINE_AUTH_ORIGIN: "https://other.example.test" },
+    { SUPABASE_SERVICE_ROLE_KEY: undefined }, { TOUCHLINE_DEPLOYMENT_MODE: TOUCHLINE_ISOLATED_PREVIEW_MODE },
+    { TOUCHLINE_LINEUP_REMINDER_ACCOUNT_ID: "11111111-1111-4111-8111-111111111111" },
+    { TOUCHLINE_FIXTURE_ALERTS_ACCOUNT_ID: "11111111-1111-4111-8111-111111111111" },
+    { STRIPE_SECRET_KEY: "synthetic-forbidden-value" },
+  ]) assert.equal(verify({ ...environment, ...patch }).status, "FAIL", JSON.stringify(Object.keys(patch)));
+  assert.deepEqual(environment, before);
+
+  // Match the existing handler's complete private control set, not a prefix grant.
+  const route = readFileSync(new URL("../app/api/notifications/lineup-reminders/dispatch/route.ts", import.meta.url), "utf8");
+  const routeKeys = [...new Set([...route.matchAll(/process\.env\.(TOUCHLINE_LINEUP_REMINDER_[A-Z_]+)/g)].map(match => match[1]))].sort();
+  assert.deepEqual(routeKeys, Object.keys(settings).filter(key => key.startsWith("TOUCHLINE_LINEUP_REMINDER_")).sort());
+});
+
 test("QA admits only exact push configuration names and never public private-key variants", () => {
   const settings = {
     NEXT_PUBLIC_TOUCHLINE_WEB_PUSH_PUBLIC_KEY: "synthetic-public-key",
@@ -462,4 +525,36 @@ test("proxy and Preview shell enforce the boundary before product work", () => {
   assert.match(page, /TOUCHLINE_ISOLATED_PREVIEW_HEADER/);
   assert.match(page, /notFound\(\)/);
   assert.doesNotMatch(page, /supabase|fetch\(|TouchlineActivityTracker|AuthForm|ArenaClient|TouchlineMatchCentre|football-data/i);
+});
+
+
+test("request timing is admitted only in the explicit canonical local development QA envelope", () => {
+  const key = "TOUCHLINE_LOCAL_READ_TIMING";
+  const local = qaEnvironment({ NODE_ENV: "development", VERCEL_GIT_COMMIT_REF: "qa",
+    NEXT_PUBLIC_SUPABASE_URL: "https://xgxbwqxjssxxuihuwmgy.supabase.co",
+    SUPABASE_URL: "https://xgxbwqxjssxxuihuwmgy.supabase.co",
+    TOUCHLINE_QA_SUPABASE_PROJECT_REF: "xgxbwqxjssxxuihuwmgy", [key]: "1" });
+  assert.deepEqual(inspectTouchlineIsolatedPreviewEnvironment(local), { status: "qa", reasons: [] });
+  for (const patch of [{NODE_ENV:"production"}, {NODE_ENV:"test"}, {VERCEL:"1"},
+    {VERCEL_GIT_COMMIT_REF:"main"}, {[key]:"true"}, {[key]:"0"},
+    {TOUCHLINE_QA_SUPABASE_PROJECT_REF:"other"}, {VERCEL_ENV:"production"},
+    {[`NEXT_PUBLIC_${key}`]:"1"}, {[`${key}_OTHER`]:"1"}]) {
+    assert.equal(inspectTouchlineIsolatedPreviewEnvironment({...local,...patch}).status, "invalid", JSON.stringify(patch));
+  }
+  assert.equal(inspectTouchlineIsolatedPreviewEnvironment(qaEnvironment({[key]:"1"})).status,"invalid");
+  assert.equal(inspectTouchlineIsolatedPreviewEnvironment(isolatedEnvironment({[key]:"1"})).status,"invalid");
+});
+
+
+test("QA admits only the private Exchange gate name without activating or widening isolated Preview", () => {
+  const key = "TOUCHLINE_CLUB_EXCHANGE_ENABLED";
+  for (const value of ["false", "true"]) {
+    const environment = Object.freeze(qaEnvironment({ [key]: value }));
+    assert.deepEqual(inspectTouchlineIsolatedPreviewEnvironment(environment), { status: "qa", reasons: [] });
+    assert.equal(environment[key], value);
+    assert.equal(inspectTouchlineIsolatedPreviewEnvironment(isolatedEnvironment({ [key]: value })).status, "invalid");
+  }
+  for (const forbidden of [`NEXT_PUBLIC_${key}`, `${key}_OTHER`]) {
+    assert.equal(inspectTouchlineIsolatedPreviewEnvironment(qaEnvironment({ [forbidden]: "true" })).status, "invalid");
+  }
 });

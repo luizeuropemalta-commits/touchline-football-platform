@@ -61,6 +61,7 @@ export const TOUCHLINE_FANTASY_MARKET_BUDGET_COPY = {
 } as const;
 
 type CollectionBudgetCopy = Readonly<{
+  pendingRecoveryUnavailable: string;
   savedFormationUnverified: string;
   incompatibleSquadAllocation: string;
   confirmCoachToUnlockFormation: string;
@@ -79,6 +80,7 @@ type CollectionBudgetCopy = Readonly<{
 /** Collection copy describes the club's signing funds, not the legacy XI valuation. */
 export const TOUCHLINE_CLUB_COLLECTION_BUDGET_COPY: Readonly<Record<TouchLineLocale, CollectionBudgetCopy>> = {
   "en-GB": {
+    pendingRecoveryUnavailable: "Unable to verify pending operations. Refresh the squad to try again.",
     signingBudget: "Signing budget", lastConfirmedBalance: "Last confirmed balance",
     savedFormationUnverified: "Unable to verify the saved formation.",
     incompatibleSquadAllocation: "This change would not preserve your bench and squad positions. Choose a compatible position.",
@@ -98,6 +100,7 @@ export const TOUCHLINE_CLUB_COLLECTION_BUDGET_COPY: Readonly<Record<TouchLineLoc
     virtualBudgetSeparate: "Your club's signing budget is separate from the subscription price.",
   },
   "pt-BR": {
+    pendingRecoveryUnavailable: "Não foi possível verificar as operações pendentes. Atualize o elenco para tentar novamente.",
     signingBudget: "Saldo para contratações", lastConfirmedBalance: "Último saldo confirmado",
     savedFormationUnverified: "Não foi possível confirmar a formação salva.",
     incompatibleSquadAllocation: "Esta alteração não mantém as posições do banco e do elenco. Escolha uma posição compatível.",
@@ -117,6 +120,7 @@ export const TOUCHLINE_CLUB_COLLECTION_BUDGET_COPY: Readonly<Record<TouchLineLoc
     virtualBudgetSeparate: "O saldo do clube para contratações é separado do preço da assinatura.",
   },
   "es-ES": {
+    pendingRecoveryUnavailable: "No se pudieron verificar las operaciones pendientes. Actualiza la plantilla para volver a intentarlo.",
     signingBudget: "Saldo para fichajes", lastConfirmedBalance: "Último saldo confirmado",
     savedFormationUnverified: "No se ha podido verificar la formación guardada.",
     incompatibleSquadAllocation: "Este cambio no conservaría las posiciones del banquillo y de la plantilla. Elige una posición compatible.",
@@ -136,6 +140,7 @@ export const TOUCHLINE_CLUB_COLLECTION_BUDGET_COPY: Readonly<Record<TouchLineLoc
     virtualBudgetSeparate: "El saldo del club para fichajes es independiente del precio de la suscripción.",
   },
   "it-IT": {
+    pendingRecoveryUnavailable: "Impossibile verificare le operazioni in sospeso. Aggiorna la rosa per riprovare.",
     signingBudget: "Saldo per gli ingaggi", lastConfirmedBalance: "Ultimo saldo confermato",
     savedFormationUnverified: "Impossibile verificare la formazione salvata.",
     incompatibleSquadAllocation: "Questa modifica non manterrebbe le posizioni della panchina e della rosa. Scegli una posizione compatibile.",
@@ -155,6 +160,7 @@ export const TOUCHLINE_CLUB_COLLECTION_BUDGET_COPY: Readonly<Record<TouchLineLoc
     virtualBudgetSeparate: "Il saldo del club per gli ingaggi è distinto dal prezzo dell'abbonamento.",
   },
   "fr-FR": {
+    pendingRecoveryUnavailable: "Impossible de vérifier les opérations en attente. Actualisez l’effectif pour réessayer.",
     signingBudget: "Solde pour les recrutements", lastConfirmedBalance: "Dernier solde confirmé",
     savedFormationUnverified: "Impossible de vérifier la formation enregistrée.",
     incompatibleSquadAllocation: "Ce changement ne préserverait pas les postes du banc et de l'effectif. Choisissez un poste compatible.",
@@ -174,6 +180,7 @@ export const TOUCHLINE_CLUB_COLLECTION_BUDGET_COPY: Readonly<Record<TouchLineLoc
     virtualBudgetSeparate: "Le solde du club pour les recrutements est distinct du prix de l'abonnement.",
   },
   "ar-SA": {
+    pendingRecoveryUnavailable: "تعذر التحقق من العمليات المعلقة. حدّث قائمة الفريق للمحاولة مجددًا.",
     signingBudget: "رصيد التعاقدات", lastConfirmedBalance: "آخر رصيد مؤكد",
     savedFormationUnverified: "تعذّر التحقق من الخطة المحفوظة.",
     incompatibleSquadAllocation: "لن يحافظ هذا التغيير على مراكز البدلاء وقائمة الفريق. اختر مركزًا متوافقًا.",
@@ -193,6 +200,7 @@ export const TOUCHLINE_CLUB_COLLECTION_BUDGET_COPY: Readonly<Record<TouchLineLoc
     virtualBudgetSeparate: "رصيد تعاقدات النادي منفصل عن سعر الاشتراك.",
   },
   "tr-TR": {
+    pendingRecoveryUnavailable: "Bekleyen işlemler doğrulanamadı. Tekrar denemek için kadroyu yenileyin.",
     signingBudget: "Transfer bakiyesi", lastConfirmedBalance: "Son doğrulanan bakiye",
     savedFormationUnverified: "Kaydedilen diziliş doğrulanamadı.",
     incompatibleSquadAllocation: "Bu değişiklik yedek kulübesi ve kadro pozisyonlarınızı korumaz. Uyumlu bir pozisyon seçin.",
@@ -212,6 +220,7 @@ export const TOUCHLINE_CLUB_COLLECTION_BUDGET_COPY: Readonly<Record<TouchLineLoc
     virtualBudgetSeparate: "Kulübün transfer bakiyesi abonelik ücretinden ayrıdır.",
   },
   "de-DE": {
+    pendingRecoveryUnavailable: "Ausstehende Vorgänge konnten nicht geprüft werden. Aktualisiere den Kader, um es erneut zu versuchen.",
     signingBudget: "Guthaben für Verpflichtungen", lastConfirmedBalance: "Zuletzt bestätigtes Guthaben",
     savedFormationUnverified: "Die gespeicherte Formation konnte nicht überprüft werden.",
     incompatibleSquadAllocation: "Diese Änderung würde die Positionen auf der Bank und im Kader nicht beibehalten. Wähle eine passende Position.",

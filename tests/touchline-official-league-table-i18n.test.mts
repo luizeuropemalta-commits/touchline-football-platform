@@ -198,7 +198,8 @@ test("official table real SSR covers all states and variants while preserving ze
       const clubLinks = f.links.filter(link => link.prefetch === false); assert.equal(clubLinks.length, count);
       if (!count) { assert.ok(!html.includes("<table>")); continue; }
       assert.ok(html.includes(`<caption>${escape(copy.caption)}</caption>`));
-      assert.equal(html.includes(`aria-label="${escape(copy.scrollLabel)}"`), variant !== "directory");
+      assert.ok(html.includes(`aria-label="${escape(copy.scrollLabel)}"`));
+      assert.ok(html.includes('tabindex="0"'), "every table permits keyboard access to overflow");
       assert.equal(html.includes('data-club-table-scroll-region="true"'), variant === "clubHubRail");
       for (let index = 0; index < count; index++) {
         assert.equal(clubLinks[index].href, `/touchline-clubs/club-${index}?lang=${encodeURIComponent(locale)}`);

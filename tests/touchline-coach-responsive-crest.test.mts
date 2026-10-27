@@ -43,7 +43,8 @@ test("real public coach crest scales with its card and preserves the 300px autho
   const html = fixture()();
   const value = html.match(/--coach-crest-size:([\d.]+)cqw/)?.[1];
   assert.ok(value, "public card must not emit an unscaled px crest");
-  const reference = Math.round(TOUCHLINE_COACH_CARD_DEFAULT_LAYOUT.crestSize * 3);
+  const reference = 92; // Approved crest width on the 300px authored artboard.
+  assert.equal(Math.round(TOUCHLINE_COACH_CARD_DEFAULT_LAYOUT.crestSize * 3), reference);
   for (const width of [40, 48, 73, 96, 166, 300, 390]) {
     const crestWidth = Number(value) * width / 100;
     assert.ok(crestWidth < width, `${width}px card contains its crest`);
@@ -68,12 +69,12 @@ test("custom editor sizing and placement remain unchanged while public sizes sta
   }
 });
 
-test("compact and zoom remain bounded by their existing presentation rules", () => {
+test("compact keeps its bounded crest while zoom inherits canonical public sizing", () => {
   const compact = fixture()({ displayMode: "compact" });
   assert.ok(compact.includes('data-coach-card-display="compact"'));
   const css = readFileSync(new URL("../components/touchline/cards/TouchlineCoachCard.module.css", import.meta.url), "utf8");
   assert.match(css, /\.shell\s*\{\s*container-type:\s*inline-size/);
   assert.match(css, /\.shell\[data-coach-card-display="compact"\] \.clubBadge \[data-touchline-card-crest-host="true"\] \{[^}]*width:\s*clamp\(9px,\s*16cqw,\s*28px\)/);
   const zoom = readFileSync(new URL("../components/touchline/cards/TouchlineCardZoom.module.css", import.meta.url), "utf8");
-  assert.match(zoom, /width:\s*min\(100%,\s*var\(--coach-crest-size,\s*132px\)\)/);
+  assert.doesNotMatch(zoom, /\.expandedCard[^{}]*\[data-touchline-card-crest-host="true"\][^{}]*\{/);
 });

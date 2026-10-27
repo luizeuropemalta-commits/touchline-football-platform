@@ -133,7 +133,7 @@ test("current English navigation preserves visible labels, current state and can
   const html = renderNavigation("en-GB");
   assert.match(html, /aria-label="TouchLine navigation"/);
   for (const label of ["Club Owner", "ClubHub", "Live", "Rankings", "More"]) assert.ok(html.includes(`>${label}<`), label);
-  for (const path of ["/account?lang=en-GB", "/touchline-clubs?lang=en-GB", "/live?lang=en-GB", "/rankings?lang=en-GB"]) {
+  for (const path of ["/clubowner?lang=en-GB", "/touchline-clubs?lang=en-GB", "/live?lang=en-GB", "/rankings?lang=en-GB"]) {
     assert.ok(html.includes(`href="${path}"`), path);
   }
   assert.match(html, /aria-current="page" data-touchline-navigation-key="live"/);
@@ -148,7 +148,7 @@ test("current Portuguese navigation keeps shared labels and destinations indepen
     assert.ok(html.includes(`>${label}<`), label);
   }
   assert.ok(html.includes('href="/touchline-clubs?lang=pt-BR"'));
-  assert.ok(html.includes('href="/account?lang=pt-BR"'), "public entry still resolves the role on the server");
+  assert.ok(html.includes('href="/clubowner?lang=pt-BR"'), "direct ClubOwner entry still resolves the role on the server");
   assert.doesNotMatch(html, /synthetic-club\?lang/);
 });
 
@@ -226,7 +226,7 @@ test("unpublished catalogues never activate the public navigation getter or link
     assert.equal(isTouchLineLocaleComplete(locale), false);
     const html = renderNavigation(locale);
     assert.match(html, /aria-label="TouchLine navigation"/);
-    assert.ok(html.includes('href="/account?lang=en-GB"'));
+    assert.ok(html.includes('href="/clubowner?lang=en-GB"'));
     assert.doesNotMatch(html, /dir="rtl"/);
   }
   assert.deepEqual(getTouchlineNavigationCopy(undefined), english);

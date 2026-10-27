@@ -7,9 +7,9 @@ import { TOUCHLINE_FANTASY_BETA_BUDGET_EUR } from "../lib/touchlineFantasy/marke
 
 const migration = readFileSync(new URL("../supabase/migrations/20261020161513_club_collection_approved_plan_budgets.sql", import.meta.url), "utf8");
 const id = (n: number) => `60000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
-test("approved collection budgets do not change the historical Beta XI budget", () => {
+test("current Beta budget follows the approved 100M model; historical migration is tested separately", () => {
   assert.deepEqual(Object.values(CLUB_PLANS).map(p => p.budget), [100_000_000,750_000_000,1_500_000_000,3_000_000_000]);
-  assert.equal(TOUCHLINE_FANTASY_BETA_BUDGET_EUR,50_000_000);
+  assert.equal(TOUCHLINE_FANTASY_BETA_BUDGET_EUR,100_000_000);
 });
 test("forward budget migration preserves installed guards, ACL, coach debit and existing balances", async () => {
   const db = await clubRoundDatabase({beforeApprovedBudgets:true});

@@ -62,4 +62,4 @@
 .canvas aside b { color: #b5ff4b; font-size: 11px; }
 .canvas aside small { color: #b8c9bc; }
 .canvas aside button { white-space: normal; overflow-wrap: anywhere; }
-.back { margin-top: 24px; white-space: normal; }
+.back { margin-top: 24px; white-space: normal; scroll-margin-block: 6px; }

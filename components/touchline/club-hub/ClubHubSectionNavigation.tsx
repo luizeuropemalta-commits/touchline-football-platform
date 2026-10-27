@@ -41,17 +41,23 @@ export default function ClubHubSectionNavigation({ locale, draftLocalesEnabled =
   useEffect(() => {
     let frame: number | null = null;
     let pendingTarget: string | null = null;
+    let pendingScrollX = window.scrollX;
+    let pendingScrollY = window.scrollY;
     let lastHash = window.location.hash;
     const requestMissingTarget = (hash: string) => {
       const target = SECTION_TARGETS.find(id => hash === `#${id}`);
       pendingTarget = target && !document.getElementById(target) ? target : null;
+      pendingScrollX = window.scrollX;
+      pendingScrollY = window.scrollY;
     };
     const cancelPendingTarget = () => { pendingTarget = null; };
+    const pendingPositionChanged = () => window.scrollX !== pendingScrollX || window.scrollY !== pendingScrollY;
     requestMissingTarget(lastHash);
     const syncActiveTarget = () => {
       frame = null;
       if (pendingTarget) {
-        if (window.location.hash !== `#${pendingTarget}`) {
+        // Mutation/rAF may run before a queued scroll event reaches its listener.
+        if (window.location.hash !== `#${pendingTarget}` || pendingPositionChanged()) {
           cancelPendingTarget();
         } else {
           const target = document.getElementById(pendingTarget);
@@ -83,6 +89,15 @@ export default function ClubHubSectionNavigation({ locale, draftLocalesEnabled =
       if (frame !== null) return;
       frame = window.requestAnimationFrame(syncActiveTarget);
     };
+    const syncScroll = () => {
+      // Scrollbar dragging need not emit wheel/touch/key input. A changed
+      // position supersedes the old missing-target intent; a queued scroll
+      // event at the same position does not. Native scrolling stays untouched.
+      if (pendingTarget && pendingPositionChanged()) {
+        cancelPendingTarget();
+      }
+      scheduleSync();
+    };
     const syncHash = () => {
       // A queued event for an already observed hash must not rearm an intent
       // cancelled by user input. An explicit same-hash click can rearm below.
@@ -112,7 +127,7 @@ export default function ClubHubSectionNavigation({ locale, draftLocalesEnabled =
     const scope = document.querySelector(".club-hub-shell");
     const observer = new MutationObserver(scheduleSync);
     if (scope) observer.observe(scope, { childList: true, subtree: true });
-    window.addEventListener("scroll", scheduleSync, { passive: true });
+    window.addEventListener("scroll", syncScroll, { passive: true });
     window.addEventListener("resize", scheduleSync);
     window.addEventListener("hashchange", syncHash);
     window.addEventListener("wheel", cancelPendingTarget, { passive: true });
@@ -121,7 +136,7 @@ export default function ClubHubSectionNavigation({ locale, draftLocalesEnabled =
     navigation?.addEventListener("click", requestClickedTarget);
     return () => {
       observer.disconnect();
-      window.removeEventListener("scroll", scheduleSync);
+      window.removeEventListener("scroll", syncScroll);
       window.removeEventListener("resize", scheduleSync);
       window.removeEventListener("hashchange", syncHash);
       window.removeEventListener("wheel", cancelPendingTarget);

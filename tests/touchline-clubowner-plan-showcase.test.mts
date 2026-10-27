@@ -184,7 +184,7 @@ test("approved prices are Beta free, Master 89.90 and VIP 169.90 EUR per season"
 const fixtureCssModules = new Map<string, { css: string; classes: Record<string, string> }>();
 
 test("benefit blocks use approved plan rules and retain top-up conditions", () => {
-  assert.deepEqual(getClubOwnerPlanBenefits("beta", "pt-BR"), []);
+  assert.deepEqual(getClubOwnerPlanBenefits("beta", "pt-BR").map(item => item.value), ["35", "Ilimitado", "7%", "Sem taxa + metade da taxa do proponente em TC", "10%"]);
   for (const [plan, rate, refundRate, price] of [["standard", "5%", "10%", "€10.00"], ["master", "4%", "10%", "€8.00"], ["vip", "2%", "10%", "€6.00"]] as const) {
     const blocks = getClubOwnerPlanBenefits(plan, "en-GB");
     assert.deepEqual(blocks.map(item => item.value), ["35", "Unlimited", rate, "No fee + half the sender's fee in TC", refundRate, price, "200M TC"]);
@@ -542,4 +542,13 @@ if (process.env.TOUCHLINE_RUN_PLAN_BROWSER_TESTS === "1") test("premium plans: t
       }
     } finally { await browser.close(); }
   }
+});
+
+test("Beta disclosure agrees on shared budget, initial coach and fees in all eight locales",()=>{
+ for(const locale of ["pt-BR","en-GB","es-ES","it-IT","fr-FR","ar-SA","tr-TR","de-DE"]){
+  const copy=getClubOwnerPlanShowcaseCopy(locale,true);
+  for(const amount of ["100M","95M","5M","35","7"])assert.ok(copy.betaBenefit.includes(amount));
+  const benefits=getClubOwnerPlanBenefits("beta",locale,true);assert.equal(benefits.length,5);assert.equal(benefits[2].value,"7%");assert.equal(benefits[4].value,"10%");
+  assert.doesNotMatch(copy.betaBenefit,/50M|not available|indisponível/);
+ }
 });

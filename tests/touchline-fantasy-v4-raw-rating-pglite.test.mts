@@ -415,6 +415,31 @@ test("Fantasy raw-rating transition executes atomically against real SQL", {skip
       await reconcile(db,gameweek);
       assert.equal(Number((await scores(db)).find(row=>row.player_id===PLAYER)!.fantasy_contribution),8.09);
     });
+    await scenario("postmatch correction 7.19 to 7.02 replaces settled contribution and replay stays idempotent",async gameweek=>{
+      await install(db);
+      await db.exec(await sql("20261026121254_football_feed_revision_history"));
+      for (const rating of [7.19,7.02,7.02]) {
+        // Synthetic imported feed and settlement share a rating; provider parsing
+        // and HTTP are covered separately, not simulated as an end-to-end claim.
+        await db.query(`update public.football_fantasy_fixture_feeds
+          set lineups_payload=$1::jsonb where provider_fixture_id='99001'`,
+          [JSON.stringify([{playerId:"9001",teamId:"900",statistics:[{typeId:"118",code:"rating",value:rating}]}])]);
+        await db.query(`update public.touchline_player_fixture_score_settlements set rating=$2,touchline_points=$2
+          where football_player_id=$1 and scoring_version='player_scoring_v4'`,[PLAYER,rating]);
+        await reconcile(db,gameweek);
+        const playerRows=(await scores(db)).filter(row=>row.player_id===PLAYER);
+        assert.equal(playerRows.length,1);
+        assert.equal(Number(playerRows[0].fantasy_contribution),rating);
+      }
+      const revisions = (await db.query(`select origin,payload->'lineups'->0->'statistics'->0->>'value' as rating
+        from public.football_feed_revisions order by id`)).rows;
+      assert.deepEqual(revisions.map(row=>row.rating),[null,"7.19","7.02"]);
+      assert.equal(revisions[0].origin,"existing_baseline");
+      // Reversible capture rollback preserves evidence and scoring behavior.
+      await db.exec("drop trigger touchline_capture_feed_revision on public.football_fantasy_fixture_feeds");
+      await db.exec("update public.football_fantasy_fixture_feeds set last_synced_at=last_synced_at");
+      assert.equal((await db.query("select count(*)::int as n from public.football_feed_revisions")).rows[0].n,3);
+    });
     for (const [name,change,expected] of [
       ["missing V4 peer",`delete from public.touchline_player_fixture_score_settlements where scoring_version='player_scoring_v4' and football_player_id='${PLAYER}'`,"TL_FANTASY_V4"],
       ["provisional V4 facts",`update public.touchline_player_fixture_score_settlements set settlement_status='provisional' where scoring_version='player_scoring_v4'`,"TL_FANTASY_V4"],

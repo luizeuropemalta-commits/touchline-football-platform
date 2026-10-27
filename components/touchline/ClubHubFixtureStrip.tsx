@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { TouchLineLocale } from "@/lib/touchlineArena/i18n";
 import type { TouchlinePublicFixture } from "@/lib/football-data/public-fixture";
 import type { TouchlineLiveReadMetadata } from "@/lib/touchlineArena/match-centre";
+import { selectTouchlinePublishedRailFixtures, type TouchlineLiveAdmissionScope } from "@/lib/touchlineArena/sports-publication-live-view";
 import { useTouchlinePublishedLive } from "@/lib/touchlineArena/sports-publication-client";
 import { getTouchlineMatchCentreCopy } from "@/lib/touchlineArena/match-centre-i18n";
 import { formatTouchlineLocalKickoff } from "@/lib/touchlineArena/local-kickoff";
@@ -15,12 +16,14 @@ import styles from "./ClubHubFixtureStrip.module.css";
 
 const EMPTY_FIXTURES: TouchlinePublicFixture[] = [];
 
-export default function ClubHubFixtureStrip({ locale, draftLocalesEnabled = false, initialFixtures, initialMetadata = null, initialNow = 0, initialTimeZone = "UTC" }: {
+export default function ClubHubFixtureStrip({ locale, draftLocalesEnabled = false, initialFixtures, initialMetadata = null, initialAdmissionScope = null, initialNow = 0, initialTimeZone = "UTC" }: {
   locale: TouchLineLocale; draftLocalesEnabled?: boolean; initialFixtures?: TouchlinePublicFixture[] | null;
+  initialAdmissionScope?: TouchlineLiveAdmissionScope | null;
   initialMetadata?: TouchlineLiveReadMetadata | null; initialNow?: number; initialTimeZone?: string;
 }) {
   const [snapshot, setSnapshot] = useState<ClubHubStripSnapshot | null>(null);
   const [failed, setFailed] = useState(false);
+  const [focusedProviderId, setFocusedProviderId] = useState<string | null>(null);
   const [zone, setZone] = useState(initialTimeZone);
   const [observedAt, setObservedAt] = useState(initialNow);
   const [canLoop, setCanLoop] = useState(false);
@@ -32,8 +35,11 @@ export default function ClubHubFixtureStrip({ locale, draftLocalesEnabled = fals
   const copy = getTouchlineMatchCentreCopy(locale, draftLocalesEnabled);
   const motion = getClubHubStripCopy(locale, draftLocalesEnabled);
   const needsInitialRead = clubHubStripSeedNeedsRecovery(initialFixtures);
-  const { fixtures, metadata } = useTouchlinePublishedLive(initialFixtures ?? snapshot?.fixtures ?? EMPTY_FIXTURES,
-    !needsInitialRead ? initialMetadata : snapshot?.metadata ?? null, observedAt);
+  const admissionScope = initialAdmissionScope ?? snapshot?.admissionScope ?? null;
+  const { fixtures: publishedFixtures, metadata } = useTouchlinePublishedLive(initialFixtures ?? snapshot?.fixtures ?? EMPTY_FIXTURES,
+    !needsInitialRead ? initialMetadata : snapshot?.metadata ?? null, observedAt, true, admissionScope, focusedProviderId);
+  const fixtures = useMemo(() => selectTouchlinePublishedRailFixtures(publishedFixtures, observedAt, focusedProviderId, admissionScope),
+    [publishedFixtures, observedAt, focusedProviderId, admissionScope]);
 
   useEffect(() => {
     const updateClock = () => {
@@ -261,6 +267,8 @@ export default function ClubHubFixtureStrip({ locale, draftLocalesEnabled = fals
           const teams = [fixture.homeTeam, fixture.awayTeam];
           const description = `${fixture.homeTeam?.name ?? copy.homeFallback} ${copy.versus} ${fixture.awayTeam?.name ?? copy.awayFallback}: ${value}. ${label}${caution ? `. ${cautionText}` : ""}`;
           return <a key={fixture.providerId} className={styles.fixture} data-state={state}
+            onFocus={run === "original" ? () => setFocusedProviderId(fixture.providerId) : undefined}
+            onBlur={run === "original" ? () => setFocusedProviderId(null) : undefined}
             tabIndex={run === "original" ? undefined : -1}
             onMouseDown={run === "original" ? undefined : event => event.preventDefault()}
             href={`/live?fixture=${encodeURIComponent(fixture.providerId)}&lang=${encodeURIComponent(locale)}`} aria-label={description} title={description}>

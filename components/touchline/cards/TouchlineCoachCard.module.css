@@ -258,6 +258,13 @@
   letter-spacing: -.035em;
 }
 
+/* A waiting-state sentence is longer than an actual coach name. Keep it
+   within the same authored nameplate without changing real-name typography. */
+.nameplate[data-coach-name-pending="true"] strong {
+  font-size: clamp(6px, 4cqw, 22px);
+  letter-spacing: -.025em;
+}
+
 .nameplate > span {
   overflow: hidden;
   color: var(--coach-touchline-soft);
@@ -334,20 +341,43 @@
   color: var(--coach-touchline);
 }
 
-/* Reuse the existing reserved footer layer without replacing points or art. */
+/* The 3:4 artwork is contained in a 2:3 shell. Its lower letterbox gutter
+   holds the purchase caption without covering the gemstone or growing the pitch slot. */
 .signingPrice {
   position: absolute;
   z-index: 3;
-  left: var(--coach-footer-x, 18%);
-  top: var(--coach-footer-y, 86.4%);
-  width: var(--coach-footer-w, 64%);
-  min-height: 0;
-  padding: 1.2cqw 1cqw;
-  gap: 1px;
+  inset: auto 0 0;
+  height: 5.55%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5cqw;
+  color: var(--coach-touchline-soft);
+  font-size: 2.5cqw;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.signingPrice small {
+  font-size: inherit;
 }
 
 .signingPrice strong {
   color: var(--coach-touchline);
+  font-weight: 800;
+}
+
+.shell[data-coach-card-display="compact"] .signingPrice small {
+  /* Keep the amount readable in the pitch slot; its full label remains in the DOM. */
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.shell[data-coach-card-display="compact"] .signingPrice {
+  font-size: 4cqw;
 }
 
 .statIcon {

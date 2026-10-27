@@ -10,7 +10,8 @@ import { resolveTouchlineCatalogueLocale } from "./catalogue-locale.ts";
 import { getTouchlineMatchCentreCopy } from "./match-centre-i18n.ts";
 import { arabicFixtureDate } from "./arabic-fixture-date.ts";
 
-export type TouchlineMatchState = "live" | "upcoming" | "finished" | "unknown";
+import { touchlineFixtureState, type TouchlineFixtureStateSource, type TouchlineMatchState } from "./fixture-state.ts";
+export { touchlineFixtureState, type TouchlineMatchState } from "./fixture-state.ts";
 export type TouchlineMatchCentreDisplayState = TouchlineMatchState | "stale" | "awaiting-update";
 
 export type TouchlineLiveReadState = "persisted-live-snapshot" | "partial-persisted-schedule";
@@ -132,11 +133,7 @@ export function touchlineFixtureRailDateLabel(
     .toLocaleUpperCase(language);
 }
 
-type TouchlineFixtureStateSource = Pick<TouchlineFixture, "startsAt" | "status">;
 type TouchlineFixtureSelectionSource = TouchlineFixtureStateSource & Pick<TouchlineFixture, "id" | "providerId">;
-
-const LIVE_STATUS = /(?:live|in[ -]?play|in progress|1st|2nd|half[ -]?time|extra time|penalt)/i;
-const FINISHED_STATUS = /(?:^ft(?:_|$)|full[ -]?time|finished|after extra time|aet|after penalties|cancelled|canceled|abandoned|awarded|walkover)/i;
 
 const enGBFixtureStatus = {
   firstHalf: "1st Half", secondHalf: "2nd Half", halfTime: "Half-time", fullTime: "Full Time",
@@ -171,17 +168,6 @@ export function touchlineFixtureStatusLabel(value: string | null | undefined, lo
   if (!Object.hasOwn(FIXTURE_STATUS_ALIASES, key)) return status;
   const meaning = FIXTURE_STATUS_ALIASES[key as keyof typeof FIXTURE_STATUS_ALIASES];
   return TOUCHLINE_FIXTURE_STATUS_CATALOGUES[resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled)][meaning];
-}
-
-export function touchlineFixtureState(fixture: TouchlineFixtureStateSource, now = Date.now()): TouchlineMatchState {
-  const status = fixture.status?.trim() ?? "";
-  const startsAt = fixture.startsAt ? Date.parse(fixture.startsAt) : Number.NaN;
-  // A provider/status snapshot cannot make a future kick-off look live. This
-  // keeps representative or delayed records honest until their scheduled time.
-  if (LIVE_STATUS.test(status)) return Number.isFinite(startsAt) && startsAt > now ? "upcoming" : "live";
-  if (FINISHED_STATUS.test(status)) return "finished";
-  if (Number.isFinite(startsAt)) return "upcoming";
-  return "unknown";
 }
 
 export function isTouchlineLiveReadMetadata(value: unknown): value is TouchlineLiveReadMetadata {
@@ -239,8 +225,8 @@ function fixtureRoundIdentity(
 
 /**
  * Live has exactly two canonical rails: the active provider round and the ten
- * most recent verified results before it. A live snapshot may contain a wider
- * window, but it can update facts only; it cannot make extra rounds visible.
+ * most recent verified results, including completed games from that round.
+ * Delayed games from other rounds are retained while they are in play.
  */
 export function selectTouchlineMatchCentreSchedule<T extends TouchlinePublicFixture>(
   fixtures: readonly T[],
@@ -250,19 +236,32 @@ export function selectTouchlineMatchCentreSchedule<T extends TouchlinePublicFixt
     fixtures.map((fixture) => [touchlinePublicFixtureIdentity(fixture), fixture]),
   ).values()];
   const seedRound = selectArenaFixtureRound(uniqueFixtures, now);
-  const roundIdentity = seedRound[0] ? fixtureRoundIdentity(seedRound[0]) : null;
-  const currentFixtures = (roundIdentity
+  const inPlay = uniqueFixtures.filter((fixture) => touchlineFixtureState(fixture, now) === "live");
+  // A delayed game can belong to another round. Choose the most complete live
+  // round deterministically, then retain every live match alongside that round.
+  const roundSize = (fixture: T, unfinishedOnly = false) => {
+    const identity = fixtureRoundIdentity(fixture);
+    return identity ? uniqueFixtures.filter(row => fixtureRoundIdentity(row) === identity
+      && (!unfinishedOnly || touchlineFixtureState(row, now) !== "finished")).length : 0;
+  };
+  const anchor = inPlay.slice().sort((left, right) => roundSize(right, true) - roundSize(left, true)
+    || roundSize(right) - roundSize(left)
+    || fixtureStartMillis(right) - fixtureStartMillis(left)
+    || touchlinePublicFixtureIdentity(left).localeCompare(touchlinePublicFixtureIdentity(right)))[0] ?? seedRound[0];
+  const roundIdentity = anchor ? fixtureRoundIdentity(anchor) : null;
+  const roundFixtures = (roundIdentity
     ? uniqueFixtures.filter((fixture) => fixtureRoundIdentity(fixture) === roundIdentity)
     : seedRound
   )
     .slice()
     .sort((first, second) => fixtureStartMillis(first) - fixtureStartMillis(second))
     .slice(0, MATCH_CENTRE_SECTION_LIMIT);
-  const currentIdentities = new Set(currentFixtures.map(touchlinePublicFixtureIdentity));
+  // Delayed fixtures from another round must remain visible while in play.
+  const currentFixtures = [...new Map([...inPlay, ...roundFixtures]
+    .map((fixture) => [touchlinePublicFixtureIdentity(fixture), fixture])).values()];
   const recentResults = uniqueFixtures
     .filter((fixture) => (
       touchlineFixtureState(fixture, now) === "finished"
-      && !currentIdentities.has(touchlinePublicFixtureIdentity(fixture))
     ))
     .slice()
     .sort((first, second) => fixtureStartMillis(second) - fixtureStartMillis(first))

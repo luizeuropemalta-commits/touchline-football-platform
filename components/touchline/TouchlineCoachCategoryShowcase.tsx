@@ -169,6 +169,11 @@ export default function TouchlineCoachCategoryShowcase({ locale, playerCards, co
                         profileHref={coachHref}
                         assetLoading="eager"
                         frameLoading="eager"
+                        // Conservative bounds from the 7/4/2-column grid and
+                        // its 1440px host cap; gutters only reduce these widths.
+                        // At <=410px the single-column row splits its visual
+                        // into .74fr/1fr with an explicit 112px minimum.
+                        frameDisplaySizes="(max-width: 410px) max(112px, 50vw), (max-width: 760px) 50vw, (max-width: 1180px) 25vw, 206px"
                       />
                     </span>
                     <Link className={styles.identity} href={coachHref} aria-label={`${dictionary.openCoach}: ${snapshot.coach.displayName}`}>

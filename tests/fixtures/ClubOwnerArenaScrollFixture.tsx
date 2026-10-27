@@ -22,7 +22,7 @@ const cards: ClubOwnerSquadCard[] = geometry.slots.map((slot, index) => ({
   countryCode3: "ENG", marketValue: "", marketValueState: "verified", touchlinePoints: 0, seasonTotalRating: null,
   editorialCard: { tierKey: "radiant-gold", marketValueEur: 1_000_000, marketValueState: "verified", cardPrice: { amountMinor: 0, currency: "GBP" }, lastReviewedAt: "2026-10-24T00:00:00Z" },
 }));
-const fixtures: TouchlinePublicFixture[] = Array.from({ length: 10 }, (_, index) => ({ id: `9900${index}`, providerId: `9900${index}`, status: "FT", startsAt: "2026-10-23T15:00:00Z",
+const fixtures: TouchlinePublicFixture[] = Array.from({ length: 10 }, (_, index) => ({ id: `9900${index}`, providerId: `9900${index}`, competitionId: "8", seasonId: "26000", roundId: "8", roundName: "8", status: "FT", startsAt: "2026-10-23T15:00:00Z",
   homeTeam: { id: `${index * 2 + 1}`, providerId: `${index * 2 + 1}`, name: `Synthetic Home ${index}`, shortCode: "HOM" },
   awayTeam: { id: `${index * 2 + 2}`, providerId: `${index * 2 + 2}`, name: `Synthetic Away ${index}`, shortCode: "AWY" }, homeScore: 2, awayScore: 2 }));
 
@@ -50,7 +50,7 @@ export default function ClubOwnerArenaScrollFixture({ ArenaBoundary, position }:
     <ArenaBoundary expanded={expanded} label="Arena geometry fixture" onClose={() => setExpanded(false)}>
       <section className={styles.myClubSquad}>
         <div className={styles.arenaBody}>
-          <div className={styles.arenaLiveRail}><ClubHubFixtureStrip locale="en-GB" initialFixtures={fixtures} initialNow={Date.parse("2026-10-24T00:00:00Z")} /></div>
+          <div className={styles.arenaLiveRail}><ClubHubFixtureStrip locale="en-GB" initialFixtures={fixtures} initialAdmissionScope={{ competitionId: "8", seasonId: "26000" }} initialNow={Date.parse("2026-10-24T00:00:00Z")} /></div>
           <div ref={pitchContainer} className={styles.myClubPitchViewport} data-fixture-pitch>
             <div className={styles.arenaToolbar} data-arena-toolbar="true">
               <div className={styles.arenaFormationControl} data-arena-formation="true">

@@ -36,24 +36,23 @@ test("separate release and hire preserve players while using two revisions and t
   assert.notEqual(hired.receipt.key, released.receipt.key);
 });
 
-test("paid vacancy validates locally without permitting repeated release or Beta vacancy", () => {
+test("explicit vacancy validates for Beta too without permitting repeated release", () => {
   const vacant = releaseClubCoach(state(), release, context).state;
   const before = structuredClone(vacant);
   assert.doesNotThrow(() => inspectClubCoachLifecycle(vacant));
   assert.doesNotThrow(() => inspectClubAcquisition(vacant));
   assert.deepEqual(vacant, before);
-  assert.throws(() => inspectClubAcquisition({ ...vacant, plan: "beta" }), error("CLUB_BETA_COACH_REQUIRED"));
+  assert.doesNotThrow(() => inspectClubAcquisition({ ...vacant, plan: "beta" }));
   assert.throws(() => releaseClubCoach(vacant, { ...release, expectedRevision: 4 }, context), error("CLUB_COACH_REQUIRED"));
   assert.throws(() => hireClubCoach(state(), { ...hire, expectedRevision: 3 }, { ...context, offer }), error("CLUB_COACH_ALREADY_OWNED"));
 });
 
-test("ordinary release uses 10 percent for every paid plan and never exchange percentages", () => {
-  for (const plan of ["standard", "master", "vip"] as const) {
+test("ordinary release uses 10 percent for every plan and never exchange percentages", () => {
+  for (const plan of ["beta", "standard", "master", "vip"] as const) {
     const result = releaseClubCoach({ ...state(), plan }, release, context);
     assert.equal(result.receipt.feeCredits, 500_000);
     assert.equal(result.receipt.refundCredits, 4_500_000);
   }
-  assert.throws(() => releaseClubCoach({ ...state(), plan: "beta" }, release, context), error("CLUB_COLLECTION_PAID_PLAN_REQUIRED"));
 });
 
 test("commands allow only numeric coach identities, revision and idempotency reference", () => {

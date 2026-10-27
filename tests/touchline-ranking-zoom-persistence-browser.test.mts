@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
+import { existsSync, realpathSync, statSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import { chromium, expect } from "@playwright/test";
-import { bundleIsolatedBrowserFixture } from "./helpers/touchline-isolated-browser-bundle.mts";
+import { compileRankingBrowserFixture } from "./helpers/touchline-ranking-browser-compile.mts";
 import { buildTouchlineRankingSnapshot } from "../lib/touchlineArena/card-ranking.ts";
 import { parseTouchlineActiveRankingState } from "../lib/touchlineArena/card-ranking-live.ts";
 import { TOUCHLINE_CARD_PRICE_TABLE_VERSION } from "../lib/touchlineArena/card-rules.ts";
@@ -50,23 +50,21 @@ test("one ranking dialog survives top3/top20 removal, incomplete catalogue and w
 }, async t => {
   const seed = publication(1, 100);
   const catalogue = Array.from({ length: 30 }, (_, index) => card(index));
-  const bundle = bundleIsolatedBrowserFixture({ entryPath: "tests/fixtures/RankingZoomPersistenceBrowserFixture.tsx", cssPrefix: "rankingzoom",
-    requiredSources: ["components/touchline/TouchlinePlayerCardRankingsPublication.tsx", "components/touchline/cards/TouchlineCardZoom.tsx",
-      "components/touchline/a11y/TouchlineDialog.tsx", "lib/touchlineArena/live-presentation-client-store.ts"],
-    mountScript: `window.unmountFixture=()=>flushSync(()=>root.unmount());window.transportDigest=()=>loadEntry().transportDigest();window.rerenderCatalogue=catalogue=>flushSync(()=>root.render(React.createElement(loadEntry().default,{...window.fixtureProps,catalogue})));flushSync(()=>root.render(React.createElement(loadEntry().default,window.fixtureProps)));`,
-  });
-  const routeSource = readFileSync(path.join(root, "app/touchline-player-card-rankings/page.tsx"), "utf8");
-  const routeCss = routeSource.match(/<style>\{`([\s\S]*?)`\}<\/style>/)?.[1];
-  assert.ok(routeCss, "use actual ranking route styles, not replacement fixture geometry");
-  const css = readFileSync(path.join(root, "node_modules/tailwindcss/preflight.css"), "utf8")
-    + readFileSync(path.join(root, "app/globals.css"), "utf8").replace(/^@(import|source)[^;]*;\s*/gm, "") + bundle.css + routeCss;
+  const bundle = await compileRankingBrowserFixture("zoom", t.signal);
+  const css = bundle.css;
+  t.diagnostic(`Compiler exited before browser launch; ${bundle.sources.length} hashed sources: ${bundle.directory}`);
   const safe = (s: string) => s.replace(/<\/script/gi, "<\\/script");
   const html = `<!doctype html><html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${css}</style></head><body><div id="root" data-touchline-orientation-root></div><script>window.fixtureProps=${safe(JSON.stringify({ seed, catalogue }))};</script><script>${safe(bundle.script)}</script></body></html>`;
   const publicRoot = realpathSync(path.join(root, "public"));
+  t.signal.throwIfAborted();
   const browser = await chromium.launch({ headless: true, timeout: 15_000 });
-  t.signal.addEventListener("abort", () => { void browser.close(); }, { once: true });
+  let closing: Promise<void> | undefined;
+  const close = () => closing ??= browser.close();
+  const abort = () => { void close().catch(() => undefined); };
+  t.signal.addEventListener("abort", abort, { once: true });
   const reports: unknown[] = [];
   try {
+    t.signal.throwIfAborted();
     for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 }, { width: 844, height: 390 }]) {
       const context = await browser.newContext({ viewport, reducedMotion: "reduce", serviceWorkers: "block" });
       const page = await context.newPage();
@@ -181,5 +179,5 @@ test("one ranking dialog survives top3/top20 removal, incomplete catalogue and w
       } finally { await page.evaluate("window.unmountFixture?.()").catch(() => undefined); await context.close(); }
     }
     console.log(`RANKING_ZOOM_BROWSER_PROOF ${JSON.stringify({ reports, qualification: "isolated real React/CSS/transport with synthetic data; not Next/native Safari/QA/provider proof" })}`);
-  } finally { await browser.close(); }
+  } finally { t.signal.removeEventListener("abort", abort); await close(); }
 });

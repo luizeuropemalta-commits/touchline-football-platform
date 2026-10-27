@@ -10,7 +10,7 @@ const same = (a: ClubReleaseRecoveryReference, b: ClubReleaseRecoveryReference) 
   && a.action === b.action && a.playerId === b.playerId
   && a.expectedRevision === b.expectedRevision && a.idempotencyKey === b.idempotencyKey;
 
-/** Isolated adapter, not wired to any page. No delete, expiry, auth, send or settlement. */
+/** References only, never authentication or settlement authority. Removal requires an exact reference. */
 export async function openClubReleaseRecoveryJournal(name: string, factory: IDBFactory = indexedDB) {
   if (!name) throw new Error("RECOVERY_JOURNAL_NAME_REQUIRED");
   const db = await new Promise<IDBDatabase>((resolve, reject) => {
@@ -68,6 +68,20 @@ export async function openClubReleaseRecoveryJournal(name: string, factory: IDBF
             fail(new Error("RECOVERY_JOURNAL_CORRUPT")); return;
           }
           result(references as ClubReleaseRecoveryReference[]);
+        };
+      });
+    },
+    async remove(input: unknown): Promise<void> {
+      const reference = parseClubReleaseRecoveryReference(input);
+      if (!reference) throw new Error("RECOVERY_REFERENCE_INVALID");
+      return transaction("readwrite", (store, result, fail) => {
+        const read = store.get(key(reference));
+        read.onsuccess = () => {
+          if (read.result === undefined) { result(undefined); return; }
+          const prior = parseClubReleaseRecoveryReference(read.result);
+          if (!prior || !same(prior, reference)) { fail(new Error("RECOVERY_REFERENCE_CONFLICT")); return; }
+          const deletion = store.delete(key(reference));
+          deletion.onsuccess = () => result(undefined);
         };
       });
     },

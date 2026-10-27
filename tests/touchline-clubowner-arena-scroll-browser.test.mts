@@ -1,12 +1,12 @@
+import { requireBrowserCapacity } from "./helpers/touchline-browser-capacity.mts";
 import assert from "node:assert/strict";
 import test from "node:test";
-import { existsSync, readFileSync, realpathSync, statSync, statfsSync } from "node:fs";
-import { execFileSync } from "node:child_process";
+import { existsSync, mkdtempSync, realpathSync, statSync } from "node:fs";
+import { spawn } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import ts from "typescript";
 import { chromium, webkit, expect } from "@playwright/test";
-import { bundleIsolatedBrowserFixture } from "./helpers/touchline-isolated-browser-bundle.mts";
+import { readArenaScrollBundle } from "./helpers/touchline-arena-scroll-bundle-receipt.mts";
 
 const rootPath = fileURLToPath(new URL("../", import.meta.url));
 test("real Arena portal scrolls a full-width pitch without trapping controls below the viewport", {
@@ -16,43 +16,53 @@ test("real Arena portal scrolls a full-width pitch without trapping controls bel
   const requestedWidth = process.env.TOUCHLINE_ARENA_SCROLL_VIEWPORT_WIDTH;
   assert.ok(requestedEngine === undefined || requestedEngine === "chromium" || requestedEngine === "webkit",
     "TOUCHLINE_ARENA_SCROLL_ENGINE must be chromium or webkit when supplied");
-  assert.ok(requestedWidth === undefined || ["844", "667", "1024"].includes(requestedWidth),
-    "TOUCHLINE_ARENA_SCROLL_VIEWPORT_WIDTH must be 844, 667 or 1024 when supplied");
+  assert.ok(requestedWidth === undefined || ["844", "667", "1024", "1280"].includes(requestedWidth),
+    "TOUCHLINE_ARENA_SCROLL_VIEWPORT_WIDTH must be 844, 667, 1024 or 1280 when supplied");
   const engines = [chromium, webkit].filter(engine => requestedEngine === undefined || engine.name() === requestedEngine);
-  const viewports = ([[844, 390], [667, 375], [1024, 768]] as const)
+  const viewports = ([[844, 390], [667, 375], [1024, 768], [1280, 900]] as const)
     .filter(([width]) => requestedWidth === undefined || String(width) === requestedWidth);
   assert.ok(engines.length > 0 && viewports.length > 0, "selection cannot silently execute an empty matrix");
   t.diagnostic(JSON.stringify({ scope: "Arena selected matrix", completeMatrix: requestedEngine === undefined && requestedWidth === undefined,
     engines: engines.map(engine => engine.name()), viewports, caseCount: engines.length * viewports.length }));
-  const capacity = () => {
-    const disk = statfsSync(rootPath);
-    assert.ok(disk.bavail * disk.bsize > 5 * 1024 ** 3);
-    assert.equal(execFileSync("sysctl", ["-n", "kern.memorystatus_vm_pressure_level"], { encoding: "utf8" }).trim(), "1");
-    assert.ok(Number(execFileSync("memory_pressure", { encoding: "utf8" }).match(/System-wide memory free percentage: (\d+)%/)?.[1]) >= 25);
-  };
+  const capacity = () => requireBrowserCapacity(rootPath, { darwinFreePercent: true });
   capacity();
-  const source = readFileSync(path.join(rootPath, "app/fantasy/FantasyGameweekClient.tsx"), "utf8");
-  const ast = ts.createSourceFile("FantasyGameweekClient.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
-  const extract = (name: string) => {
-    const found = ast.statements.filter((node): node is ts.FunctionDeclaration => ts.isFunctionDeclaration(node) && node.name?.text === name);
-    assert.equal(found.length, 1, `extract exact production ${name}`);
-    return found[0].getText(ast);
-  };
-  const functions = ts.transpileModule(`${extract("ArenaView")}\n${extract("horizontalMyClubPitchPosition")}`, {
-    compilerOptions: { target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.React },
-  }).outputText;
-  const bundle = bundleIsolatedBrowserFixture({ entryPath: "tests/fixtures/ClubOwnerArenaScrollFixture.tsx", cssPrefix: "arenaScroll",
-    requiredSources: ["components/touchline/ClubHubFixtureStrip.tsx", "components/touchline/cards/TouchlineCoachCardZoom.tsx", "components/touchline/fantasy/TouchlineGameweekCard.tsx", "components/touchline/pitch/TouchlinePitchSurface.tsx", "app/fantasy/fantasy.module.css"],
-    mountScript: `const {useRef,useEffect}=React;const styles=loadEntry().arenaStyles,createPortal=loadEntry().createArenaPortal;${functions}\nflushSync(()=>root.render(React.createElement(loadEntry().default,{ArenaBoundary:ArenaView,position:horizontalMyClubPitchPosition})));`,
+  t.signal.throwIfAborted();
+  const reuseDirectory = process.env.TOUCHLINE_ARENA_SCROLL_BUNDLE_DIR;
+  const directory = reuseDirectory ?? mkdtempSync("/private/tmp/touchline-arena-scroll-");
+  if (reuseDirectory === undefined) await new Promise<void>((resolve, reject) => {
+    const child = spawn(process.execPath, ["--experimental-strip-types",
+      path.join(rootPath, "tests/helpers/touchline-arena-scroll-compile-worker.mts"), directory], {
+      cwd: rootPath, stdio: "ignore",
+    });
+    let failure: Error | undefined;
+    const abort = () => { failure = new Error("Arena fixture compilation aborted"); child.kill("SIGKILL"); };
+    const timeout = setTimeout(() => {
+      failure = new Error("Arena fixture compilation exceeded 30 seconds"); child.kill("SIGKILL");
+    }, 30_000);
+    t.signal.addEventListener("abort", abort, { once: true });
+    child.once("error", () => { failure = new Error("Arena fixture compiler could not start"); });
+    // close, rather than exit or an IPC receipt, proves the compiler and its
+    // streams are gone before browser launch. Failures also wait for close.
+    child.once("close", code => {
+      clearTimeout(timeout); t.signal.removeEventListener("abort", abort);
+      if (failure) reject(failure);
+      else if (code !== 0) reject(new Error(`Arena fixture compiler exited with code ${code}; evidence: ${directory}`));
+      else resolve();
+    });
+    if (t.signal.aborted) abort();
   });
-  const globals = readFileSync(path.join(rootPath, "app/globals.css"), "utf8").replace(/^@(import|source)[^;]*;\s*/gm, "");
-  const preflight = readFileSync(path.join(rootPath, "node_modules/tailwindcss/preflight.css"), "utf8");
+  t.signal.throwIfAborted();
+  const { script, css, sources, outputs } = readArenaScrollBundle(rootPath, directory);
+  t.diagnostic(JSON.stringify({ scope: reuseDirectory === undefined ? "Arena compiler exited before browser" : "Arena reused bundle validated; no compiler started",
+    directory, sourceCount: sources.length, outputs }));
   const publicRoot = realpathSync(path.join(rootPath, "public"));
   for (const engine of engines) {
-    capacity(); assert.ok(existsSync(engine.executablePath()), "installed browser only");
+    capacity(); t.signal.throwIfAborted(); assert.ok(existsSync(engine.executablePath()), "installed browser only");
     const browser = await engine.launch({ headless: true });
-    const abort = () => { void browser.close(); }; t.signal.addEventListener("abort", abort, { once: true });
+    const abort = () => { void browser.close().catch(() => {}); }; t.signal.addEventListener("abort", abort, { once: true });
+    if (t.signal.aborted) abort();
     try {
+      t.signal.throwIfAborted();
       for (const [width, height] of viewports) {
         capacity();
         const context = await browser.newContext({ viewport: { width, height }, reducedMotion: "reduce", serviceWorkers: "block" });
@@ -62,7 +72,7 @@ test("real Arena portal scrolls a full-width pitch without trapping controls bel
         await context.route("**/*", async route => {
           const request = route.request(), url = new URL(request.url());
           if (request.method() !== "GET" || url.origin !== origin) { denied.push(`${request.method()} ${url.origin}${url.pathname}`); await route.abort(); return; }
-          if (url.pathname === "/") { await route.fulfill({ contentType: "text/html", body: `<!doctype html><html lang="en-GB"><head><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>${preflight}\n${globals}\n${bundle.css}</style></head><body><div id="root"></div></body></html>` }); return; }
+          if (url.pathname === "/") { await route.fulfill({ contentType: "text/html", body: `<!doctype html><html lang="en-GB"><head><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>${css}</style></head><body><div id="root"></div></body></html>` }); return; }
           if (url.pathname.startsWith("/api/")) { await route.fulfill({ status: 503, contentType: "application/json", body: '{"ok":false}' }); return; }
           const asset = path.resolve(publicRoot, `.${decodeURIComponent(url.pathname)}`);
           if (asset.startsWith(publicRoot + path.sep) && existsSync(asset) && statSync(asset).isFile() && realpathSync(asset).startsWith(publicRoot + path.sep) && /\.(png|webp|svg|jpe?g|json)$/i.test(asset)) { await route.fulfill({ path: asset }); return; }
@@ -81,7 +91,7 @@ test("real Arena portal scrolls a full-width pitch without trapping controls bel
             await expect(page.locator("#native-link")).toBeFocused();
           }
           const backward = forward === "Tab" ? "Shift+Tab" : "Alt+Shift+Tab";
-          await page.goto(origin); await page.addScriptTag({ content: `(()=>{${bundle.script}})()` });
+          await page.goto(origin); await page.addScriptTag({ content: `(()=>{${script}})()` });
           await page.locator('[data-arena-open]').click();
           const overlay = page.getByRole("dialog", { name: "Arena geometry fixture", exact: true });
           await expect(overlay).toBeVisible();
@@ -92,6 +102,23 @@ test("real Arena portal scrolls a full-width pitch without trapping controls bel
             const target = overlay.locator(selector); const box = await target.boundingBox();
             assert.ok(box && box.width >= 44 && box.height >= 44, `${selector}: 44px target`);
           }
+          const cardSizes = await overlay.locator('[data-arena-slot] [data-touchline-card-zoom="trigger"] > [role="button"]').evaluateAll(nodes => nodes.map(node => ({
+            target: node.getBoundingClientRect().toJSON(), artwork: node.querySelector('img[data-live-card-asset="frame"]')!.getBoundingClientRect().toJSON(),
+          })));
+          assert.equal(cardSizes.length, 11);
+          // 625px field at 667px viewport: floor((22% * 625 * 68/105 - 18 - 6) / (691/430)) = 40.
+          const minimumArtworkWidth = width === 667 ? 40 : 44;
+          for (const { target, artwork } of cardSizes) {
+            assert.ok(artwork.width >= minimumArtworkWidth - .1, "full-width field preserves calculated artwork instead of miniature cards");
+            assert.ok(target.width >= 44 && target.height >= 44, "transparent zoom target remains at least 44px independently of artwork");
+            assert.ok(Math.abs(artwork.width / artwork.height - 430 / 691) < .001, "actual frame image retains its canonical ratio");
+            assert.ok(Math.abs(artwork.x + artwork.width / 2 - target.x - target.width / 2) <= 1, "transparent target centres the actual artwork");
+          }
+          for (let first = 0; first < cardSizes.length; first++) for (let second = first + 1; second < cardSizes.length; second++) {
+            const a = cardSizes[first].target, b = cardSizes[second].target;
+            assert.ok(a.right <= b.left + 1 || b.right <= a.left + 1 || a.bottom <= b.top + 1 || b.bottom <= a.top + 1,
+              `real zoom targets ${first}/${second} must not overlap`);
+          }
           const measure = await overlay.evaluate(node => ({ height: node.clientHeight, scroll: node.scrollHeight, overflow: getComputedStyle(node).overflowY, viewport: innerHeight }));
           assert.equal(measure.overflow, "auto"); assert.ok(measure.height <= height);
           if (height <= 390) assert.ok(measure.scroll > measure.height + 1, "landscape requires a real vertical scroll range, not a miniaturized field");
@@ -100,10 +127,15 @@ test("real Arena portal scrolls a full-width pitch without trapping controls bel
             const surface = node.querySelector('[aria-label="Arena fixture pitch"]')!;
             const pitch = surface.getBoundingClientRect(), outer = node.getBoundingClientRect();
             const host = surface.parentElement!, hostStyle = getComputedStyle(host);
-            return { pitchBottom: pitch.bottom, outerBottom: outer.bottom, scrollTop: node.scrollTop, width: node.scrollWidth, clientWidth: node.clientWidth,
+            return { pitchLeft: pitch.left, pitchRight: pitch.right, hostLeft: host.getBoundingClientRect().left, hostRight: host.getBoundingClientRect().right, pitchHeight: pitch.height, pitchBottom: pitch.bottom, outerBottom: outer.bottom, scrollTop: node.scrollTop, width: node.scrollWidth, clientWidth: node.clientWidth,
               pitchWidth: pitch.width, availableHostWidth: host.clientWidth - parseFloat(hostStyle.paddingLeft) - parseFloat(hostStyle.paddingRight) };
           });
-          assert.ok(Math.abs(bottom.pitchWidth - Math.min(bottom.availableHostWidth, 1400)) <= 1, "pitch occupies the full available host width up to the 1400px cap");
+          if (width <= 1180) assert.ok(Math.abs(bottom.pitchWidth - Math.min(bottom.availableHostWidth, 1400)) <= 1, "pitch occupies the full available host width up to the 1400px cap");
+          else {
+            assert.ok(bottom.pitchWidth > 0 && bottom.pitchWidth <= Math.min(bottom.availableHostWidth, 1400) + 1, "desktop field fits width while height can be the limiting axis");
+            assert.ok(bottom.pitchLeft >= bottom.hostLeft - 1 && bottom.pitchRight <= bottom.hostRight + 1, "desktop grid cannot push the pitch past either host edge");
+          }
+          assert.ok(Math.abs(bottom.pitchWidth / bottom.pitchHeight - 105 / 68) < .003, "field retains regulation ratio at every breakpoint");
           if (height <= 390) assert.ok(bottom.scrollTop > 0, "landscape field bottom is reached through actual overlay scrolling");
           assert.ok(bottom.pitchBottom <= bottom.outerBottom + 1, "pitch bottom remains reachable by overlay scroll");
           assert.ok(bottom.width <= bottom.clientWidth + 1, "no horizontal overlay overflow");
@@ -151,7 +183,7 @@ test("real Arena portal scrolls a full-width pitch without trapping controls bel
           await expect(page.locator('[data-arena-open]')).toBeFocused();
           assert.equal(await page.evaluate(() => document.body.style.overflow), "");
           assert.deepEqual(errors, []); assert.deepEqual(denied, []);
-          t.diagnostic(JSON.stringify({ browser: engine.name(), width, height, forward, measure, bottom, keyboardReturn, scope: "isolated components, no auth/native-fullscreen/safe-area-device proof" }));
+          t.diagnostic(JSON.stringify({ browser: engine.name(), width, height, forward, measure, bottom, keyboardReturn, minimumArtworkWidth, cardSizes, scope: "isolated components, no auth/native-fullscreen/safe-area-device proof" }));
         } finally { await context.close(); }
       }
     } finally { t.signal.removeEventListener("abort", abort); await browser.close(); }

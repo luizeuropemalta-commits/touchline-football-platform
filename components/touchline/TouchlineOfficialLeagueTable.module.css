@@ -80,7 +80,7 @@
   overscroll-behavior: contain;
   scrollbar-color: rgba(163, 255, 18, .72) rgba(255, 255, 255, .035);
   scrollbar-width: thin;
-  touch-action: pan-y;
+  touch-action: auto;
 }
 
 .profile .tableWrap:focus-visible {
@@ -179,7 +179,7 @@
   scrollbar-color: rgba(163, 255, 18, .72) rgba(255, 255, 255, .06);
   scrollbar-gutter: stable;
   scrollbar-width: thin;
-  touch-action: pan-y;
+  touch-action: auto;
   -webkit-overflow-scrolling: touch;
 }
 

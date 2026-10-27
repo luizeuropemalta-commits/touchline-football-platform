@@ -55,6 +55,7 @@ type QuietHours = {
 };
 
 type PreferencesPayload = {
+  accountId?: string;
   settings: NotificationSettings;
   channels: NotificationChannels;
   frequency: "realtime" | "hourly_digest" | "daily_digest" | "paused";
@@ -62,6 +63,39 @@ type PreferencesPayload = {
   explicitConsentAt: string | null;
   updatedAt: string | null;
 };
+
+// Bound both transport and body parsing. A timeout is an unconfirmed outcome,
+// never proof that a preference write was rolled back; do not retry implicitly.
+async function fetchPreferences(init: RequestInit) {
+  const controller = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let rejectAbort: (() => void) | undefined;
+  const cancel = () => controller.abort();
+  init.signal?.addEventListener("abort", cancel, { once: true });
+  try {
+    if (init.signal?.aborted) controller.abort();
+    controller.signal.throwIfAborted();
+    const deadline = new Promise<never>((_resolve, reject) => {
+      rejectAbort = () => reject(new Error("preferences-unconfirmed"));
+      controller.signal.addEventListener("abort", rejectAbort, { once: true });
+      timer = setTimeout(cancel, 15_000);
+    });
+    return await Promise.race([deadline, (async () => {
+      const response = await fetch("/api/notifications/preferences", { ...init, signal: controller.signal });
+      controller.signal.throwIfAborted();
+      const payload = await response.json() as
+        | { ok: true; data: PreferencesPayload }
+        | { ok: false; error?: string };
+      controller.signal.throwIfAborted();
+      return { response, payload };
+    })()]);
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+    if (rejectAbort) controller.signal.removeEventListener("abort", rejectAbort);
+    init.signal?.removeEventListener("abort", cancel);
+    controller.abort();
+  }
+}
 
 type CategoryKey = keyof Omit<NotificationSettings, "scopes">;
 
@@ -196,6 +230,8 @@ function NotificationsContent({ draftLocalesEnabled = false }: { draftLocalesEna
   const [message, setMessage] = useState<string>(copy.loadingPreferences);
   const [consentObservation, setConsentObservation] = useState<{ locale: string; state: ConsentObservation }>({ locale, state: "checking" });
   const consentOperation = useRef({ sequence: 0, live: true });
+  const confirmedAccount = useRef<string | null>(null);
+  const saveController = useRef<AbortController | null>(null);
   const consentState = consentObservation.locale === locale ? consentObservation.state : "checking";
   const consentLabel = consentState === "checking" ? copy.consentChecking
     : consentState === "recorded" ? copy.consentRecorded
@@ -207,7 +243,7 @@ function NotificationsContent({ draftLocalesEnabled = false }: { draftLocalesEna
     return operation;
   }
   function finishConsentObservation(operation: number, state: ConsentObservation) {
-    // Fence only this indicator, not the existing preferences or account model.
+    // The same operation also fences preference receipts and account ownership.
     if (consentOperation.current.live && consentOperation.current.sequence === operation) {
       setConsentObservation({ locale, state });
     }
@@ -222,24 +258,25 @@ function NotificationsContent({ draftLocalesEnabled = false }: { draftLocalesEna
     const controller = new AbortController();
     const consentRef = consentOperation.current;
     consentRef.live = true;
+    confirmedAccount.current = null;
     // The locale-keyed projection already renders "checking" until this
     // asynchronous read settles; avoid a synchronous state update in the effect.
     const observation = ++consentRef.sequence;
 
     async function loadPreferences() {
       try {
-        const response = await fetch("/api/notifications/preferences", {
+        const { response, payload } = await fetchPreferences({
           cache: "no-store",
           signal: controller.signal,
         });
-        const payload = await response.json() as
-          | { ok: true; data: PreferencesPayload }
-          | { ok: false; error?: string };
 
         if (!response.ok || payload.ok === false) {
           throw new Error(payload.ok === false ? payload.error ?? "Preferences unavailable" : "Preferences unavailable");
         }
 
+        if (controller.signal.aborted || !consentRef.live || consentRef.sequence !== observation) return;
+        if (typeof payload.data.accountId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(payload.data.accountId)) throw Error("account-unconfirmed");
+        confirmedAccount.current = payload.data.accountId;
         setPreferences(payload.data);
         setMessage(
           payload.data.updatedAt
@@ -250,7 +287,8 @@ function NotificationsContent({ draftLocalesEnabled = false }: { draftLocalesEna
           setConsentObservation({ locale, state: observedNotificationConsent(payload.data.explicitConsentAt) });
         }
       } catch (_error) {
-        if (controller.signal.aborted) return;
+        if (controller.signal.aborted || !consentRef.live || consentRef.sequence !== observation) return;
+        setPreferences(current => ({ ...current, accountId: undefined }));
         setMessage(copy.unavailable);
         if (consentRef.live && consentRef.sequence === observation) {
           setConsentObservation({ locale, state: "unconfirmed" });
@@ -264,6 +302,8 @@ function NotificationsContent({ draftLocalesEnabled = false }: { draftLocalesEna
     return () => {
       controller.abort();
       consentRef.live = false;
+      confirmedAccount.current = null;
+      saveController.current?.abort();
       consentRef.sequence++;
     };
   }, [copy.defaults, copy.lastSaved, copy.notSaved, copy.unavailable, locale]);
@@ -296,21 +336,23 @@ function NotificationsContent({ draftLocalesEnabled = false }: { draftLocalesEna
   }
 
   async function savePreferences() {
+    const expectedAccountId = confirmedAccount.current;
+    if (!consentOperation.current.live || !expectedAccountId || saveController.current) return;
+    const controller = new AbortController(); saveController.current = controller;
     const observation = beginConsentObservation();
     setSaving(true);
     setMessage(copy.savingPreferences);
 
     try {
-      const response = await fetch("/api/notifications/preferences", {
+      const { response, payload } = await fetchPreferences({
         method: "PUT",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", "X-Touchline-Expected-Account": expectedAccountId },
+        signal: controller.signal,
         body: JSON.stringify({ ...preferences, explicitConsent: true }),
       });
-      const payload = await response.json() as
-        | { ok: true; data: PreferencesPayload }
-        | { ok: false; error?: string };
 
-      if (!response.ok || payload.ok === false) {
+      if (controller.signal.aborted || !consentOperation.current.live || consentOperation.current.sequence !== observation) return;
+      if (!response.ok || payload.ok === false || payload.data.accountId !== expectedAccountId) {
         throw new Error(copy.saveFailed);
       }
 
@@ -318,10 +360,12 @@ function NotificationsContent({ draftLocalesEnabled = false }: { draftLocalesEna
       setMessage(`${copy.saved} ${preferenceDate(payload.data.updatedAt, locale, copy.notSaved)}`);
       finishConsentObservation(observation, observedNotificationConsent(payload.data.explicitConsentAt));
     } catch (_error) {
+      if (controller.signal.aborted || !consentOperation.current.live || consentOperation.current.sequence !== observation) return;
       setMessage(copy.saveFailed);
       finishConsentObservation(observation, "unconfirmed");
     } finally {
-      setSaving(false);
+      if (saveController.current === controller) saveController.current = null;
+      if (consentOperation.current.live) setSaving(false);
     }
   }
 
@@ -533,7 +577,7 @@ function NotificationsContent({ draftLocalesEnabled = false }: { draftLocalesEna
               <button
                 type="button"
                 onClick={savePreferences}
-                disabled={saving || loading}
+                disabled={saving || loading || !preferences.accountId}
                 className={`${navigationStyles.link} disabled:cursor-not-allowed disabled:opacity-50`}
               >
                 {consentState === "recorded" ? <CheckCircle2 size={14} /> : <Save size={14} />}

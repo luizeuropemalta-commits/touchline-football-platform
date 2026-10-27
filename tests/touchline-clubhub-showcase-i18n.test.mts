@@ -285,6 +285,7 @@ test("showcase JSX, tier styling and evidence logic retain the admitted preimage
         ['<TouchlineCoachCardZoom draftLocalesEnabled={draftLocalesEnabled}', '<TouchlineCoachCardZoom', 1],
         ['hideMarketValuePanel={false}', 'hideMarketValuePanel', 1],
         ['                        // The responsive gallery can grow beyond thumbnail\n                        // dimensions, so retain the full-size card template.\n                        optimizeForLiveCompact={false}', '                        optimizeForLiveCompact', 1],
+        ['                        // Conservative bounds from the 7/4/2-column grid and\n                        // its 1440px host cap; gutters only reduce these widths.\n                        // At <=410px the single-column row splits its visual\n                        // into .74fr/1fr with an explicit 112px minimum.\n                        frameDisplaySizes="(max-width: 410px) max(112px, 50vw), (max-width: 760px) 50vw, (max-width: 1180px) 25vw, 206px"\n', '', 1],
         ['                        liveCompetitionUpdates\n', '                        publishedTouchlinePoints={competition?.totalTouchlinePoints ?? null}\n                        showLeadershipCrown={competition?.rank === 1}\n', 1],
       ] as const) {
         assert.equal(preimage.split(added).length - 1, count, `exact authorized delta: ${added}`);

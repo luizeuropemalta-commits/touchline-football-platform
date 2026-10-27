@@ -3,11 +3,24 @@ import test from "node:test";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import path from "node:path";
-import { chromium, webkit, expect } from "@playwright/test";
+import { chromium, webkit, expect, type Locator } from "@playwright/test";
 import { bundleIsolatedBrowserFixture } from "./helpers/touchline-isolated-browser-bundle.mts";
+import { getExchangeNegotiationCopy } from "../lib/touchlineFantasy/exchange-negotiations-i18n.ts";
 import { CLUB_ROSTER_CAPACITY } from "../lib/touchlineFantasy/club-roster.ts";
 
 const origin = "https://exchange-hub-fixture.invalid";
+// Approved full-screen smoke surface: transparent content on a dark translucent
+// overlay. Assert the effective layer rather than the obsolete opaque dialog.
+async function assertSmokeDialog(dialog: Locator, width: number) {
+  await expect(dialog).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  await expect(dialog).toHaveCSS("border-top-width", "0px");
+  const overlay = dialog.locator("..");
+  await expect(overlay).toHaveCSS("position", "fixed");
+  await expect(overlay).toHaveCSS("background-color", "rgba(0, 0, 0, 0.82)");
+  const bounds = await overlay.boundingBox();
+  assert.ok(bounds && Math.abs(bounds.x) <= 1 && Math.abs(bounds.width - width) <= 1);
+}
+
 const draftLabels = {
   "fr-FR": ["Négociations", "Historique des transferts", "Finances du club", "Fermer"],
   "es-ES": ["Negociaciones", "Historial de transferencias", "Finanzas del club", "Cerrar"],
@@ -37,8 +50,9 @@ test("Exchange Hub actual browser: readiness locales mobile dialogs focus and re
   const engine = process.env.TOUCHLINE_EXCHANGE_HUB_ENGINE === "webkit" ? webkit : chromium;
   const draftsOnly = process.env.TOUCHLINE_EXCHANGE_HUB_DRAFTS_ONLY === "1";
   const captureDir = process.env.TOUCHLINE_EXCHANGE_HUB_CAPTURE_DIR;
-  if (draftsOnly) {
-    assert.ok(captureDir && path.isAbsolute(captureDir), "draft proof requires an explicit absolute artifact directory");
+  if (draftsOnly) assert.ok(captureDir, "draft proof requires an explicit artifact directory");
+  if (captureDir) {
+    assert.ok(path.isAbsolute(captureDir), "capture directory must be absolute");
     mkdirSync(captureDir, { recursive: true });
   }
   const browser = await engine.launch({ headless: true, timeout: 15_000 });
@@ -81,8 +95,11 @@ test("Exchange Hub actual browser: readiness locales mobile dialogs focus and re
               await expect(dialog.getByRole("heading", { name: labels[index], exact: true })).toBeVisible();
               const close = dialog.getByRole("button", { name: labels[3], exact: true });
               await expect(close).toBeFocused();
-              await expect(dialog).toHaveCSS("background-color", "rgb(6, 14, 11)");
-              if (index === 0) await expect(dialog.locator("[data-exchange-readiness]")).toHaveText(expectedNotice);
+              await assertSmokeDialog(dialog, width);
+              if (index === 0) {
+                await expect(dialog.getByRole("status")).toHaveText(getExchangeNegotiationCopy(locale).error);
+                await expect(dialog.getByRole("button")).toHaveCount(1); // Close only: no account means no trading controls.
+              }
               if (index === 1) await expect(dialog).toContainText("Fictional Athlete");
               if (index === 2) await expect(dialog.locator("dd").first()).toHaveText(`${props.state.balanceEur.toLocaleString(locale)} TC`);
               await page.keyboard.press("Tab");
@@ -117,22 +134,25 @@ test("Exchange Hub actual browser: readiness locales mobile dialogs focus and re
           const notice = page.locator("#root [data-exchange-readiness]");
           await expect(notice).toHaveAttribute("data-exchange-readiness", status);
           if (status === "incomplete") await expect(notice).toContainText("34/35");
-          if (status === "complete") await expect(notice).toContainText(pt ? "não habilita negociações" : "negotiations are not enabled");
+          if (status === "complete") await expect(notice).toContainText(pt ? "Abra Negociações para consultar a disponibilidade atual." : "Open Negotiations to check current availability.");
           if (status === "unconfirmed") await expect(notice).not.toContainText("35");
           if (status === "incomplete" && process.env.TOUCHLINE_EXCHANGE_HUB_CAPTURE_DIR) await page.screenshot({ path: `${process.env.TOUCHLINE_EXCHANGE_HUB_CAPTURE_DIR}/exchange-hub-${engine.name()}-${width}-${locale}-notice.png` });
           const negotiations = page.getByRole("button", { name: pt ? "Negociações" : "Negotiations", exact: true });
           await negotiations.click();
           const dialog = page.getByRole("dialog");
           await expect(dialog).toBeVisible();
-          await expect(dialog).toHaveCSS("background-color", "rgb(6, 14, 11)");
-          await expect(dialog.locator("[data-exchange-readiness]")).toHaveAttribute("data-exchange-readiness", status);
+          await assertSmokeDialog(dialog, width);
+          // A complete roster is not authentication or permission to trade.
+          // This read-only fixture deliberately supplies no expectedAccountId.
+          await expect(dialog.getByRole("status")).toHaveText(getExchangeNegotiationCopy(locale).error);
+          await expect(dialog.getByRole("button")).toHaveCount(1);
           await expect(dialog.getByRole("button", { name: pt ? "Fechar" : "Close" })).toBeFocused();
           await page.keyboard.press("Tab");
           assert.equal(await dialog.evaluate(el => el.contains(document.activeElement)), true, "keyboard focus stays within dialog");
           const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1);
           assert.equal(overflow, false);
           const bounds = await dialog.boundingBox(); assert.ok(bounds && bounds.x >= -1 && bounds.x + bounds.width <= width + 1);
-          if (process.env.TOUCHLINE_EXCHANGE_HUB_CAPTURE_DIR) await page.screenshot({ path: `${process.env.TOUCHLINE_EXCHANGE_HUB_CAPTURE_DIR}/exchange-hub-${engine.name()}-${width}-${locale}-${status}-opaque.png` });
+          if (process.env.TOUCHLINE_EXCHANGE_HUB_CAPTURE_DIR) await page.screenshot({ path: `${process.env.TOUCHLINE_EXCHANGE_HUB_CAPTURE_DIR}/exchange-hub-${engine.name()}-${width}-${locale}-${status}-smoke.png` });
           await page.keyboard.press("Escape");
           await expect(dialog).toHaveCount(0); await expect(negotiations).toBeFocused();
           if (status === "incomplete") for (const [name, content] of [[pt ? "Histórico de transferências" : "Transfer history", "Fictional Athlete"], [pt ? "Finanças do clube" : "Club finances", pt ? "Saldo disponível" : "Available balance"]]) {

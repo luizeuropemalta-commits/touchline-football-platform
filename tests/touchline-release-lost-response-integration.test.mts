@@ -1,3 +1,7 @@
+import * as coachRecovery from "../lib/touchlineFantasy/club-coach-browser-recovery.ts";
+import { getClubCollectionBudgetCopy } from "../lib/touchlineFantasy/market-budget-i18n.ts";
+import { createClubReleaseBrowserRecovery } from "../lib/touchlineFantasy/club-release-browser-recovery.ts";
+import type { ClubReleaseRecoveryReference } from "../lib/touchlineFantasy/club-release-recovery.ts";
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -33,7 +37,7 @@ test('real release route and SQL survive a lost committed reply and explicit sam
   runInNewContext(ts.transpileModule(harnessCode+'\nexports.fixture=fixture;',{
     compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,
   {exports:harnessExports,assert,readFileSync,URL,ts,runInNewContext,randomUUID,AbortController,accountId,initial,
-    acquisition,authority,budget,release,bootstrap});
+    acquisition,authority,budget,release,bootstrap,coachRecovery,createClubReleaseBrowserRecovery,getClubCollectionBudgetCopy});
   const h=harnessExports.fixture();
   const db=await clubRoundDatabase();
   try {
@@ -77,7 +81,7 @@ test('real release route and SQL survive a lost committed reply and explicit sam
     const get=async(index:number)=>{h.requests[index].resolve({response:{ok:true,status:200},payload:{ok:true,state:await read(),accountId,seasonId,releaseAvailable:true}});await tick();};
     acquisition.inspectClubAcquisition(initial);
     h.render();await get(0);assert.equal(h.render().ready,true);
-    const operation=h.render().release(id(7),1);
+    const operation=h.render().release(id(7),1);await tick();
     const body=h.requests[1].options.body;
     assert.equal(h.requests[1].path,'/api/touchline-fantasy/collection/release');
     const committed=await post(body);assert.equal(committed.status,200);
@@ -93,7 +97,7 @@ test('real release route and SQL survive a lost committed reply and explicit sam
     assert.equal(denied.status,409);assert.equal((await denied.json()).error,'CLUB_CONTEXT_CHANGED');assert.equal(rpcCalls,calls);
     // The rejected cross-session probe is not delivered into the original hook.
     // A 409 delivered to that hook intentionally revokes its authority; not remount coverage.
-    session=accountId;const retry=h.render().retryPending();assert.equal(h.requests[3].options.body,body);
+    session=accountId;const retry=h.render().retryPending();await tick();assert.equal(h.requests[3].options.body,body);
     const replay=await post(h.requests[3].options.body);const payload=await replay.json();
     assert.equal(replay.status,200);assert.equal(payload.replayed,true);
     h.requests[3].resolve({response:{ok:true,status:200},payload});assert.equal(await retry,true);

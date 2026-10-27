@@ -10,7 +10,8 @@ import { resolveTouchlineFantasyMarketAccess } from "../lib/touchlineFantasy/mar
 // just as the deployed SQL contract does, and never replaces an existing draft.
 const source = stripTypeScriptTypes(readFileSync(new URL("../lib/touchlineFantasy/server.ts", import.meta.url), "utf8"));
 const start = source.indexOf("async function loadFantasySnapshotCore");
-const end = source.indexOf("  const [catalogue, coaches, userGameweekResponse, rankings]", start);
+const end = source.indexOf("  const catalogueRead = loadCatalogue(admin);", start);
+assert.ok(start >= 0 && end > start, "real lifecycle boundary must be present");
 const lifecycleSource = source.slice(start, end).replace("export ", "")
   + "return { gameweeks, activeGameweek }; }\nloadFantasySnapshotCore;";
 const helperSource = stripTypeScriptTypes(readFileSync(new URL("../lib/touchlineFantasy/gameweek-lifecycle.ts", import.meta.url), "utf8"))

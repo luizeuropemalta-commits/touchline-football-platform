@@ -69,7 +69,7 @@ test("shared card assets and ranking subscriptions retain bounded presentation c
     /subscribeToUpdates \? getActiveRankingSnapshot : getPreseasonRankingSnapshot/,
   );
   assert.match(livePageSource, /initialLocale=\{initialLocale\}/);
-  assert.match(livePageSource, /readPublicCompetitionFixtures\(\{ includeHistorical: true, limit: 240 \}\)[\s\S]*?selectTouchlineMatchCentreSchedule\(fixtures, initialNow\)/);
+  assert.match(livePageSource, /readPublicCompetitionFixtures\(\{ includeHistorical: true, readAllPages: true, strictRead: true \}\)[\s\S]*?selectTouchlineMatchCentreSchedule\(fixtures, initialNow\)/);
 });
 
 test("Premier squad responses carry the canonical team identity used by Live", () => {

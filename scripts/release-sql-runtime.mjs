@@ -5,6 +5,7 @@ const runtimeKeys = [
   "TOUCHLINE_FANTASY_PGLITE_MODULE",
   "TOUCHLINE_STUDIO_PGLITE_MODULE",
   "TOUCHLINE_GOLDEN_BOOT_PGLITE_MODULE",
+  "TOUCHLINE_COMPANY_PGLITE_MODULE",
 ];
 
 // Release SQL proofs must execute, not silently skip when a local-only path is absent.

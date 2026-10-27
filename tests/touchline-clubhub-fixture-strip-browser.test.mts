@@ -6,6 +6,8 @@ import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import ts from "typescript";
 import { chromium, webkit, expect } from "@playwright/test";
+import type { TouchlinePublicFixture } from "../lib/football-data/public-fixture.ts";
+import { parseTouchlineSportsPublication } from "../lib/touchlineArena/sports-publication.ts";
 
 const require = createRequire(import.meta.url);
 const root = resolve(import.meta.dirname, "..");
@@ -17,7 +19,8 @@ const engines = [chromium, webkit].filter(engine => requestedEngine === undefine
 const capacity = () => requireBrowserCapacity(root, { darwinFreePercent: true,
   allowLowDarwinDisk: process.env.TOUCHLINE_LOCAL_ALLOW_500MIB_RESERVE === "1" && !process.env.CI,
   allowModerateDarwinPressure: process.env.TOUCHLINE_LOCAL_ALLOW_MODERATE_PRESSURE === "1" && !process.env.CI });
-function harness(locale: string, seed: "absent" | "unavailable" | "empty" | "controlled" = "absent") {
+function harness(locale: string, seed: "absent" | "unavailable" | "empty" | "controlled" | "round-transition" = "absent",
+  roundSeed?: { fixtures: TouchlinePublicFixture[]; now: number }) {
   const react = dirname(require.resolve("react")), dom = dirname(require.resolve("react-dom/client"));
   const scheduler = dirname(createRequire(require.resolve("react-dom/client")).resolve("scheduler"));
   const modules: Record<string, string> = {
@@ -41,15 +44,23 @@ function harness(locale: string, seed: "absent" | "unavailable" | "empty" | "con
     return path;
   }
   const entry = bundle(join(root, "components/touchline/ClubHubFixtureStrip.tsx"));
+  const storeEntry = seed === "round-transition" ? bundle(join(root, "lib/touchlineArena/live-presentation-client-store.ts")) : null;
   const css = readFileSync(join(root, "components/touchline/ClubHubFixtureStrip.module.css"), "utf8") + readFileSync(join(root, "components/touchline/TouchlineGlobalNavigation.module.css"), "utf8");
   const defs = Object.entries(modules).map(([id, code]) => `${JSON.stringify(id)}:function(module,exports,require){${code}\n}`).join(",");
   return `<!doctype html><meta charset="utf-8"><style>body{margin:0;background:#08100c;color:white;padding:10px}img{width:100%;height:100%}${css}</style><div id="root"></div><script>
   const process={env:{NODE_ENV:'development'}},modules={${defs}},cache={};function require(id){if(cache[id])return cache[id].exports;const m={exports:{}};cache[id]=m;modules[id](m,m.exports,require);return m.exports;}
   const React=require('react');const fixtureRoot=require('react-dom/client').createRoot(document.getElementById('root'));
   ${seed === "controlled" ? `
-  const syntheticFixtures=Array.from({length:10},(_,i)=>({id:String(i+1),providerId:String(i+1),status:'FullTime',homeScore:2,awayScore:1,homeTeam:{id:'1',providerId:'1',name:'Synthetic Home'},awayTeam:{id:'2',providerId:'2',name:'Synthetic Away'}}));
-  const renderSeed=count=>fixtureRoot.render(React.createElement(require(${JSON.stringify(entry)}).default,{locale:${JSON.stringify(locale)},draftLocalesEnabled:true,initialFixtures:syntheticFixtures.slice(0,count),initialMetadata:{state:'partial-persisted-schedule',degraded:true}}));
+  const syntheticFixtures=Array.from({length:10},(_,i)=>({id:String(i+1),providerId:String(i+1),competitionId:'8',seasonId:'26000',roundId:'8',roundName:'8',status:'FullTime',homeScore:2,awayScore:1,homeTeam:{id:'1',providerId:'1',name:'Synthetic Home'},awayTeam:{id:'2',providerId:'2',name:'Synthetic Away'}}));
+  const renderSeed=count=>fixtureRoot.render(React.createElement(require(${JSON.stringify(entry)}).default,{locale:${JSON.stringify(locale)},draftLocalesEnabled:true,initialFixtures:syntheticFixtures.slice(0,count),initialAdmissionScope:{competitionId:'8',seasonId:'26000'},initialMetadata:{state:'partial-persisted-schedule',degraded:true}}));
   window.addEventListener('fixture-strip-test-seed',event=>renderSeed(event.detail));renderSeed(1);
+  ` : seed === "round-transition" ? `
+  const sharedStore=require(${JSON.stringify(storeEntry)}).touchlineLivePresentationStore;
+  window.addEventListener('fixture-strip-test-revalidate',()=>sharedStore.revalidate());
+  window.fixtureStripAcceptedDigest=()=>sharedStore.getSnapshot()?.sportsPublication?.publication.contentDigest??null;
+  fixtureRoot.render(React.createElement(require(${JSON.stringify(entry)}).default,{locale:${JSON.stringify(locale)},draftLocalesEnabled:true,
+    initialFixtures:${JSON.stringify(roundSeed?.fixtures)},initialNow:${JSON.stringify(roundSeed?.now)},initialTimeZone:'UTC',
+    initialAdmissionScope:{competitionId:'8',seasonId:'26000'},initialMetadata:{state:'persisted-live-snapshot',degraded:false,fetchedAt:${JSON.stringify(new Date(roundSeed?.now ?? 0).toISOString())}}}));
   ` : `fixtureRoot.render(React.createElement(require(${JSON.stringify(entry)}).default,{locale:${JSON.stringify(locale)},draftLocalesEnabled:true${seed === "absent" ? "" : `,initialFixtures:${seed === "empty" ? "[]" : "null"}`}}));`}
   </script>`;
 }
@@ -162,7 +173,7 @@ test("unavailable SSR seed recovers once while a confirmed empty seed never refe
           if (path === "/api/football-data/fantasy/livescores") {
             reads++;
             return route.fulfill({ json: { ok: true, state: "partial-persisted-schedule", degraded: true,
-              data: [{ id: "123", providerId: "123", status: "FullTime", homeScore: 2, awayScore: 1,
+              admissionScope: { competitionId: "8", seasonId: "26000" }, data: [{ id: "123", providerId: "123", competitionId: "8", seasonId: "26000", roundId: "8", roundName: "8", status: "FullTime", homeScore: 2, awayScore: 1,
                 homeTeam: { id: "1", providerId: "1", name: "Home" }, awayTeam: { id: "2", providerId: "2", name: "Away" } }] } });
           }
           if (path !== "/") return route.fulfill({ status: 503, json: { ok: false } });
@@ -225,7 +236,7 @@ test("compact strip loops smoothly, pauses for accessible interaction and preser
           // component or contacting a real site. It does not intercept click.
           if (path === "/live") { destinations.push(url.href); return route.fulfill({ status: 204 }); }
           if (path.endsWith(".png")) return route.fulfill({ contentType: "image/png", body: readFileSync(join(root, "public", path)) });
-          if (path === "/api/football-data/fantasy/livescores") return route.fulfill({ json: { ok: true, state: "partial-persisted-schedule", degraded: true, data: Array.from({ length: 10 }, (_, i) => ({ id: String(i + 1), providerId: String(i + 1), status: i === 0 ? "FullTime" : "Not started", startsAt: "2030-10-09T18:00:00Z", homeScore: 2, awayScore: 1, homeTeam: { id: "19", providerId: "19", name: "Arsenal", logoUrl: "/touchlineArena/shared/club-logos/2026-27/arsenal.png" }, awayTeam: { id: "71", providerId: "71", name: "Leeds", logoUrl: "/touchlineArena/shared/club-logos/2026-27/leeds-united.png" } })) } });
+          if (path === "/api/football-data/fantasy/livescores") return route.fulfill({ json: { ok: true, state: "partial-persisted-schedule", degraded: true, admissionScope: { competitionId: "8", seasonId: "26000" }, data: Array.from({ length: 10 }, (_, i) => ({ id: String(i + 1), providerId: String(i + 1), competitionId: "8", seasonId: "26000", roundId: "8", roundName: "8", status: "FullTime", startsAt: "2026-08-23T18:00:00Z", homeScore: 2, awayScore: 1, homeTeam: { id: "19", providerId: "19", name: "Arsenal", logoUrl: "/touchlineArena/shared/club-logos/2026-27/arsenal.png" }, awayTeam: { id: "71", providerId: "71", name: "Leeds", logoUrl: "/touchlineArena/shared/club-logos/2026-27/leeds-united.png" } })) } });
           if (path === "/") return route.fulfill({ contentType: "text/html", body: html });
           return route.fulfill({ status: 503, json: { ok: false } });
         });
@@ -442,6 +453,147 @@ test("compact strip loops smoothly, pauses for accessible interaction and preser
         assert.deepEqual(forbidden, []);
         assert.deepEqual(errors, []); await page.close();
       }
+    } finally { t.signal.removeEventListener("abort", abort); await browser.close(); }
+  }
+});
+
+
+test("one complete round survives the final publication while focused, then advances to the next seeded round", {
+  skip: requestedWidth !== undefined && requestedWidth !== "844", timeout: 60_000,
+}, async t => {
+  t.diagnostic(`Round transition: engines=${requestedEngine ?? "all"}; 844; en-GB; real strip and shared publication transport; synthetic scoped catalogue, no real network or account proof`);
+  for (const engine of engines) {
+    capacity(); assert.ok(existsSync(engine.executablePath()), "installed browser only");
+    const base = Date.now() - 1_000;
+    const stamp = new Date(base).toISOString();
+    const makeRound = (round: number): TouchlinePublicFixture[] => Array.from({ length: 10 }, (_, index) => {
+      const providerId = String(round * 100 + index + 1);
+      const home = String(index * 2 + 1), away = String(index * 2 + 2);
+      return { id: providerId, providerId, competitionId: "8", seasonId: "26000", roundId: String(round), roundName: String(round),
+        startsAt: new Date(base + (round === 8 ? -3_600_000 : 7 * 86_400_000)).toISOString(),
+        status: round === 8 ? index === 9 ? "LIVE" : "FullTime" : "Not Started",
+        ...(round === 8 ? { homeScore: 2, awayScore: 1, ...(index === 9 ? { liveMinute: 89 } : {}) } : {}),
+        homeTeam: { id: home, providerId: home, name: `Synthetic Club ${home}`, shortCode: `C${home}` },
+        awayTeam: { id: away, providerId: away, name: `Synthetic Club ${away}`, shortCode: `C${away}` },
+        verifiedAt: stamp, providerUpdatedAt: stamp };
+    });
+    const currentRound = makeRound(8), nextRound = makeRound(9);
+    const catalogue = [...currentRound, ...nextRound];
+    const publication = (revision: number, fixtures: TouchlinePublicFixture[]) => {
+      const fetchedAt = new Date(base + revision).toISOString();
+      const parsed = parseTouchlineSportsPublication({ version: 1, scopeKey: "touchline-england",
+        publication: { snapshotId: `10000000-0000-4000-8000-${String(revision).padStart(12, "0")}`,
+          contentDigest: revision.toString(16).padStart(32, "0"), publishedAt: fetchedAt,
+          playerRankingSnapshotId: null, coachRankingSnapshotId: null,
+          liveScoreSnapshotDigest: (100 + revision).toString(16).padStart(32, "0") },
+        playerRanking: null, coachRanking: null, live: { fetchedAt, fixtures } });
+      assert.ok(parsed, "Synthetic publications must pass the real public parser");
+      return parsed;
+    };
+    let published = publication(1, currentRound);
+    const initialDigest = published.publication.contentDigest;
+    const html = harness("en-GB", "round-transition", { fixtures: catalogue, now: base });
+    capacity();
+    t.signal.throwIfAborted();
+    const browser = await engine.launch({ headless: true });
+    const abort = () => { void browser.close(); }; t.signal.addEventListener("abort", abort, { once: true });
+    try {
+      t.signal.throwIfAborted();
+      capacity();
+      const page = await browser.newPage({ viewport: { width: 844, height: 390 }, reducedMotion: "reduce", serviceWorkers: "block" });
+      try {
+        page.setDefaultTimeout(8000);
+        const requests: string[] = [], forbidden: string[] = [], errors: string[] = [];
+        page.on("pageerror", error => errors.push(error.message));
+        page.on("console", message => { if (message.type() === "error") errors.push(message.text()); });
+        await page.route("**/*", route => {
+          const request = route.request(), url = new URL(request.url());
+          if (request.method() !== "GET" || url.origin !== "http://fixture-strip-round.test") {
+            forbidden.push(`${request.method()} ${url.href}`); return route.abort();
+          }
+          if (url.pathname === "/") return route.fulfill({ contentType: "text/html", body: html });
+          if (url.pathname === "/api/touchline-arena/live-presentation-state") {
+            requests.push(`state:${published.publication.contentDigest}`);
+            // Exercise the existing transport once per explicit test event;
+            // idle cadence avoids adding a poller or faking its browser clock.
+            return route.fulfill({ json: { version: 1, available: true, mode: "idle", pollAfterMs: null, resumeAt: null,
+              playerRankingSnapshotId: null, coachRankingSnapshotId: null, livePresentationSnapshotId: published.publication.contentDigest,
+              liveFreshness: { fetchedAt: published.live.fetchedAt, ageMs: 0, degraded: false } } });
+          }
+          if (url.pathname === "/api/touchline-arena/sports-publication") {
+            requests.push(`payload:${published.publication.contentDigest}`);
+            return route.fulfill({ json: { ok: true, data: published } });
+          }
+          // A complete SSR catalogue must never invoke schedule recovery;
+          // every other URL, including providers and assets, is forbidden.
+          forbidden.push(url.href); return route.abort();
+        });
+        await page.goto("http://fixture-strip-round.test/");
+        const strip = page.locator(".strip"), originals = page.locator('[data-fixture-run="original"] .fixture');
+        const hrefs = (fixtures: TouchlinePublicFixture[]) => fixtures.map(row => `/live?fixture=${row.providerId}&lang=en-GB`);
+        const currentHrefs = hrefs(currentRound), nextHrefs = hrefs(nextRound);
+        const originalHrefs = () => originals.evaluateAll(nodes => nodes.map(node => node.getAttribute("href")));
+        const acceptedDigest = () => page.evaluate("window.fixtureStripAcceptedDigest()");
+        await expect.poll(acceptedDigest).toBe(initialDigest);
+        await expect.poll(originalHrefs).toEqual(currentHrefs);
+        await expect(page.locator('[data-fixture-run="original"] .fixture[data-state="finished"]')).toHaveCount(9);
+        await expect(page.locator('[data-fixture-run="original"] .fixture[data-state="live"]')).toHaveCount(1);
+        await expect(page.getByRole("link")).toHaveCount(10);
+        const focused = originals.last();
+        await strip.evaluate(node => { (node as HTMLElement).dataset.instanceMarker = "round-instance"; });
+        await focused.evaluate(node => { (node as HTMLElement).dataset.instanceMarker = "focused-fixture"; });
+        await focused.focus();
+        await expect(focused).toBeFocused();
+        await expect.poll(() => focused.evaluate(node => {
+          const rail = node.closest(".viewport")!, box = rail.getBoundingClientRect(), item = node.getBoundingClientRect();
+          return !node.closest('[aria-hidden="true"]') && item.left >= box.left - 1 && item.right <= box.right + 1;
+        })).toBe(true);
+        await page.evaluate(() => {
+          const outside = document.createElement("button"); outside.id = "round-outside-focus"; outside.textContent = "Outside fixture strip";
+          document.body.append(outside);
+        });
+        const pageOffset = await page.evaluate(() => ({ x: scrollX, y: scrollY }));
+        const finalRound = currentRound.map((row, index) => index === 9
+          ? { ...row, status: "FullTime", homeScore: 3, liveMinute: undefined, verifiedAt: new Date(base + 2).toISOString() } : row);
+        capacity();
+        published = publication(2, finalRound);
+        await page.evaluate(() => window.dispatchEvent(new Event("fixture-strip-test-revalidate")));
+        await expect.poll(acceptedDigest).toBe(published.publication.contentDigest);
+        await expect(focused).toHaveAttribute("data-state", "finished");
+        await expect(focused.locator("b")).toHaveText("3 – 1");
+        await expect(focused).toBeFocused();
+        await expect(focused).toHaveAttribute("data-instance-marker", "focused-fixture");
+        await expect.poll(originalHrefs).toEqual(currentHrefs);
+        await expect(page.locator('[data-fixture-run="original"] .fixture[data-state="finished"]')).toHaveCount(10);
+        await expect(page.getByRole("link")).toHaveCount(10);
+        await expect(strip).toHaveAttribute("data-instance-marker", "round-instance");
+        if (process.env.TOUCHLINE_STRIP_CAPTURE_PREFIX) {
+          await page.screenshot({ path: `${process.env.TOUCHLINE_STRIP_CAPTURE_PREFIX}-round-held-${engine.name()}-844-en-GB.png` });
+        }
+        const readsBeforeBlur = [...requests];
+        await page.locator("#round-outside-focus").focus();
+        await expect.poll(originalHrefs).toEqual(nextHrefs);
+        await expect(page.locator("#round-outside-focus")).toBeFocused();
+        await expect(page.getByRole("link")).toHaveCount(10);
+        await expect(page.locator('[data-fixture-run="original"] .fixture[data-state="upcoming"]')).toHaveCount(10);
+        await expect(strip).toHaveAttribute("data-instance-marker", "round-instance");
+        for (const run of ["before", "after"]) {
+          const clone = page.locator(`[data-fixture-run="${run}"]`);
+          await expect(clone).toHaveAttribute("aria-hidden", "true");
+          assert.deepEqual(await clone.locator(".fixture").evaluateAll(nodes => nodes.map(node => node.getAttribute("href"))), nextHrefs);
+          assert.ok((await clone.locator(".fixture").evaluateAll(nodes => nodes.map(node => node.tabIndex))).every(value => value === -1));
+        }
+        assert.deepEqual(await page.evaluate(() => ({ x: scrollX, y: scrollY })), pageOffset, "Round replacement must not scroll the document");
+        assert.deepEqual(requests, readsBeforeBlur, "The next complete round comes from the retained SSR catalogue without another request");
+        assert.deepEqual(requests, [`state:${initialDigest}`, `payload:${initialDigest}`,
+          `state:${published.publication.contentDigest}`, `payload:${published.publication.contentDigest}`]);
+        assert.deepEqual(forbidden, []); assert.deepEqual(errors, []);
+        if (process.env.TOUCHLINE_STRIP_CAPTURE_PREFIX) {
+          await page.screenshot({ path: `${process.env.TOUCHLINE_STRIP_CAPTURE_PREFIX}-round-next-${engine.name()}-844-en-GB.png` });
+        }
+        t.diagnostic(`${engine.name()} 844 en-GB: current 10 held through last FT with focus preserved; next 10 shown on blur; two shared publications, zero recovery/provider requests`);
+        capacity();
+      } finally { await page.close(); }
     } finally { t.signal.removeEventListener("abort", abort); await browser.close(); }
   }
 });

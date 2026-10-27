@@ -100,13 +100,16 @@ test("real footer keeps copyright and its configured icon in one row at every wi
             const range = document.createRange(); range.selectNodeContents(label);
             return { sameRow: Math.abs(text.top + text.height / 2 - icon.top - icon.height / 2) <= 2,
               noCollision: getComputedStyle(node).direction === "rtl" ? icon.right + 19 <= text.left : text.right + 19 <= icon.left,
-              width: icon.width, height: icon.height, font: parseFloat(getComputedStyle(label).fontSize),
+              width: icon.width, height: icon.height, layoutWidth: link.offsetWidth, layoutHeight: link.offsetHeight, font: parseFloat(getComputedStyle(label).fontSize),
               allTextInside: Array.from(range.getClientRects()).every(r => r.left >= text.left - 1 && r.right <= text.right + 1 && r.top >= text.top - 1 && r.bottom <= text.bottom + 1),
               focused: link.matches(":focus-visible") && ring > 0,
               ringInside: icon.left - ring >= frame.left && icon.right + ring <= frame.right && icon.top - ring >= frame.top && icon.bottom + ring <= frame.bottom,
               noOverflow: document.documentElement.scrollWidth <= innerWidth, scrollX, scrollY };
           });
-          assert.equal(result.sameRow, true); assert.equal(result.noCollision, true); assert.ok(result.width >= 44 && result.height >= 44);
+          assert.equal(result.sameRow, true); assert.equal(result.noCollision, true); // translateY during focus can produce 43.999996px from a 44px box.
+          // Require the actual layout target and bound visual rounding separately.
+          assert.ok(result.layoutWidth >= 44 && result.layoutHeight >= 44);
+          assert.ok(result.width >= 44 - .001 && result.height >= 44 - .001, JSON.stringify({ engine: engine.name(), width, locale, result }));
           assert.equal(result.font, 12); assert.equal(result.allTextInside, true); assert.equal(result.focused, true); assert.equal(result.ringInside, true);
           assert.equal(result.noOverflow, true); assert.equal(result.scrollX, 0); assert.equal(result.scrollY, 0);
           const screenshot = path.join(screenshotDir, `${engine.name()}-${width}-${locale}.png`);

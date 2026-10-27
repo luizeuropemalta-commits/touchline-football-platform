@@ -20,7 +20,7 @@ test("sound handler sends only presentation action without permission or registr
   const source = readFileSync(new URL("../components/touchline/notifications/TouchlineMarketNotifications.tsx", import.meta.url), "utf8");
   const handler = source.slice(source.indexOf("  async function changeSound"), source.indexOf("  async function show"));
   const calls: unknown[] = [];
-  const context = { preferences: current, busyRef: { current: false }, generation: { current: 0 }, mounted: { current: true }, notificationCopy: getTouchlineMarketNotificationsCopy("en-GB"),
+  const context = { preferences: current, busyRef: { current: false }, generation: { current: 0 }, mounted: { current: true }, actionAbort: { current: null }, AbortController, notificationCopy: getTouchlineMarketNotificationsCopy("en-GB"),
     setBusy() {}, setMessage() {}, setPreferences() {},
     preferencesRequest: async (input: unknown) => { calls.push(input); return { ...current, settings: { ...current.settings, silentPush: true } }; },
   };
@@ -81,7 +81,7 @@ test("real component handlers only read on opening and discard stale reads after
   const pending: Array<(value: unknown) => void> = [];
   let focused = 0;
   const context: Record<string, unknown> = {
-    open: false, notificationCopy: getTouchlineMarketNotificationsCopy("en-GB"), preferences: null, generation: { current: 0 }, busyRef: { current: false }, mounted: { current: true },
+    open: false, notificationCopy: getTouchlineMarketNotificationsCopy("en-GB"), preferences: null, generation: { current: 0 }, busyRef: { current: false }, mounted: { current: true }, actionAbort: { current: null }, AbortController,
     trigger: { current: { focus() { focused++; } } }, title: { current: { focus() {} } },
     requestAnimationFrame: (fn: () => void) => fn(),
     preferencesRequest: () => new Promise(resolve => pending.push(resolve)),
@@ -145,4 +145,42 @@ test("complete enable acknowledgement preserves an existing digest or resumes pa
     assert.equal((await run(prior, "enable")).state, "saved");
     assert.equal(registrations, 1);
   }
+});
+
+test("invalidated gesture never continues from permission or registration into another write", async () => {
+  for (const stage of ["permission", "register"] as const) {
+    let currentGesture = true, registrations = 0, saves = 0;
+    let release!: (value: string) => void;
+    const pending = new Promise<string>(resolve => { release = resolve; });
+    const run = createMarketNotificationConsent({ configured: () => true,
+      permission: () => stage === "permission" ? "default" : "granted",
+      requestPermission: () => pending,
+      register: async () => { registrations++; return stage === "register" ? pending : "registered"; },
+      save: async value => { saves++; return value; },
+    });
+    const result = run(current, "enable", { isCurrent: () => currentGesture, signal: new AbortController().signal });
+    currentGesture = false; release(stage === "permission" ? "granted" : "registered");
+    assert.notEqual((await result).state, "saved");
+    assert.equal(registrations, stage === "register" ? 1 : 0);
+    assert.equal(saves, 0);
+  }
+});
+
+test("real panel close aborts a pending permission gesture before registration or preference save", async () => {
+  const source = readFileSync(new URL("../components/touchline/notifications/TouchlineMarketNotifications.tsx", import.meta.url), "utf8");
+  const handlers = source.slice(source.indexOf("  function close()"), source.indexOf("  return <section"));
+  let release!: (value: string) => void, registrations = 0, writes = 0;
+  const permission = new Promise<string>(resolve => { release = resolve; });
+  const context = { preferences: current, busyRef: { current: false }, mounted: { current: true }, generation: { current: 0 },
+    actionAbort: { current: null as AbortController | null }, AbortController,
+    notificationCopy: getTouchlineMarketNotificationsCopy("en-GB"), trigger: { current: { focus() {} } },
+    setBusy() {}, setMessage() {}, setPreferences() {}, setOpen() {},
+    run: createMarketNotificationConsent({ configured: () => true, permission: () => "default", requestPermission: () => permission,
+      register: async () => { registrations++; return "registered"; }, save: async value => { writes++; return value; } }),
+  };
+  const api = runInNewContext(ts.transpileModule(`${handlers}\n({act,close})`, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText, context);
+  const pending = api.act("enable"); api.close();
+  assert.equal(context.actionAbort.current?.signal.aborted, true);
+  release("granted"); await pending;
+  assert.equal(registrations, 0); assert.equal(writes, 0);
 });

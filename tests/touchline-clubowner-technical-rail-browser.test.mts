@@ -1,12 +1,12 @@
+import { requireBrowserCapacity } from "./helpers/touchline-browser-capacity.mts";
 import assert from "node:assert/strict";
-import { existsSync, readFileSync, statfsSync, mkdtempSync, realpathSync, statSync } from "node:fs";
-import { execFileSync } from "node:child_process";
-import ts from "typescript";
+import { existsSync, readFileSync, mkdtempSync, realpathSync, statSync } from "node:fs";
+import { spawn } from "node:child_process";
+import { createHash } from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { chromium, webkit, expect } from "@playwright/test";
-import { bundleIsolatedBrowserFixture } from "./helpers/touchline-isolated-browser-bundle.mts";
 import { touchlineFantasyTechnicalCardWidth } from "../lib/touchlineFantasy/market-browser.ts";
 
 const rootPath = fileURLToPath(new URL("../", import.meta.url));
@@ -35,31 +35,49 @@ test("ClubOwner technical rail preserves nine real cards, coach crown and horizo
     selectedCases: engines.length * cases.length, fullMatrixCases: 2 * matrix.length };
   t.diagnostic(`Selected technical integration scope: ${JSON.stringify(scope)}`);
   let passedCases = 0;
-  const capacity = () => {
-    const disk = statfsSync(rootPath);
-    assert.ok(disk.bavail * disk.bsize > 5 * 1024 ** 3);
-    assert.equal(execFileSync("sysctl", ["-n", "kern.memorystatus_vm_pressure_level"], { encoding: "utf8" }).trim(), "1");
-    assert.ok(Number(execFileSync("memory_pressure", { encoding: "utf8" }).match(/System-wide memory free percentage: (\d+)%/)?.[1]) >= 25);
-  };
+  const capacity = () => requireBrowserCapacity(rootPath, { darwinFreePercent: true });
   capacity();
   const screenshots = mkdtempSync("/private/tmp/touchline-technical-integration-");
-  const production = readFileSync(path.join(rootPath, "app/fantasy/FantasyGameweekClient.tsx"), "utf8");
-  const ast = ts.createSourceFile("FantasyGameweekClient.tsx", production, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
-  const arena = ast.statements.filter((node): node is ts.FunctionDeclaration => ts.isFunctionDeclaration(node) && node.name?.text === "ArenaView");
-  assert.equal(arena.length, 1);
-  const arenaFunction = ts.transpileModule(arena[0].getText(ast), { compilerOptions: { target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.React } }).outputText;
-  const liveMarker = production.indexOf('data-clubowner-live-position="above-reserves"');
-  const railMarker = production.indexOf('<ClubOwnerTechnicalRail enabled=');
-  assert.ok(liveMarker >= 0 && railMarker >= 0, "both production placement markers must exist");
-  assert.ok(liveMarker < railMarker, "production Live precedes technical rail");
-  const bundle = bundleIsolatedBrowserFixture({ entryPath: "tests/helpers/clubowner-technical-rail-fixture.tsx",
-    requiredSources: ["components/touchline/fantasy/ClubOwnerTechnicalRail.tsx", "components/touchline/fantasy/ClubOwnerCollectionSlots.tsx",
-      "components/touchline/fantasy/TouchlineGameweekCard.tsx", "components/touchline/cards/TouchlineCoachCard.tsx",
-      "components/touchline/cards/TouchlineCoachCardZoom.tsx", "components/touchline/cards/TouchlineCardZoom.tsx",
-      "components/touchline/fantasy/ClubOwnerCollectionSlots.module.css", "app/fantasy/fantasy.module.css",
-      "components/touchline/ClubHubFixtureStrip.tsx", "components/touchline/pitch/TouchlinePitchSurface.tsx"],
-    mountScript: `const {useRef,useEffect}=React;const styles=loadEntry().arenaStyles,createPortal=loadEntry().createArenaPortal;${arenaFunction}\nwindow.renderRailFixture=(props)=>flushSync(()=>root.render(React.createElement(loadEntry().default,{...props,ArenaBoundary:ArenaView})));`,
+  // Compile outside the browser process and wait for process close so the
+  // TypeScript/PostCSS graph is released before any browser is launched.
+  t.signal.throwIfAborted();
+  await new Promise<void>((resolve, reject) => {
+    const child = spawn(process.execPath, ["--experimental-strip-types",
+      path.join(rootPath, "tests/helpers/touchline-technical-rail-compile-worker.mts"), screenshots], {
+      cwd: rootPath, stdio: "ignore",
+    });
+    let failure: Error | undefined;
+    const abort = () => { failure = new Error("Technical rail compilation aborted"); child.kill("SIGKILL"); };
+    const timeout = setTimeout(() => {
+      failure = new Error("Technical rail compilation exceeded 30 seconds"); child.kill("SIGKILL");
+    }, 30_000);
+    t.signal.addEventListener("abort", abort, { once: true });
+    child.once("error", () => { failure = new Error("Technical rail compiler could not start"); });
+    child.once("close", code => {
+      clearTimeout(timeout); t.signal.removeEventListener("abort", abort);
+      if (failure) reject(failure);
+      else if (code !== 0) reject(new Error(`Technical rail compiler exited with code ${code}`));
+      else resolve();
+    });
+    if (t.signal.aborted) abort();
   });
+  t.signal.throwIfAborted();
+  const bundle = { script: readFileSync(path.join(screenshots, "fixture-script.js"), "utf8"),
+    css: readFileSync(path.join(screenshots, "fixture-style.css"), "utf8") };
+  const receipt = JSON.parse(readFileSync(path.join(screenshots, "fixture-sources.json"), "utf8")) as { sources: string[]; sha256: Record<string, string> };
+  assert.ok(bundle.script.length > 0 && bundle.css.length > 0 && Array.isArray(receipt.sources) && receipt.sources.length > 0);
+  for (const source of receipt.sources) {
+    assert.ok(typeof source === "string" && !path.isAbsolute(source) && !source.split(/[\\/]/).includes(".."));
+    assert.match(receipt.sha256[source], /^[a-f0-9]{64}$/);
+    assert.equal(createHash("sha256").update(readFileSync(path.join(rootPath, source))).digest("hex"), receipt.sha256[source], `source changed after compilation: ${source}`);
+  }
+  for (const source of ["components/touchline/fantasy/ClubOwnerTechnicalRail.tsx", "components/touchline/fantasy/ClubOwnerCollectionSlots.tsx",
+    "components/touchline/fantasy/TouchlineGameweekCard.tsx", "components/touchline/cards/TouchlineCoachCard.tsx",
+    "components/touchline/cards/TouchlineCoachCardZoom.tsx", "components/touchline/cards/TouchlineCardZoom.tsx",
+    "components/touchline/fantasy/ClubOwnerCollectionSlots.module.css", "app/fantasy/fantasy.module.css",
+    "components/touchline/ClubHubFixtureStrip.tsx", "components/touchline/pitch/TouchlinePitchSurface.tsx",
+    "app/fantasy/FantasyGameweekClient.tsx"]) assert.ok(receipt.sources.includes(source), source);
+  t.diagnostic(`Compiler exited before browser launch; ${receipt.sources.length} hashed sources: ${path.join(screenshots, "fixture-sources.json")}`);
   for (const engine of engines) {
     capacity(); assert.ok(existsSync(engine.executablePath()), "installed browser only");
     const browser = await engine.launch({ headless: true });

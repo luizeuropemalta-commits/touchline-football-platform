@@ -11,7 +11,7 @@ test("ClubOwner normal and Arena pitches fit their actual containing block witho
   const bundle = bundleIsolatedBrowserFixture({
     entryPath: "components/touchline/pitch/TouchlinePitchSurface.tsx",
     requiredSources: ["components/touchline/pitch/TouchlinePitchSurface.tsx"],
-    mountScript: `flushSync(()=>root.render(React.createElement(loadEntry().default,{className:'myClubTacticalPitch',ariaLabel:'Pitch bounds review',orientation:'horizontal',surfaceVariant:'smoked-glass'})));`,
+    mountScript: `flushSync(()=>root.render(React.createElement(React.Fragment,null,window.fixtureArena ? React.createElement('div',{className:'arenaToolbar','data-arena-toolbar':'true'},'Formation controls') : null,React.createElement(loadEntry().default,{className:'myClubTacticalPitch',ariaLabel:'Pitch bounds review',orientation:'horizontal',surfaceVariant:'smoked-glass'}))));`,
   });
   const css = `${bundle.css}\n${fantasyCss}`;
   const failures: unknown[] = [];
@@ -30,7 +30,7 @@ test("ClubOwner normal and Arena pitches fit their actual containing block witho
           const squad = `<section class="myClubSquad"><div class="arenaBody"><div class="arenaLiveRail"></div><div class="myClubPitchViewport" id="root"></div></div></section>`;
           const content = arena ? squad : `<div class="myClubCommandGrid">${squad}</div>`;
           await page.setContent(`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>html,body{margin:0}*,*::before,*::after{box-sizing:border-box}${css}</style><div class="myClubCommand${arena ? " arenaOverlay" : ""}" data-fantasy-context="market">${content}</div>`);
-          await page.addScriptTag({ content: `(() => {${bundle.script}})()` });
+          await page.addScriptTag({ content: `window.fixtureArena=${JSON.stringify(arena)};(() => {${bundle.script}})()` });
           const geometry = await page.locator(".myClubTacticalPitch").evaluate(pitch => {
             const parent = pitch.parentElement!;
             const box = pitch.getBoundingClientRect();

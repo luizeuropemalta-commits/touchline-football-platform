@@ -407,7 +407,7 @@
   overscroll-behavior: contain;
   scrollbar-color: rgba(163,255,18,.72) rgba(255,255,255,.035);
   scrollbar-width: thin;
-  touch-action: pan-y;
+  touch-action: auto;
 }
 .nextFixtureTableScroller:focus-visible { outline: 1px solid rgba(163,255,18,.75); outline-offset: -2px; }
 .nextFixtureTableRow { min-height: 26px; border-top: 1px solid rgba(255,255,255,.045); padding: 0 8px; color: rgba(241,255,234,.58); font-size: 7px; font-weight: 800; }

@@ -16,39 +16,54 @@ export async function POST(request: Request) {
   let event: Stripe.Event;
   try {
     event = stripe.webhooks.constructEvent(await request.text(), request.headers.get("stripe-signature") || "", secret);
-  } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Invalid signature." }, { status: 400 });
+  } catch {
+    return NextResponse.json({ error: "Invalid signature." }, { status: 400 });
   }
 
-  const { data: processed } = await adminClient.from("stripe_webhook_events").select("stripe_event_id").eq("stripe_event_id", event.id).maybeSingle();
-  if (processed) return NextResponse.json({ received: true, duplicate: true });
-
   try {
+    const { data: processed, error: receiptReadError } = await adminClient.from("stripe_webhook_events").select("stripe_event_id").eq("stripe_event_id", event.id).maybeSingle();
+    if (receiptReadError) throw new Error("RECEIPT_READ_FAILED");
+    if (processed) {
+      if (processed.stripe_event_id !== event.id) throw new Error("RECEIPT_MISMATCH");
+      return NextResponse.json({ received: true, duplicate: true });
+    }
     if (["invoice.paid", "invoice.payment_failed", "invoice.payment_action_required"].includes(event.type)) {
       await syncInvoice(event.data.object as Stripe.Invoice, event.type);
     }
 
-    await adminClient.from("stripe_webhook_events").insert({
+    const { error: receiptWriteError } = await adminClient.from("stripe_webhook_events").insert({
       stripe_event_id: event.id,
       event_type: event.type,
       livemode: event.livemode,
     });
+    if (receiptWriteError) {
+      if (receiptWriteError.code !== "23505") throw new Error("RECEIPT_WRITE_FAILED");
+      // A concurrent receipt is proof only after exact confirmed readback.
+      const { data: concurrentReceipt, error: concurrentReadError } = await adminClient.from("stripe_webhook_events")
+        .select("stripe_event_id,event_type,livemode").eq("stripe_event_id", event.id).maybeSingle();
+      if (concurrentReadError || !concurrentReceipt || concurrentReceipt.stripe_event_id !== event.id
+        || concurrentReceipt.event_type !== event.type || concurrentReceipt.livemode !== event.livemode) {
+        throw new Error("RECEIPT_CONFIRMATION_FAILED");
+      }
+      return NextResponse.json({ received: true, duplicate: true });
+    }
     return NextResponse.json({ received: true });
-  } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Webhook processing failed." }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: "Webhook processing failed." }, { status: 500 });
   }
 
   async function syncInvoice(invoice: Stripe.Invoice, eventType: string) {
     const customerId = idOf(invoice.customer);
-    if (!customerId) return;
-    const { data: customer } = await adminClient.from("billing_customers").select("user_id").eq("stripe_customer_id", customerId).maybeSingle();
+    if (!customerId) throw new Error("INVOICE_CUSTOMER_MISSING");
+    const { data: customer, error: customerReadError } = await adminClient.from("billing_customers").select("user_id").eq("stripe_customer_id", customerId).maybeSingle();
+    if (customerReadError) throw new Error("CUSTOMER_READ_FAILED");
     const userId = customer?.user_id;
-    if (!userId) return;
+    if (!userId) throw new Error("CUSTOMER_MAPPING_UNAVAILABLE");
     const subscriptionId = invoice.parent?.type === "subscription_details"
       ? idOf(invoice.parent.subscription_details?.subscription ?? null)
       : null;
 
-    await adminClient.from("billing_invoices").upsert({
+    const { error: invoiceWriteError } = await adminClient.from("billing_invoices").upsert({
       user_id: userId,
       stripe_invoice_id: invoice.id,
       stripe_subscription_id: subscriptionId,
@@ -66,19 +81,26 @@ export async function POST(request: Request) {
       period_end: iso(invoice.period_end),
       paid_at: iso(invoice.status_transitions.paid_at),
     }, { onConflict: "stripe_invoice_id" });
+    if (invoiceWriteError) throw new Error("INVOICE_WRITE_FAILED");
 
     if (eventType === "invoice.payment_failed") {
       await createAlert(userId, "payment_failed", "Payment failed", "Stripe could not collect this invoice payment. Update your payment method to avoid interruption.", invoice.id);
     } else if (eventType === "invoice.payment_action_required") {
       await createAlert(userId, "payment_action_required", "Payment action required", "Your bank needs additional authentication before this payment can complete.", invoice.id);
     } else if (eventType === "invoice.paid") {
-      await adminClient.from("billing_alerts").update({ resolved_at: new Date().toISOString() }).eq("user_id", userId).in("type", ["payment_failed", "payment_action_required"]).is("resolved_at", null);
+      const { error: alertUpdateError } = await adminClient.from("billing_alerts").update({ resolved_at: new Date().toISOString() })
+        .eq("user_id", userId).eq("stripe_object_id", invoice.id).in("type", ["payment_failed", "payment_action_required"]).is("resolved_at", null);
+      if (alertUpdateError) throw new Error("ALERT_UPDATE_FAILED");
     }
   }
 
   async function createAlert(userId: string | undefined, type: string, title: string, message: string, stripeObjectId: string) {
-    if (!userId) return;
-    const { data } = await adminClient.from("billing_alerts").select("id").eq("user_id", userId).eq("type", type).eq("stripe_object_id", stripeObjectId).is("resolved_at", null).maybeSingle();
-    if (!data) await adminClient.from("billing_alerts").insert({ user_id: userId, type, title, message, stripe_object_id: stripeObjectId });
+    if (!userId) throw new Error("ALERT_OWNER_MISSING");
+    const { data, error: alertReadError } = await adminClient.from("billing_alerts").select("id").eq("user_id", userId).eq("type", type).eq("stripe_object_id", stripeObjectId).is("resolved_at", null).maybeSingle();
+    if (alertReadError) throw new Error("ALERT_READ_FAILED");
+    if (!data) {
+      const { error: alertWriteError } = await adminClient.from("billing_alerts").insert({ user_id: userId, type, title, message, stripe_object_id: stripeObjectId });
+      if (alertWriteError) throw new Error("ALERT_WRITE_FAILED");
+    }
   }
 }

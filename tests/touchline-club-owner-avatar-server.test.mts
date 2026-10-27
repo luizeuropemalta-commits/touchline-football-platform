@@ -16,6 +16,11 @@ import * as isolation from "../lib/touchlinePreview/isolation.ts";
 import * as admission from "../lib/touchlineArena/club-owner-avatar-resource-admission.ts";
 import * as controlAdmission from "../lib/touchlineArena/club-owner-avatar-control-admission.ts";
 import * as localAdmission from "../lib/touchlineArena/club-owner-avatar-local-admission.ts";
+import { createClubOwnerAvatarClient } from "../lib/touchlineArena/club-owner-avatar-client.ts";
+import * as avatarClient from "../lib/touchlineArena/club-owner-avatar-client.ts";
+import * as selectionContract from "../lib/touchlineArena/club-owner-avatar-selection-contract.ts";
+import * as avatarCopy from "../lib/touchlineArena/club-owner-avatar-ui-i18n.ts";
+import * as jsxRuntime from "react/jsx-runtime";
 
 const actorId = "123e4567-e89b-42d3-a456-426614174000", operationId = "123e4567-e89b-42d3-a456-426614174001";
 const other = "123e4567-e89b-42d3-a456-426614174002";
@@ -221,7 +226,7 @@ function fixture(options: { config?: Record<string, unknown>; auth?: () => Promi
     createPrivilegedClient: () => { calls.push("privileged"); return client; },
     fetchImpl: async (input: RequestInfo | URL, init?: RequestInit) => {
       calls.push(`storage:${init?.method}`); const url = new URL(String(input));
-      assert.equal(url.origin, supabaseOrigin); assert.equal(init?.redirect, "error"); assert.equal(init?.cache, "no-store");
+      assert.equal(url.origin, settings.supabaseOrigin); assert.equal(init?.redirect, "error"); assert.equal(init?.cache, "no-store");
       if (url.pathname.includes("/bucket/")) return Response.json({ id: storage.CLUB_OWNER_AVATAR_BUCKET, name: storage.CLUB_OWNER_AVATAR_BUCKET, public: false, file_size_limit: 5 * 1024 * 1024, allowed_mime_types: ["image/webp"] });
       if (init?.method === "POST") { objects.set(url.pathname.replace("/storage/v1/object/", ""), Buffer.from(init.body as Buffer)); return Response.json({}, { status: 201 }); }
       const bytes = objects.get(url.pathname.replace("/storage/v1/object/authenticated/", "")); assert.ok(bytes);
@@ -527,4 +532,97 @@ test("GET cancelled auth cannot authorize a later client; auth failure and edita
     const denied = fixture({ auth }), response = await load("createClubOwnerAvatarReadServer")(denied.settings, denied.dependencies as never)(new Request(`${origin}/api/account/avatar?version=${operationId}`));
     assert.ok([403, 503].includes(response.status)); assert.ok(!denied.calls.includes("privileged"));
   }
+});
+
+
+test("local3319 client composes real upload, normalization, private Storage and authoritative reload without personal data", async () => {
+  const localOrigin = "http://localhost:3319", qaOrigin = "https://xgxbwqxjssxxuihuwmgy.supabase.co";
+  const f = fixture({ config: { environment: "local", requestOrigin: localOrigin, supabaseOrigin: qaOrigin, publicSupabaseOrigin: qaOrigin } });
+  const bytes = await png();
+  const upload = createClubOwnerAvatarClient({ enabled: true, current: { actorId, revision: "0", avatarUrl: null }, baseGeneration: "0",
+    bytes: new Uint8Array(bytes), contentType: "image/png", isCurrent: () => true, randomUUID: () => operationId,
+    request: async (input, init) => {
+      assert.equal(input, "/api/account/avatar");
+      const headers = new Headers(init?.headers); headers.set("origin", localOrigin);
+      return f.serve(new Request(`${localOrigin}${input}`, { ...init, headers }));
+    },
+  });
+  assert.equal(f.calls.length, 0, "constructing a file choice never sends it");
+  assert.equal(await upload.send(false), "invalid");
+  assert.equal(f.calls.length, 0);
+  assert.equal(await upload.send(true), "refresh_required");
+  assert.equal(upload.snapshot().currentAvatarUrl, null, "receipt never replaces authoritative photo locally");
+  assert.equal(f.calls.filter(value => value === "storage:POST").length, 1);
+  assert.equal(f.objects.size, 1); assert.equal(f.current().revision, "1");
+  upload.dispose();
+  // A new server composition represents reload. Durable transport doubles
+  // retain only this test's synthetic RPC row and bytes; no real network exists.
+  f.calls.length = 0;
+  const read = load("createClubOwnerAvatarReadServer")(f.settings, f.dependencies as never);
+  const response = await read(new Request(`${localOrigin}${f.current().avatarUrl}`));
+  assert.equal(response.status, 200); assert.equal(response.headers.get("content-type"), "image/webp");
+  const normalized = await sharp(Buffer.from(await response.arrayBuffer())).metadata();
+  assert.equal(normalized.format, "webp"); assert.equal(normalized.width, 2); assert.equal(normalized.height, 2);
+  assert.equal(normalized.exif, undefined);
+  assert.equal(f.calls.filter(value => value === "getUser").length, 1);
+  assert.equal(f.calls.filter(value => value === "touchline_read_club_owner_avatar").length, 2);
+  assert.ok(!f.calls.some(value => /publish|storage:POST/.test(value)), "reload performs only private reads");
+});
+
+
+test("real selection UI confirms once through local handler and reload reads persisted normalized photo", async () => {
+  const localOrigin = "http://localhost:3319", qaOrigin = "https://xgxbwqxjssxxuihuwmgy.supabase.co";
+  const f = fixture({ config: { environment: "local", requestOrigin: localOrigin, supabaseOrigin: qaOrigin, publicSupabaseOrigin: qaOrigin } });
+  let cursor = 0, refreshes = 0, revoked = 0;
+  const slots: unknown[] = [], effects: Array<() => void | (() => void)> = [], cleanups: Array<() => void> = [];
+  const hooks = {
+    useState(initial: unknown) { const index = cursor++; if (!(index in slots)) slots[index] = initial; return [slots[index], (value: unknown) => { slots[index] = value; }]; },
+    useRef(initial: unknown) { const index = cursor++; if (!(index in slots)) slots[index] = { current: initial }; return slots[index]; },
+    useId: () => "local-avatar-selection",
+    useLayoutEffect(callback: () => void | (() => void), deps: unknown[]) { const index = cursor++, old = slots[index] as unknown[] | undefined;
+      if (!old || deps.some((value, i) => old[i] !== value)) { slots[index] = deps; effects.push(callback); } },
+  };
+  const dependencies: Record<string, unknown> = { react: hooks, "react/jsx-runtime": jsxRuntime,
+    "@/lib/touchlineArena/club-owner-avatar-client": avatarClient,
+    "@/lib/touchlineArena/club-owner-avatar-selection-contract": selectionContract,
+    "@/lib/touchlineArena/club-owner-avatar-ui-i18n": avatarCopy,
+    "./TouchlineGlobalNavigation.module.css": { default: { link: "control" } } };
+  const exports: Record<string, unknown> = {};
+  vm.runInNewContext(ts.transpileModule(readFileSync(new URL("../components/touchline/ClubOwnerAvatarUploadSelection.tsx", import.meta.url), "utf8"), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX },
+  }).outputText, { exports, require: (key: string) => { assert.ok(key in dependencies); return dependencies[key]; }, Uint8Array, Blob,
+    crypto: { randomUUID: () => operationId }, performance: { now: () => 0 },
+    URL: { createObjectURL: () => "blob:test-preview", revokeObjectURL: () => { revoked++; } },
+    setTimeout: () => 1, clearTimeout: () => {}, fetch: async (input: unknown, init: RequestInit) => {
+      assert.equal(input, "/api/account/avatar"); const headers = new Headers(init.headers); headers.set("origin", localOrigin);
+      return f.serve(new Request(`${localOrigin}${input}`, { ...init, headers }));
+    },
+  });
+  const component = exports.default as (props: unknown) => unknown;
+  const props = { context: { accountId: actorId, revision: "0", avatarUrl: null, generation: "0", selectionEnabled: true, retentionReady: true },
+    enabled: true, retentionReady: true, visible: true, locale: "en-GB", isCurrent: () => true, registerUpload: () => {}, onRefreshRequired: () => { refreshes++; } };
+  type Element = { type: unknown; props: Record<string, unknown> };
+  const nodes = (tree: unknown, type: string): Element[] => Array.isArray(tree) ? tree.flatMap(item => nodes(item, type))
+    : tree && typeof tree === "object" && "props" in tree ? [...((tree as Element).type === type ? [tree as Element] : []), ...nodes((tree as Element).props.children, type)] : [];
+  const render = () => { cursor = 0; return component(props); };
+  render(); for (const effect of effects.splice(0)) { const cleanup = effect(); if (cleanup) cleanups.push(cleanup); }
+  try {
+    const bytes = new Uint8Array(await png());
+    (nodes(render(), "input")[0].props.onChange as (event: unknown) => void)({ currentTarget: { value: "", files: [{ size: bytes.length, type: "image/png", arrayBuffer: async () => bytes.buffer }] } });
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(f.calls.length, 0); assert.equal(nodes(render(), "img")[0].props.src, "blob:test-preview");
+    const confirm = nodes(render(), "button")[0].props.onClick as () => void;
+    confirm(); confirm();
+    const deadline = Date.now() + 3000;
+    while (!refreshes && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 5));
+    assert.equal(refreshes, 1); assert.equal(f.calls.filter(call => call === "storage:POST").length, 1);
+    assert.equal(nodes(render(), "input")[0].props.disabled, true);
+    assert.equal(nodes(render(), "img")[0].props.src, "blob:test-preview", "UI never promotes preview as authoritative photo");
+    const read = load("createClubOwnerAvatarReadServer")(f.settings, f.dependencies as never);
+    const response = await read(new Request(`${localOrigin}${f.current().avatarUrl}`));
+    assert.equal(response.status, 200); assert.equal(response.headers.get("content-type"), "image/webp");
+    assert.equal((await sharp(Buffer.from(await response.arrayBuffer())).metadata()).format, "webp");
+    assert.equal(f.current().revision, "1");
+  } finally { for (const cleanup of cleanups) cleanup(); }
+  assert.equal(revoked, 1);
 });

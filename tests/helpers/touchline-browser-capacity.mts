@@ -42,6 +42,12 @@ export function requireBrowserCapacity(root: string, options: { darwinFreePercen
   assert.ok(io.freeDiskBytes(root)>(lowDisk ? 500n*1024n**2n : 5n*1024n**3n),
     lowDisk ? "browser requires more than 500 MiB emergency reserve" : "browser requires more than 5 GiB free disk");
   if (io.platform === "darwin") {
+    // Explicit operator override for this local test process only, never CI.
+    // Keep the disk reserve and real behavioral assertions in place.
+    if (io === local && process.env.TOUCHLINE_LOCAL_IGNORE_MEMORY_GATE === "1" && !process.env.CI) {
+      console.warn("Local browser memory preflight bypassed by explicit operator request; disk reserve remains enforced.");
+      return;
+    }
     const pressure=io.run("sysctl",["-n","kern.memorystatus_vm_pressure_level"]).trim();
     assert.ok(pressure==="1" || (options.allowModerateDarwinPressure===true && pressure==="2"),
       "normal macOS memory pressure required unless moderate pressure explicitly authorized locally");

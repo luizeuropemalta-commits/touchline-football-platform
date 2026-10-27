@@ -233,7 +233,7 @@ function actual(input: Record<string, unknown> = {}, getCopy: (locale: string, d
     CalendarClock: icon, ShieldCheck: icon, WalletCards: icon, Crown: icon, Check: icon, ChevronRight: icon, BadgeCheck: icon, Trophy: icon, House: icon, PlaneTakeoff: icon, Send: icon, Save: icon, LockKeyhole: icon, CircleAlert: icon, Users: icon,
     builderRef: { current: null }, guidePanelRef: { current: null }, currentAlerts: [], filtered: [], persistedUserGameweek: null, RankingTable: icon,
     stepLabel: (step: string) => step, formatTouchlineFantasyMarketValue: () => "100", formatTouchlineFantasyDeadline: () => "deadline", formatTouchlineFantasyBudgetAmount: () => "100", getTouchlineFantasyMarketBudgetCopy: () => ({ rule: "{budget}" }),
-    React, ArenaView: child, ClubOwnerTechnicalRail: child, ClubHubFixtureStrip: fixtureStrip, resolveTouchlineCatalogueLocale, liveTimeZone: "UTC", initialLiveFixtures: [], initialLiveMetadata: { state: "partial-persisted-schedule", degraded: true }, initialLiveNow: 0, arenaOpen: false, ...domain, locale: "en-GB", draftLocalesEnabled, pt: false, marketPage: true, editable: true, saving: false,
+    React, ArenaView: child, ClubOwnerTechnicalRail: child, ClubHubFixtureStrip: fixtureStrip, resolveTouchlineCatalogueLocale, liveTimeZone: "UTC", initialLiveFixtures: [], initialLiveAdmissionScope: null, initialLiveMetadata: { state: "partial-persisted-schedule", degraded: true }, initialLiveNow: 0, arenaOpen: false, ...domain, locale: "en-GB", draftLocalesEnabled, pt: false, marketPage: true, editable: true, saving: false,
     styles: new Proxy({}, { get: (_, key) => String(key) }), gameweeks: [], activeGameweek: { id: "round-7", number: 7, state: "MARKET_OPEN" },
     selectedCoach: coach, selectedCoachId: coach.id, formationCode: "4-3-3", geometry, selections: [], eligiblePlayers: [player],
     catalogueById: new Map([[card.id, card]]), browseCards: [card], filteredCoaches: [coach], selectedPlayerClub: { name: "Canonical Club", teamId: "club-1" }, selectedCoachClub: { teamId: "club-1" },
@@ -280,7 +280,6 @@ test("real coach review action remains contract-bound and cannot dispatch a rele
   for (const override of [
     { collectionEnabled: false }, { marketPage: false },
     { collection: { ready: false, state: owned } },
-    { collection: { ready: true, state: { ...owned, plan: "beta" } } },
     { collection: { ready: true, state: { ...owned, coach: null } } },
     { collection: { ready: true, state: { ...owned, coach: { id: "other-coach" } } } },
   ]) {
@@ -294,6 +293,11 @@ test("real coach review action remains contract-bound and cannot dispatch a rele
     view.api.coachReleaseAction.onSelect();
     assert.deepEqual(view.calls, [], "disabled review cannot mutate or send");
   }
+  const betaView = actual({ ...base, collection: { ready: true, state: { ...owned, plan: "beta" } } }, getCopy);
+  assert.equal(betaView.api.coachReleaseAction.disabled, false);
+  betaView.api.coachReleaseAction.onSelect();
+  assert.equal(betaView.calls.length, 1);
+  assert.equal(betaView.calls[0][0], "setCoachReleaseReview");
   const before = structuredClone(owned);
   const view = actual(base, getCopy);
   assert.equal(view.api.coachReleaseAction.disabled, false);
@@ -493,14 +497,16 @@ function elements(node: React.ReactNode): Element[] {
 test("ClubOwner and Arena reuse one shared fixture strip above reserves with the canonical seed and locale", async () => {
   const { getTouchlineFantasyMarketWorkflowCopy: getCopy } = await load();
   const fixtures = [{ id: "fixture-seed", providerId: "fixture-seed" }];
+  const admissionScope = { competitionId: "8", seasonId: "28083" };
   for (const { code: locale } of TOUCHLINE_APPROVED_LOCALES) {
     for (const marketPage of [false, true]) for (const arenaOpen of [false, true]) {
-      const view = actual({ locale, marketPage, arenaOpen, initialLiveFixtures: fixtures,
+      const view = actual({ locale, marketPage, arenaOpen, initialLiveFixtures: fixtures, initialLiveAdmissionScope: admissionScope,
         initialLiveNow: 123456, liveTimeZone: "Europe/Malta" }, getCopy, true);
       const strips = elements(view.api.render()).filter(node => node.type === fixtureStrip);
       assert.equal(strips.length, 1, `${locale}/${marketPage}/${arenaOpen}`);
       if (strips[0]) {
         assert.strictEqual(strips[0].props.initialFixtures, fixtures);
+        assert.strictEqual(strips[0].props.initialAdmissionScope, admissionScope);
         assert.equal(strips[0].props.initialNow, 123456);
         assert.equal(strips[0].props.initialTimeZone, "Europe/Malta");
         assert.equal(strips[0].props.locale, locale);

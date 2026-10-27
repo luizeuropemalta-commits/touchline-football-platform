@@ -26,7 +26,7 @@ import { findTouchLineClub, TOUCHLINE_ENGLAND_CLUBS } from "@/lib/touchlineArena
 import { type TouchLineLocale } from "@/lib/touchlineArena/i18n";
 import { resolveTouchlineCatalogueLocale } from "@/lib/touchlineArena/catalogue-locale";
 import { localizedPositionLabel } from "@/lib/touchlineArena/position-labels";
-import { touchlineMatchEventLabel, touchlineMatchEventRelatedPlayerLabel } from "@/lib/touchlineArena/match-event-i18n";
+import { touchlineMatchEventKind, touchlineMatchEventLabel, touchlineMatchEventRelatedPlayerLabel } from "@/lib/touchlineArena/match-event-i18n";
 import { matchHeroScorers } from "@/lib/touchlineArena/match-hero-goals";
 import { getTouchlineMatchCentreCopy } from "@/lib/touchlineArena/match-centre-i18n";
 import { touchlineLiveCoachForTeam } from "@/lib/touchlineArena/live-coaches";
@@ -319,7 +319,10 @@ export default function TouchlineMatchCentre({
     () => [...schedule.currentFixtures, ...schedule.recentResults],
     [schedule.currentFixtures, schedule.recentResults],
   );
-  const selected = useMemo(() => selectTouchlineMatchCentreFixture(visibleFixtures, selectedId, now), [now, selectedId, visibleFixtures]);
+  const selected = useMemo(() => {
+    const historical = selectedId ? fixtures.find(fixture => fixture.id === selectedId || fixture.providerId === selectedId) : null;
+    return historical ?? selectTouchlineMatchCentreFixture(visibleFixtures, null, now);
+  }, [fixtures, now, selectedId, visibleFixtures]);
   const detailRefresh = useRef<(() => Promise<void>) | null>(null);
 
   useEffect(() => {
@@ -571,7 +574,7 @@ export default function TouchlineMatchCentre({
                 return <ul className={scorers.length > 5 ? styles.goalColumns : undefined} key={team?.providerId ?? index} tabIndex={0} aria-label={team?.name} style={{ gridColumn: index === 0 ? 1 : 3 }}>
                 {scorers.map(scorer => <li key={scorer.key}>
                   <strong>{scorer.playerName}</strong>
-                  <span className={styles.goalBalls}>{scorer.goals.map(goal => <span className={styles.goalMoment} key={goal.id}><time title={touchlineMatchEventLabel(goal.type, language, draftLocalesEnabled)} aria-label={`${touchlineMatchEventLabel(goal.type, language, draftLocalesEnabled)} ${eventMoment(goal)}`}>{eventMoment(goal)}</time><span aria-hidden="true">⚽</span></span>)}</span>
+                  <span className={styles.goalBalls}>{scorer.goals.map(goal => <span className={styles.goalMoment} key={goal.id}><time title={touchlineMatchEventLabel(goal.type, language, draftLocalesEnabled)} aria-label={`${touchlineMatchEventLabel(goal.type, language, draftLocalesEnabled)} ${eventMoment(goal)}`}>{eventMoment(goal)}</time><span aria-hidden="true">⚽{touchlineMatchEventKind(goal.type) === "ownGoal" ? <abbr className={styles.ownGoalMark} title={touchlineMatchEventLabel(goal.type, language, draftLocalesEnabled)}>OG</abbr> : null}</span></span>)}</span>
                 </li>)}
               </ul>;
               })}

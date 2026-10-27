@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
+import { existsSync, realpathSync, statSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import { chromium, expect } from "@playwright/test";
-import { bundleIsolatedBrowserFixture } from "./helpers/touchline-isolated-browser-bundle.mts";
+import { compileRankingBrowserFixture } from "./helpers/touchline-ranking-browser-compile.mts";
 import { buildTouchlineRankingSnapshot } from "../lib/touchlineArena/card-ranking.ts";
 import { parseTouchlineActiveRankingState } from "../lib/touchlineArena/card-ranking-live.ts";
 import { TOUCHLINE_CARD_PRICE_TABLE_VERSION } from "../lib/touchlineArena/card-rules.ts";
@@ -78,23 +78,21 @@ test("published /rankings awards update together without replacing the selected 
 }, async t => {
   const seed = publication(1);
   const catalogue = Array.from({ length: 8 }, (_, index) => card(index + 1));
-  const bundle = bundleIsolatedBrowserFixture({ entryPath: "tests/fixtures/RankingPodiumPublicationBrowserFixture.tsx", cssPrefix: "rankingpodium",
-    requiredSources: ["app/rankings/touchline-tables-client.tsx", "app/rankings/touchline-tables.module.css",
-      "components/touchline/cards/TouchlineCardLeadershipProvider.tsx", "components/touchline/cards/TouchlineCardZoom.tsx",
-      "components/touchline/a11y/TouchlineDialog.tsx", "lib/touchlineArena/published-ranking-awards.ts",
-      "lib/touchlineArena/published-ranking-summary.ts",
-      "lib/touchlineArena/touchline-ranking-zoom-selection.ts", "lib/touchlineArena/live-presentation-client-store.ts"],
-    mountScript: `window.unmountFixture=()=>flushSync(()=>root.unmount());window.transportDigest=()=>loadEntry().transportDigest();window.rerenderCatalogue=catalogue=>flushSync(()=>root.render(React.createElement(loadEntry().default,{...window.fixtureProps,catalogue})));flushSync(()=>root.render(React.createElement(loadEntry().default,window.fixtureProps)));`,
-  });
-  const css = readFileSync(path.join(root, "node_modules/tailwindcss/preflight.css"), "utf8")
-    + readFileSync(path.join(root, "app/globals.css"), "utf8").replace(/^@(import|source)[^;]*;\s*/gm, "") + bundle.css;
+  const bundle = await compileRankingBrowserFixture("podium", t.signal);
+  const css = bundle.css;
+  t.diagnostic(`Compiler exited before browser launch; ${bundle.sources.length} hashed sources: ${bundle.directory}`);
   const safe = (source: string) => source.replace(/<\/script/gi, "<\\/script");
   const html = `<!doctype html><html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${css}</style></head><body><div id="root" data-touchline-orientation-root></div><script>window.fixtureProps=${safe(JSON.stringify({ seed, catalogue }))};</script><script>${safe(bundle.script)}</script></body></html>`;
   const publicRoot = realpathSync(path.join(root, "public"));
+  t.signal.throwIfAborted();
   const browser = await chromium.launch({ headless: true, timeout: 15_000 });
-  t.signal.addEventListener("abort", () => { void browser.close(); }, { once: true });
+  let closing: Promise<void> | undefined;
+  const close = () => closing ??= browser.close();
+  const abort = () => { void close().catch(() => undefined); };
+  t.signal.addEventListener("abort", abort, { once: true });
   const reports: unknown[] = [];
   try {
+    t.signal.throwIfAborted();
     for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 }, { width: 844, height: 390 }]) {
       const context = await browser.newContext({ viewport, reducedMotion: "reduce", serviceWorkers: "block" });
       const page = await context.newPage();
@@ -261,13 +259,21 @@ test("published /rankings awards update together without replacing the selected 
         await expect(dialog.getByRole("heading", { name: "Synthetic 9", exact: true })).toHaveCount(1);
         await expect(jointLeaderBall).toHaveAttribute("aria-expanded", "true");
         await expect(boot.locator(triggerSelector)).toHaveAttribute("aria-expanded", "false");
-        await page.keyboard.press("Escape"); await expect(jointLeaderBall).toBeFocused();
+        // Initial dialog focus is scheduled on the next animation frame. Wait
+        // for that observable keyboard-ready state before sending Escape.
+        await expect(dialog.getByRole("button", { name: "Close card", exact: true })).toBeFocused();
+        await page.keyboard.press("Escape");
+        await expect(dialog).toHaveCount(0);
+        await expect(jointLeaderBall).toBeFocused();
         await publish(seed); await awards(6, [8]);
         // When the invoker is still mounted, close returns focus to that exact trigger.
         const invoker = ball.locator(triggerSelector);
         await invoker.click(); await expect(invoker).toHaveAttribute("aria-expanded", "true");
         await expect(boot.locator(triggerSelector)).toHaveAttribute("aria-expanded", "false");
-        await page.keyboard.press("Escape"); await expect(invoker).toBeFocused();
+        await expect(dialog.getByRole("button", { name: "Close card", exact: true })).toBeFocused();
+        await page.keyboard.press("Escape");
+        await expect(dialog).toHaveCount(0);
+        await expect(invoker).toBeFocused();
         assert.deepEqual(requests.filter(value => value.startsWith("payload:")), accepted.map(digest => `payload:${digest}`), "exactly one shared payload for each accepted publication, including reactivation");
         assert.deepEqual(errors, []); assert.deepEqual(refused, []);
         reports.push({ viewport, sameDialogAcrossLeadersAndIdentityLoss: true, beforeScroll,
@@ -276,5 +282,5 @@ test("published /rankings awards update together without replacing the selected 
       } finally { await page.evaluate("window.unmountFixture?.()").catch(() => undefined); await context.close(); }
     }
     console.log(`RANKING_PODIUM_BROWSER_PROOF ${JSON.stringify({ reports, qualification: "isolated real React/CSS/shared transport with synthetic data; not Next/native Safari/QA/provider proof" })}`);
-  } finally { await browser.close(); }
+  } finally { t.signal.removeEventListener("abort", abort); await close(); }
 });

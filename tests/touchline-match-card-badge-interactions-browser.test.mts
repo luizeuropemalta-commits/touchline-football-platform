@@ -29,7 +29,7 @@ function harness() {
     const process={env:{NODE_ENV:'development'}},modules={${definitions}},cache={};
     function require(id){if(cache[id])return cache[id].exports;const m={exports:{}};cache[id]=m;modules[id](m,m.exports,require);return m.exports;}
     const React=require('react'),root=require('react-dom/client').createRoot(document.getElementById('root')),Badge=require('badge').default,flush=require('react-dom').flushSync;
-    window.cardClicks=0;window.show=(locale,side)=>flush(()=>root.render(React.createElement('div',{onClick:()=>window.cardClicks++,style:{position:'fixed',top:'80px',left:side==='left'?'0':side==='right'?'calc(100% - 48px)':'calc(50% - 24px)',width:'48px',height:'48px',overflow:'hidden',transform:'translateZ(0)'}},React.createElement(Badge,{key:locale+side,locale,kind:side==='left'?'yellow':'red',playerName:'Confirmed Player',draftLocalesEnabled:true}))));
+    window.cardClicks=0;window.show=(locale,side,playerName='Confirmed Player')=>flush(()=>root.render(React.createElement('div',{onClick:()=>window.cardClicks++,style:{position:'fixed',top:'80px',left:side==='left'?'0':side==='right'?'calc(100% - 48px)':'calc(50% - 24px)',width:'48px',height:'48px',overflow:'hidden',transform:'translateZ(0)'}},React.createElement(Badge,{key:locale+side+playerName,locale,kind:side==='left'?'yellow':'red',playerName,draftLocalesEnabled:true}))));
   </script>`;
 }
 
@@ -114,6 +114,37 @@ test("hydrated match-card tooltip stays in viewport, supports touch/keyboard and
         await page.setViewportSize({ width: 320, height: 300 });
         await expect.poll(async () => { const b = await page.getByRole("tooltip").boundingBox(); return Boolean(b && b.x >= 0 && b.x + b.width <= 320.5); }).toBe(true);
         await page.locator("#outside").tap(); await expect(page.getByRole("tooltip")).toHaveCount(0);
+        // Real CSS and keyboard scrolling in a short viewport; this is a
+        // constrained-layout regression, not a claim of native device pinch.
+        await page.setViewportSize({ width: 320, height: 50 });
+        await page.evaluate(() => {
+          (window as unknown as {show:(locale:string,side:string,name:string)=>void}).show("en-GB", "center", "W".repeat(96));
+          document.querySelector<HTMLElement>("#root > div")!.style.top = "4px";
+        });
+        await page.locator(".trigger").focus();
+        const tallTip = page.getByRole("tooltip"), text = tallTip.locator(".tooltipText");
+        await expect(tallTip).toBeVisible();
+        const completeText = await tallTip.textContent();
+        assert.ok(completeText?.includes("W".repeat(96)));
+        assert.equal(await text.evaluate(node => {
+          const element = node as HTMLElement;
+          element.style.overflowWrap = "normal";
+          const overflowsWithoutWrapping = element.scrollWidth > element.clientWidth;
+          element.style.removeProperty("overflow-wrap");
+          return overflowsWithoutWrapping;
+        }), true, "the unbroken name demonstrates the previous horizontal overflow");
+        await expect.poll(() => text.evaluate(node => node.scrollWidth <= node.clientWidth + 1)).toBe(true);
+        await expect.poll(async () => { const b = await tallTip.boundingBox(); return Boolean(b && b.y >= 7.5 && b.y + b.height <= 42.5); }).toBe(true);
+        await expect.poll(() => text.evaluate(node => node.scrollHeight > node.clientHeight)).toBe(true);
+        await page.locator(".trigger").press("End");
+        await expect.poll(() => text.evaluate(node => node.scrollTop >= node.scrollHeight - node.clientHeight - 1)).toBe(true);
+        await expect(page.locator(".trigger")).toBeFocused();
+        await page.locator(".trigger").press("Home");
+        await expect.poll(() => text.evaluate(node => node.scrollTop)).toBe(0);
+        await text.hover(); await page.mouse.wheel(0, 200);
+        await expect.poll(() => text.evaluate(node => node.scrollTop > 0)).toBe(true);
+        assert.equal(await tallTip.textContent(), completeText, "scrolling never removes or truncates text");
+        await page.locator(".trigger").press("Escape"); await expect(page.getByRole("tooltip")).toHaveCount(0);
         assert.equal(await page.evaluate("window.cardClicks"), 0);
         assert.deepEqual(errors, []);
         await context.close();

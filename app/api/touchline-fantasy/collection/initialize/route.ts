@@ -31,9 +31,10 @@ export async function POST(request: NextRequest) {
   const snapshot = await loadTouchlineFantasyReadSnapshot(data.user);
   if (!snapshot?.entitlementActive) return fail("CLUB_ACCESS_REQUIRED",403);
   const plan = snapshot.marketAccess?.planKey;
-  if (!plan || !["standard","master","vip"].includes(plan)) return fail("CLUB_PLAN_UNAVAILABLE",409);
+  if (!plan || !["beta","standard","master","vip"].includes(plan)) return fail("CLUB_PLAN_UNAVAILABLE",409);
   const coach = snapshot.coaches.find(entry => entry.id === body.coachId);
   if (!coach) return fail("CLUB_COACH_UNAVAILABLE",409);
+  if (plan === "beta" && coach.slot.cardTier !== "ruby-red") return fail("CLUB_BETA_COACH_REQUIRED",409);
   const { data: config, error: configError } = await admin.from("touchline_fantasy_configs").select("season_id")
     .eq("competition_key","england").eq("status","active").single();
   if (configError || !config?.season_id) return fail("CLUB_SEASON_UNAVAILABLE",503);

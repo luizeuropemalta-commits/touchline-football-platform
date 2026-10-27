@@ -86,11 +86,11 @@ test("coach remains a dedicated entity outside every player slot", async () => {
   };
   findToolbar(tree);
   assert.ok(toolbar, "Arena retains its dedicated control row");
-  assert.match(toolbar.getText(tree), /data-arena-coach="true"[\s\S]*?<FantasyCoachZoom entry=\{selectedCoach\}/);
+  assert.match(toolbar.getText(tree), /data-arena-coach="true"[\s\S]*?<FantasyCoachZoom\b[^>]*\bentry=\{selectedCoach\}/);
   assert.doesNotMatch(pitch, /data-arena-coach="true"|FantasyCoachZoom|TouchlineCoachCardZoom/);
   const playerSlots = pitch.slice(pitch.indexOf("selectedCards.map"));
   assert.doesNotMatch(playerSlots, /FantasyCoachZoom|TouchlineCoachCardZoom/);
-  assert.match(source, /<FantasyCoachZoom entry=\{selectedCoach\}/);
+  assert.match(source, /<FantasyCoachZoom\b[^>]*\bentry=\{selectedCoach\}/);
   assert.match(source, /profileHref=\{`\/touchline-coaches\//);
   assert.doesNotMatch(source, /starters\.push\([^)]*coach/i);
   assert.doesNotMatch(source, /role:\s*["']coach["']/);

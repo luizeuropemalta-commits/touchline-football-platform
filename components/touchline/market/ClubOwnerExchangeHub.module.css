@@ -3,12 +3,12 @@
 .notice.notice p { margin:0; max-width:58ch; text-align:start; font-size:.8rem; line-height:1.55; color:#c1cbc5; overflow-wrap:anywhere; }
 .actions { display:flex; flex-wrap:wrap; gap:10px; padding-block:12px 4px; }
 .actions > button { max-width:100%; white-space:normal; overflow-wrap:anywhere; }
-.overlay { --accent: #c4cec8; position:fixed; inset:0; z-index:120; padding:clamp(12px,3vw,40px); background:rgba(0,0,0,.6); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); overflow:auto; color:#edf3ee; }
+.overlay { --accent:#c4cec8; position:fixed; inset:0; z-index:120; padding:0; background:rgba(0,0,0,.82); overflow:auto; overscroll-behavior:contain; color:#edf3ee; }
 .overlay[data-exchange-plan="beta"] { --accent:#ff888e; }
 .overlay[data-exchange-plan="standard"] { --accent:#75bbff; }
 .overlay[data-exchange-plan="master"] { --accent:#a5e4b6; }
 .overlay[data-exchange-plan="vip"] { --accent:#d5b4f6; }
-.dialog { width:100%; min-height:calc(100dvh - clamp(24px,6vw,80px)); border:1px solid color-mix(in srgb,var(--accent) 40%,transparent); border-radius:24px; padding:clamp(18px,4vw,48px); background:rgb(6,14,11); outline:none; box-sizing:border-box; overflow-wrap:anywhere; }
+.dialog { width:100%; min-height:100dvh; border:0; border-radius:0; padding:max(24px,env(safe-area-inset-top)) max(24px,env(safe-area-inset-right)) max(24px,env(safe-area-inset-bottom)) max(24px,env(safe-area-inset-left)); background:transparent; outline:none; box-sizing:border-box; overflow-wrap:anywhere; }
 .heading { display:flex; justify-content:space-between; align-items:start; gap:20px; padding-bottom:24px; border-bottom:1px solid color-mix(in srgb,var(--accent) 25%,transparent); }
 .heading small { color:var(--accent); }
 .heading h2 { margin:8px 0 0; font-size:clamp(22px,3vw,38px); }
@@ -21,3 +21,21 @@
 .history li { display:flex; justify-content:space-between; gap:20px; padding:16px 0; border-top:1px solid rgba(255,255,255,.1); }
 .history strong { white-space:nowrap; font-variant-numeric:tabular-nums; }
 @media(max-width:600px) { .heading { flex-wrap:wrap; } .amounts { grid-template-columns:minmax(0,1fr); gap:8px; } .amounts dd { text-align:start; margin-bottom:12px; } .history li { flex-wrap:wrap; gap:8px; } }
+
+.exchanges { list-style:none; margin:20px 0 0; padding:0; display:grid; gap:28px; max-width:1100px; }
+.exchangeReceipt { min-width:0; padding:clamp(16px,3vw,28px); border:1px solid color-mix(in srgb,var(--accent) 30%,transparent); border-radius:20px; background:rgba(6,18,12,.35); }
+.parties { display:flex; flex-wrap:wrap; gap:16px 36px; margin:0 0 28px; }
+.parties > div { min-width:0; flex:1 1 180px; }
+.parties dt { color:#c1cbc5; font-size:.8rem; margin-bottom:6px; }
+.parties dd { margin:0; line-height:1.5; }
+.cardPair { direction:ltr; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:24px; }
+.receiptCard { min-width:0; display:flex; flex-direction:column; align-items:center; text-align:center; padding:20px 12px; border:1px solid color-mix(in srgb,var(--accent) 20%,transparent); border-radius:16px; }
+.receiptCard h4 { margin:0 0 20px; color:var(--accent); }
+.receiptCard h5 { margin:14px 0 8px; font-size:1rem; }
+.receiptCard small { color:#c1cbc5; margin-top:12px; }
+.receiptCard strong,.incomeAmount { font-variant-numeric:tabular-nums; font-size:1.2rem; }
+.cardArtwork { width:min(100%,210px); min-width:0; }
+.cardMissing { display:grid; place-items:center; min-height:160px; }
+@media(max-width:540px) { .cardPair { grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; } .receiptCard { padding:10px 6px; } .receiptCard strong { font-size:1rem; } .dialog { padding:max(18px,env(safe-area-inset-top)) max(18px,env(safe-area-inset-right)) max(18px,env(safe-area-inset-bottom)) max(18px,env(safe-area-inset-left)); } }
+.negotiationSelect { display:block; width:min(100%,520px); min-height:44px; margin-block:10px 18px; padding:10px 14px; border:1px solid color-mix(in srgb,var(--accent) 45%,transparent); border-radius:14px; color:#edf3ee; background:#0b1a13; font:inherit; }
+.negotiationSelect:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }

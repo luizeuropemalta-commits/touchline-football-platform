@@ -115,7 +115,7 @@ function transitionCore(state: PreviewLedger, action: PreviewAction): PreviewLed
     requireRule(quote.final >= reserved.credits, "Saldo insuficiente após reservar os créditos das propostas.");
     return { ...state, error: null, balance: quote.final, listedIds: state.listedIds.filter(id => id !== action.outgoingId), roster: state.roster.map(c => cardIdentity(c) === action.outgoingId ? action.incoming : c), events: state.events.filter(e => e.cardId !== action.outgoingId) };
   }
-  requireRule(state.plan !== "beta" && completeRoster(state.otherRoster), "Exchange indisponível neste cenário.");
+  requireRule(completeRoster(state.otherRoster), "Exchange indisponível neste cenário.");
   requireRule(action.id.length > 0 && !state.proposals.some(p => p.id === action.id), "Identificador de proposta duplicado.");
   if (action.replaces) requireRule(state.proposals.some(p => p.id === action.replaces && p.state === "pending"), "A proposta original já foi encerrada.");
   const incoming = state.otherRoster.find(c => cardIdentity(c) === action.incomingId);

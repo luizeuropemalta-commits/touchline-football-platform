@@ -85,8 +85,8 @@ function normalizeQuietHours(value: unknown) {
 async function currentUser() {
   const supabase = await createClient();
   if (!supabase) return { supabase: null, user: null };
-  const { data: { user } } = await supabase.auth.getUser();
-  return { supabase, user: hasTouchLineArenaAccess(user) ? user : null };
+  const { data: { user }, error } = await supabase.auth.getUser();
+  return { supabase, user: !error && hasTouchLineArenaAccess(user) ? user : null };
 }
 
 async function userHasRegisteredPushDevice(supabase: NonNullable<Awaited<ReturnType<typeof createClient>>>, userId: string) {
@@ -183,7 +183,21 @@ export async function PUT(request: NextRequest) {
   const { supabase, user } = await currentUser();
   if (!supabase || !user) return NextResponse.json({ ok: false, error: "Authentication required." }, { status: 401 });
 
+  // A client condition, never identity authority: the verified session remains
+  // the only owner selector. Older callers without this header retain their contract.
+  const expectedAccount = request.headers.get("X-Touchline-Expected-Account");
+  if (expectedAccount !== null) {
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(expectedAccount)) {
+      return NextResponse.json({ ok: false, error: "Invalid account context." }, { status: 400 });
+    }
+    if (expectedAccount !== user.id) {
+      return NextResponse.json({ ok: false, error: "Account changed. Reload before trying again." }, { status: 409 });
+    }
+  }
+  if (request.signal?.aborted) return NextResponse.json({ ok: false, error: "Request cancelled." }, { status: 409 });
+
   const payload = await request.json().catch(() => null);
+  if (request.signal?.aborted) return NextResponse.json({ ok: false, error: "Request cancelled." }, { status: 409 });
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
     return NextResponse.json({ ok: false, error: "Invalid preferences." }, { status: 400 });
   }
@@ -245,6 +259,7 @@ export async function PUT(request: NextRequest) {
     }
     // Compare-and-set prevents a concurrent consent/category edit being lost.
     // Sound is presentation only: never renew consent or inspect registration.
+    if (request.signal?.aborted) return NextResponse.json({ ok: false, error: "Request cancelled." }, { status: 409 });
     const saved = await supabase.from("notification_preferences")
       .update({ settings: { ...previous.data.settings, silentPush: payload.silentPush } })
       .eq("user_id", user.id).eq("updated_at", previous.data.updated_at)
@@ -252,6 +267,7 @@ export async function PUT(request: NextRequest) {
     if (saved.error) return NextResponse.json({ ok: false, error: "Sound preference could not be confirmed." }, { status: 503 });
     if (!saved.data) return NextResponse.json({ ok: false, error: "Preferences changed. Reload before trying again." }, { status: 409 });
     return NextResponse.json({ ok: true, data: {
+      accountId: user.id,
       settings: normalizeSettings(saved.data.settings), channels: saved.data.channels,
       frequency: saved.data.frequency, quietHours: saved.data.quiet_hours,
       explicitConsentAt: saved.data.explicit_consent_at, updatedAt: saved.data.updated_at,
@@ -284,6 +300,7 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ ok: false, error: "At least one notification channel must stay enabled." }, { status: 400 });
   }
 
+  if (request.signal?.aborted) return NextResponse.json({ ok: false, error: "Request cancelled." }, { status: 409 });
   const { data, error } = await supabase
     .from("notification_preferences")
     .upsert({
@@ -302,6 +319,7 @@ export async function PUT(request: NextRequest) {
   return NextResponse.json({
     ok: true,
     data: {
+      accountId: user.id,
       settings: normalizeSettings(data.settings),
       channels: normalizeChannels(data.channels),
       frequency: data.frequency,

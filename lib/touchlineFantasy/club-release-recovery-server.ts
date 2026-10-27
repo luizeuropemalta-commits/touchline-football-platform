@@ -16,13 +16,14 @@ type Rejected = Readonly<{ status: "auth_required" | "context_changed" | "invali
  * request parameters. No gate/market/entitlement dependency: historical reads only.
  * Epoch is caller-owned correlation, not authorization. No route is wired here.
  */
-export async function readClubReleaseRecovery(
+async function readRecovery(
   repository: ReleaseRecoveryReadRepository,
   verifiedOwnerId: string | null,
   referenceInput: unknown,
   epoch: number,
   includeSnapshot = false,
-): Promise<ClubReleaseRecoveryResult | Rejected> {
+  evidence = false,
+) {
   if (!verifiedOwnerId) return { status: "auth_required", resolved: false };
   const reference = parseClubReleaseRecoveryReference(referenceInput);
   if (!reference || !Number.isSafeInteger(epoch) || epoch < 0) return { status: "invalid_request", resolved: false };
@@ -44,11 +45,23 @@ export async function readClubReleaseRecovery(
       command, operationRevision: operation.revision, receipt };
     const confirmation = parseClubReleaseRecoveryResult(dto, reference, context);
     if (!confirmation) return { status: "unavailable", resolved: false };
-    if (!includeSnapshot || !repository.snapshot) return confirmation;
+    if (!includeSnapshot || !repository.snapshot) return evidence ? dto : confirmation;
     // Receipt confirmation survives an unavailable optional collection read.
     try {
       const snapshot = await repository.snapshot(scope);
-      return parseClubReleaseRecoveryResult({ ...dto, snapshot }, reference, context) ?? confirmation;
-    } catch { return confirmation; }
+      const withSnapshot = { ...dto, snapshot };
+      const parsed = parseClubReleaseRecoveryResult(withSnapshot, reference, context);
+      return evidence ? (parsed ? withSnapshot : dto) : (parsed ?? confirmation);
+    } catch { return evidence ? dto : confirmation; }
   } catch { return { status: "unavailable", resolved: false }; }
+}
+
+/** Existing internal projection remains unchanged; only the transport requests evidence. */
+export async function readClubReleaseRecovery(repository: ReleaseRecoveryReadRepository, verifiedOwnerId: string | null,
+  referenceInput: unknown, epoch: number, includeSnapshot = false): Promise<ClubReleaseRecoveryResult | Rejected> {
+  return await readRecovery(repository, verifiedOwnerId, referenceInput, epoch, includeSnapshot, false) as ClubReleaseRecoveryResult | Rejected;
+}
+export async function readClubReleaseRecoveryEvidence(repository: ReleaseRecoveryReadRepository, verifiedOwnerId: string | null,
+  referenceInput: unknown) {
+  return readRecovery(repository, verifiedOwnerId, referenceInput, 0, true, true);
 }

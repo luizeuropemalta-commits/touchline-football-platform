@@ -201,7 +201,10 @@ test("eight complete catalogues preserve EN/PT, reuse checkAgain, and keep six d
   assert.deepEqual(keys.map(key => all["en-GB"][key]), english);
   assert.deepEqual(keys.map(key => all["pt-BR"][key]), portuguese);
   for (const locale of locales) {
-    assert.deepEqual(Object.keys(all[locale]).sort(), [...keys].sort());
+    const observationKeys = ["deliveryUnconfirmed", "mobileAlertsUnavailable", "deviceNotLinked", "deviceMissing", "deviceUnverified",
+      "consentRequired", "alertsPaused", "quietHours", "preferenceUnconfirmed"] as const;
+    assert.deepEqual(Object.keys(all[locale]).sort(), [...keys, ...observationKeys].sort());
+    for (const key of observationKeys) assert.ok(all[locale][key].length > 0, `${locale}/${key}`);
     assert.ok(Object.values(all[locale]).every(value => typeof value === "string" && value.trim()));
     assert.equal(all[locale].checkAgain, TOUCHLINE_PLAYER_SOCIAL_CATALOGUES[locale].checkAgain);
     assert.match(all[locale].signedOut, /Arena/);

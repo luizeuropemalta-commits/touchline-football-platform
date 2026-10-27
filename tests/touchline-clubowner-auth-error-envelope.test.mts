@@ -1,3 +1,5 @@
+import { resolveClubOwnerShell } from "./helpers/touchline-resolve-clubowner-shell.mts";
+import { createLocalReadTiming } from "../lib/touchlineArena/local-read-timing.ts";
 import assert from "node:assert/strict";
 import { clubCollectionPresentationEnabled } from "../lib/touchlineFantasy/club-collection-presentation.ts";
 import { readFileSync } from "node:fs";
@@ -39,8 +41,9 @@ class Navigation extends Error {
     this.destination = destination;
   }
 }
-function fixture(getUser: () => Promise<unknown>, clientFailure = false, clientWait?: Promise<void>) {
+function fixture(getUser: () => Promise<unknown>, clientFailure = false, clientWait?: Promise<void>, snapshotWait?: Promise<void>) {
   const calls: string[] = [];
+  const timingRecords: Array<{ stage: string; status: string }> = [];
   const timers = new Map<number, () => void>();
   let sequence = 0;
   const deadline: Record<string, unknown> = {};
@@ -62,6 +65,9 @@ function fixture(getUser: () => Promise<unknown>, clientFailure = false, clientW
     "@/lib/touchlineFantasy/club-collection-presentation": { clubCollectionPresentationEnabled },
     "@/lib/touchlineFantasy/market-plan-policy": marketPolicy,
     "@/lib/touchlineArena/site-locales-release": siteLocalePolicy,
+    react: React,
+    "@/components/touchline/TouchlineAccountLoading": { default: "account-loading" },
+    "@/components/touchline/cards/TouchlineCardLeadershipLayout": { default: "leadership-boundary" },
     "react/jsx-runtime": jsx,
     "next/headers": { headers: async () => new Headers({ "x-vercel-ip-timezone": "Europe/Malta" }) },
     "@/lib/touchlineArena/match-centre": { normalizeTouchlineMatchCentreTimeZone },
@@ -75,6 +81,7 @@ function fixture(getUser: () => Promise<unknown>, clientFailure = false, clientW
       return { auth: { getUser: () => { calls.push("auth"); return getUser(); } } };
     } },
     "@/lib/admin/owner": { isOwnerEmail: (email: string) => { calls.push("owner-policy"); return ownerPolicy(email); } },
+    "@/lib/touchlineArena/local-read-timing": { createLocalReadTiming: () => createLocalReadTiming({ NODE_ENV: "development", TOUCHLINE_LOCAL_READ_TIMING: "1" }, { emit: record => timingRecords.push(record) }) },
     "@/lib/touchlineArena/server-read-deadline": deadline,
     "@/lib/touchlineArena/auth-i18n": authCopy,
     "@/lib/touchlineArena/catalogue-locale": catalogue,
@@ -86,7 +93,7 @@ function fixture(getUser: () => Promise<unknown>, clientFailure = false, clientW
       // loads must not schedule lifecycle writers.  Keep this VM fixture on
       // the same public contract as the real module.
       loadTouchlineFantasySnapshot: async (actor: unknown) => { calls.push("snapshot"); return { actor, config: { budgetEur: 500_000_000 } }; },
-      loadTouchlineFantasyReadSnapshot: async (actor: unknown) => { calls.push("snapshot"); return { actor, config: { budgetEur: 500_000_000 } }; },
+      loadTouchlineFantasyReadSnapshot: async (actor: unknown) => { calls.push("snapshot"); await snapshotWait; return { actor, config: { budgetEur: 500_000_000 } }; },
     },
     "@/lib/touchlineArena/club-owner-page-identity": { resolveTouchlineClubOwnerPageIdentity: (...args: Parameters<typeof identity.resolveTouchlineClubOwnerPageIdentity>) => { calls.push("identity"); return identity.resolveTouchlineClubOwnerPageIdentity(...args); } },
     "./market-game.module.css": { default: { page: "page", content: "content" } },
@@ -103,7 +110,8 @@ function fixture(getUser: () => Promise<unknown>, clientFailure = false, clientW
   runInNewContext(page, { exports, process: { env: {} }, require: (name: string) => { assert.ok(Object.hasOwn(modules, name), name); return modules[name]; } });
   assert.ok(exports.default);
   return {
-    calls, run: () => exports.default!({ searchParams: Promise.resolve({ lang: "pt-BR" }) }),
+    calls, timingRecords, runShell: () => exports.default!({ searchParams: Promise.resolve({ lang: "pt-BR" }) }),
+    run: async () => resolveClubOwnerShell(await exports.default!({ searchParams: Promise.resolve({ lang: "pt-BR" }) })),
     expire: () => { for (const callback of [...timers.values()]) callback(); },
   };
 }
@@ -188,4 +196,35 @@ test("ClubOwner deadline includes client setup and fences a late client before a
   finish();
   await new Promise<void>(resolve => setImmediate(resolve));
   assert.deepEqual(h.calls, [], "late setup must not start authentication after the deadline");
+});
+
+
+test("verified shell appears before a pending squad, without duplicating account reads", async () => {
+  let release!: () => void;
+  const pending = new Promise<void>(resolve => { release = resolve; });
+  const actor = user("customer@example.test");
+  const h = fixture(async () => ({ data: { user: actor }, error: null }), false, undefined, pending);
+  let shell: React.ReactElement | undefined;
+  const rendering = h.runShell().then(value => { shell = value; return value; });
+  try {
+    for (let turn = 0; turn < 35; turn++) await Promise.resolve();
+    assert.ok(shell, "authenticated header must not wait for squad completion");
+    const all = nodes(shell);
+    assert.equal(all.filter(node => node.type === "main").length, 1);
+    const header = all.find(node => node.type === "brand-header")!;
+    assert.equal(JSON.stringify(header.props.accountLocaleContext), JSON.stringify({ mode: "account", accountId: actor.id }));
+    assert.equal(all.find(node => node.type === "navigation")!.props.surface, "authenticated");
+    assert.equal(all.some(node => node.type === "fantasy-client"), false, "account body is still deferred");
+    const boundary = all.find(node => node.type === React.Suspense)!;
+    assert.equal((boundary.props.fallback as React.ReactElement<{contentOnly: boolean}>).props.contentOnly, true);
+    assert.equal(h.calls.filter(call => call === "snapshot").length, 1);
+    assert.equal(h.calls.filter(call => call === "auth").length, 1);
+    assert.equal(h.timingRecords.some(record => record.stage === "total"), false, "total cannot finish when only the shell is ready");
+    release();
+    const completed = nodes(await resolveClubOwnerShell(await rendering));
+    assert.equal(h.timingRecords.filter(record => record.stage === "total" && record.status === "fulfilled").length, 1);
+    assert.equal(completed.filter(node => node.type === "brand-header").length, 1);
+    assert.equal(completed.filter(node => node.type === "fantasy-client").length, 1);
+    assert.equal(h.calls.filter(call => call === "snapshot").length, 1);
+  } finally { release(); await rendering; }
 });

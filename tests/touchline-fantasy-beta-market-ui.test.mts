@@ -24,7 +24,7 @@ function visit(node: ts.Node) {
   ts.forEachChild(node, visit);
 }
 visit(tree);
-const beta = { planKey: "beta" as const, budgetEur: 50_000_000, allowedClubTeamIds: ["22", "117", "116", "52"] };
+const beta = { planKey: "beta" as const, budgetEur: 100_000_000, allowedClubTeamIds: ["22", "117", "116", "52", "3", "13"] };
 const base = { React, TOUCHLINE_ENGLAND_CLUBS_BY_RANK, findTouchLineClub, canBrowseMarketClub, isTouchlineFantasyMarketAccess,
   getTouchlineFantasyMarketWorkflowCopy, Image: "img", LockKeyhole: "svg",
   styles: new Proxy({}, { get: (_target, key) => String(key) }) };
@@ -45,7 +45,7 @@ function buttons(element: Rendered): Rendered[] {
   return (element.props.children as Rendered[]).filter(child => child.type === "button");
 }
 
-test("Beta renders all 20 club buttons with 16 locks, without selecting a locked club", () => {
+test("Beta renders all 20 club buttons with 14 locks, without selecting a locked club", () => {
   const selected: string[] = [], notices: string[] = [];
   const label = getTouchlineFantasyMarketPlanLockCopy("pt-BR");
   const selector = actualFunction("CompactClubSelector");
@@ -53,7 +53,7 @@ test("Beta renders all 20 club buttons with 16 locks, without selecting a locked
     onSelect: (club: { teamId: string }) => selected.push(club.teamId), onLockedSelect: () => notices.push(label) });
   const controls = buttons(rendered);
   assert.equal(controls.length, 20);
-  assert.equal(controls.filter(button => button.props["aria-disabled"] === true).length, 16);
+  assert.equal(controls.filter(button => button.props["aria-disabled"] === true).length, 14);
   for (const [index, button] of controls.entries()) {
     const teamId = TOUCHLINE_ENGLAND_CLUBS_BY_RANK[index].teamId;
     const locked = !beta.allowedClubTeamIds.includes(teamId);
@@ -62,7 +62,7 @@ test("Beta renders all 20 club buttons with 16 locks, without selecting a locked
     (button.props.onClick as () => void)();
   }
   assert.deepEqual(selected.sort(), [...beta.allowedClubTeamIds].sort());
-  assert.equal(notices.length, 16);
+  assert.equal(notices.length, 14);
 });
 
 test("the selector allows every club only for a recognized unrestricted plan", () => {
@@ -152,7 +152,7 @@ test("the actual save guard cannot submit a restricted existing XI as a new draf
 });
 
 test("budget presentation uses the server's policy and never a selected plan preview", () => {
-  assert.equal(actualVariable("marketBudgetEur", { collectionEnabled: false, marketPolicy: beta, snapshot: { config: { budgetEur: 777_000_000 } } }), 50_000_000);
+  assert.equal(actualVariable("marketBudgetEur", { collectionEnabled: false, marketPolicy: beta, snapshot: { config: { budgetEur: 777_000_000 } } }), 100_000_000);
   assert.equal(actualVariable("marketBudgetEur", { collectionEnabled: false, marketPolicy: undefined, snapshot: { config: { budgetEur: 777_000_000 } } }), 0);
   assert.doesNotMatch(source, /planPreview/);
 });

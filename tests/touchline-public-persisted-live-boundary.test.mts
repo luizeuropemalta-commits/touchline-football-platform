@@ -27,8 +27,10 @@ test("live scores read one durable snapshot or honest partial schedule without i
   assert.match(liveRoute, /persisted-live-snapshot/);
   assert.match(liveRoute, /partial-persisted-schedule/);
   assert.match(liveRoute, /persisted-live-data-unavailable/);
-  assert.match(liveRoute, /liveSnapshot\?\.fixtures\.length/);
-  assert.match(liveRoute, /selectArenaFixtureRound\(schedule, now \?\? Date\.now\(\)\)/);
+  assert.match(liveRoute, /readCurrentPublicCompetitionSeasonTarget/);
+  assert.match(liveRoute, /includeHistorical: true, readAllPages: true, strictRead: true/);
+  assert.match(liveRoute, /\.filter\(belongs\)/);
+  assert.match(liveRoute, /selectCarouselFixtureRound\(fixtures, selectionNow, admissionScope\)/);
   assert.doesNotMatch(liveRoute, /completeTouchlineOfficialFixtureSchedule/);
   assert.doesNotMatch(
     liveRoute,
@@ -39,10 +41,14 @@ test("live scores read one durable snapshot or honest partial schedule without i
 test("Live prefers a fresh snapshot and marks every non-live fallback degraded", () => {
   assert.match(liveRoute, /const snapshotReadNow = now \?\? Date\.now\(\)/);
   assert.match(liveRoute, /const freshness = touchlineLiveFreshness\(liveSnapshot, snapshotReadNow\)/);
-  assert.match(liveRoute, /const snapshotIsFresh = freshness !== null && !freshness\.degraded/);
-  assert.match(liveRoute, /liveSnapshot\?\.fixtures\.length && snapshotIsFresh/);
+  assert.match(liveRoute, /const snapshotIsFresh = completedFreshness !== null && !completedFreshness\.degraded/);
+  assert.match(liveRoute, /selected\.length > 0 && selected\.every/);
+  assert.match(liveRoute, /snapshotIsFresh && allSelectedCovered/);
+  assert.match(liveRoute, /degraded: !snapshotIsFresh \|\| !allSelectedCovered/);
+  for (const field of ["status", "homeScore", "awayScore", "liveMinute"]) {
+    assert.ok(liveRoute.includes(`published.${field} === fixture.${field}`), `freshness requires canonical ${field} agreement`);
+  }
   assert.match(liveRoute, /state: "partial-persisted-schedule"[\s\S]*?degraded: true/);
-  assert.match(liveRoute, /if \(liveSnapshot\?\.fixtures\.length\) \{[\s\S]*?degraded: true/);
   assert.match(liveRoute, /degraded: true/);
   assert.match(matchCentre, /initialReadMetadata/);
   // The metadata validator now lives at the shared publication boundary;

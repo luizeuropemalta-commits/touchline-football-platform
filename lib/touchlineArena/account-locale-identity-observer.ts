@@ -35,38 +35,52 @@ export function startAccountLocaleIdentityObserver({ subscribe, readUser, onIden
   };
   const unsubscribe = subscribe((_event, session) => {
     if (!active) return;
-    const epoch = ++generation;
+    generation++;
     clearPending();
     if (session === null) { onIdentity(null); return; }
     let identity: string | undefined;
     try { identity = record(session) ? userIdentity(session.user) : undefined; } catch { /* unavailable user proxy */ }
     if (identity !== undefined) { onIdentity(identity); return; }
     onIdentity(undefined);
-    deferred = setTimer(() => {
-      deferred = undefined;
-      if (!active || epoch !== generation) return;
-      deadline = setTimer(() => {
-        deadline = undefined;
-        if (active && epoch === generation) generation++;
-      }, timeoutMs);
-      void (async () => {
-        try {
-          const result = await readUser();
-          if (!active || epoch !== generation) return;
+    const retryable = (error: unknown) => {
+      const status = record(error) && typeof error.status === "number" ? error.status : undefined;
+      return status === undefined || status === 0 || status >= 500;
+    };
+    const scheduleRead = (attempt: number, delay: number) => {
+      const scheduledGeneration = generation;
+      deferred = setTimer(() => {
+        deferred = undefined;
+        if (!active || scheduledGeneration !== generation) return;
+        const readGeneration = ++generation;
+        const retry = () => {
+          if (!active || readGeneration !== generation) return;
           clearPending();
-          if (!record(result) || result.error !== null || !record(result.data)) return;
-          const user = result.data.user;
-          if (user === null) onIdentity(null);
-          else {
-            const verified = userIdentity(user);
-            if (verified !== undefined) onIdentity(verified);
+          generation++; // Late responses from this attempt can never revive it.
+          if (attempt < 2) scheduleRead(attempt + 1, attempt === 0 ? 1000 : 3000);
+        };
+        deadline = setTimer(retry, timeoutMs);
+        void (async () => {
+          try {
+            const result = await readUser();
+            if (!active || readGeneration !== generation) return;
+            if (record(result) && result.error != null && retryable(result.error)) { retry(); return; }
+            clearPending();
+            if (!record(result) || result.error !== null || !record(result.data)) return;
+            const user = result.data.user;
+            if (user === null) onIdentity(null);
+            else {
+              const verified = userIdentity(user);
+              if (verified !== undefined) onIdentity(verified);
+            }
+          } catch (error) {
+            if (!active || readGeneration !== generation) return;
+            if (retryable(error)) retry();
+            else clearPending();
           }
-        } catch {
-          if (active && epoch === generation) clearPending();
-          // Temporary failure stays unknown, never a fabricated sign-out.
-        }
-      })();
-    }, 0);
+        })();
+      }, delay);
+    };
+    scheduleRead(0, 0);
   });
   return () => {
     if (!active) return;

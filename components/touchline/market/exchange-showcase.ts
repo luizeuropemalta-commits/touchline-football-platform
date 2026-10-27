@@ -16,7 +16,7 @@ export function changeShowcaseListing(input: {
     throw new Error("A vitrine contém anúncios inválidos. Recarregue os dados.");
   // Withdrawing publicity is always possible; it does not cancel a proposal.
   if (!input.publish) return listedIds.filter(id => id !== cardId);
-  if (!["standard", "master", "vip"].includes(input.plan)) throw new Error("A vitrine está disponível nos planos pagos.");
+  if (!["beta", "standard", "master", "vip"].includes(input.plan)) throw new Error("A vitrine não está disponível para este plano.");
   if (input.locked) throw new Error("A rodada está travada. Aguarde a reabertura para anunciar.");
   if (!input.ownedIds.includes(cardId)) throw new Error("Só é possível anunciar um jogador do próprio elenco.");
   if (input.reservedIds.has(cardId) || input.unavailableIds.has(cardId)) throw new Error("Este jogador está reservado ou indisponível.");

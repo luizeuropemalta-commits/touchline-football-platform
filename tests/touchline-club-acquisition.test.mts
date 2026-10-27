@@ -15,7 +15,7 @@ const command: ClubAcquisitionCommand = { playerId: offer.playerId, area: "outsi
 const context = { marketOpen: true, offer, allowedClubIds: null };
 const reject = (fn: () => unknown, code: string) => assert.throws(fn, error => error instanceof Error && error.message === code);
 
-test("only explicit paid-plan coach vacancy is valid; missing or malformed coach stays invalid", () => {
+test("only explicit coach vacancy is valid; missing or malformed coach stays invalid", () => {
   for (const plan of ["standard", "master", "vip"] as const) {
     const vacant: ClubAcquisitionState = { ...state(), plan, coach: null };
     const original = structuredClone(vacant);
@@ -27,7 +27,7 @@ test("only explicit paid-plan coach vacancy is valid; missing or malformed coach
     assert.deepEqual(purchased.receipt, { key: command.idempotencyKey, playerId: offer.playerId, area: command.area, slot: command.slot, valueEur: offer.valueEur, revision: 1 });
     reject(() => acquireClubPlayer(vacant, command, { ...context, marketOpen: false }), "CLUB_MARKET_CLOSED");
   }
-  reject(() => inspectClubAcquisition({ ...state(), plan: "beta", coach: null }), "CLUB_BETA_COACH_REQUIRED");
+  assert.doesNotThrow(() => inspectClubAcquisition({ ...state(), plan: "beta", coach: null }));
   const missing: Record<string, unknown> = { ...state() }; delete missing.coach;
   reject(() => inspectClubAcquisition(missing as unknown as ClubAcquisitionState), "CLUB_COACH_INVALID");
   for (const coach of [undefined, false, 0, "", [], {}, { id: " ", tier: "ruby-red", valueEur: 5_000_000 }, { id: 1, tier: "ruby-red", valueEur: 5_000_000 }]) {
@@ -95,15 +95,19 @@ test("same player or occupied destination cannot be bought again", () => {
     ...context, offer: { ...offer, playerId: "other" },
   }), "CLUB_SLOT_OCCUPIED");
 });
-test("Beta stays on the existing flow; the new paid collection cannot activate a six-club Beta", () => {
-  const beta = { ...state(), plan: "beta" as const, balanceEur: 45_000_000 };
-  for (const allowedClubIds of [null, [], ["club"], Array(6).fill("club"), ["club", "a", "b", "c", "d", " "]]) {
-    reject(() => acquireClubPlayer(beta, command, { ...context, allowedClubIds }), "CLUB_COLLECTION_PAID_PLAN_REQUIRED");
+test("Beta acquisition requires its server allowlist and charges the shared wallet", () => {
+  const beta = { ...state(), plan: "beta" as const, balanceEur: 95_000_000 };
+  const before = structuredClone(beta);
+  reject(() => acquireClubPlayer(beta, command, context), "CLUB_ALLOWLIST_REQUIRED");
+  for (const allowedClubIds of [[], ["other"]]) {
+    reject(() => acquireClubPlayer(beta, command, { ...context, allowedClubIds }), "CLUB_CLUB_NOT_ALLOWED");
   }
-  const allowed = ["club", "a", "b", "c", "d", "e"];
-  reject(() => acquireClubPlayer(beta, command, { ...context, allowedClubIds: allowed }), "CLUB_COLLECTION_PAID_PLAN_REQUIRED");
-  reject(() => acquireClubPlayer(state(), command, { ...context, allowedClubIds: ["other"] }), "CLUB_CLUB_NOT_ALLOWED");
-  reject(() => inspectClubAcquisition({ ...beta, coach: { id: "coach", tier: "diamond-gold", valueEur: 70_000_000 } }), "CLUB_BETA_COACH_REQUIRED");
+  const allowedClubIds = ["club", "a", "b", "c", "d", "e"];
+  const result = acquireClubPlayer(beta, command, { ...context, allowedClubIds });
+  assert.equal(result.state.balanceEur, 85_000_000);
+  assert.equal(result.state.players[0].valueEur, offer.valueEur);
+  assert.deepEqual(beta, before);
+  reject(() => acquireClubPlayer(beta, command, { ...context, allowedClubIds, marketOpen: false }), "CLUB_MARKET_CLOSED");
 });
 test("each exact quota is enforced separately, including left and right wings", () => {
   for (const position of Object.keys(CLUB_POSITION_LIMITS) as (keyof typeof CLUB_POSITION_LIMITS)[]) {

@@ -1,22 +1,18 @@
 "use client";
 
-import { useEffect, useRef, type FocusEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, type ReactNode } from "react";
 
 /** Keep the focused navigation control and its ring inside this rail only. */
 export default function TouchlineNavigationRail({ className, children }: { className: string; children: ReactNode }) {
+  const railRef = useRef<HTMLDivElement | null>(null);
   const pendingFrame = useRef<number | null>(null);
-  const cancelPendingFrame = () => {
+  const cancelPendingFrame = useCallback(() => {
     if (pendingFrame.current !== null) cancelAnimationFrame(pendingFrame.current);
     pendingFrame.current = null;
-  };
-  useEffect(() => () => {
-    if (pendingFrame.current !== null) cancelAnimationFrame(pendingFrame.current);
   }, []);
 
-  function revealFocusedControl(event: FocusEvent<HTMLDivElement>) {
+  const revealFocusedControl = useCallback((rail: HTMLDivElement, target: HTMLElement) => {
     cancelPendingFrame();
-    const rail = event.currentTarget;
-    const target = event.target;
     const reveal = () => {
       if (!rail.isConnected || !target.isConnected || target !== rail.ownerDocument.activeElement) return;
       const railStyle = getComputedStyle(rail);
@@ -40,7 +36,29 @@ export default function TouchlineNavigationRail({ className, children }: { class
       pendingFrame.current = null;
       reveal();
     });
-  }
+  }, [cancelPendingFrame]);
 
-  return <div className={className} onFocusCapture={revealFocusedControl} onBlurCapture={cancelPendingFrame}>{children}</div>;
+  useEffect(() => {
+    const rail = railRef.current;
+    if (!rail) return;
+    // WebKit's native time editor may emit focus without focusin. React's
+    // synthetic onFocusCapture follows focusin, so listen to native capture
+    // for this control only and reuse the same local reveal operation.
+    const nativeTimeFocus = (event: FocusEvent) => {
+      const target = event.target;
+      if (target instanceof HTMLElement && target.matches('input[type="time"]')) {
+        revealFocusedControl(rail, target);
+      }
+    };
+    rail.addEventListener("focus", nativeTimeFocus, true);
+    return () => {
+      rail.removeEventListener("focus", nativeTimeFocus, true);
+      cancelPendingFrame();
+    };
+  }, [cancelPendingFrame, revealFocusedControl]);
+
+  return <div ref={railRef} className={className} onFocusCapture={event => {
+    // Native capture owns time controls even in engines emitting both events.
+    if (!event.target.matches('input[type="time"]')) revealFocusedControl(event.currentTarget, event.target);
+  }} onBlurCapture={cancelPendingFrame}>{children}</div>;
 }

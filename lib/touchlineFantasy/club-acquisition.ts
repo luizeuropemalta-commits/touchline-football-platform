@@ -20,7 +20,7 @@ export type ClubAcquisitionState = Readonly<{
   plan: Plan;
   /** Verified plan credit allocation, not legacy purchased TC. */
   balanceEur: number;
-  /** Explicit vacancy is valid only for paid plans; omitted is never a vacancy. */
+  /** Explicit vacancy is valid after an authorized release; omitted is never a vacancy. */
   coach: Readonly<{ id: string; tier: CoachTier; valueEur: number }> | null;
   formationCode?: string;
   players: readonly ClubOwnedPlayer[];
@@ -42,13 +42,11 @@ export function inspectClubAcquisition(state: ClubAcquisitionState) {
   ensure(money(state.balanceEur), "CLUB_BALANCE_INVALID");
   ensure(state.formationCode === undefined || /^[0-9]+(?:-[0-9]+){1,4}$/.test(state.formationCode), "CLUB_FORMATION_INVALID");
   ensure(Object.hasOwn(state, "coach") && state.coach !== undefined, "CLUB_COACH_INVALID");
-  if (state.coach === null) ensure(state.plan !== "beta", "CLUB_BETA_COACH_REQUIRED");
-  else {
+  if (state.coach !== null) {
     ensure(typeof state.coach === "object" && !Array.isArray(state.coach)
       && typeof state.coach.id === "string" && state.coach.id.trim()
       && Object.hasOwn(CLUB_COACH_VALUES, state.coach.tier)
       && state.coach.valueEur === CLUB_COACH_VALUES[state.coach.tier], "CLUB_COACH_INVALID");
-    ensure(state.plan !== "beta" || state.coach.tier === "ruby-red", "CLUB_BETA_COACH_REQUIRED");
   }
   ensure(validateClubRoster(state.players).length === 0, "CLUB_ROSTER_INVALID");
   inspectClubQuota(state.players, state.plan, state.seasonId);
@@ -75,8 +73,7 @@ export function inspectClubAcquisition(state: ClubAcquisitionState) {
 export function acquireClubPlayer(state: ClubAcquisitionState, command: ClubAcquisitionCommand,
   context: Readonly<{ marketOpen: boolean; offer: PublishedClubOffer | null; allowedClubIds: readonly string[] | null }>) {
   inspectClubAcquisition(state);
-  // Beta remains on its existing XI flow; no experimental six-club/35-player policy.
-  ensure(state.plan !== "beta", "CLUB_COLLECTION_PAID_PLAN_REQUIRED");
+  ensure(state.plan !== "beta" || context.allowedClubIds !== null, "CLUB_ALLOWLIST_REQUIRED");
   ensure(/^[a-zA-Z0-9_-]{8,120}$/.test(command.idempotencyKey), "CLUB_IDEMPOTENCY_INVALID");
   const prior = state.receipts.find(r => r.key === command.idempotencyKey);
   if (prior) {

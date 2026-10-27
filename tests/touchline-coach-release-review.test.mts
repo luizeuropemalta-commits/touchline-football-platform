@@ -11,7 +11,7 @@ import * as rules from "../lib/touchlineFantasy/club-market-rules.ts";
 import * as copy from "../lib/touchlineFantasy/coach-release-review-i18n.ts";
 import * as locales from "../lib/touchlineArena/catalogue-locale.ts";
 
-type Props = { state: acquisition.ClubAcquisitionState; coachName: string; locale: string; onClose: () => void };
+type Props = { state: acquisition.ClubAcquisitionState; coachName: string; locale: string; onClose: () => void; available?: boolean; busy?: boolean; error?: string | null; onConfirm?: (id: string, revision: number) => Promise<boolean> };
 const source = readFileSync(new URL("../components/touchline/fantasy/ClubOwnerCoachReleaseDialog.tsx", import.meta.url), "utf8");
 function fixture() {
   let frozen: unknown;
@@ -113,4 +113,25 @@ test("changed revision, coach, season or balance hides the frozen quote", () => 
 test("overflow never produces an unsafe projected balance", () => {
   const { html } = fixture()(props({ ...state(), balanceEur: Number.MAX_SAFE_INTEGER }));
   assert.match(html, /Balance after release · projection<\/dt><dd>—<\/dd>/);
+});
+
+
+test("enabled review confirms the frozen contract only, and closes only after verified success", async () => {
+  let calls = 0, closed = 0;
+  const render = fixture();
+  const result = render({ ...props(), available: true, onClose: () => { closed++; }, onConfirm: async (id, revision) => {
+    calls++; assert.equal(id, "owned-coach"); assert.equal(revision, 3); return true;
+  } });
+  function buttons(node: React.ReactNode): React.ReactElement<{onClick?:()=>Promise<void>;children?:React.ReactNode;disabled?:boolean}>[] {
+    if (!React.isValidElement<{children?:React.ReactNode}>(node)) return [];
+    return [ ...(node.type === "button" ? [node as React.ReactElement<{onClick?:()=>Promise<void>;children?:React.ReactNode;disabled?:boolean}>] : []),
+      ...React.Children.toArray(node.props.children).flatMap(buttons) ];
+  }
+  const confirm = buttons(result.tree).find(button => button.props.children === "Confirm release");
+  assert.ok(confirm); assert.equal(confirm.props.disabled, false); assert.equal(calls,0);
+  await confirm.props.onClick!(); assert.equal(calls,1); assert.equal(closed,1);
+  assert.ok(!result.html.includes(copy.getCoachReleaseReviewCopy("en-GB").unavailable));
+  const busy = fixture()({...props(),available:true,busy:true,onConfirm:async()=>{assert.fail("busy must not confirm");}});
+  const disabled=buttons(busy.tree).find(button=>button.props.children === "Confirm release")!;
+  assert.equal(disabled.props.disabled,true);await disabled.props.onClick!();
 });

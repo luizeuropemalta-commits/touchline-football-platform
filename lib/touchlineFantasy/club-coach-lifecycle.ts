@@ -46,7 +46,6 @@ function inspectContract(contract: CoachContract) {
 /** Validates only the coach/economy envelope, NOT players, entitlement or persisted collection authority. */
 export function inspectClubCoachLifecycle(state: ClubCoachLifecycleState) {
   assertClubRule(state && Object.hasOwn(CLUB_PLANS, state.plan), "CLUB_PLAN_INVALID");
-  assertClubRule(state.plan !== "beta", "CLUB_COLLECTION_PAID_PLAN_REQUIRED");
   assertClubRule(typeof state.seasonId === "string" && state.seasonId.trim(), "CLUB_SEASON_REQUIRED");
   assertClubRule(Number.isSafeInteger(state.revision) && state.revision >= 0, "CLUB_REVISION_INVALID");
   assertClubRule(Number.isSafeInteger(state.balanceEur) && state.balanceEur >= 0, "CLUB_BALANCE_INVALID");

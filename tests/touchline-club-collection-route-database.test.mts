@@ -10,6 +10,7 @@ import * as allocation from "../lib/touchlineFantasy/club-allocation.ts";
 import * as position from "../lib/touchlineFantasy/club-position.ts";
 import * as commandReader from "../lib/touchlineFantasy/club-request.ts";
 import * as authority from "../lib/touchlineFantasy/club-command-authority.ts";
+import * as marketPlanPolicy from "../lib/touchlineFantasy/market-plan-policy.ts";
 import * as fantasyDomain from "../lib/touchlineFantasy/domain.ts";
 import * as primaryIndex from "../lib/touchlineFantasy/club-primary-position-index.ts";
 import { collectionSlotPlan } from "../lib/touchlineFantasy/collection-slot-plan.ts";
@@ -114,6 +115,7 @@ test("collection HTTP handlers persist all 35 purchases, isolate owners and neve
       // The actual allowance preflight has its own read-only regression.
       "@/lib/touchlineFantasy/club-initial-budget-server":{readClubInitialBudget:(_admin:unknown,requestedOwner:string)=>{assert.notEqual(requestedOwner,id(1));return null;}},
       "@/lib/touchlineFantasy/domain":fantasyDomain,
+      "@/lib/touchlineFantasy/market-plan-policy":marketPlanPolicy,
     };
     function load<T>(path: string): T {
       const exports={};

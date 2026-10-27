@@ -397,6 +397,12 @@ test("ClubHub extraction preserves CSS and inactive labels rather than activatin
     assert.equal(originalCss.split(current).length - 1, 1, `authorized CSS delta: ${current}`);
     originalCss = originalCss.replace(current, baseline);
   };
+  // Approved outer safe-area margins: preserve the exact previous spacing
+  // when no device inset exists before checking the independent CSS baseline.
+  for (const [top, horizontal, bottom] of [["42px", "5vw", "64px"], ["22px", "14px", "42px"], ["18px", "10px", "36px"], ["12px", "14px", "28px"]]) {
+    reverse(`padding: ${top} max(${horizontal}, env(safe-area-inset-right, 0px)) max(${bottom}, env(safe-area-inset-bottom, 0px)) max(${horizontal}, env(safe-area-inset-left, 0px));`,
+      `padding: ${top} ${horizontal} ${bottom};`);
+  }
   assert.equal(css.split("        .club-hub {\n          min-height: 100dvh;").length - 1, 1, "shell selector remains unchanged");
   reverse("        #club-table,\n        #club-squad,\n        #touchline-club-lineup", "        #club-feed,\n        #club-table,\n        #club-squad,\n        #touchline-club-lineup");
   reverse("        }\n        .club-hub-content { padding: 42px 5vw 64px; }", "          padding: 42px 5vw 64px;\n        }");

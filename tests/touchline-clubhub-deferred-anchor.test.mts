@@ -53,7 +53,7 @@ function mount({ hash = lineupHash, existing = false } = {}) {
   const frames = new Map<number, () => void>();
   let nextFrame = 0;
   const window = Object.assign(new Events(), {
-    location: { hash }, scrollY: 0, innerHeight: 390,
+    location: { hash }, scrollX: 0, scrollY: 0, innerHeight: 390,
     requestAnimationFrame(callback: () => void) { frames.set(++nextFrame, callback); return nextFrame; },
     cancelAnimationFrame(id: number) { frames.delete(id); },
   });
@@ -74,13 +74,14 @@ function mount({ hash = lineupHash, existing = false } = {}) {
     if (type === "nav") (props.ref as { current: unknown }).current = navigation;
     return { type, props };
   };
+  const document = {
+    activeElement: null as Element | null,
+    documentElement: { scrollHeight: 5000 },
+    getElementById: (id: string) => elements.get(id) ?? null,
+    querySelector: (selector: string) => selector === ".club-hub-shell" ? scope : null,
+  };
   runInNewContext(compiled, {
-    exports, Element, MutationObserver, window,
-    document: {
-      documentElement: { scrollHeight: 5000 },
-      getElementById: (id: string) => elements.get(id) ?? null,
-      querySelector: (selector: string) => selector === ".club-hub-shell" ? scope : null,
-    },
+    exports, Element, MutationObserver, window, document,
     require(name: string) {
       if (name === "react") return {
         useEffect: (effect: () => void | (() => void)) => effects.push(effect),
@@ -111,9 +112,10 @@ function mount({ hash = lineupHash, existing = false } = {}) {
   return {
     calls, window, navigation, frames, observers, mutate, flush,
     arrive(id = lineupId) { elements.set(id, new Element(id)); mutate(); },
-    click(hash = lineupHash, overrides: Record<string, unknown> = {}) {
+    click(hash = lineupHash, overrides: Record<string, unknown> = {}, focused = false) {
       // An icon nested in the anchor exercises closest(), as in the real nav.
       const link = new Element("link", hash, navigation), icon = new Element("icon", null, link);
+      if (focused) document.activeElement = link;
       navigation.emit("click", { target: icon, button: 0, defaultPrevented: false, ...overrides });
     },
     cleanup() { for (const cleanup of cleanups.reverse()) cleanup?.(); },
@@ -153,6 +155,114 @@ test("real navigation keeps pending arrival for a non-scroll key", () => {
   const app = mount();
   app.window.emit("keydown", { key: "a" }); app.arrive(); app.flush();
   assert.equal(app.calls.length, 1); app.cleanup();
+});
+
+test("scroll-only position change before delayed arrival does not steal the chosen position (isolated sequence, not native gesture proof)", t => {
+  const app = mount();
+  try {
+    // This exercises the current effect's event path only. A native scrollbar
+    // drag must independently prove that it produces this sequence; a mocked
+    // scroll event (or its isTrusted flag) cannot establish that provenance.
+    app.window.scrollY = 400;
+    app.window.emit("scroll");
+    app.flush();
+    assert.equal(app.calls.length, 0, "the missing target cannot be scrolled to yet");
+    assert.equal(app.window.location.hash, lineupHash);
+    app.arrive();
+    app.flush();
+    t.diagnostic(JSON.stringify({
+      boundary: "real component effect with controlled scroll-only event; no browser or native input",
+      chosenScrollY: app.window.scrollY,
+      hash: app.window.location.hash,
+      scrollIntoViewCalls: app.calls,
+    }));
+    assert.equal(app.calls.length, 0, "delayed arrival must not invoke scrollIntoView after a separate position change");
+  } finally { app.cleanup(); }
+});
+
+test("a scroll event without a position change preserves delayed arrival", () => {
+  const app = mount();
+  try {
+    app.window.emit("scroll"); app.flush();
+    app.arrive(); app.window.emit("scroll"); app.flush();
+    assert.equal(app.calls.length, 1);
+    app.window.scrollY = 2200; app.window.emit("scroll"); app.mutate(); app.flush();
+    assert.equal(app.calls.length, 1, "a resolved arrival remains consumed");
+  } finally { app.cleanup(); }
+});
+
+test("keyboard activation captures the position already reached by native focus without imperative link scrolling", () => {
+  const app = mount({ hash: "" });
+  try {
+    // The browser test separately proves the scoped CSS makes native focus
+    // scrolling immediate. Here the effect receives that settled position.
+    app.window.scrollY = 400;
+    app.click(lineupHash, { detail: 0 }, true); app.window.location.hash = lineupHash;
+    assert.equal(app.calls.length, 0);
+    assert.equal(app.window.scrollY, 400);
+    app.window.emit("scroll"); app.window.emit("hashchange"); app.flush();
+    app.arrive(); app.flush();
+    assert.deepEqual(app.calls.map(call => call.id), [lineupId]);
+  } finally { app.cleanup(); }
+});
+
+test("a subsequent scroll still cancels a keyboard-armed intent, including before scroll dispatch", () => {
+  for (const dispatch of [true, false]) {
+    const app = mount({ hash: "" });
+    try {
+      app.window.scrollY = 400;
+      app.click(lineupHash, { detail: 0 }, true); app.window.location.hash = lineupHash;
+      app.window.scrollY = 600;
+      if (dispatch) app.window.emit("scroll");
+      app.arrive(); app.flush();
+      assert.equal(app.calls.length, 0);
+    } finally { app.cleanup(); }
+  }
+});
+
+test("keyboard activation of an existing anchor keeps native navigation untouched", () => {
+  const app = mount({ existing: true });
+  try {
+    app.click(lineupHash, { detail: 0 }, true); app.flush();
+    assert.equal(app.calls.length, 0);
+  } finally { app.cleanup(); }
+});
+
+test("changed position cancels arrival even when its scroll event is still queued", () => {
+  const app = mount();
+  try {
+    app.window.scrollY = 400;
+    app.arrive(); app.flush();
+    assert.equal(app.calls.length, 0, "the mutation frame must check position before consuming the missing-target intent");
+    app.window.emit("scroll"); app.flush();
+    assert.equal(app.calls.length, 0);
+  } finally { app.cleanup(); }
+});
+
+test("an explicit same-hash click rearms arrival at the new position after scroll-only cancellation", () => {
+  const app = mount();
+  try {
+    app.window.scrollY = 400; app.window.emit("scroll"); app.flush();
+    app.click();
+    app.window.emit("hashchange"); app.window.emit("scroll"); app.flush();
+    assert.equal(app.calls.length, 0);
+    app.arrive(); app.flush();
+    assert.equal(app.calls.length, 1);
+    assert.equal(app.calls[0].id, lineupId);
+  } finally { app.cleanup(); }
+});
+
+test("horizontal position changes cancel the old intent while a new hash captures its own position", () => {
+  const app = mount();
+  try {
+    app.window.scrollX = 40; app.window.emit("scroll"); app.flush();
+    app.arrive(); app.flush();
+    assert.equal(app.calls.length, 0);
+    app.window.location.hash = "#club-table"; app.window.emit("hashchange");
+    app.window.emit("scroll"); app.flush();
+    app.arrive("club-table"); app.flush();
+    assert.equal(app.calls.length, 1); assert.equal(app.calls[0].id, "club-table");
+  } finally { app.cleanup(); }
 });
 
 test("real navigation honors changed hashes even before hashchange dispatch", () => {

@@ -78,7 +78,7 @@ test("card zoom ignores a drag gesture while preserving keyboard activation", ()
   assert.match(zoom, /Math\.hypot\([\s\S]*?\) >= 8/);
   assert.match(zoom, /if \(pointerMovedRef\.current\) \{[\s\S]*?return;/);
   assert.match(zoom, /event\.key !== "Enter" && event\.key !== " "/);
-  assert.match(zoomCss, /touch-action: pan-x pan-y;/);
+  assert.match(zoomCss, /touch-action: auto;/);
 });
 
 test("short landscape zoom keeps named card regions and scales the artwork to its measured column", () => {

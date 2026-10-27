@@ -16,3 +16,6 @@
 .cards { display:grid; grid-template-columns:repeat(5,minmax(0,64px)); justify-content:center; gap:clamp(8px,2vw,16px); margin:24px 0; }
 .cards span { display:block; width:100%; aspect-ratio:430/691; }
 .pitch { width:100%; aspect-ratio:105/68; }
+
+/* The authenticated header remains outside this streamed body placeholder. */
+.contentLoading { min-height:70vh; min-height:70dvh; padding:24px 0; background:none; }

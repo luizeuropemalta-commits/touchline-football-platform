@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useLayoutEffect, useRef, useState } from "react";
-import { ArrowLeft, Check, ChevronRight, X } from "lucide-react";
+import { ArrowLeft, ChevronRight, X } from "lucide-react";
 import { resolveTouchlineCatalogueLocale } from "@/lib/touchlineArena/catalogue-locale";
 import { getTouchlineClubOwnerMarketCopy } from "@/lib/touchlineArena/club-owner-market-i18n";
 import { CLUB_OWNER_PLAN_PREVIEWS, getClubOwnerPlanBenefits, getClubOwnerPlanBenefitTerms, getClubOwnerPlanShowcaseCopy, getClubOwnerPlanDisclosure } from "@/lib/touchlineArena/club-owner-plan-showcase";
@@ -119,7 +119,7 @@ function PlanOnboardingSession({ open, locale, draftLocalesEnabled = false, onDi
           <h3>{disclosure.viewBenefits}</h3>
           <p className={styles.note}>{plan === "beta" ? disclosure.betaSquad : disclosure.squad}</p>
           <p className={styles.note}>{disclosure.status}</p>
-          {plan === "beta" ? <div className={styles.betaBenefit}><Check size={22} aria-hidden="true" /><p>{labels.betaBenefit}</p></div> : <dl className={styles.benefits}>{getClubOwnerPlanBenefits(plan, locale, draftLocalesEnabled).map(benefit => <div key={benefit.label}><dt>{benefit.label}</dt><dd>{benefit.value}</dd></div>)}</dl>}
+          <dl className={styles.benefits}>{getClubOwnerPlanBenefits(plan, locale, draftLocalesEnabled).map(benefit => <div key={benefit.label}><dt>{benefit.label}</dt><dd>{benefit.value}</dd></div>)}</dl>
           {plan !== "beta" ? <p className={styles.note}>{getClubOwnerPlanBenefitTerms(locale, draftLocalesEnabled)}</p> : null}
           {hiringAction(plan)}
         </div>

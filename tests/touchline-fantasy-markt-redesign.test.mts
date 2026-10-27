@@ -63,7 +63,8 @@ test("the My Club presentation keeps the guided coach-first Gameweek flow", asyn
   assert.match(client, /filteredCoaches\.map[\s\S]*?<CompactClubIdentity clubName=\{entry\.clubName\} clubLogoUrl=\{entry\.clubLogoUrl/);
   // Legacy browsing stays club-scoped; the funded collection can only display
   // its owned coach until an audited paid coach-change flow is available.
-  assert.match(client, /filteredCoaches = snapshot\.coaches\.filter\(\(entry\) => findTouchLineClub\(entry\.clubName\)\?\.teamId === selectedCoachClub\?\.teamId\s*&& \(!normalizedQuery \|\| `\$\{entry\.coach\.displayName\} \$\{entry\.clubName\}`\.toLowerCase\(\)\.includes\(normalizedQuery\)\)\s*(?:\/\/[^\n]*\n\s*)*&& \(!collectionEnabled \|\| !collection\.state \|\| entry\.id === collection\.state\.coach\?\.id\)\)/);
+  assert.match(client, /collection\.canHireCoach \|\| entry\.id === collection\.state\.coach\?\.id/);
+  assert.match(client, /marketPolicy\?\.planKey !== "beta" \|\| entry\.slot\.cardTier === "ruby-red"/);
   assert.match(client, /builderCopy\.hireCoach/);
   assert.match(client, /entry\.competition\?\.home\.touchlinePoints[\s\S]*?entry\.competition\?\.away\.touchlinePoints/);
   assert.match(client, /<aside className=\{styles\.guidePanel\} ref=\{guidePanelRef\} data-guide-step=\{visibleStep\} tabIndex=\{0\}[^>]*onPointerDown=\{\(event\) => \{ if \(event\.target === event\.currentTarget\) event\.currentTarget\.focus\(\{ preventScroll: true \}\); \}\}/);
@@ -85,12 +86,12 @@ test("the My Club presentation keeps the guided coach-first Gameweek flow", asyn
   assert.match(client, /const builderRef = useRef<HTMLElement>\(null\)[\s\S]*?const guidePanelRef = useRef<HTMLElement>\(null\)/);
   assert.match(client, /new ResizeObserver\(synchroniseHeight\)[\s\S]*?observer\.observe\(builder\)/);
   assert.match(client, /<section className=\{styles\.builder\} ref=\{builderRef\}/);
-  assert.match(styles, /\.guidePanel\{[\s\S]*?display:flex[\s\S]*?height:var\(--market-guide-height,100%\)[\s\S]*?overflow:auto[\s\S]*?overscroll-behavior-y:contain[\s\S]*?scrollbar-gutter:stable[\s\S]*?touch-action:pan-y[\s\S]*?flex-direction:column/);
+  assert.match(styles, /\.guidePanel\{[\s\S]*?display:flex[\s\S]*?height:var\(--market-guide-height,100%\)[\s\S]*?overflow:auto[\s\S]*?overscroll-behavior-y:contain[\s\S]*?scrollbar-gutter:stable[\s\S]*?touch-action:\s*auto[\s\S]*?flex-direction:column/);
   assert.match(styles, /\.guidePanel\[data-guide-step=players\],\.guidePanel\[data-guide-step=coach\]\{overflow:hidden\}/);
   assert.match(styles, /@keyframes touchlineNeonOrbit/);
   assert.match(styles, /\.playerViewport\{[\s\S]*?flex:1[\s\S]*?border:1px solid transparent[\s\S]*?conic-gradient\(from var\(--touchline-neon-angle\)[\s\S]*?overflow:hidden[\s\S]*?animation:touchlineNeonOrbit/);
   assert.match(styles, /\.playerScroller\{[\s\S]*?height:100%[\s\S]*?padding:14px 16px 24px 14px[\s\S]*?overflow-y:auto[\s\S]*?overscroll-behavior-y:contain[\s\S]*?scrollbar-gutter:stable both-edges[\s\S]*?clip-path:inset\(1px round 16px\)/);
-  assert.match(styles, /\.coachScroller\{[\s\S]*?flex:1[\s\S]*?overflow-y:auto[\s\S]*?touch-action:pan-y/);
+  assert.match(styles, /\.coachScroller\{[\s\S]*?flex:1[\s\S]*?overflow-y:auto[\s\S]*?touch-action:\s*auto/);
   assert.match(styles, /\.clubSelector\{[\s\S]*?grid-template-columns:repeat\(10,minmax\(0,1fr\)\)/);
   assert.match(styles, /\.clubSelector>button\{[\s\S]*?background:transparent/);
   assert.match(styles, /\.playerScroller::\-webkit-scrollbar,\.coachScroller::\-webkit-scrollbar\{width:10px\}/);

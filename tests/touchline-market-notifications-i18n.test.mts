@@ -68,7 +68,7 @@ function consumer(locale: string, getCopy: (locale: string) => Copy) {
   let focused = 0;
   const state = {
     locale, draftLocalesEnabled: false, pt: locale === "pt-BR", open: false, busy: false, preferences: initial as unknown, message: "", id: "panel-id",
-    generation: { current: 0 }, busyRef: { current: false }, mounted: { current: true },
+    generation: { current: 0 }, busyRef: { current: false }, mounted: { current: true }, actionAbort: { current: null }, AbortController,
     trigger: { current: { focus() { focused++; } } }, title: { current: { focus() { focused++; } } },
     React, Bell: () => React.createElement("svg", { "aria-hidden": true }), controls: { link: "canonical-control" },
     getTouchlineMarketNotificationsCopy: getCopy, requestAnimationFrame: (callback: () => void) => callback(),

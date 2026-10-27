@@ -32,7 +32,7 @@ async function destination(result:AuthResult|null|Error,params:Record<string,str
 test("public entry resolves admin, customer and unknown roles without customer links for admin",()=>{
   assert.equal(touchlineGlobalNavigationEntryHref("pt-BR","auth"),"/admin?lang=pt-BR");
   assert.equal(touchlineGlobalNavigationEntryHref("de-DE","auth",true),"/admin?lang=en-GB");
-  assert.equal(touchlineGlobalNavigationEntryHref("pt-BR","public"),"/account?lang=pt-BR");
+  assert.equal(touchlineGlobalNavigationEntryHref("pt-BR","public"),"/clubowner?lang=pt-BR");
   assert.equal(touchlineGlobalNavigationEntryHref("pt-BR","authenticated"),"/clubowner?lang=pt-BR");
 });
 test("verified administrator returns directly to admin, never creates a customer team",async()=>{

@@ -1,5 +1,16 @@
 # TouchLine Current State
 
+### 2026-10-25 — QA df29cf17 READY; hosted smoke partial, sports data stale
+
+SUPERSEDES previous awaiting-budget/publication status for df29cf17 only. Owner authorized one new QA Git-native attempt; push0acff3 consumed1/1. GitHub40171729205 SUCCESS:6497total/6447PASS/0FAIL/50SKIP (ce6aa6). VercelGsRnQvGT1vSAJypwyGtVPyysQeUB Ready14m56s; authenticated Safari dashboard verified exactSHA df29cf1785fde301878895539ef202a456229334,Preview/qa and stableQAalias.
+
+🟢 1. QA application published: https://touchline-arena-official-git-qa-fifa-agent-plataform.vercel.app . Immutable preview https://touchline-arena-official-1sg2w74qj-fifa-agent-plataform.vercel.app . NoProduction action.
+🟢 2. Public configuration PASS and3GETs200. StableQA normalSafari opened customer LuizLopes/VIP,balance1.254.350.000TC,34/35players,10/11starters,ninereserves,EnzoMaresca. Header/account/rail screenshot and Live19722140 Everton–Chelsea render confirmed. No roster operation executed.
+🔴 3. Sports freshness remains unresolved: publication/live fetched2026-10-16,about8days16h old; livescores partialpersistedschedule5fixtures/degradedtrue. Live shows stale notice. Deployment success does not fix source data.
+🔴 4. Full hosted mobile/RTL,seam/speed,ClubHub destination and runtime log checks remain pending;50SKIPnotPASS. Coach financial operations,notifications,remoteSQL/provider recovery not activated.
+
+Evidence coordinator outputs/card-review-20260921/QA_HOSTED_SMOKE_RESULT_20261025.md and QA_PUBLIC_SMOKE_20261025.json; manifest updated READY_SMOKE_PARTIAL_DATA_STALE. These checkpoint-only writes occur after deployment and are not pushed; product code remains deployed df29cf17. No extra build budget consumed. PriorReadyQA4pzGUi27KE3JdNoMJ8H99fKt4Hvp is historicalrollbackreference,revalidatebeforeuse. MISSION: RELEASE publishedQA; overall functional/data approval incomplete; next resolve existing shared sports synchronization and remaining hosted checks. Preserve allWIP/data;Productionuntouched.
+
 ### 2026-10-25 07:07 UTC — fractional carousel seam corrected; full local verification PASS
 
 Remote20d1a827 attempt failed:GitHub40169811632=6492total/6441PASS/1FAIL/50SKIP; Vercel6Sy2B8RWdyidsZJM8iUovhnL8NyU ERROR QA_CI_NOT_SUCCESSFUL12m21s. Navigation correction passed. Remaining failure exposed native WebKit390ar-SA rounding:cycle1473.4375,offset1473/2946 feedback between animation and scroll normalization.
@@ -5963,3 +5974,394 @@ Reservas: espaçamento compartilhado4px→4.4px (+10%), mesmas medidas nas duas 
 Refinamento posterior do proprietário: ENTRA esquerda / SAI direita; nomes e setas verde/vermelha no centro de três colunas, sem legendas acima dos cards. Área técnica com linhas flex centradas e treinador30%maior.5testes focados PASS; sem mutação de elenco. Inspeção final desses refinamentos pendente: usuário navegava no Safari, ações interrompidas pela proteção de concorrência; não forçar nem declarar novo aceite visual.
 
 DAILY UI: entrada Fora da partida agora usa ClubOwnerSquadSwapDialog, compartilhado com titulares/reservas, em vez do seletor textual legado. Revisão exibe dois cards canônicos SAI/ENTRA; fluid cards não ampliam moldura compacta119px e comparação reserva folga igual para prêmios. Textos de substituição refinados nos oito idiomas. Safari real: Cole Palmer → seleção Rayan Cherki → revisão com dois cards, bordas nítidas e alinhadas após remount. Nenhum clique Confirmar/mutação realizado.13testes focados PASS, TypeScript PASS, lint escopado0, diff-checkPASS. Verificação mobile final, persistência da operação e publicação ainda pendentes; sem build completo/deploy/Produção. Screenshot na pasta de visualizações da conversa; relatório no MOBILE_REPAIR_PLAN_20261023.md da auditoria mestre.
+
+
+## 2026-10-25 — QA synchronization recovery checkpoint (08:20 UTC)
+
+QA only. Provider-limits-only policy enabled with real authority receipts; original expired lease retained/audited. Automatic run 3a94f550-59b4-4c08-b2b0-c4176b366e27 recovered final historical backlog. Fresh read 08:20 UTC: 75 Full Time,15 future Not Started,zero past Not Started.75/75 stored completed fixtures have feeds and V4 settlements; scores agree. Active player ranking427players,75/75fixtures,audit passed,published08:07:13. Safari Haaland full card confirms60.16points/9goals against database. This is not an exhaustive provider inventory proof; guarded comparison runner pending database connection diagnosis, zero provider receipts on failed attempt.
+
+Local WIP fixes: canonical historical lookup beyond4h schedule; V4 rows-written count; latest10completed results including active round plus all in-play games; roster last actual fixture and settlement pagination.102combined focused tests previously passed; new cross-round live regression brings match-centre suite32/32; focused ESLint and diff-check pass. App remains published df29cf1785fde301878895539ef202a456229334; no app deploy/build consumed. Full gates, exhaustive provider inventory and sitewide responsive/browser proof remain red. Evidence coordinator outputs/card-review-20260921/QA_SYNC_RECOVERY_20261025.md. Production untouched.
+
+🟢 2026-10-25 08:23 UTC — Superseding inventory checkpoint: guarded real Sportmonks comparison league8,currentseason28083,21Aug–25Oct returned80fixtures; QA80; identical IDs/scores/states,zero differences.2HTTP200pages and persisted receipts970e4334-49fb-4e8f-8833-406586303397/31dd41a7-6e13-4b7f-97eb-fd4f470e74b3. No football data writes from audit. Evidence coordinator QA_PROVIDER_HISTORY_AUDIT_20261025.json. Tabelaaudit20clubs/150played/213GF=213GA/SG0. Coach snapshot20coaches/75fixtures exact. Safari ranking+zoom+completeprofile Haaland60.16/9goals/8games agree. Native Safari ClubHub table displays MCI8games/21points/+11. Previous seasons/coach identity refresh not claimed. Typecheck2GiB PASS;1GiB failed OOM; serverlimit unchanged. Additional Live reader/carousel fixes underway, release gates pending.
+
+
+## 2026-10-25 — G1 mobile/shared navigation: LOCAL, acceptance remains RED
+
+Owner requests every device (phone/tablet/computer/console), grouped work and no deploy before all acceptance gates. Device coverage is explicit: simulated layouts are not physical proof. Full scope and new enterprise-admin/email-contract/PNG requests preserved in /Users/luizlopez/.codex/visualizations/2026/09/05/01a072f6-e393-7e53-b03d-83c34721d03a/TOUCHLINE_AUDITORIA_CONSOLIDADA_20261025.md .
+
+Changes: public global entry targets protected /clubowner directly (removes /account auth/redirect hop, preserves compatibility route and existing guards); shared card resting scale1 retains interaction without permanent translateZ/will-change/backface; public scroll surfaces allow native pan/pinch through touch-action:auto; all official-table variants expose labelled keyboard focus; Rankings/ClubHub outer padding respects safe-area at every existing breakpoint. No auth policy, credentials, data, transaction, API/provider call, remote mutation or publication changed. Existing sync/history WIP preserved.
+
+Evidence: 37 navigation/auth/locale tests passed; 102 distinct CSS/i18n/component tests covered (101 initial + repaired obsolete tabindex assertion, relevant file10/10). Header browser63 combinations passed across Chromium/WebKit/Firefox, widths320/390/768/844/1024/1280/1920, PT/DE/AR; Firefox native scroll-container tab stop explicitly handled, all links still required. Card zoom24 scenarios passed3engines/2landscape sizes/2notch sides/2card types. New safe-area test54scenarios passed3engines/3viewports/2wrappers/3insets. Typecheck finalPASS, focusedlint0errors/1preexistingunusedwarning, diffcheckPASS. Independent G1 review found no additional P1/P2, no remaining public pinch blocker. No measured memory gain or native crash recovery claimed.
+
+Logs /private/tmp/touchline-g1-{navigation,css-contracts,social-contract,header-matrix-final,zoom-three-engines,safe-areas,typecheck-final,lint}-20261025.log (individual actual filenames in consolidated audit). F2 and T05 automated checks now green only within their isolated scope. All product/device approvals remain red pending actual new-candidate page/account proof and physical iPhone/iPad/Android/console. Requested available device models asynchronously. Local3100 inactive at observation; old tmp runtime absent; repository launcher available but source QA environment file path not recovered this turn. No local server/remote deploy started.
+
+G1 file scope: lib/touchlineArena/global-navigation.ts; app/globals.css; app/rankings/touchline-tables.module.css; app/touchline-clubs/[club]/page.tsx (padding only, preserve prior sync changes); components/touchline/TouchlineOfficialLeagueTable.{tsx,module.css}; components/touchline/cards/TouchlineCardZoom.module.css; app/fantasy/fantasy.module.css; components/touchline/match-centre/touchline-match-centre.module.css; components/touchline/club-hub/ClubHubPremiumPrototype.module.css; components/touchline/club-social/TouchlineClubSocialFeed.module.css; associated navigation/CSS/i18n/browser tests and new tests/touchline-page-safe-area-browser.test.mts. Rollback only these G1 hunks, never reset entire contaminated worktree. Mission footer reviewed: group NOT complete; full suite/build/clean SHA/device and end-to-end gates not satisfied.
+
+2026-10-25 — Owner device clarification: iPhone13ProMax, Android tablet, MacBook available; no console owned, quality requirement unchanged. Expanded G1 safe-area browser geometry matrix to8viewports844x390/926x428/600x960/768x1024/1024x768/1280x800/1440x900/1920x1080.144simulated scenarios acrossChromium/WebKit/Firefox and2wrappers/3insets PASS, zero failures/skips,48.3s; log /private/tmp/touchline-g1-safe-area-expanded-20261025.log. DiffcheckPASS. This is not physical device, complete page, native pinch/crash recovery or console approval. G1 remainsRED; no deploy.
+
+## 2026-10-25 — G1 continuation: real Safari diagnosis, NOT complete
+
+Owner carousel clarification recorded in consolidated audit: onlycurrentround inclFT until finalfixture, thennextcomplete; Live previous+current. Owner expressly requested retaining G1focus; G3notimplemented. G2 read-only findings in coordinator G2_PROFILE_POINTS_READ_AUDIT_20261025.md and G2_COACH_MARKET_READ_AUDIT_20261025.md.
+
+QA environment recovered using existing Supabase CLI authentication, keys onlyinmemory, via coordinator outputs/card-review-20260921/qa-candidate-connected-source-20261025.mjs. Exactrepo/HEADdf29 pinned; personaPASS; collection/contextenabled, releasefalse. No provider/push/payments/transaction. Candidate3100 launched then stopped intentionally forserialtests; onlylocaldiagnostictabclosed, publishedQA/adminsessionspreserved.
+
+NativeSafari: real35contracts,11XI,9bench,15outside,Enzo. ColdGET33.5s(next23.9/app9.2), manifest95s(next94),collectiontimeout40s/localetimeout15s. Warmcollection255–275ms; localeRetryGET200/494ms enabledcontrol. Subsequentreload12.7s(app) againblockedlocale/balance, therefore NOT recoveredend-to-end. TransientXI0/11/coachblank with35contracts laterreturned11/Enzo withoutwrites; SSRseedcorrectionunderreview.
+
+Concretehydrationerror: DocumentLocaleSync effectmutated streamedmain id/tabindex/data-managedbeforehydration. Removedmigration; ReactSSRwrapperretainsstable skiptarget/tabindex.20focusedtestsPASS (/private/tmp/touchline-g1-hydration-focus-20261025.log); independentreview foundnoblockingregression. No nativeiPhonecrashclaim. Serverfinalavailability/cards/QAreadsparallelized afterwriters;33testsPASS (/private/tmp/touchline-g1-parallel-read-20261025.log), actualperformanceimprovementnotyetmeasured.
+
+Skippedtestfollowup: locale menu/select fixturesrepaired (realCSSmodules/newdependencies,RetryGETwithoutre-PUT);14testsPASSincluding12browsercases, combinedlocale-utilityfinallogfailslaterutilitycapacity,notglobalPASS. AppLoadingCSSusescurrentsourceinsteadstale.nextchunk;sixscenariosPASS. Globalerrorportrait3testsPASS. UtilityChromium18casesPASS; WebKitincompletepressure2. Cinematicplayedbothenginesbutcapacityabortbeforecompletion,NOTPASS. Newtypecheckrunningatcheckpoint. G1/allproductgroupsremainRED; fullsuite/build/physicaldevices/newQAdeploynotdone.
+
+Scopeadded: DocumentLocaleSync.tsx,locale-persistence.test.mts,public-launch-gate.spec.ts(comment),server.ts,fantasy-arena-projection.test.mts,locale-menu-browser/app-loading-browsertestfixtures. Rollbackonlythesehunks,preserveearliersync/G1WIP. Missionfooterreviewed; no claimofcompletion. ProductionNOTTOUCHED.
+
+
+## 2026-10-25 — G1 follow-up: verified local changes, group still RED
+
+Owner explicitly confirmed retaining G1 focus; carousel requirement is a reminder only. Carousel current round only; Live previous+current remain G3 acceptance, not implemented by this follow-up.
+
+Read-only ClubOwner snapshot now starts selections/history as soon as confirmed userGameweek resolves, without waiting for catalogue/coaches/ranking. Reconcile path retains independent reads → alert writer → dependent reads. One userGameweek query shared; both branches observed immediately; no partial snapshot or draft fallback on locked-XI failure. Independent reviewer found no new defect.41focused tests PASS (arena projection, rollover, entitlement, catalogue waterfall): /private/tmp/touchline-g1-squad-dependency-20261025.log. No measured latency gain claimed.
+
+Badge overlays now bound both dimensions to visual viewport, preserve complete scrollable text, support keyboard scrolling while trigger keeps focus, coalesce placement work and cancel pending callbacks.12unit tests PASS;2match-card browser tests PASS and2availability browser tests PASS in Chromium/WebKit including long text and50px-height constrained viewport. Logs /private/tmp/touchline-g1-badge-height-unit-20261025.log, /private/tmp/touchline-g1-badge-height-browser-20261025.log, /private/tmp/touchline-g1-availability-height-browser-20261025.log. Native pinch/crash recovery NOT proved.
+
+SSR seed and skip-target independently reviewed: no new concrete issue; actual hydration/transitions still require candidate. Static manifest200 verified preserving metadata but performance gain unproved. Local-only timing ready for auth/avatar/snapshot/liveRail/collection/total, no private arguments/results logged; live measurement not yet performed.
+
+TypeScript full PASS /private/tmp/touchline-g1-types-final-pass2-20261025.log; scopedESLint PASS /private/tmp/touchline-g1-lint-final-pass2-20261025.log; diffcheckPASS. These are not fullsuite/build/release.
+
+Skipped-browser tracking: T13WebKit onecasePASS then capacityWARN did not normalize within10s; T04MP4played but freeRAM<25% beforefinalcapture; T49abortedpressure2. T48root cause of geometric test failure was floating rounding duringfocus translation (44px layout measured43.999996px); test now requireslayout≥44px andvisual≥43.999px.30Chromiumcases passed beforecapacityabort plus2remainingTR/DE1280cases passed separately;32/32scenario coverage, not a clean combinedtestPASS. WebKitpendingatcheckpoint. No site-footer productCSS changed.
+
+Mac locked atnativeSafari attempt; manualunlock requested asynchronously. Candidate remainsOFF. Preserve allrealaccounts/sessions; no logout, storageclear, secretschanged, rosteroperation ordeployment. Allproductgroups remainRED. Next: finishWebKitcheck/record exactresult, regainSafari afterunlock, runinstrumentedcandidate withfilesfrozen, then address measuredbranch. Consolidatedaudit and50-skip inventory retain originalresults withlaterverification separately. ProductionNOTTOUCHED.
+
+
+## 2026-10-25 — G1 instrumented Safari measurement and owner additions
+
+Measured local candidate from df29+preservedWIP: first cold58s (Next49s), anothercompile23.1s (Next17.7s); warm4.8s then2.1s (Next3ms/auth147ms/snapshot1872ms/collection136ms/liveRail511ms). NativeSafari showed11XI,9bench,15outside,coach andbalance, but locale stilldisabled with Retry. Log /private/tmp/touchline-g1-candidate-measured-final-20261025.log. Not a comparative benchmark or groupPASS. Stopped owned runtime30978 before edits and closed onlylocaltab; publishedQA andaccount sessionspreserved.
+
+New requirements recorded RED in consolidatedaudit23/24: remove manual Retry near language and recover reads automatically without replaying PUT; coachzoom clubcrest must scale proportionally acrossalltrainers. G1 remainsfocus; coachpresentation latergroup. Twoexistingagents own separatefiles: locale recovery and cardname canvas/state performance.
+
+T48WebKit32/32PASS (/private/tmp/touchline-g1-site-footer-webkit-20261025.log); total64isolatedscenarios with priorChromium splitruns. T49PASS aftercompiler subprocess exitsbeforeWebKit (/private/tmp/touchline-g1-site-frame-worker-20261025.log), scopedlintPASS. T13latestWebKitretry stillcapacityFAIL afterfirstcase; T04stillincomplete. Originalskipinventory preserved withlatestverification separately. Localtimingflag boundary22testsPASS (/private/tmp/touchline-g1-timing-boundary-review-20261025.log), allowedonlycanonical developmentQA/nonVercel, nothosted. No remoteenv change.
+
+Next: complete and review bounded locale recovery including unknownidentity timeout, focused tests, types/lint, nativeSafari again. Do not claim nativeiPhone crashfix. Fullsuite/build/devicecoverage/deploy stillpending; allproductgroupsRED. ProductionNOTTOUCHED.
+
+
+## 2026-10-25 — G1 automatic locale recovery and rendering follow-up
+
+Implemented/reviewed bounded transient GET recovery and independent unknown-session verification, generation fences, no PUT replay; removed manual Retry UI and instruction from eight locale copies. Independent review found then closed stale-loop GET race.93unit tests PASS (/private/tmp/touchline-g1-locale-auto-recovery-final-unit-20261025.log);23Chromium/WebKit React tests PASS including controlled timeouts and lost PUT receipts (/private/tmp/touchline-g1-locale-auto-recovery-browser-20261025.log). FullTypeScript PASS (/private/tmp/touchline-g1-recovery-types-20261025.log),scopedESLintPASS (/private/tmp/touchline-g1-recovery-lint-20261025.log),diffcheckPASS. No real preference writes.
+
+Name measurement in TouchlineEliteExactCard reuses canvas/context per effect and preserves state when measurements identical;10testsPASS (/private/tmp/touchline-g1-card-name-fit-20261025.log). Typography/coachcrest unchanged. Zoom24scenarios asserted but global120s timeout cancelled test,NOTPASS (/private/tmp/touchline-g1-card-name-zoom-regression-20261025.log). Harness now supports validated per-engine selection defaultall and abortbrowsercleanup; serialreexecutionpending.
+
+Native verification remainsPENDING: local restart refused beforelaunch atpressure2/free29%/disk~9.9GiB, no duplicate server or test runner. Log /private/tmp/touchline-g1-candidate-locale-recovery-20261025.log. No appclosed/cachedeleted. Owner requests23/24 (no Retry UI / trainerzoomcrestscale) recorded. G1/productgroupsRED; no deploy. ProductionNOTTOUCHED.
+
+
+## 2026-10-25 — G1 native locale and contextual image delivery
+
+Candidate session88104 started after pressure returned1; QA persona preflightPASS, secrets onlymemory, releasefalse. NativeSafari cold navigation33.4s (Next23.6s/application9s) showed11XI/35contracts but locale and collection timedout. Subsequent navigation12.6s also unconfirmed. Captured reload8.2s after initial endpoint compilation recovered: preferencesGET200/299ms, collectionGET200/410ms (earlier4.7s), enabled native locale selector with8options, balance1.214.350.000TC and11XI/35contracts. Opened menu thenEscape, no preference write. Removed locale Retry confirmed visually atheader. This is warm-reload recovery only, NOT cold recovery, physicaliPhone proof, latencybenchmark or groupPASS. Network/console included prior aborted collection request access-control error; do not infer CORS cause from that alone. Log /private/tmp/touchline-g1-native-auto-locale-20261025.log. Stopped ownedcandidate88104 andclosed onlylocaltab; publishedQA/Admin sessionspreserved.
+
+Contextualimage patch5files: GameweekCard,EliteExactCard,CollectionSlots,FantasyGameweekClient,testgameweek-i18n. Onlyoutsideandmarket thumbnails lazy; XI/reserves/zoom eager.3focusedSSR/callsite/conversiontestsPASS /private/tmp/touchline-g1-contextual-images-20261025.log. Independentreview no concreteissue; CSSneonmay stillfetchframeearly, network/memorygain NOTmeasured. Types/lint priorreceipt predates thispatch; finalchecks pending.
+
+Initialclientfanout identified: preferences,collection,sharedpresentation signal then publication under8scombineddeadline; fantasy/state firstpoll20s. No pollingpercard. Purestatusclassifier extraction being prepared to remove presentationimports from stateendpoint; no rule/datachange authorizedbythisstep. G1andallproductgroupsRED. No deploy/realtransactions/Productionchanges.
+
+
+## 2026-10-25 — G1 continued: streamed authenticated shell, verification in progress
+
+Pure fixture-state extraction preserved classifier behavior and public re-exports;60focused testsPASS (/private/tmp/touchline-g1-pure-fixture-state-20261025.log). Existing AET/penalties classification defect documented separately forG3, not fixedbyextraction. Zoom regression re-executed serially:WebKit8,Chromium8,Firefox8scenariosPASS (/private/tmp/touchline-g1-zoom-{webkit,chromium,firefox}-serial-20261025.log). These are isolated browser/simulatednotch checks, notphysicaliPhonepinchproof. FullTypeScript and scopedESLint passed after contextualimages+classifier (/private/tmp/touchline-g1-{types,lint}-images-state-20261025.log); newer shell requiresfreshchecks.
+
+G1 shell refactor keeps verified identity/header outside sportingbody Suspense; auth and owner redirects remain before protected reads. Body preservesparallelreads,collectionprovideridentityandleadership. Route auth-cold fallback remains.65focusedtestsPASS (/private/tmp/touchline-g1-streamed-shell-focused-20261025.log),includingpendingbody/headerstreaming/authfailures. Independent review andnativeverificationpending; no4secondrecoveryclaim.
+
+T04 compiler now exits child process beforebrowser; actualWebKit attempt failed beforePNG onfreeRAM<25% afterinitialvideosample (/private/tmp/touchline-g1-cinematic-worker-webkit-20261025.log),NOTPASS. T13 WebKit retry prior tolifecyclepatch passedonecase thenWARN2timeout (/private/tmp/touchline-g1-utility-webkit-recovered-20261025.log). Harness now closesbrowserpercase whilepreservingcapacitychecks,assertionsandmatrix; independentlyreviewed,executionpending. Do not repeatunchangedcapacityfailures.
+
+Coachzoomitem24 diagnosed/documented in coordinator G2_COACH_ZOOM_CREST_AUDIT_20261025.md; nofixclaimed. G1/allproductgroupsremainRED. CandidateOFF duringcode/tests, oneheavyprocess. No accountwrites,deploy,Productionchange. ExistingWIPpreserved.
+
+
+## 2026-10-25 — G1 verification update and item 24 local correction
+
+Authenticated streamed shell:65focusedtestsPASS,fullTypeScriptPASS,scopedESLintPASS,independentreviewnoP1/P2. Logs /private/tmp/touchline-g1-streamed-shell-{focused,types,lint}-20261025.log. These prove local contracts, not Safari latency or finalhydration.
+
+Locale transient-GET exhaustion now recovers on focus/online/visible document, at mostonecycleinflight and30sbetween eventcycles. Sameaccount/generationvalidation, bounded3GET, noPUTreplayorautomaticwrite reconciliation.60testsPASS /private/tmp/touchline-g1-locale-visible-recovery-20261025.log; scopedESLintPASS /private/tmp/touchline-g1-locale-visible-lint-20261025.log; independentreviewPASS. Fulltypesafterthislastdelta stillpending. NativeSafari unavailable: Maclocked; asynchronousunlockrequested, no login/storagechange.
+
+T13 browser lifecycle improved:15/18WebKitcasesPASS in5partitions (1280PT/AR,844PT/AR,390PT);390AR3cases remainpending. FirstlastpartitionfailedprelaunchWARN10s; retryafterpressure1/free34 reachedcompilerexit then capacityquerysysctlETIMEDOUT. Logs /private/tmp/touchline-g1-utility-per-case-webkit-*-20261025.log. No finalmatrixPASS; priorChromium18scenariospreserved. One844ARscreenshot inspected, confirmsisolatedheader/navigationreadable.
+
+Item24 coachcrest: removed2zoomCSSoverrides that clampedcrestto10%-anchor. Canonicalrenderer/art/compact/editor/crown unchanged.7unitPASS /private/tmp/touchline-g2-coach-crest-unit-20261025.log; independentreviewnoP1/P2. ActualChromium8zoomscenariosPASS /private/tmp/touchline-g2-coach-crest-chromium-fixture-20261025.log; WebKit8PASS /private/tmp/touchline-g2-coach-crest-webkit-20261025.log. Fourcoachgeometrychecks/engine confirm92/300authoredratio,withininner,nocollisionname/flag/crown. Initialbrowserattemptfoundmissingcrestinputinfixture; addedexplicitlocalArsenalcrestprop, notproductdata. WebKit844screenshot inspected /private/tmp/touchline-coach-zoom-crest-4wIikW/webkit-844-coach.png. Firefoxpendingatentry. These are isolateddefaultlayout+synthesizednotch, notsavedlayout,physicaldevicesoractualQAroute. Item24/G2remainREDpendingfullvisualacceptance.
+
+G1/fullsitegroupsremainRED. CandidateOFF,Macsessionspreserved,zero accounttransactions/deploy/Productionchanges. Rootcontinuesserializedchecks; no parallelheavywork.
+
+
+## 2026-10-25 — Current local checkpoint; native gate pending
+
+G1 shell65focusedPASS;locale visible-recovery60PASS;coachcrest7unitPASS. Coachdefault geometry24browser scenariosPASS acrossChromium/WebKit/Firefox (12coach+12player); Firefox receipt /private/tmp/touchline-g2-coach-crest-firefox-20261025.log. Independent review caught fixture coach nationalityEngland but omittedcountryCode3, thus rendererdefaultITA; this does not invalidate defaultcrestgeometry but notEnglandflagproof. Fixture nowexplicitENG andassertflagcount/alt/loaded; Chromium8scenariosPASS /private/tmp/touchline-g2-coach-crest-eng-chromium-20261025.log. ENGWebKit/Firefox batch refusedbeforelaunchpressure2 (exit75), noexecution/noPASSclaimed. Productioncallsiteaudit foundnocountryCode3omission; noproductionnationalitychange.
+
+FullTypeScriptPASS /private/tmp/touchline-g1-g2-final-types-20261025.log afterproductpatches, beforetest-onlyENGprop/assertions; scopedlintPASS /private/tmp/touchline-g1-g2-final-lint-20261025.log andfreshENGtestlintPASS /private/tmp/touchline-g2-coach-crest-eng-lint-20261025.log. gitdiffcheckPASS afterwhitespacecleanup.22logs/screenshots preserved withSHA256 in coordinator outputs/card-review-20260921/evidence-20261025-g1-g2-final; tmp receipts notsolecopies.
+
+No candidate/test/build left running bythischeckpoint. SafariQA/customer/adminsessionspreserved. Native verification blockedbylockedMac; unlockquestionpending. Do notclaimG1/G2complete orpublish. Continuefromthischeckpoint afterunlock/capacity: nativeClubOwnerheader-beforebody andlocale enabled/visible recovery withoutPUT;11XI/coach/35contracts/balance/read-onlynavigation; actualcoachzoom. StillpendingT13WebKit390AR3casesandT04videofinalproof, physicaliPhonepinch/crash/Android/tablet/console andremaininggroups. No deploy, accounttransactions orProductionchanges.
+
+MissionDAILYlocalimplementation+AUDITreview. Relevanttoolsused:execfocusedtests/types/lint/diff;headlessChromium/WebKit/Firefox;imageinspection;CUAnativeattemptconfirmedMaclocked;3subagentsforimplementation/review. Rollbackonlyownedhunks (shell/locale/crest/testlifecycle), preserveallpreexistingWIP; notcleanreleaseSHA. Fullsuite/build/nativefinalgates NOTpassed.
+
+
+## 2026-10-25 — G3 rodada completa e G2 identidade/pontos (validação local)
+
+A regra do carrossel foi implementada: escopo canônico de competição/temporada, catálogo persistido da temporada, dez confrontos da mesma rodada incluindo encerrados, avanço somente para a próxima rodada completa após o último resultado. Foco mantém a rodada inteira até sair da faixa. A página Live mantém sua seleção separada. Sem novas consultas diretas ao Sportmonks ou alteração de dados.
+
+Evidências: 70 testes focados SSR/Arena passaram; 36 de seleção/consumidores/escopo passaram; a transição renderizada passou em Chromium e WebKit em 844/en-GB, com transporte compartilhado e dados sintéticos. A primeira execução WebKit foi interrompida por pressão 2; a execução recovered passou e está separada. Consulta Supabase somente leitura confirmou 20 fixtures das rodadas 8/9; o seletor escolheu os dez atuais, e uma simulação exclusivamente em memória avançou para os dez seguintes. Recibos /private/tmp/touchline-g3-real-round-selection-20261025.json e touchline-g3-qa-rounds-readonly-20261025.json. Não equivale a validação da candidata autenticada ou iPhone físico.
+
+TypeScript completo passou com heap 2 GiB; tentativa anterior com 1 GiB encerrou por OOM, não erro de tipos. ESLint G3/G2: zero erros, dois avisos existentes de img no carrossel. Chromium844: hover/recovery, dois testes PASS. Chromium390: movimento/PT/AR, um teste PASS. Matriz completa continua pendente; não converter filtros ou SKIP em PASS.
+
+G2 pontos: erro na consulta de pontuação agora invalida snapshot completo em vez de virar zero; projeção Arena continua sem consulta. Não prova os pontos devidos à conta. G2 foto: observador compartilhado trata sessão sem user legível; identidade desconhecida retira clientes, permite recuperação somente da mesma conta ainda sem interação e nunca repete operação incerta. 36 testes PASS, revisão independente sem P1/P2. Nenhuma flag ativada ou foto enviada.
+
+QA atual de foto, pelo plugin Supabase: Edge touchline-avatar-retention ACTIVE v3, verifyJWT true; sete tabelas privadas com RLS; 14 RPCs service-only; bucket privado WebP 5MiB; políticas INSERT/SELECT service_role; cinco migrações esperadas presentes. Cron contém golden-boot inativo e live-sync ativo; nenhum job nomeado avatar, sem inferir ausência de outros disparadores. Configuração efetiva/execução periódica/upload CUSTOMER ainda precisam de prova. Não reinstalar estruturas existentes.
+
+Mac desbloqueado observado no Safari; caffeinate PID36288/session91110 mantém display/sistema ativos por dez horas desde15:09:26Malta atéaproximadamente01:09de26/10, sem alterar senha ou bloqueio manual. Candidata OFF durante testes; nenhum deploy, transação, credencial ou Produção alterados. Agentes: implementação avatar, revisão independente e G4 capas em arquivos separados. G1–G7 permanecem vermelhos como grupos completos.
+
+
+## 2026-10-25 — Beta seis clubes e capas: consolidação local intermediária
+
+Usuário confirmou que a restrição de seis clubes se aplica SOMENTE ao Beta; Standard/Master/VIP preservados. Suíte Beta final 39/39 PASS, zero skip/cancel/fail: touchline-g5-beta-six-focused-final-20261025.log. Revisão independente sem P1/P2. Falhas iniciais37/39 eram expectativa antiga16bloqueios (agora14) e cadeia SQL histórica incompleta no PGlite, corrigidas sem stubs. Migração forward local preserva ACL/recibos históricos/contas; replay e rollback por divergência testados. Não aplicada remotamente. SQL e app exigem rollout coordenado; não publicar apenas uma metade.
+
+G4: 18 lojas oficiais integradas ao cadastro já existente, total20, com fontes no relatório G4_OFFICIAL_CLUB_STORES_READ_AUDIT_20261025.md. 19 testes focados de canais/capas/i18n PASS. Capa compacta sem jogadores promocionais do City passou matriz isolada Chromium/WebKit: 5larguras×3idiomas×2clubes por motor. Revisão visual da captura600 constatou fixture sem tipografia global (Times/identidade preta): recibo prova geometria, não tipografia final. Revisão encontrou família de botão local divergente; correção para estilo compartilhado e ampliação de nomes/idiomas EM ANDAMENTO. PASS anterior não cobre esse próximo delta.
+
+T13: último lote WebKit390AR passou3cenários, completando18/18WebKit isolados junto aos15anteriores; Chromium18anteriores preservados. Revisão independente confirmou guardas de CI/pressão crítica/memória/disco; timeout consulta≤5s dentrodeadline10s. Captura notifications inspecionada pelo revisor. Não é prova de APIs reais/Safari nativo/iPhone.
+
+Safari QA publicado: aba ClubHub criada pela auditoria mostra20links; primeiros8escudos desktop inspecionados sem quadrado evidente, portanto defeito móvel ainda não reproduzido. Aba ClubOwner com alterações não salvas e Admin preservadas. Nenhum dado alterado. Recibos desta rodada preservados com hashes em evidence-20261025-g4-g5. G1–G7 continuam vermelhos como grupos completos; nenhum deploy/SQL remoto/credencial/transação/Produção.
+
+
+## 2026-10-25 — G4 validado localmente; G7 correções preservadas
+
+Pedido recente confirmado: resíduos da Arena antiga ficam no item vermelho25 para auditoria antes de remover; manter foco do site. Nenhum vídeo/asset foi apagado. Administrador deve ter somente inglês e português. A ampliação para oito idiomas não chegou ao código; sem helper/import parcial. Após usuário pedir para não priorizar Admin, trabalho voltou às páginas públicas. As correções financeiras concluídas foram preservadas.
+
+G4: canonicalV2 cobriu31 páginas isoladas por motor e oito idiomas. Inspeção PNG encontrou defeito adicional em canal restrito290px: título alemão sobrepunha CTA em1,22px. Novo teste reproduziu RED; fluxo flex-wrap exclusivo default/compact corrigiu sem mudar hero/cover nem estilo canônico. Matriz final completa3/3PASS Chromium29,7s e3/3PASS WebKit45s, incluindo limites entre irmãos, foco e44px. Capturas finais DE600 e coverPT600 inspecionadas. Não é prova de página inteira/aparelho físico. Quadrados nos escudos: A/B com20assets reais844/1280 não reproduziu; teste adicionalDPR3 em andamento, causa móvel ainda aberta.
+
+G7: moedas separadas, valores originais identificados, erro distinto de zero; export deixa explícita amostra últimas1000faturas, sem dados parciais por erro, no-store e proteção de fórmulas; webhook verifica erros de persistência e limita alertas à própria fatura. 41/41 testes PASS (8webhook,13SSR,4export,7summary,9fronteiras), TypeScript completo e ESLint focal PASS. Revisão independente sem regressão bloqueante; SQL concorrente, ordem dos eventos e reconciliação histórica permanecem abertos. Nenhuma cobrança, credencial, banco remoto ou Produção alterados.
+
+T04 agora verde somente como teste isolado de mídia: Chromium/WebKit carregam MP4 local e avançam, imagens inicial/reprodução inspecionadas sem Play. G1–G7 integrados continuam vermelhos. Teste anterior de tipos falhou em digits na versão intermediária; formatter explícito final passou. Evidências190 arquivos com SHA256 em coordinator outputs/card-review-20260921/evidence-20261025-g4-g5-g7-final. Detalhes em G4_CHANNEL_VALIDATION_20261025.md e G7_FINANCE_WEBHOOK_EXPORT_REVIEW_20261025.md.
+
+Classificação DAILY+AUDIT local; HEAD df29cf1785fde301878895539ef202a456229334 com WIP compartilhado. Candidata OFF, nenhum build/deploy/commit. Rollback limitado aos arquivos/hunks desta rodada, preservando WIP. Próximo: concluir diagnóstico dos escudos e conferência nativa pública, depois próximos grupos do site. Auditoria física móvel e integrações reais seguem pendentes; nenhuma conclusão integral declarada.
+
+
+## 2026-10-25 — G4 conferência nativa City/Brighton e esclarecimento de escopo
+
+Financeiro significa a administração de despesas, contratos e pagamentos do site solicitada hoje, não saldo TC. Usuário pediu continuar focado; admin EN/PT mantido, correções anteriores preservadas.
+
+Safari nativo na candidata local mostrou capas completas de Manchester City e Brighton em pt-BR: City sem jogadores promocionais, loja e membership compactos no canto inferior direito, títulos e escudos sem sobreposição observável no desktop. AX confirmou destinos City mancity.com/memberships e shop.mancity.com/gb/en/home/; Brighton brightonandhovealbion.com/myalbion-plus e shop.brightonandhovealbion.com/. Confirma href renderizado, não navegação/transação nesses sites externos nem todos20clubes nativos. Screenshots/AX e log preservados em evidence-20261025-g4-g5-g7-final/g4-native-*.
+
+GET City inicial98s com85scompilação; leituras posteriores6.4s/3.1s. Carrossel apresenta dez fixtures, porém snapshot continua atrasado; Brighton seção da partida mostra segundo tempo enquanto faixa aguarda atualização oficial. Divergência registrada como pendência G3, sem falsificar placar ou esconder falta de atualização. G4 inteiro e aparelhos físicos permanecem vermelhos. A/B escudos844DPR3 também não reproduziu quadrados; isso não refuta captura do iPhone.
+
+Candidata sessão2454 encerrada por Ctrl-C (exit130) após inspeção; sessões Safari customer/admin preservadas. Disco observado3837896KiB livres; consulta pressão nesta ferramenta negada pelo ambiente, não atribuir diagnóstico de RAM. Nenhum teste/build pesado paralelo, deploy/commit/SQL remoto/transação. HEAD df29cf1785fde301878895539ef202a456229334; diffcheckPASS. DAILY/AUDIT, gates globais continuam abertos. Próximo: reconciliar consumidores G3 e seguir auditoria móvel sem declarar grupo completo.
+
+
+## 2026-10-25 — continuação após quadro verde
+T37 verde LOCAL: tabela/placar compartilhados em3larguras, incluindo gols/correções/FT/degradação/recuperação, 1/1PASS7,34s. Total dos antigos50:15verdeslocais/35vermelhos; G1–G7 abertos. Recibos no workspacecoordenador outputs/card-review-20260921/evidence-20261025-score-anchor-review.
+ScoreClubHub agora usa freshness/metadata compartilhados e fixtureID correto, sem statusSSR duplicado. Focados30/30PASS. Geometria72casosChromium eWebKitPASS, mas inspeçãoPNG390ptBRstale encontrou texto emlinhasdemais: NÃO aprovado visualmente; correção de status fullwidth abaixoescudos emandamento comprovider.
+T07 AST3/3PASS, WebKit navegação/históricoexpandido1/1PASS23,97s; permanecevermelho: scrollbar nativoindisponível noheadless eoutrasinteraçõespendentes. T12 REDForest160: seis pixels spreadRGB3 contra limite2, ON/ONruídozero, contornovisível/bordasintactas. Doisrevisores apontam calibraçãoquantização necessária; nãoalterararteoulimiararbitrário.
+CandidataOFF; nenhumdeploy/mutaçãoremota/transaçãoreal. Próximo: statusfaixalarga, repetir matrizalterada, demaispendências públicas.
+
+
+### Fechamento da rodada local do placar (continuação, missão aberta)
+Status movido para faixa abaixo de ambos os escudos via subgrid; fonte17px, palavras inteiras, placarcentral e escudosalinhados. Uma assinatura live/sem pollingadicional. Chromium72/72cenários eWebKit72/72cenários PASS (8idiomas×3larguras×3estados); screenshots390ptBRstale inspecionadas raiz nosdoismotores e salvas comrecibos. Regressãofinal31/31PASS9,1s incluindoT37 apósalteração. T37verdecontinua válido.
+Não equivale a layout inteiro aprovado, Safari físico ou sincronizaçãoremota. T07/T12 continuamvermelhos pelos limitesdocumentados; proposta calibraçãoT12 apenasdesenhada, nãoimplementada. Todosagentes desta rodada entregaram; nenhumaexecuçãopesada ativa. CandidataOFF e nada publicado. Próxima rodada: fecharinteraçõesT07 e calibraçãoT12, validaçãointegrada publicG1/G3/G4; Admin seguedepriorizado.
+
+## Continuação local — testes e qualidade dos cards
+31/50 testes antigos aprovados LOCALMENTE,19pendentes no quadro mestre. T34 validado9/9(8cenários+suíte), Chromium/WebKit EN/PT reservas/fora, sem transações reais. Evidências: outputs/card-review-20260921/evidence-20261025-additional-tests no workspace coordenador.
+T03 oito idiomas, T08particionado com guardas, T14Exchange simulado, T41push simulado e T47publicação local documentados no quadro. Grupos integrados/native iPhone e recebimento real permanecem abertos.
+Cards: densidade declarativa de molduras originais,20testes focadosPASS e ESLint5arquivosPASS. WebKitDPR2 ruby-red/diamond-gold parcial; demais tiers/DPR e zoom físico pendentes. Não modificar arte nem inventar resolução.
+T15oráculo corrigido mas pressão2 interrompeu matriz; compilador em filho sendo preparado. T18teve falha real foco390/ar-SA, em investigação. T36largura dos campos corrigida, foco ainda falha; sem aprovação. T19harness atualizado para endpointcanônico, execução emcurso no log /private/tmp/touchline-live-canonical-final.log.
+CandidataOFF, nenhuma publicação/commit/transação/credencial alterada. WIP preservado. Agentes: cinematic T15child+T18foco; provider T36foco; strip T19harnessentregue. Próximo: validar correções, restantes T07/10/12/23–33/35, integrados e físicos. Não repetir testes já comprovados sem mudança.
+
+## Continuação — 40/50 testes antigos locais
+Quadro mestre atualizado: T15(24casos),T18(12casos),T19(6testes),T24(marketChromium/WebKit),T25(zoomChromium),T29(montagemdiagnóstica),T31(8cenários),T32(4cenários),T33(4cenários),T34(8cenários) têm recibos locais. Total40/50,10pendentes. Não representa gruposglobais/crossdevice/publicação aprovados.
+Evidências duráveis no coordenador outputs/card-review-20260921/evidence-20261025-additional-tests. ESLint arquivosmodificados7PASS, diffssemwhitespace. Coach fallbackdense4focadosPASS. Borduras clear-diamond/emerald-green DPR2WebKit agoraPASSparcial, mantendo arte.
+T35v2 10subcasosPASS,4REDseleçãoteclado devidoLiveantescoach; agentcorrigiu percursoTabreal, aguarda execução. T36matrizsemtrace aindaREDWebKit390ARtimeparcialmenteoculto; diagnóstico isoladoinstrumentadoPASSnãoaprova; recheckboundedemrevisão. T26–28executando em /private/tmp/touchline-xi26-28-final.log. T12calibraçãoindependenteemdesenvolvimento; limiaroriginalpreservado. Semcandidata/deploy/contareal.
+
+## Continuação 25/10 — revisão local, 48/50 testes antigos
+
+Quadro mestre: 48 testes antigos verdes no escopo local; T07 e T08 ainda abertos. Isso não fecha G1–G7, aparelhos físicos ou publicação. T10 coberto em 14 casos Chromium/WebKit por lotes; T12 2/2 testes por motor com contrato SVG/controles negativos e captura UTF-8 inspecionada. T28 passou 44s com imagens reais, proporção430/691, alvo44px e centro; desktop/667 capturados e inspecionados. T08 já passou seis casos após correção de campo, mas precisa repetir após último ajuste de padding transparente. Candidata permanece OFF.
+
+Borduras: sete categorias, 28 casos WebKitDPR2 e 14 capturas revisadas. Player zoom continua limitado pela fonte430px; não alegar qualidade universal. Recorte do treinador dourado consta no PNG original; arte preservada. Otimização de seleção da imagem do treinador em campo pequeno está sendo preparada para evitar decodificação810px desnecessária; NÃO congelada.
+
+G2: regressão RED comprovou perda da referência de liberação após remount. Primeiro GREEN recupera recibo original por GET sem segundo POST. Implementação de journal/hook/handler ainda em revisão de conta/temporada/cleanup; NÃO ativada remotamente e nenhuma operação financeira executada.
+G3: estado observado do sino agora distingue impedimentos sem afirmar entrega ativa; 44 testes focados PASS. Revisão independente/visual pendente, push real continua aberto.
+
+Logs e relatórios duráveis no coordenador outputs/card-review-20260921/evidence-20261025-additional-tests. Nenhum deploy, commit, limpeza, credencial ou dado real alterado. Processos de teste são seriais; abortos por pressão2 não contam como PASS. Próximos: congelar mudanças dos três agentes, revalidar provas afetadas, revisão de código e integrada. Não repetir evidências inalteradas.
+
+## Continuação local: recuperação, navegação e provas pendentes
+- Recuperação G2: 44/44 focados PASS (touchline-release-recovery-focused-v6.log); 34/34 derivados PASS antes do ajuste final apenas de tratamento async do construtor; PGlite read/two-keys 2/2 PASS. Revisão independente corrigiu status múltiplo; lint final recovery+alerts PASS (touchline-recovery-alerts-lint-v2.log). Nenhuma operação real.
+- T07: RED scroll-only e corrida scroll enfileirado reproduzidos no effect; posição verificada no listener e antes do consumo da intenção. 29/29 unitários PASS (touchline-t07-scroll-intent-unit-v2-20261025.log). Browser após novo patch não iniciado por pressão2; T07 continua vermelho.
+- T08: Chromium667 PASS após padding; Chromium844 concluiu assertions na tentativa de matriz que depois abortou por pressão2. Não declarar execução total PASS. WebKit1024 abortou antes de execução; permanece vermelho.
+- Lint cards/scroll PASS. Density240 DPR2 abortou antes do browser por pressão2 mesmo após espera limitada10s. Nada aprovado por abort.
+- Mac: pressão2, livre31%, disco5.5GiB na última amostra; sem Next/build. Servidor isolado3197 encerrado. Preservadas sessões Safari do usuário.
+- Inventário borduras: jogador zoom fonte430px e coach810px podem não cobrir zoomDPR3. Não inventar detalhe nem redesenhar arte. Callsite CoachCategory sob revisão geométrica.
+- 48/50 antigos testes permanecem verdes LOCAIS; T07/T08 e grupos integrados/físicos continuam abertos. Nenhum deploy.
+
+## Checkpoint — G2/T07/borduras, aguardando capacidade visual
+G2 final44/44 PASS e lintPASS; T07 final29/29 PASS com RED da corrida enfileirada preservado, revisão independente semP1/P2. GaleriaCoach: sizes responsivo preserva modo compacto e seleciona entre240/810 usando grade7/4/2;15/15unitPASS+lintPASS. Zero alteração da arte. Novos testes IndexedDB removal em doisarquivos estão preparados mas NÃOexecutados. Filtro TOUCHLINE_RELEASE_JOURNAL_CASE=removal, engine chromium/webkit, serial.
+Última amostra pressão2 impede novos browsers; não fechar sessões do usuário nem considerar abort um PASS. Próximos passos: browserT07 apósguardaposição (navigation/back/forward e gesto nativo), T08 remaining1024Chromium/3WebKit apóspadding, densityhint+fallback e galleryactualsrc, IDBremoval2motores. Depois tipos/suíte integrada comcapacidade. 48/50antigos verdesLOCAIS;gruposcompletos continuamvermelhos. Recibos+hashes em evidence-20261025-additional-tests. Nenhumdeploy/contatransaction.
+
+## Retomada após reinício — testes de maior memória
+Mac inicialmente pressão1,44%livre,disco11GiB. T08 fonte atual: três casosChromium844/667/1024 completaram antes da guarda interromper troca de motor; execução completa NÃO PASS. Reuso seguro de bundle adicionado (106fontes+hashJS/CSS),8unitPASS; WebKit844 completou comreuso antespressão2. Ainda faltam WebKit667/1024 atuais e inspeção visual. IDBremove recusadoantesexecução porpressão2. Logs touchline-restart-* preservados. SemNext/deploy/alteração deconta.
+
+## Continuação autorizada com pressão moderada — evidência local
+A autorização explícita do usuário permite testes locais com pressão macOS2 via TOUCHLINE_LOCAL_MODERATE_MEMORY=1, mantendo um processo pesado por vez e bloqueio crítico. Sem alteração persistente de limites de runtime.
+T08: cobertura atual dos seis cenários concluída por união dos recibos Chromium3 + WebKit3; 49/50 antigos testes verdes no escopo LOCAL. Isso não aprova grupos integrados/aparelhos físicos.
+IndexedDB: novos testes reais de remoção/rollback entre abas passaram Chromium e WebKit (2PASS+2SKIP antigos em cada filtro); sem transações de elenco.
+T07 permanece VERMELHO: navigation3larguras e scrollbar1280 passaram, mas matriz WebKit encontrou regressão keyboard-navigation-before-load nas3larguras. Correção em andamento, não ocultar falha.
+Borduras: WebKit ruby240/DPR2 passou4casos e fallback; galeria760/DPR1 preparada, ainda não executada. Nenhum deploy. Logs preservados e hashes em outputs/card-review-20260921/evidence-20261025-additional-tests/moderate-memory-run-receipts.json no coordenador.
+
+## Verificação integrada após retomada
+T07 final: CSS limitado ao foco visível da navegação evita animação de foco pendente; semreposicionamentoimperativo. 32unitPASS, WebKitmatrizcompleta3largurasPASS e Chromium7fases3larguras empartiçõesPASS. ScrollbarChromium overlay não comprovado; WebKit arraste real coberto. Agora50/50 antigos testes com evidência LOCAL, semfechargrupos físicos/remotos.
+Galeria: inspeção detectou sobreposição que assertdedensidade não via; aspectratioauto somentecoach reservaalturaintrinsic; seisframes+pendingruby, gaps8, WebKit760/844/1280 eChromium760PASS,capturasinspecionadas. Nãoalterararte.
+TypecheckintegralPASS apósadaptadorread-onlySupabasecastnarrow e removidobranchreleaseinalcançável;42recoveryPASS;lint7arquivosPASS;revisãoindependente semP1/P2.
+Suítegeral emcurso: invocaçãodireta nãoforneceu releaseSqlEnvironment, doiscentralSQL falharamporenvruntimeausente;nãodefeitoproduto/nãoalteraroráculo. Demaisfalhas sendo triadas, próximasexecuções usarhelpercanônico. Nãoanunciar aprovaçãointegral. Nenhumdeploy/transação.
+
+## Retomada - suite integrada e build local
+Suite V2 com releaseSqlEnvironment: 6794 testes, 6736 PASS, 0 FAIL, 58 SKIP, 279.36s. Primeira rodada diagnostica 33FAIL preservada. Os58:50UI/mount,4IndexedDB,3diagnosticos,1Swift; zeroSQLskip. Os50 recibos locais antigos permanecem separados da integracao autenticada e aparelhos fisicos.
+Arena: coluna implicita WebKit corrigida com minmax(0,1fr);16geometrias e8cenarios isolados PASS. TypeScript integral PASS; ESLint integral0erros/10avisos; rename de variavel do teste revisado independentemente,7/7PASS;diffcheckPASS. Readiness estatico sem falhas, gates externos abertos.
+Build completo local iniciado, resultado PENDENTE: /private/tmp/touchline-resume-local-build.log. Um pesado por vez, Node heap3072MiB,Sentry upload OFF. Pre-build:pressao1,46%memoria livre,8.4GiBdisco. Zero deploy/commit/transacao. HEAD df29cf1785fde301878895539ef202a456229334,WIP preservado.
+Evidencias duraveis: evidence-20261025-additional-tests/resume-integrated-receipts.json no coordenador. Grupos completos continuam VERMELHOS ate suas provas integradas/visuais/fisicas.
+
+## Build local concluido
+next build --webpack EXIT0: compiled28.6s, TypeScript13.4s,138/138 paginas estaticas; otimizacao/traces concluidos. Sentry upload OFF. Log e SHA256 em resume-build-receipt.json, evidence-20261025-additional-tests. Build nao usou credenciais QA nem prova execucao autenticada. Proximo fluxo: clienteSafari -> ClubOwner -> APIQA -> elenco/idioma; preflight QA PASS e dev3100Ready309ms, releasefalse. Somente leitura, nenhum deploy.
+
+## Safari nativo - observacao integrada limitada
+QA persona PASS antes do servidor. Sessao existente Luiz Lopes/VIP preservada, sem login/logout nem troca de identidade. Safari abriu /clubowner?lang=pt-BR: cabecalho visivel, idioma inicialmente carregando e depois habilitado sem botao Tentar novamente;35contratos,11titulares,9reservas,15fora,treinador e saldo confirmado presentes na arvore. GETcollection/read200 totalservidor295/520ms;coldcompile4.8s;rotaClubOwnercold12.1s(incl8.4scompile),warm1.086s. POSTprepare automatico da pagina200; nenhuma acao manual de contratacao/liberacao/confirmacao.
+Navegacao ClubOwner->ClubHub->ClubOwner realizada no Safari, retorno com cabecalho,idioma habilitado e elenco. Nao prova ausencia de todo flash entreframes nem estabilidade fisica iPhone. Zoom real EnzoMaresca abriu/fechou e escudo visivel; nao clicado Liberar treinador. Screenshot do momento inicial de transicao nao representa estado final: segunda captura confirmou modal completo.
+PENDENCIAS preservadas:avatar indisponivel;ranking/seguidores semdados;Exchange indisponivel;0.00pontos exigem reconciliacao,nao considerar correto semdados;carrossel com10fixtures31out-2nov e indicacao de snapshot desatualizado exige auditar rodada/origem antes de aprovar. Componentes/autotestes nao aprovam estes dados integrados. Candidata3100 permanece aberta nesta observacao,processo76684,semheavytest paralelo.
+MISSION: DAILY/AUDIT local. QA BRANCH:detached;QA COMMIT:df29cf1785fde301878895539ef202a456229334+WIP;DEPLOYMENT:none;remote budget consumed0. Functional/visual:parcial acima;responsive:isolated8Arena/16geometry,nativeMac apenas;accessibility:T07evidencias separadas;security:semcredenciais persistidas/transacoes manuais. Browser matrix:Chromium/WebKit isolados+SafariMac limitado;physicalmobile pendente. Tests6736PASS/58SKIP,typesPASS,lint0errors10warnings,buildPASS,diffPASS. WIPnaolimpo,semcommit. Rollback:reverter somentehunksproprios preservandoWIP. PRODUCTION:NOT TOUCHED.
+Tools:exec executou/inspecionou suites,types,lint,build;collaboration revisou falhas/oraculos/SKIPs;CUAexecutou navegacao e screenshots;SupabaseCLI existente usado pelo launcher somenteidentidade/keysmemoria+personapreflight,naomutacao. Evidencias em resume-integrated-receipts.json,resume-build-receipt.json e log native-candidate. Nenhum grupo integral declarado pronto.
+
+## G2/G3 — diagnóstico integrado e configuração de notificações
+🟢 1. Configuração: admitidos dez nomes privados exatos de fixture alerts/lineup reminders na QA. 39/39 testes focados,19/19 revisão independente,lint/diffcheckPASS. Gates e valores não ativados.
+🟢 2. Rodada: leitura QA confirmou10 jogos da rodada8 FullTime; último19722124 atualizado18:36:03.594121UTC25out. Avanço do carrossel à9 corresponde à regra solicitada. Não é aprovação geral de frescor.
+🟢 3. Diagnóstico de pontos: conta canônica só tem rodada9DRAFT,zero seleções draft/locked e nenhum recibo de score. Zero não comprova perda; não inventar nem retroagir pontos. Fluxo pontuação após XI confirmado ainda pendente.
+🔴 4. Avatar: Edge retençãoACTIVEv3/JWTtrue,bucketprivado5MiBwebp,mas sem evidência atual de execução/agendamento da retenção. Launcher omite flags,usa3100 e envelopeVERCEL incompatível comexceção3319. Preflight read-only adicionado ao launcher --avatar-preflight,executado semchaves/rede/servidor. É projeção do builder,não prova ambiente autenticado.9testesdiagnóstico+2preflightPASS;revisãoindependente7PASS+lintPASS,semP1/P2. Não habilitado upload.
+🔴 5. Entrega push real,avatar pontaaponta,treinador/Exchange integrados e aparelhos físicos continuam pendentes. Nenhum deploy/transação/alteraçãoProduction. Build anteriorPASS antecede estes patches; não tratá-lo como builddoestadoatual.
+Evidência: coordinator outputs/card-review-20260921/evidence-20261025-additional-tests/g2-g3-current-qa-diagnosis.json;logs /private/tmp/touchline-notification-qa-admission-focused.log,/private/tmp/touchline-avatar-preflight-independent.log. Safari/candidata preservados;3100 escutaIPv6::1,GETavatar nãoautenticado503 nãoé diagnósticoauth.
+
+## Retomada após atendimento de consumo — 25/10/2026
+Trabalho retomado por autorização explícita. Sem deploy, migração remota, transações reais ou envio de notificações.
+🟢 1. Storage PNG: teste local com servidor HTTP em loopback executado pela coordenação; 2 PASS, 0 FAIL, 0 SKIP. Confere conteúdo, ETag, autorização e falha fechada. Não é validação visual do Admin.
+🟢 2. Histórico Exchange: composição cliente → GET real → adapter → projeção com RPC simulado, mais regressões: 25 PASS. Corrigidos split 50/50 e total agregado; bônus apenas para aceitante.
+🟢 3. Fundação financeira empresarial: 7 testes locais, lint e diff check passaram. Trata fornecedores, contratos, obrigações, vencimentos e pagamentos por moeda. Não confundir com sistema administrativo funcional.
+🔴 4. Exchange SQL/API em revisão: primeiro cenário executou SQL real em PGlite com rollback de dois saldos quando recibo falha, replay sem nova cobrança e autorização. Testes adicionais em andamento. Fonte de preço deve seguir carteira ClubOwner (valor verificado usado na aquisição); calculated_price_tc da publicação contém preço nominal GBP e não pode ser misturado com milhões TC. Correção encaminhada e confirmada pelo implementador; revisão final pendente.
+🔴 5. Interface de propostas/anúncios ainda não integrada; GET de listagens/inbox e comandos cliente necessários. Beta ainda exige solução de coleção compatível, sem concessão artificial de 35 jogadores.
+🔴 6. Studio PNG local implementado, mas validação visual administrativa pendente. Financeiro empresarial ainda precisa persistência, APIs, UI, documentos, emails e alertas. Migration local em preparação.
+🔴 7. Gates globais anteriores não aprovam patches novos. Restam validações integradas/autenticadas, entrega push, avatar e aparelhos físicos descritas no quadro mestre.
+Ownership: coach_review SQL/API Exchange; exchange_economics cliente/composição; notification_avatar_review financeiro empresarial. Um teste pesado por vez. Preserve todos os WIP e evidências anteriores.
+
+## Continuação após reinício e atendimento — integração local 25/10
+🟢 35. Exchange: backend local SQL/API e histórico conectados. PGlite executa migration real; cobre autorização, dois saldos, recibo, rollback por falha de recibo, replay, contratos e encerramento da temporada. Preço da carteira segue valor verificado da aquisição; preço nominal GBP da publicação permanece separado. POST não expõe saldo da contraparte. Gate continua OFF.
+🟢 36. Histórico: 25 testes de composição/regressão passaram; cliente POST 6 testes passaram; Storage PNG 2 testes passaram. TypeScript global v2 PASS, log /private/tmp/touchline-exchange-admin-types-v2.log. Não representa build final.
+🟢 37. Expiração: integração local com tick autenticado existente, falhas isoladas de Sportmonks, 21 testes passaram. Nenhum cron remoto criado nem ativado.
+🟢 38. Admin empresarial: modelos e persistência isolados do TC, APIs e UI PT/EN para fornecedores, contratos, obrigações e baixas. 7 testes puros, 6 persistência, 5 API e 4 integração handler→SQL passaram. Browser Chromium isolado cobriu 4 cenários PT/EN desktop/celular; CSS integral/Admin autenticado não comprovados.
+🔴 39. UI Exchange em validação: oito idiomas e proposta com cards reais. Revisão exigiu journal persistente em sessionStorage para reload, status traduzido e identificação correta do bônus do aceitante. Prova de reload em navegador ainda em andamento.
+🔴 40. Beta: participação econômica aprovada 7%/seis clubes, mas coleção runtime continua pendente. Revisão das regras e migrações em andamento; não conceder jogadores/saldo automaticamente.
+🔴 41. Admin: upload de documentos privados em desenvolvimento. Integração de emails, alertas, ajustes/estornos e rateio de pagamentos continuam pendentes; não declarar grupo G7 funcional completo.
+🔴 42. Provas restantes: concorrência PostgreSQL real (binários locais não localizados), gates finais após congelar patch, Admin autenticado e todos os aparelhos físicos. Itens anteriores 1–34 continuam válidos quando não substituídos por evidência específica acima.
+Sem deploy, commit, aplicação remota de migration ou transações reais nesta continuação. Evidências detalhadas nos relatórios G4/G7 e checkpoints do repositório.
+
+## 2026-10-25 — Beta autorizado e revisão global intermediária
+
+Decisão humana: não existem contas Beta a converter; aplicar o novo modelo em todos os fluxos. SUPERSEDED a pendência de migração de contas Beta: 35 jogadores + treinador, caixa único de 100M TC, seis clubes aprovados e Exchange 7%. Não é prova de estado remoto nem autorização de créditos extras. Implementação coordenada backend/UI em andamento.
+
+Suíte local completa desta rodada: 6.896 testes, 6.822 PASS, 10 FAIL, 64 SKIP; exit1. Log /private/tmp/touchline-exchange-admin-full-suite.log. Não é gate aprovado. Três falhas de canais oficiais eram sysctl EPERM no sandbox: execução serial autorizada passou 3/3 em Chromium/WebKit (/private/tmp/touchline-channel-retry.log). Inventário avatar corrigido e compilador real passou 7/7 (/private/tmp/touchline-avatar-target-repair.log). Manifesto de rotas atualizado com políticas explícitas das novas APIs, 24/24 PASS. Quatro falhas restantes dos testes antigos de confirmação do treinador estão sendo revistas junto ao modelo Beta; não remover guards para obter PASS. Nova suíte final/build/integração ainda pendentes.
+
+Backup pré-Beta verificado: outputs/save-exchange-admin-20261025-222342 no workspace coordenador, 333 arquivos, manifesto e hashes conferidos. Nenhuma publicação ou migração remota nesta rodada.
+
+
+# Checkpoint — pausa solicitada por limite de uso
+Data: 25/10/2026 22:37 Europe/Malta
+Repositório: /Users/luizlopez/Developer/touchline-qa-release-20261022
+HEAD: df29cf1785fde301878895539ef202a456229334; WIP preservado, sem commit/deploy nesta etapa.
+
+## Decisão final Beta
+Usuário confirmou que não existem contas Beta e autorizou novo modelo em tudo. Não reabrir pergunta de migração legada. Novo Beta: caixa único100M TC,35 jogadores+treinador, inicialRuby5M/95M restantes, seis clubes Hull/Coventry/Ipswich/Bournemouth/Sunderland/Everton, Exchange7%. Ranking competitivo pago preservado. Nenhuma concessão remota ou conversão de conta.
+
+## Evidência local concluída
+🟢 1. UI/readiness/onboarding/benefícios em8idiomas e parser inicialBeta100M:70 testes focados PASS; lintUI PASS.
+🟢 2. Beta forward20261025212933 instalado em cadeia real PGlite:2 testes PASS com múltiplas asserções. Inicialização/replay/allowlist/Exchange7% e contrato sem bônus incorporado. Ver beta-new-model.log e teste fonte para cobertura detalhada.
+🟢 3. Regressões inventário avatar:7PASS com compilador real. Manifesto rotas:24PASS (74páginas/120métodosAPI/7boundaries).
+🟢 4. Canais oficiais:3PASS Chromium/WebKit após execução permitida fora do sandbox; falha inicial sysctlEPERM, não defeito comprovado de UI.
+🟢 5. git diff --check PASS. Revisão fonte independenteBeta sem bloqueante confirmado; não substitui runtimeQA.
+
+## Antes do deploy — ainda pendente
+🔴 6. BrowserBeta preparado em tests/touchline-beta-bootstrap-browser.test.mts, NÃO executado. Validar captura real/componentes, cadastro→coleção e orçamento; fixture não substitui sessãoQA.
+🔴 7. Typecheck global pósBeta, suíte final completa, lint final e build. Typecheckv3 PASS é anteriorBeta. Suíte anteriorBeta:6896 total/6822PASS/10FAIL/64SKIP, exit1; falhas tratadas em focais, não declarar suíte final verde sem rerun.
+🔴 8. Revisar testes legados Beta que ainda esperam50M/paid-only, sem enfraquecer guardas. SQL real concorrente Exchange não executado (PGlite serial não prova concorrênciaPG).
+🔴 9. G7 administrativo ainda falta ingestão automática dos dois e-mails/alertas, reversões/correções, alocação de pagamento em múltiplas faturas e reconciliação de anexos órfãos. Base financeira/contratos/PDFprivado/PNG implementada e testada localmente; não concluirgrupo.
+🔴 10. Preservar lista auditada de mobile físico/pinça/scroll/reload, ClubOwnercarregamento/idioma/rodapé/pontos,20clubes/capas/logos/links, borduras em todos tamanhos, safeareas e legadoArena antes de exclusão. Consultar auditoria consolidada sem apagar evidências anteriores.
+
+## Integração QA e aparelhos — não comprovado
+🔴 11. Migrações remotas não aplicadas; gatesExchange não ativados. Nenhuma transaçãoreal, saldo ou elenco alterado.
+🔴 12. Autenticação real cliente/admin, persistência bilateral/Storage/entrega realnotificações/avatar, sincronização Sportmonks e consumidores no alvo publicado.
+🔴 13. iPhone13ProMax/Androidtablet/MacBook; testes automatizados não equivalem a aparelhos físicos/consoles.
+
+## Retomada exata
+1. Ler este checkpoint + CURRENT_STATE.md/CURRENT_EXECUTION_LEDGER.md e relatóriosG4/G7.
+2. Conferir manifestodo backup pósBeta; preservarWIP.
+3. Começar pelos testesBeta focados/compatibilidade e browser preparado, depois types/suíte/build serial conforme capacidade. Não repetir evidências inalteradas sem necessidade.
+4. Corrigir pendências locaisG7 e integrar; somente então preparar gateQA. Não realizar deploy automaticamente.
+
+Relatórios: outputs/card-review-20260921/G4_EXCHANGE_HISTORY_CONNECTION_20261025.md; auditoria consolidada e G7 em /Users/luizlopez/.codex/visualizations/2026/09/05/01a072f6-e393-7e53-b03d-83c34721d03a/.
+
+## Retomada 26/10/2026 — Beta
+🟢 Expectativas obsoletas atualizadas em aquisição, lifecyclecoach, enrollment e marketpolicy. Guardas de mercado, allowlist e saldo mantidas. RecibosSQLhistóricos50M preservados, política corrente100M separada.
+🟢 28testesfocais+7policy+13SQL PASS semskip; browserChromium/WebKit PT/AR1280/390 PASS (8combinações,2testes). Captura enrollmentPT390 inspecionada legível; bootstrap usa hook real comtransportesimulados, NÃO comprova contaQAreal.
+🟢 TypeScriptglobalpósBeta PASS. Correção real: tipo explícito da lista de benefícios evita inferência estreita que impedia adicionar recargas dos planospagos. ESLintalterados/diffcheck PASS.
+🔴 Suíteglobalfinal/build não executados nesta retomada. Medição disco3,4GiBlivres; memória71%livre. Semcleanup nem encerramento de aplicativo. Não iniciarbuild com esse espaço.
+🔴 IntegraçãoQA, migraçõesremotas, transaçõesreais, aparelho físicopermanecem pendentes. ItensG7 e demais da auditoria anterior preservados; não declarar sófaltadeploy.
+Evidência permanente: outputs/beta-resume-20261026 no workspacecoordenador. Nenhum deploy/alteraçãoProduction. Próxima ação: validar fluxointegradoQA na etapaautorizada; completarG7local e, comcapacidadede disco, suíte/buildfinais.
+
+## 26/10/2026 — indicação de gol contra na Live
+Capturas do usuário mostram Pascal Groß17min sem marcação, comparativo mostraOG. Fonte do hero usava tipo somente emtitle/aria-label. AcrescentadoOGvisível juntoàbola para tipo canônicoownGoal; tooltip e leitor mantêm rótulo traduzidoGolcontra. Sem inferência por nome/time e sem alterar gols/placar.3 testesmatch-hero-goalsPASS;diffcheckPASS. Ainda não verificado o payload específico nem aparência renderizada na candidata/QA; nenhum deploy.
+
+## 26/10/2026 — reconsulta pós-jogo LOCAL
+Correção local em live-sync/cadence: consulta histórica paginada da temporada corrente e frescor persistido, recentes1h/antigos24h, até2por execução, sem retirar encerrados completos permanentemente. Mesmo caminho de reconciliação, sem push histórico.95 testes focados+19SQL PGlite PASS; types/lint/diffcheck PASS. SQL prova7.19→7.02→7.02 sem duplicar contribuição. Não houve deploy nem alteração remota de pontos. Histórico imutável de respostas ainda pendente, bem como prova nas telas publicadas e release completo. Relatório/evidências: /Users/luizlopez/Documents/Codex/2026-09-05/touchline-prompt-formalizer/outputs/postmatch-rating-20261026/CHECKPOINT.md. Não declarar corrigido no site.
+
+## 26/10/2026 — histórico permanente LOCAL (não aplicado em QA)
+🟢 Migração 20261026121254_football_feed_revision_history criada pelo CLI. Trigger transacional captura mudanças normalizadas em todos os caminhos de escrita do feed; repetição sem mudança não duplica. Baseline existente rotulada separadamente, sem alegar prova de resposta HTTP original. Histórico privado, serviço somente leitura, UPDATE/DELETE/TRUNCATE bloqueados; identidade do feed protegida.
+🟢 Teste PGlite touchline-feed-revision-history-pglite.test.mts PASS: 7.19→7.02, replay, retorno ao valor anterior, imutabilidade, privilégios, primeiro import e rollback atômico quando gravação do histórico falha. git diff --check PASS. Teste isolado não prova concorrência PostgreSQL nem site publicado.
+🔴 Migração ainda não aplicada remotamente. Falta ensaio integrado de migração/rollback na cadeia completa, revisão de segurança e gate completo de release; WIP amplo preservado. Nenhum deploy nem pontos reais alterados.
+🔴 Prova QA pendente: capturar nota fonte com horário, sincronizar pelo caminho agendado, conferir feed/revisão/settlement/totais/card/Live/ranking, repetir e provar ausência de duplicação. Não recalcular manualmente números sem fonte. Reconsultas da temporada anterior e justiça de retry ainda precisam revisão.
+Rollback previsto para ensaio: remover trigger touchline_capture_feed_revision da tabela de feeds; preservar football_feed_revisions e seus registros. Não executar DROP TABLE no rollback. Não executado remotamente.
+
+
+## 2026-10-26 — Local memory test override and serial release suite
+- User explicitly requested removing the local test memory block. Added opt-in TOUCHLINE_LOCAL_IGNORE_MEMORY_GATE=1 to shared browser capacity helper; applies only to actual local macOS IO and never CI. Disk reserve remains separate. No OS settings or production protections changed.
+- Serial canonical release test list: 6874 total, 6809 passed, 0 failed, 65 skipped; /tmp/touchline-release-serial-final.log. Skips are not approvals.
+- Override validation: 13 passed, 0 failed/skipped, including Chromium/WebKit official channels and capacity contracts; /tmp/touchline-memory-override-tests.log. Initial sandbox launch was blocked; rerun outside sandbox passed.
+- QA migration, production build and published end-to-end proof remain pending. No deploy performed.
+
+## 2026-10-27 — pre-QA verification resumed (in progress)
+- Canonical HEAD remains df29cf1785fde301878895539ef202a456229334; extensive WIP preserved. No commit, QA migration or deployment performed.
+- Feed history regression PASS: rating revisions, event reclassification/removal, absent rating preserved as null, unchanged replay without duplicate history, immutable/private/atomic checks retained.
+- Own-goal hero browser PASS with visible OG in Chromium/WebKit desktop/landscape; WebKit844x390 capture inspected. Synthetic fixture, not provider/QA proof.
+- Coach border/price browser56 combinations passed; fallback text clipping fixed and rerun passed, compact screenshot readiness being hardened separately.
+- All65 prior skips audited:61 browser,3companySQL,1Swift, across46files. All locally executable. 13 additional local-artifact/doc files excluded by canonical runner are separate.
+- First opt-in batch49 invocations (density normal/gallery×2engines):36PASS/13FAIL. Failures preserved; rerun underway after fixture setup, legacy expectations and local-memory helper consolidation. NOT release approval.
+- release-sql-runtime now supplies COMPANY PGlite automatically. Its5contract tests passed. Company document/persistence/integration cases executed successfully in opt-in batch.
+- Reports and manifest: coordinator outputs/preqa-20261027; working logs /tmp/touchline-skips-results-20261027 and /tmp/touchline-rerun-skips-progress-20261027.log.
+- Still pending: final opt-in reconciliation, global types/lint/full suite and build after patches, independent review, clean candidate, QA migration and published end-to-end proof. Broad admin/email automation and physical-device evidence remain separate unresolved scope; not silently considered complete.
+
+## 2026-10-27 — local verification and production build completed; QA not deployed
+🟢 1. Coach borders/price: real Chromium/WebKit renderer, 7 tiers × 4 sizes = 56 combinations passed. One correctly proportioned border/neon; signing price outside artwork/stone; missing-coach label no longer clipped. Parent inspected compact72 and enlarged340 captures. Independent source review found no blocker.
+🟢 2. Own-goal hero and revision history: visible OG browser proof and transactional history/replay tests passed locally. Synthetic cases are not provider or published-QA proof.
+🟢 3. Original65 skipped case groups each have local passing evidence, plus14 variants. New coach56 cases also passed. See OPT_IN_STATUS.md for exact evidence and distinctions.
+🟢 4. Real global scrollbar defect fixed: state selector specificity was switching custom5px to overlay scrollbar on hover/focus/active. Native drag and delayed-anchor matrix passed Chromium/WebKit at390/844/1280, with independent review.
+🟢 5. Global TypeScript and ESLint passed. Updated Arena capacity-contract test passed8 assertions; final focused ESLint and git diff --check passed.
+🟢 6. Final canonical release suite:6883 total,6820 passed,0 failed,63 opt-in skips; skips have separate execution evidence, not silently approvals. Earlier failed run preserved:5 memory preflight interruptions and1 obsolete harness contract. Final run uses the user-authorized local memory exception, no CI/production change.
+🟢 7. All13 local-only artifact test files excluded from the Vercel input executed:60 passed,0 failed/skipped.
+🟢 8. Full local Next webpack production build exited0: compiled24.6s, TypeScript14.8s,138 static pages generated. No remote deployment.
+🟡 9. Notifications keyboard focus: full12-case matrix and3 targeted WebKit/Arabic repeats passed, but the earlier intermittent failure's cause remains unproved. Diagnostics preserved; no claim that an underlying defect was fixed.
+🔴 10. Release packaging still pending: detached df29cf1785fde301878895539ef202a456229334 and extensive WIP preserved; WIP_SNAPSHOT.json is an inventory, NOT approved release manifest. Empty untracked company-settlement-reversals migration is a draft, not implemented functionality; do not include it as a completed migration.
+🔴 11. Full intended migration-chain/rollback evidence and QA environment/target verification still required, followed by one approved Git-native deployment and published end-to-end rating/feed/points/totals/cards/Live/ranking replay proof. No remote schema, points, balances, roster or Production changed.
+🔴 12. Wider G7 administration/email automation and native iPhone/Android validation remain separate unresolved scope. Local build success does not mean the whole site is100% approved.
+Evidence: coordinator outputs/preqa-20261027/OPT_IN_STATUS.md, RELEASE_GATE_REVIEW.md and final logs; outputs/coach-border-20261027; outputs/notification-keyboard-20261027.
+Next: finalize explicit release manifest and migration plan without sweeping unrelated WIP into a commit, then QA gates. Preserve this evidence rather than rerunning unchanged tests.
+
+
+## 2026-10-27 — QA release package verified and migrations applied; deployment pending
+- Owner authorized completing the checks and deploying QA. Exact target: canonical Git branch qa, Vercel prj_GtCzQlIE8AJdm0hSf7GB5yOWejmM/team_P1d7YNrmUObvbJJTJRlGcXoz; Supabase xgxbwqxjssxxuihuwmgy only. One Git-native build; Production excluded.
+- Clean candidate: /Users/luizlopez/Documents/Codex/2026-09-05/touchline-prompt-formalizer/worktrees/qa-final-20261027, based on df29cf1785fde301878895539ef202a456229334. Explicit manifest preserves original WIP and excludes the empty settlement-reversals draft. Independent packaging and migration reviews completed.
+- Fixed inherited service_role ALL privileges on new coach/exchange receipts before migration; executed ACL regression and reviewed exact grants. Focused tests 6/6; complete migration-chain rehearsal 12/12, including atomic failure, replay, preservation and containment.
+- Final serial suite in clean candidate: 6884 total, 6821 passed, 0 failed, 63 opt-in skips. Original opt-in groups retain separate passing evidence in OPT_IN_STATUS.md. Global TypeScript and ESLint exit0 (10 warnings, no errors). Full local production build exit0; 138 static pages. Governance, Vercel inputs and local readiness checks pass. Earlier single disk-preflight failure preserved and exact test rerun passed; final run had no concurrent build.
+- Nine QA migrations applied in one guarded atomic bundle, SHA256 2e8c546414236375e3276a377cf2ab0d25e531163a0025477f036c6d26164487. Actual MCP wrapper journal 20261027075433 represented by a no-op receipt; original nine version rows preserved. All14 new tables RLS enabled; anonymous/authenticated access blocked; immutable receipts/history cannot UPDATE/DELETE/TRUNCATE through service_role.
+- Existing collection count1 and fingerprint f410a3ed4229518cac9ca55c8287d206 unchanged after migration. No manual points/roster/balance change. Security advisors show no ERROR; older agency/social/Auth warnings remain separately recorded, not declared resolved.
+- Existing logged-in Vercel Safari tab used; no second Vercel tab or credential extraction. Required qa Preview variable names/scopes confirmed; preserve existing flags, absent switches remain closed. Active cron confirmed; automatic post-match behavior still requires the new deployed code and end-to-end proof.
+- Rollback deployment: dpl_GsRnQvGT1vSAJypwyGtVPyysQeUB (df29cf...). Database containment restores predecessor definitions while preserving additive schemas, journals and user records; it deliberately fences writes rather than claiming full reversal.
+- Pending: commit/push once, exact-SHA CI and Vercel READY, stable-alias proof, published Safari/API/data/logs/replay smoke. Wider G7 mailbox automation/reversals, native iPhone/Android checks and the observed notification keyboard intermittency remain open; this QA publication is not a claim of whole-site approval.
+- Evidence: /Users/luizlopez/Documents/Codex/2026-09-05/touchline-prompt-formalizer/outputs/preqa-20261027. Production main437b318e08c04c1e11f8e290cf652482a4f6a98d untouched.

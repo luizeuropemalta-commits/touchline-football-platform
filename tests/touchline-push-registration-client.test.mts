@@ -169,6 +169,7 @@ function rehearsalClient(options: { stage?: Stage; ack?: unknown; existingId?: s
   const source = readFileSync(new URL("../lib/touchlineArena/push-device-registration.ts", import.meta.url), "utf8");
   vm.runInContext(stripTypeScriptTypes(source).replace(/export /g, ""), context);
   return { run: () => vm.runInContext("registerTouchlinePushDeviceForRehearsal(input)", context) as Promise<unknown>,
+    runGeneral: () => vm.runInContext("registerTouchlinePushDevice(input)", context) as Promise<string>,
     calls, requests, invalidate: () => { current = false; }, abort: () => controller.abort(), release: () => release?.(),
     expire: () => { for (const action of [...timers.values()]) action(); }, counts: () => ({ listeners, timers: timers.size }) };
 }
@@ -242,4 +243,17 @@ test("rehearsal preserves permission and configuration refusals without prompts 
   for (const [options, status] of [[{ permission: "default" }, "permission-required"], [{ configured: false }, "subscription-unconfigured"]] as const) {
     const h = rehearsalClient(options); assert.deepEqual(JSON.parse(JSON.stringify(await h.run())), { status }); assert.deepEqual(h.calls, []);
   }
+});
+
+
+test("normal consent registration accepts the same account and abort fence as rehearsal", async () => {
+  const valid = rehearsalClient(); assert.equal(await valid.runGeneral(), "registered");
+  assert.equal(valid.requests[0].headers["X-Touchline-Expected-Account"], rehearsalAccount);
+  const wrong = rehearsalClient({ ack: { ...rehearsalAck, accountId: rehearsalInstallation } });
+  await assert.rejects(wrong.runGeneral(), /registration-failed/);
+  const cancelled = rehearsalClient({ stage: "ready" });
+  const pending = cancelled.runGeneral(); await tick();
+  const rejected = assert.rejects(pending); cancelled.abort(); await rejected;
+  cancelled.release(); await tick(); assert.equal(cancelled.requests.length, 0);
+  assert.deepEqual(cancelled.counts(), { listeners: 0, timers: 0 });
 });

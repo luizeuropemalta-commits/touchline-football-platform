@@ -50,7 +50,7 @@ export default function CardZoomLandscapeBrowserFixture() {
         </div>
         <div data-landscape-subject="coach" style={{ width: 80 }}>
           <TouchlineCoachCardZoom coach={coach} slot={createTouchlineArenaCoachSlot(coach, 1, "sapphire-blue")}
-            clubName="Arsenal" locale="en-GB" contract={null} showLeadershipCrown assetLoading="eager"
+            countryCode3="ENG" clubName="Arsenal" clubLogoUrl="/touchlineArena/shared/club-logos/2026-27/ui-512/arsenal.png" locale="en-GB" contract={null} showLeadershipCrown assetLoading="eager"
             profileHref="/touchline-coaches/990002?lang=en-GB" />
         </div>
       </div>

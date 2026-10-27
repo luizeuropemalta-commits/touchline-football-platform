@@ -70,7 +70,7 @@ test("neutral webhook verifies, deduplicates, syncs invoices and audits every ac
   assert.match(webhook, /request\.headers\.get\("stripe-signature"\)/);
   assert.match(webhook, /stripe\.webhooks\.constructEvent\(/);
   assert.match(webhook, /from\("stripe_webhook_events"\)\.select\("stripe_event_id"\)/);
-  assert.match(webhook, /if \(processed\) return NextResponse\.json\(\{ received: true, duplicate: true \}\)/);
+  assert.match(webhook, /if \(processed\) \{\s*if \(processed\.stripe_event_id !== event\.id\) throw new Error\("RECEIPT_MISMATCH"\);\s*return NextResponse\.json\(\{ received: true, duplicate: true \}\)/);
 
   assert.match(webhook, /"invoice\.paid"/);
   assert.match(webhook, /"invoice\.payment_failed"/);

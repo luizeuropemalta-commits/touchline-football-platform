@@ -17,9 +17,13 @@ type Props = Readonly<{
   coachName: string;
   locale: string;
   onClose: () => void;
+  available?: boolean;
+  busy?: boolean;
+  error?: string | null;
+  onConfirm?: (coachId: string, revision: number) => Promise<boolean>;
 }>;
 
-/** Presentation only: no command, request, wallet update or confirmation callback. */
+/** Review is bound to the confirmed contract; the parent owns guarded persistence. */
 export function ClubOwnerCoachReleaseDialog(props: Props) {
   try {
     inspectClubAcquisition(props.state);
@@ -30,7 +34,7 @@ export function ClubOwnerCoachReleaseDialog(props: Props) {
   return <CoachReleaseReview {...props} />;
 }
 
-function CoachReleaseReview({ state, coachName, locale, onClose }: Props) {
+function CoachReleaseReview({ state, coachName, locale, onClose, available = false, busy = false, error, onConfirm }: Props) {
   const [review] = useState(() => {
     // The outer component rejects vacancy and malformed contracts before mounting.
     const coach = state.coach!;
@@ -57,7 +61,8 @@ function CoachReleaseReview({ state, coachName, locale, onClose }: Props) {
     <div {...dialogProps} className={`${layout.dialog} ${styles.dialog}`}
       lang={resolvedLocale} dir={resolvedLocale === "ar-SA" ? "rtl" : "ltr"}>
       <h2 ref={heading} tabIndex={-1}>{copy.releaseLabel} · {review.coachName}</h2>
-      <div className={styles.safety}><p role="status">{copy.unavailable}</p></div>
+      {!available ? <div className={styles.safety}><p role="status">{copy.unavailable}</p></div> : null}
+      {error ? <p role="alert">{error}</p> : null}
       {changed ? <p role="alert">{copy.changed}</p> : <div className={styles.review} data-has-card="false">
         <div className={styles.details}>
           <section className={styles.section} aria-label={copy.contract}>
@@ -81,7 +86,7 @@ function CoachReleaseReview({ state, coachName, locale, onClose }: Props) {
       </div>}
       <div className={layout.pickerModes}>
         <button type="button" className={controls.link} onClick={onClose}>{copy.keep}</button>
-        <button type="button" className={controls.link} disabled>{copy.confirm}</button>
+        <button type="button" className={controls.link} disabled={!available || busy || changed || !onConfirm || review.projectedBalance === null} onClick={async () => { if (!available || busy || changed || !onConfirm) return; if (await onConfirm(review.coachId, review.revision)) onClose(); }}>{copy.confirm}</button>
       </div>
     </div>
   </div>, document.body);

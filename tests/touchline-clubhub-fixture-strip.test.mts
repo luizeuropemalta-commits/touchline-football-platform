@@ -2,6 +2,18 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { parseClubHubStripSnapshot, clubHubStripState, clubHubStripScore, clubHubStripSeedNeedsRecovery } from "../lib/touchlineArena/club-hub-fixture-strip.ts";
+
+test("fallback parsing admits only an explicit current competition scope without deriving it from results", () => {
+  const payload = { ok: true, data: [], state: "partial-persisted-schedule", degraded: true };
+  assert.deepEqual(parseClubHubStripSnapshot({ ...payload, admissionScope: { competitionId: "8", seasonId: "26000" } })?.admissionScope,
+    { competitionId: "8", seasonId: "26000" });
+  for (const admissionScope of [undefined, null, {}, { competitionId: "9", seasonId: "26000" },
+    { competitionId: "8", seasonId: "" }, { competitionId: "8", seasonId: " 26000 " }, { competitionId: "8", seasonId: 26000 }]) {
+    const result = parseClubHubStripSnapshot({ ...payload, admissionScope });
+    assert.ok(result, "Invalid admission scope does not discard valid fixture history");
+    assert.equal(result.admissionScope, null);
+  }
+});
 import { CLUB_HUB_STRIP_COPY, getClubHubStripCopy } from "../lib/touchlineArena/club-hub-fixture-strip-i18n.ts";
 import { fixtureStripFrameDistance, wrapFixtureStripOffset, normalizeFixtureStripScrollOffset } from "../lib/touchlineArena/fixture-strip-motion.ts";
 

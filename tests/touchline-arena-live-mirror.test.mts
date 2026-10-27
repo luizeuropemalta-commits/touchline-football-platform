@@ -60,9 +60,26 @@ test("authenticated ClubOwner seeds the embedded Live rail from the same persist
   assert.match(page, /if \(!user\) redirect\([\s\S]*?readPersistedLiveRailWithin\(\)/);
   assert.doesNotMatch(page, /readPublicCompetitionFixtures|scheduleNow/);
   assert.match(owner, /state: "partial-persisted-schedule", degraded: true/);
-  assert.match(page, /initialLiveFixtures=\{initialLiveFixtures\} initialLiveNow=\{initialLiveNow\}/);
-  assert.match(owner, /initialFixtures=\{initialLiveFixtures\} initialNow=\{initialLiveNow\}/);
-  assert.match(owner, /initialMetadata=\{initialLiveMetadata\}/);
+  const assertProps = (input: string, component: string, expected: Record<string, string>) => {
+    const ast = ts.createSourceFile("consumer.tsx", input, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+    const elements: Array<ts.JsxSelfClosingElement | ts.JsxOpeningElement> = [];
+    const visit = (node: ts.Node) => {
+      if ((ts.isJsxSelfClosingElement(node) || ts.isJsxOpeningElement(node)) && node.tagName.getText(ast) === component) elements.push(node);
+      node.forEachChild(visit);
+    };
+    visit(ast);
+    assert.equal(elements.length, 1, `${component} has one authoritative seed consumer`);
+    for (const [name, expression] of Object.entries(expected)) {
+      const attributes = elements[0].attributes.properties.filter((attribute): attribute is ts.JsxAttribute =>
+        ts.isJsxAttribute(attribute) && attribute.name.getText(ast) === name);
+      assert.equal(attributes.length, 1, `${component}.${name} is passed exactly once`);
+      const initializer = attributes[0].initializer;
+      assert.ok(initializer && ts.isJsxExpression(initializer) && initializer.expression, `${component}.${name} uses the seed expression`);
+      assert.equal(initializer.expression.getText(ast), expression, `${component}.${name} preserves server authority`);
+    }
+  };
+  assertProps(page, "FantasyGameweekClient", { initialLiveFixtures: "initialLiveFixtures", initialLiveNow: "initialLiveNow", initialLiveMetadata: "initialLiveMetadata" });
+  assertProps(owner, "ClubHubFixtureStrip", { initialFixtures: "initialLiveFixtures", initialNow: "initialLiveNow", initialMetadata: "initialLiveMetadata", initialAdmissionScope: "initialLiveAdmissionScope" });
   assert.doesNotMatch(owner, /<TouchlineMatchCentre railOnly initialFixtures=\{\[\]\}/);
 });
 test("ClubOwner and Arena reuse one shared strip above reserves, without a second match centre", () => {

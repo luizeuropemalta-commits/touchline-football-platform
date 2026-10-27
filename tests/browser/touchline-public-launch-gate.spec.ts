@@ -122,8 +122,8 @@ test("phone portrait preserves the intro through rotation and guest Market entry
   await page.goto(`${baseURL}/arena?lang=pt-BR&intro=first`, { waitUntil: "domcontentloaded" });
 
   const gate = page.getByRole("dialog", { name: "Gire para o modo horizontal" });
-  // DocumentLocaleSync moves the skip-link ID to the semantic main. The
-  // persistent orientation wrapper owns inert; its descendants inherit it.
+  // The persistent SSR skip-link target also owns inert; its descendants
+  // inherit it without moving attributes onto a streamed route subtree.
   const content = page.locator("[data-touchline-main-content-fallback]");
   await expect(gate).toBeVisible();
   await expect(content).toHaveJSProperty("inert", true);

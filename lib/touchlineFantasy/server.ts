@@ -480,9 +480,9 @@ async function loadFantasySnapshotCore(user: User, projection: "full" | "arena",
   }
 
   timing?.mark("catalogue-and-squad");
-  const [catalogue, coaches, userGameweekResponse, rankings] = await Promise.all([
-    loadCatalogue(admin),
-    projection === "full" ? loadCoaches(admin) : Promise.resolve([]),
+  const catalogueRead = loadCatalogue(admin);
+  const coachesRead = projection === "full" ? loadCoaches(admin) : Promise.resolve([]);
+  const userGameweekRead = Promise.resolve(
     activeGameweek
       ? admin.from("touchline_fantasy_user_gameweeks")
         .select("id,formation_code,selected_coach_id,locked_coach_id,state,total_market_value_eur,carry_source_user_gameweek_id"
@@ -490,60 +490,82 @@ async function loadFantasySnapshotCore(user: User, projection: "full" | "arena",
         .eq("user_id", user.id)
         .eq("gameweek_id", activeGameweek.id)
         .maybeSingle()
-      : Promise.resolve({ data: null, error: null }),
+      : Promise.resolve({ data: null, error: null })
+  );
+  const catalogueAndSquadRead = Promise.all([
+    catalogueRead,
+    coachesRead,
+    userGameweekRead,
     projection === "full" && activeGameweek ? loadRankings(admin, activeGameweek.id, seasonId, user.id) : Promise.resolve({ gameweek: [], season: [] }),
   ]);
-  // A failed read is not evidence that the customer has no team.
-  if (userGameweekResponse.error) return null;
-  const userGameweekRow = userGameweekResponse.data as Row | null;
-  const userGameweekId = text(userGameweekRow?.id);
-  if (reconcileLifecycle && activeGameweek && userGameweekId) {
-    timing?.mark("alerts");
-    await admin.rpc("touchline_fantasy_reconcile_lineup_alerts", { p_gameweek_id: activeGameweek.id });
-  }
-  timing?.mark("selections");
-  const [{ selections, historyData }, scoreResponse, seasonScoresResponse, alertsResponse] = await Promise.all([
-      userGameweekId ? (async () => {
-        const [draftResponse, lockedResponse] = await Promise.all([
-          admin.from("touchline_fantasy_user_gameweek_selections").select("player_id,slot_id").eq("user_gameweek_id", userGameweekId),
-          admin.from("touchline_fantasy_locked_selections").select("player_id,slot_id").eq("user_gameweek_id", userGameweekId),
-        ]);
-        // Never fall back to a draft when the locked XI could not be read.
-        if (draftResponse.error || lockedResponse.error
-          || !Array.isArray(draftResponse.data) || !Array.isArray(lockedResponse.data)) {
-          throw new Error("TOUCHLINE_LINEUP_READ_UNAVAILABLE");
-        }
-        const selectionRows = rows(lockedResponse.data).length ? rows(lockedResponse.data) : rows(draftResponse.data);
-        const selections = selectionRows.flatMap((row): TouchlineFantasySelectionView[] => {
-          const playerId = text(row.player_id);
-          const slotId = text(row.slot_id);
-          return playerId && slotId ? [{ playerId, slotId }] : [];
-        });
-        // All lifecycle writers above remain settled. History depends on this
-        // XI, not on the independent scores or reconciled-alert read below.
-        const selectedPlayerIds = selections.map((entry) => entry.playerId);
-        const { data: historyData } = projection === "full" && activeGameweek && selectedPlayerIds.length
-          ? await admin.from("touchline_fantasy_player_fixture_scores")
-            .select("fixture_id,player_id,rating,goals,fantasy_contribution,reason_code,settlement_status")
-            .eq("gameweek_id", activeGameweek.id)
-            .in("player_id", selectedPlayerIds)
-          : { data: [] };
-        return { selections, historyData };
-      })() : Promise.resolve({ selections: [], historyData: [] }),
-      projection === "full" && userGameweekId ? admin.from("touchline_fantasy_user_gameweek_scores").select("gameweek_score").eq("user_gameweek_id", userGameweekId).maybeSingle() : Promise.resolve({ data: null, error: null }),
-      // Season history belongs to the account, not to the existence of this
-      // round's draft. A new round must never make earned points disappear.
-      projection === "full" ? admin.from("touchline_fantasy_user_gameweek_scores").select("gameweek_score,settlement_status,touchline_fantasy_user_gameweeks!inner(user_id,touchline_fantasy_gameweeks!inner(season_id))")
-        .eq("touchline_fantasy_user_gameweeks.user_id", user.id)
-        .eq("touchline_fantasy_user_gameweeks.touchline_fantasy_gameweeks.season_id", seasonId) : Promise.resolve({ data: [], error: null }),
-      projection === "full" && userGameweekId ? admin.from("touchline_fantasy_lineup_alerts")
-        .select("player_id,fixture_id,state,was_editable_at_detection,detected_at")
-        .eq("user_gameweek_id", userGameweekId)
-        .order("detected_at", { ascending: false }) : Promise.resolve({ data: [], error: null }),
-    ]);
-  if (projection === "full" && (seasonScoresResponse.error || !Array.isArray(seasonScoresResponse.data))) {
-    throw new Error("TOUCHLINE_SEASON_SCORE_READ_UNAVAILABLE");
-  }
+  const readSquadDetails = async () => {
+    const userGameweekResponse = await userGameweekRead;
+    // A failed read is not evidence that the customer has no team.
+    if (userGameweekResponse.error) return null;
+    const userGameweekRow = userGameweekResponse.data as Row | null;
+    const userGameweekId = text(userGameweekRow?.id);
+    if (reconcileLifecycle && activeGameweek && userGameweekId) {
+      timing?.mark("alerts");
+      await admin.rpc("touchline_fantasy_reconcile_lineup_alerts", { p_gameweek_id: activeGameweek.id });
+    }
+    timing?.mark("selections");
+    const [{ selections, historyData }, scoreResponse, seasonScoresResponse, alertsResponse] = await Promise.all([
+        userGameweekId ? (async () => {
+          const [draftResponse, lockedResponse] = await Promise.all([
+            admin.from("touchline_fantasy_user_gameweek_selections").select("player_id,slot_id").eq("user_gameweek_id", userGameweekId),
+            admin.from("touchline_fantasy_locked_selections").select("player_id,slot_id").eq("user_gameweek_id", userGameweekId),
+          ]);
+          // Never fall back to a draft when the locked XI could not be read.
+          if (draftResponse.error || lockedResponse.error
+            || !Array.isArray(draftResponse.data) || !Array.isArray(lockedResponse.data)) {
+            throw new Error("TOUCHLINE_LINEUP_READ_UNAVAILABLE");
+          }
+          const selectionRows = rows(lockedResponse.data).length ? rows(lockedResponse.data) : rows(draftResponse.data);
+          const selections = selectionRows.flatMap((row): TouchlineFantasySelectionView[] => {
+            const playerId = text(row.player_id);
+            const slotId = text(row.slot_id);
+            return playerId && slotId ? [{ playerId, slotId }] : [];
+          });
+          // All lifecycle writers above remain settled. History depends on this
+          // XI, not on the independent scores or reconciled-alert read below.
+          const selectedPlayerIds = selections.map((entry) => entry.playerId);
+          const { data: historyData } = projection === "full" && activeGameweek && selectedPlayerIds.length
+            ? await admin.from("touchline_fantasy_player_fixture_scores")
+              .select("fixture_id,player_id,rating,goals,fantasy_contribution,reason_code,settlement_status")
+              .eq("gameweek_id", activeGameweek.id)
+              .in("player_id", selectedPlayerIds)
+            : { data: [] };
+          return { selections, historyData };
+        })() : Promise.resolve({ selections: [], historyData: [] }),
+        projection === "full" && userGameweekId ? admin.from("touchline_fantasy_user_gameweek_scores").select("gameweek_score").eq("user_gameweek_id", userGameweekId).maybeSingle() : Promise.resolve({ data: null, error: null }),
+        // Season history belongs to the account, not to the existence of this
+        // round's draft. A new round must never make earned points disappear.
+        projection === "full" ? admin.from("touchline_fantasy_user_gameweek_scores").select("gameweek_score,settlement_status,touchline_fantasy_user_gameweeks!inner(user_id,touchline_fantasy_gameweeks!inner(season_id))")
+          .eq("touchline_fantasy_user_gameweeks.user_id", user.id)
+          .eq("touchline_fantasy_user_gameweeks.touchline_fantasy_gameweeks.season_id", seasonId) : Promise.resolve({ data: [], error: null }),
+        projection === "full" && userGameweekId ? admin.from("touchline_fantasy_lineup_alerts")
+          .select("player_id,fixture_id,state,was_editable_at_detection,detected_at")
+          .eq("user_gameweek_id", userGameweekId)
+          .order("detected_at", { ascending: false }) : Promise.resolve({ data: [], error: null }),
+      ]);
+    if (projection === "full" && scoreResponse.error) {
+      throw new Error("TOUCHLINE_GAMEWEEK_SCORE_READ_UNAVAILABLE");
+    }
+    if (projection === "full" && (seasonScoresResponse.error || !Array.isArray(seasonScoresResponse.data))) {
+      throw new Error("TOUCHLINE_SEASON_SCORE_READ_UNAVAILABLE");
+    }
+    return { userGameweekRow, userGameweekId, selections, historyData, scoreResponse, seasonScoresResponse, alertsResponse };
+  };
+  // A customer read can follow its confirmed user-gameweek immediately. Writer
+  // callers retain the original catalogue/rankings -> alert writer -> reads order.
+  // Join both branches now so early failures are always observed while other
+  // reads are pending; neither branch may publish a partial snapshot.
+  const [[catalogue, coaches, , rankings], squadDetails] = await Promise.all([
+    catalogueAndSquadRead,
+    reconcileLifecycle ? catalogueAndSquadRead.then(readSquadDetails) : readSquadDetails(),
+  ]);
+  if (!squadDetails) return null;
+  const { userGameweekRow, userGameweekId, selections, historyData, scoreResponse, seasonScoresResponse, alertsResponse } = squadDetails;
   timing?.mark("projection");
   const userGameweek: TouchlineFantasySnapshot["userGameweek"] = userGameweekId ? {
     id: userGameweekId,
@@ -557,14 +579,20 @@ async function loadFantasySnapshotCore(user: User, projection: "full" | "arena",
   } : null;
   // Keep every lifecycle writer above. Only unused read-only enrichments are
   // omitted; the Arena receives the same complete catalogue and locked XI.
-  const playerAvailabilityIndicators = activeGameweek
-    ? await readGameweekPlayerAvailability(admin, seasonId, activeGameweek.id,
-      selections.map(selection => selection.playerId), catalogue) : [];
+  // These enrichments depend on the same confirmed XI/catalogue, not on each
+  // other. All lifecycle writers and required reads above remain settled first.
+  // Arena must not acquire the full page's match-card or QA-market dependencies.
+  const [playerAvailabilityIndicators, matchCardIndicators, qaClubMarketOpen] = await Promise.all([
+    activeGameweek
+      ? readGameweekPlayerAvailability(admin, seasonId, activeGameweek.id,
+        selections.map(selection => selection.playerId), catalogue) : Promise.resolve([]),
+    projection === "full" && activeGameweek && ["LOCKED", "LIVE", "FINAL", "SETTLED"].includes(activeGameweek.state)
+      ? readGameweekMatchCardIndicators(admin, seasonId, activeGameweek.id,
+        selections.map(selection => selection.playerId), catalogue) : Promise.resolve([]),
+    projection === "full" && process.env.TOUCHLINE_CLUB_COLLECTION_ENABLED === "true"
+      ? readQaClubMarketOpening(admin, seasonId) : Promise.resolve(false),
+  ]);
   if (projection === "arena") return { activeGameweek, userGameweek, selections, catalogue, formationRegistry, playerAvailabilityIndicators };
-  const matchCardIndicators = activeGameweek && ["LOCKED", "LIVE", "FINAL", "SETTLED"].includes(activeGameweek.state)
-    ? await readGameweekMatchCardIndicators(admin, seasonId, activeGameweek.id,
-      selections.map((selection) => selection.playerId), catalogue)
-    : [];
   const matchHistory = rows(historyData).flatMap((row): TouchlineFantasyMatchHistory[] => {
     const fixtureId = text(row.fixture_id);
     const playerId = text(row.player_id);
@@ -598,8 +626,7 @@ async function loadFantasySnapshotCore(user: User, projection: "full" | "arena",
   return {
     userId: user.id,
     entitlementActive,
-    qaClubMarketOpen: projection === "full" && process.env.TOUCHLINE_CLUB_COLLECTION_ENABLED === "true"
-      ? await readQaClubMarketOpening(admin, seasonId) : false,
+    qaClubMarketOpen,
     plan: { active: entitlementActive, expiresAt: planExpiresAt },
     marketAccess,
     config: {

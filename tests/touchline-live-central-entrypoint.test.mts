@@ -41,7 +41,7 @@ async function scenario(ack: boolean, scoring = false) {
     football_clubs: [{ id: 'home-db', provider: 'sportmonks', provider_team_id: '19', name: 'Arsenal' },
       { id: 'away-db', provider: 'sportmonks', provider_team_id: '20', name: 'Opponent' }],
     touchline_fantasy_configs: [{ season_id: 'season-db', competition_key: 'england', status: 'active' }],
-    football_fantasy_fixture_feeds: [], football_player_season_memberships: [], touchline_player_fixture_score_settlements: [],
+    football_fantasy_fixture_feeds: [], football_postmatch_check_attempts: [], football_player_season_memberships: [], touchline_player_fixture_score_settlements: [],
     football_fixture_events: [], football_player_season_statistics: [], touchline_card_ranking_snapshots: [], touchline_card_ranking_active_snapshots: [],
   };
   if (scoring) Object.assign(tables, {
@@ -100,7 +100,7 @@ async function scenario(ack: boolean, scoring = false) {
           if (action !== 'read') {
             if (table === 'football_data_sync_runs') { finalizations.push(payload as Row); events.push('run-end'); }
             else {
-              assert.equal(centralCompletions, 2, 'provider receipts committed before any football write'); events.push(`write:${table}`);
+              assert.equal(centralCompletions, table === 'football_postmatch_check_attempts' ? 1 : 2, 'attempt metadata precedes fixture request; football facts require provider receipt'); events.push(`write:${table}`);
               if (table === 'football_live_snapshots') snapshots.push(payload as Row);
               else if (table === 'football_fantasy_fixture_feeds') tables[table] = [{ ...payload as Row, id: 'feed-db' }];
               else if (table === 'football_fixtures') { assert.equal((payload as Row).home_score, 4); if (ack) Object.assign(fixture, payload); }

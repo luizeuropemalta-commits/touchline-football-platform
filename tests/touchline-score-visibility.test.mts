@@ -7,6 +7,8 @@ import { stripTypeScriptTypes } from "node:module";
 import { setImmediate } from "node:timers/promises";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import * as stripState from "../lib/touchlineArena/club-hub-fixture-strip.ts";
+import * as matchCopy from "../lib/touchlineArena/match-centre-i18n.ts";
 import * as matchCentre from "../lib/touchlineArena/match-centre.ts";
 import { parseTouchlineLivePresentationState } from "../lib/touchlineArena/live-presentation-state.ts";
 import { parseTouchlineSportsPublication } from "../lib/touchlineArena/sports-publication.ts";
@@ -21,6 +23,8 @@ test("the real score uses the shared publication and refresh boundary without a 
     target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.React,
   } }).outputText, { exports, React, require(name: string) {
     if (name === "@/lib/touchlineArena/match-centre") return matchCentre;
+    if (name === "@/lib/touchlineArena/club-hub-fixture-strip") return stripState;
+    if (name === "@/lib/touchlineArena/match-centre-i18n") return matchCopy;
     if (name === "@/lib/touchlineArena/sports-publication-client") return {
       useTouchlinePublishedLive(seed: unknown[], metadata: unknown, now: number, enabled: boolean) {
         assert.equal(metadata, null); assert.equal(now, 0);

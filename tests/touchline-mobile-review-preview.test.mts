@@ -15,7 +15,20 @@ test("preview server is import-safe and real components render in all eight loca
     assert.match(html, /touchline_preview_fixture/);
     assert.match(html, /Dados sintéticos para revisão visual/);
     assert.match(html, /Instagram demonstrativo/);
-    assert.equal((html.slice(0, html.indexOf("<script>")).match(/<a[^>]+data-state=/g) ?? []).length, 10);
+    const markup = html.slice(0, html.indexOf("<script>"));
+    const originalStart = markup.indexOf('data-fixture-run="original"');
+    const sectionEnd = markup.indexOf("</section>", originalStart);
+    assert.ok(originalStart >= 0 && sectionEnd > originalStart);
+    const original = markup.slice(originalStart, sectionEnd);
+    assert.equal((original.match(/<a[^>]+data-state=/g) ?? []).length, 10);
+    const originals = [...original.matchAll(/<a\b[^>]+href="([^"]+)"/g)].map(match => match[1]);
+    assert.equal(new Set(originals).size, 10, "ten distinct synthetic fixture links survive the actual round selector");
+    for (let index = 0; index < 10; index++) assert.ok(originals.some(href => href.startsWith(`/live?fixture=synthetic-${index}&amp;`)));
+    assert.equal((original.match(/data-state="finished"/g) ?? []).length, 10);
+    // SSR cannot measure overflow. Loop copies are added only after the real
+    // ResizeObserver measurement; their behavior has separate browser tests.
+    assert.equal((markup.match(/<a[^>]+data-state=/g) ?? []).length, 10);
+    assert.doesNotMatch(markup, /data-fixture-run="(?:before|after)"/);
     const script = html.match(/<script>([\s\S]*)<\/script>/)?.[1];
     assert.ok(script);
     assert.doesNotThrow(() => new vm.Script(script), `${locale} bundle compiles`);

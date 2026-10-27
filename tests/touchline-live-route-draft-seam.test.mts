@@ -23,9 +23,11 @@ type Page = (props: Props, draft?: boolean) => Promise<ReactElement<Record<strin
 type Metadata = (props: Props, draft?: boolean) => Promise<{ title: string; description: string }>;
 const user = { id: "11111111-1111-4111-8111-111111111111", app_metadata: { touchline_arena_access_v1: true } };
 const selected = { id: "fixture-one", providerId: 123, homeName: "Official $& Home", awayName: "Official Away", homeScore: 0 };
-function fixture(viewer: unknown = { data: { user }, error: null }) {
+function fixture(viewer: unknown = { data: { user }, error: null }, historical = false) {
   let reads = 0, detailReads = 0;
   const persisted = [{ providerFixtureId: 123 }];
+  const archived = { ...selected, id: "archive-fixture", providerId: 124 };
+  const fixtures = historical ? [archived, selected] : [selected];
   const detail = { fixtureId: 123, events: [], score: 0 };
   const selectionCalls: unknown[][] = [];
   const modules: Record<string, unknown> = {
@@ -38,15 +40,15 @@ function fixture(viewer: unknown = { data: { user }, error: null }) {
     "@/lib/touchlineArena/auth-access": auth,
     "@/lib/touchlineArena/match-centre-i18n": matchCopy,
     "@/lib/supabase/server": { createClient: async () => ({ auth: { getUser: async () => { reads++; return viewer; } } }) },
-    "@/lib/football-data/fixture-schedule-store": { readPublicCompetitionFixtures: async (options: unknown) => { assert.deepEqual(JSON.parse(JSON.stringify(options)), { includeHistorical: true, limit: 240 }); return persisted; } },
+    "@/lib/football-data/fixture-schedule-store": { readPublicCompetitionFixtures: async (options: unknown) => { assert.deepEqual(JSON.parse(JSON.stringify(options)), { includeHistorical: true, readAllPages: true, strictRead: true }); return persisted; } },
     "@/lib/football-data/official-league-table-server": { readTouchlineCurrentSeasonName: async () => "2026/27" },
-    "@/lib/football-data/public-fixture-match-detail-server": { readPublicFantasyFixtureMatchDetail: async (id: number) => { assert.equal(id, selected.providerId); detailReads++; return detail; } },
-    "@/lib/touchlineArena/stadium-catalog": { toTouchlineLiveFixtures: (input: unknown) => { assert.equal(input, persisted); return [selected]; } },
+    "@/lib/football-data/public-fixture-match-detail-server": { readPublicFantasyFixtureMatchDetail: async (id: number) => { assert.equal(id, historical ? archived.providerId : selected.providerId); detailReads++; return detail; } },
+    "@/lib/touchlineArena/stadium-catalog": { toTouchlineLiveFixtures: (input: unknown) => { assert.equal(input, persisted); return fixtures; } },
     "@/lib/touchlineArena/match-centre": {
       normalizeTouchlineMatchCentreTimeZone: (value: string) => value,
-      selectTouchlineMatchCentreSchedule: (fixtures: unknown, now: number) => { assert.equal(now, 123456); assert.deepEqual(fixtures, [selected]); return { currentFixtures: [selected], recentResults: [] }; },
-      selectTouchlineMatchCentreFixture: (...args: unknown[]) => { selectionCalls.push(args); return selected; },
-      hasTouchlineMatchCentreFixture: (_fixtures: unknown, id: string) => id === selected.id,
+      selectTouchlineMatchCentreSchedule: (input: unknown, now: number) => { assert.equal(now, 123456); assert.deepEqual(input, fixtures); return { currentFixtures: [selected], recentResults: [] }; },
+      selectTouchlineMatchCentreFixture: (...args: unknown[]) => { selectionCalls.push(args); return (args[0] as typeof fixtures).find(row => row.id === args[1]) ?? selected; },
+      hasTouchlineMatchCentreFixture: (input: typeof fixtures, id: string) => input.some(row => row.id === id),
     },
   };
   const exports = {} as { default: Page; renderLivePage: Page; generateMetadata: Metadata; generateLiveMetadata: Metadata };
@@ -55,6 +57,32 @@ function fixture(viewer: unknown = { data: { user }, error: null }) {
   });
   return { exports, detail, selectionCalls, reads: () => reads, detailReads: () => detailReads };
 }
+
+test("an explicit historical fixture outside both compact rails remains selected without redirect", async () => {
+  const f = fixture(undefined, true);
+  const tree = await f.exports.renderLivePage({ searchParams: Promise.resolve({ fixture: "archive-fixture", lang: "pt-BR" }) });
+  assert.equal(tree.props.initialFixtureId, "archive-fixture");
+  assert.equal((tree.props.initialFixtures as unknown[]).length, 2);
+  assert.equal(f.detailReads(), 1);
+});
+
+test("client selection retains an explicit historical fixture while compact rails change", () => {
+  const component = readFileSync(new URL("../components/touchline/match-centre/TouchlineMatchCentre.tsx", import.meta.url), "utf8");
+  const ast = ts.createSourceFile("component.tsx", component, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  let initializer: ts.Expression | undefined;
+  function visit(node: ts.Node) {
+    if (ts.isVariableDeclaration(node) && node.name.getText(ast) === "selected") initializer = node.initializer;
+    ts.forEachChild(node, visit);
+  }
+  visit(ast); assert.ok(initializer);
+  const code = ts.transpileModule(initializer.getText(ast), { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
+  const archived = { id: "archive", providerId: "99", status: "Full Time" };
+  for (const selectedId of [archived.id, archived.providerId]) {
+    const value = runInNewContext(code, { useMemo: (select: () => unknown) => select(), fixtures: [archived], visibleFixtures: [],
+      selectedId, now: 0, selectTouchlineMatchCentreFixture: () => assert.fail("Must preserve explicit archive selection") });
+    assert.equal(value, archived);
+  }
+});
 
 test("real Live route and metadata use eight explicit draft locales with closed public wrappers", async () => {
   for (const locale of ["en-GB", "pt-BR", "es-ES", "it-IT", "fr-FR", "ar-SA", "tr-TR", "de-DE"]) for (const draft of [false, true]) {

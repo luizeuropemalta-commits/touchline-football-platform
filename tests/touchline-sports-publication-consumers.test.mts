@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createTouchlinePublishedLiveReader, createTouchlineSportsPublicationReader } from "../lib/touchlineArena/sports-publication-reader.ts";
-import { projectTouchlinePublishedLive } from "../lib/touchlineArena/sports-publication-live-view.ts";
+import { projectTouchlinePublishedLive, selectTouchlinePublishedRailFixtures } from "../lib/touchlineArena/sports-publication-live-view.ts";
 import { parseTouchlineLivePresentationState, touchlineLiveFreshness } from "../lib/touchlineArena/live-presentation-state.ts";
 import type { TouchlinePresentationRead, createTouchlineLivePresentationStore } from "../lib/touchlineArena/live-presentation-client-store.ts";
 
@@ -144,4 +144,143 @@ test("withdrawn facts clear explicitly but missing canonical teams cannot overwr
   const unsafe = { ...value, sportsPublication: { ...value.sportsPublication!, live: { fetchedAt: stamp, fixtures: [noTeams] } } };
   assert.equal(projectTouchlinePublishedLive([noTeams], null, unsafe, NOW).fixtures[0], noTeams);
   assert.equal(projectTouchlinePublishedLive([current], null, unsafe, NOW).fixtures[0], current);
+});
+
+
+test("only the opted-in strip admits new in-play fixtures in its explicit current-season scope", () => {
+  const scoped = (id: string, status = "In Play") => ({ ...fixture(id), status, competitionId: "8", seasonId: "season-a", roundId: "8", roundName: "8" });
+  const seed = [scoped("100", "FT")];
+  const value = read();
+  const publication = { ...value, sportsPublication: { ...value.sportsPublication!, live: { fetchedAt: stamp,
+    fixtures: [scoped("200"), scoped("200"), scoped("300", "NS"), { ...scoped("400"), competitionId: "9" },
+      { ...scoped("500"), seasonId: "season-b" }, { ...scoped("600"), startsAt: "2026-10-24T08:00:00Z" },
+      { ...scoped("700"), awayTeam: scoped("700").homeTeam }],
+  } } };
+  assert.deepEqual(projectTouchlinePublishedLive(seed, null, publication, NOW).fixtures.map(f => f.providerId), ["100"]);
+  const admitted = projectTouchlinePublishedLive(seed, null, publication, NOW, { competitionId: "8", seasonId: "season-a" });
+  assert.deepEqual(admitted.fixtures.map(f => f.providerId), ["100", "200"]);
+  assert.equal(admitted.metadata!.degraded, true, "omitted historical facts are not newly verified");
+  assert.equal(projectTouchlinePublishedLive([], null, publication, NOW).fixtures.length, 0, "no scope means no expansion");
+  assert.equal(projectTouchlinePublishedLive([], null, publication, NOW, { competitionId: "8", seasonId: "season-a" }).fixtures.length, 1);
+  const mixed = [seed[0], { ...scoped("101", "FT"), seasonId: "other" }];
+  assert.equal(projectTouchlinePublishedLive(mixed, null, publication, NOW, { competitionId: "8", seasonId: "season-a" }).fixtures.length, 3);
+  const previousSeason = [{ ...seed[0], seasonId: "previous-season" }];
+  const rollover = projectTouchlinePublishedLive(previousSeason, null, publication, NOW, { competitionId: "8", seasonId: "season-a" });
+  assert.deepEqual(rollover.fixtures.map(f => f.providerId), ["100", "200"]);
+  assert.equal(rollover.fixtures[0].seasonId, "previous-season");
+  for (const invalidScope of [{ competitionId: "9", seasonId: "season-a" }, { competitionId: "8", seasonId: "" },
+    { competitionId: "8", seasonId: "   " }, { competitionId: "8", seasonId: null }]) {
+    assert.equal(projectTouchlinePublishedLive(seed, null, publication, NOW, invalidScope as never).fixtures.length, 1);
+  }
+  const foreignSameId = { ...publication, sportsPublication: { ...publication.sportsPublication, live: { fetchedAt: stamp,
+    fixtures: [{ ...scoped("100"), competitionId: "9", homeScore: 99 }] } } };
+  assert.equal(projectTouchlinePublishedLive(seed, null, foreignSameId, NOW, { competitionId: "8", seasonId: "season-a" }).fixtures[0], seed[0]);
+});
+
+test("strip keeps current-round finals, advances as a group, and never mixes a focused old result", () => {
+  const scope = { competitionId: "8" as const, seasonId: "season-a" };
+  const listeners = new Set<(value: TouchlinePresentationRead) => void>();
+  const store = { getRequestEpoch: () => 0, revalidate() {},
+    subscribe(listener: (value: TouchlinePresentationRead) => void) {
+      listeners.add(listener); return () => { listeners.delete(listener); };
+    } } as unknown as ReturnType<typeof createTouchlineLivePresentationStore>;
+  const round = (number: number, status: string) => Array.from({ length: 10 }, (_, i) => ({
+    ...fixture(String(number * 100 + i)), ...scope, roundId: String(number), roundName: String(number), status,
+    startsAt: new Date(NOW + (number - 8) * 7 * 86_400_000).toISOString(),
+    homeTeam: { id: String(i*2+1), providerId: String(i*2+1), name: `Home ${i}` },
+    awayTeam: { id: String(i*2+2), providerId: String(i*2+2), name: `Away ${i}` },
+  }));
+  const current = round(8, "FT"); current[9].status = "In Play";
+  const next = round(9, "Not Started");
+  const seed = [...round(7, "FT"), ...current, ...next];
+  const strip = createTouchlinePublishedLiveReader(store, seed, null, scope);
+  const stop = strip.subscribe(() => {});
+  const publish = (fixtures: typeof seed, epoch: number, valid = true) => {
+    const value = read(epoch);
+    for (const listener of listeners) listener({ ...value,
+      state: { ...value.state, livePresentationSnapshotId: valid ? value.state.livePresentationSnapshotId : "c".repeat(32) },
+      sportsPublication: { ...value.sportsPublication!, live: { fetchedAt: stamp, fixtures } } });
+  };
+  const visible = (focus: string | null = null) => selectTouchlinePublishedRailFixtures(strip.getSnapshot().fixtures, NOW, focus, scope);
+  assert.deepEqual(visible().map(f => f.providerId), current.map(f => f.providerId));
+  publish([{ ...current[9], status: "FT", homeScore: 4 }], 1, false);
+  assert.equal(visible()[9].status, "In Play", "unvalidated publication cannot close the round");
+  publish([{ ...current[9], status: "FT", homeScore: 4 }], 2);
+  assert.deepEqual(visible().map(f => f.providerId), next.map(f => f.providerId));
+  const focused = visible("809");
+  assert.equal(focused.length, 10);
+  assert.ok(focused.every(f => f.roundId === "8"), "focus retains the entire old round, never an eleventh link");
+  assert.equal(focused[9].homeScore, 4);
+  publish([], 3);
+  assert.deepEqual(visible().map(f => f.providerId), next.map(f => f.providerId), "omission cannot roll back accepted completion");
+  assert.equal(strip.getSnapshot().fixtures.length, 30, "future catalogue survives projection");
+  assert.equal(strip.getServerSnapshot().fixtures[19].status, "In Play", "SSR seed is not mutated");
+  stop(); assert.equal(listeners.size, 0);
+});
+
+test("historical catalogue facts do not make a freshly covered current round stale", () => {
+  const scope = { competitionId: "8" as const, seasonId: "season-a" };
+  const old = { ...fixture("old"), ...scope, roundId: "7", roundName: "7", status: "FT", startsAt: "2026-10-16T08:00:00Z" };
+  const current = { ...fixture(), ...scope, roundId: "8", roundName: "8", status: "In Play" };
+  const value = read();
+  const result = projectTouchlinePublishedLive([old, current], null, { ...value,
+    sportsPublication: { ...value.sportsPublication!, live: { fetchedAt: stamp, fixtures: [current] } } }, NOW, scope);
+  assert.equal(result.metadata?.degraded, false);
+  assert.deepEqual(selectTouchlinePublishedRailFixtures(result.fixtures, NOW, null, scope).map(f => f.providerId), ["100"]);
+});
+
+const freshnessScope = { competitionId: "8" as const, seasonId: "season-a" };
+function freshnessRound(number: number, status: string) {
+  return Array.from({ length: 10 }, (_, index) => ({
+    ...fixture(`${number}-${index}`), ...freshnessScope, roundId: String(number), roundName: String(number), status,
+    startsAt: new Date(NOW + (number - 8) * 7 * 86_400_000).toISOString(),
+    homeScore: status === "Not Started" ? undefined : 2,
+    awayScore: status === "Not Started" ? undefined : 1,
+    homeTeam: { id: `team-${index * 2}`, providerId: `team-${index * 2}`, name: `Home ${index}` },
+    awayTeam: { id: `team-${index * 2 + 1}`, providerId: `team-${index * 2 + 1}`, name: `Away ${index}` },
+  }));
+}
+
+test("freshness follows the whole focused round instead of the newly covered next round", () => {
+  const previous = freshnessRound(8, "FT"), next = freshnessRound(9, "Not Started");
+  const seed = [...previous, ...next], original = structuredClone(seed);
+  const oldMetadata = { state: "persisted-live-snapshot" as const, degraded: true, fetchedAt: "2026-10-22T08:00:00Z" };
+  const value = read();
+  const publication = { ...value, sportsPublication: { ...value.sportsPublication!, live: { fetchedAt: stamp, fixtures: next } } };
+  const unfocused = projectTouchlinePublishedLive(seed, oldMetadata, publication, NOW, freshnessScope);
+  assert.equal(unfocused.metadata?.degraded, false, "all ten displayed next-round fixtures are covered");
+  assert.equal(unfocused.metadata?.fetchedAt, stamp);
+
+  // The hook projects its accepted catalogue again when focus changes. It must
+  // not reuse that next-round freshness for the older round retained by focus.
+  const focused = projectTouchlinePublishedLive(unfocused.fixtures, unfocused.metadata, publication, NOW, freshnessScope, previous[4].providerId);
+  const displayed = selectTouchlinePublishedRailFixtures(focused.fixtures, NOW, previous[4].providerId, freshnessScope);
+  assert.deepEqual(displayed.map(row => row.providerId), previous.map(row => row.providerId));
+  assert.equal(focused.metadata?.degraded, true, "omitted focused facts are not freshly verified");
+  assert.equal(displayed[4].homeScore, 2, "fencing freshness must preserve the result and focused link");
+  const blurred = projectTouchlinePublishedLive(focused.fixtures, focused.metadata, publication, NOW, freshnessScope);
+  assert.equal(blurred.metadata?.degraded, false);
+  assert.deepEqual(selectTouchlinePublishedRailFixtures(blurred.fixtures, NOW, null, freshnessScope).map(row => row.providerId), next.map(row => row.providerId));
+  assert.deepEqual(seed, original, "focus and blur do not mutate the server catalogue");
+});
+
+test("advancing to an omitted scoreless schedule round cannot inherit the closing round's freshness", () => {
+  const current = freshnessRound(8, "FT"), next = freshnessRound(9, "Not Started");
+  current[9].status = "In Play";
+  const seed = [...current, ...next], original = structuredClone(seed);
+  const value = read();
+  const completed = current.map(row => ({ ...row, status: "FT" }));
+  const publication = { ...value, sportsPublication: { ...value.sportsPublication!, live: { fetchedAt: stamp, fixtures: completed } } };
+  const advanced = projectTouchlinePublishedLive(seed, null, publication, NOW, freshnessScope);
+  const displayed = selectTouchlinePublishedRailFixtures(advanced.fixtures, NOW, null, freshnessScope);
+  assert.deepEqual(displayed.map(row => row.providerId), next.map(row => row.providerId));
+  assert.ok(displayed.every(row => row.homeScore === undefined && row.awayScore === undefined));
+  assert.equal(advanced.metadata?.degraded, true, "absence of scores does not establish publication coverage");
+
+  const covered = { ...value, sportsPublication: { ...value.sportsPublication!, live: { fetchedAt: stamp, fixtures: next } } };
+  const recovered = projectTouchlinePublishedLive(advanced.fixtures, advanced.metadata, covered, NOW, freshnessScope);
+  assert.equal(recovered.metadata?.degraded, false, "a later receipt covering the actual displayed round can restore freshness");
+  assert.equal(recovered.metadata?.fetchedAt, stamp);
+  assert.equal(recovered.fixtures.length, 20, "completion and recovery retain the full catalogue");
+  assert.deepEqual(seed, original, "the original live fixture and scoreless schedule remain immutable");
 });

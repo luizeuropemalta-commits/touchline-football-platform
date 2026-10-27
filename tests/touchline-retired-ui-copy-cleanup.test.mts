@@ -94,7 +94,7 @@ test("only the orphan ComingSoon component is retired; intro implementation and 
   ]) assert.equal(existsSync(new URL(`../${path}`, import.meta.url)), true, path);
   assert.ok(source("app/coming-soon/page.tsx").includes('redirect(`/intro?lang=${encodeURIComponent(locale)}`)'));
   assert.match(source("app/arena/page.tsx"), /redirect\(`\/intro\?/);
-  assert.match(source("app/manifest.ts"), /id: "\/arena"/);
+  assert.equal(JSON.parse(source("public/manifest.webmanifest")).id, "/arena");
 });
 
 test("retired team presentations and their private styles have no remaining runtime references", () => {

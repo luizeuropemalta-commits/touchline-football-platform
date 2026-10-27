@@ -80,9 +80,15 @@ test("source contract guards loaders, seeds provider and reuses only the existin
   assert.ok(boundary.indexOf("if (!enabled)") < boundary.indexOf("resolveServerReadWithin(loadTouchLineActiveRanking()"));
   assert.doesNotMatch(source("app/layout.tsx"), /TouchlineCardLeadershipBoundary/);
   assert.match(source("components/touchline/cards/TouchlineCardLeadershipLayout.tsx"), /enabled=\{!isIsolatedPreview && dataSource === "direct"\}/);
-  for (const family of ["arena", "my-club", "clubowner", "touchline-clubs", "touchline-coaches"]) {
+  for (const family of ["arena", "my-club", "touchline-clubs", "touchline-coaches"]) {
     assert.match(source(`app/${family}/layout.tsx`), /TouchlineCardLeadershipLayout/);
   }
+  // ClubOwner streams its authenticated shell before sporting reads. Its one
+  // leadership boundary therefore belongs inside the page's Suspense content.
+  const clubOwner = source("app/clubowner/page.tsx");
+  assert.doesNotMatch(source("app/clubowner/layout.tsx"), /TouchlineCardLeadershipLayout/);
+  assert.equal((clubOwner.match(/<TouchlineCardLeadershipLayout>/g) ?? []).length, 1);
+  assert.match(clubOwner, /<Suspense\b[^>]*fallback=\{<TouchlineAccountLoading contentOnly \/>\}>\s*<TouchlineCardLeadershipLayout>\s*<ClubOwnerDeferredContent content=\{content\} \/>\s*<\/TouchlineCardLeadershipLayout>\s*<\/Suspense>/);
   const provider = source("components/touchline/cards/TouchlineCardLeadershipProvider.tsx");
   assert.match(provider, /!allowed \? EMPTY_CARD_LEADERSHIP_AUTHORITY/);
   assert.match(provider, /useTouchlineRankingRead\(liveUpdates && allowed\)/);

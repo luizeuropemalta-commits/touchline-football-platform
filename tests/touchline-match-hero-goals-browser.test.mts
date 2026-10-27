@@ -1,34 +1,57 @@
 import assert from "node:assert/strict";
-import { existsSync, mkdtempSync, readFileSync, realpathSync, statSync, statfsSync } from "node:fs";
-import { execFileSync } from "node:child_process";
+import { existsSync, mkdtempSync, readFileSync, realpathSync, statSync } from "node:fs";
+import { spawn } from "node:child_process";
+import { createHash } from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { chromium, webkit, expect, type Locator } from "@playwright/test";
-import { bundleIsolatedBrowserFixture } from "./helpers/touchline-isolated-browser-bundle.mts";
+
+import { requireBrowserCapacity } from "./helpers/touchline-browser-capacity.mts";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 test("real MatchCentre goals: five authors per column, grouped balls and long names without frame growth", {
   skip: process.env.TOUCHLINE_RUN_HERO_GOALS_BROWSER_TESTS !== "1", timeout: 120_000,
 }, async t => {
-  const capacity = () => {
-    const disk = statfsSync(root);
-    assert.ok(disk.bavail * disk.bsize > 5 * 1024 ** 3, "stop below 5 GiB free disk");
-    assert.equal(execFileSync("sysctl", ["-n", "kern.memorystatus_vm_pressure_level"], { encoding: "utf8" }).trim(), "1", "normal memory pressure required");
-    const free = Number(execFileSync("memory_pressure", { encoding: "utf8" }).match(/System-wide memory free percentage: (\d+)%/)?.[1]);
-    assert.ok(Number.isFinite(free) && free >= 25, "at least 25% free memory required");
-  };
+  const capacity = () => requireBrowserCapacity(root, { darwinFreePercent: true });
   capacity();
   // Synthetic browser evidence only. Keep screenshots outside the repository;
   // print exact generated paths for human inspection, including failing cases.
   const screenshotDirectory = mkdtempSync("/private/tmp/touchline-hero-goals-");
   t.diagnostic(`Screenshot directory: ${screenshotDirectory}`);
-  const bundle = bundleIsolatedBrowserFixture({ entryPath: "tests/fixtures/MatchHeroGoalsBrowserFixture.tsx", cssPrefix: "herogoals",
-    requiredSources: ["components/touchline/match-centre/TouchlineMatchCentre.tsx", "components/touchline/match-centre/touchline-match-centre.module.css", "lib/touchlineArena/match-hero-goals.ts"],
-    mountScript: "window.goalStyles=loadEntry().goalStyles;window.renderGoalScenario=scenario=>flushSync(()=>root.render(React.createElement(loadEntry().default,{scenario})));",
+  // Wait for close: compiler/AST caches must be gone before browser launch.
+  t.signal.throwIfAborted();
+  await new Promise<void>((resolve, reject) => {
+    const child = spawn(process.execPath, ["--experimental-strip-types",
+      path.join(root, "tests/helpers/touchline-hero-goals-compile-worker.mts"), screenshotDirectory], {
+      cwd: root, stdio: "ignore",
+    });
+    let failure: Error | undefined;
+    const abort = () => { failure = new Error("Hero goals fixture compilation aborted"); child.kill("SIGKILL"); };
+    const timeout = setTimeout(() => { failure = new Error("Hero goals fixture compilation exceeded 30 seconds"); child.kill("SIGKILL"); }, 30_000);
+    t.signal.addEventListener("abort", abort, { once: true });
+    child.once("error", () => { failure = new Error("Hero goals compiler could not start"); });
+    child.once("close", code => {
+      clearTimeout(timeout); t.signal.removeEventListener("abort", abort);
+      if (failure) reject(failure);
+      else if (code !== 0) reject(new Error(`Hero goals compiler exited with code ${code}`));
+      else resolve();
+    });
+    if (t.signal.aborted) abort();
   });
-  const css = readFileSync(path.join(root, "node_modules/tailwindcss/preflight.css"), "utf8")
-    + readFileSync(path.join(root, "app/globals.css"), "utf8").replace(/^@(import|source)[^;]*;\s*/gm, "") + bundle.css;
+  t.signal.throwIfAborted();
+  const script = readFileSync(path.join(screenshotDirectory, "fixture.js"), "utf8");
+  const css = readFileSync(path.join(screenshotDirectory, "fixture.css"), "utf8");
+  const receipt = JSON.parse(readFileSync(path.join(screenshotDirectory, "fixture-sources.json"), "utf8")) as { sources: string[]; sha256: Record<string, string> };
+  assert.ok(script.length > 0 && css.length > 0 && Array.isArray(receipt.sources) && receipt.sources.length > 0);
+  for (const source of receipt.sources) {
+    assert.ok(typeof source === "string" && !path.isAbsolute(source) && !source.split("/").includes(".."), "repository-relative source required");
+    assert.equal(createHash("sha256").update(readFileSync(path.join(root, source))).digest("hex"), receipt.sha256[source], "compiled source must match current source");
+  }
+  for (const required of ["components/touchline/match-centre/TouchlineMatchCentre.tsx", "components/touchline/match-centre/touchline-match-centre.module.css", "lib/touchlineArena/match-hero-goals.ts", "app/globals.css"]) {
+    assert.ok(receipt.sources.includes(required), required);
+  }
+  t.diagnostic(`Compiler exited before browser launch; source receipt: ${path.join(screenshotDirectory, "fixture-sources.json")}`);
   const publicRoot = realpathSync(path.join(root, "public")), origin = "https://hero-goals.test";
   const revealInsideGoalList = async (target: Locator, heroClass: string) => {
     // Move only the real list scrollport, never document/scrollIntoView. Check
@@ -92,7 +115,7 @@ test("real MatchCentre goals: five authors per column, grouped balls and long na
             if (asset.startsWith(publicRoot + path.sep) && existsSync(asset) && statSync(asset).isFile() && realpathSync(asset).startsWith(publicRoot + path.sep)) return route.fulfill({ path: asset });
             forbidden.push(url.pathname); return route.abort();
           });
-          await page.goto(`${origin}/live?lang=en-GB`); await page.addScriptTag({ content: `(()=>{${bundle.script}})()` });
+          await page.goto(`${origin}/live?lang=en-GB`); await page.addScriptTag({ content: `(()=>{${script}})()` });
           const classes = await page.evaluate(() => (window as unknown as { goalStyles: Record<string, string> }).goalStyles);
           let baseline: { height: number; teams: number; score: number } | null = null;
           for (const scenario of selectedScenarios) {
@@ -122,6 +145,11 @@ test("real MatchCentre goals: five authors per column, grouped balls and long na
               const side = sideIndex === 0 ? "Home" : "Away";
               const minuteStart = sideIndex === 0 ? 5 : 8;
               await expect(list).toHaveAttribute("aria-label", `Synthetic ${side}`);
+              const ownGoal = list.locator(`.${classes.ownGoalMark}`);
+              await expect(ownGoal).toHaveCount(1);
+              await expect(ownGoal).toHaveText("OG");
+              await expect(ownGoal).toHaveAttribute("title", "Own goal");
+              await expect(ownGoal).toBeVisible();
               const authors = list.locator(":scope > li");
               const authorCount = scenario === "one-seven" ? 1 : scenario === "five" ? 5 : 6;
               await expect(authors).toHaveCount(authorCount);

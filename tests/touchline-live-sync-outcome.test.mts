@@ -24,8 +24,8 @@ const reconcilePendingTouchlineFantasyGameweeks = runInNewContext(
   `${executableSource("../lib/touchlineFantasy/gameweek-lifecycle.ts")}\nreconcilePendingTouchlineFantasyGameweeks;`,
   {}, { timeout: 1000 },
 );
-const mergeCanonicalLiveFixture = runInNewContext(
-  `${executableSource("../lib/football-data/live-fixture-store.ts")}\nmergeCanonicalLiveFixture;`,
+const { mergeCanonicalLiveFixture, persistLiveFixtureStates } = runInNewContext(
+  `${executableSource("../lib/football-data/live-fixture-store.ts")}\n({ mergeCanonicalLiveFixture, persistLiveFixtureStates });`,
   { touchlineFixtureState },
   { timeout: 1000 },
 );
@@ -38,6 +38,11 @@ const fixture: TouchlineFixture = {
 };
 
 type Input = {
+  postMatchFixtureIds?: string[];
+  historicalPersistence?: {
+    lookupFailure?: "missing" | "throw" | "wrong-season" | "wrong-id" | "wrong-competition";
+    unconfirmedWrite?: boolean;
+  };
   fixtureOverride?: TouchlineFixture;
   now?: number;
   scheduled?: boolean;
@@ -100,11 +105,27 @@ function scenario(input: Input = {}) {
   const writes: Write[] = [];
   const calls: string[] = [];
   const snapshots: TouchlineFixture[][] = [];
+  const canonicalWrites: Array<{ values: Record<string, unknown>; filters: Record<string, unknown> }> = [];
   const eventObservationInputs: unknown[] = [];
   const pushProducerInputs: unknown[] = [];
   const logs: Array<{ status: string; errorCount: number; level: string }> = [];
   const admin = {
     from(table: string) {
+      if (table === "football_fixtures" && input.historicalPersistence) {
+        return { update(values: Record<string, unknown>) {
+          const filters: Record<string, unknown> = {};
+          const query = {
+            eq(column: string, value: unknown) { filters[column] = value; return query; },
+            async select(columns: string) {
+              assert.equal(columns, "provider_fixture_id");
+              canonicalWrites.push({ values, filters });
+              return { data: input.historicalPersistence?.unconfirmedWrite ? []
+                : [{ provider_fixture_id: filters.provider_fixture_id }], error: null };
+            },
+          };
+          return query;
+        } };
+      }
       if (table === "touchline_fantasy_configs") {
         const query = {
           select() { return query; },
@@ -164,7 +185,9 @@ function scenario(input: Input = {}) {
       return { data: { reconciled: 2 }, error: input.coachError ? { code: input.coachError } : null };
     },
   };
-  const readFixtures = async () => input.noIncomingFixtures ? [] : input.secondUnwrittenFixture ? [fixture, secondFixture] : [fixture];
+  const displayFixture = { ...secondFixture, status: "NotStarted", startsAt: new Date(now + 12 * 60 * 60 * 1000).toISOString() };
+  const readFixtures = async () => input.historicalPersistence ? [displayFixture]
+    : input.noIncomingFixtures ? [] : input.secondUnwrittenFixture ? [fixture, secondFixture] : [fixture];
   const sync = runInNewContext(`${syncSource}\nsyncSportmonksLiveState;`, {
     decideLiveSyncCadence, mergeCanonicalLiveFixture, reconcilePendingTouchlineFantasyGameweeks, AbortController,
     recoveryFixtureMatches, BACKLOG_MAX_PER_RUN, BACKLOG_DEADLINE_MS,
@@ -183,7 +206,7 @@ function scenario(input: Input = {}) {
       return {
         // ranking-source-incomplete deliberately retains the scorer's valid
         // settlements and may return ok:true with no ordinary errors.
-        ok: !input.playerErrors?.length, fixtureRowsWritten: 22,
+        ok: !input.playerErrors?.length, fixtureRowsWritten: 0, v4FixtureRowsWritten: 22,
         scoringFixtureIds: ["fixture-internal"], failedFixtureIds: input.failedFixtureIds ?? [], missingSettlementFixtureIds: input.missingSettlementFixtureIds ?? [],
         errors: input.playerErrors ?? [], rankingError: input.rankingError ?? null,
       };
@@ -192,6 +215,20 @@ function scenario(input: Input = {}) {
 
   const run = () => sync(admin, input.scheduled || input.cadenceNotDue || input.noIncomingFixtures ? {} : { forceFixtureId: fixture.providerId }, {
     now: () => now,
+    readFixtureById: async (id: string, options: { providedAdmin: unknown; competitionProviderId: string }) => {
+      calls.push("read-canonical");
+      assert.equal(id, fixture.providerId);
+      assert.equal(options.providedAdmin, admin);
+      assert.equal(options.competitionProviderId, "8");
+      const failure = input.historicalPersistence?.lookupFailure;
+      if (failure === "throw") throw new Error("private-database-details");
+      if (failure === "missing") return null;
+      return { ...fixture, status: "NotStarted", homeScore: null, awayScore: null,
+        ...(failure === "wrong-season" ? { seasonId: "other-season" } : {}),
+        ...(failure === "wrong-id" ? { providerId: "19722199" } : {}),
+        ...(failure === "wrong-competition" ? { competitionId: "other-league" } : {}),
+      };
+    },
     resolveRecoveryScope: async () => ({ seasonId: "active-season", providerSeasonId: "25600", competitionId: "league-a" }),
     claimRecovery: async () => {
       if (!input.backlog) return null;
@@ -205,12 +242,14 @@ function scenario(input: Input = {}) {
     acquireRun: async () => { calls.push("lease"); return input.leaseUnavailable
       ? { acquired: false, reason: "live_sync_in_flight" }
       : { acquired: true, runId: RUN_ID }; },
+    readPostMatchCandidates: async () => input.postMatchFixtureIds ?? [],
+    recordPostMatchAttempt: async () => {},
     ...(input.scheduleError ? {} : { readFixtures }),
     provider: input.providerInitializationFailure ? undefined : {
       async getLiveScores() {
         calls.push("provider-live");
         return input.liveError ? { ok: false, error: { code: input.liveError, status: input.liveHttpStatus,
-          requestDisposition: input.liveRequestDisposition, message: "secret-provider-payload" } } : { ok: true, data: input.noIncomingFixtures ? []
+          requestDisposition: input.liveRequestDisposition, message: "secret-provider-payload" } } : { ok: true, data: input.noIncomingFixtures || input.historicalPersistence ? []
           : input.secondUnwrittenFixture ? [incomingFixture, secondIncoming] : [incomingFixture] };
       },
       async getFixtureFantasyFeed(providerId: string) {
@@ -226,7 +265,7 @@ function scenario(input: Input = {}) {
     },
     persistFantasyFeed: async () => { calls.push("persist-feed"); return { persisted: !input.feedPersistenceError, reason: input.feedPersistenceError }; },
     recordLineupObservation: async () => input.lineupError ? { recorded: false, error: input.lineupError } : { recorded: true },
-    persistStates: async () => {
+    persistStates: input.historicalPersistence ? persistLiveFixtureStates : async () => {
       await Promise.resolve();
       calls.push("states");
       return { updated: input.stateUpdates ?? 1, errors: input.stateErrors ?? [],
@@ -253,7 +292,7 @@ function scenario(input: Input = {}) {
       return { status: input.pushProducerStatus ?? "completed", prepared: 1, baselined: 1, attempted: 0, storedOrExisting: 0, suppressed: 0 };
     },
   });
-  return { run, writes, calls, snapshots, logs, eventObservationInputs, pushProducerInputs };
+  return { run, writes, calls, snapshots, logs, eventObservationInputs, pushProducerInputs, canonicalWrites };
 }
 
 const pushObservationEnvironment = { VERCEL_ENV: "preview", TOUCHLINE_QA_SUPABASE_PROJECT_REF: "xgxbwqxjssxxuihuwmgy", TOUCHLINE_MATCH_PUSH_WORKER_ENABLED: "true" };
@@ -740,3 +779,73 @@ test("provider initialization failure leaves a safe diagnostic and makes no prov
   assert.equal(s.logs[0].errorCount, 1);
   assert.doesNotMatch(JSON.stringify([s.writes, s.logs]), /private-provider/);
 });
+
+
+const historicalFixture: TouchlineFixture = {
+  ...fixture, startsAt: "2026-09-12T15:00:00.000Z", status: "Full Time", homeScore: 2, awayScore: 2,
+};
+
+test("forced historical feed updates its exact canonical row through the real writer without extending the display schedule", async () => {
+  const s = scenario({ fixtureOverride: historicalFixture, historicalPersistence: {} });
+  const result = await s.run();
+  assert.equal(result.ok, true);
+  assert.equal(result.updated, 1);
+  assert.equal(s.canonicalWrites.length, 1);
+  assert.deepEqual(s.canonicalWrites[0].filters, { provider: "sportmonks", provider_fixture_id: historicalFixture.providerId });
+  assert.equal(s.canonicalWrites[0].values.status, "Full Time");
+  assert.equal(s.canonicalWrites[0].values.home_score, 2);
+  assert.equal(s.canonicalWrites[0].values.away_score, 2);
+  assert.equal(s.canonicalWrites[0].values.source_updated_at, new Date(NOW).toISOString());
+  assert.equal(s.calls.filter(call => call === "read-canonical").length, 1);
+  assert.equal(s.calls.filter(call => call === "provider-feed").length, 1);
+  assert.equal(s.calls.filter(call => call === "provider-live").length, 1);
+  assert.equal(s.calls.some(call => call.startsWith("fetch-")), false);
+  assert.deepEqual(Array.from(s.snapshots[0], row => row.providerId), ["19722168"]);
+  assertCompletion(s, result);
+});
+
+for (const lookupFailure of ["missing", "throw", "wrong-season", "wrong-id", "wrong-competition"] as const) {
+  test(`forced historical ${lookupFailure} canonical lookup is explicit partial failure, never a provider fallback`, async () => {
+    const s = scenario({ fixtureOverride: historicalFixture, historicalPersistence: { lookupFailure }, environment: pushProducerEnvironment });
+    const result = await s.run();
+    assert.equal(result.ok, false);
+    assert.equal(result.status, "partial");
+    assert.equal(result.updated, 0);
+    assert.deepEqual([...result.errors], [`${historicalFixture.providerId}:canonical-state-unavailable`]);
+    assert.equal(s.canonicalWrites.length, 0);
+    assert.equal(s.calls.includes("publish-presentation"), false);
+    assert.equal(s.calls.includes("observe-events"), false);
+    assert.equal(s.calls.includes("produce-push"), false);
+    assert.equal(s.calls.filter(call => call === "provider-feed").length, 1);
+    assert.doesNotMatch(JSON.stringify([result, s.writes, s.logs]), /private-database/);
+    assertCompletion(s, result);
+  });
+}
+
+test("forced historical canonical write without an acknowledgement cannot count as an update", async () => {
+  const s = scenario({ fixtureOverride: historicalFixture, historicalPersistence: { unconfirmedWrite: true } });
+  const result = await s.run();
+  assert.equal(result.ok, false);
+  assert.equal(result.status, "partial");
+  assert.equal(result.updated, 0);
+  assert.deepEqual([...result.errors], [`${historicalFixture.providerId}:write-unconfirmed`]);
+  assert.equal(s.canonicalWrites.length, 1);
+  assert.equal(s.calls.includes("publish-presentation"), false);
+  assertCompletion(s, result);
+});
+
+test("a fixture already in the canonical schedule needs no additional exact lookup", async () => {
+  const s = scenario();
+  const result = await s.run();
+  assert.equal(result.ok, true);
+  assert.equal(s.calls.includes("read-canonical"), false);
+});
+
+ test("completed fixture revisions traverse provider, canonical points and publication without historical push", async () => {
+  const check = scenario({ scheduled: true, postMatchFixtureIds: [fixture.providerId],
+    fixtureOverride: { ...fixture, status: "Full Time", startsAt: new Date(NOW - 24 * 3600000).toISOString() } });
+  const result = await check.run();
+  assert.equal(result.ok, true);
+  for (const step of ["provider-feed", "persist-feed", "players", "fantasy-lifecycle", "publish-presentation"])
+    assert.ok(check.calls.includes(step), step);
+ });

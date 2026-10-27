@@ -117,10 +117,10 @@ test("benefits remain in the same dialog; back restores focus; hiring stays unav
 
 test("Beta exploration never invokes legacy selection or hiring callbacks", () => {
   const view = fixture(); view.click("Ver benefícios: Beta"); assert.deepEqual(view.selections, []);
-  assert.match(view.html(), /Elenco Beta previsto: 35 jogadores \+ 1 treinador/);
-  assert.match(view.html(), /Esta coleção ainda não está disponível para Beta/);
+  assert.match(view.html(), /100M TC compartilhados entre 35 jogadores e 1 treinador/);
+  assert.match(view.html(), /Treinador inicial Ruby: 5M TC; saldo restante: 95M TC/);
   assert.doesNotMatch(view.html(), /Jogadores e treinador usam o mesmo saldo/);
-  assert.match(view.html(), /50M TC/); assert.doesNotMatch(view.html(), /Pagamento indisponível/);
+  assert.match(view.html(), /100M TC/); assert.doesNotMatch(view.html(), /Pagamento indisponível/);
   view.click("Contratar plano"); view.click("Contratar plano"); assert.deepEqual(view.selections, []);
   view.update({ selecting: true }); assert.equal(view.button("Contratar plano").props.disabled, true);
   view.update({ selecting: false, onSelect: undefined, selectionError: true }); assert.equal(view.button("Contratar plano").props.disabled, true);

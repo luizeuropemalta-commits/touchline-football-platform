@@ -18,7 +18,7 @@ const objectKey = `${actorId}/${operationId}/${digest}.webp`;
 const avatarUrl = `/api/account/avatar?version=${operationId}`;
 const signal = () => new AbortController().signal;
 const avatarModules = () => readdirSync(resolve(import.meta.dirname, "../lib/touchlineArena")).filter(name => /^club-owner-avatar-.*\.ts$/.test(name)).sort();
-const expectedAvatarModules = ["client", "context-server", "control-admission", "local-admission", "output-policy", "persistence", "read-handler", "resource-admission", "retention-discovery-worker", "retention-list-storage", "retention-rpc", "retention-server", "retention-storage", "retention-worker", "selection-contract", "server", "storage", "transport-limits", "ui-i18n", "upload-contract", "upload-handler", "validation-types", "validation"].map(name => `club-owner-avatar-${name}.ts`).sort();
+const expectedAvatarModules = ["admission-diagnostics", "client", "context-server", "control-admission", "local-admission", "output-policy", "persistence", "read-handler", "resource-admission", "retention-discovery-worker", "retention-list-storage", "retention-rpc", "retention-server", "retention-storage", "retention-worker", "selection-contract", "server", "storage", "transport-limits", "ui-i18n", "upload-contract", "upload-handler", "validation-types", "validation"].map(name => `club-owner-avatar-${name}.ts`).sort();
 
 test("avatar compiler inventory includes every reviewed module, including the explicit local admission guard", () => {
   assert.deepEqual(avatarModules(), expectedAvatarModules);

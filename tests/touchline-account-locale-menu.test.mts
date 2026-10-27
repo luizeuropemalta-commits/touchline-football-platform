@@ -7,7 +7,6 @@ import * as jsx from 'react/jsx-runtime';
 import { startAccountLocaleBrowser } from '../lib/touchlineArena/account-locale-browser.ts';
 import * as i18n from '../lib/touchlineArena/i18n.ts';
 import * as menuCopy from '../lib/touchlineArena/account-locale-menu-i18n.ts';
-import * as publicErrorCopy from '../lib/touchlineArena/public-error-i18n.ts';
 import { startAccountLocaleIdentityObserver } from '../lib/touchlineArena/account-locale-identity-observer.ts';
 
 const owner = '11111111-1111-4111-8111-111111111111';
@@ -40,13 +39,14 @@ function harness(mode = context, request = async (_url: string, init: RequestIni
     'react/jsx-runtime': jsx,
     'next/navigation': { useRouter: () => ({ refresh: () => { refreshes++; } }) },
     'lucide-react': { Check: () => null, ChevronDown: () => null, Languages: () => null },
-    '@/lib/touchlineArena/account-locale-browser': { startAccountLocaleBrowser },
+    '@/lib/touchlineArena/account-locale-browser': { startAccountLocaleBrowser: (options: Parameters<typeof startAccountLocaleBrowser>[0]) => startAccountLocaleBrowser({ ...options,
+      setTimer: (callback, delay) => { timers.set(++timerSerial, { callback, delay }); return timerSerial; },
+      clearTimer: handle => { timers.delete(handle as number); },
+    }) },
     '@/lib/touchlineArena/account-locale-identity-observer': { startAccountLocaleIdentityObserver: (options: Parameters<typeof startAccountLocaleIdentityObserver>[0]) => startAccountLocaleIdentityObserver({ ...options,
       setTimer: (callback, delay) => { timers.set(++timerSerial, { callback, delay }); return timerSerial; },
       clearTimer: handle => { timers.delete(handle as number); },
     }) },
-    '@/lib/touchlineArena/public-error-i18n': publicErrorCopy,
-    './TouchlineGlobalNavigation.module.css': { default: { link: 'shared-control' } },
     '@/lib/touchlineArena/presentation-locale-intent': { readTouchlinePresentationLocaleIntent: () => null, rememberTouchlinePresentationLocaleIntent: () => false },
     '@/lib/touchlineArena/i18n': i18n,
     '@/lib/touchlineArena/account-locale-menu-i18n': menuCopy,
@@ -67,7 +67,11 @@ function harness(mode = context, request = async (_url: string, init: RequestIni
       const entry = [...timers].find(([, timer]) => timer.delay === 0); assert.ok(entry);
       timers.delete(entry[0]); entry[1].callback();
     },
-    commitRecovery() { mounted = false; render(); mounted = true; cleanup(); cleanup = effect!(); },
+    runRecovery() {
+      const entry = [...timers].find(([, timer]) => timer.delay === 1000); assert.ok(entry);
+      timers.delete(entry[0]); entry[1].callback();
+    },
+    timerCount: () => timers.size,
     changeContextBeforePassive(next: typeof mode) {
       mode = next; mounted = false; render(); mounted = true;
       // Model commit layout phase only: passive cleanup has not run yet.
@@ -77,16 +81,16 @@ function harness(mode = context, request = async (_url: string, init: RequestIni
     emit: (id: string | null) => identity!('SIGNED_IN', id === null ? null : { user: { id } }), counts: () => ({ authCalls, unsubscribes, refreshes }) };
 }
 type Element = { type: unknown; props: Record<string, unknown> };
-test('blocked language copy offers retry in eight locales without requiring a page reload', () => {
+test('blocked language copy stays honest in eight locales without a removed retry instruction', () => {
   const expected = {
-    'en-GB': 'Language could not be confirmed. Try again.',
-    'pt-BR': 'Não foi possível confirmar o idioma. Tente novamente.',
-    'es-ES': 'No se pudo confirmar el idioma. Vuelve a intentarlo.',
-    'it-IT': 'Impossibile confermare la lingua. Riprova.',
-    'fr-FR': 'La langue n’a pas pu être confirmée. Réessayez.',
-    'ar-SA': 'تعذّر تأكيد اللغة. حاول مرة أخرى.',
-    'tr-TR': 'Dil doğrulanamadı. Tekrar deneyin.',
-    'de-DE': 'Die Sprache konnte nicht bestätigt werden. Versuche es erneut.',
+    'en-GB': 'Language could not be confirmed.',
+    'pt-BR': 'Não foi possível confirmar o idioma.',
+    'es-ES': 'No se pudo confirmar el idioma.',
+    'it-IT': 'Impossibile confermare la lingua.',
+    'fr-FR': 'La langue n’a pas pu être confirmée.',
+    'ar-SA': 'تعذّر تأكيد اللغة.',
+    'tr-TR': 'Dil doğrulanamadı.',
+    'de-DE': 'Die Sprache konnte nicht bestätigt werden.',
   };
   assert.deepEqual(Object.keys(expected), i18n.TOUCHLINE_APPROVED_LOCALES.map(entry => entry.code));
   for (const [locale, message] of Object.entries(expected)) {
@@ -104,16 +108,14 @@ test('locale loading and blocked feedback stay accessible without visible header
     assert.equal(loading.props.role, 'status');
     assert.equal(loading.props['aria-live'], 'polite');
     assert.ok(loading.props.children);
-    pending.resolve(new Response('{}', { status: 503 }));
+    pending.resolve(new Response('{}', { status: 403 }));
     await settle();
     const blocked = elements(h.render(), 'p')[0];
     assert.equal(blocked.props.className, 'sr-only');
     assert.equal(blocked.props.role, 'status');
     assert.equal(blocked.props['aria-live'], 'polite');
-    assert.equal(blocked.props.children, 'Language could not be confirmed. Try again.');
-    const retry = elements(h.render(), 'button')[0];
-    assert.equal(retry.props.children, 'Try again');
-    assert.equal(retry.props.className, 'shared-control');
+    assert.equal(blocked.props.children, 'Language could not be confirmed.');
+    assert.equal(elements(h.render(), 'button').length, 0, 'no visible manual recovery button');
     assert.deepEqual(h.navigations, []);
     h.cleanup();
   }
@@ -234,20 +236,24 @@ test('unavailable user in guest context is blocked until identity is resolved', 
   h.cleanup();
 });
 
-test('explicit retry creates one fresh authenticated read and never replays a failed selection', async () => {
+test('automatic read recovery enables the selector without replaying a failed selection', async () => {
   let reads = 0;
   const h = harness(context, async (_url, init) => {
     if (init.method === 'PUT') return new Response('{}', { status: 503 });
-    reads++; return reads === 1 ? new Response('{}', { status: 503 }) : json(receipt);
+    reads++; return reads === 1 ? new Response('{}', { status: 503 }) : json({ ...receipt, data: { ...receipt.data, gameLocaleRevision: '9' } });
   });
   await settle(); assert.equal(reads, 1);
-  const retry = elements(h.render(), 'button')[0];
-  assert.equal(retry.props.children, 'Try again'); assert.equal(retry.props.className, 'shared-control');
-  (retry.props.onClick as () => void)(); h.commitRecovery(); await settle();
+  assert.equal(elements(h.render(), 'button').length, 0);
+  assert.equal(elements(h.render(), 'a')[0].props['aria-disabled'], true);
+  h.runRecovery(); await settle();
   assert.equal(reads, 2); assert.equal(elements(h.render(), 'a')[0].props['aria-disabled'], false);
   click(elements(h.render(), 'a')[1]); await settle();
-  (elements(h.render(), 'button')[0].props.onClick as () => void)(); h.commitRecovery(); await settle();
-  assert.deepEqual(h.calls.map(call => call.method), ['GET', 'GET', 'PUT', 'GET']);
+  assert.deepEqual(h.calls.map(call => call.method), ['GET', 'GET', 'PUT']);
+  assert.equal(JSON.parse(h.calls[2].body as string).expectedRevision, '9', 'explicit write uses freshly verified revision');
+  assert.equal(elements(h.render(), 'button').length, 0);
+  assert.equal(h.timerCount(), 0, 'uncertain writes do not start read or write recovery');
+  assert.equal(elements(h.render(), 'a')[0].props['aria-disabled'], true);
+  assert.equal(h.counts().refreshes, 0);
   assert.deepEqual(h.navigations, []); assert.deepEqual(h.storageWrites, []);
   assert.equal(h.document.cookie, ''); h.cleanup();
 });
@@ -256,6 +262,7 @@ test('demo and unavailable instantiate no browser auth client or account request
     const h = harness({ mode, accountId: '' }); await settle();
     click(elements(h.render(), 'a')[1]); await settle();
     assert.equal(h.counts().authCalls, 0); assert.equal(h.calls.length, 0);
+    assert.equal(h.counts().refreshes, 0); assert.equal(h.timerCount(), 0);
     assert.equal(h.navigations.length, mode === 'demo' ? 1 : 0); h.cleanup();
   }
 });

@@ -49,14 +49,14 @@ export const CLUB_OWNER_PLAN_EXPERIENCE_COPY: Readonly<Record<TouchLineLocale, R
   "de-DE": { membership: "Mitgliedschaft", fantasyFootball: "Fantasy-Fußball", comparePlans: "Pläne vergleichen", details: "Plandetails", close: "Schließen", previewShort: "Planvorschau", plan: "Plan", viewPlan: "Plan ansehen", selected: "Ausgewählt", choosePlan: "Plan wählen", working: "Wir bereiten Planwechsel vor. Dein aktueller Plan und dein Guthaben bleiben unverändert." },
 };
 const BETA_MARKET_BENEFIT: Readonly<Record<TouchLineLocale, string>> = {
-  "en-GB": "50M TC XI budget. Player Market: Hull City, Coventry City, Ipswich Town and Bournemouth. Public browsing and coaches remain open.",
-  "pt-BR": "Orçamento de 50M TC para o XI. Mercado de jogadores: Hull City, Coventry City, Ipswich Town e Bournemouth. Navegação pública e treinadores continuam livres.",
-  "es-ES": "Presupuesto de 50M TC para el once. Mercado de jugadores: Hull City, Coventry City, Ipswich Town y Bournemouth. La navegación pública y los entrenadores siguen abiertos.",
-  "it-IT": "Budget di 50M TC per gli undici. Mercato giocatori: Hull City, Coventry City, Ipswich Town e Bournemouth. La navigazione pubblica e gli allenatori restano accessibili.",
-  "fr-FR": "Budget de 50M TC pour le onze. Marché des joueurs : Hull City, Coventry City, Ipswich Town et Bournemouth. La navigation publique et les entraîneurs restent accessibles.",
-  "ar-SA": "ميزانية 50 مليون TC للتشكيلة الأساسية. سوق اللاعبين: هال سيتي وكوفنتري سيتي وإيبسويتش تاون وبورنموث. يظل التصفح العام والمدربون متاحين.",
-  "tr-TR": "İlk 11 için 50M TC bütçe. Oyuncu Pazarı: Hull City, Coventry City, Ipswich Town ve Bournemouth. Herkese açık gezinme ve teknik direktörler erişilebilir kalır.",
-  "de-DE": "50M TC Startelf-Budget. Spielermarkt: Hull City, Coventry City, Ipswich Town und Bournemouth. Öffentliches Browsen und Trainer bleiben zugänglich.",
+  "en-GB": "100M TC shared by 35 players and 1 coach. Initial Ruby coach: 5M TC; remaining balance: 95M TC. Player Market: Hull City, Coventry City, Ipswich Town, Bournemouth, Sunderland and Everton. Exchange fee: 7%.",
+  "pt-BR": "100M TC compartilhados entre 35 jogadores e 1 treinador. Treinador inicial Ruby: 5M TC; saldo restante: 95M TC. Mercado de jogadores: Hull City, Coventry City, Ipswich Town, Bournemouth, Sunderland e Everton. Taxa de Exchange: 7%.",
+  "es-ES": "100M TC compartidos entre 35 jugadores y 1 entrenador. Entrenador inicial Ruby: 5M TC; saldo restante: 95M TC. Mercado: Hull City, Coventry City, Ipswich Town, Bournemouth, Sunderland y Everton. Comisión de Exchange: 7%.",
+  "it-IT": "100M TC condivisi tra 35 giocatori e 1 allenatore. Allenatore iniziale Ruby: 5M TC; saldo restante: 95M TC. Mercato: Hull City, Coventry City, Ipswich Town, Bournemouth, Sunderland ed Everton. Commissione Exchange: 7%.",
+  "fr-FR": "100M TC partagés entre 35 joueurs et 1 entraîneur. Entraîneur initial Ruby : 5M TC ; solde restant : 95M TC. Marché : Hull City, Coventry City, Ipswich Town, Bournemouth, Sunderland et Everton. Frais Exchange : 7%.",
+  "ar-SA": "100M TC مشتركة بين 35 لاعبًا ومدرب واحد. المدرب الأول من فئة Ruby: 5M TC؛ الرصيد المتبقي: 95M TC. السوق: هال سيتي وكوفنتري سيتي وإيبسويتش تاون وبورنموث وسندرلاند وإيفرتون. رسوم Exchange: 7%.",
+  "tr-TR": "35 oyuncu ve 1 teknik direktör için ortak 100M TC. İlk Ruby teknik direktör: 5M TC; kalan bakiye: 95M TC. Pazar: Hull City, Coventry City, Ipswich Town, Bournemouth, Sunderland ve Everton. Exchange ücreti: %7.",
+  "de-DE": "100M TC gemeinsam für 35 Spieler und 1 Trainer. Erster Ruby-Trainer: 5M TC; verbleibendes Guthaben: 95M TC. Markt: Hull City, Coventry City, Ipswich Town, Bournemouth, Sunderland und Everton. Exchange-Gebühr: 7%."
 };
 const BETA_PRICE: Readonly<Record<TouchLineLocale, string>> = {
   "en-GB": "Free", "pt-BR": "Gratuito", "es-ES": "Gratis", "it-IT": "Gratuito",
@@ -119,28 +119,30 @@ export function getClubOwnerPlanDisclosure(locale: string, draftLocalesEnabled =
 }
 
 const BETA_SQUAD_DISCLOSURE: Readonly<Record<TouchLineLocale, string>> = {
-  "en-GB": "Planned Beta squad: 35 players + 1 coach sharing one credit balance. This collection is not available for Beta yet.",
-  "pt-BR": "Elenco Beta previsto: 35 jogadores + 1 treinador no mesmo saldo de créditos. Esta coleção ainda não está disponível para Beta.",
-  "es-ES": "Plantilla Beta prevista: 35 jugadores + 1 entrenador con un saldo compartido. Esta colección aún no está disponible para Beta.",
-  "it-IT": "Rosa Beta prevista: 35 giocatori + 1 allenatore con saldo condiviso. Questa collezione non è ancora disponibile per Beta.",
-  "fr-FR": "Effectif Beta prévu : 35 joueurs + 1 entraîneur avec un solde commun. Cette collection n’est pas encore disponible pour Beta.",
-  "ar-SA": "تشكيلة Beta المخططة: 35 لاعبًا ومدرب واحد برصيد مشترك. هذه المجموعة غير متاحة لخطة Beta بعد.",
-  "tr-TR": "Planlanan Beta kadrosu: ortak bakiyeyle 35 oyuncu + 1 teknik direktör. Bu koleksiyon henüz Beta için kullanılamıyor.",
-  "de-DE": "Geplanter Beta-Kader: 35 Spieler + 1 Trainer mit gemeinsamem Guthaben. Diese Sammlung ist für Beta noch nicht verfügbar.",
+  "en-GB": "100M TC shared by 35 players and 1 coach. Initial Ruby coach: 5M TC; remaining balance: 95M TC. Player Market: Hull City, Coventry City, Ipswich Town, Bournemouth, Sunderland and Everton. Exchange fee: 7%.",
+  "pt-BR": "100M TC compartilhados entre 35 jogadores e 1 treinador. Treinador inicial Ruby: 5M TC; saldo restante: 95M TC. Mercado de jogadores: Hull City, Coventry City, Ipswich Town, Bournemouth, Sunderland e Everton. Taxa de Exchange: 7%.",
+  "es-ES": "100M TC compartidos entre 35 jugadores y 1 entrenador. Entrenador inicial Ruby: 5M TC; saldo restante: 95M TC. Mercado: Hull City, Coventry City, Ipswich Town, Bournemouth, Sunderland y Everton. Comisión de Exchange: 7%.",
+  "it-IT": "100M TC condivisi tra 35 giocatori e 1 allenatore. Allenatore iniziale Ruby: 5M TC; saldo restante: 95M TC. Mercato: Hull City, Coventry City, Ipswich Town, Bournemouth, Sunderland ed Everton. Commissione Exchange: 7%.",
+  "fr-FR": "100M TC partagés entre 35 joueurs et 1 entraîneur. Entraîneur initial Ruby : 5M TC ; solde restant : 95M TC. Marché : Hull City, Coventry City, Ipswich Town, Bournemouth, Sunderland et Everton. Frais Exchange : 7%.",
+  "ar-SA": "100M TC مشتركة بين 35 لاعبًا ومدرب واحد. المدرب الأول من فئة Ruby: 5M TC؛ الرصيد المتبقي: 95M TC. السوق: هال سيتي وكوفنتري سيتي وإيبسويتش تاون وبورنموث وسندرلاند وإيفرتون. رسوم Exchange: 7%.",
+  "tr-TR": "35 oyuncu ve 1 teknik direktör için ortak 100M TC. İlk Ruby teknik direktör: 5M TC; kalan bakiye: 95M TC. Pazar: Hull City, Coventry City, Ipswich Town, Bournemouth, Sunderland ve Everton. Exchange ücreti: %7.",
+  "de-DE": "100M TC gemeinsam für 35 Spieler und 1 Trainer. Erster Ruby-Trainer: 5M TC; verbleibendes Guthaben: 95M TC. Markt: Hull City, Coventry City, Ipswich Town, Bournemouth, Sunderland und Everton. Exchange-Gebühr: 7%."
 };
 
 /** Presentation of approved rules only: never activates a plan or a payment. */
 export function getClubOwnerPlanBenefits(plan: typeof CLUB_OWNER_PLAN_PREVIEWS[number]["id"], locale: string, draftLocalesEnabled = false) {
-  if (plan === "beta") return [];
   const labels = BENEFIT_LABELS[resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled)];
   const rules = CLUB_PLANS[plan];
-  return [
+  const benefits: { label: string; value: string }[] = [
     { label: labels[0], value: String(CLUB_ROSTER_CAPACITY.total) },
     { label: labels[1], value: CLUB_OWNER_PLAN_SHOWCASE_COPY[resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled)].unlimited },
     { label: labels[2], value: `${rules.exchange}%` },
     { label: labels[3], value: labels[7] },
     { label: labels[4], value: `${rules.market}%` },
+  ];
+  if (rules.topUpCents !== null) benefits.push(
     { label: labels[5], value: new Intl.NumberFormat(locale, { style: "currency", currency: "EUR" }).format(rules.topUpCents / 100) },
     { label: labels[6], value: `${CLUB_SEASON_TOP_UP_LIMIT / 1_000_000}M TC` },
-  ];
+  );
+  return benefits;
 }

@@ -5,6 +5,7 @@ import vm from "node:vm";
 import ts from "typescript";
 import * as jsx from "react/jsx-runtime";
 import * as client from "../lib/touchlineArena/club-owner-avatar-client.ts";
+import { startAccountLocaleIdentityObserver } from "../lib/touchlineArena/account-locale-identity-observer.ts";
 import * as catalogue from "../lib/touchlineArena/club-owner-avatar-ui-i18n.ts";
 import * as localeModule from "../lib/touchlineArena/i18n.ts";
 import * as selection from "../lib/touchlineArena/club-owner-avatar-selection-contract.ts";
@@ -69,12 +70,19 @@ test("real header forwards separate dormant selection capabilities without chang
 
 // Real component + real C2 controller. Hook slots/effects, auth notifications,
 // router and HTTP are controlled boundaries; not a React scheduler or DOM proof.
-function fixture(options: { context?: unknown; locale?: string; missingAuth?: boolean; delayedAuth?: boolean; drafts?: boolean; copy?: Record<string, unknown> } = {}) {
+function fixture(options: { context?: unknown; locale?: string; missingAuth?: boolean; delayedAuth?: boolean; initialSession?: unknown; drafts?: boolean; copy?: Record<string, unknown> } = {}) {
   let props = { accountId: actor, context: Object.hasOwn(options, "context") ? options.context : context(), locale: options.locale ?? "en-GB", children: "EXISTING PORTRAIT", draftLocalesEnabled: options.drafts ?? false };
   let cursor = 0, mounted = false;
   const slots: unknown[] = [], effects: { index: number; callback: () => void | (() => void); deps: unknown[] }[] = [];
   const cleanup = new Map<number, () => void>(); const calls: string[] = [], requests: { input: unknown; init: RequestInit }[] = [];
-  const observers = new Set<(event: string, session: { user: { id: string } } | null) => void>();
+  const observers = new Set<(event: string, session: unknown) => void>();
+  const identityTimers = new Map<number, { callback: () => void; delay: number }>(); let identityTimerId = 0, notifying = false;
+  let userResponse = async (): Promise<unknown> => ({ data: { user: { id: actor } }, error: null });
+  const notify = (session: unknown) => {
+    notifying = true;
+    try { for (const callback of observers) callback("SIGNED_IN", session); }
+    finally { notifying = false; }
+  };
   const timers = new Set<() => void>(); let now = 0;
   let responder = async (_input: unknown, _init: RequestInit): Promise<Response> => Response.json({ ok: true, state: "observed", context: context() });
   const hook = {
@@ -89,11 +97,18 @@ function fixture(options: { context?: unknown; locale?: string; missingAuth?: bo
     react: hook, "react/jsx-runtime": jsx,
     "next/navigation": { useRouter: () => ({ refresh: () => calls.push("refresh") }) },
     "@/lib/supabase/client": { createClient: () => { calls.push("auth-client"); return options.missingAuth ? null : { auth: {
+      getUser: () => { assert.equal(notifying, false, "getUser must run outside the SDK callback"); calls.push("getUser"); return userResponse(); },
       onAuthStateChange(callback: typeof observers extends Set<infer T> ? T : never) {
-        observers.add(callback); if (!options.delayedAuth) callback("INITIAL_SESSION", { user: { id: actor } });
+        observers.add(callback); if (!options.delayedAuth) notify(Object.hasOwn(options, "initialSession") ? options.initialSession : { user: { id: actor } });
         return { data: { subscription: { unsubscribe: () => { calls.push("unsubscribe"); observers.delete(callback); } } } };
       },
     } }; } },
+    "@/lib/touchlineArena/account-locale-identity-observer": {
+      startAccountLocaleIdentityObserver: (input: Parameters<typeof startAccountLocaleIdentityObserver>[0]) => startAccountLocaleIdentityObserver({ ...input,
+        setTimer: (callback, delay) => { identityTimers.set(++identityTimerId, { callback, delay }); return identityTimerId; },
+        clearTimer: handle => { identityTimers.delete(handle as number); },
+      }),
+    },
     "@/lib/touchlineArena/club-owner-avatar-client": { ...client, createClubOwnerAvatarRecoveryClient: (input: Parameters<typeof client.createClubOwnerAvatarRecoveryClient>[0]) => client.createClubOwnerAvatarRecoveryClient({ ...input,
       now: () => now, scheduleTimeout: callback => { timers.add(callback); return () => { timers.delete(callback); }; } }) },
     "@/lib/touchlineArena/club-owner-avatar-ui-i18n": options.copy ?? copyModule(options.drafts),
@@ -119,7 +134,14 @@ function fixture(options: { context?: unknown; locale?: string; missingAuth?: bo
     expire: () => { now = 8_001; for (const callback of [...timers]) callback(); }, timers,
     click: (key: string) => { const found = button(key); assert.notEqual(found.props.disabled, true, key); (found.props.onClick as () => void)(); return commit(); },
     respond: (value: typeof responder) => { responder = value; },
-    identity: (id: string | null) => { for (const callback of observers) callback("SIGNED_IN", id ? { user: { id } } : null); },
+    identity: (id: string | null) => notify(id ? { user: { id } } : null),
+    session: notify,
+    userResponse: (next: typeof userResponse) => { userResponse = next; },
+    identityTimers,
+    stepIdentity: () => {
+      const entry = [...identityTimers].sort((a, b) => a[1].delay - b[1].delay)[0];
+      assert.ok(entry, "an identity task must be scheduled"); const [key, value] = entry; identityTimers.delete(key); value.callback();
+    },
     locale: (locale: string) => { props = { ...props, locale }; render(); return commit(); },
     account: (accountId: string) => { props = { ...props, accountId }; render(); return commit(); },
     unmount: () => { for (const dispose of cleanup.values()) dispose(); cleanup.clear(); },
@@ -247,4 +269,72 @@ test("C3 pending identity and later drift use neutral session copy without claim
     h.identity(other); assert.equal(h.button("open").props.disabled, true); assert.equal(text(h.render()).trim(), `EXISTING PORTRAIT ${message}`);
     assert.equal(h.requests.length, 0); h.unmount();
   }
+});
+
+
+const unknownUserProxy = () => ({ user: new Proxy({}, { get: () => { throw Error("unavailable token-only user"); } }) });
+
+test("C3 token-only proxy is fenced and same-account verification restores an untouched control without avatar HTTP", async () => {
+  const h = fixture({ initialSession: unknownUserProxy() });
+  assert.equal(h.button("open").props.disabled, true); assert.equal(h.calls.includes("getUser"), false);
+  assert.equal(h.requests.length, 0);
+  h.stepIdentity(); await tick();
+  assert.equal(h.button("open").props.disabled, false);
+  assert.equal(h.calls.filter(call => call === "getUser").length, 1);
+  assert.equal(h.requests.length, 0); assert.equal(h.calls.includes("refresh"), false);
+  h.locale("pt-BR"); assert.equal(h.calls.filter(call => call === "auth-client").length, 1);
+  h.unmount(); assert.equal(h.identityTimers.size, 0);
+});
+
+test("C3 unknown then different or absent verified account never restores the previous control", async () => {
+  for (const user of [null, { id: other }]) {
+    const h = fixture({ initialSession: unknownUserProxy() });
+    h.userResponse(async () => ({ data: { user }, error: null }));
+    h.stepIdentity(); await tick(); h.identity(actor);
+    assert.equal(h.button("open").props.disabled, true); assert.equal(h.requests.length, 0);
+    h.unmount();
+  }
+});
+
+test("C3 identity deadlines remain bounded and late results or cleanup cannot revive retired clients", async () => {
+  const h = fixture({ initialSession: unknownUserProxy() });
+  const held = deferred<unknown>(); h.userResponse(() => held.promise);
+  for (let step = 0; step < 6; step++) { h.stepIdentity(); await tick(); }
+  assert.equal(h.calls.filter(call => call === "getUser").length, 3);
+  assert.equal(h.identityTimers.size, 0); assert.equal(h.button("open").props.disabled, true);
+  held.resolve({ data: { user: { id: actor } }, error: null }); await tick();
+  assert.equal(h.button("open").props.disabled, true); assert.equal(h.requests.length, 0); h.unmount();
+  const disposed = fixture({ initialSession: unknownUserProxy() });
+  const pending = deferred<unknown>(); disposed.userResponse(() => pending.promise);
+  disposed.stepIdentity(); disposed.unmount();
+  pending.resolve({ data: { user: { id: actor } }, error: null }); await tick();
+  assert.equal(disposed.identityTimers.size, 0); assert.equal(disposed.requests.length, 0);
+  assert.equal(disposed.calls.filter(call => call === "unsubscribe").length, 1);
+});
+
+test("C3 an unknown identity after interaction cannot silently reopen or retry recovery", async () => {
+  for (const operation of ["open", "observe", "fence"] as const) {
+    const h = fixture(); h.click("open");
+    const held = deferred<Response>();
+    if (operation === "fence") {
+      h.click("observe"); await tick(); h.click("prepare-fence");
+      h.respond(() => held.promise); h.click("confirm-fence");
+    } else if (operation === "observe") { h.respond(() => held.promise); h.click("observe"); }
+    const count = h.requests.length;
+    h.session(unknownUserProxy());
+    assert.equal(h.button("open").props.disabled, true);
+    if (count) assert.equal(h.requests.at(-1)?.init.signal?.aborted, true);
+    h.stepIdentity(); await tick();
+    held.resolve(Response.json({ ok: true, state: "observed", context: context() })); await tick();
+    assert.equal(h.button("open").props.disabled, true); assert.equal(h.requests.length, count);
+    assert.equal(h.calls.includes("refresh"), false); h.unmount();
+  }
+});
+
+test("C3 known account can recover a fresh unused lifetime after a later unknown notification", async () => {
+  const h = fixture(); assert.equal(h.button("open").props.disabled, false);
+  h.session(unknownUserProxy()); assert.equal(h.button("open").props.disabled, true);
+  h.stepIdentity(); await tick(); assert.equal(h.button("open").props.disabled, false);
+  assert.equal(h.requests.length, 0); h.click("open"); h.click("observe"); await tick();
+  assert.equal(h.requests.length, 1); h.unmount();
 });

@@ -4,6 +4,7 @@ import { ArrowUpRight, ShoppingBag, Ticket, UsersRound } from "lucide-react";
 import type { TouchlineClubOfficialChannels } from "@/lib/touchlineArena/club-official-channels";
 import { getTouchlineClubOfficialChannelsCopy } from "@/lib/touchlineArena/club-official-channels-i18n";
 
+import controls from "./TouchlineGlobalNavigation.module.css";
 import styles from "./ClubHubOfficialChannel.module.css";
 
 type ChannelKind = "store" | "tickets" | "membership" | "playerCollection" | "playerShirt";
@@ -14,7 +15,7 @@ type ClubHubOfficialChannelProps = {
   locale: string;
   draftLocalesEnabled?: boolean;
   className?: string;
-  variant?: "default" | "hero";
+  variant?: "default" | "hero" | "cover";
   clubIdentity?: { name: string; crestUrl?: string };
 };
 
@@ -43,9 +44,10 @@ export default function ClubHubOfficialChannel({
       : { title: copy.membershipTitle, action: copy.learnMembership, Icon: UsersRound, compact: false };
   const Icon = presentation.Icon;
   const isMembershipHero = variant === "hero" && kind === "membership";
+  const isCoverChannel = variant === "cover" && (kind === "membership" || kind === "store");
 
   return (
-    <section className={[styles.channel, presentation.compact ? styles.compact : "", isMembershipHero ? styles.hero : "", className].filter(Boolean).join(" ")} data-clubhub-official-channel={kind}>
+    <section dir={isCoverChannel ? "auto" : undefined} className={[styles.channel, presentation.compact ? styles.compact : "", isMembershipHero ? styles.hero : "", isCoverChannel ? styles.cover : "", className].filter(Boolean).join(" ")} data-clubhub-official-channel={kind}>
       {isMembershipHero && channels.membershipHeroImage ? (
         <Image
           alt=""
@@ -77,7 +79,7 @@ export default function ClubHubOfficialChannel({
           {kind === "membership" ? <p>{copy.membershipDescription}</p> : null}
         </div>
       </div>
-      <a href={destination.url} target="_blank" rel="noopener noreferrer" aria-label={`${presentation.action}. ${copy.externalSite}`}>
+      <a className={controls.link} href={destination.url} target="_blank" rel="noopener noreferrer" aria-label={`${presentation.action}. ${copy.externalSite}`}>
         <span>{presentation.action}</span>
         <ArrowUpRight aria-hidden="true" strokeWidth={2.1} />
       </a>

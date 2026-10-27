@@ -86,15 +86,19 @@ const { renderToStaticMarkup } = require("react-dom/server");
 
 export function buildMobileReviewHtml(locale = "en-GB") {
   if (!REVIEW_LOCALES.includes(locale)) throw new Error("Unsupported preview locale");
+  // One explicit synthetic round with twenty distinct club identities exercises
+  // the real scoped-round selector. These are never provider facts or reads.
+  const admissionScope = { competitionId: "8", seasonId: "synthetic-review-season" };
   const fixtures = Array.from({ length: 10 }, (_item, index) => ({
-    id: `synthetic-${index}`, providerId: `synthetic-${index}`, status: index % 2 ? "Not Started" : "FullTime",
-    startsAt: "2030-10-09T18:00:00Z", homeScore: index % 2 ? undefined : 2, awayScore: index % 2 ? undefined : 1,
-    homeTeam: { id: "synthetic-home", providerId: "synthetic-home", name: "Arsenal", logoUrl: logoPaths[0] },
-    awayTeam: { id: "synthetic-away", providerId: "synthetic-away", name: "Leeds United", logoUrl: logoPaths[1] },
+    id: `synthetic-${index}`, providerId: `synthetic-${index}`, status: "FullTime",
+    ...admissionScope, roundId: "synthetic-review-round", roundName: "1",
+    startsAt: "2026-08-23T18:00:00Z", homeScore: 2, awayScore: 1,
+    homeTeam: { id: `synthetic-home-${index}`, providerId: `synthetic-home-${index}`, name: "Arsenal", logoUrl: logoPaths[0] },
+    awayTeam: { id: `synthetic-away-${index}`, providerId: `synthetic-away-${index}`, name: "Leeds United", logoUrl: logoPaths[1] },
   }));
   const footer = renderToStaticMarkup(React.createElement(Footer, { locale, draftLocalesEnabled: true,
     instagramUrl: "https://www.instagram.com/touchline_preview_fixture/" }));
-  const carouselProps = { locale, draftLocalesEnabled: true, initialFixtures: fixtures, initialNow: Date.now(),
+  const carouselProps = { locale, draftLocalesEnabled: true, initialFixtures: fixtures, initialAdmissionScope: admissionScope, initialNow: Date.now(),
     initialTimeZone: "Europe/Malta", initialMetadata: { state: "partial-persisted-schedule", degraded: true } };
   const carousel = renderToStaticMarkup(React.createElement(Carousel, carouselProps));
   const css = stylesheets.map(path => readFileSync(join(root, path), "utf8")).join("\n");

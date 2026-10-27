@@ -73,7 +73,7 @@ test("incomplete or duplicated ownership and invalid reservation data fail close
     assert.throws(() => inspectExchangeAllocation({ ...a, players }), /COMPLETE_ROSTER/);
   assert.throws(() => inspectExchangeAllocation({ ...a, reservations: [{ playerId: "unknown", proposalId: "p" }] }), /RESERVATION/);
   assert.throws(() => inspectExchangeAllocation({ ...a, unavailableIds: ["unknown"] }), /AVAILABILITY/);
-  assert.throws(() => pair({ ...a, plan: "beta" }, club("b")), /PAID_PLAN/);
+  assert.throws(() => pair({ ...a, plan: "unknown" as "beta" }, club("b")), /EXCHANGE_PLAN/);
 });
 test("unlisted, unavailable, foreign and self trades are refused without modifying cards", () => {
   const a = club("a"), b = club("b");
@@ -82,4 +82,13 @@ test("unlisted, unavailable, foreign and self trades are refused without modifyi
   assert.throws(() => validateExchangePair(a, b, "not-owned", "b-outside-0"), /OWNERSHIP/);
   assert.throws(() => pair(a, { ...b, ownerId: "a" }), /SELF_EXCHANGE/);
   assert.equal(a.players.length, 35);
+});
+
+
+test("approved Beta economics can validate an allocation without enabling the collection or bypassing slot rules", () => {
+  const a = { ...club("a"), plan: "beta" as const };
+  assert.doesNotThrow(() => pair(a, club("b")));
+  assert.doesNotThrow(() => pair(club("a"), { ...club("b"), plan: "beta" }));
+  assert.throws(() => pair({ ...a, players: a.players.slice(1) }, club("b")), /COMPLETE_ROSTER/);
+  assert.throws(() => validateExchangePair(a, club("b"), "a-starters-0", "b-outside-0"), /MATCH_RELATED/);
 });

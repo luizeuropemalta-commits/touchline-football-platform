@@ -7,7 +7,7 @@ import type { ClubInitialBudget } from "./club-initial-budget";
 
 export type ClubCollectionReadResult = {
   status: "confirmed"; accountId: string; seasonId: string;
-  state: ClubAcquisitionState | null; initialBudget: ClubInitialBudget | null; releaseAvailable: boolean;
+  state: ClubAcquisitionState | null; initialBudget: ClubInitialBudget | null; releaseAvailable: boolean; coachLifecycleAvailable?: boolean;
 } | {
   status: "unavailable"; error: "AUTH_REQUIRED" | "CLUB_COLLECTION_UNAVAILABLE" | "CLUB_STORAGE_UNAVAILABLE" | "CLUB_SEASON_UNAVAILABLE";
   httpStatus: 401 | 503;
@@ -36,6 +36,6 @@ export async function readClubCollectionServer(authenticatedOwnerId: string | nu
     if (!state) state = await store.read(authenticatedOwnerId, seasonId);
     if (state) initialBudget = null;
     mark("budget");
-    return { status: "confirmed", accountId: authenticatedOwnerId, seasonId, state, initialBudget, releaseAvailable: clubReleaseEnabled() };
+    return { status: "confirmed", accountId: authenticatedOwnerId, seasonId, state, initialBudget, releaseAvailable: clubReleaseEnabled(), coachLifecycleAvailable: process.env.TOUCHLINE_CLUB_COACH_LIFECYCLE_ENABLED === "true" };
   } catch { return unavailable("CLUB_STORAGE_UNAVAILABLE"); }
 }

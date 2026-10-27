@@ -1,8 +1,9 @@
 import { parseTouchlinePublicFixtures } from "../football-data/public-fixture-client.ts";
 import type { TouchlinePublicFixture } from "../football-data/public-fixture.ts";
+import type { TouchlineLiveAdmissionScope } from "./sports-publication-live-view.ts";
 import { isTouchlineLiveReadMetadata, touchlineMatchCentreDisplayState, type TouchlineLiveReadMetadata } from "./match-centre.ts";
 
-export type ClubHubStripSnapshot = { fixtures: TouchlinePublicFixture[]; metadata: TouchlineLiveReadMetadata };
+export type ClubHubStripSnapshot = { fixtures: TouchlinePublicFixture[]; metadata: TouchlineLiveReadMetadata; admissionScope: TouchlineLiveAdmissionScope | null };
 
 /** An explicit empty schedule is a result; a missing seed needs one durable read. */
 export function clubHubStripSeedNeedsRecovery(seed: readonly TouchlinePublicFixture[] | null | undefined) {
@@ -13,10 +14,15 @@ export function parseClubHubStripSnapshot(value: unknown): ClubHubStripSnapshot 
   if (!value || typeof value !== "object") return null;
   const payload = value as Record<string, unknown>;
   const fixtures = parseTouchlinePublicFixtures(payload.data);
+  const rawScope = payload.admissionScope;
   if (payload.ok !== true || !fixtures || !isTouchlineLiveReadMetadata(payload)) return null;
   const ids = new Set(fixtures.map((fixture) => fixture.providerId));
   if (ids.size !== fixtures.length) return null;
-  return { fixtures, metadata: { state: payload.state, degraded: payload.degraded, fetchedAt: payload.fetchedAt } };
+  const scope = rawScope as Record<string, unknown> | null | undefined;
+  const admissionScope: TouchlineLiveAdmissionScope | null = scope?.competitionId === "8"
+    && typeof scope.seasonId === "string" && scope.seasonId.trim() === scope.seasonId && scope.seasonId.length > 0
+    ? { competitionId: "8", seasonId: scope.seasonId } : null;
+  return { fixtures, admissionScope, metadata: { state: payload.state, degraded: payload.degraded, fetchedAt: payload.fetchedAt } };
 }
 
 /** Missing/failed metadata must never promote an old result to LIVE. */

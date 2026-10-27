@@ -1,3 +1,6 @@
+import { Suspense, type ReactNode } from "react";
+import TouchlineAccountLoading from "@/components/touchline/TouchlineAccountLoading";
+import TouchlineCardLeadershipLayout from "@/components/touchline/cards/TouchlineCardLeadershipLayout";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { normalizeTouchlineMatchCentreTimeZone } from "@/lib/touchlineArena/match-centre";
@@ -18,6 +21,7 @@ import { createClubOwnerAvatarContextReader } from "@/lib/touchlineArena/club-ow
 import { readPersistedLiveRailWithin } from "@/lib/touchlineArena/persisted-live-rail-server";
 import { touchLineAuthEntryHref } from "@/lib/touchlineArena/auth-i18n";
 import { resolveServerReadWithin } from "@/lib/touchlineArena/server-read-deadline";
+import { createLocalReadTiming, type LocalReadTiming } from "@/lib/touchlineArena/local-read-timing";
 import { loadTouchlineFantasyReadSnapshot } from "@/lib/touchlineFantasy/server";
 import { clubCollectionEnabled } from "@/lib/touchlineFantasy/club-collection-server";
 import { readClubCollectionServer, type ClubCollectionReadResult } from "@/lib/touchlineFantasy/club-collection-read-server";
@@ -60,7 +64,24 @@ export default async function MarketTransferPage(props: ClubOwnerPageProps) {
   return renderClubOwnerPage(props, isTouchLineSiteLocalesEnabled("/clubowner"));
 }
 
-async function renderClubOwnerPage({ searchParams }: ClubOwnerPageProps, draftLocalesEnabled = false) {
+async function renderClubOwnerPage(props: ClubOwnerPageProps, draftLocalesEnabled = false) {
+  const timing = createLocalReadTiming();
+  // The shell may stream first, but the existing total still measures auth and
+  // all page reads, not merely the time until the header becomes available.
+  let complete!: () => void;
+  let fail!: (error: unknown) => void;
+  const completion = new Promise<void>((resolve, reject) => { complete = resolve; fail = reject; });
+  void timing.measure("total", () => completion).catch(() => {});
+  try { return await renderClubOwnerPageContent(props, draftLocalesEnabled, timing, complete, fail); }
+  catch (error) { fail(error); throw error; }
+}
+
+async function ClubOwnerDeferredContent({ content }: { content: Promise<ReactNode> }) {
+  return await content;
+}
+
+async function renderClubOwnerPageContent({ searchParams }: ClubOwnerPageProps, draftLocalesEnabled: boolean, timing: LocalReadTiming,
+  complete: () => void, fail: (error: unknown) => void) {
   const locale = await marketLocale(searchParams, draftLocalesEnabled);
   const params = await searchParams;
   const clubSlug = Array.isArray(params.club) ? params.club[0] : params.club;
@@ -76,12 +97,12 @@ async function renderClubOwnerPage({ searchParams }: ClubOwnerPageProps, draftLo
   const readAvatarContext = createClubOwnerAvatarContextReader();
   const login = touchLineAuthEntryHref("/login", locale, destination, draftLocalesEnabled);
   let authenticationReadActive = true;
-  const authentication = await resolveServerReadWithin((async () => {
+  const authentication = await timing.measure("auth", () => resolveServerReadWithin((async () => {
     const supabase = await createClient();
     // A late client setup must not start another network read after timeout.
     if (!authenticationReadActive || !supabase) return null;
     return supabase.auth.getUser();
-  })(), null, 8_000);
+  })(), null, 8_000));
   authenticationReadActive = false;
   if (!authentication) redirect(`${login}&error=auth_unavailable`);
   if (authentication.error instanceof AuthSessionMissingError) redirect(login);
@@ -90,43 +111,54 @@ async function renderClubOwnerPage({ searchParams }: ClubOwnerPageProps, draftLo
   if (!user) redirect(touchLineAuthEntryHref("/login", locale, destination, draftLocalesEnabled));
   // Retain the existing customer-only boundary; never borrow a demo identity.
   if (isOwnerEmail(user.email)) redirect(touchLineAuthEntryHref("/admin", locale));
-  const [avatarContext, snapshot, liveRail, collectionRead] = await Promise.all([
-    readAvatarContext(authentication, user.id),
-    // The ClubOwner must not replace a real in-flight roster with the
-    // unavailable state merely because a cold local read takes longer than
-    // the generic auth deadline.
-    resolveServerReadWithin(loadTouchlineFantasyReadSnapshot(user), null, 30_000),
-    readPersistedLiveRailWithin(),
-    resolveServerReadWithin<ClubCollectionReadResult>(readClubCollectionServer(user.id),
-      { status: "unavailable", error: "CLUB_STORAGE_UNAVAILABLE", httpStatus: 503 }, 8_000),
-  ]);
-  const clubOwner = resolveTouchlineClubOwnerPageIdentity(user, undefined, avatarContext?.avatarUrl);
-  const liveTimeZone = normalizeTouchlineMatchCentreTimeZone((await headers()).get("x-vercel-ip-timezone"));
-  const initialLiveFixtures = liveRail?.fixtures ?? null;
-  const initialLiveMetadata = liveRail?.metadata ?? null;
-  const initialLiveNow = Date.now();
-  const marketAccess = snapshot && isTouchlineFantasyMarketAccess(snapshot.marketAccess) ? snapshot.marketAccess : null;
-  const activePlanKey = snapshot?.entitlementActive === true && snapshot?.plan?.active === true
-    ? marketAccess?.planKey ?? null : null;
-  const remainingMarketPower = snapshot?.entitlementActive === true && typeof marketAccess?.budgetEur === "number"
-    ? Math.max(0, marketAccess.budgetEur - (snapshot.userGameweek?.totalMarketValueEur ?? 0)) : null;
-  const collectionAvailable = clubCollectionEnabled() && activePlanKey !== "beta" && activePlanKey !== "pro" && activePlanKey !== null;
-  const collectionStructureVisible = clubCollectionPresentationEnabled({
-    nodeEnv: process.env.NODE_ENV, enabled: process.env.TOUCHLINE_CLUB_COLLECTION_PRESENTATION,
-    host: (await headers()).get("host"), plan: activePlanKey,
-  });
+  const content = (async () => {
+    const [avatarContext, snapshot, liveRail, collectionRead] = await Promise.all([
+      timing.measure("avatar", () => readAvatarContext(authentication, user.id)),
+      // The ClubOwner must not replace a real in-flight roster with the
+      // unavailable state merely because a cold local read takes longer than
+      // the generic auth deadline.
+      timing.measure("snapshot", () => resolveServerReadWithin(loadTouchlineFantasyReadSnapshot(user), null, 30_000)),
+      timing.measure("liveRail", () => readPersistedLiveRailWithin()),
+      timing.measure("collection", () => resolveServerReadWithin<ClubCollectionReadResult>(readClubCollectionServer(user.id),
+        { status: "unavailable", error: "CLUB_STORAGE_UNAVAILABLE", httpStatus: 503 }, 8_000)),
+    ]);
+    const clubOwner = resolveTouchlineClubOwnerPageIdentity(user, undefined, avatarContext?.avatarUrl);
+    const liveTimeZone = normalizeTouchlineMatchCentreTimeZone((await headers()).get("x-vercel-ip-timezone"));
+    const initialLiveFixtures = liveRail?.fixtures ?? null;
+    const initialLiveMetadata = liveRail?.metadata ?? null;
+    const initialLiveNow = Date.now();
+    const marketAccess = snapshot && isTouchlineFantasyMarketAccess(snapshot.marketAccess) ? snapshot.marketAccess : null;
+    const activePlanKey = snapshot?.entitlementActive === true && snapshot?.plan?.active === true
+      ? marketAccess?.planKey ?? null : null;
+    const remainingMarketPower = snapshot?.entitlementActive === true && typeof marketAccess?.budgetEur === "number"
+      ? Math.max(0, marketAccess.budgetEur - (snapshot.userGameweek?.totalMarketValueEur ?? 0)) : null;
+    const collectionAvailable = clubCollectionEnabled() && activePlanKey !== "pro" && activePlanKey !== null;
+    const collectionStructureVisible = clubCollectionPresentationEnabled({
+      nodeEnv: process.env.NODE_ENV, enabled: process.env.TOUCHLINE_CLUB_COLLECTION_PRESENTATION,
+      host: (await headers()).get("host"), plan: activePlanKey,
+    });
+    return <div className={styles.content}>
+        <ClubCollectionProvider key={`${user.id}:${snapshot?.config.seasonId ?? "unavailable"}`} initialRead={collectionAvailable ? collectionRead : null}
+          authority={snapshot?.config.seasonId ? {expectedAccountId:user.id, expectedSeasonId:snapshot.config.seasonId} : null}>
+        <ClubOwnerMarketHeader owner={clubOwner?.isAuthenticatedClubOwner ? clubOwner : null} locale={locale} rankingPosition={clubOwnerRankingPosition(snapshot?.seasonRanking)} remainingMarketPower={remainingMarketPower} plan={snapshot?.plan ?? null} activePlanKey={activePlanKey} activePlanBudget={activePlanKey ? marketAccess?.budgetEur : undefined} planPreview={planPreview} draftLocalesEnabled={draftLocalesEnabled} accountId={user.id} avatarContext={avatarContext} avatarSelectionEnabled={avatarSelectionEnabled} retentionReady={retentionReady} collectionEnabled={collectionAvailable} />
+        <FantasyGameweekClient initialSnapshot={snapshot} locale={locale} liveTimeZone={liveTimeZone} draftLocalesEnabled={draftLocalesEnabled} embedded marketPage
+          collectionEnabled={collectionAvailable}
+          initialCollectionRead={collectionAvailable ? collectionRead : null}
+          collectionStructureVisible={collectionStructureVisible}
+          initialLiveAdmissionScope={liveRail?.admissionScope ?? null}
+          initialLiveFixtures={initialLiveFixtures} initialLiveNow={initialLiveNow} initialLiveMetadata={initialLiveMetadata} initialPlayerClubTeamId={initialPlayerClubTeamId} clubOwner={clubOwner ? { name: clubOwner.name, avatarUrl: clubOwner.avatarUrl } : undefined} />
+        </ClubCollectionProvider>
+      </div>;
+  })();
+  // Observe failures immediately, including before React reaches this child.
+  // The same rejected promise still reaches the route error boundary.
+  void content.then(complete, fail);
   return <main className={styles.page} dir={draftLocalesEnabled ? "ltr" : undefined}>
     <TouchlineBrandHeader href={destination} locale={locale} accountLocaleContext={{ mode: "account", accountId: user.id }} draftLocalesEnabled={draftLocalesEnabled} navigationAccessory={<TouchlineSignOutButton compact locale={locale} draftLocalesEnabled={draftLocalesEnabled} />} navigation={<TouchlineGlobalNavigation locale={locale} draftLocalesEnabled={draftLocalesEnabled} currentRoute="market" surface="authenticated" showAudioControl={false} />} />
-    <div className={styles.content}>
-      <ClubCollectionProvider key={`${user.id}:${snapshot?.config.seasonId ?? "unavailable"}`} initialRead={collectionAvailable ? collectionRead : null}
-        authority={snapshot?.config.seasonId ? {expectedAccountId:user.id, expectedSeasonId:snapshot.config.seasonId} : null}>
-      <ClubOwnerMarketHeader owner={clubOwner?.isAuthenticatedClubOwner ? clubOwner : null} locale={locale} rankingPosition={clubOwnerRankingPosition(snapshot?.seasonRanking)} remainingMarketPower={remainingMarketPower} plan={snapshot?.plan ?? null} activePlanKey={activePlanKey} activePlanBudget={activePlanKey ? marketAccess?.budgetEur : undefined} planPreview={planPreview} draftLocalesEnabled={draftLocalesEnabled} accountId={user.id} avatarContext={avatarContext} avatarSelectionEnabled={avatarSelectionEnabled} retentionReady={retentionReady} collectionEnabled={collectionAvailable} />
-      <FantasyGameweekClient initialSnapshot={snapshot} locale={locale} liveTimeZone={liveTimeZone} draftLocalesEnabled={draftLocalesEnabled} embedded marketPage
-        collectionEnabled={collectionAvailable}
-        initialCollectionRead={collectionAvailable ? collectionRead : null}
-        collectionStructureVisible={collectionStructureVisible}
-        initialLiveFixtures={initialLiveFixtures} initialLiveNow={initialLiveNow} initialLiveMetadata={initialLiveMetadata} initialPlayerClubTeamId={initialPlayerClubTeamId} clubOwner={clubOwner ? { name: clubOwner.name, avatarUrl: clubOwner.avatarUrl } : undefined} />
-      </ClubCollectionProvider>
-    </div>
+    <Suspense fallback={<TouchlineAccountLoading contentOnly />}>
+      <TouchlineCardLeadershipLayout>
+        <ClubOwnerDeferredContent content={content} />
+      </TouchlineCardLeadershipLayout>
+    </Suspense>
   </main>;
 }

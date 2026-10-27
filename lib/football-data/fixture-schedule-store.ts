@@ -145,6 +145,45 @@ function fixtureFromRow(
   };
 }
 
+type PublicCompetitionSeasonTarget = {
+  storageSeasonId: string;
+  admissionScope: { competitionId: "8"; seasonId: string };
+};
+const isStorageSeasonId = (value: unknown): value is string => typeof value === "string"
+  && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+
+/** One canonical lookup binds the storage query and public season authority.
+ * Storage UUID stays server-side; callers publish only admissionScope.
+ */
+export async function readCurrentPublicCompetitionSeasonTarget(
+  { providedAdmin, isActive = () => true }: { providedAdmin?: FixtureAdminClient; isActive?: () => boolean } = {},
+): Promise<PublicCompetitionSeasonTarget | null> {
+  if (!isActive()) return null;
+  try {
+    const admin = providedAdmin ?? createAdminClient();
+    if (!admin || !isActive()) return null;
+    const { data, error } = await admin.from("football_seasons")
+      .select("id,provider_season_id,football_competitions!inner(provider,provider_competition_id)")
+      .eq("provider", DEFAULT_PROVIDER)
+      .eq("is_current", true)
+      .eq("football_competitions.provider", DEFAULT_PROVIDER)
+      .eq("football_competitions.provider_competition_id", DEFAULT_COMPETITION_PROVIDER_ID)
+      .maybeSingle();
+    const seasonId = asString(data?.provider_season_id);
+    return !error && isActive() && seasonId && isStorageSeasonId(data?.id)
+      ? { storageSeasonId: data.id, admissionScope: { competitionId: "8", seasonId } } : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Public projection never exposes the canonical storage UUID. */
+export async function readCurrentPublicCompetitionAdmissionScope(
+  options: { providedAdmin?: FixtureAdminClient; isActive?: () => boolean } = {},
+): Promise<{ competitionId: "8"; seasonId: string } | null> {
+  return (await readCurrentPublicCompetitionSeasonTarget(options))?.admissionScope ?? null;
+}
+
 /**
  * Exact server-only fixture read for workflows that already possess one
  * verified provider fixture identity. Unlike the bounded schedule reader,
@@ -208,8 +247,7 @@ export async function readPublicCompetitionFixtureByProviderId(
   return fixtureFromRow(row, clubsById, seasonsById, roundsById, competitionProviderId);
 }
 
-/** Server-only schedule read shared by ClubHub, Arena and TouchLine Live. */
-export async function readPublicCompetitionFixtures(options: {
+export type PublicCompetitionFixtureReadOptions = {
   /** Internal synchronization can reuse this mapper with an explicit season/window. */
   providedAdmin?: FixtureAdminClient;
   seasonId?: string;
@@ -223,11 +261,51 @@ export async function readPublicCompetitionFixtures(options: {
   includeHistorical?: boolean;
   /** Opt-in consumers must distinguish an unavailable read from a valid empty schedule. */
   strictRead?: boolean;
-} = {}) {
+  /** Explicit archive consumers traverse every page; legacy reads retain their limit. */
+  readAllPages?: boolean;
+  /** Stop starting database reads after an SSR deadline; does not cancel in-flight I/O. */
+  isActive?: () => boolean;
+};
+
+/** Server-only schedule read shared by ClubHub, Arena and TouchLine Live. */
+export async function readPublicCompetitionFixtures(options: PublicCompetitionFixtureReadOptions = {}) {
+  if (!options.readAllPages) return readPublicCompetitionFixturePage(options);
+  const requested = Number.isFinite(options.limit) ? Math.trunc(options.limit ?? MAX_LIMIT) : MAX_LIMIT;
+  const pageSize = Math.min(MAX_LIMIT, Math.max(1, requested));
+  const fixtures: TouchlineFixture[] = [];
+  const seen = new Set<string>();
+  let expectedCount: number | null = null;
+  try {
+    for (let offset = 0; ;) {
+      if (options.isActive?.() === false) throw new Error("FIXTURE_SCHEDULE_UNAVAILABLE");
+      // Map each page separately so relational reads also stay bounded. A bad
+      // page must not silently certify a truncated archive as complete.
+      const receipt = { count: null as number | null };
+      const page = await readPublicCompetitionFixturePage({ ...options, limit: pageSize, strictRead: true }, offset, receipt);
+      if (!Number.isSafeInteger(receipt.count) || receipt.count! < 0
+        || (expectedCount !== null && receipt.count !== expectedCount)) throw new Error("FIXTURE_SCHEDULE_UNAVAILABLE");
+      expectedCount = receipt.count;
+      if (offset + page.length > expectedCount! || (!page.length && offset < expectedCount!)) throw new Error("FIXTURE_SCHEDULE_UNAVAILABLE");
+      for (const fixture of page) {
+        if (seen.has(fixture.providerId)) throw new Error("FIXTURE_SCHEDULE_UNAVAILABLE");
+        seen.add(fixture.providerId);
+        fixtures.push(fixture);
+      }
+      offset += page.length;
+      if (offset === expectedCount) return fixtures;
+    }
+  } catch {
+    if (options.strictRead) throw new Error("FIXTURE_SCHEDULE_UNAVAILABLE");
+    return [];
+  }
+}
+
+async function readPublicCompetitionFixturePage(options: PublicCompetitionFixtureReadOptions, offset?: number, receipt?: { count: number | null }) {
   const unavailable = (): TouchlineFixture[] => {
     if (options.strictRead) throw new Error("FIXTURE_SCHEDULE_UNAVAILABLE");
     return [];
   };
+  if (options.isActive?.() === false) return unavailable();
   const records = (value: unknown): value is DatabaseRecord[] => Array.isArray(value)
     && value.every(row => row !== null && typeof row === "object" && !Array.isArray(row));
   const admin = options.providedAdmin ?? createAdminClient();
@@ -247,19 +325,23 @@ export async function readPublicCompetitionFixtures(options: {
     .eq("provider_competition_id", competitionProviderId)
     .maybeSingle();
   if (competitionError || !competition?.id) return unavailable();
+  if (options.isActive?.() === false) return unavailable();
   if (options.strictRead && !asString(competition.id)) return unavailable();
 
   let fixtureQuery = admin
     .from("football_fixtures")
-    .select("provider,provider_fixture_id,competition_id,season_id,round_id,starts_at,status,home_score,away_score,home_club_id,away_club_id,source_updated_at,provider_state_id,live_minute,live_second,live_period,events_count,provider_updated_at")
+    .select("provider,provider_fixture_id,competition_id,season_id,round_id,starts_at,status,home_score,away_score,home_club_id,away_club_id,source_updated_at,provider_state_id,live_minute,live_second,live_period,events_count,provider_updated_at", offset === undefined ? undefined : { count: "exact" })
     .eq("provider", provider)
     .eq("competition_id", competition.id)
-    .order("starts_at", { ascending: true })
-    .limit(limit);
+    .order("starts_at", { ascending: true });
+  fixtureQuery = offset === undefined ? fixtureQuery.limit(limit)
+    : fixtureQuery.order("provider_fixture_id", { ascending: true }).range(offset, offset + limit - 1);
   if (options.from || !options.includeHistorical) fixtureQuery = fixtureQuery.gte("starts_at", options.from ?? from);
   if (options.seasonId) fixtureQuery = fixtureQuery.eq("season_id", options.seasonId);
   if (options.through) fixtureQuery = fixtureQuery.lte("starts_at", options.through);
-  const { data: fixtureRows, error: fixturesError } = await fixtureQuery;
+  const { data: fixtureRows, error: fixturesError, count } = await fixtureQuery;
+  if (receipt) receipt.count = count;
+  if (options.isActive?.() === false) return unavailable();
   if (fixturesError || !Array.isArray(fixtureRows)) return unavailable();
   if (!fixtureRows.length) return [] as TouchlineFixture[];
   if (options.strictRead && !records(fixtureRows)) return unavailable();
@@ -318,6 +400,7 @@ export async function readPublicCompetitionFixtures(options: {
   const fixtures = (fixtureRows as FixtureRow[])
     .map((row) => fixtureFromRow(row, clubsById, seasonsById, roundsById, competitionProviderId))
     .filter((fixture): fixture is TouchlineFixture => Boolean(fixture));
+  if (options.isActive?.() === false) return unavailable();
   if (options.strictRead && (fixtures.length !== fixtureRows.length
     || new Set(fixtures.map(fixture => fixture.providerId)).size !== fixtures.length
     || fixtures.some(fixture => fixture.homeTeam?.providerId === fixture.awayTeam?.providerId))) return unavailable();

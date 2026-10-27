@@ -1,17 +1,15 @@
+import { requireBrowserCapacity } from "./helpers/touchline-browser-capacity.mts";
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, realpathSync, statSync, statfsSync } from "node:fs";
-import { createRequire } from "node:module";
+import { spawn } from "node:child_process";
+import { createHash } from "node:crypto";
+import { existsSync, mkdtempSync, readFileSync, realpathSync, statSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { chromium, webkit, expect } from "@playwright/test";
-import ts from "typescript";
-import { bundleIsolatedBrowserFixture, transpileFixtureModule } from "./helpers/touchline-isolated-browser-bundle.mts";
 import { getTouchlineFootballSearchCopy } from "../lib/touchlineArena/football-search-i18n.ts";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
-const require = createRequire(import.meta.url);
 const viewports = [{ width: 1280, height: 900 }, { width: 844, height: 390 }, { width: 390, height: 844 }];
 const locales = ["pt-BR", "ar-SA"];
 const scenarios = ["catalogue", "long-labels"];
@@ -35,50 +33,47 @@ test("actual football search renderer preserves its row, readable labels and loc
   assert.ok(selectedCases > 0);
   t.diagnostic(JSON.stringify({ selectedCases, fullMatrixCases: 24, engineFilter, widthFilter, localeFilter, scenarioFilter,
     scope: "real renderer AST/client mount, real CSS/rail; synthetic long labels; not Next SSR, hydration, routing, auth or complete utility shell" }));
-  const capacity = () => {
-    const fs = statfsSync(root);
-    assert.ok(fs.bavail * fs.bsize > 5 * 1024 ** 3, "disk must exceed 5 GiB");
-    assert.equal(execFileSync("sysctl", ["-n", "kern.memorystatus_vm_pressure_level"], { encoding: "utf8" }).trim(), "1", "pressure must be normal");
-    const free = Number(execFileSync("memory_pressure", { encoding: "utf8" }).match(/System-wide memory free percentage: (\d+)%/)?.[1]);
-    assert.ok(Number.isFinite(free) && free >= 25, "free memory must be at least 25%");
-  };
+  const capacity = () => requireBrowserCapacity(root, { darwinFreePercent: true });
   capacity();
-  const pagePath = "app/(app)/football-search/page.tsx";
-  const source = readFileSync(path.join(root, pagePath), "utf8");
-  const ast = ts.createSourceFile(pagePath, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
-  const renderers = ast.statements.filter((node): node is ts.FunctionDeclaration => ts.isFunctionDeclaration(node) && node.name?.text === "renderFootballSearchPage");
-  assert.equal(renderers.length, 1, "extract the actual server renderer, never duplicate JSX");
-  assert.ok(renderers[0].body);
-  const compiledRenderer = transpileFixtureModule(renderers[0].getText(ast), "real-football-search-renderer.tsx");
-  const bundle = bundleIsolatedBrowserFixture({
-    entryPath: "tests/fixtures/FootballSearchContentBrowserFixture.tsx", cssPrefix: "searchcontent",
-    requiredSources: ["components/player-database-search.tsx", "components/touchline/TouchlineNavigationRail.tsx",
-      "components/touchline/TouchlineGlobalNavigation.module.css", "app/(app)/football-search/FootballSearchContent.module.css"],
-    mountScript: `void (async()=>{
-      const fixture=loadEntry();
-      const {Link,ArrowLeft,DatabaseZap,PlayerDatabaseSearch,TouchlineNavigationRail,navigationStyles,styles,touchLineAuthHref,resolveTouchlineCatalogueLocale}=fixture;
-      const longLabels=new URLSearchParams(location.search).get('scenario')==='long-labels';
-      const getTouchlineFootballSearchCopy=(locale,enabled)=>{
-        const copy=fixture.getTouchlineFootballSearchCopy(locale,enabled);
-        return longLabels?{...copy,back:copy.back+' · TouchLine',title:copy.title+' · '+copy.title+' · '+copy.title}:copy;
-      };
-      const exports={};
-      const require=id=>{if(id==='react/jsx-runtime')return fixture.jsxRuntime;throw Error('Unapproved extracted renderer dependency: '+id);};
-      ${compiledRenderer}
-      const content=await renderFootballSearchPage({searchParams:Promise.resolve({lang:document.documentElement.lang})},true);
-      flushSync(()=>root.render(React.createElement(fixture.default,null,content)));
-      document.documentElement.dataset.fixtureReady='true';
-    })().catch(error=>{setTimeout(()=>{throw error;},0);});`,
-  });
-  const tailwindRequire = createRequire(require.resolve("@tailwindcss/postcss"));
-  const { compile } = tailwindRequire("@tailwindcss/node");
-  const { Scanner } = tailwindRequire("@tailwindcss/oxide");
-  const candidates = new Scanner({ sources: [] }).scanFiles([...bundle.sources, pagePath].filter(f => /\.tsx?$/.test(f)).map(f => ({ content: readFileSync(path.join(root, f), "utf8"), extension: path.extname(f).slice(1) })));
-  const globals = path.join(root, "app/globals.css");
-  const compiler = await compile(readFileSync(globals, "utf8"), { base: path.dirname(globals), from: globals, onDependency() {} });
-  const css = `${compiler.build(candidates)}\n${bundle.css}`;
   const screenshots = mkdtempSync("/private/tmp/touchline-search-content-");
   t.diagnostic(`Screenshots: ${screenshots}`);
+  // Wait for close, not a ready message: compiler caches must be released
+  // before starting a browser. Test timeout/abort also terminate this child.
+  t.signal.throwIfAborted();
+  await new Promise<void>((resolve, reject) => {
+    const child = spawn(process.execPath, ["--experimental-strip-types",
+      path.join(root, "tests/helpers/touchline-football-search-content-compile-worker.mts"), screenshots], {
+      cwd: root, stdio: "ignore",
+    });
+    let failure: Error | undefined;
+    const abort = () => { failure = new Error("Football search fixture compilation aborted"); child.kill("SIGKILL"); };
+    const timeout = setTimeout(() => {
+      failure = new Error("Football search fixture compilation exceeded 30 seconds"); child.kill("SIGKILL");
+    }, 30_000);
+    t.signal.addEventListener("abort", abort, { once: true });
+    child.once("error", () => { failure = new Error("Football search fixture compiler could not start"); });
+    child.once("close", code => {
+      clearTimeout(timeout); t.signal.removeEventListener("abort", abort);
+      if (failure) reject(failure);
+      else if (code !== 0) reject(new Error(`Football search fixture compiler exited with code ${code}`));
+      else resolve();
+    });
+    if (t.signal.aborted) abort();
+  });
+  t.signal.throwIfAborted();
+  const bundle = { script: readFileSync(path.join(screenshots, "fixture-script.js"), "utf8") };
+  const css = readFileSync(path.join(screenshots, "fixture-style.css"), "utf8");
+  const receipt = JSON.parse(readFileSync(path.join(screenshots, "fixture-sources.json"), "utf8")) as { sources: string[]; sha256: Record<string, string> };
+  assert.ok(bundle.script.length > 0 && css.length > 0 && Array.isArray(receipt.sources) && receipt.sources.length > 0);
+  for (const source of receipt.sources) {
+    assert.ok(typeof source === "string" && !path.isAbsolute(source) && !source.split(/[\\/]/).includes(".."));
+    assert.match(receipt.sha256[source], /^[a-f0-9]{64}$/);
+    assert.equal(createHash("sha256").update(readFileSync(path.join(root, source))).digest("hex"), receipt.sha256[source], `source changed after compilation: ${source}`);
+  }
+  for (const source of ["components/player-database-search.tsx", "components/touchline/TouchlineNavigationRail.tsx",
+    "components/touchline/TouchlineGlobalNavigation.module.css", "app/(app)/football-search/FootballSearchContent.module.css",
+    "app/(app)/football-search/page.tsx", "app/globals.css"]) assert.ok(receipt.sources.includes(source), source);
+  t.diagnostic(`Compiler exited before browser launch; ${receipt.sources.length} hashed sources: ${path.join(screenshots, "fixture-sources.json")}`);
   const origin = "https://search-content.test", publicRoot = realpathSync(path.join(root, "public"));
   let passedCases = 0;
   for (const engine of engines) {
@@ -115,6 +110,16 @@ test("actual football search renderer preserves its row, readable labels and loc
           await page.addScriptTag({ content: `(()=>{${bundle.script}})()` });
           await expect(page.locator("html")).toHaveAttribute("data-fixture-ready", "true");
           await page.evaluate(() => document.fonts.ready);
+          // The real page-in animation starts at scale(.995), even for its
+          // reduced-motion .01ms lifetime. Read geometry after finite entry
+          // animations finish, not before the later screenshot fast-forwards
+          // them. Keep the actual 44px touch-target assertion unchanged.
+          await page.waitForFunction(() => document.getAnimations().every(animation => {
+            const endTime = animation.effect?.getComputedTiming().endTime;
+            return typeof endTime !== "number" || !Number.isFinite(endTime)
+              || animation.playState === "finished" || animation.playState === "idle";
+          }), undefined, { timeout: 5000, polling: "raf" });
+
           const main = page.locator("main[data-football-search-fixture]"), back = main.locator("a");
           const row = back.locator(".."), rail = row.locator(".."), title = row.locator(":scope > div");
           const copy = getTouchlineFootballSearchCopy(locale, true);
@@ -127,12 +132,42 @@ test("actual football search renderer preserves its row, readable labels and loc
           await expect(main.locator("input,button,form")).toHaveCount(0);
           const layout = await row.evaluate(node => {
             const [a, title] = Array.from(node.children) as HTMLElement[];
+            const rect = (r: DOMRect) => ({ left: r.left, right: r.right, top: r.top, bottom: r.bottom, width: r.width, height: r.height });
+            const children = [a, title].map(el => {
+              const style = getComputedStyle(el);
+              const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+              const textRanges: ReturnType<typeof rect>[] = [];
+              while (walker.nextNode()) {
+                if (!walker.currentNode.textContent?.trim()) continue;
+                const range = document.createRange(); range.selectNodeContents(walker.currentNode);
+                textRanges.push(...Array.from(range.getClientRects(), rect));
+              }
+              const pseudo = (name: string) => {
+                const p = getComputedStyle(el, name);
+                return { content: p.content, position: p.position, inset: p.inset, width: p.width, height: p.height, opacity: p.opacity, transform: p.transform };
+              };
+              return { tag: el.tagName, box: rect(el.getBoundingClientRect()), textRanges,
+                scrollWidth: el.scrollWidth, clientWidth: el.clientWidth, scrollHeight: el.scrollHeight, clientHeight: el.clientHeight,
+                overflowX: style.overflowX, overflowY: style.overflowY, textOverflow: style.textOverflow, whiteSpace: style.whiteSpace,
+                before: pseudo('::before'), after: pseudo('::after') };
+            });
             const ab = a.getBoundingClientRect(), tb = title.getBoundingClientRect();
-            return { flexWrap: getComputedStyle(node).flexWrap, sameRow: Math.abs(ab.top + ab.height / 2 - tb.top - tb.height / 2) < 1,
+            return { children, rowBox: rect(node.getBoundingClientRect()), flexWrap: getComputedStyle(node).flexWrap, sameRow: Math.abs(ab.top + ab.height / 2 - tb.top - tb.height / 2) < 1,
               font: [a, title].map(el => parseFloat(getComputedStyle(el).fontSize)), height: ab.height, width: ab.width,
-              complete: [a, title].every(el => el.scrollWidth <= el.clientWidth + 1 && getComputedStyle(el).textOverflow !== "ellipsis"),
+              // Absolute decorative pseudo-elements contribute to WebKit's
+              // scrollWidth even when transparent. Measure actual label text,
+              // not that decorative overflow, without accepting clipped glyphs.
+              complete: children.every(child => child.textOverflow !== "ellipsis" && child.textRanges.length > 0
+                && child.textRanges.every(text => text.left >= child.box.left - 1 && text.right <= child.box.right + 1
+                  && text.top >= child.box.top - 1 && text.bottom <= child.box.bottom + 1)),
               noDocumentOverflow: document.documentElement.scrollWidth <= innerWidth };
           });
+          // Keep the original assertions intact; persist evidence before any
+          // geometry failure so an engine-specific overflow can be diagnosed.
+          t.diagnostic(JSON.stringify({ stage: "pre-layout-assert", engine: engine.name(), viewport, locale, scenario, layout }));
+          const beforeAssert = path.join(screenshots, `${engine.name()}-${viewport.width}x${viewport.height}-${locale}-${scenario}-before-layout-assert.png`);
+          await page.screenshot({ path: beforeAssert, fullPage: true, animations: "disabled" });
+          t.diagnostic(`Pre-assert screenshot: ${beforeAssert}`);
           assert.equal(layout.flexWrap, "nowrap"); assert.equal(layout.sameRow, true); assert.equal(layout.complete, true);
           // Canonical navigation deliberately uses 11px below640px; the page
           // badge stays12px. Do not redefine the shared button to fit this test.

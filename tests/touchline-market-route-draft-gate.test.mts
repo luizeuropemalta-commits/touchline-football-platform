@@ -1,3 +1,5 @@
+import { resolveClubOwnerShell } from "./helpers/touchline-resolve-clubowner-shell.mts";
+import { createLocalReadTiming } from "../lib/touchlineArena/local-read-timing.ts";
 import assert from "node:assert/strict";
 import { clubCollectionPresentationEnabled } from "../lib/touchlineFantasy/club-collection-presentation.ts";
 import { readFileSync } from "node:fs";
@@ -65,6 +67,9 @@ function fixture(options: { user?: User | null; configured?: boolean; rejectAuth
     } },
     "@/lib/touchlineFantasy/club-collection-presentation": { clubCollectionPresentationEnabled },
     "@/lib/touchlineArena/site-locales-release": siteLocalePolicy,
+    react: React,
+    "@/components/touchline/TouchlineAccountLoading": { default: "account-loading" },
+    "@/components/touchline/cards/TouchlineCardLeadershipLayout": { default: "leadership-boundary" },
     "react/jsx-runtime": jsxRuntime,
     "next/headers": { headers: async () => ({ get: () => "Europe/Malta" }) },
     "@/lib/touchlineArena/match-centre": { normalizeTouchlineMatchCentreTimeZone },
@@ -106,6 +111,7 @@ function fixture(options: { user?: User | null; configured?: boolean; rejectAuth
       };
     } },
     "@/lib/touchlineArena/auth-i18n": { touchLineAuthEntryHref },
+    "@/lib/touchlineArena/local-read-timing": { createLocalReadTiming: () => createLocalReadTiming({}) },
     "@/lib/touchlineArena/server-read-deadline": { resolveServerReadWithin },
     "@/lib/touchlineFantasy/server": { loadTouchlineFantasyReadSnapshot: async (received: unknown) => {
       events.push("snapshot");
@@ -129,13 +135,13 @@ function fixture(options: { user?: User | null; configured?: boolean; rejectAuth
   const metadata = loaded.generateMetadata as (props: { searchParams: Promise<Params> }) => Promise<{ title: string; description: string }>;
   const internalRoute = (params: Params, enabled?: boolean) => {
     assert.equal(typeof loaded.internalRoute, "function", "private renderClubOwnerPage seam must exist");
-    return (loaded.internalRoute as (props: { searchParams: Promise<Params> }, enabled?: boolean) => Promise<Element>)({ searchParams: Promise.resolve(params) }, enabled);
+    return (loaded.internalRoute as (props: { searchParams: Promise<Params> }, enabled?: boolean) => Promise<Element>)({ searchParams: Promise.resolve(params) }, enabled).then(async node => await resolveClubOwnerShell(node) as Element);
   };
   const internalMetadata = (params: Params, enabled?: boolean) => {
     assert.equal(typeof loaded.internalMetadata, "function", "private generateClubOwnerMetadata seam must exist");
     return (loaded.internalMetadata as (props: { searchParams: Promise<Params> }, enabled?: boolean) => Promise<{ title: string; description: string }>)({ searchParams: Promise.resolve(params) }, enabled);
   };
-  return { events, leaves, snapshot, avatarContext, railFixtures, railMetadata, get railReads() { return railReads; }, internalRoute, internalMetadata, route: (params: Params) => route({ searchParams: Promise.resolve(params) }), metadata: (params: Params) => metadata({ searchParams: Promise.resolve(params) }) };
+  return { events, leaves, snapshot, avatarContext, railFixtures, railMetadata, get railReads() { return railReads; }, internalRoute, internalMetadata, route: (params: Params) => route({ searchParams: Promise.resolve(params) }).then(async node => await resolveClubOwnerShell(node) as Element), metadata: (params: Params) => metadata({ searchParams: Promise.resolve(params) }) };
 }
 
 function descendants(node: React.ReactNode): Element[] {

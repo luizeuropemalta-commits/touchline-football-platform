@@ -8,6 +8,7 @@ import { resolveTouchlineOfficialLeagueTable, type TouchlineOfficialLeagueTable,
   type TouchlineOfficialLeagueTableFixture, type TouchlineOfficialLeagueTableLiveSource } from "../lib/football-data/official-league-table.ts";
 import type { TouchlinePublicFixture } from "../lib/football-data/public-fixture.ts";
 import { parseTouchlineSportsPublication, type TouchlineSportsPublication } from "../lib/touchlineArena/sports-publication.ts";
+import { parseTouchlineLivePresentationState } from "../lib/touchlineArena/live-presentation-state.ts";
 
 const root = path.resolve(import.meta.dirname, "..");
 const origin = "https://official-table-fixture.test";
@@ -45,9 +46,9 @@ function publicFixture(stamp: string, homeScore: number, awayScore: number, stat
     ...(status === "LIVE" ? { liveMinute: 35 } : {}), verifiedAt: stamp, providerUpdatedAt: stamp };
 }
 
-function publication(revision: number, stamp: string, fixtures: readonly TouchlinePublicFixture[]): TouchlineSportsPublication {
+function publication(revision: number, stamp: string, fixtures: readonly TouchlinePublicFixture[], publishedAt = stamp): TouchlineSportsPublication {
   const result = parseTouchlineSportsPublication({ version: 1, scopeKey: "touchline-england",
-    publication: { snapshotId: id(100 + revision), contentDigest: revision.toString(16).padStart(32, "0"), publishedAt: stamp,
+    publication: { snapshotId: id(100 + revision), contentDigest: revision.toString(16).padStart(32, "0"), publishedAt,
       playerRankingSnapshotId: null, coachRankingSnapshotId: null, liveScoreSnapshotDigest: (100 + revision).toString(16).padStart(32, "0") },
     playerRanking: null, coachRanking: null, live: { fetchedAt: stamp, fixtures } });
   assert.ok(result, "the synthetic envelope must pass the real all-or-nothing public parser");
@@ -127,6 +128,7 @@ test("two real official tables and ClubHub score share goal/correction publicati
       const context = await browser.newContext({ viewport, reducedMotion: "reduce", serviceWorkers: "block" });
       const page = await context.newPage();
       let current = seed;
+      let transportDegraded = false;
       const requests: string[] = [], refused: string[] = [], errors: string[] = [];
       page.on("pageerror", error => errors.push(error.message));
       page.on("console", message => { if (message.type() === "error") errors.push(message.text()); });
@@ -140,9 +142,11 @@ test("two real official tables and ClubHub score share goal/correction publicati
           requests.push(`state:${current.publication.contentDigest}`);
           // Idle scheduling keeps this event-driven proof deterministic; it is
           // not a test of production polling cadence or provider latency.
-          await route.fulfill({ json: { version: 1, available: true, mode: "idle", pollAfterMs: null, resumeAt: null,
+          const statePayload = { version: 1, available: true, mode: "idle", pollAfterMs: null, resumeAt: null,
             playerRankingSnapshotId: null, coachRankingSnapshotId: null, livePresentationSnapshotId: current.publication.contentDigest,
-            liveFreshness: { fetchedAt: current.live.fetchedAt, ageMs: 0, degraded: false } } }); return;
+            liveFreshness: { fetchedAt: current.live.fetchedAt, ageMs: Math.max(0, Date.now() - Date.parse(current.live.fetchedAt!)), degraded: transportDegraded } };
+          assert.ok(parseTouchlineLivePresentationState(statePayload), "synthetic freshness must satisfy the real transport contract");
+          await route.fulfill({ json: statePayload }); return;
         }
         if (url.pathname === "/api/touchline-arena/sports-publication") {
           requests.push(`payload:${current.publication.contentDigest}`);
@@ -157,6 +161,10 @@ test("two real official tables and ClubHub score share goal/correction publicati
         await page.goto(`${origin}${fixturePath}`, { waitUntil: "domcontentloaded" });
         for (const tableId of tableIds) await expect(page.locator(`#${tableId} tbody tr`)).toHaveCount(20);
         await settleFrames(page);
+        const score = page.locator("[data-table-fixture-score] b");
+        await expect(score.locator("[data-clubhub-fixture-score]")).toHaveText("0 — 0");
+        await expect(score.locator("[data-clubhub-fixture-status]")).toHaveText("Live data updating");
+        await expect(score).not.toContainText("35′");
         assert.deepEqual(requests, [], "static opt-out must not subscribe or borrow another surface's publication");
         await page.getByRole("textbox", { name: "Local note" }).fill("keep table selection");
         const rerender = (patch: unknown) => page.evaluate(value =>
@@ -167,7 +175,6 @@ test("two real official tables and ClubHub score share goal/correction publicati
         await expect.poll(() => payloads().length).toBe(1);
         const profile = page.locator("#table-profile");
         const profileHandle = await profile.elementHandle();
-        const score = page.locator("[data-table-fixture-score] b");
         const movingLink = profile.locator(`a[href="${clubHref(1)}"]`);
         const movingLinkHandle = await movingLink.elementHandle();
         const movingRowHandle = await movingLink.evaluateHandle(link => link.closest("tr")!);
@@ -192,8 +199,8 @@ test("two real official tables and ClubHub score share goal/correction publicati
               await expect(tr.locator("td").nth(8)).toHaveText(String(playerPoints));
             }
           }
-          await expect(score).toContainText(`${fixture.homeScore} — ${fixture.awayScore}`);
-          await expect(score).toContainText(fixture.status === "FT" ? "Full Time" : "35′");
+          await expect(score.locator("[data-clubhub-fixture-score]")).toHaveText(`${fixture.homeScore} — ${fixture.awayScore}`);
+          await expect(score.locator("[data-clubhub-fixture-status]")).toHaveText(fixture.status === "FT" ? "Full Time" : "35′");
           await expect(profile.locator("header small").last()).toContainText(String(fixture.status === "FT" ? 5 : 4));
           assert.equal(await profileHandle.evaluate(node => node === document.getElementById("table-profile")), true);
           assert.equal(await movingLinkHandle.evaluate((node, selector) => node === document.querySelector(selector), `#table-profile a[href="${clubHref(1)}"]`), true);
@@ -213,11 +220,13 @@ test("two real official tables and ClubHub score share goal/correction publicati
           { revision: 5, home: 0, away: 1, status: "FT", points: [3, 6] },
         ] as const;
         for (const step of sequence) {
-          const next = publicFixture(stamp, step.home, step.away, step.status);
+          const next = { ...publicFixture(stamp, step.home, step.away, step.status),
+            ...(step.status === "FT" ? { liveMinute: 90 } : {}) };
           current = publication(step.revision, stamp, [next]);
           await page.evaluate(() => window.dispatchEvent(new Event("online")));
           await expect.poll(() => page.evaluate("window.transportDigest()")).toBe(current.publication.contentDigest);
           await check(next, step.points);
+          if (step.status === "FT") await expect(score).not.toContainText("90′");
           assert.equal(payloads().filter(value => value === `payload:${current.publication.contentDigest}`).length, 1,
             "both tables and score consume one payload per accepted publication, not per component");
         }
@@ -287,6 +296,30 @@ test("two real official tables and ClubHub score share goal/correction publicati
         await expect.poll(() => page.evaluate("window.transportDigest()")).toBe(current.publication.contentDigest);
         await check(resumed, [6, 3], false);
         assert.equal(payloads().filter(value => value === `payload:${current.publication.contentDigest}`).length, 1);
+        // Actual shared transport/reader: source freshness, not response arrival, controls LIVE.
+        for (const state of [
+          { revision: 8, fetchedAt: new Date(Date.now() - 6 * 60_000).toISOString(), degraded: true },
+          { revision: 9, fetchedAt: stamp, degraded: true },
+        ]) {
+          transportDegraded = state.degraded;
+          // A new publication can contain an older source receipt; do not backdate the publication itself.
+          current = publication(state.revision, state.fetchedAt, [publicFixture(state.fetchedAt, 2, 1)], new Date().toISOString());
+          await page.evaluate(() => window.dispatchEvent(new Event("online")));
+          await expect.poll(() => page.evaluate("window.transportDigest()")).toBe(current.publication.contentDigest);
+          await expect(score.locator("[data-clubhub-fixture-score]")).toHaveText("2 — 1");
+          await expect(score.locator("[data-clubhub-fixture-status]")).toHaveText("Live data updating");
+          await expect(score).not.toContainText("35′");
+          assert.equal(payloads().filter(value => value === `payload:${current.publication.contentDigest}`).length, 1,
+            "freshness handling must not add a second payload reader");
+        }
+        transportDegraded = false;
+        const recoveredStamp = stamp;
+        const recovered = publicFixture(recoveredStamp, 2, 1);
+        current = publication(10, recoveredStamp, [recovered], new Date().toISOString());
+        await page.evaluate(() => window.dispatchEvent(new Event("online")));
+        await expect.poll(() => page.evaluate("window.transportDigest()")).toBe(current.publication.contentDigest);
+        await check(recovered, [6, 3], false);
+        assert.equal(payloads().filter(value => value === `payload:${current.publication.contentDigest}`).length, 1);
         const routeRefreshRequests = await page.evaluate("window.fixtureRefreshCount") as number;
         assert.ok(routeRefreshRequests > 0, "real refresh boundary still requests server reconciliation");
         await page.evaluate("window.unmountFixture()");
@@ -298,7 +331,7 @@ test("two real official tables and ClubHub score share goal/correction publicati
         assert.deepEqual(refused, []); assert.deepEqual(errors, []);
         reports.push({ viewport, dimensions, scrollBefore, payloads: payloads().length, stateReads: requests.length - payloads().length,
           routeRefreshRequests, scenarios: ["goal", "equaliser", "downward-correction", "FT-no-double-count", "late-SSR", "omission-LKG",
-            "A-B-A", "same-digest", "hidden", "disabled", "resume", "unmount"], focusScrollAndInputPreserved: true });
+            "A-B-A", "same-digest", "seed-without-metadata", "FT-residual-minute", "expired-receipt", "degraded-receipt", "fresh-recovery", "hidden", "disabled", "resume", "unmount"], focusScrollAndInputPreserved: true });
       } finally { await page.evaluate("window.unmountFixture?.()").catch(() => undefined); await context.close(); }
     }
     console.log(`OFFICIAL_TABLE_BROWSER_PROOF ${JSON.stringify({ reports,

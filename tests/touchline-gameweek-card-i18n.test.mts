@@ -87,6 +87,70 @@ function fixture(reviewLocale?: typeof locales[number]) {
 }
 const escape = (value: string) => value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
 
+test("contextual lazy thumbnails preserve real artwork and geometry while their opened zoom stays eager", () => {
+  const view = fixture();
+  const images = (html: string) => [...html.matchAll(/<img\b[^>]*>/g)].map(match => match[0]);
+  const withoutDeliveryHints = (tags: string[]) => tags.map(tag => tag.replace(/\s(?:loading|decoding|fetchpriority)="[^"]*"/gi, ""));
+  for (const props of [{ compact: true }, { displayWidth: 126, fitContainer: true }]) {
+    const eagerElement = view.produce("en-GB", {}, props);
+    const lazyElement = view.produce("en-GB", {}, { ...props, imageLoading: "lazy" });
+    assert.equal(eagerElement.props.children.props.imageLoading, "eager");
+    assert.equal(lazyElement.props.children.props.imageLoading, "lazy");
+    assert.equal(lazyElement.props.expandedContent.props.imageLoading, undefined, "thumbnail hint never propagates into the zoom");
+    const eager = view.render(eagerElement), lazy = view.render(lazyElement);
+    const eagerImages = images(eager.card), lazyImages = images(lazy.card);
+    const frame = lazyImages.find(tag => tag.includes('data-touchline-card-frame="true"'));
+    assert.ok(frame, "real renderer produces a frame");
+    assert.match(frame, /loading="lazy"/);
+    assert.match(frame, /decoding="async"/);
+    assert.match(frame, /fetchpriority="low"/i);
+    for (const asset of ["frame", "crest", "flag", "brand"]) {
+      const tag = lazyImages.find(image => image.includes(`data-live-card-asset="${asset}"`));
+      assert.ok(tag, `real ${asset} asset is present`);
+      assert.match(tag, /loading="lazy"/);
+    }
+    const eagerFrame = eagerImages.find(tag => tag.includes('data-touchline-card-frame="true"'))!;
+    assert.match(eagerFrame, /loading="eager"/);
+    if (props.compact) {
+      assert.match(eagerFrame, /decoding="sync"/);
+      assert.match(eagerFrame, /fetchpriority="high"/i);
+    }
+    assert.deepEqual(withoutDeliveryHints(lazyImages), withoutDeliveryHints(eagerImages), "URLs, dimensions, styles and artwork remain identical");
+    assert.deepEqual(images(lazy.expanded), images(eager.expanded), "zoom image delivery and artwork remain identical");
+    assert.match(images(lazy.expanded).find(tag => tag.includes('data-touchline-card-frame="true"'))!, /loading="eager"/);
+    const lazyNeon = lazy.card.match(/--touchline-card-neon-art:[^;"]+/)?.[0];
+    assert.ok(lazyNeon, "the existing neon artwork declaration remains present");
+    assert.equal(lazyNeon, eager.card.match(/--touchline-card-neon-art:[^;"]+/)?.[0]);
+  }
+});
+
+test("only outside collection and market results opt into lazy thumbnails; reserves and XI keep defaults", () => {
+  function openings(source: string, component: string) {
+    const file = ts.createSourceFile("caller.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+    const found: Array<Map<string, string | undefined>> = [];
+    function visit(node: ts.Node) {
+      if ((ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) && node.tagName.getText(file) === component) {
+        found.push(new Map(node.attributes.properties.filter(ts.isJsxAttribute).map(attribute => [attribute.name.getText(file), attribute.initializer?.getText(file)])));
+      }
+      ts.forEachChild(node, visit);
+    }
+    visit(file);
+    return found;
+  }
+  const slots = openings(fantasyClient, "ClubOwnerCollectionSlots");
+  const outside = slots.filter(slot => slot.get("area") === '"outside"');
+  const reserves = slots.filter(slot => slot.get("area") === '"reserves"');
+  assert.equal(outside.length, 1); assert.equal(outside[0].get("imageLoading"), '"lazy"');
+  assert.equal(reserves.length, 2); assert.ok(reserves.every(slot => !slot.has("imageLoading")));
+  const cards = openings(fantasyClient, "TouchlineGameweekCard");
+  assert.equal(cards.filter(card => card.get("imageLoading") === '"lazy"').length, 1);
+  assert.ok(cards.filter(card => card.has("compact")).every(card => !card.has("imageLoading")), "XI thumbnails remain eager by default");
+  const collectionSource = readFileSync(new URL("../components/touchline/fantasy/ClubOwnerCollectionSlots.tsx", import.meta.url), "utf8");
+  assert.match(collectionSource, /imageLoading = "eager"/);
+  assert.equal(openings(collectionSource, "TouchlineGameweekCard").filter(card => card.get("imageLoading") === "{imageLoading}").length, 1,
+    "only collection slot thumbnails receive the hint, not the explicit swap comparison");
+});
+
 test("real Gameweek card forwards one squad action and the independent contract release without invoking either", () => {
   const view = fixture();
   let calls = 0;

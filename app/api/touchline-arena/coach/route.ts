@@ -158,6 +158,9 @@ export async function DELETE(request: Request) {
     p_idempotency_key: idempotencyKey,
   });
   if (error) {
+    if (error.message.includes("CLUB_COLLECTION_ROUTE_REQUIRED")) {
+      return NextResponse.json({ ok: false, error: "CLUB_COLLECTION_ROUTE_REQUIRED" }, { status: 409 });
+    }
     const missing = error.message.includes("TL_COACH_ACTIVE_CONTRACT_NOT_FOUND");
     return NextResponse.json(
       { ok: false, error: missing ? "TL_COACH_ACTIVE_CONTRACT_NOT_FOUND" : "TL_COACH_END_FAILED" },

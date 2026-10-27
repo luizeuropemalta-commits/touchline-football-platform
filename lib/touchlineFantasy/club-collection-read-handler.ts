@@ -34,6 +34,6 @@ export async function GET() {
     const result = await readClubCollectionServer(user.id, mark);
     if (result.status === "unavailable") return fail(result.error, result.httpStatus);
     return reply({ ok: true, state: result.state, initialBudget: result.initialBudget,
-      releaseAvailable: result.releaseAvailable, accountId: result.accountId, seasonId: result.seasonId }, 200, result.releaseAvailable);
+      releaseAvailable: result.releaseAvailable, coachLifecycleAvailable: result.coachLifecycleAvailable === true, accountId: result.accountId, seasonId: result.seasonId }, 200, result.releaseAvailable);
   } catch { return fail("CLUB_STORAGE_UNAVAILABLE", 503); }
 }

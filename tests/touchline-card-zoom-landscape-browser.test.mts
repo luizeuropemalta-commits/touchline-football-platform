@@ -1,16 +1,20 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, realpathSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
-import { chromium, webkit, expect, type Locator } from "@playwright/test";
+import { chromium, webkit, firefox, expect, type Locator } from "@playwright/test";
 import { bundleIsolatedBrowserFixture } from "./helpers/touchline-isolated-browser-bundle.mts";
 import { getTouchlineCardZoomCopy } from "../lib/touchlineArena/card-zoom-i18n.ts";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const enabled = process.env.TOUCHLINE_RUN_ZOOM_LANDSCAPE_BROWSER_TESTS === "1";
+const requestedEngine = process.env.TOUCHLINE_ZOOM_LANDSCAPE_BROWSER_ENGINE ?? "all";
+assert.ok(["all", "chromium", "webkit", "firefox"].includes(requestedEngine),
+  "TOUCHLINE_ZOOM_LANDSCAPE_BROWSER_ENGINE must be all, chromium, webkit or firefox");
+const engines = [chromium, webkit, firefox].filter(engine => requestedEngine === "all" || engine.name() === requestedEngine);
 
-test("canonical player/coach zoom: two landscape notch sides, crowns, dismissal and focus", { skip: !enabled, timeout: 120_000 }, async () => {
+test(`canonical player/coach zoom (${requestedEngine}): two landscape notch sides, crowns, dismissal and focus`, { skip: !enabled, timeout: 120_000 }, async t => {
   const bundle = bundleIsolatedBrowserFixture({ entryPath: "tests/fixtures/CardZoomLandscapeBrowserFixture.tsx", cssPrefix: "landscapezoom",
     requiredSources: ["components/touchline/fantasy/TouchlineGameweekCard.tsx", "components/touchline/cards/TouchlineCoachCardZoom.tsx",
       "components/touchline/cards/TouchlineCardZoom.tsx", "components/touchline/cards/TouchlineCardZoom.module.css",
@@ -28,11 +32,21 @@ test("canonical player/coach zoom: two landscape notch sides, crowns, dismissal 
   const insetCss = css.replace(safeAreaTokens, (_, edge: string) => `var(--fixture-safe-${edge}, 0px)`);
   const publicRoot = realpathSync(path.join(root, "public"));
   const origin = "https://zoom-landscape.test";
+  const screenshots = mkdtempSync("/private/tmp/touchline-coach-zoom-crest-");
+  t.diagnostic(`Coach crest screenshots: ${screenshots}`);
   const reports: unknown[] = [];
-  for (const engine of [chromium, webkit]) {
+  for (const engine of engines) {
+    t.signal.throwIfAborted();
     const browser = await engine.launch({ headless: true });
+    let closing: Promise<void> | undefined;
+    const closeBrowser = () => closing ??= browser.close();
+    const abortBrowser = () => { void closeBrowser().catch(() => undefined); };
+    t.signal.addEventListener("abort", abortBrowser, { once: true });
     try {
+      // Cancellation during launch must also close the newly created browser.
+      t.signal.throwIfAborted();
       for (const viewport of [{ width: 844, height: 390 }, { width: 812, height: 375 }]) for (const notch of ["left", "right"] as const) {
+        t.signal.throwIfAborted();
         const context = await browser.newContext({ viewport, reducedMotion: "reduce", serviceWorkers: "block" });
         try {
           const page = await context.newPage(); page.setDefaultTimeout(8000);
@@ -66,6 +80,8 @@ test("canonical player/coach zoom: two landscape notch sides, crowns, dismissal 
           assert.ok(before.y > 0, "document starts genuinely scrolled");
           for (const subject of ["player", "coach"]) {
             const trigger = page.locator(`[data-landscape-subject="${subject}"] [data-touchline-card-zoom="trigger"] > [role="button"]`);
+            assert.equal(await trigger.evaluate(node => getComputedStyle(node).touchAction), "auto",
+              "the real card trigger must allow native pinch and pan; this is CSS proof, not a physical gesture test");
             await trigger.evaluate(node => (node as HTMLElement).focus({ preventScroll: true }));
             await page.keyboard.press("Enter");
             const dialog = page.locator('[data-touchline-card-zoom="dialog"]'), close = dialog.getByRole("button", { name: getTouchlineCardZoomCopy("en-GB").close, exact: true });
@@ -77,7 +93,58 @@ test("canonical player/coach zoom: two landscape notch sides, crowns, dismissal 
               await expect.poll(() => image.evaluate(node => (node as HTMLImageElement).complete && (node as HTMLImageElement).naturalWidth > 0)).toBe(true);
             }
             assert.match(await expanded.locator('img[data-touchline-card-frame="true"]').first().getAttribute("src") ?? "", /\/templates\/zoom\//, "expanded artwork must not reuse the tiny live frame");
-            if (subject === "coach") await expect(expanded.locator('[data-coach-frame-ready]')).toHaveAttribute("data-coach-frame-ready", "true");
+            if (subject === "coach") {
+              await expect(expanded.locator('[data-coach-frame-ready]')).toHaveAttribute("data-coach-frame-ready", "true");
+              const coachCard = expanded.locator('[data-coach-card-display="default"]');
+              const crest = coachCard.locator('img[data-touchline-card-crest="true"]');
+              await expect(coachCard).toHaveCount(1);
+              await expect(crest).toHaveCount(1);
+              await expect(crest).toHaveAttribute("alt", "Arsenal");
+              const flagImage = coachCard.locator('[data-coach-card-inner="true"] img:not([data-touchline-card-crest])');
+              await expect(flagImage).toHaveCount(1);
+              await expect(flagImage).toHaveAttribute("alt", "ENG");
+              await expect.poll(() => flagImage.evaluate(node => {
+                const image = node as HTMLImageElement;
+                return image.complete && image.naturalWidth > 0;
+              })).toBe(true);
+              await expect.poll(() => crest.evaluate(node => {
+                const image = node as HTMLImageElement;
+                return image.complete && image.naturalWidth > 0;
+              })).toBe(true);
+              assert.match(await crest.getAttribute("src") ?? "", /\/arsenal\.(?:png|webp)(?:\?|$)/);
+
+              const crestGeometry = () => coachCard.evaluate(node => {
+                const image = node.querySelector<HTMLImageElement>('img[data-touchline-card-crest="true"]')!;
+                const host = image.closest<HTMLElement>('[data-touchline-card-crest-host="true"]')!;
+                const inner = node.querySelector<HTMLElement>('[data-coach-card-inner="true"]')!;
+                const name = node.querySelector<HTMLElement>('[data-coach-name-fit]')!;
+                const flag = inner.querySelector<HTMLImageElement>('img:not([data-touchline-card-crest])');
+                const crown = node.querySelector<HTMLImageElement>('[data-touchline-coach-leader-crown="true"]');
+                const rect = (element: Element) => {
+                  const b = element.getBoundingClientRect();
+                  return { left: b.left, right: b.right, top: b.top, bottom: b.bottom, width: b.width, height: b.height };
+                };
+                return { card: rect(node), host: rect(host), image: rect(image), inner: rect(inner),
+                  name: rect(name), flag: flag ? rect(flag) : null, crown: crown ? rect(crown) : null };
+              });
+              await expect.poll(async () => {
+                const g = await crestGeometry();
+                const expected = g.card.width * 92 / 300;
+                return Math.max(Math.abs(g.host.width - expected), Math.abs(g.host.height - expected),
+                  Math.abs(g.image.width - expected), Math.abs(g.image.height - expected));
+              }, { message: "crest must retain authored 92/300 proportion after the real zoom cascade" }).toBeLessThan(1);
+              const g = await crestGeometry();
+              assert.ok(g.image.left >= g.inner.left - 1 && g.image.right <= g.inner.right + 1
+                && g.image.top >= g.inner.top - 1 && g.image.bottom <= g.inner.bottom + 1,
+                "canonical crest must remain inside the clipping inner card");
+              for (const other of [g.name, g.flag, g.crown].filter(value => value !== null)) {
+                const overlapX = Math.min(g.image.right, other.right) - Math.max(g.image.left, other.left);
+                const overlapY = Math.min(g.image.bottom, other.bottom) - Math.max(g.image.top, other.top);
+                assert.ok(overlapX <= 1 || overlapY <= 1, "crest must not overlap name, flag or crown");
+              }
+              t.diagnostic(JSON.stringify({ engine: engine.name(), viewport, notch, coachCrestGeometry: g }));
+              if (notch === "left") await page.screenshot({ path: path.join(screenshots, `${engine.name()}-${viewport.width}-coach.png`) });
+            }
             await expect.poll(() => expanded.locator('img[data-touchline-card-frame="true"]').first().evaluate(node => {
               let element: Element | null = node;
               while (element) { const style = getComputedStyle(element); if (style.opacity === "0" || style.visibility === "hidden" || style.display === "none") return false; element = element.parentElement; }
@@ -118,7 +185,11 @@ test("canonical player/coach zoom: two landscape notch sides, crowns, dismissal 
           assert.ok(assetReads.some(value => /\.png|\.webp/.test(value)), "original local artwork actually loaded");
         } finally { await context.close(); }
       }
-    } finally { await browser.close(); }
+    } finally {
+      t.signal.removeEventListener("abort", abortBrowser);
+      await closeBrowser();
+    }
   }
-  console.log(JSON.stringify({ syntheticNotchOnly: true, reports }));
+  assert.equal(reports.length, engines.length * 8, "every selected engine must complete both viewports, notch sides and subjects");
+  console.log(JSON.stringify({ syntheticNotchOnly: true, requestedEngine, reports }));
 });

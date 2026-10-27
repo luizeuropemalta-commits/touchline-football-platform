@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { runInNewContext } from "node:vm";
@@ -16,7 +16,7 @@ import type { TouchlineFantasySnapshot } from "../lib/touchlineFantasy/server.ts
 import { resolvePlayerAvailabilityBadge } from "../lib/touchlineArena/player-availability-badge.ts";
 import { getTouchlineFantasyMarketBudgetCopy } from "../lib/touchlineFantasy/market-budget-i18n.ts";
 import { isTouchlineFantasyMarketAccess } from "../lib/touchlineFantasy/market-plan-policy.ts";
-import { acquireClubPlayer, type ClubAcquisitionState, type ClubAcquisitionCommand } from "../lib/touchlineFantasy/club-acquisition.ts";
+import { acquireClubPlayer, CLUB_ACQUISITION_BUDGETS, type ClubAcquisitionState, type ClubAcquisitionCommand } from "../lib/touchlineFantasy/club-acquisition.ts";
 import { clubPlayerPosition } from "../lib/touchlineFantasy/club-position.ts";
 import { collectionSlotPlan } from "../lib/touchlineFantasy/club-position-plan.ts";
 
@@ -96,22 +96,22 @@ function exhaustedBetaSnapshot(): TouchlineFantasySnapshot {
   const betaClub = findTouchLineClub("22")!;
   const selectedIds = new Set([...snapshot.selections.slice(0, 4), snapshot.selections.find(selection => selection.slotId === targetSlot.id)!].map(selection => selection.playerId));
   const catalogue = snapshot.catalogue.map(card => ({ ...card, clubName: betaClub.name,
-    editorialCard: { ...card.editorialCard!, marketValueEur: card.id === "xi-replacement" ? 5_000_000 : 10_000_000 } }));
+    editorialCard: { ...card.editorialCard!, marketValueEur: card.id === "xi-replacement" ? 10_000_000 : 20_000_000 } }));
   const expensive = catalogue.find(card => card.id === "xi-replacement")!;
   catalogue.push({ ...expensive, id: "xi-expensive", canonicalPlayerId: "xi-expensive", name: "Synthetic Expensive", shortName: "Expensive",
-    editorialCard: { ...expensive.editorialCard!, marketValueEur: 11_000_000 } });
+    editorialCard: { ...expensive.editorialCard!, marketValueEur: 21_000_000 } });
   const selections = snapshot.selections.filter(selection => selectedIds.has(selection.playerId));
-  return { ...snapshot, marketAccess: { planKey: "beta", budgetEur: 50_000_000, allowedClubTeamIds: ["22", "117", "116", "52"] },
-    config: { ...snapshot.config, budgetEur: 50_000_000 }, catalogue, selections,
-    userGameweek: { ...snapshot.userGameweek!, totalMarketValueEur: 50_000_000 },
+  return { ...snapshot, marketAccess: { planKey: "beta", budgetEur: 100_000_000, allowedClubTeamIds: ["22", "117", "116", "52", "3", "13"] },
+    config: { ...snapshot.config, budgetEur: 100_000_000 }, catalogue, selections,
+    userGameweek: { ...snapshot.userGameweek!, totalMarketValueEur: 100_000_000 },
     coaches: snapshot.coaches.map(entry => ({ ...entry, clubId: betaClub.teamId, clubName: betaClub.name,
       coach: { ...entry.coach, teamId: betaClub.teamId } })) };
 }
 
-test("XI browser fixtures use recognized Standard 400M and exact Beta five-player 50M budgets", () => {
+test("XI browser fixtures use recognized Standard 400M and exact Beta five-player 100M budgets", () => {
   for (const [snapshot, expectedPlan, expectedTotal, expectedRemaining] of [
     [fixtureSnapshot(), "standard", 11_000_000, 389_000_000],
-    [exhaustedBetaSnapshot(), "beta", 50_000_000, 0],
+    [exhaustedBetaSnapshot(), "beta", 100_000_000, 0],
   ] as const) {
     assert.equal(isTouchlineFantasyMarketAccess(snapshot.marketAccess), true);
     assert.equal(snapshot.marketAccess?.planKey, expectedPlan);
@@ -128,6 +128,16 @@ test("XI browser fixtures use recognized Standard 400M and exact Beta five-playe
     assert.equal(validation.budgetRemainingEur, expectedRemaining);
     assert.equal(snapshot.userGameweek?.totalMarketValueEur, expectedTotal);
   }
+  // Keep the insufficient-budget offer above the outgoing card's credit.
+  // Doubling the Beta fixture to100M must not leave an11M offer affordable.
+  const beta = exhaustedBetaSnapshot();
+  const original = beta.catalogue.find(card => card.id === beta.selections.find(selection => selection.slotId === targetSlot.id)!.playerId)!;
+  const cheap = beta.catalogue.find(card => card.id === "xi-replacement")!;
+  const expensive = beta.catalogue.find(card => card.id === "xi-expensive")!;
+  assert.equal(original.editorialCard!.marketValueEur, 20_000_000);
+  assert.equal(cheap.editorialCard!.marketValueEur, 10_000_000);
+  assert.equal(expensive.editorialCard!.marketValueEur, 21_000_000);
+  assert.ok(expensive.editorialCard!.marketValueEur > original.editorialCard!.marketValueEur);
 });
 
 test("fixture module lowering initializes ESM dependencies before body in source order", async () => {
@@ -313,12 +323,22 @@ test("original market zoom signing mounted: staged confirmation only", {
   } finally { await browser.close(); }
 });
 type SaveRequest = { gameweekId: string; selectedCoachId: string; formationCode: string; selections: Array<{ playerId: string; slotId: string }>; action: string; idempotencyKey: string };
-async function openFixture(browser: Browser, bundle: Bundle, mode: Mode, options: { marketVacancy?: "starters" | "reserves" | "outside"; emptyAccount?: boolean; expiredDeadline?: boolean; structure?: boolean; collection?: boolean; filledBench?: boolean; holdCollection?: boolean; locked?: boolean; divergent?: boolean; indicators?: boolean; budgetExhausted?: boolean; viewport?: { width: number; height: number }; formationCode?: string } = {}) {
+async function openFixture(browser: Browser, bundle: Bundle, mode: Mode, options: { livePresentationState?: import("../lib/touchlineArena/live-presentation-state.ts").TouchlineLivePresentationState; marketVacancy?: "starters" | "reserves" | "outside"; emptyAccount?: boolean; unconfirmedBudget?: boolean; expiredDeadline?: boolean; structure?: boolean; collection?: boolean; filledBench?: boolean; holdCollection?: boolean; locked?: boolean; divergent?: boolean; indicators?: boolean; budgetExhausted?: boolean; viewport?: { width: number; height: number }; formationCode?: string } = {}) {
   const snapshot = options.budgetExhausted ? exhaustedBetaSnapshot() : fixtureSnapshot(options.locked, options.formationCode);
+  const { parseTouchlineLivePresentationState } = await import("../lib/touchlineArena/live-presentation-state.ts");
+  // Every marketPage mount includes the real ClubHub strip/shared reader. These
+  // XI/collection fixtures publish no sports facts; retain its unavailable/retry
+  // path while keeping private fantasy state and indicators independently driven.
+  const livePresentationState = parseTouchlineLivePresentationState(options.livePresentationState ?? {
+    version: 1, available: false, playerRankingSnapshotId: null, coachRankingSnapshotId: null,
+    livePresentationSnapshotId: null, mode: "idle", pollAfterMs: null, resumeAt: null,
+  });
+  assert.ok(livePresentationState, "XI fixture must satisfy the real shared presentation-state contract");
   if (options.emptyAccount) { snapshot.userGameweek = null; snapshot.selections = []; }
   if (options.expiredDeadline && snapshot.activeGameweek) snapshot.activeGameweek.locksAt = new Date(Date.now() - 60_000).toISOString();
   let collection: ClubAcquisitionState | undefined;
   const collectionWrites: ClubAcquisitionCommand[] = [];
+  let collectionReads = 0, prepareRequests = 0;
   if (options.collection && options.emptyAccount) {
     snapshot.userId = "30000000-0000-4000-8000-000000000001";
     snapshot.config = { ...snapshot.config, seasonId: "30000000-0000-4000-8000-000000000003" };
@@ -326,7 +346,8 @@ async function openFixture(browser: Browser, bundle: Bundle, mode: Mode, options
   if (options.collection && !options.emptyAccount) {
     snapshot.userId = "30000000-0000-4000-8000-000000000001";
     // The round snapshot still carries legacy XI policy; the enabled collection
-    // supplies its separate confirmed 500M total. Do not invent a server DTO.
+    // supplies a synthetic confirmed remaining balance, not an initial plan grant.
+    // The historical 500M fixture allocation is not the current Standard budget.
     snapshot.config = { ...snapshot.config, seasonId: "30000000-0000-4000-8000-000000000003" };
     snapshot.selections = [];
     snapshot.userGameweek = { ...snapshot.userGameweek!, totalMarketValueEur: 0 };
@@ -370,6 +391,7 @@ async function openFixture(browser: Browser, bundle: Bundle, mode: Mode, options
     snapshot.matchCardIndicators = [{ playerId, fixtureId: "991", eventId: "synthetic-yellow", kind: "yellow" }];
   }
   let stateUnavailable = false, stateReads = 0;
+  let livePresentationReads = 0;
   const context = await browser.newContext({ viewport: options.viewport ?? (mode.touch ? { width: 844, height: 390 } : { width: 1280, height: 900 }),
     hasTouch: mode.touch, reducedMotion: mode.reduced ? "reduce" : "no-preference", serviceWorkers: "block" });
   let page: Page | undefined;
@@ -428,14 +450,21 @@ async function openFixture(browser: Browser, bundle: Bundle, mode: Mode, options
       if (url.pathname === "/fixture" && method === "GET") { await route.fulfill({ contentType: "text/html", body: html }); return; }
       if (options.emptyAccount && url.pathname === "/api/touchline-fantasy/prepare" && method === "POST") {
         // A missing round remains unconfirmed. Its warning must not replace the shell.
+        prepareRequests++;
+        assert.deepEqual(request.postDataJSON(), { expectedAccountId: snapshot.userId, gameweekId: snapshot.activeGameweek!.id });
         await route.fulfill({ json: { ok: false } }); return;
       }
       if (options.emptyAccount && options.collection && url.pathname.startsWith("/api/touchline-fantasy/collection")) {
         if (method !== "GET") { unexpected.push(`${method} ${url.pathname}`); await route.abort(); return; }
+        collectionReads++;
         if (options.locked) {
           expectedHttpErrors.set(request.url(), (expectedHttpErrors.get(request.url()) ?? 0) + 1);
           await route.fulfill({ status: 503, json: { ok: false } });
-        } else await route.fulfill({ json: { ok: true, state: null, accountId: snapshot.userId, seasonId: snapshot.config.seasonId } });
+        } else await route.fulfill({ json: { ok: true, state: null, accountId: snapshot.userId, seasonId: snapshot.config.seasonId,
+          // A confirmed empty paid collection needs its read-only entitlement allowance.
+          // Omission is retained as a separate fail-closed scenario, never a wallet.
+          ...(!options.unconfirmedBudget ? { initialBudget: { plan: "standard", balanceEur: CLUB_ACQUISITION_BUDGETS.standard } } : {}),
+        } });
         return;
       }
       // Transport-only fixture: actual component/hook and acquisition domain;
@@ -479,6 +508,12 @@ async function openFixture(browser: Browser, bundle: Bundle, mode: Mode, options
             formationCode: committed.formationCode, state: committed.action === "confirm" ? "CONFIRMED" : "DRAFT" },
         } : {}) } }); return;
       }
+      // Keep the real shared reader mounted. Only this canonical GET is allowed;
+      // external origins, query variants and every unrecognized write still fail.
+      if (method === "GET" && url.pathname === "/api/touchline-arena/live-presentation-state" && url.search === "") {
+        livePresentationReads++;
+        await route.fulfill({ json: livePresentationState }); return;
+      }
       // Real read-only hooks remain mounted; no award/ranking authority is fabricated.
       if (method === "GET" && ["/api/touchline-awards/golden-boot", "/api/touchline-arena/card-ranking/active", "/api/football-data/fantasy/livescores"].includes(url.pathname)) {
         expectedHttpErrors.set(request.url(), (expectedHttpErrors.get(request.url()) ?? 0) + 1);
@@ -510,12 +545,20 @@ async function openFixture(browser: Browser, bundle: Bundle, mode: Mode, options
     console.log(`XI_FIXTURE_READY ${JSON.stringify({ engine: browser.browserType().name(), elapsedMs: Math.round(performance.now() - mountStartedAt), scriptBytes: Buffer.byteLength(bundle.script), cssBytes: Buffer.byteLength(bundle.css), mountPhases, resourceTiming })}`);
     return { page, snapshot, writes, errors, unexpected, pitch, list, confirm, removeName, collectionWrites,
       get collection() { return collection; },
+      get collectionReads() { return collectionReads; },
+      get prepareRequests() { return prepareRequests; },
       releaseCollection() { assert.ok(releaseCollection, "purchase confirmation must be held"); releaseCollection(); releaseCollection = undefined; },
       setStateUnavailable(value: boolean) { stateUnavailable = value; },
       get stateReads() { return stateReads; },
+      get livePresentationReads() { return livePresentationReads; },
       get readsAfterSave() { return readsAfterSave; },
       release() { assert.ok(releaseSave, "POST receipt must be held"); releaseSave(); releaseSave = undefined; },
-      async assertClean() { assert.deepEqual(errors, []); assert.deepEqual(unexpectedConsoleErrors, [], "Unexpected browser console errors"); assert.deepEqual(unexpected, []); assert.equal(JSON.stringify(snapshot.selections), initialSelections); },
+      async assertClean() {
+        assert.deepEqual(errors, []); assert.deepEqual(unexpectedConsoleErrors, [], "Unexpected browser console errors");
+        assert.deepEqual(unexpected, []); assert.equal(JSON.stringify(snapshot.selections), initialSelections);
+        console.log(`XI_ALLOWED_READS ${JSON.stringify({ engine: browser.browserType().name(), locale: mode.locale,
+          livePresentationReads, stateReads, lineupWrites: writes.length, collectionWrites: collectionWrites.length })}`);
+      },
       async close() { for (const release of heldSaves) release(); await mountedPage.evaluate("window.unmountFixture()").catch(() => {}); await context.close(); },
     };
   } catch (error) {
@@ -687,26 +730,57 @@ async function calibrateNativeKeyboard(browser: Browser): Promise<KeyboardKey> {
   } finally { await control.close(); }
 }
 
-async function assertCalibratedKeyboardReachability(page: Page, pitch: Locator, target: Locator, key: KeyboardKey) {
-  // The product already focused the pitch; do not focus the target or choose a
-  // fallback in response to product behavior. Calibration predates its mount.
-  const plain = await recordKeyboardProbe(page, "Tab");
-  console.log(`XI_KEYBOARD_REACHABILITY ${JSON.stringify({ phase: "plain-Tab", selectedKey: key, scope: browserScope, evidence: plain.evidence })}`);
-  checkedKeyboardProbe(plain);
-  if (key === "Alt+Tab") {
-    // Reset only the same section for the independently predetermined key.
-    await pitch.focus(); await expect(pitch).toBeFocused();
-    const selected = await recordKeyboardProbe(page, key, target);
-    console.log(`XI_KEYBOARD_REACHABILITY ${JSON.stringify({ phase: "calibrated-key", selectedKey: key, scope: browserScope, evidence: selected.evidence })}`);
-    checkedKeyboardProbe(selected);
+async function walkNativeKeyboardToCoach(page: Page, target: Locator, key: KeyboardKey,
+  firstProbe?: Awaited<ReturnType<typeof recordKeyboardProbe>>) {
+  const visited = new Set<string>();
+  // This empty-sports fixture has at most the carousel viewport and optional
+  // technical rail before its coach. Bound traversal and reject every other
+  // stop, escape from the pitch, backwards traversal or repeated focus.
+  for (let step = 0; step < 4; step++) {
+    const probe = step === 0 && firstProbe ? firstProbe : await recordKeyboardProbe(page, key);
+    checkedKeyboardProbe(probe);
+    const reached = await target.evaluate(node => document.activeElement === node);
+    console.log(`XI_KEYBOARD_REACHABILITY ${JSON.stringify({ phase: "bounded-native-path", step: step + 1,
+      selectedKey: key, scope: browserScope, reached, evidence: probe.evidence })}`);
+    if (reached) {
+      await expect(target).toBeVisible(); await expect(target).toBeEnabled(); await expect(target).toBeFocused();
+      return;
+    }
+    const stop = await target.evaluate(node => {
+      const active = document.activeElement;
+      const pitch = node.closest('#my-club-xi-pitch');
+      if (!(active instanceof HTMLElement) || !pitch?.contains(active)
+        || !(active.compareDocumentPosition(node) & Node.DOCUMENT_POSITION_FOLLOWING)) return null;
+      if (active.matches('[data-fixture-carousel="continuous"] [tabindex="0"]')) return 'live-carousel';
+      if (active.matches('[data-clubowner-technical-rail="true"]')) return 'technical-rail';
+      return null;
+    });
+    assert.ok(stop, "native navigation must stay on a known preceding rail or reach the coach");
+    assert.ok(!visited.has(stop), `native focus must progress, not repeat ${stop}`);
+    visited.add(stop);
   }
-  await expect(target).toBeVisible(); await expect(target).toBeEnabled(); await expect(target).toBeFocused();
+  assert.fail("coach was not reachable within the bounded native keyboard path");
+}
+
+async function assertCalibratedKeyboardReachability(page: Page, pitch: Locator, target: Locator, key: KeyboardKey) {
+  // The product already focused the pitch. The independent native control owns
+  // key selection; the intervening Live viewport is a legitimate tab stop.
+  await expect(pitch).toBeFocused();
+  const plain = await recordKeyboardProbe(page, "Tab");
+  checkedKeyboardProbe(plain);
+  if (key === "Tab") await walkNativeKeyboardToCoach(page, target, key, plain);
+  else {
+    console.log(`XI_KEYBOARD_REACHABILITY ${JSON.stringify({ phase: "plain-Tab", selectedKey: key, scope: browserScope, evidence: plain.evidence })}`);
+    // Reset only the same starting section for the independently calibrated key.
+    await pitch.focus(); await expect(pitch).toBeFocused();
+    await walkNativeKeyboardToCoach(page, target, key);
+  }
 }
 
 async function diagnoseRealTab(page: Page, pitch: Locator, target: Locator, selectedKey: KeyboardKey) {
   // Selection comes exclusively from the native control before product mount.
   // Retain both raw observations; never choose a fallback from product behavior.
-  const tab = await recordKeyboardProbe(page, "Tab", selectedKey === "Tab" ? target : undefined);
+  const tab = await recordKeyboardProbe(page, "Tab");
   const targetFocusedAfterTab = await target.evaluate(node => document.activeElement === node);
   const targetState = await target.evaluate(node => {
     const button = node as HTMLButtonElement, rect = button.getBoundingClientRect(), style = getComputedStyle(button);
@@ -721,23 +795,24 @@ async function diagnoseRealTab(page: Page, pitch: Locator, target: Locator, sele
     // Reset ONLY the starting section for the paired probe. Never focus the
     // target button, change tabindex, intercept Tab, or alter engine preferences.
     await pitch.focus(); await expect(pitch).toBeFocused();
-    const probe = await recordKeyboardProbe(page, "Alt+Tab", selectedKey === "Alt+Tab" ? target : undefined);
+    const probe = await recordKeyboardProbe(page, "Alt+Tab");
     alternateProbe = probe;
     alternate = { ...probe.evidence, keyOrCollectionFailed: Boolean(probe.failure) };
   } catch (error) { alternateFailure = error; alternate = { unavailable: true }; }
   console.log(`XI_KEYBOARD_DIAGNOSTIC ${JSON.stringify({ surface: "real-xi", target: targetState, tab: tab.evidence,
-    alternate, selectedKey, originalTabAssertion: targetFocusedAfterTab ? "passed" : "failed" })}`);
+    alternate, selectedKey, targetFocusedAfterFirstTab: targetFocusedAfterTab })}`);
   checkedKeyboardProbe(tab);
   if (alternateFailure) throw alternateFailure;
   assert.ok(alternateProbe, "Paired alternate probe must be collected");
   checkedKeyboardProbe(alternateProbe);
-  await expect(target).toBeVisible(); await expect(target).toBeEnabled();
+  await pitch.focus(); await expect(pitch).toBeFocused();
+  await walkNativeKeyboardToCoach(page, target, selectedKey);
 }
 
 async function replacePlayer(fixture: Awaited<ReturnType<typeof openFixture>>, mode: Mode, keyboardDiagnostic = false, keyboardKey?: KeyboardKey) {
   const { page, pitch, list } = fixture;
   await openReplacement(fixture, mode);
-  await expect(pitch.locator("header strong")).toHaveText("11/11 · 4-3-3");
+  await expect(pitch.locator('header[data-formation-toolbar="true"] > div > strong')).toHaveText("11/11 · 4-3-3");
   await expect(list).toBeFocused();
   await expect(list).toContainText(`${mode.locale === "pt-BR" ? "Vaga do XI" : "XI slot"}: ${targetSlot.id}`);
   const results = page.locator("#my-club-position-results");
@@ -747,15 +822,15 @@ async function replacePlayer(fixture: Awaited<ReturnType<typeof openFixture>>, m
   const replacement = results.locator("article").filter({ has: page.locator("strong", { hasText: /^Synthetic Replacement$/ }) });
   await expect(replacement).toHaveCount(1);
   await activate(replacement.getByRole("button", { name: `${mode.locale === "pt-BR" ? "Substituir" : "Replace"} · ${targetSlot.id}`, exact: true }), mode);
-  await expect(pitch.locator("header strong")).toHaveText("11/11 · 4-3-3");
+  await expect(pitch.locator('header[data-formation-toolbar="true"] > div > strong')).toHaveText("11/11 · 4-3-3");
   await expect(pitch).toBeFocused();
   await expect(pitch.getByRole("button", { name: /Synthetic Replacement/ })).toHaveCount(1);
   await expect.poll(() => pitch.evaluate(node => { const box = node.getBoundingClientRect(); return box.top < innerHeight && box.bottom > 0; })).toBe(true);
   const scrolls = await page.evaluate("window.fixtureScrolls") as Array<{ id: string; behavior: string }>;
   assert.deepEqual(scrolls.slice(-2), ["my-club-player-selection", "my-club-xi-pitch"].map(id => ({ id, behavior: mode.reduced ? "instant" : "smooth" })));
   if (!mode.touch) {
-    // The approved technical-area layout puts the coach before the Arena
-    // control. Verify both through native keyboard traversal, never focus them.
+    // Live's viewport precedes the technical coach, followed by formation and
+    // Arena. Verify the bounded natural path, never focus those targets.
     const target = pitch.getByRole("button", { name: "Open Synthetic XI Coach coach card", exact: true });
     if (keyboardDiagnostic) {
       assert.ok(keyboardKey, "Native keyboard calibration must precede the diagnostic product scenario");
@@ -766,7 +841,7 @@ async function replacePlayer(fixture: Awaited<ReturnType<typeof openFixture>>, m
       await assertCalibratedKeyboardReachability(page, pitch, target, keyboardKey);
       const arena = pitch.getByRole("button", { name: "Arena mode", exact: true });
       await page.keyboard.press(keyboardKey);
-      await expect(pitch.locator("summary")).toBeFocused();
+      await expect(pitch.locator('header[data-formation-toolbar="true"] > details > summary')).toBeFocused();
       await page.keyboard.press(keyboardKey);
       await expect(arena).toBeFocused();
       await expect(arena).toBeEnabled();
@@ -783,13 +858,13 @@ async function openReplacement(fixture: Awaited<ReturnType<typeof openFixture>>,
   // The dialog installs initial focus on the next animation frame. Visibility
   // alone does not prove keyboard readiness, especially in WebKit.
   await expect(dialog.getByRole("button", { name: mode.locale === "pt-BR" ? "Fechar card" : "Close card", exact: true })).toBeFocused();
-  await activate(dialog.getByRole("button", { name: `${mode.locale === "pt-BR" ? "Trocar" : "Replace"} · ${original.name}`, exact: true }), mode);
+  await activate(dialog.getByRole("button", { name: `${mode.locale === "pt-BR" ? "Substituir" : "Replace"} · ${original.name}`, exact: true }), mode);
   await expect(dialog).toHaveCount(0);
   await expect(fixture.list).toBeFocused();
   assert.equal(fixture.writes.length, 0);
 }
 
-test("real Beta budget DOM: five players spend 50M, locks credit replacements and comparison never upgrades", {
+test("real Beta budget DOM: five players spend 100M, locks credit replacements and comparison never upgrades", {
   skip: process.env.TOUCHLINE_XI_BUDGET_PROOF !== "1", timeout: 90_000,
 }, async t => {
   const engineName = process.env.TOUCHLINE_XI_BUDGET_ENGINE ?? "chromium";
@@ -805,7 +880,7 @@ test("real Beta budget DOM: five players spend 50M, locks credit replacements an
         const copy = getTouchlineFantasyMarketBudgetCopy(mode.locale);
         const notice = h.page.locator('[data-market-budget-notice="exhausted"]');
         await expect(notice).toContainText(copy.exhausted);
-        await expect(h.pitch.locator("header strong")).toHaveText("5/11 · 4-3-3");
+        await expect(h.pitch.locator('header[data-formation-toolbar="true"] > div > strong')).toHaveText("5/11 · 4-3-3");
         const unchangedUrl = h.page.url();
         const comparison = notice.locator(":scope > details");
         const comparisonToggle = comparison.locator(":scope > summary");
@@ -827,7 +902,7 @@ test("real Beta budget DOM: five players spend 50M, locks credit replacements an
         const lockedSlot = h.pitch.getByRole("button", { name: `${copy.exhausted} · ${empty.id}`, exact: true });
         await expect(lockedSlot).toBeDisabled();
         await activate(notice.getByRole("button", { name: copy.reviewXI, exact: true }), mode);
-        await expect(h.pitch.locator("header strong")).toHaveText("5/11 · 4-3-3");
+        await expect(h.pitch.locator('header[data-formation-toolbar="true"] > div > strong')).toHaveText("5/11 · 4-3-3");
         assert.equal(h.writes.length, 0);
 
         // A selected player still credits the outgoing value, so replacement
@@ -840,21 +915,29 @@ test("real Beta budget DOM: five players spend 50M, locks credit replacements an
         await expect(cheaperSwap).not.toHaveAttribute("aria-disabled", "true");
         await activate(cheaperSwap, mode);
         await expect(h.page.locator("[data-market-budget-notice]")).toHaveCount(0);
-        await expect(h.pitch.locator("header strong")).toHaveText("5/11 · 4-3-3");
+        await expect(h.pitch.locator('header[data-formation-toolbar="true"] > div > strong')).toHaveText("5/11 · 4-3-3");
         await expect(h.pitch.getByRole("button", { name: /Synthetic Replacement/ })).toHaveCount(1);
 
-        // Removing the cheaper player releases 5M more, enabling the original
-        // 10M player without changing coach or issuing any automatic save.
+        // The current zoom offers replacement rather than a separate removal.
+        // Swap back: 10M remaining plus the outgoing 10M permits the original 20M,
+        // while the 21M offer stays locked. Five selections remain throughout.
         await activate(h.pitch.getByRole("button", { name: /Synthetic Replacement/ }), mode);
         const dialog = h.page.getByRole("dialog");
         await expect(dialog.getByRole("button", { name: mode.locale === "pt-BR" ? "Fechar card" : "Close card", exact: true })).toBeFocused();
-        await activate(dialog.getByRole("button", { name: `${mode.locale === "pt-BR" ? "Remover" : "Remove"} · Synthetic Replacement`, exact: true }), mode);
+        await expect(dialog.getByRole("button", { name: `${mode.locale === "pt-BR" ? "Retirar da escalação" : "Remove from line-up"} · Synthetic Replacement`, exact: true })).toHaveCount(0);
+        await activate(dialog.getByRole("button", { name: `${mode.locale === "pt-BR" ? "Substituir" : "Replace"} · Synthetic Replacement`, exact: true }), mode);
         await expect(dialog).toHaveCount(0);
-        await expect(h.pitch.locator("header strong")).toHaveText("4/11 · 4-3-3");
+        await expect(h.list).toBeFocused();
+        await expect(h.pitch.locator('header[data-formation-toolbar="true"] > div > strong')).toHaveText("5/11 · 4-3-3");
         const original = h.snapshot.catalogue[geometry.slots.indexOf(targetSlot)];
         const originalArticle = h.page.locator("#my-club-position-results article").filter({ has: h.page.locator("strong", { hasText: new RegExp(`^${original.name}$`) }) });
-        await activate(originalArticle.getByRole("button", { name: `${mode.locale === "pt-BR" ? "Escolher" : "Choose"} · ${targetSlot.id}`, exact: true }), mode);
-        await expect(h.pitch.locator("header strong")).toHaveText("5/11 · 4-3-3");
+        const restoreOriginal = originalArticle.getByRole("button", { name: `${mode.locale === "pt-BR" ? "Substituir" : "Replace"} · ${targetSlot.id}`, exact: true });
+        await expect(restoreOriginal).not.toHaveAttribute("aria-disabled", "true");
+        await expect(expensive.getByRole("button", { name: copy.insufficient })).toHaveAttribute("aria-disabled", "true");
+        await activate(restoreOriginal, mode);
+        await expect(h.pitch.locator('header[data-formation-toolbar="true"] > div > strong')).toHaveText("5/11 · 4-3-3");
+        await expect(h.pitch.getByRole("button", { name: new RegExp(original.name) })).toHaveCount(1);
+        await expect(h.pitch.getByRole("button", { name: /Synthetic Replacement/ })).toHaveCount(0);
         await expect(h.page.locator('[data-market-budget-notice="exhausted"]')).toBeVisible();
         assert.equal(h.writes.length, 0); await h.assertClean();
       } finally { await h.close(); }
@@ -995,9 +1078,64 @@ test("Arena overlay keeps its coach off the touchline, canonical formation and a
         for (const choice of await choices.all()) assert.equal(await choice.isDisabled(), locked);
         const [fieldBox, coachBox, formationBox, pointsBox, closeBox] = await Promise.all([field, coach, formation, points, close].map(locator => locator.boundingBox()));
         assert.ok(fieldBox && coachBox && formationBox && pointsBox && closeBox);
+        const boxes = { field: fieldBox, coach: coachBox, formation: formationBox, points: pointsBox, close: closeBox };
+        const layoutState = await field.evaluate(node => {
+          const describe = (element: HTMLElement) => {
+            const style = getComputedStyle(element), box = element.getBoundingClientRect();
+            return { tag: element.tagName, className: element.className, box: box.toJSON(),
+              clientWidth: element.clientWidth, clientHeight: element.clientHeight,
+              scrollWidth: element.scrollWidth, scrollHeight: element.scrollHeight, scrollTop: element.scrollTop,
+              display: style.display, position: style.position, width: style.width, height: style.height,
+              maxWidth: style.maxWidth, minHeight: style.minHeight, aspectRatio: style.aspectRatio,
+              overflowX: style.overflowX, overflowY: style.overflowY, gridTemplateRows: style.gridTemplateRows,
+              transform: style.transform };
+          };
+          const ancestors = []; let element: HTMLElement | null = node as HTMLElement;
+          for (let index = 0; element && index < 7; index++, element = element.parentElement) ancestors.push(describe(element));
+          const overlay = node.closest('[role="dialog"]');
+          return { innerWidth, innerHeight, scrollX, scrollY,
+            visualViewport: window.visualViewport ? { width: visualViewport!.width, height: visualViewport!.height,
+              offsetLeft: visualViewport!.offsetLeft, offsetTop: visualViewport!.offsetTop, scale: visualViewport!.scale } : null,
+            ancestors, liveRail: overlay?.querySelector('[data-clubowner-live-position]')?.getBoundingClientRect().toJSON() ?? null,
+            toolbar: overlay?.querySelector('[data-arena-toolbar]')?.getBoundingClientRect().toJSON() ?? null,
+            activeElement: document.activeElement?.outerHTML.slice(0, 350) ?? null };
+        });
+        const measurement = { name, formationCode, locale: mode.locale, locked, viewport, boxes, layoutState };
+        console.log(`XI_ARENA_BEFORE_BOUNDS ${JSON.stringify(measurement)}`);
+        const scrollingField = viewport.width <= 1180;
+        const outsideViewport = Object.entries(boxes).some(([label, box]) => box.x < 0 || box.y < 0
+          || box.x + box.width > viewport.width + 1 || (!(scrollingField && label === "field") && box.y + box.height > viewport.height + 1));
+        if (outsideViewport) {
+          const prefix = `/private/tmp/touchline-arena-bounds-${name}-${formationCode}-20261025`;
+          writeFileSync(`${prefix}.json`, JSON.stringify(measurement, null, 2));
+          await page.screenshot({ path: `${prefix}.png`, animations: "disabled" });
+          console.log(`XI_ARENA_BOUNDS_EVIDENCE ${prefix}`);
+        }
         for (const [label, box] of [["field", fieldBox], ["coach", coachBox], ["formation", formationBox], ["points", pointsBox], ["close", closeBox]] as const) {
           assert.ok(box.x >= 0 && box.y >= 0 && box.x + box.width <= viewport.width + 1
-            && box.y + box.height <= viewport.height + 1, `${label} clipped outside ${name} viewport`);
+            && ((scrollingField && label === "field") || box.y + box.height <= viewport.height + 1), `${label} clipped outside ${name} viewport`);
+        }
+        assert.ok(Math.abs(fieldBox.width / fieldBox.height - 105 / 68) < .001, "regulation field ratio stays intact");
+        if (scrollingField) {
+          const beforeScroll = await page.evaluate(() => ({ x: scrollX, y: scrollY }));
+          const scrollProof = await dialog.evaluate(node => {
+            const surface = node.querySelector<HTMLElement>('[data-touchline-pitch-surface]')!;
+            const host = surface.parentElement!, style = getComputedStyle(host);
+            node.scrollTop = node.scrollHeight;
+            const pitch = surface.getBoundingClientRect(), outer = node.getBoundingClientRect();
+            return { scrollTop: node.scrollTop, scrollHeight: node.scrollHeight, clientHeight: node.clientHeight,
+              overflow: getComputedStyle(node).overflowY, pitchBottom: pitch.bottom, outerBottom: outer.bottom,
+              width: node.scrollWidth, clientWidth: node.clientWidth, pitchWidth: pitch.width,
+              availableWidth: host.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) };
+          });
+          console.log(`XI_ARENA_SCROLL_PROOF ${JSON.stringify({ name, formationCode, ...scrollProof })}`);
+          assert.equal(scrollProof.overflow, "auto");
+          assert.ok(Math.abs(scrollProof.pitchWidth - Math.min(scrollProof.availableWidth, 1400)) <= 1, "landscape field keeps its full available width");
+          assert.ok(scrollProof.pitchBottom <= scrollProof.outerBottom + 1, "whole field remains reachable through the Arena overlay");
+          assert.ok(scrollProof.width <= scrollProof.clientWidth + 1, "Arena must not scroll horizontally");
+          if (viewport.height <= 390) assert.ok(scrollProof.scrollTop > 0, "phone field uses actual vertical scrolling rather than miniature cards");
+          assert.deepEqual(await page.evaluate(() => ({ x: scrollX, y: scrollY })), beforeScroll, "Arena scroll does not move the document");
+          await dialog.evaluate(node => { node.scrollTop = 0; });
         }
         assert.ok(Math.abs(coachBox.x + coachBox.width / 2 - fieldBox.x - fieldBox.width / 2) <= 6,
           "coach must align to the canonical halfway line");
@@ -1007,25 +1145,76 @@ test("Arena overlay keeps its coach off the touchline, canonical formation and a
         assert.ok(closeBox.y + closeBox.height <= pointsBox.y, "Arena control must be above round points");
         assert.ok(Math.abs(formationBox.y + formationBox.height - pointsBox.y - pointsBox.height) <= 6,
           "formation selector and round points must share a bottom line");
-        const cardTriggers = dialog.locator('[data-arena-slot] [data-touchline-card-zoom="trigger"]');
+        const cardTriggers = dialog.locator('[data-arena-slot] [data-touchline-card-zoom="trigger"] > [role="button"]');
         await expect(cardTriggers).toHaveCount(11);
+        // At the smallest supported 667px landscape width the full-width field
+        // is 625px wide. Its closest same-column centres are 22% of 625*68/105
+        // apart; subtract the existing 18px label and 6px gap, then divide by
+        // the 691/430 artwork ratio: floor(...) = 40px. Larger hosts retain44.
+        const minimumArtworkWidth = name === "small-phone-landscape" ? 40 : 44;
+        const frameImages = dialog.locator('[data-arena-slot] img[data-live-card-asset="frame"]');
+        await expect.poll(() => frameImages.evaluateAll(nodes => nodes.length === 11 && nodes.every(node => {
+          const image = node as HTMLImageElement; return image.complete && image.naturalWidth > 0;
+        })), { timeout: 3_000 }).toBe(true);
+        const artworkBoxes = await frameImages.evaluateAll(nodes => nodes.map(node => {
+          const image = node as HTMLImageElement, frame = image.getBoundingClientRect();
+          const target = image.closest('[role="button"]')!.getBoundingClientRect();
+          return { ...frame.toJSON(), target: target.toJSON(), complete: image.complete, naturalWidth: image.naturalWidth };
+        }));
+        assert.equal(artworkBoxes.length, 11);
+        console.log(`XI_ARENA_CARD_SIZES ${JSON.stringify({ name, formationCode, minimumArtworkWidth, artworkBoxes })}`);
+        if (formationCode === "4-3-3" && ["desktop", "small-phone-landscape"].includes(name)) {
+          await page.screenshot({ path: `/private/tmp/touchline-arena-readable-frame-${name}-20261025.png`, animations: "disabled" });
+        }
+        for (const art of artworkBoxes) {
+          assert.ok(art.complete && art.naturalWidth > 0, "real frame asset must be loaded");
+          assert.ok(art.width >= minimumArtworkWidth - .1, `Arena artwork must remain legible: ${art.width}px < ${minimumArtworkWidth}px`);
+          assert.ok(Math.abs(art.width / art.height - 430 / 691) < .001, "real frame image keeps its canonical ratio");
+          assert.ok(Math.abs(art.x + art.width / 2 - art.target.x - art.target.width / 2) <= 1, "transparent target padding centres the actual artwork");
+        }
         const cardBoxes = await cardTriggers.evaluateAll((nodes) => nodes.map((node) => {
           const rect = node.getBoundingClientRect();
           return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
         }));
+        for (const box of cardBoxes) assert.ok(box.width >= 44 && box.height >= 44, "actual zoom target must remain at least 44px independently of artwork");
         for (let first = 0; first < cardBoxes.length; first++) for (let second = first + 1; second < cardBoxes.length; second++) {
           const a = cardBoxes[first], b = cardBoxes[second];
           assert.ok(a.x + a.width <= b.x + 1 || b.x + b.width <= a.x + 1
             || a.y + a.height <= b.y + 1 || b.y + b.height <= a.y + 1,
           `cards ${first}/${second} collide in ${name}`);
         }
-        for (const slot of geometry.slots) {
-          const box = await dialog.locator(`[data-arena-slot="${slot.id}"]`).boundingBox();
-          assert.ok(box, `missing ${slot.id}`);
-          const x = 100 * (box.x + box.width / 2 - fieldBox.x) / fieldBox.width;
-          const y = 100 * (box.y + box.height / 2 - fieldBox.y) / fieldBox.height;
-          assert.ok(Math.abs(x - Math.min(89, Math.max(11, slot.x))) <= 4, `${slot.id} x ${x}`);
-          assert.ok(Math.abs(y - Math.min(86, Math.max(14, slot.y))) <= 4, `${slot.id} y ${y}`);
+        // Registry y follows the team's lateral axis. With GK left and attack
+        // right, the right flank projects below halfway (100 - canonical y).
+        const slotCoordinates = await field.evaluate((node, canonicalSlots) => {
+          const fieldRect = node.getBoundingClientRect();
+          return canonicalSlots.map(slot => {
+            const element = node.querySelector<HTMLElement>(`[data-arena-slot="${slot.id}"]`);
+            const box = element?.getBoundingClientRect();
+            const cardBox = element?.querySelector('[data-touchline-card-zoom="trigger"]')?.getBoundingClientRect();
+            const centre = (rect: DOMRect) => ({
+              x: 100 * (rect.x + rect.width / 2 - fieldRect.x) / fieldRect.width,
+              y: 100 * (rect.y + rect.height / 2 - fieldRect.y) / fieldRect.height,
+            });
+            const style = element ? getComputedStyle(element) : null;
+            return { id: slot.id, canonical: { x: slot.x, y: slot.y },
+              expected: { x: Math.min(89, Math.max(11, slot.x)), y: Math.min(86, Math.max(14, 100 - slot.y)) },
+              observed: box ? centre(box) : null, cardCentre: cardBox ? centre(cardBox) : null,
+              box: box?.toJSON() ?? null, cardBox: cardBox?.toJSON() ?? null,
+              position: style ? { left: style.left, top: style.top, transform: style.transform } : null };
+          });
+        }, geometry.slots.map(({ id, x, y }) => ({ id, x, y })));
+        console.log(`XI_ARENA_SLOT_COORDINATES ${JSON.stringify({ name, formationCode, slots: slotCoordinates })}`);
+        if (slotCoordinates.some(slot => !slot.observed || Math.abs(slot.observed.x - slot.expected.x) > 4
+          || Math.abs(slot.observed.y - slot.expected.y) > 4)) {
+          const prefix = `/private/tmp/touchline-arena-slots-${name}-${formationCode}-20261025`;
+          writeFileSync(`${prefix}.json`, JSON.stringify({ ...measurement, slots: slotCoordinates }, null, 2));
+          await page.screenshot({ path: `${prefix}.png`, animations: "disabled" });
+          console.log(`XI_ARENA_SLOT_EVIDENCE ${prefix}`);
+        }
+        for (const slot of slotCoordinates) {
+          assert.ok(slot.observed, `missing ${slot.id}`);
+          assert.ok(Math.abs(slot.observed.x - slot.expected.x) <= 4, `${slot.id} x ${slot.observed.x}, expected ${slot.expected.x}`);
+          assert.ok(Math.abs(slot.observed.y - slot.expected.y) <= 4, `${slot.id} y ${slot.observed.y}, expected ${slot.expected.y}`);
         }
         if (formationCode === "4-3-3" && ["tv", "small-phone-landscape"].includes(name)) {
           await page.screenshot({ path: `/private/tmp/touchline-arena-resume-${name}-20261011.png` });
@@ -1106,21 +1295,47 @@ test("empty ClubOwner preserves pitch, bench, outside slots, Exchange and embedd
   for (const engine of [chromium, webkit]) {
     const browser = await engine.launch({ headless: true, timeout: 15_000 });
     try {
-      for (const scenario of [{locked:false,expiredDeadline:false},{locked:true,expiredDeadline:false},{locked:false,expiredDeadline:true}]) {
-        const { locked, expiredDeadline } = scenario;
+      for (const scenario of [
+        { locked: false, expiredDeadline: false, unconfirmedBudget: false },
+        { locked: true, expiredDeadline: false, unconfirmedBudget: false },
+        { locked: false, expiredDeadline: true, unconfirmedBudget: false },
+        { locked: false, expiredDeadline: false, unconfirmedBudget: true },
+      ]) {
+        const { locked, expiredDeadline, unconfirmedBudget } = scenario;
         const h = await openFixture(browser, bundle, modes[0], { emptyAccount: true, structure: true, collection: true, ...scenario });
         try {
           await expect(h.pitch.locator('[data-touchline-pitch-surface] button')).toHaveCount(11);
           await expect(h.page.locator('[data-collection-area="reserves"] button')).toHaveCount(9);
           await expect(h.page.locator('[data-collection-area="outside"] button')).toHaveCount(15);
           await expect(h.page.getByRole('region', { name: 'ClubOwner Exchange', exact: true })).toHaveCount(1);
-          await expect(h.page.getByRole('complementary', { name: 'Fixtures', exact: true })).toHaveCount(1);
+          const liveRail = h.page.getByRole('region', { name: "This week's fixtures", exact: true });
+          await expect(liveRail).toHaveCount(1);
+          await expect(liveRail).toHaveAttribute('data-fixture-carousel', 'continuous');
+          await expect.poll(() => h.livePresentationReads).toBeGreaterThan(0);
+          await expect(liveRail.getByRole('link')).toHaveCount(0); // no fabricated fixtures during unavailable reads
           await expect(h.confirm).toBeDisabled();
           for (const button of await h.page.locator('[data-collection-area] button').all()) await expect(button).toBeDisabled();
-          if (!locked && !expiredDeadline) await h.pitch.locator('[data-touchline-pitch-surface] button').first().click();
-          else for (const button of await h.pitch.locator('[data-touchline-pitch-surface] button').all()) await expect(button).toBeDisabled();
-          if (!locked && !expiredDeadline) await expect(h.page.locator('[data-fantasy-continuity="unconfirmed"]')).toBeVisible();
-          else await expect(h.page.locator('[data-fantasy-continuity]')).toHaveCount(0);
+          // No confirmed collection/coach exists, even when the market is open.
+          // Recovery is automatic and its explicit retry is read-only; never click
+          // a disabled player slot or manufacture ownership to reach the warning.
+          for (const button of await h.pitch.locator('[data-touchline-pitch-surface] button').all()) await expect(button).toBeDisabled();
+          await expect.poll(() => h.collectionReads).toBeGreaterThan(0);
+          if (!locked && !expiredDeadline && !unconfirmedBudget) {
+            const continuity = h.page.locator('[data-fantasy-continuity="unconfirmed"]');
+            await expect(continuity).toBeVisible();
+            assert.equal(h.prepareRequests, 1, "StrictMode must not duplicate the automatic preparation");
+            const readsBefore = h.stateReads;
+            await continuity.getByRole('button', { name: 'Check saved lineup', exact: true }).click();
+            await expect.poll(() => h.stateReads).toBeGreaterThan(readsBefore);
+            await expect(continuity).toBeVisible();
+            assert.equal(h.prepareRequests, 1, "explicit continuity recovery must not replay preparation");
+          } else {
+            await expect(h.page.locator('[data-fantasy-continuity]')).toHaveCount(0);
+            assert.equal(h.prepareRequests, 0, "closed or unconfirmed collection cannot prepare a round");
+            if (locked || unconfirmedBudget) await expect(h.page.getByRole('alert')).toBeVisible();
+          }
+          console.log(`XI_EMPTY_CONTINUITY ${JSON.stringify({ engine: engine.name(), ...scenario,
+            collectionReads: h.collectionReads, prepareRequests: h.prepareRequests, stateReads: h.stateReads })}`);
           assert.equal(h.writes.length, 0);
           assert.equal(h.collectionWrites.length, 0);
           assert.equal(h.snapshot.userGameweek, null);
@@ -1174,11 +1389,20 @@ test("collection structure: visible without activating ownership or purchases", 
             return Math.max(...children.map(b => b.y + b.height / 2)) - Math.min(...children.map(b => b.y + b.height / 2));
           });
           assert.ok(alignment <= 2, `formation toolbar alignment: ${alignment}`);
-          await expect.poll(async () => page.locator('[data-market-starting-xi="true"]').evaluate(el => {
-            const coachWidth = el.querySelector('[data-coach-card-art]')!.getBoundingClientRect().width;
-            const playerWidth = el.querySelector('[data-arena-slot] .touchline-card-surface')!.getBoundingClientRect().width;
-            return Math.abs(coachWidth / playerWidth - 1.1);
-          })).toBeLessThan(.01);
+          // The technical coach has been 130% in the product source since HEAD.
+          // Compare its actual artwork with a reserve slot: on narrow screens
+          // the technical rail keeps 44px slots while pitch cards may be smaller.
+          const technicalRail = page.locator('[data-clubowner-technical-rail="true"]');
+          await expect(technicalRail).toHaveCount(1);
+          const technicalSizing = () => technicalRail.evaluate(el => {
+            const coachWidth = el.querySelector('[data-technical-coach] [data-coach-card-art]')!.getBoundingClientRect().width;
+            const slotWidth = el.querySelector('[data-collection-area="reserves"] [data-collection-slot]')!.getBoundingClientRect().width;
+            return { coachWidth, slotWidth, ratio: coachWidth / slotWidth };
+          });
+          await expect.poll(async () => Math.abs((await technicalSizing()).ratio - 1.3)).toBeLessThan(.01);
+          const sizing = await technicalSizing();
+          assert.ok(sizing.slotWidth >= 44, "technical reserve slots retain the minimum touch width");
+          console.log(`XI_TECHNICAL_SIZING ${JSON.stringify({ engine: engine.name(), locale: mode.locale, ...sizing })}`);
           const outside = page.locator('[data-collection-area="outside"]');
           await expect(outside.getByRole("button")).toHaveCount(15);
           for (const button of await page.locator('[data-collection-area] button').all()) await expect(button).toBeDisabled();
@@ -1235,79 +1459,109 @@ test("collection filled bench: nine original cards stay separated from coach and
 test("collection DOM: original plus slots 4+5 and 15, purchase confirmed before card and budget update", {
   skip: process.env.TOUCHLINE_RUN_COLLECTION_BROWSER_TESTS !== "1", timeout: 120_000,
 }, async t => {
+  const { getClubCollectionBudgetCopy } = await import("../lib/touchlineFantasy/market-budget-i18n.ts");
+  const { parseTouchlineLivePresentationState } = await import("../lib/touchlineArena/live-presentation-state.ts");
+  // This purchase fixture publishes no sports/ranking facts. Match the server's
+  // unavailable DTO, including its real reader retry path, rather than inventing
+  // a fresh publication or disabling the shared hook.
+  const livePresentationState = parseTouchlineLivePresentationState({
+    version: 1, available: false, playerRankingSnapshotId: null, coachRankingSnapshotId: null,
+    livePresentationSnapshotId: null, mode: "idle", pollAfterMs: null, resumeAt: null,
+  });
+  assert.ok(livePresentationState, "T34 must return a DTO accepted by the real presentation-state parser");
   const bundle = bundleProduct();
   for (const engine of [chromium, webkit]) {
     const browser = await engine.launch({ headless: true, timeout: 15_000 });
     try {
-      for (const mode of modes) await t.test(`${engine.name()} ${mode.locale}`, async () => {
-        const fixture = await openFixture(browser, bundle, mode, { collection: true, holdCollection: true });
+      for (const mode of modes) for (const area of ["reserves", "outside"] as const) await t.test(`${engine.name()} ${mode.locale} ${area}`, async () => {
+        // One vacancy after a confirmed XI is the next guided destination.
+        // A separate outside vacancy avoids bypassing the nine reserve slots.
+        const fixture = await openFixture(browser, bundle, mode, { collection: true, holdCollection: true, marketVacancy: area, livePresentationState });
         try {
-          const { page } = fixture;
+          const { page, list } = fixture;
+          const copy = getClubCollectionBudgetCopy(mode.locale);
           const reserveGroups = page.locator('[data-collection-area="reserves"]');
-          await expect(reserveGroups).toHaveCount(2);
-          await expect(reserveGroups.nth(0).getByRole("button")).toHaveCount(4);
-          await expect(reserveGroups.nth(1).getByRole("button")).toHaveCount(5);
           const outside = page.locator('[data-collection-area="outside"]');
-          await expect(outside.getByRole("button")).toHaveCount(15);
-          const pt = mode.locale === "pt-BR";
-          const opening = reserveGroups.nth(0).getByRole("button").first();
+          await expect(reserveGroups).toHaveCount(2);
+          await expect(reserveGroups.nth(0).locator('[data-collection-slot]')).toHaveCount(4);
+          await expect(reserveGroups.nth(1).locator('[data-collection-slot]')).toHaveCount(5);
+          await expect(outside.locator('[data-collection-slot]')).toHaveCount(15);
+          const targetGroup = area === "reserves" ? reserveGroups.nth(0) : outside;
+          const target = targetGroup.locator('[data-collection-slot="0"]');
+          const opening = target.locator('[data-collection-placeholder="true"]');
+          const balance = page.locator("output").filter({ hasText: mode.locale === "pt-BR" ? "Saldo do elenco" : "Squad balance" });
+          const originalContracts = fixture.collection!.players.map(player => ({ ...player }));
+          assert.equal(originalContracts.length, 34);
+          assert.equal(fixture.collection?.balanceEur, 475_000_000);
+          await expect(balance).toContainText("475");
+          await expect(opening).toBeEnabled();
+          const emptyBounds = await opening.boundingBox();
+          assert.ok(emptyBounds && Math.abs(emptyBounds.width - 44) <= 1 && Math.abs(emptyBounds.height - 44) <= 1,
+            "the original plus remains a 44px circle");
           await opening.click();
-          let dialog = page.getByRole("dialog", { name: pt ? "Selecionar jogador" : "Select player", exact: true });
-          await expect(dialog).toBeVisible();
-          await expect(dialog.getByRole("textbox")).toBeFocused();
-          await dialog.getByRole("textbox").fill(fixture.snapshot.catalogue.find(card => card.position === "Goalkeeper")!.name);
-          if (process.env.TOUCHLINE_COLLECTION_CAPTURE_PREFIX) await page.screenshot({
-            path: `${process.env.TOUCHLINE_COLLECTION_CAPTURE_PREFIX}-${engine.name()}-${mode.locale}-picker.png`, animations: "disabled",
+          const destination = list.locator('[data-collection-market-destination]');
+          await expect(destination).toHaveAttribute("data-collection-market-destination", `${area}:0`);
+          await expect(list).toBeFocused();
+          await expect(page.getByRole("dialog")).toHaveCount(0);
+          await list.getByRole("button", { name: copy.sign, exact: true }).click();
+          const staged = list.locator('[data-collection-signing-confirmation]');
+          const playerId = `fictional-${area}-0`;
+          await expect(staged).toHaveAttribute("data-collection-signing-confirmation", playerId);
+          const confirm = staged.getByRole("button", { name: copy.confirmSigning, exact: true });
+          await expect(confirm).toBeEnabled();
+          assert.equal(fixture.collectionWrites.length, 0, "staging must not purchase");
+          assert.equal(fixture.writes.length, 0, "staging must not submit the XI");
+          await expect(target.locator('[data-touchline-card-zoom="trigger"]')).toHaveCount(0);
+          await expect(balance).toContainText("475");
+          if (process.env.TOUCHLINE_COLLECTION_CAPTURE_PREFIX) await list.screenshot({
+            path: `${process.env.TOUCHLINE_COLLECTION_CAPTURE_PREFIX}-${engine.name()}-${mode.locale}-${area}-staged.png`, animations: "disabled",
           });
-          await dialog.getByRole("button", { name: pt ? "Contratar" : "Sign", exact: true }).click();
+          await confirm.click();
           await expect.poll(() => fixture.collectionWrites.length).toBe(1);
-          await expect(dialog.getByRole("button", { name: pt ? "Contratar" : "Sign", exact: true })).toBeDisabled();
-          await expect(reserveGroups.nth(0).locator('[data-touchline-card-zoom="trigger"]')).toHaveCount(0);
-          await expect(page.locator("output").filter({ hasText: pt ? "Saldo do elenco" : "Squad balance" })).toContainText("475");
+          await expect(confirm).toBeDisabled();
+          const command = fixture.collectionWrites[0];
+          assert.deepEqual([command.playerId, command.area, command.slot, command.expectedRevision], [playerId, area, 0, 34]);
+          assert.equal(command.expectedAccountId, fixture.snapshot.userId);
+          assert.equal(command.expectedSeasonId, fixture.collection?.seasonId);
+          assert.deepEqual(fixture.collection?.players, originalContracts, "held receipt must not create an optimistic contract");
+          assert.equal(fixture.collection?.balanceEur, 475_000_000);
+          await expect(target.locator('[data-touchline-card-zoom="trigger"]')).toHaveCount(0);
+          await expect(balance).toContainText("475");
           fixture.releaseCollection();
-          await expect(dialog).toHaveCount(0);
-          await expect(reserveGroups.nth(0).locator('[data-touchline-card-zoom="trigger"]')).toHaveCount(1);
+          await expect(target.locator('[data-touchline-card-zoom="trigger"]')).toHaveCount(1);
+          await expect(destination).toHaveCount(0);
+          await expect(balance).toContainText("474");
           assert.equal(fixture.collectionWrites.length, 1);
           assert.equal(fixture.collection?.balanceEur, 474_000_000);
-          assert.deepEqual(fixture.collection?.players.map(p => [p.area, p.slot]), [["reserves", 0]]);
-
-          await outside.getByRole("button").first().click();
-          dialog = page.getByRole("dialog", { name: pt ? "Selecionar jogador" : "Select player", exact: true });
-          await dialog.getByRole("button", { name: "TouchLine Markt Transfer", exact: true }).click();
-          await dialog.getByRole("textbox").fill("Synthetic Replacement");
-          await dialog.getByRole("button", { name: pt ? "Contratar" : "Sign", exact: true }).click();
-          await expect.poll(() => fixture.collectionWrites.length).toBe(2);
-          await expect(outside.locator('[data-touchline-card-zoom="trigger"]')).toHaveCount(0);
-          fixture.releaseCollection();
-          await expect(dialog).toHaveCount(0);
-          await expect(outside.locator('[data-touchline-card-zoom="trigger"]')).toHaveCount(1);
-          assert.equal(fixture.collectionWrites.length, 2);
-          assert.equal(fixture.collection?.balanceEur, 473_000_000);
-          await expect(page.locator("output").filter({ hasText: pt ? "Saldo do elenco" : "Squad balance" })).toContainText("473");
+          assert.equal(fixture.collection?.players.length, 35);
+          assert.deepEqual(fixture.collection?.players.filter(player => player.playerId !== playerId), originalContracts,
+            "the confirmed signing must preserve all existing contracts");
+          assert.deepEqual(fixture.collection?.players.filter(player => player.playerId === playerId).map(player => [player.area, player.slot]), [[area, 0]]);
           for (const group of [reserveGroups.nth(0), reserveGroups.nth(1), outside]) {
-            const violations = await group.evaluate(element => {
-              const rects = [...element.children].map(slot => {
-                const first = slot.firstElementChild as HTMLElement;
-                const bounds = first.getBoundingClientRect();
-                const container = slot.getBoundingClientRect();
-                return { bounds, container, empty: first.tagName === "BUTTON" && first.textContent === "+" };
-              });
-              return rects.filter(({ bounds, container, empty }) => bounds.left < container.left - 1
-                || bounds.right > container.right + 1 || (empty && (Math.abs(bounds.width - 44) > 1 || Math.abs(bounds.height - 44) > 1)))
-                .map(({ bounds, container, empty }) => ({ bounds: bounds.toJSON(), container: container.toJSON(), empty }));
-            });
-            assert.deepEqual(violations, [], "original 70px cards must fit their slots and original plus remain 44px circles");
+            const violations = await group.locator('[data-collection-slot]').evaluateAll(slots => slots.flatMap(slot => {
+              const first = slot.firstElementChild as HTMLElement;
+              const bounds = first.getBoundingClientRect(), container = slot.getBoundingClientRect();
+              return bounds.left < container.left - 1 || bounds.right > container.right + 1
+                ? [{ bounds: bounds.toJSON(), container: container.toJSON() }] : [];
+            }));
+            assert.deepEqual(violations, [], "original cards must fit their slots");
           }
-          const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
-          assert.equal(overflow, false, "collection must not overflow the viewport");
+          assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1), false,
+            "collection must not overflow the viewport");
           if (process.env.TOUCHLINE_COLLECTION_CAPTURE_PREFIX) await fixture.pitch.screenshot({
-            path: `${process.env.TOUCHLINE_COLLECTION_CAPTURE_PREFIX}-${engine.name()}-${mode.locale}.png`, animations: "disabled",
+            path: `${process.env.TOUCHLINE_COLLECTION_CAPTURE_PREFIX}-${engine.name()}-${mode.locale}-${area}.png`, animations: "disabled",
           });
+          await expect.poll(() => fixture.livePresentationReads).toBeGreaterThan(0);
+          const presentationReadsBeforeReload = fixture.livePresentationReads;
           await page.reload({ waitUntil: "domcontentloaded" });
-          await expect(reserveGroups.nth(0).locator('[data-touchline-card-zoom="trigger"]')).toHaveCount(1);
-          await expect(outside.locator('[data-touchline-card-zoom="trigger"]')).toHaveCount(1);
-          await expect(page.locator("output").filter({ hasText: pt ? "Saldo do elenco" : "Squad balance" })).toContainText("473");
-          assert.equal(fixture.collectionWrites.length, 2, "reload must read confirmed ownership, never repurchase");
+          await expect.poll(() => fixture.livePresentationReads).toBeGreaterThan(presentationReadsBeforeReload);
+          await expect(target.locator('[data-touchline-card-zoom="trigger"]')).toHaveCount(1);
+          await expect(balance).toContainText("474");
+          assert.equal(fixture.collectionWrites.length, 1, "reload must read confirmed ownership, never repurchase");
+          assert.equal(fixture.writes.length, 0, "collection signing must not submit the XI");
+          console.log(`T34_ALLOWED_READS ${JSON.stringify({ engine: engine.name(), locale: mode.locale, area,
+            livePresentationBeforeReload: presentationReadsBeforeReload, livePresentationTotal: fixture.livePresentationReads,
+            collectionWrites: fixture.collectionWrites.length, lineupWrites: fixture.writes.length })}`);
           await fixture.assertClean();
         } finally { await fixture.close(); }
       });
@@ -1366,7 +1620,7 @@ test("real My Club XI DOM: replace, focus, explicit save and readback", { skip: 
             await activate(h.pitch.getByRole("button", { name: /Synthetic Replacement/ }), mode);
             const dialog = h.page.getByRole("dialog");
             await expect(dialog.getByRole("button", { name: mode.locale === "pt-BR" ? "Fechar card" : "Close card", exact: true })).toBeFocused();
-            await expect(dialog.getByRole("button", { name: /(?:Replace|Trocar) · Synthetic Replacement/ })).toBeDisabled();
+            await expect(dialog.getByRole("button", { name: /(?:Replace|Substituir) · Synthetic Replacement/ })).toBeDisabled();
             await h.page.keyboard.press("Escape");
             await expect(dialog).toHaveCount(0);
             assert.equal(h.readsAfterSave, 0, "no verification before the POST receipt");
@@ -1395,15 +1649,15 @@ test("real My Club XI DOM: replace, focus, explicit save and readback", { skip: 
             await expect(h.page.locator("#my-club-position-results article")).toHaveCount(0);
             await expect(h.list).toContainText(mode.locale === "pt-BR" ? "Cards nesta posição: 0" : "Cards in this position: 0");
             await expect(h.list).toContainText(mode.locale === "pt-BR" ? "Nenhum card corresponde a esta seleção ou busca." : "No cards match this selection or search.");
-            await expect(h.pitch.locator("header strong")).toHaveText("11/11 · 4-3-3");
+            await expect(h.pitch.locator('header[data-formation-toolbar="true"] > div > strong')).toHaveText("11/11 · 4-3-3");
             await search.fill(""); await expect(h.page.locator("#my-club-position-results article")).toHaveCount(4);
-            await expect(h.pitch.locator("header strong")).toHaveText("11/11 · 4-3-3"); assert.equal(h.writes.length, 0); await h.assertClean();
+            await expect(h.pitch.locator('header[data-formation-toolbar="true"] > div > strong')).toHaveText("11/11 · 4-3-3"); assert.equal(h.writes.length, 0); await h.assertClean();
           } finally { await h.close(); }
         });
         await scenario(`${prefix}: locked XI has no remove or select mutation`, { timeout: 20_000 }, async () => {
           const h = await open(browser, mode, { locked: true });
           try {
-            await expect(h.pitch.locator("header strong")).toHaveText("11/11 · 4-3-3");
+            await expect(h.pitch.locator('header[data-formation-toolbar="true"] > div > strong')).toHaveText("11/11 · 4-3-3");
             await expect(h.page.getByRole("button", { name: h.removeName, exact: true })).toHaveCount(0);
             await expect(h.confirm).toBeDisabled();
             await expect(h.page.locator("#my-club-position-results article > div > button")).toHaveCount(0);
@@ -1419,7 +1673,7 @@ test("real My Club XI DOM: replace, focus, explicit save and readback", { skip: 
           await expect(h.page.getByRole("status").filter({ hasText: "The server received the save, but verification has not returned yet." }).first()).toBeVisible();
           assert.equal(h.readsAfterSave, 3); assert.equal(h.writes.length, 1);
           await expect(h.page.getByText("XI confirmed, persisted and verified in TouchLine.", { exact: true })).toHaveCount(0);
-          await expect(h.pitch.locator("header strong")).toHaveText("11/11 · 4-3-3"); await h.assertClean();
+          await expect(h.pitch.locator('header[data-formation-toolbar="true"] > div > strong')).toHaveText("11/11 · 4-3-3"); await h.assertClean();
         } finally { await h.close(); }
       });
     } finally { await browser.close(); }

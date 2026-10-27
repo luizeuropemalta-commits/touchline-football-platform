@@ -32,7 +32,7 @@
   display: flow-root;
   width: 100%;
   cursor: zoom-in;
-  touch-action: pan-x pan-y;
+  touch-action: auto;
   overflow: visible;
   /* Include the external focus marker and rounding clearance in native scrolling. */
   scroll-margin-bottom: 8px;
@@ -149,20 +149,8 @@
   margin-top: 0 !important;
 }
 
-/* The coach editor stores crest dimensions in pixels for its fixed artboard.
-   In a responsive zoom those pixels can exceed the positioned crest layer,
-   especially on a phone. Keep the original asset, but fit it to that layer. */
-.expandedCard :global([data-coach-card-display="default"]) :global([data-touchline-card-crest-host="true"]) {
-  width: min(100%, var(--coach-crest-size, 132px));
-  height: auto;
-  aspect-ratio: 1;
-}
-
-.expandedCard :global([data-coach-card-display="default"]) :global([data-touchline-card-crest-host="true"] > img) {
-  width: 100%;
-  height: 100%;
-  max-width: 100%;
-}
+/* Expanded coach crests keep the public renderer's card-relative sizing.
+   The positioned crest layer is an anchor, not the artwork size limit. */
 
 .close {
   position: absolute;

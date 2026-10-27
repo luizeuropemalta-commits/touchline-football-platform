@@ -1,16 +1,14 @@
+import { setTimeout as pause } from "node:timers/promises";
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, realpathSync, statSync, statfsSync } from "node:fs";
-import { createRequire } from "node:module";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { chromium, webkit, expect, type Locator } from "@playwright/test";
-import { bundleIsolatedBrowserFixture } from "./helpers/touchline-isolated-browser-bundle.mts";
 import { normalizeTouchLineAuthLocale, touchLineAuthEntryHref } from "../lib/touchlineArena/auth-i18n.ts";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
-const require = createRequire(import.meta.url);
 const viewports = [{ width: 1280, height: 900 }, { width: 844, height: 390 }, { width: 390, height: 844 }];
 const locales = ["pt-BR", "ar-SA"];
 const routes = ["/notifications", "/inbox", "/football-search"];
@@ -34,39 +32,72 @@ test("real customer utility shell keeps one header/main/logout and accessible pr
   assert.ok(selectedCases > 0);
   t.diagnostic(JSON.stringify({ selectedCases, fullMatrixCases: 36, engineFilter, widthFilter, localeFilter, routeFilter,
     scope: "synthetic identity and logout callback; real client mount/CSS, not SSR hydration, authenticated account or Next routing" }));
-  const capacity = () => {
-    const disk = statfsSync(root);
-    assert.ok(disk.bavail * disk.bsize > 5 * 1024 ** 3, "more than5GiB disk required");
-    assert.equal(execFileSync("sysctl", ["-n", "kern.memorystatus_vm_pressure_level"], { encoding: "utf8" }).trim(), "1");
-    const free = Number(execFileSync("memory_pressure", { encoding: "utf8" }).match(/System-wide memory free percentage: (\d+)%/)?.[1]);
-    assert.ok(Number.isFinite(free) && free >= 25);
+  const capacity = async () => {
+    const deadline = performance.now() + 10_000;
+    let announced = false;
+    while (true) {
+      t.signal.throwIfAborted();
+      const disk = statfsSync(root);
+      assert.ok(disk.bavail * disk.bsize > 5 * 1024 ** 3, "more than 5 GiB free disk required");
+      const query = (command: string, args: string[]) => {
+        const remaining = Math.floor(deadline - performance.now());
+        assert.ok(remaining > 0, "normal capacity did not return within 10 seconds");
+        // A loaded Mac can take more than one second to answer sysctl even
+        // after the browser is closed. Keep the overall bounded deadline.
+        return execFileSync(command, args, { encoding: "utf8", timeout: Math.min(5000, remaining), maxBuffer: 64 * 1024 });
+      };
+      const pressure = query("sysctl", ["-n", "kern.memorystatus_vm_pressure_level"]).trim();
+      assert.ok(pressure === "1" || pressure === "2", "critical or unknown memory pressure aborts immediately");
+      const free = Number(query("memory_pressure", []).match(/System-wide memory free percentage: (\d+)%/)?.[1]);
+      assert.ok(Number.isFinite(free) && free >= 25, "at least 25% free memory required");
+      const remaining = deadline - performance.now();
+      assert.ok(remaining > 0, "normal capacity did not return within 10 seconds");
+      if (pressure === "1" || pressure === "2" && process.env.TOUCHLINE_LOCAL_ALLOW_MODERATE_PRESSURE === "1" && !process.env.CI) return;
+      if (!announced) { t.diagnostic("Transient WARN: waiting up to 10 seconds for normal capacity before continuing"); announced = true; }
+      await pause(Math.min(250, remaining), undefined, { signal: t.signal });
+    }
   };
-  capacity();
+  await capacity();
   const screenshots = mkdtempSync("/private/tmp/touchline-utility-shell-");
   t.diagnostic(`Screenshots: ${screenshots}`);
-  const bundle = bundleIsolatedBrowserFixture({
-    entryPath: "tests/fixtures/CustomerUtilityShellBrowserFixture.tsx", cssPrefix: "utilityshell",
-    requiredSources: ["components/touchline/TouchlineCustomerUtilityShell.tsx", "components/touchline/TouchlineCustomerUtilityShell.module.css",
-      "components/touchline/TouchlineBrandHeader.tsx", "components/touchline/TouchlineGlobalNavigation.tsx", "components/touchline/TouchlineNavigationRail.tsx"],
-    mountScript: `flushSync(()=>root.render(React.createElement(loadEntry().default,{pathname:location.pathname,locale:document.documentElement.lang})));`,
+  // Wait for compiler process exit, not merely a result message: native scanner
+  // and module-cache memory must not overlap the browser's lifetime.
+  await new Promise<void>((resolve, reject) => {
+    const child = spawn(process.execPath, ["--experimental-strip-types",
+      fileURLToPath(new URL("./helpers/touchline-utility-shell-compile-worker.mts", import.meta.url)), screenshots], {
+      cwd: root, stdio: "ignore",
+    });
+    let failure: Error | undefined;
+    const abort = () => { failure = new Error("Utility fixture compilation aborted"); child.kill("SIGKILL"); };
+    const timeout = setTimeout(() => {
+      failure = new Error("Utility fixture compilation exceeded 60 seconds"); child.kill("SIGKILL");
+    }, 60_000);
+    t.signal.addEventListener("abort", abort, { once: true });
+    child.once("error", () => { failure = new Error("Utility fixture compiler could not start"); });
+    child.once("close", code => {
+      clearTimeout(timeout); t.signal.removeEventListener("abort", abort);
+      if (failure) reject(failure);
+      else if (code !== 0) reject(new Error(`Utility fixture compiler exited with code ${code}`));
+      else resolve();
+    });
+    if (t.signal.aborted) abort();
   });
-  // Same installed, source-scoped compiler as the real header browser proof.
-  const tailwindRequire = createRequire(require.resolve("@tailwindcss/postcss"));
-  const { compile } = tailwindRequire("@tailwindcss/node");
-  const { Scanner } = tailwindRequire("@tailwindcss/oxide");
-  const candidates = new Scanner({ sources: [] }).scanFiles(bundle.sources.filter(file => /\.tsx?$/.test(file)).map(file => ({ content: readFileSync(path.join(root, file), "utf8"), extension: path.extname(file).slice(1) })));
-  const globals = path.join(root, "app/globals.css");
-  const compiler = await compile(readFileSync(globals, "utf8"), { base: path.dirname(globals), from: globals, onDependency() {} });
-  const css = `${compiler.build(candidates)}\n${bundle.css}`;
+  const bundle = { script: readFileSync(path.join(screenshots, "fixture.js"), "utf8") };
+  const css = readFileSync(path.join(screenshots, "fixture.css"), "utf8");
+  const sources: unknown = JSON.parse(readFileSync(path.join(screenshots, "fixture-sources.json"), "utf8"));
+  assert.ok(bundle.script.length > 0 && css.length > 0, "fresh compiled fixture required");
+  assert.ok(Array.isArray(sources) && sources.length > 0 && sources.every(source => typeof source === "string"));
+  t.diagnostic(`Compiler exited before browser launch; real source receipt: ${path.join(screenshots, "fixture-sources.json")}`);
   const origin = "https://utility-shell.test", publicRoot = realpathSync(path.join(root, "public"));
   let passedCases = 0;
-  for (const engine of engines) {
-    capacity(); assert.ok(existsSync(engine.executablePath()), "installed browser only");
+  // Each case already owns an isolated context. Also release the browser process
+  // pool between cases so the next capacity check does not retain prior pages.
+  for (const engine of engines) for (const viewport of selectedViewports) for (const locale of selectedLocales) for (const pathname of selectedRoutes) {
+    await capacity(); assert.ok(existsSync(engine.executablePath()), "installed browser only");
     const browser = await engine.launch({ headless: true });
     const abort = () => { void browser.close(); }; t.signal.addEventListener("abort", abort, { once: true });
     try {
-      for (const viewport of selectedViewports) for (const locale of selectedLocales) for (const pathname of selectedRoutes) {
-        capacity();
+        await capacity();
         const context = await browser.newContext({ viewport, reducedMotion: "reduce", serviceWorkers: "block" });
         try {
           const page = await context.newPage(); page.setDefaultTimeout(5000);
@@ -157,7 +188,6 @@ test("real customer utility shell keeps one header/main/logout and accessible pr
           assert.equal(new URL(page.url()).pathname, pathname, "synthetic logout never navigates or authenticates");
           passedCases++; t.diagnostic(JSON.stringify({ engine: engine.name(), viewport, locale, pathname, blockedApis, passedCases }));
         } finally { await context.close(); }
-      }
     } finally { t.signal.removeEventListener("abort", abort); await browser.close(); }
   }
   assert.equal(passedCases, selectedCases);

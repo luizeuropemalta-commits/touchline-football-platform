@@ -17,7 +17,7 @@ export default function MatchHeroGoalsBrowserFixture({ scenario }: { scenario: G
     homeTeam: { id: home.teamId, providerId: home.teamId, name: "Synthetic Home", logoUrl: home.logoUrl },
     awayTeam: { id: away.teamId, providerId: away.teamId, name: "Synthetic Away", logoUrl: away.logoUrl }, homeScore: count, awayScore: count };
   const events: TouchlinePublicFantasyEvent[] = [home, away].flatMap((team, side) => Array.from({ length: count }, (_, index) => ({
-    id: `${side}-${index}`, fixtureId: fixture.providerId, teamId: team.teamId, type: "goal", status: "recorded" as const,
+    id: `${side}-${index}`, fixtureId: fixture.providerId, teamId: team.teamId, type: index === 0 ? "Own goal" : "goal", status: "recorded" as const,
     playerId: `${side}-player-${scenario === "one-seven" ? 0 : index}`,
     playerName: scenario === "one-seven" ? `Synthetic ${side === 0 ? "Home" : "Away"} Seven Goals` : scenario === "long-names"
       ? `Synthetic ${side === 0 ? "Home" : "Away"} Very Long Compound Footballer Name ${index + 1}` : `Synthetic ${side === 0 ? "Home" : "Away"} Scorer ${index + 1}`,

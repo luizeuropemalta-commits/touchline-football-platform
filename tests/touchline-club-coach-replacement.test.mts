@@ -56,13 +56,12 @@ test("integer wallet and canonical incoming price only; exact affordability may 
   rejects({ ...state(), balanceEur: 5_499_999 }, command, context, "CLUB_INSUFFICIENT_BALANCE");
   assert.equal(replaceClubCoach({ ...state(), balanceEur: 5_500_000 }, command, context).state.balanceEur, 0);
 });
-test("all paid plans reuse 10 percent ordinary release, not exchange plan fees", () => {
-  for (const plan of ["standard", "master", "vip"] as const) {
+test("all current plans reuse 10 percent ordinary release, not exchange plan fees", () => {
+  for (const plan of ["beta", "standard", "master", "vip"] as const) {
     const result = replaceClubCoach({ ...state(), plan }, command, context);
     assert.equal(result.receipt.feeCredits, 500_000);
     assert.equal(result.receipt.refundCredits, 4_500_000);
   }
-  rejects({ ...state(), plan: "beta" }, command, context, "CLUB_COLLECTION_PAID_PLAN_REQUIRED");
 });
 test("wallet overflow is rejected, but safe net balance is computed without intermediate overflow", () => {
   const rich = { ...state(), balanceEur: Number.MAX_SAFE_INTEGER, coach: { id: "old", tier: "diamond-gold" as const, valueEur: 70_000_000 } };

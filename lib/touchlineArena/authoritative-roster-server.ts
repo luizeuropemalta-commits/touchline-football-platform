@@ -250,7 +250,13 @@ export function mapAuthoritativeRosterRows(
   const fixtureStatisticByPlayerId = new Map<string, DatabaseRecord>();
   for (const row of rows.playerFixtureStatistics ?? []) {
     const playerId = asUuid(row.football_player_id);
-    if (playerId && !fixtureStatisticByPlayerId.has(playerId)) fixtureStatisticByPlayerId.set(playerId, row);
+    const current = playerId ? fixtureStatisticByPlayerId.get(playerId) : undefined;
+    const startsAt = Date.parse(asString(asRecord(row.football_fixtures)?.starts_at) ?? "");
+    const currentStartsAt = Date.parse(asString(asRecord(current?.football_fixtures)?.starts_at) ?? "");
+    if (playerId && (!current || (Number.isFinite(startsAt)
+      && (!Number.isFinite(currentStartsAt) || startsAt > currentStartsAt)))) {
+      fixtureStatisticByPlayerId.set(playerId, row);
+    }
   }
 
   for (const contract of rows.contracts) {
@@ -360,6 +366,22 @@ function dataRows(value: unknown) {
   if (!Array.isArray(value)) return null;
   const rows = value.map(asRecord);
   return rows.every((row): row is DatabaseRecord => Boolean(row)) ? rows : null;
+}
+
+// A full season can exceed one response page even for a 35-player roster.
+// Reuse the complete SELECT reader; the mapper chooses latest fixture time.
+async function readRosterFixtureStatistics(admin: SupabaseClient, seasonId: string, playerIds: string[]) {
+  try {
+    const { createCompleteTouchlineCatalogueAdmin } = await import("./complete-catalogue-read-server.ts");
+    return await createCompleteTouchlineCatalogueAdmin(admin)
+      .from("touchline_player_fixture_score_settlements")
+      .select("football_player_id,rating,statistics_payload,source_synced_at,football_fixtures!inner(starts_at)")
+      .eq("season_id", seasonId)
+      .eq("scoring_version", "player_scoring_v4")
+      .in("football_player_id", playerIds);
+  } catch {
+    return { data: null, error: { message: "TL_ROSTER_DATA_INCOMPLETE" } };
+  }
 }
 
 /**
@@ -496,12 +518,7 @@ export async function readAuthoritativeTouchlineRoster(
         .in("football_player_id", playerIds)
       : Promise.resolve({ data: [], error: null }),
     currentSeasonId
-      ? admin.from("touchline_player_fixture_score_settlements")
-        .select("football_player_id,rating,statistics_payload,source_synced_at,football_fixtures!inner(starts_at)")
-        .eq("season_id", currentSeasonId)
-        .eq("scoring_version", "player_scoring_v4")
-        .in("football_player_id", playerIds)
-        .order("starts_at", { referencedTable: "football_fixtures", ascending: false })
+      ? readRosterFixtureStatistics(admin, currentSeasonId, playerIds)
       : Promise.resolve({ data: [], error: null }),
   ]);
   if (seasonStatisticsResponse.error || fixtureStatisticsResponse.error) {

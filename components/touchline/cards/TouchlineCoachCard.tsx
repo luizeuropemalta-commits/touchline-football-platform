@@ -68,6 +68,10 @@ type TouchlineCoachCardProps = {
   editableLayers?: TouchlineCoachLayerKey[];
   displayMode?: "default" | "compact";
   optimizeForLiveCompact?: boolean;
+  /** Layout-owned CSS width; omit when container sizing is not known. Never used to resize the card. */
+  frameDisplayWidth?: number;
+  /** Layout-owned responsive sizes hint; a valid numeric width takes precedence. */
+  frameDisplaySizes?: string;
   enableInteractiveNeon?: boolean;
   assetLoading?: "eager" | "lazy";
   frameLoading?: "eager" | "lazy";
@@ -127,6 +131,8 @@ export default function TouchlineCoachCard({
   editableLayers,
   displayMode = "default",
   optimizeForLiveCompact = false,
+  frameDisplayWidth,
+  frameDisplaySizes,
   enableInteractiveNeon = true,
   assetLoading,
   frameLoading,
@@ -164,6 +170,10 @@ export default function TouchlineCoachCard({
   const signingPresentation = resolveCoachSigningPricePresentation(locale, draftLocalesEnabled);
   const tier = touchlineArenaTierForKey(slot.cardTier) ?? touchlineArenaTierForKey("ruby-red")!;
   const tierPalette = touchlineCardTierPalette(tier.key);
+  // The 810px candidate has 3.375 times the 240px source density. Keep
+  // selection declarative and the approved CSS geometry unchanged. When the
+  // layout owner supplies its width, w descriptors avoid overfetching for tiny
+  // pitch cards. Unknown containers retain the existing density contract.
   const compactCardTemplateUrl = touchlineLiveCompactCoachFrameUrl(slot.cardTier);
   const zoomCardTemplateUrl = touchlineZoomCoachFrameUrl(slot.cardTier);
   const runtimeCardTemplateUrl = optimizeForLiveCompact ? compactCardTemplateUrl : zoomCardTemplateUrl;
@@ -471,7 +481,7 @@ export default function TouchlineCoachCard({
           </div>
         ) : null}
 
-        <div className={styles.nameplate} data-coach-name-fit={coachNameFit} {...editableLayerProps("nameplate", "Nome do treinador")}>
+        <div className={styles.nameplate} data-coach-name-fit={coachNameFit} data-coach-name-pending={!coach?.displayName ? "true" : "false"} {...editableLayerProps("nameplate", "Nome do treinador")}>
           <small>{copy.firstTeamManager}</small>
           <strong>{coachDisplayName}</strong>
           <span>{clubName}</span>
@@ -492,15 +502,13 @@ export default function TouchlineCoachCard({
           <span className={styles.stat} data-coach-discipline-source={yellowCards === null && redCards === null ? "unavailable" : "canonical"}><CoachStatIcon type="discipline" /><small>{copy.cards}</small><strong>{disciplineValue}</strong></span>
           <span className={`${styles.stat} ${styles.pointsStat}`}><CoachStatIcon type="points" /><small>TL PTS</small><strong>{points}</strong></span>
         </div>
-
-        {acquisitionPrice && Number.isSafeInteger(acquisitionPrice.valueTc) && acquisitionPrice.valueTc >= 0 ? (
-          <div className={`${styles.stat} ${styles.signingPrice}`} data-coach-signing-value={acquisitionPrice.valueTc}>
-            <small>{acquisitionPrice.label}</small>
-            <strong>{new Intl.NumberFormat(signingPresentation.locale, { notation: "compact", maximumFractionDigits: 1 }).format(acquisitionPrice.valueTc)} TC</strong>
-          </div>
-        ) : null}
-
       </div>
+      {acquisitionPrice && Number.isSafeInteger(acquisitionPrice.valueTc) && acquisitionPrice.valueTc >= 0 ? (
+        <div className={styles.signingPrice} data-coach-signing-value={acquisitionPrice.valueTc}>
+          <small>{acquisitionPrice.label}</small>
+          <strong>{new Intl.NumberFormat(signingPresentation.locale, { notation: "compact", maximumFractionDigits: 1 }).format(acquisitionPrice.valueTc)} TC</strong>
+        </div>
+      ) : null}
       <img
         ref={frameRef}
         className={styles.frame}
@@ -508,6 +516,26 @@ export default function TouchlineCoachCard({
         data-live-card-asset="frame"
         data-card-delivery={optimizeForLiveCompact ? "live-compact" : "zoom-optimized"}
         src={optimizeForLiveCompact ? compactCardTemplateUrl : zoomCardTemplateUrl}
+        srcSet={optimizeForLiveCompact
+          ? (typeof frameDisplayWidth === "number" && Number.isFinite(frameDisplayWidth) && frameDisplayWidth > 0)
+            || (typeof frameDisplaySizes === "string" && frameDisplaySizes.trim().length > 0)
+            ? `${compactCardTemplateUrl} 240w, ${zoomCardTemplateUrl} 810w`
+            : `${compactCardTemplateUrl} 1x, ${zoomCardTemplateUrl} ${810 / 240}x`
+          : undefined}
+        sizes={optimizeForLiveCompact
+          ? typeof frameDisplayWidth === "number" && Number.isFinite(frameDisplayWidth) && frameDisplayWidth > 0
+            ? `${frameDisplayWidth}px`
+            : typeof frameDisplaySizes === "string" && frameDisplaySizes.trim().length > 0 ? frameDisplaySizes : undefined
+          : undefined}
+        onError={optimizeForLiveCompact ? (event) => {
+          const image = event.currentTarget;
+          const failedSource = image.currentSrc || image.src;
+          // Recover the same tier when its dense candidate fails. Removing
+          // srcset prevents the browser from selecting that failed URL again.
+          image.srcset = "";
+          if (failedSource.endsWith(compactCardTemplateUrl)) return;
+          image.src = compactCardTemplateUrl;
+        } : undefined}
         alt=""
         draggable={false}
         loading={frameLoading ?? (optimizeForLiveCompact ? "eager" : "lazy")}

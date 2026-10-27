@@ -1,3 +1,5 @@
+import * as coachRecovery from "../lib/touchlineFantasy/club-coach-browser-recovery.ts";
+import { createClubReleaseBrowserRecovery } from "../lib/touchlineFantasy/club-release-browser-recovery.ts";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -67,11 +69,19 @@ function hookFixture() {
   const exports = {} as { useClubCollection: typeof useClubCollection };
   const source = ts.transpileModule(readFileSync(new URL("../components/touchline/fantasy/useClubCollection.ts", import.meta.url), "utf8"),
     { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
-  runInNewContext(source, { exports, AbortController, crypto: { randomUUID }, require: (name: string) => {
+  const coachStorageData = new Map<string,string>();
+  const coachStorage = {getItem:(key:string)=>coachStorageData.get(key)??null,setItem:(key:string,value:string)=>{coachStorageData.set(key,value);},removeItem:(key:string)=>{coachStorageData.delete(key);}};
+  runInNewContext(source, { exports, window:{sessionStorage:coachStorage}, AbortController, crypto: { randomUUID }, require: (name: string) => {
     if (name === "react") return react;
+    if (name.includes("club-coach-browser-recovery")) return coachRecovery;
+    if (name.includes("market-budget-i18n")) return { getClubCollectionBudgetCopy };
     if (name.includes("club-acquisition")) return acquisition;
     if (name.includes("club-command-authority")) return authority;
     if (name.includes("club-initial-budget")) return budget;
+    if (name.includes("club-release-browser-recovery")) return {createClubReleaseBrowserRecovery:(context:authority.ClubCommandAuthority)=>createClubReleaseBrowserRecovery(context,{
+      now:()=>1,open:async()=>({append:async()=>"inserted",list:async()=>[],remove:async()=>{},close:()=>{}}),
+      read:async()=>{throw new Error("unexpected recovery read in empty journal fixture");},
+    })};
     if (name.includes("club-release")) return release;
     if (name.includes("club-collection-bootstrap")) return bootstrap;
     if (name.includes("ClubCollectionContext")) return { useConfirmedClubCollection: () => context };

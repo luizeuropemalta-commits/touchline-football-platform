@@ -162,8 +162,8 @@ async function registerDevice(rehearsal?: RehearsalOptions): Promise<Registratio
 }
 
 /** Existing game registration API and return strings remain unchanged. */
-export async function registerTouchlinePushDevice(): Promise<"registered" | Refusal> {
-  return (await registerDevice()).status;
+export async function registerTouchlinePushDevice(options?: RehearsalOptions): Promise<"registered" | Refusal> {
+  return (await registerDevice(options)).status;
 }
 
 /** Explicit rehearsal registration only. No permission prompt, preference write,

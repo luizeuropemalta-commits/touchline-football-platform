@@ -1,12 +1,11 @@
+import { setTimeout as pause } from "node:timers/promises";
 import assert from "node:assert/strict";
 import test from "node:test";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, realpathSync, statSync, statfsSync } from "node:fs";
 import { open } from "node:fs/promises";
-import { createRequire } from "node:module";
 import path from "node:path";
 import { chromium, webkit, expect } from "@playwright/test";
-import { bundleIsolatedBrowserFixture } from "./helpers/touchline-isolated-browser-bundle.mts";
 import { TOUCHLINE_ARENA_ENTRY_VIDEO, TOUCHLINE_ARENA_VIDEO_POSTER } from "../lib/touchlineArena/arena-intro.ts";
 
 const root = path.resolve(import.meta.dirname, "..");
@@ -17,37 +16,58 @@ test("real cinematic background loads local media and advances without forcing p
 }, async t => {
   const engineFilter = process.env.TOUCHLINE_AUTH_CINEMATIC_ENGINE;
   assert.ok(engineFilter === undefined || ["chromium", "webkit"].includes(engineFilter), "invalid engine filter");
-  const capacity = () => {
-    const disk = statfsSync(root);
-    assert.ok(disk.bavail * disk.bsize > 5 * 1024 ** 3, "more than 5 GiB free disk required");
-    assert.equal(execFileSync("sysctl", ["-n", "kern.memorystatus_vm_pressure_level"], { encoding: "utf8" }).trim(), "1", "normal memory pressure required");
-    const free = Number(execFileSync("memory_pressure", { encoding: "utf8" }).match(/System-wide memory free percentage: (\d+)%/)?.[1]);
-    assert.ok(Number.isFinite(free) && free >= 25, "at least 25% free memory required");
-  };
-  capacity();
-  const bundle = bundleIsolatedBrowserFixture({
-    entryPath: "components/auth-cinematic-media.tsx",
-    requiredSources: ["components/auth-cinematic-media.tsx", "lib/touchlineArena/arena-intro.ts"],
-    mountScript: "flushSync(()=>root.render(React.createElement(loadEntry().AuthCinematicMedia)));",
-  });
-  // Extract only the component's actual global rules, preserving surrounding
-  // media conditions. This component has no Tailwind layout dependencies.
-  const require = createRequire(import.meta.url);
-  const postcss = createRequire(require.resolve("next/package.json"))("postcss") as typeof import("postcss");
-  const globals = postcss.parse(readFileSync(path.join(root, "app/globals.css"), "utf8"));
-  const wanted = new Set([".auth-cinematic-media", ".auth-cinematic-video", ".auth-cinematic-original", ".auth-cinematic-shade"]);
-  const rules: string[] = [];
-  globals.walkRules(rule => {
-    if (!wanted.has(rule.selector)) return;
-    let node: import("postcss").ChildNode = rule.clone();
-    for (let parent = rule.parent; parent && parent.type !== "root"; parent = parent.parent) {
-      assert.equal(parent.type, "atrule", "unexpected nested cinematic selector");
-      const wrapper = parent.clone(); wrapper.removeAll(); wrapper.append(node); node = wrapper as import("postcss").ChildNode;
+  const allowModeratePressure = process.env.TOUCHLINE_LOCAL_ALLOW_MODERATE_PRESSURE === "1" && !process.env.CI;
+  if (allowModeratePressure) t.diagnostic("capacityException=local-moderate-pressure; memory>=25%; disk>5GiB; critical pressure refused");
+  const capacity = async () => {
+    const deadline = performance.now() + 10_000;
+    let announced = false;
+    while (true) {
+      t.signal.throwIfAborted();
+      const disk = statfsSync(root);
+      assert.ok(disk.bavail * disk.bsize > 5 * 1024 ** 3, "more than 5 GiB free disk required");
+      const query = (command: string, args: string[]) => {
+        const remaining = Math.floor(deadline - performance.now());
+        assert.ok(remaining > 0, "normal capacity did not return within 10 seconds");
+        return execFileSync(command, args, { encoding: "utf8", timeout: Math.min(5000, remaining), maxBuffer: 64 * 1024 });
+      };
+      const pressure = query("sysctl", ["-n", "kern.memorystatus_vm_pressure_level"]).trim();
+      assert.ok(pressure === "1" || pressure === "2", "critical or unknown memory pressure aborts immediately");
+      const free = Number(query("memory_pressure", []).match(/System-wide memory free percentage: (\d+)%/)?.[1]);
+      assert.ok(Number.isFinite(free) && free >= 25, "at least 25% free memory required");
+      const remaining = deadline - performance.now();
+      assert.ok(remaining > 0, "normal capacity did not return within 10 seconds");
+      if (pressure === "1" || (allowModeratePressure && pressure === "2")) return;
+      if (!announced) { t.diagnostic("Transient WARN: waiting up to 10 seconds for normal capacity before continuing"); announced = true; }
+      await pause(Math.min(250, remaining), undefined, { signal: t.signal });
     }
-    rules.push(node.toString());
+  };
+  await capacity();
+  const screenshots = mkdtempSync("/private/tmp/touchline-auth-playback-");
+  // Wait for close, including timeout/abort, before starting any browser.
+  await new Promise<void>((resolve, reject) => {
+    const child = spawn(process.execPath, ["--experimental-strip-types",
+      path.join(root, "tests/helpers/touchline-auth-cinematic-compile-worker.mts"), screenshots], {
+      cwd: root, stdio: "ignore",
+    });
+    let failure: Error | undefined;
+    const abort = () => { failure = new Error("Cinematic fixture compilation aborted"); child.kill("SIGKILL"); };
+    const timeout = setTimeout(() => {
+      failure = new Error("Cinematic fixture compilation exceeded 30 seconds"); child.kill("SIGKILL");
+    }, 30_000);
+    t.signal.addEventListener("abort", abort, { once: true });
+    child.once("error", () => { failure = new Error("Cinematic fixture compiler could not start"); });
+    child.once("close", code => {
+      clearTimeout(timeout); t.signal.removeEventListener("abort", abort);
+      if (failure) reject(failure);
+      else if (code !== 0) reject(new Error(`Cinematic fixture compiler exited with code ${code}`));
+      else resolve();
+    });
+    if (t.signal.aborted) abort();
   });
-  for (const selector of wanted) assert.ok(rules.some(rule => rule.includes(selector)), selector);
-  const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0;min-height:100%;background:#02050a}${rules.join("\n")}</style></head><body><div id="root"></div></body></html>`;
+  const script = readFileSync(path.join(screenshots, "fixture.js"), "utf8");
+  const html = readFileSync(path.join(screenshots, "fixture.html"), "utf8");
+  assert.ok(script.length > 0 && html.length > 0, "fresh compiled cinematic fixture required");
+  t.diagnostic(`Compiler exited before browser launch; real component/global CSS: ${screenshots}`);
   const publicRoot = realpathSync(path.join(root, "public"));
   const assets = new Map([TOUCHLINE_ARENA_ENTRY_VIDEO, TOUCHLINE_ARENA_VIDEO_POSTER].map(url => {
     const file = realpathSync(path.join(publicRoot, url.slice(1)));
@@ -55,14 +75,16 @@ test("real cinematic background loads local media and advances without forcing p
     assert.ok(statSync(file).size > 0 && statSync(file).size <= 32 * 1024 ** 2, "local media exceeds the bounded asset budget");
     return [url, { file, size: statSync(file).size, contentType: url.endsWith(".mp4") ? "video/mp4" : "image/jpeg" }] as const;
   }));
-  const screenshots = mkdtempSync("/private/tmp/touchline-auth-playback-");
   t.diagnostic(JSON.stringify({ screenshots, engineFilter,
     scope: "real component/global CSS/MP4/poster; isolated client mount, no form/auth/Next/server; native engine policy and codec may differ from installed Safari; PNG requires inspection for browser-owned Play overlay" }));
   for (const engine of [chromium, webkit].filter(value => engineFilter === undefined || value.name() === engineFilter)) {
-    capacity(); assert.ok(existsSync(engine.executablePath()), "installed browser required");
+    await capacity(); assert.ok(existsSync(engine.executablePath()), "installed browser required");
+    t.signal.throwIfAborted();
     const browser = await engine.launch({ headless: true });
     const abort = () => { void browser.close(); }; t.signal.addEventListener("abort", abort, { once: true });
     try {
+      t.signal.throwIfAborted();
+      await capacity();
       const context = await browser.newContext({ viewport: { width: 844, height: 390 }, reducedMotion: "no-preference", serviceWorkers: "block", permissions: [] });
       try {
         const page = await context.newPage(); page.setDefaultTimeout(5000);
@@ -123,7 +145,7 @@ test("real cinematic background loads local media and advances without forcing p
           return route.fulfill({ status: 206, headers: { ...headers, "content-range": `bytes ${start}-${end}/${asset.size}`, "content-length": String(body.length) }, body });
         });
         await page.goto(origin);
-        await page.addScriptTag({ content: `(()=>{${bundle.script}})()` });
+        await page.addScriptTag({ content: `(()=>{${script}})()` });
         const video = page.locator("video.auth-cinematic-video");
         await expect(video).toHaveCount(1);
         const sample = () => video.evaluate(node => {
@@ -138,7 +160,7 @@ test("real cinematic background loads local media and advances without forcing p
             error: video.error ? { code: video.error.code, message: video.error.message } : null };
         });
         const initial = await sample();
-        capacity();
+        await capacity();
         const initialPng = path.join(screenshots, `${engine.name()}-844-initial.png`);
         await page.screenshot({ path: initialPng }); t.diagnostic(`Screenshot: ${initialPng}`);
         // Observation only: never call play(), seek, override media methods,
@@ -158,7 +180,7 @@ test("real cinematic background loads local media and advances without forcing p
         const outcome = final.error ? "media-error" : playing ? "playing" : final.policy === "disallowed" ? "policy-blocked" : "not-playing-undetermined";
         const finalPng = path.join(screenshots, `${engine.name()}-844-${outcome}.png`);
         t.diagnostic(JSON.stringify({ engine: engine.name(), outcome, initial, final, events, requests, errors, forbidden, plannedScreenshot: finalPng }));
-        capacity();
+        await capacity();
         await page.screenshot({ path: finalPng });
         t.diagnostic(`Screenshot: ${finalPng}`);
         assert.deepEqual(forbidden, []); assert.deepEqual(errors, []);

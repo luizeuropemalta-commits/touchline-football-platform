@@ -52,7 +52,7 @@ function fixtureState(fixture: TouchlineFixture, now: number) {
  */
 export function decideLiveSyncCadence(
   fixtures: TouchlineFixture[],
-  options: { now?: number; lastSuccessfulSyncAt?: string | null; forceFixtureId?: string | null } = {},
+  options: { now?: number; lastSuccessfulSyncAt?: string | null; forceFixtureId?: string | null; postMatchFixtureIds?: string[] } = {},
 ): LiveSyncDecision {
   const now = options.now ?? Date.now();
   const forced = options.forceFixtureId?.trim();
@@ -73,12 +73,37 @@ export function decideLiveSyncCadence(
 
   const cadence: LiveSyncCadence = candidateFixtureIds.size || forced
     ? "live"
-    : matchWithinDay
+    : matchWithinDay || options.postMatchFixtureIds?.length
       ? "matchday"
       : "idle";
   const intervalMs = cadence === "live" ? MINUTE : cadence === "matchday" ? 5 * MINUTE : 60 * MINUTE;
   const last = Date.parse(options.lastSuccessfulSyncAt ?? "");
   const due = Boolean(forced) || !Number.isFinite(last) || now - last >= intervalMs;
 
+  for (const id of options.postMatchFixtureIds ?? []) candidateFixtureIds.add(id);
   return { cadence, intervalMs, due, candidateFixtureIds: [...candidateFixtureIds] };
+}
+
+/** Completed means playable facts exist, not that the provider cannot revise them.
+ * Revisit recent matches hourly and older season history daily, oldest checks first.
+ * Two per tick bounds work; no fixture ages out of correction eligibility.
+ */
+export function selectPostMatchRechecks(
+  fixtures: TouchlineFixture[], checkedAt: ReadonlyMap<string, string>, now: number,
+  attemptedAt: ReadonlyMap<string, string> = new Map(),
+) {
+  const attemptTime = (id: string) => { const value = Date.parse(attemptedAt.get(id) ?? ""); return Number.isFinite(value) ? value : 0; };
+  return fixtures.filter(f => /^(ft([_ -].*)?|full[ -]?time|finished|after extra time|aet|after penalties|penalties finished)$/i.test(f.status?.trim() ?? "")
+    && fixtureStartsAt(f) !== null && fixtureStartsAt(f)! <= now)
+    .map(f => ({ id: f.providerId, checked: Date.parse(checkedAt.get(f.providerId) ?? ""),
+      interval: now - fixtureStartsAt(f)! <= 72 * HOUR ? HOUR : 24 * HOUR }))
+    .filter(f => !Number.isFinite(f.checked) || now - f.checked >= f.interval)
+    .filter(f => {
+      const attempt = Date.parse(attemptedAt.get(f.id) ?? "");
+      return !Number.isFinite(attempt) || now - attempt >= 15 * 60 * 1000;
+    })
+    .sort((a, b) => attemptTime(a.id) - attemptTime(b.id)
+      || (Number.isFinite(a.checked) ? a.checked : 0) - (Number.isFinite(b.checked) ? b.checked : 0)
+      || a.id.localeCompare(b.id))
+    .slice(0, 2).map(f => f.id);
 }

@@ -22,7 +22,7 @@ const data = (explicitConsentAt: unknown) => ({ settings: {
   transfersAndOffers: true, creditsPromotionsRewards: true, accountSecurity: true, generalComms: false,
   silentPush: true, lineupReminders: false, scopes: { clubs: ["A & B"], players: [], competitions: ["TouchLine England"], fixtures: [] },
 }, channels: { in_app: true, push: false, email: false }, frequency: "realtime", quietHours: { enabled: false, start: "22:00", end: "07:00", timezone: "UTC" },
-explicitConsentAt, updatedAt: null, gameLocale: "pt-BR", accountId: "fixture-account" });
+explicitConsentAt, updatedAt: null, gameLocale: "pt-BR", accountId: "11111111-1111-4111-8111-111111111111" });
 const tick = async () => { for (let i = 0; i < 8; i++) await Promise.resolve(); };
 function deferred<T>() { let resolve!: (value: T) => void; let reject!: (reason?: unknown) => void; return { promise: new Promise<T>((yes, no) => { resolve = yes; reject = no; }), resolve, reject }; }
 function evaluate<T>(source: string, dependencies: Record<string, unknown>, globals = {}): T {
@@ -51,6 +51,7 @@ function fixture(copy?: CopyModule, initialLocale = "en-GB", future = false, rel
   const policy = evaluate<{ isTouchLineSiteLocalesEnabled: () => boolean }>(read('lib/touchlineArena/site-locales-release.ts'), {}, { process: { env: { TOUCHLINE_SITE_LOCALES_ENABLED: releaseFlag } } });
   const slots: unknown[] = [], effects: { index: number; callback: () => (() => void) | void }[] = [], cleanups = new Map<number, () => void>();
   let cursor = 0, locale = initialLocale;
+  const timers = new Map<number, () => void>(); let timerId = 0;
   const requests: { url: string; options: RequestInit; response: ReturnType<typeof deferred<unknown>> }[] = [];
   const hooks = { ...React,
     useState: (initial: unknown) => { const index = cursor++; if (!(index in slots)) slots[index] = initial; return [slots[index], (value: unknown) => { slots[index] = typeof value === "function" ? value(slots[index]) : value; }]; },
@@ -71,11 +72,11 @@ function fixture(copy?: CopyModule, initialLocale = "en-GB", future = false, rel
     "@/lib/touchlineArena/i18n": canonical,
     "@/lib/touchlineArena/catalogue-locale": { resolveTouchlineCatalogueLocale },
     "@/lib/touchlineArena/notification-centre-i18n": copy,
-  }, { AbortController, URLSearchParams, Intl, Date, fetch: (url: string, options: RequestInit) => { const response = deferred<unknown>(); requests.push({ url, options, response }); return response.promise; } });
+  }, { AbortController, URLSearchParams, Intl, Date, setTimeout: (callback: () => void, ms: number) => { assert.equal(ms, 15_000); timers.set(++timerId, callback); return timerId; }, clearTimeout: (id: number) => timers.delete(id), fetch: (url: string, options: RequestInit) => { const response = deferred<unknown>(); requests.push({ url, options, response }); return response.promise; } });
   function render() { cursor = 0; const entry = mod.default(); const tree = mod.NotificationsContent(future ? { draftLocalesEnabled: true } : entry.props as { draftLocalesEnabled: boolean }); return { tree, nodes: nodes(tree), html: renderToStaticMarkup(tree) }; }
   function commit() { for (const item of effects.splice(0)) { cleanups.get(item.index)?.(); const cleanup = item.callback(); if (cleanup) cleanups.set(item.index, cleanup); } return render(); }
   function resolve(index: number, value: unknown, ok = true) { requests[index].response.resolve({ ok, json: async () => value }); }
-  return { requests, render, commit, resolve, valid: mod.validNotificationConsentTimestamp,
+  return { requests, render, commit, resolve, expire: () => { for (const callback of [...timers.values()]) callback(); }, pendingTimers: () => timers.size, valid: mod.validNotificationConsentTimestamp,
     locale: (next: string) => { locale = next; render(); return commit(); },
     start: () => { render(); return commit(); },
     save: () => { const button = render().nodes.find(node => node.type === "button")!; return (button.props.onClick as () => Promise<void>)(); },
@@ -124,8 +125,10 @@ test("save only by gesture keeps exact payload; pending, success and lost respon
 });
 test("only the current observation can update the indicator; cleanup and StrictMode retire older GET/PUT receipts", async () => {
   const c = await catalogue(); const f = fixture(c); f.start();
+  await f.save(); assert.equal(f.requests.length, 1, "an unconfirmed account cannot save defaults");
+  f.resolve(0, { ok: true, data: data(null) }); await tick();
   const save = f.save(); f.resolve(1, { ok: true, data: data(timestamp) }); await save;
-  f.resolve(0, { ok: true, data: data(null) }); await tick(); assert.match(f.render().html, /Record found/);
+  assert.match(f.render().html, /Record found/);
   const late = f.save(); f.locale("pt-BR"); assert.match(f.render().html, /Consultando registro/);
   f.resolve(2, { ok: true, data: data(timestamp) }); await late; assert.match(f.render().html, /Consultando registro/);
   f.resolve(3, { ok: true, data: data(null) }); await tick(); assert.match(f.render().html, /Registro não encontrado/); f.unmount();
@@ -192,7 +195,7 @@ test("real notification copy and active count reach the page in all eight opt-in
 test("domain defaults, API handlers and key order remain intact outside the explicitly admitted observation projection", () => {
   const source = read(path);
   assert.match(source, /body: JSON\.stringify\(\{ \.\.\.preferences, explicitConsent: true \}\)/);
-  assert.match(source, /disabled=\{saving \|\| loading\}/);
+  assert.match(source, /disabled=\{saving \|\| loading \|\| !preferences\.accountId\}/);
   assert.match(source, /return \(\) => \{/);
   assert.doesNotMatch(source, /requestPermission|serviceWorker|Notification\.permission|setInterval/);
   assert.deepEqual([...source.matchAll(/key: "(playerRumours|availability|confirmedLineup|goalsAndEvents|selectedLiveMatches|leagueLeadership|transfersAndOffers|creditsPromotionsRewards|accountSecurity|generalComms)"/g)].map(match => match[1]), categories);
@@ -214,9 +217,11 @@ test("presentation keeps fixed desktop groups inside one real focus rail without
   assert.match(html, /Consultando registro/);
   const css = read("app/(app)/notifications/NotificationsContent.module.css");
   assert.match(css, /\.contentRail\s*\{[^}]*max-width:\s*100%;[^}]*overflow-x:\s*auto;/s);
-  assert.match(css, /\.canvas\s*\{[^}]*min-width:\s*960px;/s);
-  assert.match(css, /\.stats,\s*\.quietHours\s*\{\s*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/);
-  assert.match(css, /\.panels\s*\{\s*grid-template-columns:\s*minmax\(0, 1\.1fr\) minmax\(0, \.9fr\)/);
+  assert.match(css, /\.canvas\s*\{[^}]*min-width:\s*1160px;/s);
+  assert.match(css, /\.stats\s*\{\s*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/);
+  assert.match(css, /\.panels\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1\.1fr\) minmax\(calc\(38rem \+ 66px\), \.9fr\)/);
+  assert.match(css, /\.quietHours\s*\{[^}]*grid-template-columns:\s*repeat\(2, minmax\(9rem, 1fr\)\) minmax\(20rem, 1\.5fr\)/);
+  assert.match(css, /\.canvas input\[type="time"\]:focus\s*\{[^}]*outline:\s*1px solid/);
   assert.match(css, /\.categories\s*\{\s*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/);
   assert.match(css, /\.scopes\s*\{\s*grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\)/);
   assert.match(css, /\.scopePanel\s*\{\s*grid-column:\s*1 \/ -1;/);
@@ -242,4 +247,49 @@ test("exported notifications page forwards server context release without changi
     assert.equal(f.requests.length, 1, "render and receipt must never save or grant consent");
     f.unmount();
   }
+});
+
+test("centre requires a confirmed account, binds one explicit PUT, and rejects a different-account receipt", async () => {
+  const c = await catalogue();
+  for (const accountId of [undefined, "invalid"]) {
+    const f = fixture(c); f.start(); f.resolve(0, { ok: true, data: { ...data(null), accountId } }); await tick();
+    await f.save(); assert.equal(f.requests.length, 1); assert.match(f.render().html, /Record unconfirmed/);
+    assert.equal(f.render().nodes.find(node => node.type === "button")?.props.disabled, true); f.unmount();
+  }
+  const f = fixture(c); f.start(); f.resolve(0, { ok: true, data: data(null) }); await tick();
+  const pending = f.save(); await f.save(); assert.equal(f.requests.length, 2, "single explicit write");
+  assert.equal(new Headers(f.requests[1].options.headers).get("X-Touchline-Expected-Account"), data(null).accountId);
+  f.resolve(1, { ok: true, data: { ...data(timestamp), accountId: "22222222-2222-4222-8222-222222222222" } }); await pending;
+  assert.match(f.render().html, /Record unconfirmed/);
+  f.unmount();
+});
+
+test("centre cleanup aborts the in-flight PUT and late receipt cannot publish preferences", async () => {
+  const f = fixture(await catalogue()); f.start(); f.resolve(0, { ok: true, data: data(null) }); await tick();
+  const pending = f.save(); f.unmount();
+  assert.equal(f.requests[1].options.signal?.aborted, true);
+  f.resolve(1, { ok: true, data: { ...data(timestamp), frequency: "paused" } }); await pending;
+  assert.doesNotMatch(f.render().html, /Record found/);
+  assert.equal(f.requests.length, 2, "no automatic retry");
+});
+
+
+test("preference transport and body timeouts unlock the centre without replaying uncertain writes", async () => {
+  const copy = await catalogue();
+  for (const stage of ["transport", "body"] as const) {
+    const f = fixture(copy, "pt-BR"); f.start();
+    if (stage === "body") { f.requests[0].response.resolve({ ok: true, json: () => new Promise(() => {}) }); await tick(); }
+    f.expire(); await tick();
+    assert.match(f.render().html, /Registro não confirmado/);
+    assert.equal(f.requests.length, 1); assert.equal(f.pendingTimers(), 0); f.unmount();
+  }
+  const f = fixture(copy, "pt-BR"); f.start(); f.resolve(0, { ok: true, data: data(timestamp) }); await tick();
+  const saving = f.save(); assert.equal(f.requests.length, 2);
+  f.expire(); await saving; await tick();
+  assert.match(f.render().html, /Registro não confirmado/);
+  assert.equal(f.render().nodes.find(node => node.type === "button")!.props.disabled, false);
+  assert.equal(f.requests.length, 2, "no implicit retry of possibly committed PUT");
+  f.resolve(1, { ok: true, data: data(timestamp) }); await tick();
+  assert.match(f.render().html, /Registro não confirmado/, "late success cannot overwrite timeout uncertainty");
+  assert.equal(f.pendingTimers(), 0); f.unmount();
 });

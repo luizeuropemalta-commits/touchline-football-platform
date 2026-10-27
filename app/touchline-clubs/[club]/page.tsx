@@ -1050,8 +1050,8 @@ async function renderClubHubPage({ params, searchParams }: ClubHubPageProps, dra
             </div>
           </div>
           <div className="club-hub-hero-channels">
-            <ClubHubOfficialChannel channels={officialChannels} kind="membership" variant="hero" locale={locale} draftLocalesEnabled={draftLocalesEnabled} clubIdentity={{ name: club.name, crestUrl: club.logoUrl }} />
-            <ClubHubOfficialChannel channels={officialChannels} kind="store" locale={locale} draftLocalesEnabled={draftLocalesEnabled} />
+            <ClubHubOfficialChannel channels={officialChannels} kind="membership" variant="cover" locale={locale} draftLocalesEnabled={draftLocalesEnabled} />
+            <ClubHubOfficialChannel channels={officialChannels} kind="store" variant="cover" locale={locale} draftLocalesEnabled={draftLocalesEnabled} />
           </div>
           <div className="club-hub-hero-footer">
             {clubHonours.length ? (
@@ -1141,7 +1141,7 @@ async function renderClubHubPage({ params, searchParams }: ClubHubPageProps, dra
             radial-gradient(circle at 84% 14%, color-mix(in srgb, var(--club-secondary) 18%, transparent), transparent 22%),
             linear-gradient(135deg, #020707 0%, #06110d 44%, #030503 100%);
         }
-        .club-hub-content { padding: 42px 5vw 64px; }
+        .club-hub-content { padding: 42px max(5vw, env(safe-area-inset-right, 0px)) max(64px, env(safe-area-inset-bottom, 0px)) max(5vw, env(safe-area-inset-left, 0px)); }
         .club-hub-deferred {
           position: relative;
           display: grid;
@@ -1418,9 +1418,11 @@ async function renderClubHubPage({ params, searchParams }: ClubHubPageProps, dra
           position: relative;
           z-index: 2;
           display: grid;
-          /* Keep the Membership presentation aligned with the trophy rail. */
+          /* Reserve the lower-right cover area; never overlap identity or honours. */
           align-self: end;
-          gap: 10px;
+          justify-self: end;
+          width: min(100%, 350px);
+          gap: 8px;
           min-width: 0;
         }
         .club-hub-identity {
@@ -2031,10 +2033,10 @@ async function renderClubHubPage({ params, searchParams }: ClubHubPageProps, dra
           text-decoration: none;
         }
         @media (max-width: 980px) {
-          .club-hub-content { padding: 22px 14px 42px; }
+          .club-hub-content { padding: 22px max(14px, env(safe-area-inset-right, 0px)) max(42px, env(safe-area-inset-bottom, 0px)) max(14px, env(safe-area-inset-left, 0px)); }
           .club-hub-hero {
-            grid-template-columns: minmax(0, 1fr);
-            grid-template-areas: "identity" "channels" "honours";
+            grid-template-columns: minmax(0, 1fr) minmax(260px, 350px);
+            grid-template-areas: "identity channels" "honours channels";
           }
           .club-hub-identity,
           .club-hub-section-head { align-items: stretch; flex-direction: column; }
@@ -2057,17 +2059,18 @@ async function renderClubHubPage({ params, searchParams }: ClubHubPageProps, dra
           }
           .club-hub-hero-channels {
             position: relative;
-            order: 3;
-            width: min(100%, 520px);
-            margin: 0 auto;
-            align-self: auto;
+            order: 4;
+            width: min(100%, 350px);
+            margin: 0;
+            align-self: end;
+            justify-self: end;
           }
           .club-hub-hero-footer {
             position: relative;
             right: auto;
             bottom: auto;
             left: auto;
-            order: 4;
+            order: 3;
             width: 100%;
             margin-top: 4px;
             grid-template-columns: 1fr;
@@ -2107,7 +2110,11 @@ async function renderClubHubPage({ params, searchParams }: ClubHubPageProps, dra
           .club-hub-feature-list small { grid-column: 2; }
         }
         @media (max-width: 720px) {
-          .club-hub-content { padding: 18px 10px 36px; }
+          .club-hub-content { padding: 18px max(10px, env(safe-area-inset-right, 0px)) max(36px, env(safe-area-inset-bottom, 0px)) max(10px, env(safe-area-inset-left, 0px)); }
+          .club-hub-hero {
+            grid-template-columns: minmax(0, 1fr) minmax(240px, 300px);
+            grid-template-areas: "identity channels" "honours channels";
+          }
           .club-hub-honour-page {
             grid-template-columns: repeat(var(--club-hub-trophy-page-columns), minmax(0, 1fr));
             gap: 8px;
@@ -2158,7 +2165,7 @@ async function renderClubHubPage({ params, searchParams }: ClubHubPageProps, dra
         }
         @media (orientation: landscape) and (max-width: 1100px) and (max-height: 520px) {
           .club-hub-content {
-            padding: 12px 14px 28px;
+            padding: 12px max(14px, env(safe-area-inset-right, 0px)) max(28px, env(safe-area-inset-bottom, 0px)) max(14px, env(safe-area-inset-left, 0px));
           }
           .club-hub-back {
             display: inline-flex;
@@ -2176,8 +2183,8 @@ async function renderClubHubPage({ params, searchParams }: ClubHubPageProps, dra
             flex-direction: row;
           }
           .club-hub-hero {
-            grid-template-columns: minmax(0, 1fr);
-            grid-template-areas: "identity" "channels" "honours";
+            grid-template-columns: minmax(0, 1fr) minmax(260px, 350px);
+            grid-template-areas: "identity channels" "honours channels";
             min-height: 0;
             padding: 16px 20px;
           }
@@ -2225,11 +2232,24 @@ async function renderClubHubPage({ params, searchParams }: ClubHubPageProps, dra
         }
         @media (orientation: landscape) and (max-width: 720px) and (max-height: 520px) {
           .club-hub-hero {
-            grid-template-columns: minmax(0, 1fr);
-            grid-template-areas: "identity" "channels" "honours";
+            grid-template-columns: minmax(0, 1fr) minmax(240px, 300px);
+            grid-template-areas: "identity channels" "honours channels";
+            gap: 12px;
+            padding: 16px;
           }
-          .club-hub-logo-stack {
-            width: 136px;
+          .club-hub-identity { flex-direction: column; align-items: flex-start; gap: 12px; }
+          .club-hub-logo-stack { width: 100px; }
+          .club-hub-logo { width: 100px; }
+          .club-hub-identity h1 { margin: 0; font-size: clamp(26px, 4.5vw, 32px); }
+          .club-hub-home-stadium-identity { grid-template-columns: minmax(0, 1fr); padding: 8px; }
+          .club-hub-home-stadium-identity strong { overflow-wrap: anywhere; }
+        }
+        /* Defensive portrait fallback only; the public product keeps its
+           existing orientation gate. This does not expose a portrait flow. */
+        @media (max-width: 480px) and (orientation: portrait) {
+          .club-hub-hero {
+            grid-template-columns: minmax(0, 1fr);
+            grid-template-areas: "identity" "honours" "channels";
           }
         }
         @media (prefers-reduced-motion: reduce) {
@@ -2259,5 +2279,5 @@ async function ClubHubPersistedLiveRail({ snapshotPromise, locale, initialNow, d
 }) {
   const snapshot = await snapshotPromise;
   return <ClubHubFixtureStrip draftLocalesEnabled={draftLocalesEnabled} locale={locale}
-    initialFixtures={snapshot?.fixtures ?? null} initialMetadata={snapshot?.metadata ?? null} initialNow={initialNow} />;
+    initialFixtures={snapshot?.fixtures ?? null} initialMetadata={snapshot?.metadata ?? null} initialAdmissionScope={snapshot?.admissionScope ?? null} initialNow={initialNow} />;
 }

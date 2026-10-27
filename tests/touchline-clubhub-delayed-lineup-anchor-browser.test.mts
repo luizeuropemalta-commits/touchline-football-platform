@@ -1,105 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, realpathSync, statSync, statfsSync } from "node:fs";
 import path from "node:path";
-import ts from "typescript";
 import { chromium, webkit, expect } from "@playwright/test";
-import { bundleIsolatedBrowserFixture } from "./helpers/touchline-isolated-browser-bundle.mts";
 
 const root = path.resolve(import.meta.dirname, "..");
 const origin = "https://delayed-lineup.test";
 const anchor = "touchline-club-lineup";
 const destination = `${origin}/touchline-clubs/arsenal?lang=pt-BR&fixtureId=990099#${anchor}`;
-
-// Only these CSS-module classes occur in the page's unmounted right rail.
-// They must never stand in for selectors used by the isolated lineup/nav.
-const unmountedRailClasses: Readonly<Record<string, Readonly<Record<string, string>>>> = {
-  officialLeagueStyles: {
-    layout: "isolated-unmounted-rail-official-layout",
-    fixture: "isolated-unmounted-rail-official-fixture",
-  },
-  premiumStyles: {
-    nextFixtureTeams: "isolated-unmounted-rail-premium-teams",
-    nextFixtureClub: "isolated-unmounted-rail-premium-club",
-    nextFixtureKickoff: "isolated-unmounted-rail-premium-kickoff",
-    nextFixtureVenue: "isolated-unmounted-rail-premium-venue",
-    nextFixtureVenueImage: "isolated-unmounted-rail-premium-venue-image",
-    nextFixtureVenueCopy: "isolated-unmounted-rail-premium-venue-copy",
-  },
-};
-
-function extractIsolatedPageCss(ast: ts.SourceFile): string {
-  const styles: string[] = [];
-  function visit(node: ts.Node) {
-    if (ts.isJsxElement(node) && ts.isIdentifier(node.openingElement.tagName)
-      && node.openingElement.tagName.text === "style") {
-      for (const child of node.children) {
-        if (ts.isJsxText(child) && !child.text.trim()) continue;
-        assert.ok(ts.isJsxExpression(child) && child.expression, "page style must contain a template literal");
-        const expression = child.expression;
-        if (ts.isNoSubstitutionTemplateLiteral(expression)) {
-          styles.push(expression.text);
-          continue;
-        }
-        assert.ok(ts.isTemplateExpression(expression), "page style must contain a template literal");
-        let css = expression.head.text;
-        for (const span of expression.templateSpans) {
-          const access = span.expression;
-          assert.ok(ts.isPropertyAccessExpression(access) && !access.questionDotToken
-            && ts.isIdentifier(access.expression) && ts.isIdentifier(access.name),
-          "unsupported page CSS interpolation");
-          const mapName = access.expression.text, className = access.name.text;
-          assert.ok(Object.hasOwn(unmountedRailClasses, mapName)
-            && Object.hasOwn(unmountedRailClasses[mapName], className),
-          "unknown page CSS module class");
-          assert.match(css, /\.club-hub-right-rail \.$/,
-            "CSS-module substitution is restricted to an unmounted right-rail selector");
-          css += unmountedRailClasses[mapName][className] + span.literal.text;
-        }
-        styles.push(css);
-      }
-    }
-    ts.forEachChild(node, visit);
-  }
-  visit(ast);
-  return styles.join("\n");
-}
-
-const parsePageCssTest = (source: string) => extractIsolatedPageCss(
-  ts.createSourceFile("page.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX),
-);
-
-test("isolated page CSS preserves static rules and substitutes only known unmounted rail classes", () => {
-  const css = "#touchline-club-lineup { scroll-margin-top: 91px; }\n"
-    + ".club-hub-right-rail .${officialLeagueStyles.layout} { width: 100%; }\n"
-    + ".club-hub-right-rail .${premiumStyles.nextFixtureClub} img { width: 44px; }";
-  assert.equal(parsePageCssTest("<style>{`" + css + "`}</style>"), css
-    .replace("${officialLeagueStyles.layout}", "isolated-unmounted-rail-official-layout")
-    .replace("${premiumStyles.nextFixtureClub}", "isolated-unmounted-rail-premium-club"));
-  assert.equal(parsePageCssTest("<style>{`body { margin: 0; }`}</style>"), "body { margin: 0; }");
-});
-
-test("isolated page CSS rejects executable, unknown and non-rail interpolations", () => {
-  for (const expression of ["run()", "officialLeagueStyles['layout']", "otherStyles.layout",
-    "officialLeagueStyles.unknown", "officialLeagueStyles?.layout", "officialLeagueStyles.constructor"]) {
-    assert.throws(() => parsePageCssTest("<style>{`.club-hub-right-rail .${" + expression + "} { width: 100%; }`}</style>"));
-  }
-  assert.throws(() => parsePageCssTest("<style>{`#touchline-club-lineup { scroll-margin-top: ${officialLeagueStyles.layout}; }`}</style>"));
-  assert.throws(() => parsePageCssTest("<style>{getCss()}</style>"));
-});
-
-test("isolated page CSS extracts current production anchor and fallback rules unchanged", () => {
-  const source = readFileSync(path.join(root, "app/touchline-clubs/[club]/page.tsx"), "utf8");
-  const css = parsePageCssTest(source);
-  for (const selector of ["#touchline-club-lineup", ".club-hub-deferred-lineup"]) {
-    const start = source.indexOf(`${selector} {`);
-    assert.ok(start >= 0, `production selector required: ${selector}`);
-    const rule = source.slice(start, source.indexOf("}", start) + 1);
-    assert.ok(css.includes(rule), `production rule preserved: ${selector}`);
-  }
-  assert.ok(css.includes(".club-hub-right-rail .isolated-unmounted-rail-official-layout"));
-});
 
 test("native delayed ClubHub anchor arrival, reload and history (not Next/RSC routing)", {
   skip: process.env.TOUCHLINE_RUN_LINEUP_ANCHOR_BROWSER_TESTS !== "1", timeout: 120_000,
@@ -109,11 +18,12 @@ test("native delayed ClubHub anchor arrival, reload and history (not Next/RSC ro
   const selectedCase = process.env.TOUCHLINE_LINEUP_ANCHOR_CASE;
   assert.ok(selectedEngine === undefined || ["chromium", "webkit"].includes(selectedEngine));
   assert.ok(selectedWidth === undefined || ["390", "844", "1280"].includes(selectedWidth));
-  assert.ok(selectedCase === undefined || ["navigation", "user-changed-hash", "user-scrolled-away"].includes(selectedCase));
+  assert.ok(selectedCase === undefined || ["navigation", "keyboard-navigation", "touch-navigation", "user-changed-hash", "user-scrolled-away", "user-keyboard-away", "user-touched-page", "user-scrollbar-away"].includes(selectedCase));
   const capacity = () => {
     const disk = statfsSync(root);
     assert.ok(disk.bavail * disk.bsize > 5 * 1024 ** 3, "more than 5GiB disk required");
-    assert.equal(execFileSync("sysctl", ["-n", "kern.memorystatus_vm_pressure_level"], { encoding: "utf8" }).trim(), "1");
+    const pressure = execFileSync("sysctl", ["-n", "kern.memorystatus_vm_pressure_level"], { encoding: "utf8" }).trim();
+    assert.ok(pressure === "1" || (process.env.TOUCHLINE_LOCAL_MODERATE_MEMORY === "1" && pressure === "2"), "critical memory pressure is not authorized");
     const free = Number(execFileSync("memory_pressure", { encoding: "utf8" }).match(/System-wide memory free percentage: (\d+)%/)?.[1]);
     assert.ok(Number.isFinite(free) && free >= 25, "at least 25% free memory required");
   };
@@ -121,32 +31,55 @@ test("native delayed ClubHub anchor arrival, reload and history (not Next/RSC ro
   const screenshots = mkdtempSync("/private/tmp/touchline-lineup-anchor-");
   t.diagnostic(JSON.stringify({ screenshots, selectedEngine, selectedWidth, selectedCase: selectedCase ?? "all",
     partial: Boolean(selectedEngine || selectedWidth || selectedCase),
-    boundary: "real lineup/nav/CSS; native document navigation and client Suspense only; explicit unrelated-content gap separates menu and loader; empty unconfirmed lineup; no Next/RSC stream or real fixture selection" }));
-  const pageSource = readFileSync(path.join(root, "app/touchline-clubs/[club]/page.tsx"), "utf8");
-  const ast = ts.createSourceFile("page.tsx", pageSource, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
-  const fallback = ast.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === "ClubHubDeferredSection");
-  assert.ok(fallback, "production deferred fallback must exist");
-  const fallbackScript = ts.transpileModule(fallback.getText(ast), { compilerOptions: {
-    target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.None, jsx: ts.JsxEmit.React,
-  } }).outputText;
-  const pageCss = extractIsolatedPageCss(ast);
-  assert.ok(pageCss.includes("#touchline-club-lineup") && pageCss.includes(".club-hub-deferred-lineup"), "real page anchor and fallback CSS required");
-  const bundle = bundleIsolatedBrowserFixture({
-    entryPath: "tests/fixtures/ClubHubDelayedLineupBrowserFixture.tsx",
-    requiredSources: ["components/touchline/ClubHubOfficialLineup.tsx", "components/touchline/ClubHubOfficialLineup.module.css", "components/touchline/club-hub/ClubHubSectionNavigation.tsx"],
-    mountScript: `${fallbackScript}\nwindow.resolveIsolatedLineup=loadEntry().resolveLineup;flushSync(()=>root.render(React.createElement(loadEntry().default,{DeferredSection:ClubHubDeferredSection})));`,
+    boundary: "real lineup/nav/page CSS plus global base typography/scrollbar rules (no decorative global layers or portrait gate); touch is a real tap interruption, not swipe proof; native document navigation and client Suspense only; explicit unrelated-content gap separates menu and loader; empty unconfirmed lineup; no Next/RSC stream or real fixture selection" }));
+  // Wait for process close, not just output: compiler caches must not overlap
+  // the browser. The parser's three AST tests run in their own unit-test file.
+  t.signal.throwIfAborted();
+  await new Promise<void>((resolve, reject) => {
+    const child = spawn(process.execPath, ["--experimental-strip-types",
+      path.join(root, "tests/helpers/touchline-lineup-anchor-compile-worker.mts"), screenshots], {
+      cwd: root, stdio: "ignore",
+    });
+    let failure: Error | undefined;
+    const abort = () => { failure = new Error("Lineup anchor fixture compilation aborted"); child.kill("SIGKILL"); };
+    const timeout = setTimeout(() => {
+      failure = new Error("Lineup anchor fixture compilation exceeded 30 seconds"); child.kill("SIGKILL");
+    }, 30_000);
+    t.signal.addEventListener("abort", abort, { once: true });
+    child.once("error", () => { failure = new Error("Lineup anchor fixture compiler could not start"); });
+    child.once("close", code => {
+      clearTimeout(timeout); t.signal.removeEventListener("abort", abort);
+      if (failure) reject(failure);
+      else if (code !== 0) reject(new Error(`Lineup anchor fixture compiler exited with code ${code}`));
+      else resolve();
+    });
+    if (t.signal.aborted) abort();
   });
-  const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;background:#08100c;color:white;font:16px Arial}*{box-sizing:border-box}${pageCss}${bundle.css}</style></head><body><div id="root"></div><script>${bundle.script.replaceAll("</script", "<\\/script")}</script></body></html>`;
+  t.signal.throwIfAborted();
+  const html = readFileSync(path.join(screenshots, "fixture.html"), "utf8");
+  const receipt = JSON.parse(readFileSync(path.join(screenshots, "fixture-sources.json"), "utf8")) as { sources: string[]; sha256: Record<string, string> };
+  assert.ok(html.length > 0 && Array.isArray(receipt.sources) && receipt.sources.length > 0, "fresh compiled fixture and source receipt required");
+  for (const source of receipt.sources) {
+    assert.ok(typeof source === "string" && /^[a-f0-9]{64}$/.test(receipt.sha256[source]), "hashed real source required");
+  }
+  for (const required of ["components/touchline/ClubHubOfficialLineup.tsx", "components/touchline/ClubHubOfficialLineup.module.css",
+    "components/touchline/club-hub/ClubHubSectionNavigation.tsx", "components/touchline/club-hub/ClubHubSectionNavigation.module.css",
+    "app/touchline-clubs/[club]/page.tsx", "app/globals.css"]) {
+    assert.ok(receipt.sources.includes(required), required);
+  }
+  t.diagnostic(`Compiler exited before browser launch; ${receipt.sources.length} hashed sources: ${path.join(screenshots, "fixture-sources.json")}`);
   const publicRoot = realpathSync(path.join(root, "public"));
   const observations: unknown[] = [], failures: string[] = [];
   for (const engine of [chromium, webkit].filter(value => !selectedEngine || value.name() === selectedEngine)) {
     capacity(); assert.ok(existsSync(engine.executablePath()), "installed browser only");
-    const browser = await engine.launch({ headless: true });
+    t.signal.throwIfAborted();
+    const browser = await engine.launch({ headless: true, ignoreDefaultArgs: ["--hide-scrollbars"] });
     const abort = () => { void browser.close(); }; t.signal.addEventListener("abort", abort, { once: true });
     try {
+      t.signal.throwIfAborted();
       for (const width of [390, 844, 1280].filter(value => !selectedWidth || String(value) === selectedWidth)) {
         capacity();
-        const context = await browser.newContext({ viewport: { width, height: width === 844 ? 390 : 844 }, reducedMotion: "reduce", serviceWorkers: "block" });
+        const context = await browser.newContext({ viewport: { width, height: width === 844 ? 390 : 844 }, reducedMotion: "reduce", hasTouch: true, serviceWorkers: "block" });
         try {
           const page = await context.newPage(); page.setDefaultTimeout(5000);
           const errors: string[] = [], forbidden: string[] = [];
@@ -211,13 +144,133 @@ test("native delayed ClubHub anchor arrival, reload and history (not Next/RSC ro
             await page.goto(`${origin}/elsewhere`); await page.goBack();
             if (await page.locator(".club-hub-deferred-lineup").count()) await release();
             await expect(page.locator(`#${anchor}`)).toHaveCount(1); await observe("native-back");
+            capacity(); await page.goForward();
+            await expect(page).toHaveURL(`${origin}/elsewhere`);
+            await expect(page.getByText("Native history destination", { exact: true })).toBeVisible();
+            await page.screenshot({ path: path.join(screenshots, `${engine.name()}-${width}-native-forward.png`) });
+            observations.push({ engine: engine.name(), width, phase: "native-forward", url: page.url(), reached: true });
+            await page.goBack();
+            if (await page.locator(".club-hub-deferred-lineup").count()) await release();
+            await expect(page.locator(`#${anchor}`)).toHaveCount(1); await observe("native-back-after-forward");
+            // Also traverse forward into the anchored document, rather than
+            // claiming an outgoing forward navigation proves anchor arrival.
+            await page.goto(`${origin}/elsewhere`);
+            await page.goto(destination); await release();
+            await page.goBack(); await expect(page).toHaveURL(`${origin}/elsewhere`);
+            await page.goForward();
+            if (await page.locator(".club-hub-deferred-lineup").count()) await release();
+            await expect(page.locator(`#${anchor}`)).toHaveCount(1); await observe("native-forward-arrival");
           }
-          for (const phase of (["user-changed-hash", "user-scrolled-away"] as const).filter(phase => !selectedCase || phase === selectedCase)) {
+          for (const activation of (["keyboard-navigation", "touch-navigation"] as const).filter(value => !selectedCase || selectedCase === value)) {
+            capacity();
+            await page.goto(`${origin}/elsewhere`);
+            await page.goto(destination.split("#")[0]);
+            await expect(page.locator(".club-hub-deferred-lineup")).toBeVisible();
+            const link = page.locator(`nav a[href="#${anchor}"]`);
+            await page.evaluate(() => {
+              const state = window as unknown as { anchorActivationEvents: unknown[] };
+              state.anchorActivationEvents = [];
+              for (const type of ["keydown", "keyup", "focusin", "click", "scroll"]) addEventListener(type, event => {
+                if (state.anchorActivationEvents.length < 80) state.anchorActivationEvents.push({ type, y: scrollY,
+                  key: event instanceof KeyboardEvent ? event.key : null, detail: event instanceof MouseEvent ? event.detail : null,
+                  active: document.activeElement?.getAttribute("href"), trusted: event.isTrusted,
+                  scrollBehavior: getComputedStyle(document.documentElement).scrollBehavior });
+              }, { capture: true, passive: true });
+            });
+            const activate = async () => {
+              await link.evaluate(node => {
+                (window as unknown as { anchorActivationTrusted: boolean }).anchorActivationTrusted = false;
+                node.addEventListener('click', event => {
+                  (window as unknown as { anchorActivationTrusted: boolean }).anchorActivationTrusted = event.isTrusted;
+                }, { once: true });
+              });
+              if (activation === "keyboard-navigation") {
+                // Option+Tab enables native link traversal in WebKit's default
+                // macOS keyboard policy; no script focus or synthetic click.
+                const key = engine.name() === "webkit" ? "Alt+Tab" : "Tab";
+                let reached = await link.evaluate(node => node === document.activeElement);
+                for (let step = 0; !reached && step < 24; step++) {
+                  await page.keyboard.press(key);
+                  reached = await link.evaluate(node => node === document.activeElement);
+                }
+                assert.equal(reached, true, "keyboard must reach the actual lineup link");
+                await expect(link).toBeFocused();
+                await expect(link).toHaveCSS("outline-style", "solid");
+                assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).scrollBehavior), "auto",
+                  "real hashed navigation CSS must make native keyboard focus scrolling immediate");
+                await page.keyboard.press("Enter");
+              } else await link.tap();
+              assert.equal(await page.evaluate(() => (window as unknown as { anchorActivationTrusted: boolean }).anchorActivationTrusted), true,
+                "activation must originate from trusted keyboard/touch input");
+              await expect.poll(() => new URL(page.url()).hash).toBe(`#${anchor}`);
+            };
+            await activate();
+            const beforeResolve = await page.locator(".club-hub-deferred-lineup").evaluate(node => ({ top: node.getBoundingClientRect().top, viewport: innerHeight }));
+            assert.ok(beforeResolve.top >= beforeResolve.viewport, "activation alone must not reveal the unresolved lineup");
+            await release(); await observe(`${activation}-before-load`);
+            t.diagnostic(JSON.stringify({ engine: engine.name(), width, phase: `${activation}-event-order`,
+              events: await page.evaluate(() => (window as unknown as { anchorActivationEvents: unknown[] }).anchorActivationEvents) }));
+            // Reset only the test precondition, not the activation under test.
+            // The extracted real html CSS uses smooth scrolling: the positional
+            // overload can still be animating when its evaluate() has returned.
+            await page.evaluate(() => scrollTo({ top: 0, left: 0, behavior: "instant" }));
+            await expect.poll(() => page.evaluate(() => scrollY)).toBe(0);
+            assert.ok(await page.locator(`#${anchor}`).evaluate(node => node.getBoundingClientRect().top >= innerHeight),
+              "mounted lineup must remain below the viewport before trusted activation");
+            await activate(); await observe(`${activation}-after-load`);
+          }
+          for (const phase of (["user-changed-hash", "user-scrolled-away", "user-keyboard-away", "user-touched-page", "user-scrollbar-away"] as const).filter(phase => !selectedCase || phase === selectedCase)) {
             capacity(); await page.goto(`${origin}/elsewhere`); await page.goto(destination);
             await expect(page.locator(".club-hub-deferred-lineup")).toBeVisible();
             await expect(page.locator(`#${anchor}`)).toHaveCount(0);
             if (phase === "user-changed-hash") await page.evaluate(() => { location.hash = "#club-hub-top"; });
-            else await page.mouse.wheel(0, 400);
+            else if (phase === "user-scrolled-away") await page.mouse.wheel(0, 400);
+            else if (phase === "user-keyboard-away") {
+              await page.evaluate(() => {
+                (window as unknown as { anchorTrustedInput: boolean }).anchorTrustedInput = false;
+                addEventListener("keydown", event => { (window as unknown as { anchorTrustedInput: boolean }).anchorTrustedInput = event.isTrusted && event.key === "PageDown"; }, { once: true });
+              });
+              await page.keyboard.press("PageDown");
+              assert.equal(await page.evaluate(() => (window as unknown as { anchorTrustedInput: boolean }).anchorTrustedInput), true,
+                "keyboard interruption must come from a trusted PageDown input");
+            } else if (phase === "user-touched-page") {
+              await page.evaluate(() => {
+                (window as unknown as { anchorTrustedInput: boolean }).anchorTrustedInput = false;
+                addEventListener("touchstart", event => { (window as unknown as { anchorTrustedInput: boolean }).anchorTrustedInput = event.isTrusted; }, { once: true });
+              });
+              await page.touchscreen.tap(100, 100);
+              assert.equal(await page.evaluate(() => (window as unknown as { anchorTrustedInput: boolean }).anchorTrustedInput), true,
+                "touch cancellation must use a real Playwright touch, not dispatchEvent");
+            } else {
+              // DOM visibility alone does not ensure the native scrollbar has
+              // been painted after a fresh navigation. Do not move scrollY here.
+              await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+              const scrollbar = await page.evaluate(() => ({
+                width: innerWidth - document.documentElement.clientWidth, viewport: innerHeight,
+                documentHeight: document.documentElement.scrollHeight, start: scrollY, viewportWidth: innerWidth,
+              }));
+              assert.ok(scrollbar.width > 0 && scrollbar.documentHeight > scrollbar.viewport && scrollbar.start === 0,
+                `Scrollbar precondition unavailable; do not replace native drag with script scrolling: ${JSON.stringify(scrollbar)}`);
+              const x = scrollbar.viewportWidth - scrollbar.width / 2;
+              const thumbMiddle = Math.max(8, scrollbar.viewport * scrollbar.viewport / scrollbar.documentHeight / 2);
+              await page.mouse.move(x, thumbMiddle);
+              const hoveredScrollbar = await page.evaluate(() => ({
+                clientWidth: document.documentElement.clientWidth,
+                color: getComputedStyle(document.documentElement).scrollbarColor,
+                width: getComputedStyle(document.documentElement).scrollbarWidth,
+              }));
+              // Hover must not switch the site's custom thumb to a zero-width
+              // native overlay and make the user's drag target disappear.
+              assert.equal(scrollbar.viewportWidth - hoveredScrollbar.clientWidth, scrollbar.width,
+                `Scrollbar geometry must survive hover: ${JSON.stringify(hoveredScrollbar)}`);
+              t.diagnostic(JSON.stringify({ phase: "scrollbar-hover", metrics: hoveredScrollbar }));
+              await page.mouse.down();
+              try { await page.mouse.move(x, thumbMiddle + 60, { steps: 8 }); }
+              finally { await page.mouse.up(); }
+              t.diagnostic(JSON.stringify({ engine: engine.name(), width, phase, scrollbar,
+                drag: { x, startY: thumbMiddle, endY: thumbMiddle + 60 },
+                afterDrag: await page.evaluate(() => ({ scrollY, clientWidth: document.documentElement.clientWidth })) }));
+            }
             if (phase === "user-changed-hash") await expect.poll(() => page.locator("#club-hub-top").evaluate(node => {
               const margin = Number.parseFloat(getComputedStyle(node).scrollMarginTop) || 0;
               const documentTop = node.getBoundingClientRect().top + scrollY;
@@ -225,9 +278,19 @@ test("native delayed ClubHub anchor arrival, reload and history (not Next/RSC ro
               const expectedScroll = Math.min(maxScroll, Math.max(0, documentTop - margin));
               return location.hash === "#club-hub-top" && Math.abs(scrollY - expectedScroll) <= 1;
             }), { timeout: 1000 }).toBe(true);
-            else await expect.poll(() => page.evaluate(() => scrollY >= 200 && scrollY < 800), { timeout: 1000 }).toBe(true);
+            else if (phase === "user-scrolled-away") await expect.poll(() => page.evaluate(() => scrollY >= 200 && scrollY < 800), { timeout: 1000 }).toBe(true);
+            else if (phase === "user-touched-page") assert.equal(await page.evaluate(() => scrollY), 0, "A tap cancels pending arrival without pretending to be a swipe");
+            else await expect.poll(() => page.evaluate(() => scrollY > 100), { timeout: 1000 }).toBe(true);
+            // Finish the user's own native scroll animation before observing
+            // resolution. This is a stability precondition, not a scripted move.
+            await expect.poll(async () => {
+              const before = await page.evaluate(() => scrollY);
+              await page.waitForTimeout(100);
+              return (await page.evaluate(() => scrollY)) === before;
+            }, { timeout: 2000 }).toBe(true);
             await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
             const before = await page.evaluate(() => ({ scrollY, hash: location.hash }));
+            assert.equal(before.hash, phase === "user-changed-hash" ? "#club-hub-top" : `#${anchor}`);
             // Observe every scrolling event during resolution, not only the
             // final position: a transient jump and return is also a failure.
             await page.evaluate(() => {

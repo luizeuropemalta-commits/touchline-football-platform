@@ -2,13 +2,13 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { persistFantasyFixtureFeed } from "@/lib/football-data/fantasy-store";
 import { syncSportmonksFixtureSchedule } from "@/lib/football-data/fixture-schedule-sync";
-import { readPublicCompetitionFixtures } from "@/lib/football-data/fixture-schedule-store";
+import { readPublicCompetitionFixtures, readPublicCompetitionFixtureByProviderId } from "@/lib/football-data/fixture-schedule-store";
 import { persistLiveFixtureStates, mergeCanonicalLiveFixture } from "@/lib/football-data/live-fixture-store";
 import { persistLiveScoreSnapshot } from "@/lib/football-data/live-score-persistence";
 import { observePersistedConfirmedEvents, type ConfirmedEventObservationResult } from "@/lib/football-data/confirmed-event-observer";
 import { runMatchPushProducer } from "@/lib/football-data/match-push-producer";
 import { syncTouchLinePlayerSeasonStatistics } from "@/lib/football-data/player-season-statistics-store";
-import { decideLiveSyncCadence } from "@/lib/football-data/live-sync-cadence";
+import { decideLiveSyncCadence, selectPostMatchRechecks } from "@/lib/football-data/live-sync-cadence";
 import { acquireTouchlineLiveSyncRun } from "@/lib/football-data/live-sync-lease";
 import { createGuardedFixtureProvider } from "@/lib/football-data/fixture-provider-server";
 import type { FootballDataProvider, TouchlineFixture } from "@/lib/football-data/types";
@@ -28,6 +28,9 @@ const FIXTURE_SCHEDULE_REFRESH_MS = 6 * 60 * 60 * 1000;
 type Dependencies = {
   provider?: FootballDataProvider;
   readFixtures?: typeof readPublicCompetitionFixtures;
+  readPostMatchCandidates?: typeof readPostMatchCandidates;
+  recordPostMatchAttempt?: typeof recordPostMatchAttempt;
+  readFixtureById?: typeof readPublicCompetitionFixtureByProviderId;
   persistStates?: typeof persistLiveFixtureStates;
   persistSnapshot?: typeof persistLiveScoreSnapshot;
   publishLivePresentation?: typeof publishTouchlineLivePresentationSnapshot;
@@ -181,6 +184,34 @@ async function completeRun(admin: SupabaseClient, result: LiveSyncResult) {
   }));
 }
 
+async function readPostMatchCandidates(admin: SupabaseClient, seasonId: string, now: number) {
+  const history = await readPublicCompetitionFixtures({ providedAdmin: admin, seasonId,
+    includeHistorical: true, readAllPages: true, strictRead: true, through: new Date(now).toISOString(), now });
+  const checked = new Map<string, string>();
+  const attempted = new Map<string, string>();
+  // Chunk metadata reads so the database row limit cannot silently truncate history.
+  for (let offset = 0; offset < history.length; offset += 200) {
+    const { data, error } = await admin.from("football_fantasy_fixture_feeds")
+      .select("provider_fixture_id,last_synced_at").eq("provider", "sportmonks")
+      .in("provider_fixture_id", history.slice(offset, offset + 200).map(f => f.providerId));
+    if (error || !Array.isArray(data)) throw new Error("POSTMATCH_FRESHNESS_UNAVAILABLE");
+    for (const row of data) checked.set(row.provider_fixture_id, row.last_synced_at);
+    const attempts = await admin.from("football_postmatch_check_attempts")
+      .select("provider_fixture_id,attempted_at").eq("provider", "sportmonks")
+      .in("provider_fixture_id", history.slice(offset, offset + 200).map(f => f.providerId));
+    if (attempts.error || !Array.isArray(attempts.data)) throw new Error("POSTMATCH_ATTEMPTS_UNAVAILABLE");
+    for (const row of attempts.data) attempted.set(row.provider_fixture_id, row.attempted_at);
+  }
+  return selectPostMatchRechecks(history, checked, now, attempted);
+}
+
+async function recordPostMatchAttempt(admin: SupabaseClient, fixtureId: string, now: number) {
+  const { error } = await admin.from("football_postmatch_check_attempts").upsert({
+    provider: "sportmonks", provider_fixture_id: fixtureId, attempted_at: new Date(now).toISOString(),
+  }, { onConflict: "provider,provider_fixture_id" });
+  if (error) throw new Error("POSTMATCH_ATTEMPT_WRITE_FAILED");
+}
+
 function uniqueFixtures(fixtures: TouchlineFixture[]) {
   return [...new Map(fixtures.map((fixture) => [fixture.providerId, fixture])).values()];
 }
@@ -255,7 +286,14 @@ export async function syncSportmonksLiveState(
     // A cadence_not_due row remains auditable but cannot postpone real work.
     // The durable lease above remains the authority for overlapping runs.
     const lastSuccessfulSyncAt = await latestSuccessfulRunStartedAt(admin);
+    let postMatchFixtureIds: string[] = [];
+    try {
+      postMatchFixtureIds = await (dependencies.readPostMatchCandidates ?? readPostMatchCandidates)(admin, scope.seasonId, now);
+    } catch {
+      recordRecoveryIssue("postmatch:freshness-unavailable");
+    }
     const decision = decideLiveSyncCadence(schedule, {
+      postMatchFixtureIds,
       now,
       lastSuccessfulSyncAt,
       forceFixtureId: options.forceFixtureId,
@@ -295,6 +333,10 @@ export async function syncSportmonksLiveState(
     const persistedCurrentFeedIds = new Set<string>();
     for (const fixtureId of candidateIds) {
       if (providerRateLimited) break;
+      if (postMatchFixtureIds.includes(fixtureId)) {
+        try { await (dependencies.recordPostMatchAttempt ?? recordPostMatchAttempt)(admin, fixtureId, dependencies.now?.() ?? Date.now()); }
+        catch { result.errors.push(`${fixtureId}:postmatch_attempt_unavailable`); continue; }
+      }
       const feedResponse = await provider.getFixtureFantasyFeed(fixtureId);
       if (!feedResponse.ok) {
         result.errors.push(`${fixtureId}:${feedResponse.error.code}`);
@@ -309,7 +351,8 @@ export async function syncSportmonksLiveState(
       incoming.push(feedResponse.data.fixture);
       const persisted = await (dependencies.persistFantasyFeed ?? persistFantasyFixtureFeed)(feedResponse.data);
       if (persisted.persisted) {
-        persistedCurrentFeedIds.add(fixtureId);
+        // Corrections must not replay historical push notifications.
+        if (!postMatchFixtureIds.includes(fixtureId)) persistedCurrentFeedIds.add(fixtureId);
         result.fantasyFeedsStored += 1;
         const observed = await (
           dependencies.recordLineupObservation ?? recordTouchlineLineupAvailableObservation
@@ -389,12 +432,32 @@ export async function syncSportmonksLiveState(
       return result;
     }
 
-    const persistence = await (dependencies.persistStates ?? persistLiveFixtureStates)(
+    // The display/cadence schedule is time-bounded. A forced historical feed
+    // still needs its existing canonical row, never a provider-derived fallback.
+    const canonicalCurrent = new Map(schedule.map((fixture) => [fixture.providerId, fixture]));
+    const canonicalReadErrors: string[] = [];
+    for (const incomingFixture of canonicalIncoming) {
+      if (canonicalCurrent.has(incomingFixture.providerId)) continue;
+      try {
+        const current = await (dependencies.readFixtureById ?? readPublicCompetitionFixtureByProviderId)(
+          incomingFixture.providerId, { providedAdmin: admin, competitionProviderId: COMPETITION_ID },
+        );
+        if (!current || !recoveryFixtureMatches(current, scope, incomingFixture.providerId)) {
+          canonicalReadErrors.push(`${incomingFixture.providerId}:canonical-state-unavailable`);
+          continue;
+        }
+        canonicalCurrent.set(current.providerId, current);
+      } catch {
+        canonicalReadErrors.push(`${incomingFixture.providerId}:canonical-state-unavailable`);
+      }
+    }
+    const statePersistence = await (dependencies.persistStates ?? persistLiveFixtureStates)(
       admin,
-      schedule,
-      canonicalIncoming,
+      [...canonicalCurrent.values()],
+      canonicalIncoming.filter((fixture) => canonicalCurrent.has(fixture.providerId)),
       fetchedAt,
     );
+    const persistence = { ...statePersistence, errors: [...canonicalReadErrors, ...statePersistence.errors] };
     result.updated = persistence.updated + recoveredClaims.length;
     result.errors.push(...persistence.errors);
     for (const claim of recoveredClaims) {
@@ -433,7 +496,7 @@ export async function syncSportmonksLiveState(
       if (lifecycle.error) result.errors.push(`fantasy-lifecycle:${lifecycle.error}`);
       else if (lifecycle.pendingStatistics) result.errors.push("fantasy-lifecycle:statistics-pending");
     });
-    result.playerFixtureRowsWritten = playerReconciliation.fixtureRowsWritten;
+    result.playerFixtureRowsWritten = playerReconciliation.v4FixtureRowsWritten;
     result.playerScoringFixtureIds = playerReconciliation.scoringFixtureIds;
     result.playerFailedFixtureIds = playerReconciliation.failedFixtureIds;
     result.playerMissingSettlementFixtureIds = playerReconciliation.missingSettlementFixtureIds;

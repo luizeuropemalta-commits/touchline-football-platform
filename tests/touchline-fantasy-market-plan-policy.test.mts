@@ -98,3 +98,14 @@ test("competitive rankings exclude Beta and unknown snapshots before loading sco
   assert.match(rankingSource, /\.in\("market_plan_key_snapshot", \["standard", "pro", "master", "vip"\]\)/);
   assert.ok(rankingSource.indexOf('"market_plan_key_snapshot"') < rankingSource.indexOf('"touchline_fantasy_user_gameweek_scores"'));
 });
+
+// Current owner confirmation uses the shared 100M collection model.
+test("Beta includes the six confirmed canonical clubs and rejects old or forged policy payloads", () => {
+  const beta = resolveTouchlineFantasyMarketAccess("beta")!;
+  assert.deepEqual(beta.allowedClubTeamIds, ["22", "117", "116", "52", "3", "13"]);
+  assert.equal(beta.budgetEur, 100_000_000);
+  for (const team of ["3", "13"]) assert.equal(isTouchlineFantasyMarketClubAllowed(beta, team), true);
+  for (const allowedClubTeamIds of [["22", "117", "116", "52"], ["22", "117", "116", "52", "3", "19"], ["22", "117", "116", "52", "3", "3"]]) {
+    assert.equal(isTouchlineFantasyMarketAccess({ ...beta, allowedClubTeamIds }), false);
+  }
+});

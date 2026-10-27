@@ -6,6 +6,7 @@ import ts from "typescript";
 import * as jsx from "react/jsx-runtime";
 import * as contract from "../lib/touchlineArena/club-owner-avatar-selection-contract.ts";
 import * as client from "../lib/touchlineArena/club-owner-avatar-client.ts";
+import { startAccountLocaleIdentityObserver } from "../lib/touchlineArena/account-locale-identity-observer.ts";
 import * as copy from "../lib/touchlineArena/club-owner-avatar-ui-i18n.ts";
 import { TOUCHLINE_APPROVED_LOCALES } from "../lib/touchlineArena/i18n.ts";
 
@@ -124,9 +125,11 @@ function hostFixture() {
     useLayoutEffect(callback: () => void | (() => void), deps: unknown[]) { const scope = active, index = scope.cursor++, previous = scope.slots[index] as unknown[] | undefined;
       if (!previous || deps.some((value, i) => value !== previous[i])) { scope.slots[index] = deps; scope.effects.push({ index, callback }); } },
   };
+  let authCallback: ((event: string, session: unknown) => void) | undefined;
+  let uploadSignal: AbortSignal | null | undefined;
   const request = async (input: unknown, init: RequestInit) => {
     requests.push(String(input));
-    if (input === "/api/account/avatar") return uploadResponse;
+    if (input === "/api/account/avatar") { uploadSignal = init.signal; return uploadResponse; }
     assert.equal(input, "/api/account/avatar/recovery");
     assert.deepEqual(JSON.parse(init.body as string), { action: "status" });
     return Response.json({ ok: true, state: "observed", context: recovery });
@@ -137,8 +140,15 @@ function hostFixture() {
     "@/lib/touchlineArena/club-owner-avatar-selection-contract": contract,
     "@/lib/touchlineArena/club-owner-avatar-ui-i18n": copy,
     "next/navigation": { useRouter: () => ({ refresh: () => calls.push("refresh") }) },
-    "@/lib/supabase/client": { createClient: () => ({ auth: { onAuthStateChange: (callback: (event: string, session: { user: { id: string } }) => void) => {
-      calls.push("auth-subscription"); callback("INITIAL_SESSION", { user: { id: actor } }); return { data: { subscription: { unsubscribe: () => calls.push("unsubscribe") } } };
+    "@/lib/touchlineArena/account-locale-identity-observer": {
+      startAccountLocaleIdentityObserver: (input: Parameters<typeof startAccountLocaleIdentityObserver>[0]) => startAccountLocaleIdentityObserver({ ...input,
+        setTimer: (callback, delay) => { timers.set(callback, delay); return callback; },
+        clearTimer: handle => { timers.delete(handle as () => void); },
+      }),
+    },
+    "@/lib/supabase/client": { createClient: () => ({ auth: { getUser: async () => ({ data: { user: { id: actor } }, error: null }),
+    onAuthStateChange: (callback: (event: string, session: unknown) => void) => {
+      authCallback = callback; calls.push("auth-subscription"); callback("INITIAL_SESSION", { user: { id: actor } }); return { data: { subscription: { unsubscribe: () => calls.push("unsubscribe") } } };
     } } }) },
     "./TouchlineGlobalNavigation.module.css": { default: { link: "shared-control" } },
     "./ClubOwnerMarketHeader.module.css": { default: {} },
@@ -178,6 +188,12 @@ function hostFixture() {
   function clickAction(action: string) { const button = nodes(settle(), "button").find(node => node.props["data-avatar-action"] === action); assert.ok(button); (button.props.onClick as () => void)(); return settle(); }
   settle(); clickAction("open");
   return { calls, requests, settle, clickAction, finishUpload,
+    uploadSignal: () => uploadSignal,
+    unknownIdentity: () => {
+      authCallback?.("TOKEN_REFRESHED", { user: new Proxy({}, { get: () => { throw Error("unavailable user"); } }) });
+      return settle();
+    },
+    verifyIdentity: () => { for (const [callback, delay] of [...timers]) if (delay === 0) { timers.delete(callback); callback(); } },
     choose: () => { const input = nodes(settle(), "input")[0]; assert.ok(input); (input.props.onChange as (value: unknown) => void)({ currentTarget: { value: "", files: [{ size: 4, type: "image/jpeg", arrayBuffer: async () => Uint8Array.of(255,216,255,1).buffer }] } }); },
     confirm: () => { const button = nodes(settle(), "button").find(node => node.props.children === "Confirm photo upload"); assert.ok(button); (button.props.onClick as () => void)(); settle(); },
     expire: () => { now = 60_001; for (const [callback, ms] of [...timers]) if (ms === 60_000) callback(); return settle(); },
@@ -206,4 +222,20 @@ test("real host TTL releases pending-upload preview without cancelling uncertain
   assert.equal(nodes(h.expire(), "img").length, 0); assert.ok(h.calls.includes("revoke"));
   h.finishUpload(Response.json({ ok: false, error: "OUTPUT_TOO_LARGE", state: "unknown" }, { status: 422 })); await tick();
   assert.equal(nodes(h.settle(), "input")[0].props.disabled, true); assert.equal(h.requests.length, 1); assert.ok(!h.calls.includes("refresh")); h.dispose();
+});
+
+
+test("real host retires an upload on unknown identity and never replays after same-account verification", async () => {
+  const h = hostFixture(); h.choose(); await tick(); h.confirm();
+  assert.deepEqual(h.requests, ["/api/account/avatar"]); assert.equal(h.uploadSignal()?.aborted, false);
+  const tree = h.unknownIdentity();
+  assert.equal(h.uploadSignal()?.aborted, true); assert.equal(nodes(tree, "input").length, 0);
+  h.verifyIdentity(); await tick();
+  h.finishUpload(Response.json({ ok: true, state: "committed", requiresRefresh: true, accountId: actor,
+    operationId: operation, revision: "1", avatarUrl: `/api/account/avatar?version=${operation}` }));
+  await tick();
+  const after = h.settle();
+  assert.equal(nodes(after, "button").find(node => node.props["data-avatar-action"] === "open")?.props.disabled, true);
+  assert.equal(nodes(after, "input").length, 0); assert.equal(h.calls.includes("refresh"), false);
+  assert.deepEqual(h.requests, ["/api/account/avatar"]); h.dispose();
 });

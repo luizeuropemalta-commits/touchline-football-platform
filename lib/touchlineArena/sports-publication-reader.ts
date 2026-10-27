@@ -1,7 +1,7 @@
 import type { createTouchlineLivePresentationStore, TouchlinePresentationRead } from "./live-presentation-client-store";
 import type { TouchlinePublicFixture } from "../football-data/public-fixture";
 import type { TouchlineLiveReadMetadata } from "./match-centre";
-import { projectTouchlinePublishedLive } from "./sports-publication-live-view.ts";
+import { projectTouchlinePublishedLive, type TouchlineLiveAdmissionScope } from "./sports-publication-live-view.ts";
 
 /** Per-mount adapter: never replay another route's cache over a newer SSR seed. */
 export function createTouchlineSportsPublicationReader(store: ReturnType<typeof createTouchlineLivePresentationStore>) {
@@ -34,6 +34,7 @@ export function createTouchlinePublishedLiveReader(
   store: ReturnType<typeof createTouchlineLivePresentationStore>,
   seed: TouchlinePublicFixture[],
   metadata: TouchlineLiveReadMetadata | null,
+  admissionScope: TouchlineLiveAdmissionScope | null = null,
 ) {
   const reader = createTouchlineSportsPublicationReader(store);
   const initial = { fixtures: seed, metadata, read: null as TouchlinePresentationRead | null };
@@ -45,7 +46,7 @@ export function createTouchlinePublishedLiveReader(
       return reader.subscribe(() => {
         const read = reader.getSnapshot();
         if (!read) return;
-        current = { ...projectTouchlinePublishedLive(current.fixtures, current.metadata, read, read.receivedAt), read };
+        current = { ...projectTouchlinePublishedLive(current.fixtures, current.metadata, read, read.receivedAt, admissionScope), read };
         notify();
       });
     },

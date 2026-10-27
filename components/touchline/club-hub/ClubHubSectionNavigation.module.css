@@ -15,6 +15,13 @@
 
 .navigation::-webkit-scrollbar { display: none; }
 
+/* Keyboard focus must reach a section link before its activation can arm a
+   delayed anchor. Keep that native focus scroll immediate, not a lingering
+   document animation that would look like a later scroll interruption. */
+:global(html):has(.navigation :focus-visible) {
+  scroll-behavior: auto;
+}
+
 .backToTop {
   flex: 0 0 auto;
 }

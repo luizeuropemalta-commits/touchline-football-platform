@@ -1,3 +1,7 @@
+import * as coachRecovery from "../lib/touchlineFantasy/club-coach-browser-recovery.ts";
+import { getClubCollectionBudgetCopy } from "../lib/touchlineFantasy/market-budget-i18n.ts";
+import { createClubReleaseBrowserRecovery } from "../lib/touchlineFantasy/club-release-browser-recovery.ts";
+import type { ClubReleaseRecoveryReference } from "../lib/touchlineFantasy/club-release-recovery.ts";
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -15,7 +19,7 @@ import type { useClubCollection } from '../components/touchline/fantasy/useClubC
 
 // Reuse the existing lightweight hook scheduler, not its tests or fabricated replies.
 // Product hook and route are real. Only auth/HTTP boundaries are synthetic; RPC is SQL.
-for (const mode of ['remount','delivered-409','closed-round'] as const) test(`characterizes lost release recovery capability: ${mode}`,async()=>{
+for (const mode of ['remount','delivered-409','closed-round'] as const) test(`durable release recovery preserves original operation: ${mode}`,async()=>{
   const id=(n:number)=>`99000000-0000-4000-8000-${String(n).padStart(12,'0')}`;
   const accountId=id(1),seasonId=id(3);
   const initial:acquisition.ClubAcquisitionState={revision:1,seasonId,plan:'vip',balanceEur:100_000_000,
@@ -29,11 +33,11 @@ for (const mode of ['remount','delivered-409','closed-round'] as const) test(`ch
   assert.ok(start>=0&&end>start,'existing hook harness boundary');
   const harnessCode=source.slice(start,end).replaceAll('import.meta.url',JSON.stringify(sourceUrl.href));
   type RequestSlot={path:string;options:{body:string};resolve:(value:unknown)=>void;reject:(error:Error)=>void};
-  const harnessExports:Record<string,()=>{render:()=>ReturnType<typeof useClubCollection>;requests:RequestSlot[]}>={};
+  const harnessExports:Record<string,(development?:boolean,initialRead?:undefined,durable?:Map<string,ClubReleaseRecoveryReference>)=>{render:()=>ReturnType<typeof useClubCollection>;requests:RequestSlot[];durable:Map<string,ClubReleaseRecoveryReference>;unmount:()=>void}>={};
   runInNewContext(ts.transpileModule(harnessCode+'\nexports.fixture=fixture;',{
     compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,
   {exports:harnessExports,assert,readFileSync,URL,ts,runInNewContext,randomUUID,AbortController,accountId,initial,
-    acquisition,authority,budget,release,bootstrap});
+    acquisition,authority,budget,release,bootstrap,coachRecovery,createClubReleaseBrowserRecovery,getClubCollectionBudgetCopy});
   const h=harnessExports.fixture();
   const db=await clubRoundDatabase();
   try {
@@ -77,7 +81,7 @@ for (const mode of ['remount','delivered-409','closed-round'] as const) test(`ch
     const get=async(index:number)=>{h.requests[index].resolve({response:{ok:true,status:200},payload:{ok:true,state:await read(),accountId,seasonId,releaseAvailable:true}});await tick();};
     acquisition.inspectClubAcquisition(initial);
     h.render();await get(0);assert.equal(h.render().ready,true);
-    const operation=h.render().release(id(7),1);
+    const operation=h.render().release(id(7),1);await tick();
     const body=h.requests[1].options.body;
     assert.equal(h.requests[1].path,'/api/touchline-fantasy/collection/release');
     const committed=await post(body);assert.equal(committed.status,200);
@@ -92,29 +96,34 @@ for (const mode of ['remount','delivered-409','closed-round'] as const) test(`ch
       const replay=await post(body);assert.equal(replay.status,200);
       assert.equal((await replay.json()).replayed,true,'base SQL permits historical replay after market closes');
     } else if(mode==='remount') {
-      const fresh=harnessExports.fixture();fresh.render();
+      h.unmount();const fresh=harnessExports.fixture(false,undefined,h.durable);fresh.render();
       fresh.requests[0].resolve({response:{ok:true,status:200},payload:{ok:true,state:await read(),accountId,seasonId,releaseAvailable:true}});
-      await tick();assert.equal(fresh.render().ready,true);
-      assert.equal(fresh.render().hasPending,false,'new mount lost operation reference');
+      await tick();assert.equal(fresh.render().ready,false,'current state alone is not a historical receipt');
+      assert.equal(fresh.requests[1].path,'/api/touchline-fantasy/collection/release/recovery');
+      const {expectedAccountId:ignoredOwner,expectedSeasonId:ignoredSeason,...original}=JSON.parse(body);void ignoredOwner;void ignoredSeason;
+      fresh.requests[1].resolve({response:{ok:true,status:200},payload:{ok:true,result:{status:'committed',accountId,seasonId,
+        command:original,operationRevision:2,receipt:first.receipt,snapshot:await read()}}});
+      await tick();assert.equal(fresh.render().ready,true);assert.equal(fresh.render().hasPending,false);
       assert.equal(await fresh.render().retryPending(),false);
-      assert.equal(fresh.requests.length,1,'no operation reference, no retry POST');
+      assert.equal(fresh.requests.length,2,'only current snapshot and original receipt reads after remount');
       assert.equal(fresh.render().state?.balanceEur,109_000_000);
-      assert.equal(h.render().hasPending,true,'old mount retained its private reference');
     } else {
       session=id(9);const calls=rpcCalls;
-      const retry=h.render().retryPending();assert.equal(h.requests[2].options.body,body);
+      const retry=h.render().retryPending();await tick();assert.equal(h.requests[2].options.body,body);
       const denied=await post(body);const payload=await denied.json();
       assert.equal(denied.status,409);assert.equal(payload.error,'CLUB_CONTEXT_CHANGED');assert.equal(rpcCalls,calls);
       h.requests[2].resolve({response:{ok:false,status:409},payload});assert.equal(await retry,false);
-      assert.equal(h.render().ready,false);assert.equal(h.render().hasPending,false,'409 discards previous uncertain reference');
+      assert.equal(h.render().ready,false);assert.equal(h.render().hasPending,true,'identity mismatch preserves uncertain reference');
       session=accountId;h.render().reload();h.render();await get(3);
-      assert.equal(h.render().ready,true);assert.equal(await h.render().retryPending(),false);
-      assert.equal(h.requests.length,4,'restored GET cannot recover original reference');
+      assert.equal(h.render().ready,true);const explicit=h.render().retryPending();await tick();
+      assert.equal(h.requests[4].options.body,body);const replay=await post(body);const replayed=await replay.json();
+      assert.equal(replayed.replayed,true);h.requests[4].resolve({response:{ok:true,status:200},payload:replayed});
+      assert.equal(await explicit,true);assert.equal(h.render().hasPending,false);
     }
     const final=await read();assert.equal(final.balanceEur,109_000_000);assert.equal(final.revision,2);
     assert.deepEqual(final.players,[initial.players[1]]);assert.deepEqual(final.coach,initial.coach);assert.deepEqual(final.receipts,initial.receipts);
     for(const table of ['touchline_club_release_receipts','touchline_club_collection_operations'])
       assert.equal((await db.query<{n:number}>(`select count(*)::int n from ${table}`)).rows[0].n,1);
-    assert.equal(rpcCalls,mode==='closed-round'?2:1,'no extra financial mutation');
+    assert.equal(rpcCalls,mode==='remount'?1:2,'no extra financial mutation');
   } finally {await db.close();}
 });

@@ -117,15 +117,15 @@ function harness() {
   const geometry = TOUCHLINE_DEFAULT_FORMATION_GEOMETRY_REGISTRY["4-3-3"];
   const club = findTouchLineClub("22")!;
   const players = geometry.slots.map((slot, index) => ({ playerId: `synthetic-${index}`, clubId: club.name,
-    marketValueEur: 10_000_000, positionBucket: touchlineMarketPositionBucket(slot.allowedPositions[0], slot.role) }));
-  players.push({ ...players[0], playerId: "synthetic-cheap", marketValueEur: 5_000_000 },
-    { ...players[0], playerId: "synthetic-equal" }, { ...players[0], playerId: "synthetic-expensive", marketValueEur: 11_000_000 });
+    marketValueEur: 20_000_000, positionBucket: touchlineMarketPositionBucket(slot.allowedPositions[0], slot.role) }));
+  players.push({ ...players[0], playerId: "synthetic-cheap", marketValueEur: 10_000_000 },
+    { ...players[0], playerId: "synthetic-equal" }, { ...players[0], playerId: "synthetic-expensive", marketValueEur: 22_000_000 });
   const selections = geometry.slots.slice(0, 5).map((slot, index) => ({ slotId: slot.id, playerId: players[index].playerId }));
   const changes: unknown[] = [], feedback: unknown[] = [];
   const context: Record<string, unknown> & { selections: typeof selections; eligiblePlayers: typeof players } = { ...domain, geometry, eligiblePlayers: players, selections, activeSlot: geometry.slots[5],
     collectionEnabled: false, collection: { state: null }, marketPage: false, visualIntentEpoch: { current: 0 }, nextGuidedChoice,
-    editable: true, saving: false, marketBudgetEur: 50_000_000, snapshot: { config: { maxPlayersPerClub: 11 } },
-    marketPolicy: { planKey: "beta", budgetEur: 50_000_000, allowedClubTeamIds: ["22", "117", "116", "52"] },
+    editable: true, saving: false, marketBudgetEur: 100_000_000, snapshot: { config: { maxPlayersPerClub: 11 } },
+    marketPolicy: { planKey: "beta", budgetEur: 100_000_000, allowedClubTeamIds: ["22", "117", "116", "52", "3", "13"] },
     workflowCopy: getTouchlineFantasyMarketWorkflowCopy("en-GB"), canBrowseMarketClub, findTouchLineClub,
     setSelections(value: unknown) { context.selections = typeof value === "function" ? value(context.selections) : value; changes.push(context.selections); },
     setFeedback(value: unknown) { feedback.push(value); }, setVisibleStep() {}, setActiveSlotId() {},
@@ -135,10 +135,10 @@ function harness() {
     add: productionFunction("addPlayer", context), remove: productionFunction("removePlayer", context),
     locked: productionFunction("playerExceedsBudget", context),
     remaining: () => domain.validateTouchlineFantasyLineup({ selections: context.selections, players: context.eligiblePlayers,
-      geometry, budgetEur: 50_000_000, maxPlayersPerClub: 11, requireComplete: false }).budgetRemainingEur };
+      geometry, budgetEur: 100_000_000, maxPlayersPerClub: 11, requireComplete: false }).budgetRemainingEur };
 }
 
-test("actual budget lock and add guard refuse player six above 50M without changing the five-player draft", async () => {
+test("actual budget lock and add guard refuse player six above 100M without changing the five-player draft", async () => {
   const h = harness(); const before = JSON.stringify(h.context.selections);
   assert.equal(h.remaining(), 0);
   assert.equal(h.locked(h.card("synthetic-5")), true);
@@ -156,12 +156,12 @@ test("actual affordability credits the outgoing slot: cheap and equal swaps rema
   assert.equal(await h.add(h.card("synthetic-equal")), true);
   assert.equal(h.remaining(), 0); assert.equal(h.context.selections.length, 5);
   assert.equal(await h.add(h.card("synthetic-cheap")), true);
-  assert.equal(h.remaining(), 5_000_000); assert.equal(h.context.selections.length, 5);
+  assert.equal(h.remaining(), 10_000_000); assert.equal(h.context.selections.length, 5);
 });
 
 test("actual removal frees funds and a valid replacement consumes only them; closed or saving drafts cannot mutate", async () => {
   const h = harness(); await h.remove("synthetic-0");
-  assert.equal(h.context.selections.length, 4); assert.equal(h.remaining(), 10_000_000);
+  assert.equal(h.context.selections.length, 4); assert.equal(h.remaining(), 20_000_000);
   assert.equal(h.locked(h.card("synthetic-5")), false);
   assert.equal(await h.add(h.card("synthetic-5")), true);
   assert.equal(h.context.selections.length, 5); assert.equal(h.remaining(), 0);

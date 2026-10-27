@@ -54,17 +54,17 @@ test("verified different account or signed-out result is reported without assumi
 test("auth read error or malformed result stays unknown, not signed out", async () => {
   for (const result of [{ data: { user: null }, error: new Error("offline") }, {}, verified("invalid")]) {
     const h = harness(async () => result); h.emit({ user: unavailableUser }); h.run(0); await settle();
-    assert.deepEqual(h.identities, [undefined]); assert.equal(h.timers.size, 0); h.cleanup();
+    assert.deepEqual(h.identities, [undefined]); assert.equal(h.timers.size, "error" in result && result.error ? 1 : 0); h.cleanup();
   }
 });
-test("timeout and cleanup ignore a late user response and do not retry", async () => {
+test("timeout and cleanup fence late user responses; only timeout schedules bounded recovery", async () => {
   for (const action of ["timeout", "cleanup"]) {
     const pending = deferred(), h = harness(() => pending.promise);
     h.emit({ user: unavailableUser }); h.run(0);
     if (action === "timeout") h.run(8_000); else h.cleanup();
     pending.resolve(verified(owner)); await settle();
     assert.deepEqual(h.identities, [undefined]); assert.equal(h.counts().reads, 1);
-    assert.equal(h.timers.size, 0); h.cleanup(); assert.equal(h.counts().unsubscribes, 1);
+    assert.equal(h.timers.size, action === "timeout" ? 1 : 0); h.cleanup(); assert.equal(h.timers.size, 0); assert.equal(h.counts().unsubscribes, 1);
   }
 });
 test("new known identity fences an older verification and cleanup cancels queued work", async () => {
@@ -74,4 +74,50 @@ test("new known identity fences an older verification and cleanup cancels queued
   assert.deepEqual(h.identities, [undefined, other]);
   h.emit({ user: unavailableUser }); h.cleanup(); assert.equal(h.timers.size, 0);
   assert.equal(h.counts().reads, 1);
+});
+
+
+test("unknown identity recovers after a temporary auth read error without an auth event loop", async () => {
+  let attempt = 0;
+  const h = harness(async () => ++attempt === 1 ? { data: { user: null }, error: { status: 503 } } : verified(owner));
+  h.emit({ user: unavailableUser }); h.run(0); await settle();
+  assert.deepEqual(h.identities, [undefined]);
+  h.run(1000); await settle();
+  assert.deepEqual(h.identities, [undefined, owner]);
+  assert.equal(h.counts().reads, 2); assert.equal(h.timers.size, 0); h.cleanup();
+});
+
+test("timed-out auth attempt cannot override the recovery result", async () => {
+  const pending = deferred(); let attempt = 0;
+  const h = harness(() => ++attempt === 1 ? pending.promise : Promise.resolve(verified(other)));
+  h.emit({ user: unavailableUser }); h.run(0); h.run(8000); h.run(1000); await settle();
+  pending.resolve(verified(owner)); await settle();
+  assert.deepEqual(h.identities, [undefined, other]);
+  assert.equal(h.counts().reads, 2); assert.equal(h.timers.size, 0); h.cleanup();
+});
+
+test("auth transient failures stop after three reads; invalid or forbidden authority is terminal", async () => {
+  const h = harness(async () => { throw new TypeError("offline"); });
+  h.emit({ user: unavailableUser }); h.run(0); await settle();
+  h.run(1000); await settle(); h.run(3000); await settle();
+  assert.equal(h.counts().reads, 3); assert.equal(h.timers.size, 0);
+  assert.deepEqual(h.identities, [undefined]); h.cleanup();
+  for (const status of [400, 401, 403, 429]) {
+    const terminal = harness(async () => ({ data: { user: null }, error: { status } }));
+    terminal.emit({ user: unavailableUser }); terminal.run(0); await settle();
+    assert.equal(terminal.counts().reads, 1); assert.equal(terminal.timers.size, 0);
+    assert.deepEqual(terminal.identities, [undefined]); terminal.cleanup();
+  }
+});
+
+test("known identity and cleanup cancel scheduled auth recovery including stale callbacks", async () => {
+  for (const end of ["known", "cleanup"] as const) {
+    const h = harness(async () => { throw new TypeError("offline"); });
+    h.emit({ user: unavailableUser }); h.run(0); await settle();
+    const stale = [...h.timers.values()][0].callback;
+    if (end === "known") h.emit({ user: { id: other } }); else h.cleanup();
+    stale(); await settle();
+    assert.equal(h.counts().reads, 1); assert.equal(h.timers.size, 0);
+    assert.deepEqual(h.identities, end === "known" ? [undefined, other] : [undefined]); h.cleanup();
+  }
 });

@@ -4,7 +4,7 @@ import { Bell } from "lucide-react";
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { getTouchlineFixtureAlertCopy } from "@/lib/touchlineArena/fixture-alert-i18n";
 import { parseFixtureAlertSavedInterest } from "@/lib/touchlineArena/fixture-alert-readiness";
-import { parseFixtureAlertStatus } from "@/lib/touchlineArena/fixture-alert-status-client";
+import { fixtureAlertStatusReasons, parseFixtureAlertStatus } from "@/lib/touchlineArena/fixture-alert-status-client";
 import { readTouchlinePushInstallationId } from "@/lib/touchlineArena/push-device-registration";
 import { createClient } from "@/lib/supabase/client";
 import { startAccountLocaleIdentityObserver } from "@/lib/touchlineArena/account-locale-identity-observer";
@@ -26,7 +26,7 @@ export default function TouchlineFixtureAlerts({ fixtureId, label, locale, expec
   const identityConfirmed = useRef(false);
   const previousAccount = useRef(expectedAccountId);
   const statusGeneration = useRef(0);
-  const [readiness, setReadiness] = useState<{ key: string; epoch: number; phase: "loading" | "observed" | "unconfirmed" }>({ key: "", epoch: -1, phase: "unconfirmed" });
+  const [readiness, setReadiness] = useState<{ key: string; epoch: number; phase: "loading" | "observed" | "unconfirmed"; observation: ReturnType<typeof parseFixtureAlertStatus> }>({ key: "", epoch: -1, phase: "unconfirmed", observation: null });
   const [identityRetry, setIdentityRetry] = useState(0);
   // A GET can precede a delayed PUT commit. Automatic readback is observation,
   // not completion. Explicit reread permits a new CAS command, never a replay.
@@ -61,6 +61,13 @@ export default function TouchlineFixtureAlerts({ fixtureId, label, locale, expec
     : observedUrl?.key !== contextKey || observedUrl.epoch !== viewEpoch || (phase === "ready" && !visibleIdentity.confirmed)
       ? "loading" : (phase === "ready" || phase === "error") && !visibleIdentity.invalid && uncertainContexts.has(contextKey) ? "uncertain" : phase;
 
+  // Facts belong to this exact opening/account/fixture, just like the saved
+  // preference. Never show an earlier receipt during identity recovery/errors.
+  const visibleObservation = readiness.key === contextKey && readiness.epoch === viewEpoch && readiness.phase === "observed"
+    && visibleIdentity.confirmed && !visibleIdentity.invalid && (visiblePhase === "ready" || visiblePhase === "saving")
+    ? readiness.observation : null;
+  const readinessReasons = visibleObservation ? fixtureAlertStatusReasons(visibleObservation) : [];
+
   // Commit-time invalidation precedes passive effects and user interaction.
   // A previous fixture's pending response must never populate the new panel.
   useLayoutEffect(() => {
@@ -81,7 +88,7 @@ export default function TouchlineFixtureAlerts({ fixtureId, label, locale, expec
     let disposed = false;
     let invalidated = false;
     let observedSameAccount = false;
-    let scopedReceipt = false;
+    let scopedReceipt: ReturnType<typeof parseFixtureAlertStatus> = null;
     const recovering = accountInvalid.current;
     let unsubscribe: (() => void) | undefined;
     const publishIdentity = (confirmed: boolean, invalid: boolean) => {
@@ -89,7 +96,7 @@ export default function TouchlineFixtureAlerts({ fixtureId, label, locale, expec
         ? { ...previous, confirmed, invalid } : previous);
     };
     const publishReadiness = (nextPhase: "observed" | "unconfirmed") => {
-      setReadiness({ key: contextKey, epoch: viewEpoch, phase: nextPhase });
+      setReadiness({ key: contextKey, epoch: viewEpoch, phase: nextPhase, observation: nextPhase === "observed" ? scopedReceipt : null });
     };
     const current = () => !disposed && observationGeneration === statusGeneration.current && !controller.signal.aborted && !invalidated;
     const settleRecovery = () => {
@@ -159,7 +166,7 @@ export default function TouchlineFixtureAlerts({ fixtureId, label, locale, expec
         if (!current()) return;
         if (response.status === 401 || response.status === 409) { invalidate(response.status === 401 ? "signed-out" : "error"); return; }
         const receipt = response.ok ? parseFixtureAlertStatus(body, expected) : null;
-        scopedReceipt = receipt !== null;
+        scopedReceipt = receipt;
         if (receipt) settleRecovery();
         else { publishReadiness("unconfirmed"); if (accountInvalid.current) setPhase("error"); }
       }).catch(() => { if (current()) publishReadiness("unconfirmed"); })
@@ -265,7 +272,10 @@ export default function TouchlineFixtureAlerts({ fixtureId, label, locale, expec
         : visiblePhase === "uncertain" ? copy.uncertain
         : subscribed ? copy.saved
         : copy.notSaved}</p>
-      <p data-readiness={readiness.key === contextKey && readiness.epoch === viewEpoch ? readiness.phase : "loading"}>{copy.deliveryUnavailable}</p>
+      <p data-readiness={readiness.key === contextKey && readiness.epoch === viewEpoch ? readiness.phase : "loading"}>{visibleObservation ? copy.deliveryUnconfirmed : copy.deliveryUnavailable}</p>
+      {visibleObservation && readinessReasons.length > 0 ? <div aria-live="polite" data-alert-readiness-reasons="true">
+        {readinessReasons.map(reason => <p key={reason}>{copy[reason]}</p>)}
+      </div> : null}
       <div className={shared.profileActions}>
         {visiblePhase === "ready" || visiblePhase === "saving" ? <button type="button" disabled={visiblePhase === "saving"} onClick={() => void save()}>{subscribed ? copy.removeMatch : copy.saveMatch}</button> : null}
         {visiblePhase === "error" || visiblePhase === "uncertain" ? <button type="button" onClick={() => {

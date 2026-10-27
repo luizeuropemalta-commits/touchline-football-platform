@@ -6,14 +6,14 @@ import vm from "node:vm";
 import ts from "typescript";
 import { getTouchlineFixtureAlertCopy } from "../lib/touchlineArena/fixture-alert-i18n.ts";
 import { parseFixtureAlertSavedInterest } from "../lib/touchlineArena/fixture-alert-readiness.ts";
-import { parseFixtureAlertStatus } from "../lib/touchlineArena/fixture-alert-status-client.ts";
+import { fixtureAlertStatusReasons, parseFixtureAlertStatus } from "../lib/touchlineArena/fixture-alert-status-client.ts";
 import { startAccountLocaleIdentityObserver } from "../lib/touchlineArena/account-locale-identity-observer.ts";
 
 type Node = { type: unknown; props: Record<string, any> };
 function harness(accountId: string | null = null, initialAuthCallback = true) {
   const slots: any[] = [];
   let cursor = 0, dirty = true, tree: Node;
-  let props: { fixtureId: string; label: string; locale: string; expectedAccountId: string | null } = { fixtureId: "123", label: "First fixture", locale: "en-GB", expectedAccountId: accountId ?? "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" };
+  let props: { fixtureId: string; label: string; locale: string; expectedAccountId: string | null; draftLocalesEnabled?: boolean } = { fixtureId: "123", label: "First fixture", locale: "en-GB", expectedAccountId: accountId ?? "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" };
   let authListener: ((event: string, session: unknown) => void) | undefined;
   let subscriptions = 0;
   let layouts: (() => void)[] = [], effects: (() => void)[] = [];
@@ -50,7 +50,7 @@ function harness(accountId: string | null = null, initialAuthCallback = true) {
       if (name === "lucide-react") return { Bell: "Bell" };
       if (name === "@/lib/touchlineArena/fixture-alert-i18n") return { getTouchlineFixtureAlertCopy };
       if (name === "@/lib/touchlineArena/fixture-alert-readiness") return { parseFixtureAlertSavedInterest };
-      if (name === "@/lib/touchlineArena/fixture-alert-status-client") return { parseFixtureAlertStatus };
+      if (name === "@/lib/touchlineArena/fixture-alert-status-client") return { fixtureAlertStatusReasons, parseFixtureAlertStatus };
       if (name === "@/lib/touchlineArena/account-locale-identity-observer") return { startAccountLocaleIdentityObserver };
       if (name === "@/lib/touchlineArena/push-device-registration") return { readTouchlinePushInstallationId: () => null };
       if (name === "@/lib/supabase/client") return { createClient: () => ({ auth: { getUser: async () => ({ data: { user: { id: props.expectedAccountId } }, error: null }), onAuthStateChange: (callback: typeof authListener) => {
@@ -87,6 +87,7 @@ function harness(accountId: string | null = null, initialAuthCallback = true) {
     click(index: number) { buttons(tree)[index].props.onClick(); flush(); },
     renderFixture(fixtureId: string) { props = { ...props, fixtureId, label: "Next fixture" }; dirty = true; render(); },
     renderAccount(expectedAccountId: string | null) { props = { ...props, expectedAccountId }; dirty = true; render(); },
+    renderLocale(locale: string) { props = { ...props, locale, draftLocalesEnabled: true }; dirty = true; render(); },
     auth(id: string | null) { authListener?.("SIGNED_OUT", id ? { user: { id } } : null); flush(); },
     authSession(session: unknown) { authListener?.("TOKEN_REFRESHED", session); flush(); },
     subscriptions: () => subscriptions,
@@ -368,5 +369,78 @@ test("uncertain write stays locked when leaving and returning to its fixture", a
   h.reply(1, true); await h.tick(); // Late old write receipt remains fenced.
   assert.match(h.text(), /Further changes are paused/);
   assert.equal(h.requests.filter(request => request.method === "PUT").length, 1);
+  h.unmount();
+});
+
+
+test("readiness renders only confirmed impediments in all eight catalogues, without activating delivery or writing", async () => {
+  for (const locale of ["en-GB", "pt-BR", "es-ES", "it-IT", "fr-FR", "ar-SA", "tr-TR", "de-DE"]) {
+    const h = harness(owner); h.renderLocale(locale); h.commit(); h.flush(); h.click(0);
+    const body = statusBody(); body.data.configuration = "unconfigured"; body.data.preference = "quiet-hours";
+    h.reply(0, false, 200, body); h.reply(1, false); await h.tick();
+    const copy = getTouchlineFixtureAlertCopy(locale, true);
+    for (const key of ["mobileAlertsUnavailable", "deviceNotLinked", "quietHours", "deliveryUnconfirmed"] as const)
+      assert.ok(h.text().includes(copy[key]), `${locale}/${key}`);
+    assert.doesNotMatch(h.text(), /"(?:accountId|installationId|operational|active)":/);
+    assert.deepEqual(h.requests.map(request => request.method), ["GET", "GET"]);
+    h.unmount(); assert.equal(h.subscriptions(), 0);
+  }
+});
+
+test("readiness facts wait for matching identity even when both GET receipts arrived", async () => {
+  const h = harness(owner, false); h.click(0);
+  const body = statusBody(); body.data.preference = "paused";
+  h.reply(0, false, 200, body); h.reply(1, false); await h.tick();
+  assert.doesNotMatch(h.text(), /data-alert-readiness-reasons|Your notification preference is paused/);
+  h.auth(owner); await h.tick();
+  assert.match(h.text(), /Your notification preference is paused/);
+  assert.match(h.text(), /Mobile delivery has not been confirmed/);
+  h.auth("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");
+  assert.doesNotMatch(h.text(), /data-alert-readiness-reasons|Your notification preference is paused/);
+  assert.equal(h.requests.every(request => request.method === "GET"), true);
+  h.unmount();
+});
+
+test("fixture change hides an observed reason before effects and failed new readiness never reuses it", async () => {
+  const h = harness(owner); h.click(0);
+  const body = statusBody(); body.data.preference = "quiet-hours";
+  h.reply(0, false, 200, body); h.reply(1, false); await h.tick();
+  assert.match(h.text(), /your quiet hours were in effect/);
+  h.renderFixture("456");
+  assert.doesNotMatch(h.text(), /data-alert-readiness-reasons|your quiet hours were in effect/);
+  h.commit(); await h.tick();
+  h.reply(2, false, 503, { ok: false }); h.reply(3, false); await h.tick();
+  assert.doesNotMatch(h.text(), /data-alert-readiness-reasons|your quiet hours were in effect/);
+  assert.match(h.text(), /"data-readiness":"unconfirmed"/);
+  h.unmount();
+});
+
+test("account A-B-A never presents A's earlier readiness and rejects a foreign account receipt", async () => {
+  const h = harness(owner); h.click(0);
+  const body = statusBody(); body.data.preference = "paused";
+  h.reply(0, false, 200, body); h.reply(1, false); await h.tick();
+  assert.match(h.text(), /Your notification preference is paused/);
+  const other = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+  h.renderAccount(other); assert.doesNotMatch(h.text(), /data-alert-readiness-reasons/); h.commit(); await h.tick();
+  h.renderAccount(owner); assert.doesNotMatch(h.text(), /data-alert-readiness-reasons/); h.commit(); await h.tick();
+  h.reply(2, false, 200, statusBody(other)); h.reply(3, false);
+  h.reply(4, false, 200, statusBody(other)); h.reply(5, false); await h.tick();
+  assert.doesNotMatch(h.text(), /data-alert-readiness-reasons|Your notification preference is paused/);
+  assert.equal(h.requests.every(request => request.method === "GET"), true);
+  h.unmount();
+});
+
+test("closed opening, expired readiness and forged active facts cannot revive presentation", async () => {
+  const h = harness(owner); h.click(0);
+  const body = statusBody(); body.data.preference = "paused";
+  h.reply(0, false, 200, body); h.reply(1, false); await h.tick();
+  h.click(0); h.click(0);
+  assert.doesNotMatch(h.text(), /data-alert-readiness-reasons/);
+  h.expire(); h.reply(2, false, 200, body); h.reply(3, false); await h.tick();
+  assert.doesNotMatch(h.text(), /data-alert-readiness-reasons|Your notification preference is paused/);
+  h.click(0); h.click(0);
+  h.reply(4, false, 200, { ...body, data: { ...body.data, active: true } }); h.reply(5, false); await h.tick();
+  assert.doesNotMatch(h.text(), /data-alert-readiness-reasons|Your notification preference is paused/);
+  assert.equal(h.requests.every(request => request.method === "GET"), true);
   h.unmount();
 });

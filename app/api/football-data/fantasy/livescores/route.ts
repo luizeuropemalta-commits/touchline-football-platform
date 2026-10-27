@@ -12,6 +12,7 @@ export async function GET() {
     return NextResponse.json({
       ok: true,
       data: snapshot.fixtures,
+      admissionScope: snapshot.admissionScope,
       state: snapshot.metadata.state,
       ...(snapshot.metadata.fetchedAt ? { fetchedAt: snapshot.metadata.fetchedAt } : {}),
       degraded: snapshot.metadata.degraded,

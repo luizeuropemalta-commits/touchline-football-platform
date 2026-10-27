@@ -32,7 +32,7 @@ const coach: TouchlineCoach = {
   source: { provider: "sportmonks", providerId: "990001", raw: { syntheticLayoutFixture: true } },
 };
 const fixtures: TouchlinePublicFixture[] = Array.from({ length: 10 }, (_, index) => ({
-  id: `9905${index}`, providerId: `9905${index}`, status: "FT", startsAt: "2026-10-23T15:00:00Z",
+  id: `9905${index}`, providerId: `9905${index}`, competitionId: "8", seasonId: "26000", roundId: "8", roundName: "8", status: "FT", startsAt: "2026-10-23T15:00:00Z",
   homeTeam: { id: "19", providerId: "19", name: `Synthetic Home ${index}` },
   awayTeam: { id: "236", providerId: "236", name: `Synthetic Away ${index}` }, homeScore: 2, awayScore: 1,
 }));
@@ -48,7 +48,7 @@ export default function TechnicalRailFixture({ width, direction = "ltr", enabled
     <section className={fantasy.myClubSquad}>
     <div className={fantasy.arenaBody}>
     <div className={fantasy.arenaLiveRail} data-clubowner-live-position="above-reserves">
-      <ClubHubFixtureStrip initialFixtures={fixtures} initialNow={Date.parse("2026-10-24T00:00:00Z")} initialTimeZone="UTC" locale="en-GB" />
+      <ClubHubFixtureStrip initialFixtures={fixtures} initialAdmissionScope={{ competitionId: "8", seasonId: "26000" }} initialNow={Date.parse("2026-10-24T00:00:00Z")} initialTimeZone="UTC" locale="en-GB" />
     </div>
     <div className={fantasy.myClubPitchViewport}>
       {/* Real production portal/lifecycle is provided from AST. This remains

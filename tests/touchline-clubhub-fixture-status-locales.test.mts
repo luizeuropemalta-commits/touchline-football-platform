@@ -66,5 +66,9 @@ test("localized status remains wired into the rendered matchup without exporting
   assert.match(source, /status: localizedFixtureStatus\(matchPreview\.status, locale, draftLocalesEnabled\)/);
   assert.ok(!declaration.modifiers?.some(modifier => modifier.kind === ts.SyntaxKind.ExportKeyword));
   const lineup = readFileSync(new URL("../components/touchline/ClubHubOfficialLineup.tsx", import.meta.url), "utf8");
-  assert.match(lineup, /<small>\{matchup\.status \? `\$\{matchup\.status\} · ` : null\}<ClubHubLocalKickoff startsAt=\{matchup\.startsAtIso\} locale=\{locale\} draftLocalesEnabled=\{draftLocalesEnabled\} fallback=\{matchup\.startsAt\} \/><\/small>/);
+  // A frozen parent status must not sit beside a refreshed child score.
+  // Kickoff stays in the small row; the shared score owns the localized status.
+  assert.match(lineup, /<small><ClubHubLocalKickoff startsAt=\{matchup\.startsAtIso\} locale=\{locale\} draftLocalesEnabled=\{draftLocalesEnabled\} fallback=\{matchup\.startsAt\} \/><\/small>/);
+  assert.doesNotMatch(lineup, /\{matchup\.status/);
+  assert.match(lineup, /<ClubHubLiveFixtureScore[\s\S]*?locale=\{resolveTouchlineCatalogueLocale\(locale, draftLocalesEnabled\)\}/);
 });

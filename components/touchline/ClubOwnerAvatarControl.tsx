@@ -3,6 +3,7 @@
 import { useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { startAccountLocaleIdentityObserver } from "@/lib/touchlineArena/account-locale-identity-observer";
 import { createClubOwnerAvatarRecoveryClient } from "@/lib/touchlineArena/club-owner-avatar-client";
 import { getTouchlineClubOwnerAvatarUiCopy, getTouchlineClubOwnerAvatarSelectionCopy } from "@/lib/touchlineArena/club-owner-avatar-ui-i18n";
 import type { projectAvatarRecoveryContext } from "@/lib/touchlineArena/club-owner-avatar-upload-contract";
@@ -16,7 +17,7 @@ export type ClubOwnerAvatarUiContext = ReturnType<typeof projectAvatarRecoveryCo
 type Props = { accountId: string; context: ClubOwnerAvatarUiContext | null; locale: string; children: ReactNode; draftLocalesEnabled?: boolean; avatarSelectionEnabled?: boolean; retentionReady?: boolean };
 type Recovery = ReturnType<typeof createClubOwnerAvatarRecoveryClient>;
 type Snapshot = ReturnType<Recovery["snapshot"]>;
-type Lifetime = { accountId: string; live: boolean; valid: boolean; observed: boolean; busy: boolean; recovery: Recovery };
+type Lifetime = { accountId: string; live: boolean; valid: boolean; observed: boolean; busy: boolean; engaged: boolean; recovery: Recovery };
 
 /** Recovery remains the default. Selection additionally requires both explicit
  * dormant capabilities; no automatic status/fence/retry or photo update. */
@@ -37,27 +38,51 @@ export default function ClubOwnerAvatarControl({ accountId, context, locale, chi
 
   useLayoutEffect(() => {
     if (!enabled) return;
-    const life: Lifetime = { accountId, live: true, valid: true, observed: false, busy: false,
+    const createLifetime = () => {
+      const next: Lifetime = { accountId, live: true, valid: true, observed: false, busy: false, engaged: false,
       recovery: createClubOwnerAvatarRecoveryClient({ enabled: true, accountId,
         upload: { snapshot: () => ({ accountId }), invalidate: () => upload.current?.invalidate() },
-        isCurrent: () => current.current === life && life.live && life.valid && life.observed,
+        isCurrent: () => current.current === next && next.live && next.valid && next.observed,
         request: (input, init) => fetch(input, init) }) };
+      return next;
+    };
+    let life = createLifetime();
+    let identityPending = false, terminal = false;
     current.current = life;
-    const invalidate = () => {
+    const retire = () => {
       life.valid = false; life.recovery.dispose(); upload.current?.dispose(); upload.current = null;
       if (life.live && current.current === life) { setView({ accountId, available: false, snapshot: null }); setConfirming(false); }
     };
+    const invalidate = () => { terminal = true; retire(); };
     let unsubscribe: (() => void) | undefined;
     try {
       const client = createClient(); if (!client) throw Error();
-      const { data } = client.auth.onAuthStateChange((_event, session) => {
-        if (!life.live || current.current !== life) return;
-        if (session?.user?.id !== accountId) { invalidate(); return; }
-        if (!life.valid || life.observed) return;
-        life.observed = true;
-        setView({ accountId, available: true, snapshot: life.recovery.snapshot() });
+      unsubscribe = startAccountLocaleIdentityObserver({
+        subscribe: observer => {
+          const { data } = client.auth.onAuthStateChange(observer);
+          return () => data.subscription.unsubscribe();
+        },
+        readUser: () => client.auth.getUser(),
+        onIdentity: identity => {
+          if (!life.live || current.current !== life || terminal) return;
+          if (identity === undefined) {
+            // Retire clients immediately. Only an untouched lifetime may recover;
+            // a possibly dispatched operation must never be replayed or rebased.
+            identityPending = !life.engaged;
+            if (!identityPending) terminal = true;
+            retire();
+            return;
+          }
+          if (identity !== accountId) { invalidate(); return; }
+          if (identityPending) {
+            life.live = false;
+            life = createLifetime(); current.current = life; identityPending = false;
+          }
+          if (!life.valid || life.observed) return;
+          life.observed = true;
+          setView({ accountId, available: true, snapshot: life.recovery.snapshot() });
+        },
       });
-      unsubscribe = () => data.subscription.unsubscribe();
     } catch { invalidate(); }
     return () => {
       // Retire the observed identity before a StrictMode/new-account lifetime.
@@ -72,7 +97,7 @@ export default function ClubOwnerAvatarControl({ accountId, context, locale, chi
   async function perform(action: "observe" | "fence" | "retry") {
     const life = current.current;
     if (!life || life.accountId !== accountId || !enabled || !isCurrent(life) || life.busy || action === "fence" && !confirming) return;
-    life.busy = true; setConfirming(false);
+    life.engaged = true; life.busy = true; setConfirming(false);
     try {
       const pending = action === "observe" ? life.recovery.observe() : action === "fence" ? life.recovery.fence(true) : life.recovery.retryFence(true);
       if (!isCurrent(life)) return;
@@ -90,7 +115,7 @@ export default function ClubOwnerAvatarControl({ accountId, context, locale, chi
   return <>
     <button ref={portrait} type="button" data-avatar-action="open" className={`${controls.link} ${styles.photoButton}`}
       disabled={!available} aria-label={copy.open} aria-expanded={opened && available} aria-controls={`${id}-panel`} aria-describedby={`${id}-status`}
-      onClick={() => { if (available) setOpened(true); }}>{children}</button>
+      onClick={() => { const life = current.current; if (available && life && isCurrent(life)) { life.engaged = true; setOpened(true); } }}>{children}</button>
     <small id={`${id}-status`} role="status" aria-live="polite">{message}</small>
     {opened && available ? <section ref={panel} tabIndex={-1} id={`${id}-panel`} className={styles.recoveryPanel} aria-labelledby={`${id}-title`} aria-busy={busy}>
       <h3 id={`${id}-title`}>{copy.title}</h3>{!selection ? <p>{copy.noUpload}</p> : null}
@@ -111,6 +136,11 @@ export default function ClubOwnerAvatarControl({ accountId, context, locale, chi
       isCurrent={() => { const life = current.current; return !!life && life.accountId === accountId && isCurrent(life); }}
       canSelect={() => { const life = current.current; return !!life && !life.busy && life.recovery.snapshot().phase === "unobserved"; }}
       recoveryActive={busy || phase !== "unobserved"}
-      registerUpload={value => { upload.current = value; }} onRefreshRequired={() => router.refresh()} /> : null}
+      registerUpload={value => {
+        const life = current.current;
+        if (value && (!life || !isCurrent(life))) { value.dispose(); return; }
+        if (value && life) life.engaged = true;
+        upload.current = value;
+      }} onRefreshRequired={() => router.refresh()} /> : null}
   </>;
 }

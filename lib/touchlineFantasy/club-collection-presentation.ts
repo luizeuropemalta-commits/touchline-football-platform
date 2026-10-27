@@ -4,5 +4,5 @@ export function clubCollectionPresentationEnabled(input: {
 }): boolean {
   return input.nodeEnv === "development" && input.enabled === "true"
     && (input.host === "localhost:3319" || input.host === "127.0.0.1:3319")
-    && (input.plan === "standard" || input.plan === "master" || input.plan === "vip");
+    && (input.plan === "beta" || input.plan === "standard" || input.plan === "master" || input.plan === "vip");
 }

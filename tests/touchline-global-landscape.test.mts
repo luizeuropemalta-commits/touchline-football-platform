@@ -11,7 +11,7 @@ test("the shared boundary blocks mobile portrait while preserving the mounted co
   const [layout, boundary, manifest] = await Promise.all([
     source("app/layout.tsx"),
     source("components/touchline/TouchlineLandscapeBoundary.tsx"),
-    source("app/manifest.ts"),
+    source("public/manifest.webmanifest"),
   ]);
   assert.match(layout, /<TouchlineLandscapeBoundary skipLabel=\{skipLabel\}/);
   assert.equal((layout.match(/<TouchlineLandscapeBoundary/g) ?? []).length, 1);
@@ -26,5 +26,5 @@ test("the shared boundary blocks mobile portrait while preserving the mounted co
   assert.match(boundary, /\{copy\.orientationTitle\}/);
   assert.match(boundary, /\{children\}/);
   assert.doesNotMatch(boundary, /orientation\.lock|router\.(push|replace)|location\.(assign|reload)/);
-  assert.match(manifest, /orientation:\s*"landscape"/);
+  assert.equal(JSON.parse(manifest).orientation, "landscape");
 });

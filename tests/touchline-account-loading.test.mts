@@ -39,17 +39,18 @@ test("both actual navigation routes use the shared immediate loading boundary", 
   assert.doesNotMatch(source, /"use client"|fetch\(|useEffect|useSearchParams|async function|next\/headers|supabase/i);
 });
 
-test("ClubOwner covers async layout ranking reads outside the nested route loading boundary", () => {
+test("ClubOwner authenticates its header outside content and leadership loading", () => {
   const layout = readFileSync(new URL("../app/clubowner/layout.tsx", import.meta.url), "utf8");
-  assert.match(layout, /import \{ Suspense, type ReactNode \} from "react"/);
-  assert.match(layout, /<Suspense fallback=\{<TouchlineAccountLoading \/>\}>\s*<TouchlineCardLeadershipLayout>\{children\}<\/TouchlineCardLeadershipLayout>\s*<\/Suspense>/);
-  assert.doesNotMatch(layout, /async function|await |fetch\(/);
+  const page = readFileSync(new URL("../app/clubowner/page.tsx", import.meta.url), "utf8");
+  assert.match(layout, /return children/);
+  assert.doesNotMatch(layout, /Suspense|TouchlineAccountLoading|TouchlineCardLeadershipLayout/);
+  assert.match(page, /<Suspense fallback=\{<TouchlineAccountLoading contentOnly \/>\}>\s*<TouchlineCardLeadershipLayout>/);
 });
 
-test("actual ClubOwner layout streams its real fallback before controlled leadership data resolves", { timeout: 5_000 }, async (context) => {
+test("actual ClubOwner shell keeps its header while content leadership suspends", { timeout: 5_000 }, async (context) => {
   // Isolated React streaming proof, not Next/RSC routing, hydration or Safari
   // navigation proof. Only the external async leadership read is substituted;
-  // the production layout owns Suspense and renders the real loading component.
+  // the production page JSX owns Suspense and renders the real loading component.
   let resolved = false;
   let release!: () => void;
   const pending = new Promise<void>((resolve) => { release = resolve; });
@@ -57,7 +58,14 @@ test("actual ClubOwner layout streams its real fallback before controlled leader
     if (!resolved) throw pending;
     return children;
   }
-  const layoutSource = readFileSync(new URL("../app/clubowner/layout.tsx", import.meta.url), "utf8");
+  const pageSource = readFileSync(new URL("../app/clubowner/page.tsx", import.meta.url), "utf8");
+  const pageFile = ts.createSourceFile("page.tsx", pageSource, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const declaration = pageFile.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === "renderClubOwnerPageContent") as ts.FunctionDeclaration;
+  const shellReturn = declaration.body!.statements.findLast(ts.isReturnStatement)!;
+  assert.ok(shellReturn.expression, "real authenticated shell return");
+  // Render that exact product JSX. Auth/read barriers are independently tested
+  // by the real route harness; only the pending sporting reader is controlled.
+  const layoutSource = `exports.default = ({ children }) => { const content = children; return ${shellReturn.expression.getText(pageFile)}; };`;
   const exports: { default?: (props: { children: unknown }) => unknown } = {};
   const modules: Record<string, unknown> = {
     react: React,
@@ -69,6 +77,11 @@ test("actual ClubOwner layout streams its real fallback before controlled leader
     module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX,
   } }).outputText, {
     exports,
+    Suspense: React.Suspense, styles: { page: "page" }, draftLocalesEnabled: false, destination: "/clubowner?lang=en-GB", locale: "en-GB", user: { id: "verified-account" },
+    TouchlineAccountLoading: loadLoading(), TouchlineCardLeadershipLayout: ControlledLeadership,
+    ClubOwnerDeferredContent: ({ content }: { content: unknown }) => content,
+    TouchlineBrandHeader: () => React.createElement("header", { "data-authenticated-header": "ready" }, "Authenticated navigation"),
+    TouchlineSignOutButton: () => null, TouchlineGlobalNavigation: () => null,
     require(id: string) {
       assert.ok(Object.hasOwn(modules, id), `Unexpected layout dependency: ${id}`);
       return modules[id];
@@ -94,7 +107,7 @@ test("actual ClubOwner layout streams its real fallback before controlled leader
     React.createElement("body", null,
       React.createElement("div", { "data-controlled-shell": "ready" },
         React.createElement(exports.default, null,
-          React.createElement("main", { "data-controlled-route": "ready" }, "Controlled ClubOwner content")))));
+          React.createElement("div", { "data-controlled-route": "ready" }, "Controlled ClubOwner content")))));
   const stream = renderToPipeableStream(tree, {
     onShellReady() { shellReady = true; stream.pipe(destination); },
     onAllReady() { allReady = true; },
@@ -120,7 +133,9 @@ test("actual ClubOwner layout streams its real fallback before controlled leader
     assert.equal(allReady, false, "the controlled leadership read must still suspend");
     assert.match(shell, /aria-busy="true"/);
     assert.match(shell, /role="status"/);
-    assert.ok(shell.includes(renderLoading()), "the shell must contain the complete real fallback");
+    assert.ok(shell.includes(renderToStaticMarkup(React.createElement(loadLoading(), { contentOnly: true }))), "the shell must contain the real body fallback");
+    assert.match(shell, /data-authenticated-header="ready"/);
+    assert.equal((shell.match(/<main /g) ?? []).length, 1, "content fallback never nests a main");
     assert.doesNotMatch(shell, /data-controlled-route|Controlled ClubOwner content/);
     phase = "resolved content";
     resolved = true;
@@ -170,4 +185,13 @@ test("placeholder layout stays static and reserves safe areas with shrinkable ca
   assert.match(css, /box-sizing:border-box/);
   assert.match(css, /grid-template-columns:repeat\(5,minmax\(0,64px\)\)/);
   assert.match(css, /min-height:100vh; min-height:100dvh/);
+});
+
+
+test("body fallback contains one status without a second header, main or navigation", () => {
+  const html = renderToStaticMarkup(React.createElement(loadLoading(), { contentOnly: true }));
+  assert.doesNotMatch(html, /<main|<header|<nav|<strong/);
+  assert.equal((html.match(/role="status"/g) ?? []).length, 1);
+  assert.match(html, /class="loading contentLoading"/);
+  assert.match(css, /\.contentLoading\s*\{[^}]*min-height:70vh; min-height:70dvh/);
 });

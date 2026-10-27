@@ -111,9 +111,10 @@ export function ClubOwnerSquadSwapDialog({ state, playerId, outsideOnly = false,
 }
 
 /** Placement only. Card artwork, points, zoom and empty-slot button are canonical. */
-export function ClubOwnerCollectionSlots({ state, catalogue, area, start = 0, count, locale, liveSeasonRating = false, draftLocalesEnabled = false, enabled, displayWidth = 70, guidedSlot, onChoose, onFieldPlayer, onReleasePlayer, grouped = false, slotPositions }: {
+export function ClubOwnerCollectionSlots({ state, catalogue, area, start = 0, count, locale, liveSeasonRating = false, draftLocalesEnabled = false, enabled, displayWidth = 70, imageLoading = "eager", guidedSlot, onChoose, onFieldPlayer, onReleasePlayer, grouped = false, slotPositions }: {
   state: Pick<ClubAcquisitionState, "players"> | null; catalogue: readonly ClubOwnerSquadCard[]; area: ClubRosterArea;
   start?: number; count: number; locale: string; liveSeasonRating?: boolean; draftLocalesEnabled?: boolean; enabled: boolean; displayWidth?: number; guidedSlot?: number;
+  imageLoading?: "eager" | "lazy";
   onChoose: (destination: CollectionDestination) => void;
   onFieldPlayer?: (playerId: string) => void;
   onReleasePlayer?: (playerId: string) => void;
@@ -134,7 +135,7 @@ export function ClubOwnerCollectionSlots({ state, catalogue, area, start = 0, co
       const card = owned ? cards.get(owned.playerId) : null;
       const positionName = position ? collectionPositionName(position, locale, draftLocalesEnabled) : null;
       return <div className={layout.slot} key={slot} data-collection-slot={slot} data-position={position ?? undefined} data-owned={owned ? "true" : undefined}>
-        {card ? <TouchlineGameweekCard liveSeasonRating={liveSeasonRating} card={card} locale={locale} draftLocalesEnabled={draftLocalesEnabled} compact displayWidth={displayWidth}
+        {card ? <TouchlineGameweekCard liveSeasonRating={liveSeasonRating} card={card} locale={locale} draftLocalesEnabled={draftLocalesEnabled} compact displayWidth={displayWidth} imageLoading={imageLoading}
           replacementAction={owned && onFieldPlayer ? { label: copy.replacePlayer, disabled: !enabled || !state,
             onSelect: () => { if (enabled && state) onFieldPlayer(owned.playerId); } } : undefined}
           releaseAction={owned && onReleasePlayer ? { label: pt ? "Liberar jogador" : "Release player", disabled: !enabled || !state,

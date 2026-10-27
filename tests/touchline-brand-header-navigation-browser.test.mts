@@ -4,7 +4,7 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { chromium, expect, webkit } from "@playwright/test";
+import { chromium, expect, firefox, webkit } from "@playwright/test";
 import { bundleIsolatedBrowserFixture } from "./helpers/touchline-isolated-browser-bundle.mts";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
@@ -38,11 +38,11 @@ async function headerFixture() {
   return { ...bundle, css: `${compiler.build(candidates)}\n${bundle.css}` };
 }
 
-test("real BrandHeader navigation endpoints remain reachable with visible keyboard focus in PT, DE and AR", async t => {
+test("real BrandHeader navigation endpoints remain reachable with visible keyboard focus in PT, DE and AR", { timeout: 90_000 }, async t => {
   const fixture = await headerFixture();
   t.diagnostic(`Real modules: ${fixture.sources.join(", ")}. Real client mount/handlers; no media provider, downloaded font, real account or Next route transition proof.`);
   const failures: unknown[] = [];
-  for (const engine of [chromium, webkit]) {
+  for (const engine of [chromium, webkit, firefox]) {
     const browser = await engine.launch({ headless: true });
     try {
       const page = await browser.newPage({ reducedMotion: "reduce" });
@@ -57,7 +57,7 @@ test("real BrandHeader navigation endpoints remain reachable with visible keyboa
       await page.keyboard.press("Tab");
       let forward = "Tab";
       if (!await page.locator("#native-link").evaluate(element => element === document.activeElement)) {
-        assert.equal(engine.name(), "webkit", "Chromium Tab must focus a native link");
+        assert.equal(engine.name(), "webkit", "Chromium and Firefox Tab must focus a native link");
         assert.equal(await page.locator("#native-input").evaluate(element => element === document.activeElement), true, "only the known native link-skipping preference permits Option-Tab");
         await page.setContent(probe);
         forward = "Alt+Tab";
@@ -67,8 +67,11 @@ test("real BrandHeader navigation endpoints remain reachable with visible keyboa
       const backward = forward === "Tab" ? "Shift+Tab" : "Alt+Shift+Tab";
       t.diagnostic(`${engine.name()} native full-navigation key: ${forward}`);
       for (const locale of ["pt-BR", "de-DE", "ar-SA"]) {
-        for (const width of [320, 390, 844, 1280]) {
+        for (const width of [320, 390, 768, 844, 1024, 1280, 1920]) {
           await page.setViewportSize({ width, height: 900 });
+          // Start a fresh document, including native sequential focus state.
+          // setContent alone can retain Firefox's prior keyboard anchor.
+          await page.goto("about:blank");
           await page.setContent(`<!doctype html><html lang="${locale}" dir="${locale === "ar-SA" ? "rtl" : "ltr"}"><head><meta charset="utf-8"><style>${fixture.css}</style></head><body><div aria-hidden="true" style="height:800px"></div><div id="root"></div><div aria-hidden="true" style="height:900px"></div></body></html>`);
           await page.addScriptTag({ content: `(() => {${fixture.script}})()` });
           await page.evaluate(() => scrollTo(0, 800));
@@ -124,8 +127,17 @@ test("real BrandHeader navigation endpoints remain reachable with visible keyboa
           // Native Tab starts at the actual logo, then enters ClubOwner. No
           // focus(), scrollIntoView() or injected focus handler masks clipping.
           await page.keyboard.press(forward);
+          const firstFocus = await page.evaluate(() => document.activeElement?.outerHTML.slice(0, 500));
           await page.keyboard.press(forward);
-          assert.equal(await primary.evaluate(element => element === document.activeElement), true);
+          // Firefox gives an overflowing scroll container a native Tab stop.
+          // Accept only this specific rail stop, then require the first link.
+          if (await rail.evaluate(element => element === document.activeElement)) {
+            t.diagnostic(`${engine.name()} native scroll-container Tab stop: ${locale} ${width}`);
+            await page.keyboard.press(forward);
+          }
+          assert.equal(await primary.evaluate(element => element === document.activeElement), true,
+            JSON.stringify({ browser: engine.name(), locale, width, firstFocus,
+              secondFocus: await page.evaluate(() => document.activeElement?.outerHTML.slice(0, 500)) }));
           await geometry("first via Tab");
           for (let index = 0; index < 3; index++) {
             await page.keyboard.press(forward);

@@ -77,7 +77,7 @@ function produce(expression: typeof expressions[number], locale: string, positio
     releaseAction: undefined,
     signingActions: undefined,
     lockedReason: undefined,
-    fitContainer: false, resolvedDisplayWidth: 132, useLiveCompactAsset: false,
+    fitContainer: false, resolvedDisplayWidth: 132, useLiveCompactAsset: false, imageLoading: "eager",
     TouchlineCardZoom: "zoom-boundary", TouchlineEliteExactCard: "artwork-boundary", CompactPlayerCard: "compact-boundary", ClubHubOfficialChannel: "official-channel-boundary",
   };
   // Absence is intentional in the RED fixture: old callers do not provide

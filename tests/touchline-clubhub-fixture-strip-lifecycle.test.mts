@@ -5,6 +5,7 @@ import vm from "node:vm";
 import ts from "typescript";
 import { clubHubStripSeedNeedsRecovery, parseClubHubStripSnapshot } from "../lib/touchlineArena/club-hub-fixture-strip.ts";
 import * as fixtureStripMotion from "../lib/touchlineArena/fixture-strip-motion.ts";
+import { selectTouchlinePublishedRailFixtures } from "../lib/touchlineArena/sports-publication-live-view.ts";
 
 // Execute the real component's bootstrap effect without a browser, network,
 // or shared publication transport. Browser/visual verification is separate.
@@ -18,6 +19,7 @@ function harness(fetcher: typeof fetch, initialFixtures?: unknown[]) {
       const current = index++;
       return [value, (next: unknown) => writes.push({ index: current, value: next })];
     },
+    useMemo: (compute: () => unknown) => compute(),
     useRef: () => ({ current: null }),
     useEffect: (effect: () => void | (() => void)) => effects.push(effect),
   };
@@ -36,6 +38,7 @@ function harness(fetcher: typeof fetch, initialFixtures?: unknown[]) {
       if (id === "react") return react;
       if (id === "react/jsx-runtime") return { jsx: () => null, jsxs: () => null };
       if (id.endsWith(".css")) return { default: {} };
+      if (id.endsWith("sports-publication-live-view")) return { selectTouchlinePublishedRailFixtures };
       if (id.endsWith("sports-publication-client")) return { useTouchlinePublishedLive: () => ({ fixtures: [], metadata: null }) };
       if (id.endsWith("match-centre-i18n")) return { getTouchlineMatchCentreCopy: () => ({}) };
       if (id.endsWith("club-hub-fixture-strip-i18n")) return { getClubHubStripCopy: () => ({}) };

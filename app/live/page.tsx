@@ -63,7 +63,7 @@ async function renderLivePage({ searchParams }: LivePageProps, draftLocalesEnabl
   // Keep the durable schedule available to the client while the presentation
   // selector exposes only the current ten-match round and ten prior results.
   const [persistedFixtures, viewer, initialSeasonName] = await Promise.all([
-    readPublicCompetitionFixtures({ includeHistorical: true, limit: 240 }),
+    readPublicCompetitionFixtures({ includeHistorical: true, readAllPages: true, strictRead: true }),
     // An invalid fixture redirect must not wait for authentication.
     requestedFixture ? null : readLiveViewer(),
     readTouchlineCurrentSeasonName(),
@@ -74,8 +74,11 @@ async function renderLivePage({ searchParams }: LivePageProps, draftLocalesEnabl
     ...initialSchedule.currentFixtures,
     ...initialSchedule.recentResults,
   ];
-  const initiallySelected = selectTouchlineMatchCentreFixture(initiallyVisibleFixtures, requestedFixture, initialNow);
-  if (requestedFixture && !hasTouchlineMatchCentreFixture(initiallyVisibleFixtures, requestedFixture)) {
+  // An explicit archive link stays valid even outside the two compact rails.
+  const selectionFixtures = requestedFixture && hasTouchlineMatchCentreFixture(fixtures, requestedFixture)
+    ? fixtures : initiallyVisibleFixtures;
+  const initiallySelected = selectTouchlineMatchCentreFixture(selectionFixtures, requestedFixture, initialNow);
+  if (requestedFixture && !hasTouchlineMatchCentreFixture(fixtures, requestedFixture)) {
     const canonical = new URLSearchParams({ lang: normalizedLanguage });
     if (initiallySelected) canonical.set("fixture", initiallySelected.id);
     redirect(`/live?${canonical.toString()}`);

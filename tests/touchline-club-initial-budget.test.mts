@@ -24,8 +24,8 @@ async function read(overrides:Record<string,unknown>={}){
   const value=await exports.readClubInitialBudget(admin,"owner","season");
   return {value:value?JSON.parse(JSON.stringify(value)):null,calls};
 }
-test("pristine paid accounts expose the canonical allowance without creating a collection",async()=>{
-  for(const plan of ["standard","master","vip"] as const){
+test("pristine approved accounts expose the canonical allowance without creating a collection",async()=>{
+  for(const plan of ["beta","standard","master","vip"] as const){
     const {value,calls}=await read({[tables[0]]:{data:{plan_key:plan,current_period_start:null,current_period_end:null},error:null}});
     assert.deepEqual(value,{plan,balanceEur:acquisition.CLUB_ACQUISITION_BUDGETS[plan]});
     assert.ok(calls.includes("season_id.eq.season,season_id.is.null"));
@@ -41,7 +41,7 @@ test("each legacy artifact suppresses initial allowance and any read failure fai
 });
 test("expired, future, unsupported and malformed entitlements do not unlock initial budget",async()=>{
   const base={plan_key:"vip",current_period_start:null,current_period_end:null};
-  for(const data of [null,{...base,plan_key:"beta"},{...base,plan_key:"pro"},{...base,current_period_end:"2000-01-01"},
+  for(const data of [null,{...base,plan_key:"pro"},{...base,current_period_end:"2000-01-01"},
     {...base,current_period_start:"2999-01-01"},{...base,current_period_end:"invalid"},{plan_key:"vip"}]){
     assert.equal((await read({[tables[0]]:{data,error:null}})).value,null);
   }
@@ -49,3 +49,5 @@ test("expired, future, unsupported and malformed entitlements do not unlock init
   assert.equal(parseClubInitialBudget({plan:"vip",balanceEur:1_200_000_000}),null);
   assert.deepEqual(parseClubInitialBudget({plan:"vip",balanceEur:3_000_000_000}),{plan:"vip",balanceEur:3_000_000_000});
 });
+
+test("new Beta initial allowance rejects old 50M and accepts only canonical100M",()=>{assert.equal(parseClubInitialBudget({plan:"beta",balanceEur:50_000_000}),null);assert.deepEqual(parseClubInitialBudget({plan:"beta",balanceEur:100_000_000}),{plan:"beta",balanceEur:100_000_000});});

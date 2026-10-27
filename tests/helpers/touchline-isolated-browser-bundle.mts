@@ -58,7 +58,7 @@ export function bundleIsolatedBrowserFixture(options: {
     // fixture. The SDK is a forbidden transport, not a fake authenticated session.
     "@supabase/ssr": `const forbidden=()=>{throw Error('Unexpected Supabase transport in isolated XI fixture');};exports.createBrowserClient=forbidden;exports.parseCookieHeader=forbidden;exports.serializeCookieHeader=forbidden;`,
   };
-  const allowedPackages = new Set(["react", "react-dom", "scheduler", "lucide-react"]);
+  const allowedPackages = new Set(["react", "react-dom", "scheduler", "lucide-react", "clsx", "tailwind-merge"]);
   function resolve(specifier: string, parent: string): string {
     if (Object.hasOwn(boundaries, specifier)) return `boundary:${specifier}`;
     if (specifier.startsWith("@/") || specifier.startsWith(".")) {

@@ -30,6 +30,10 @@ type TouchlineCoachCardZoomProps = {
   liveCompetitionUpdates?: boolean;
   profileHref: string;
   compact?: boolean;
+  /** Known trigger width only; the expanded card owns a different layout. */
+  frameDisplayWidth?: number;
+  /** Responsive trigger sizing hint only; expanded content ignores it. */
+  frameDisplaySizes?: string;
   cardClassName?: string;
   publishedTouchlinePoints?: number | null;
   showLeadershipCrown?: boolean;
@@ -76,6 +80,8 @@ export default function TouchlineCoachCardZoom({
   liveCompetitionUpdates = false,
   profileHref,
   compact = true,
+  frameDisplayWidth,
+  frameDisplaySizes,
   cardClassName,
   publishedTouchlinePoints = null,
   showLeadershipCrown,
@@ -178,6 +184,8 @@ export default function TouchlineCoachCardZoom({
       draftLocalesEnabled={draftLocalesEnabled}
       displayMode={compact ? "compact" : "default"}
       optimizeForLiveCompact={compact}
+      frameDisplayWidth={frameDisplayWidth}
+      frameDisplaySizes={frameDisplaySizes}
       enableInteractiveNeon={false}
       assetLoading={assetLoading ?? "lazy"}
       frameLoading={frameLoading}

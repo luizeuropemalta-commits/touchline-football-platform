@@ -147,9 +147,9 @@ export default function ClubOwnerPlanShowcase({ initialPlan, activePlanKey = nul
         {zoomOpen ? <div className={styles.zoomCard} aria-hidden="true"><ClubOwnerPlanCard tier={plan.id} locale={locale} draftLocalesEnabled={draftLocalesEnabled} active={activePlanKey === plan.id} activePlanBudget={activePlanKey === plan.id ? activePlanBudget : undefined} /></div> : null}
         <div className={styles.dialogDetails}>
       <h2 className={embedded ? styles.visuallyHidden : undefined} id={`${id}-dialog-heading`}>{title}</h2><strong className={styles.dialogPrice}>{priceFor(plan.id)}</strong><p>{benefitFor(plan.id)}</p>
-      {plan.id !== "beta" ? <dl className={styles.benefitGrid} data-plan-benefits={plan.id}>
+      <dl className={styles.benefitGrid} data-plan-benefits={plan.id}>
         {getClubOwnerPlanBenefits(plan.id, locale, draftLocalesEnabled).map(item => <div key={item.label}><dt>{item.label}</dt><dd>{item.value}</dd></div>)}
-      </dl> : null}
+      </dl>
       {plan.id !== "beta" ? <p className={styles.benefitTerms}>{getClubOwnerPlanBenefitTerms(locale, draftLocalesEnabled)}</p> : null}
       <dl><div className={embedded ? styles.visuallyHidden : undefined}><dt>{labels.planBudget}</dt><dd>{plan.amount} TC</dd></div><div><dt>{balanceLabel}</dt><dd data-current-xi-budget={!collectionEnabled || undefined} data-current-squad-budget={collectionEnabled || undefined} aria-describedby={balanceStatus ? `${id}-balance-status` : undefined} aria-label={remainingMarketPower === null ? copy.marketPowerUnavailable : undefined}>{`${remainingMarketPower ?? "—"} TC`}</dd></div></dl>
       {balanceStatus ? <p className={styles.previewNote} id={`${id}-balance-status`} role="status">{balanceStatus}</p> : null}

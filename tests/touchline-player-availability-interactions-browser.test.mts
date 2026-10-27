@@ -113,6 +113,28 @@ test("hydrated availability tooltip stays in viewport, supports touch/keyboard a
         await page.setViewportSize({ width: 320, height: 300 });
         await expect.poll(async () => { const b = await page.getByRole("tooltip").boundingBox(); return Boolean(b && b.x >= 0 && b.x + b.width <= 320.5); }).toBe(true);
         await page.locator("#outside").tap(); await expect(page.getByRole("tooltip")).toHaveCount(0);
+        // Keep the complete translated label readable when the available
+        // height is smaller than its text, using the actual CSS and handlers.
+        await page.setViewportSize({ width: 320, height: 50 });
+        await page.evaluate(() => {
+          (window as unknown as {show:(locale:string,side:string)=>void}).show("pt-BR", "center");
+          document.querySelector<HTMLElement>("#root > div")!.style.top = "4px";
+        });
+        await page.locator(".trigger").focus();
+        const tallTip = page.getByRole("tooltip"), text = tallTip.locator(".tooltipText");
+        await expect(tallTip).toBeVisible();
+        const completeText = await tallTip.textContent();
+        await expect.poll(async () => { const b = await tallTip.boundingBox(); return Boolean(b && b.y >= 7.5 && b.y + b.height <= 42.5); }).toBe(true);
+        await expect.poll(() => text.evaluate(node => node.scrollHeight > node.clientHeight)).toBe(true);
+        await page.locator(".trigger").press("End");
+        await expect.poll(() => text.evaluate(node => node.scrollTop >= node.scrollHeight - node.clientHeight - 1)).toBe(true);
+        await expect(page.locator(".trigger")).toBeFocused();
+        await page.locator(".trigger").press("Home");
+        await expect.poll(() => text.evaluate(node => node.scrollTop)).toBe(0);
+        await text.hover(); await page.mouse.wheel(0, 200);
+        await expect.poll(() => text.evaluate(node => node.scrollTop > 0)).toBe(true);
+        assert.equal(await tallTip.textContent(), completeText, "scrolling never removes or truncates text");
+        await page.locator(".trigger").press("Escape"); await expect(page.getByRole("tooltip")).toHaveCount(0);
         assert.equal(await page.evaluate("window.cardClicks"), 0);
         assert.deepEqual(errors, []);
         await context.close();

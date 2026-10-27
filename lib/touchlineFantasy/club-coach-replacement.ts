@@ -38,7 +38,6 @@ export function replaceClubCoach(state: ClubAcquisitionState,
   command: ClubCoachReplacementCommand, context: ClubCoachReplacementContext) {
   assertClubRule(state.coach && typeof state.coach.id === "string" && state.coach.id.trim(), "CLUB_COACH_INVALID");
   inspectClubAcquisition(state);
-  assertClubRule(state.plan !== "beta", "CLUB_COLLECTION_PAID_PLAN_REQUIRED");
   assertClubRule(typeof command.idempotencyKey === "string" && /^[a-zA-Z0-9_-]{8,120}$/.test(command.idempotencyKey), "CLUB_IDEMPOTENCY_INVALID");
   assertClubRule(Number.isSafeInteger(command.expectedRevision) && command.expectedRevision >= 0, "CLUB_REVISION_INVALID");
   assertClubRule(command.expectedRevision === state.revision, "CLUB_STALE_REVISION");

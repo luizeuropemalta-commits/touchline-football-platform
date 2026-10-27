@@ -1,4 +1,5 @@
 export type MarketNotificationPreferences = {
+  accountId?: string;
   settings: Record<string, unknown>;
   channels: { in_app: boolean; push: boolean; email: boolean };
   frequency: string;
@@ -17,12 +18,14 @@ export function gameNotificationSelection(current: MarketNotificationPreferences
   return settings;
 }
 
+export type MarketNotificationOperation = Readonly<{ isCurrent: () => boolean; signal: AbortSignal }>;
+
 type Dependencies = {
   configured: () => boolean;
   permission: () => "granted" | "denied" | "default" | "unsupported";
   requestPermission: () => Promise<string>;
-  register: () => Promise<string>;
-  save: (value: MarketNotificationPreferences & { explicitConsent: boolean }) => Promise<MarketNotificationPreferences>;
+  register: (current: MarketNotificationPreferences, operation?: MarketNotificationOperation) => Promise<string>;
+  save: (value: MarketNotificationPreferences & { explicitConsent: boolean }, operation?: MarketNotificationOperation) => Promise<MarketNotificationPreferences>;
 };
 export type MarketConsentResult = { state: "busy" | "unavailable" | "denied" | "failed" | "partial" | "saved"; preferences?: MarketNotificationPreferences };
 
@@ -39,17 +42,23 @@ function hasConsentTimestamp(value: unknown): boolean {
 /** A single mounted controller owns the gesture. Opening/reading is not consent. */
 export function createMarketNotificationConsent(deps: Dependencies) {
   let running = false;
-  return async (current: MarketNotificationPreferences, action: "enable" | "pause"): Promise<MarketConsentResult> => {
+  return async (current: MarketNotificationPreferences, action: "enable" | "pause", operation?: MarketNotificationOperation): Promise<MarketConsentResult> => {
     if (running) return { state: "busy" };
     running = true;
     let registered = false;
+    const check = () => {
+      if (operation && (operation.signal.aborted || !operation.isCurrent())) throw Error("notification-gesture-retired");
+    };
     try {
+      check();
       if (action === "enable") {
         const permission = deps.permission();
         if (!deps.configured() || permission === "unsupported") return { state: "unavailable" };
         if (permission === "denied" || (permission === "default" && await deps.requestPermission() !== "granted")) return { state: "denied" };
-        if (await deps.register() !== "registered") return { state: "unavailable" };
+        check();
+        if (await deps.register(current, operation) !== "registered") return { state: "unavailable" };
         registered = true;
+        check();
       }
       const requested = { ...current,
         settings: action === "enable" ? gameNotificationSelection(current) : current.settings,
@@ -57,7 +66,9 @@ export function createMarketNotificationConsent(deps: Dependencies) {
         frequency: action === "enable" && current.frequency === "paused" ? "realtime" : action === "pause" ? "paused" : current.frequency,
         explicitConsent: action === "enable",
       };
-      const preferences = await deps.save(requested);
+      check();
+      const preferences = await deps.save(requested, operation);
+      check();
       const confirmed = action === "pause"
         ? preferences.frequency === "paused" && !preferences.channels.in_app && !preferences.channels.push
           && !preferences.channels.email && preferences.explicitConsentAt === null

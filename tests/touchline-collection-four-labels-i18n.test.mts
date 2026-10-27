@@ -43,7 +43,10 @@ test('four-label source wiring retains actions, conditions and currency formatti
   const end = source.indexOf('{collectionEnabled && releasePlayerId', begin);
   assert.ok(begin >= 0 && end > begin);
   const block = source.slice(begin, end);
-  for (const key of labels) assert.ok(block.includes(`{collectionBudgetCopy.${key}}`));
+  for (const key of labels) assert.match(block, new RegExp(`\\bcollectionBudgetCopy\\.${key}\\b`));
+  // Read-only recovery offers refresh; only an actual pending command offers
+  // confirmation. Both retain the same explicit user action and busy gates.
+  assert.match(block, /onClick=\{collection\.retryPending\}>\{collection\.pendingRecoveryOnly \? collectionBudgetCopy\.refreshSquad : collectionBudgetCopy\.confirmPendingOperation\}/);
   assert.doesNotMatch(block, /locale\.startsWith/);
   assert.ok(block.includes('disabled={collection.busy} onClick={collection.reload}'));
   assert.ok(block.includes('collectionEnabled && collection.hasPending'));

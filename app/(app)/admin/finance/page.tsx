@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Banknote, CircleDollarSign, Download, Receipt, ShieldCheck, TriangleAlert, WalletCards } from "lucide-react";
+import { CircleDollarSign, Download, Receipt, ShieldCheck, TriangleAlert, WalletCards } from "lucide-react";
 
 import { GamePanel, LivePill, StatTile } from "@/components/arena-admin-ui";
+import { summarizeInvoiceSample, summarizeFeeSample, formatStripeMinorAmount } from "@/lib/admin/finance-summary";
 import { isOwnerEmail } from "@/lib/admin/owner";
 import { getStripe } from "@/lib/stripe/client";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -26,15 +27,11 @@ type InvoiceRow = {
   number: string | null;
 };
 
-const money = (cents: number, locale: TouchLineAuthLocale, currency = "EUR") => new Intl.NumberFormat(locale, { style: "currency", currency: currency.toUpperCase() }).format((cents || 0) / 100);
+const money = (amount: number, locale: TouchLineAuthLocale, currency = "EUR") => formatStripeMinorAmount(amount, locale, currency);
 const date = (value: string | null | undefined, locale: TouchLineAuthLocale) => value ? new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(new Date(value)) : "-";
 
 function statusCount(rows: InvoiceRow[], status: string) {
   return rows.filter((row) => row.status === status).length;
-}
-
-function sum(rows: InvoiceRow[], key: keyof Pick<InvoiceRow, "subtotal" | "tax" | "total" | "amount_paid" | "amount_due">) {
-  return rows.reduce((total, row) => total + Number(row[key] ?? 0), 0);
 }
 
 function invoiceStatusBreakdown(rows: InvoiceRow[]) {
@@ -79,9 +76,9 @@ export default async function AdminFinancePage({
     );
   }
 
-  const [{ data: invoices }, { data: webhookEvents }] = await Promise.all([
-    admin.from("billing_invoices").select("id,status,currency,subtotal,tax,total,amount_paid,amount_due,created_at,paid_at,stripe_invoice_id,number").order("created_at", { ascending: false }).limit(100).returns<InvoiceRow[]>(),
-    admin.from("stripe_webhook_events").select("stripe_event_id,event_type,processed_at").order("processed_at", { ascending: false }).limit(12),
+  const [{ data: invoices, error: invoiceError }, { data: webhookEvents, error: webhookError }] = await Promise.all([
+    admin.from("billing_invoices").select("id,status,currency,subtotal,tax,total,amount_paid,amount_due,created_at,paid_at,stripe_invoice_id,number").order("created_at", { ascending: false }).limit(100).returns<InvoiceRow[]>().then((result) => result, () => ({ data: null, error: true })),
+    admin.from("stripe_webhook_events").select("stripe_event_id,event_type,processed_at").order("processed_at", { ascending: false }).limit(12).then((result) => result, () => ({ data: null, error: true })),
   ]);
 
   const stripe = getStripe();
@@ -92,13 +89,12 @@ export default async function AdminFinancePage({
       ])
     : [null, null];
 
-  const invoiceRows = invoices ?? [];
-  const currency = invoiceRows[0]?.currency ?? "eur";
-  const grossRevenue = sum(invoiceRows, "amount_paid");
-  const due = sum(invoiceRows, "amount_due");
-  const stripeFees = balanceTransactions?.data.reduce((total, tx) => total + (tx.fee ?? 0), 0) ?? 0;
-  const netRevenue = grossRevenue - stripeFees;
+  const invoiceSummary = summarizeInvoiceSample(invoices, Boolean(invoiceError));
+  const feeSummary = summarizeFeeSample(balanceTransactions?.data ?? null);
+  const invoiceRows = invoiceSummary.status === "ready" ? invoices ?? [] : [];
   const invoiceStatuses = invoiceStatusBreakdown(invoiceRows);
+  const invoicesAvailable = invoiceSummary.status === "ready";
+  const webhookAvailable = !webhookError && webhookEvents !== null;
 
   return (
     <div className="space-y-6">
@@ -110,12 +106,13 @@ export default async function AdminFinancePage({
             <h1 className="mt-2 max-w-4xl text-5xl font-black  italic leading-[.9] text-white md:text-7xl">
               Finance Control
             </h1>
+            <Link href={`/admin/company-finance?lang=${locale}`} className="mt-3 inline-flex text-sm font-bold text-[#b7ff45] underline underline-offset-4">{locale === "pt-BR" ? "Fornecedores, contratos e despesas" : "Suppliers, contracts and expenses"}</Link>
             <p className="mt-5 max-w-3xl text-sm leading-6 text-slate-300/75">
               Read-only reconciliation from Stripe-synchronized billing tables. No bank passwords, no exposed secret keys, no automatic refunds, transfers or account changes.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <a href="/api/admin/finance/export" className="inline-flex h-11 items-center gap-2 rounded-2xl bg-[#a3ff12] px-5 text-[9px] font-black text-[#071007]">
-                <Download size={14} /> Export CSV
+                <Download size={14} /> Export latest 1,000 invoices (CSV)
               </a>
               <Link href={touchLineAuthHref("/admin", locale)} className="rounded-2xl border border-cyan-300/20 bg-cyan-300/[.06] px-4 py-3 text-[10px] font-black text-cyan-100">Owner Admin</Link>
             </div>
@@ -141,14 +138,28 @@ export default async function AdminFinancePage({
         </div>
       </GamePanel>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
-        <StatTile icon={CircleDollarSign} label="Gross" value={money(grossRevenue, locale, currency)} delta="paid invoices" accent="gold" />
-        <StatTile icon={Banknote} label="Net" value={money(netRevenue, locale, currency)} delta="minus fetched fees" accent="lime" />
-        <StatTile icon={WalletCards} label="Fees" value={money(stripeFees, locale, currency)} delta="provider txs" accent="rose" />
-        <StatTile icon={Receipt} label="Pending" value={String(statusCount(invoiceRows, "open"))} delta={money(due, locale, currency)} accent="cyan" />
-        <StatTile icon={TriangleAlert} label="Refused" value={String(statusCount(invoiceRows, "uncollectible"))} delta="invoice status" accent="rose" />
-        <StatTile icon={ShieldCheck} label="Webhooks" value={String(webhookEvents?.length ?? 0)} delta="recent events" accent="cyan" />
-      </div>
+      <GamePanel className="space-y-4 p-5">
+        <p className="text-sm text-slate-300">Invoice sample: latest 100 records. Amounts are grouped by currency, without conversion. These are not all-time totals. Original amount due is the invoice’s original amount_due, not its outstanding balance.</p>
+        {invoiceSummary.currencies.map((group) => (
+          <div key={group.currency} className="grid gap-4 md:grid-cols-2">
+            <StatTile icon={CircleDollarSign} label={`Paid · ${group.currency}`} value={money(group.paid, locale, group.currency)} delta={`${group.count} sampled invoices`} accent="gold" />
+            <StatTile icon={Receipt} label={`Original amount due · ${group.currency}`} value={money(group.due, locale, group.currency)} delta="same invoice sample" accent="cyan" />
+          </div>
+        ))}
+        {!invoiceSummary.currencies.length ? <p role={invoicesAvailable ? undefined : "status"} className="text-sm text-slate-400">{invoicesAvailable ? "No invoices in the confirmed sample." : "Invoice sample unavailable. Amounts are not confirmed."}</p> : null}
+        <div className="grid gap-4 md:grid-cols-3">
+          <StatTile icon={Receipt} label="Open invoices" value={invoicesAvailable ? String(statusCount(invoiceRows, "open")) : "—"} delta="latest 100 records" accent="cyan" />
+          <StatTile icon={TriangleAlert} label="Uncollectible invoices" value={invoicesAvailable ? String(statusCount(invoiceRows, "uncollectible")) : "—"} delta="latest 100 records" accent="rose" />
+          <StatTile icon={ShieldCheck} label="Webhooks" value={webhookAvailable ? String(webhookEvents?.length ?? 0) : "—"} delta={webhookAvailable ? "latest 12 records" : "read unavailable"} accent="cyan" />
+        </div>
+      </GamePanel>
+      <GamePanel className="space-y-4 p-5">
+        <p className="text-sm text-slate-300">Stripe fee sample: latest 12 balance transactions, a separate window from invoices. No reconciled net is calculated from these different samples.</p>
+        <div className="grid gap-4 md:grid-cols-2">
+          {feeSummary.currencies.map((group) => <StatTile key={group.currency} icon={WalletCards} label={`Fees · ${group.currency}`} value={money(group.fees, locale, group.currency)} delta={`${group.count} sampled transactions`} accent="rose" />)}
+        </div>
+        {!feeSummary.currencies.length ? <p role={feeSummary.status === "ready" ? undefined : "status"} className="text-sm text-slate-400">{feeSummary.status === "ready" ? "No transactions in the confirmed fee sample." : "Stripe fee sample unavailable. Fees are not confirmed."}</p> : null}
+      </GamePanel>
 
       <div className="grid gap-5 xl:grid-cols-[.65fr_1.35fr]">
         <GamePanel className="p-5">
@@ -160,7 +171,7 @@ export default async function AdminFinancePage({
                 <span className="capitalize">{status.replaceAll("_", " ")}</span><span>{count}</span>
               </div>
             ))}
-            {!Object.keys(invoiceStatuses).length ? <p className="text-[10px] text-slate-500">No invoices synchronized yet.</p> : null}
+            {!Object.keys(invoiceStatuses).length ? <p className="text-[10px] text-slate-500">{invoicesAvailable ? "No invoices in the confirmed sample." : "Invoice status unavailable."}</p> : null}
           </div>
           <p className="mt-5 rounded-2xl border border-amber-300/15 bg-amber-300/[.055] p-3 text-[10px] leading-5 text-amber-100/80">
             Refunds, transfers and payout account changes are intentionally not available here. Add reinforced confirmation only when operations are legally ready.
@@ -170,7 +181,7 @@ export default async function AdminFinancePage({
         <GamePanel className="overflow-hidden">
           <div className="border-b border-white/[.07] p-5">
             <p className="text-[10px] font-black text-cyan-300">Recent transactions</p>
-            <h2 className="mt-1 text-2xl font-black  italic text-white">Reconciliation Feed</h2>
+            <h2 className="mt-1 text-2xl font-black  italic text-white">Recent Financial Samples</h2>
           </div>
           <div className="divide-y divide-white/[.06]">
             {(balanceTransactions?.data ?? []).map((tx) => (
@@ -195,7 +206,7 @@ export default async function AdminFinancePage({
                 </div>
               ))
             ) : null}
-            {!balanceTransactions?.data.length && !invoiceRows.length ? <div className="p-8 text-center text-xs text-slate-500">No financial records synchronized yet.</div> : null}
+            {!balanceTransactions?.data.length && !invoiceRows.length ? <div className="p-8 text-center text-xs text-slate-500">{invoicesAvailable ? "No invoices in the confirmed sample." : "Invoice records unavailable."}</div> : null}
           </div>
         </GamePanel>
       </div>

@@ -8,7 +8,7 @@ import { sportmonksFixtureInstant } from "../lib/football-data/sportmonks-fixtur
 test("ClubOwner date window excludes a large archive before the fixture limit", async () => {
   const source = await readFile(new URL("../lib/football-data/fixture-schedule-store.ts", import.meta.url), "utf8");
   const ast = ts.createSourceFile("store.ts", source, ts.ScriptTarget.Latest, true);
-  const fn = ast.statements.find((node): node is ts.FunctionDeclaration => ts.isFunctionDeclaration(node) && node.name?.text === "readPublicCompetitionFixtures");
+  const fn = ast.statements.find((node): node is ts.FunctionDeclaration => ts.isFunctionDeclaration(node) && node.name?.text === "readPublicCompetitionFixturePage");
   assert.ok(fn?.body);
   const prefix = fn.body.statements.map((node) => node.getText(ast));
   const end = prefix.findIndex((statement) => statement.includes("const { data: fixtureRows"));
@@ -29,7 +29,7 @@ test("ClubOwner date window excludes a large archive before the fixture limit", 
   };
   const result = await vm.runInNewContext(`(async()=>{${js}; return fixtureRows;})()`, {
     options: { providedAdmin: { from: () => query }, includeHistorical: true, limit: 240, from: "2026-10-04T00:00:00.000Z", through: "2026-10-25T00:00:00.000Z" },
-    DEFAULT_PROVIDER: "sportmonks", DEFAULT_COMPETITION_PROVIDER_ID: "8", DEFAULT_LIMIT: 50, MAX_LIMIT: 500,
+    offset: undefined, DEFAULT_PROVIDER: "sportmonks", DEFAULT_COMPETITION_PROVIDER_ID: "8", DEFAULT_LIMIT: 50, MAX_LIMIT: 500,
   });
   assert.deepEqual(result.map((row: { id: string }) => row.id), ["friday", "today"]);
 });

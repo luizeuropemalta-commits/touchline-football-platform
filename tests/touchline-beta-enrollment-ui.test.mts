@@ -11,7 +11,7 @@ import { isTouchlineFantasyMarketAccess } from "../lib/touchlineFantasy/market-p
 
 const require = createRequire(import.meta.url);
 const source = readFileSync(new URL("../components/touchline/fantasy/TouchlineBetaEnrollment.tsx", import.meta.url), "utf8");
-const confirmed = { ok: true, planKey: "beta", status: "active", budgetEur: 50_000_000, allowedClubTeamIds: ["22", "117", "116", "52"] };
+const confirmed = { ok: true, planKey: "beta", status: "active", budgetEur: 100_000_000, allowedClubTeamIds: ["22", "117", "116", "52", "3", "13"] };
 const response = (status: number, body: unknown) => ({ ok: status >= 200 && status < 300, status, json: async () => body });
 type Element = { type: unknown; props: { children?: unknown; onClick?: () => Promise<void> | void; [key: string]: unknown } };
 function elements(value: unknown): Element[] {

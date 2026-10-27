@@ -11,17 +11,17 @@ const compiled = ts.transpileModule(source, {
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
 }).outputText;
 const quietHours = { enabled: false, start: "22:00", end: "07:00", timezone: "UTC" };
-const accountId = "synthetic-account-id";
+const accountId = "22222222-2222-4222-8222-222222222222";
 const sentinel = "PRIVATE_DIAGNOSTIC_SENTINEL schema=private_preferences path=/synthetic/internal.sql";
 const publicError = "Notification preferences could not be saved.";
 const plain = (value: unknown) => JSON.parse(JSON.stringify(value));
 
-function harness(options: { error?: boolean; authenticated?: boolean; arenaAccess?: boolean; clientAvailable?: boolean } = {}) {
+function harness(options: { error?: boolean; authenticated?: boolean; arenaAccess?: boolean; clientAvailable?: boolean; authError?: boolean } = {}) {
   const calls = { clients: 0, auth: 0, writes: 0, singles: 0 };
   let written: Record<string, unknown> | undefined;
   const user = options.authenticated === false ? null : { id: accountId };
   const client = {
-    auth: { getUser: async () => { calls.auth++; return { data: { user }, error: null }; } },
+    auth: { getUser: async () => { calls.auth++; return { data: { user }, error: options.authError ? { message: sentinel } : null }; } },
     from: (table: string) => {
       assert.equal(table, "notification_preferences", "unexpected table/device access");
       return {
@@ -101,6 +101,7 @@ test("preferences PUT preserves successful preference data without internal fiel
   const body = await response.json();
   assert.equal(body.ok, true);
   assert.deepEqual(body.data, {
+    accountId,
     settings: h.written()?.settings,
     channels: { in_app: true, push: false, email: false },
     frequency: "realtime", quietHours, explicitConsentAt: null, updatedAt: "2026-10-21T00:00:00Z",
@@ -128,5 +129,54 @@ test("preferences PUT rejects invalid origins before creating a client", async (
     assert.equal(response.status, 403);
     assert.deepEqual(await response.json(), { ok: false, error: "Invalid request origin." });
     assert.deepEqual(h.calls, { clients: 0, auth: 0, writes: 0, singles: 0 });
+  }
+});
+
+test("expected account from an earlier read cannot authorize another user's preference write", async () => {
+  const h = harness();
+  const response = await h.put(request({ "X-Touchline-Expected-Account": "11111111-1111-4111-8111-111111111111" }));
+  assert.equal(response.status, 409);
+  assert.equal(h.calls.auth, 1);
+  assert.equal(h.calls.writes, 0);
+});
+
+
+test("matching expected account remains a condition; malformed context or auth errors never write", async () => {
+  const valid = harness();
+  assert.equal((await valid.put(request({ "X-Touchline-Expected-Account": accountId }))).status, 200);
+  assert.equal(valid.written()?.user_id, accountId);
+  for (const value of ["", "not-a-uuid"]) {
+    const h = harness(); assert.equal((await h.put(request({ "X-Touchline-Expected-Account": value }))).status, 400);
+    assert.equal(h.calls.writes, 0);
+  }
+  const failed = harness({ authError: true });
+  assert.equal((await failed.put(request({ "X-Touchline-Expected-Account": accountId }))).status, 401);
+  assert.equal(failed.calls.writes, 0);
+});
+
+test("account condition applies before both consent and presentation actions", async () => {
+  for (const action of ["set_push_sound", "set_game_locale"]) {
+    const h = harness();
+    const req = new Request("https://touchline.test/api/notifications/preferences", { method: "PUT",
+      headers: { origin: "https://touchline.test", "X-Touchline-Expected-Account": "11111111-1111-4111-8111-111111111111" },
+      body: JSON.stringify({ action, silentPush: true, locale: "en-GB", expectedRevision: "0" }) });
+    assert.equal((await h.put(req)).status, 409); assert.equal(h.calls.writes, 0);
+  }
+});
+
+
+test("cancellation while parsing a request body prevents every preference action", async () => {
+  for (const payload of [{ action: "set_game_locale", locale: "en-GB", expectedRevision: "0" },
+    { action: "set_push_sound", silentPush: true }, await request().json()]) {
+    const h = harness(), controller = new AbortController();
+    const req = new Request(request({ "X-Touchline-Expected-Account": accountId }), { signal: controller.signal });
+    let release!: (value: unknown) => void;
+    const body = new Promise(resolve => { release = resolve; });
+    Object.defineProperty(req, "json", { value: () => body });
+    const pending = h.put(req);
+    await new Promise<void>(resolve => setImmediate(resolve));
+    controller.abort(); release(payload);
+    assert.equal((await pending).status, 409);
+    assert.equal(h.calls.writes, 0);
   }
 });

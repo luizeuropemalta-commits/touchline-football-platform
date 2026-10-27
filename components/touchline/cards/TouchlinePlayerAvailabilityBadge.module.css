@@ -42,7 +42,8 @@
   z-index: 2147483000;
   box-sizing: border-box;
   width: max-content;
-  max-width: min(260px, calc(100vw - 32px));
+  max-width: min(260px, calc(100vw - 32px), var(--touchline-tooltip-available-width, 260px));
+  max-height: var(--touchline-tooltip-available-height, calc(100dvh - 16px));
   padding: 8px 10px;
   border: 1px solid rgba(163, 255, 18, .52);
   border-radius: 9px;
@@ -53,6 +54,13 @@
   text-align: start;
   box-shadow: 0 10px 30px rgba(0, 0, 0, .5);
   pointer-events: auto;
+}
+
+.tooltipText {
+  display: block;
+  max-height: max(0px, calc(var(--touchline-tooltip-available-height, calc(100dvh - 16px)) - 18px));
+  overflow: auto;
+  overflow-wrap: anywhere;
 }
 
 /* Invisible hit area bridges the visual gap without changing the artwork. */

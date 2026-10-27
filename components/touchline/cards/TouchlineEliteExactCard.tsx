@@ -1045,14 +1045,16 @@ export function TouchlineEliteExactCard({
     if (!mask || typeof document === "undefined") return;
 
     let active = true;
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
     const fitNameInsideShirt = () => {
       if (!active) return;
       const initialSize = fitShirtBackNameSize(shirtPlayerName) * shirtClubScale * SHIRT_NAME_READABILITY_MULTIPLIER;
       const availableWidth = Math.max(1, mask.clientWidth - shirtNamePadding.left - shirtNamePadding.right);
-      const canvas = document.createElement("canvas");
-      const context = canvas.getContext("2d");
       if (!context) {
-        setShirtPlayerNameFit({ size: initialSize, horizontalScale: 1 });
+        setShirtPlayerNameFit((previous) => previous.size === initialSize && previous.horizontalScale === 1
+          ? previous
+          : { size: initialSize, horizontalScale: 1 });
         return;
       }
       context.font = `950 ${initialSize}px "Bebas Neue", "Anton", Impact, Inter, sans-serif`;
@@ -1064,10 +1066,13 @@ export function TouchlineEliteExactCard({
       const fittedSize = availableScale < MIN_SHIRT_NAME_HORIZONTAL_SCALE
         ? initialSize * (availableScale / MIN_SHIRT_NAME_HORIZONTAL_SCALE)
         : initialSize;
-      setShirtPlayerNameFit({
+      const nextFit = {
         size: Number(Math.max(3.5, fittedSize).toFixed(2)),
         horizontalScale: Number(horizontalScale.toFixed(3)),
-      });
+      };
+      setShirtPlayerNameFit((previous) => previous.size === nextFit.size && previous.horizontalScale === nextFit.horizontalScale
+        ? previous
+        : nextFit);
     };
 
     fitNameInsideShirt();
@@ -1113,8 +1118,10 @@ export function TouchlineEliteExactCard({
     const liveCompactFallbackUrl = touchlineLiveCompactFrameUrl(DEFAULT_CLUB_TEMPLATE_URL);
     const zoomFallbackUrl = touchlineZoomFrameUrl(DEFAULT_CLUB_TEMPLATE_URL);
     const handleFrameError = (image: HTMLImageElement, fallbackUrl: string) => {
-      if (image.src.endsWith(fallbackUrl)) return;
+      // A failed density candidate can differ from src (the 1x fallback).
+      const failedSource = image.currentSrc || image.src;
       image.srcset = "";
+      if (failedSource.endsWith(fallbackUrl)) return;
       image.src = fallbackUrl;
     };
     const frameStyle = {
@@ -1129,17 +1136,21 @@ export function TouchlineEliteExactCard({
       userSelect: "none",
     } as const;
 
+    // Densities are relative to the 119px source, not viewport width: the
+    // 430px canvas is transformed. Both candidates retain the same intrinsic
+    // width, and SSR/hydration need no browser measurement or global state.
     if (optimizeForLiveCompact) {
       return (
         <img
           data-touchline-card-frame="true"
           data-live-card-asset="frame"
           src={liveCompactFrameUrl}
+          srcSet={liveCompactFrameUrl !== zoomFrameUrl ? `${liveCompactFrameUrl} 1x, ${zoomFrameUrl} ${430 / 119}x` : undefined}
           alt=""
           draggable={false}
           loading={imageLoading}
-          decoding="sync"
-          fetchPriority="high"
+          decoding={imageLoading === "lazy" ? "async" : "sync"}
+          fetchPriority={imageLoading === "lazy" ? "low" : "high"}
           onError={(event) => handleFrameError(event.currentTarget, liveCompactFallbackUrl)}
           style={frameStyle}
         />
@@ -1156,6 +1167,7 @@ export function TouchlineEliteExactCard({
         draggable={false}
         loading={imageLoading}
         decoding="async"
+        fetchPriority={imageLoading === "lazy" ? "low" : undefined}
         onError={(event) => handleFrameError(event.currentTarget, zoomFallbackUrl)}
         style={frameStyle}
       />
@@ -1439,8 +1451,8 @@ export function TouchlineEliteExactCard({
           alt=""
           aria-hidden="true"
           draggable={false}
-          loading="eager"
-          decoding="sync"
+          loading={imageLoading}
+          decoding={imageLoading === "lazy" ? "async" : "sync"}
           style={{
             position: "absolute",
             left: "50%",

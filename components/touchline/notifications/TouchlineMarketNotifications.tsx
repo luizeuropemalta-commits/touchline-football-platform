@@ -7,20 +7,30 @@ import { registerTouchlinePushDevice, touchlinePushIsConfigured } from "@/lib/to
 import { getTouchlineMarketNotificationsCopy } from "@/lib/touchlineArena/market-notifications-i18n";
 import controls from "@/components/touchline/TouchlineGlobalNavigation.module.css";
 
-async function preferencesRequest(value?: (MarketNotificationPreferences & { explicitConsent: boolean }) | { action: "set_push_sound"; silentPush: boolean }) {
+const ACCOUNT_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+async function preferencesRequest(value?: (MarketNotificationPreferences & { explicitConsent: boolean }) | { action: "set_push_sound"; silentPush: boolean },
+  context?: { expectedAccountId?: string; signal?: AbortSignal }) {
   const controller = new AbortController();
+  const cancel = () => controller.abort();
+  context?.signal?.addEventListener("abort", cancel, { once: true });
+  if (context?.signal?.aborted) cancel();
   const timeout = setTimeout(() => controller.abort(), 15_000);
   try {
+    controller.signal.throwIfAborted();
+    if (value && (!context?.expectedAccountId || !ACCOUNT_ID.test(context.expectedAccountId))) throw Error("account-unconfirmed");
     const response = await fetch("/api/notifications/preferences", {
       method: value ? "PUT" : "GET", cache: "no-store", signal: controller.signal,
-      ...(value ? { headers: { "Content-Type": "application/json" }, body: JSON.stringify(value) } : {}),
+      ...(value ? { headers: { "Content-Type": "application/json", "X-Touchline-Expected-Account": context!.expectedAccountId! }, body: JSON.stringify(value) } : {}),
     });
     const body = await response.json();
+    controller.signal.throwIfAborted();
     if (!response.ok || body?.ok !== true || !body.data?.settings || !body.data?.quietHours
       || typeof body.data?.channels?.push !== "boolean" || typeof body.data?.channels?.email !== "boolean"
       || typeof body.data?.channels?.in_app !== "boolean" || typeof body.data?.frequency !== "string") throw new Error("preferences-unavailable");
+    if (typeof body.data.accountId !== "string" || !ACCOUNT_ID.test(body.data.accountId)
+      || (context?.expectedAccountId && body.data.accountId !== context.expectedAccountId)) throw Error("account-unconfirmed");
     return body.data as MarketNotificationPreferences;
-  } finally { clearTimeout(timeout); }
+  } finally { clearTimeout(timeout); context?.signal?.removeEventListener("abort", cancel); controller.abort(); }
 }
 
 export default function TouchlineMarketNotifications({ locale, draftLocalesEnabled = false }: { locale: string; draftLocalesEnabled?: boolean }) {
@@ -31,10 +41,11 @@ export default function TouchlineMarketNotifications({ locale, draftLocalesEnabl
   const busyRef = useRef(false);
   const generation = useRef(0);
   const mounted = useRef(true);
+  const actionAbort = useRef<AbortController | null>(null);
   useEffect(() => {
-    const lifecycle = mounted, requests = generation;
+    const lifecycle = mounted, requests = generation, pending = actionAbort;
     lifecycle.current = true;
-    return () => { lifecycle.current = false; requests.current++; };
+    return () => { lifecycle.current = false; requests.current++; pending.current?.abort(); };
   }, []);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -44,18 +55,22 @@ export default function TouchlineMarketNotifications({ locale, draftLocalesEnabl
     configured: () => Boolean(touchlinePushIsConfigured()),
     permission: () => typeof Notification === "undefined" || !("serviceWorker" in navigator) || !("PushManager" in window) ? "unsupported" : Notification.permission,
     requestPermission: () => Notification.requestPermission(),
-    register: registerTouchlinePushDevice,
-    save: preferencesRequest,
+    register: (current, operation) => {
+      if (!current.accountId || !ACCOUNT_ID.test(current.accountId) || !operation) throw Error("account-unconfirmed");
+      return registerTouchlinePushDevice({ expectedAccountId: current.accountId, signal: operation.signal, isCurrentAccount: operation.isCurrent });
+    },
+    save: (value, operation) => preferencesRequest(value, { expectedAccountId: value.accountId, signal: operation?.signal }),
   }), []);
 
-  function close() { generation.current++; setOpen(false); trigger.current?.focus(); }
+  function close() { generation.current++; actionAbort.current?.abort(); setOpen(false); trigger.current?.focus(); }
   async function changeSound(silentPush: boolean) {
     if (!preferences || busyRef.current) return;
     busyRef.current = true; setBusy(true);
     const current = ++generation.current;
+    const controller = new AbortController(); actionAbort.current = controller;
     setMessage(notificationCopy.savingSound);
     try {
-      const saved = await preferencesRequest({ action: "set_push_sound", silentPush });
+      const saved = await preferencesRequest({ action: "set_push_sound", silentPush }, { expectedAccountId: preferences.accountId, signal: controller.signal });
       if (saved.settings.silentPush !== silentPush) throw new Error("sound-unconfirmed");
       if (!mounted.current || current !== generation.current) return;
       setPreferences(saved);
@@ -87,7 +102,10 @@ export default function TouchlineMarketNotifications({ locale, draftLocalesEnabl
     busyRef.current = true; setBusy(true);
     const current = ++generation.current;
     setMessage(notificationCopy.awaiting);
-    const result = await run(preferences, action);
+    const controller = new AbortController(); actionAbort.current = controller;
+    const result = await run(preferences, action, {
+      signal: controller.signal, isCurrent: () => mounted.current && current === generation.current,
+    });
     busyRef.current = false;
     if (!mounted.current) return;
     setBusy(false);

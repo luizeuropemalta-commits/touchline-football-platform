@@ -291,7 +291,9 @@ test("real SSR keeps eleven coordinates, identities, links, leaders, card modes 
     const html = view.render(locale, { confirmed: true });
     assert.equal((html.match(/<article /g) ?? []).length, 11);
     for (const player of view.players) assert.ok(html.includes(`--lineup-x:${player.x}%;--lineup-y:${player.y}%`));
-    assert.ok(html.includes("4-3-3")); assert.ok(html.includes("ARS")); assert.ok(html.includes("CHE")); assert.ok(html.replace(/<[^>]*>/g, "").includes("canonical-status · canonical-kickoff"));
+    assert.ok(html.includes("4-3-3")); assert.ok(html.includes("ARS")); assert.ok(html.includes("CHE"));
+    assert.ok(html.replace(/<[^>]*>/g, "").includes("canonical-kickoff"));
+    assert.ok(!html.includes("canonical-status"), "The SSR status must not compete with the shared score/freshness consumer");
     const kickoff = view.captures.find(item => item.kind === "ClubHubLocalKickoff")!;
     assert.equal(kickoff.props.locale, locale); assert.equal(kickoff.props.fallback, "canonical-kickoff");
     assert.ok(html.includes("Verified Leader"));

@@ -162,7 +162,7 @@ test("ClubHub retires public feed while preserving its bounded reader, admin and
   assert.match(styles, /\.liveMedia\s*\{[\s\S]*?place-content:\s*center/);
   assert.match(styles, /\.liveMedia img\s*\{[\s\S]*?object-fit:\s*contain/);
   assert.match(styles, /\.shell\s*\{[\s\S]*?display:\s*flex[\s\S]*?height:\s*100%[\s\S]*?overflow:\s*hidden/);
-  assert.match(styles, /\.grid\s*\{[\s\S]*?align-content:\s*start[\s\S]*?grid-auto-rows:\s*max-content[\s\S]*?overflow-y:\s*auto[\s\S]*?overscroll-behavior:\s*contain[\s\S]*?scrollbar-gutter:\s*stable[\s\S]*?touch-action:\s*pan-y/);
+  assert.match(styles, /\.grid\s*\{[\s\S]*?align-content:\s*start[\s\S]*?grid-auto-rows:\s*max-content[\s\S]*?overflow-y:\s*auto[\s\S]*?overscroll-behavior:\s*contain[\s\S]*?scrollbar-gutter:\s*stable[\s\S]*?touch-action:\s*auto/);
   const leagueLayoutStyles = readFileSync(new URL("../components/touchline/club-hub/ClubHubOfficialLeague.module.css", import.meta.url), "utf8");
   assert.match(leagueLayoutStyles, /width:\s*min\(920px, 100%\)/);
   assert.match(leagueLayoutStyles, /align-items:\s*start/);
@@ -170,9 +170,9 @@ test("ClubHub retires public feed while preserving its bounded reader, admin and
   const tableStyles = readFileSync(new URL("../components/touchline/TouchlineOfficialLeagueTable.module.css", import.meta.url), "utf8");
   const tableComponent = readFileSync(new URL("../components/touchline/TouchlineOfficialLeagueTable.tsx", import.meta.url), "utf8");
   assert.match(tableStyles, /\.clubHubRail\s*\{[\s\S]*?display:\s*flex[\s\S]*?overflow:\s*hidden/);
-  assert.match(tableStyles, /\.clubHubRail \.tableWrap\s*\{[\s\S]*?max-height:\s*620px[\s\S]*?overflow-y:\s*auto[\s\S]*?touch-action:\s*pan-y/);
+  assert.match(tableStyles, /\.clubHubRail \.tableWrap\s*\{[\s\S]*?max-height:\s*620px[\s\S]*?overflow-y:\s*auto[\s\S]*?touch-action:\s*auto/);
   assert.match(tableComponent, /data-club-table-scroll-region=\{variant === "clubHubRail" \? "true" : undefined\}/);
-  assert.match(tableComponent, /tabIndex=\{hasScrollableViewport \? 0 : undefined\}/);
+  assert.match(tableComponent, /tabIndex=\{0\}/);
   assert.doesNotMatch(component, /comment|reaction|SportMonks|provider|API/i);
 });
 

@@ -18,7 +18,7 @@ test("missing paths receive one validated installed runtime and SQL proofs canno
   const deps = fixture();
   const source = { TOUCHLINE_RUN_LOCALE_BROWSER_TESTS: "1" };
   const env = await releaseSqlEnvironment(source, deps);
-  for (const family of ["FANTASY", "STUDIO", "GOLDEN_BOOT"]) {
+  for (const family of ["FANTASY", "STUDIO", "GOLDEN_BOOT", "COMPANY"]) {
     assert.equal(env[`TOUCHLINE_${family}_PGLITE_MODULE`], "/test/pglite/dist/index.js");
   }
   assert.equal(env.TOUCHLINE_AVATAR_QA_COMPATIBILITY, "1");
@@ -30,10 +30,10 @@ test("missing paths receive one validated installed runtime and SQL proofs canno
 test("explicit distinct absolute paths are preserved and each is validated", async () => {
   const deps = fixture();
   deps.resolveRuntime = () => { throw new Error("must not resolve fallback"); };
-  const source = Object.fromEntries(["FANTASY", "STUDIO", "GOLDEN_BOOT"].map(family => [`TOUCHLINE_${family}_PGLITE_MODULE`, `/test/${family}/index.js`]));
+  const source = Object.fromEntries(["FANTASY", "STUDIO", "GOLDEN_BOOT", "COMPANY"].map(family => [`TOUCHLINE_${family}_PGLITE_MODULE`, `/test/${family}/index.js`]));
   const env = await releaseSqlEnvironment(source, deps);
   for (const [key, value] of Object.entries(source)) assert.equal(env[key], value);
-  assert.equal(deps.calls.length, 5);
+  assert.equal(deps.calls.length, 6);
 });
 
 test("invalid explicit paths never silently fall back", async () => {

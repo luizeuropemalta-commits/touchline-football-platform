@@ -9,7 +9,9 @@ import * as matchCentre from "../lib/touchlineArena/match-centre.ts";
 import * as round from "../lib/touchlineArena/arena-fixture-round.ts";
 import * as i18n from "../lib/touchlineArena/i18n.ts";
 import * as catalogueLocale from "../lib/touchlineArena/catalogue-locale.ts";
+import * as stripState from "../lib/touchlineArena/club-hub-fixture-strip.ts";
 import * as matchCopy from "../lib/touchlineArena/match-centre-i18n.ts";
+import * as fixtureState from "../lib/touchlineArena/fixture-state.ts";
 import * as arabicDate from "../lib/touchlineArena/arabic-fixture-date.ts";
 import type { TouchlinePublicFixture } from "../lib/football-data/public-fixture.ts";
 import { loadSportsPublicationClientForSsr } from "./helpers/load-sports-publication-client.mts";
@@ -34,6 +36,7 @@ function futureHelper(_unused?: undefined, inheritedProbe = false) {
   runInNewContext((inheritedProbe ? 'Object.prototype["provider inherited"] = "FALSE_STATUS_LABEL";\n' : "")
     + ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText,
     { exports, require: (name: string) => {
+      if (name === "./fixture-state.ts") return fixtureState;
       if (name === "./arena-fixture-round.ts") return round;
       if (name === "./catalogue-locale.ts") return catalogueLocale;
       if (name === "./match-centre-i18n.ts") return matchCopy;
@@ -99,6 +102,8 @@ function parentToChild(normalize: typeof i18n.normalizeTouchLineLocale, label: t
       if (name === "@/components/touchline/TouchlineLivePresentationRefresh") return { default: (props: { serverRefreshAfterMs: number }) => {
         refreshes.push(props); return null;
       } };
+      if (name === "@/lib/touchlineArena/club-hub-fixture-strip") return stripState;
+      if (name === "@/lib/touchlineArena/match-centre-i18n") return matchCopy;
       if (name === "@/lib/touchlineArena/match-centre") return { ...matchCentre, touchlineFixtureStatusLabel: label };
       assert.fail(`Unexpected child import: ${name}`);
     } });
@@ -120,45 +125,69 @@ function parentToChild(normalize: typeof i18n.normalizeTouchLineLocale, label: t
   } };
 }
 const fixture = (patch: Record<string, unknown> = {}) => ({
-  id: "canonical-fixture-id", providerId: "fixture-provider-id", startsAt: "2020-01-01T12:00:00Z", status: "Live",
+  id: "canonical-fixture-id", providerId: "canonical-fixture-id", startsAt: "2020-01-01T12:00:00Z", status: "Live",
   homeTeam: { id: "h", providerId: "h", name: "Official Home" }, awayTeam: { id: "a", providerId: "a", name: "Official Away" },
   homeScore: 0, awayScore: 0, ...patch,
 }) as TouchlinePublicFixture;
 
-test("real parent binding passes normalized full locale into the real child presentation through all three status calls", () => {
+function expectedMarkup(score: string, status: string | null = null) {
+  return renderToStaticMarkup(React.createElement("b", { "aria-live": "polite" },
+    React.createElement("span", { "data-clubhub-fixture-score": "" }, score),
+    status ? React.createElement("span", { "data-clubhub-fixture-status": "" }, ` ${status}`) : null));
+}
+
+test("real parent binding preserves full locale and cannot invent live freshness from an SSR seed", () => {
   const normalizations: string[] = [], labelCalls: string[] = [];
   const future = futureHelper();
   const view = parentToChild(((value: string) => { normalizations.push(value); return value; }) as typeof i18n.normalizeTouchLineLocale,
     (value, locale) => { labelCalls.push(locale); return future(value, locale); }, true);
   for (const locale of locales) {
-    const copy = matchCentre.TOUCHLINE_FIXTURE_STATUS_CATALOGUES[locale];
-    for (const [data, expected] of [
-      [fixture({ status: "FT", liveMinute: 77, livePeriod: "1st Half" }), `0 — 0 · ${copy.fullTime}`],
-      [fixture({ liveMinute: 0, livePeriod: "1st Half" }), `0 — 0 · 0′ · ${copy.firstHalf}`],
-      [fixture(), `0 — 0 · ${copy.live}`],
+    const copy = matchCopy.getTouchlineMatchCentreCopy(locale, true);
+    for (const [data, status] of [
+      [fixture({ status: "FT", liveMinute: 77, livePeriod: "1st Half" }), matchCentre.TOUCHLINE_FIXTURE_STATUS_CATALOGUES[locale].fullTime],
+      [fixture({ liveMinute: 0, livePeriod: "1st Half" }), copy.liveDataUpdating],
+      [fixture(), copy.liveDataUpdating],
     ] as const) {
-      const before = JSON.stringify(data); assert.equal(view.render(locale, data), `<b aria-live="polite">${expected}</b>`); assert.equal(JSON.stringify(data), before);
-      assert.equal(view.calls.at(-1)?.initialFixture, data); assert.equal(view.calls.at(-1)?.fixtureId, "canonical-fixture-id"); assert.equal(view.calls.at(-1)?.locale, locale);
+      const before = JSON.stringify(data); assert.equal(view.render(locale, data), expectedMarkup("0 — 0", status)); assert.equal(JSON.stringify(data), before);
+      assert.equal(view.calls.at(-1)?.initialFixture, data); assert.equal(view.calls.at(-1)?.fixtureId, data.providerId); assert.equal(view.calls.at(-1)?.locale, locale);
     }
   }
-  assert.deepEqual(normalizations, locales.flatMap(locale => [locale, locale, locale])); assert.deepEqual(labelCalls, normalizations);
-  assert.match(view.parentSource, /import \{ resolveTouchlineCatalogueLocale \} from "@\/lib\/touchlineArena\/catalogue-locale"/);
+  assert.deepEqual(normalizations, locales.flatMap(locale => [locale, locale, locale]));
+  assert.deepEqual(labelCalls, locales, "only confirmed finished facts bypass missing live freshness");
 });
 
-test("actual gated parent/child keeps zero/null/partial scores, minute zero, pregame VS and raw unknown text", () => {
-  const view = parentToChild(i18n.normalizeTouchLineLocale, matchCentre.touchlineFixtureStatusLabel);
-  for (const locale of locales) {
-    const copy = baseline[locale === "pt-BR" ? "pt-BR" : "en-GB"];
-    for (const [data, expected] of [
-      [null, "VS"], [fixture({ status: "Not Started", homeScore: null, awayScore: null }), "VS"],
-      [fixture({ homeScore: 0, awayScore: null }), `VS · ${copy.live}`],
-      [fixture({ homeScore: null, awayScore: 0 }), `VS · ${copy.live}`],
-      [fixture({ liveMinute: 0 }), "0 — 0 · 0′"],
-      [fixture({ status: "FT", liveMinute: 88, livePeriod: "2nd Half", homeScore: 2, awayScore: 1 }), `2 — 1 · ${copy.fullTime}`],
-      [fixture({ status: "  Provider <special>  " }), "0 — 0 · Provider &lt;special&gt;"],
-    ] as const) assert.equal(view.render(locale, data), `<b aria-live="polite">${expected}</b>`);
-    assert.equal(view.calls.at(-1)?.locale, locale === "pt-BR" ? "pt-BR" : "en-GB");
+test("actual score presentation retains zero/null scores and localized live periods only with explicit fresh metadata", () => {
+  const child = readFileSync(new URL("../components/touchline/ClubHubLiveFixtureScore.tsx", import.meta.url), "utf8");
+  const ast = ts.createSourceFile("Score.tsx", child, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const declaration = ast.statements.find((node): node is ts.FunctionDeclaration => ts.isFunctionDeclaration(node) && node.name?.text === "presentation");
+  assert.ok(declaration);
+  const now = Date.parse("2026-10-25T12:00:00Z");
+  const runtimeExports: { present?: (fixture: TouchlinePublicFixture | null, metadata: matchCentre.TouchlineLiveReadMetadata | null, locale: i18n.TouchLineLocale, draft: boolean) => { score: string; status: string | null } } = {};
+  runInNewContext(ts.transpileModule(`${declaration.getText(ast)}; export const present = presentation;`, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, {
+    exports: runtimeExports, Date: class extends Date { static now() { return now; } },
+    clubHubStripState: stripState.clubHubStripState, getTouchlineMatchCentreCopy: matchCopy.getTouchlineMatchCentreCopy,
+    touchlineFixtureStatusLabel: matchCentre.touchlineFixtureStatusLabel,
+  });
+  const fresh = { state: "persisted-live-snapshot", degraded: false, fetchedAt: new Date(now).toISOString() } as const;
+  for (const locale of locales) for (const draft of [false, true]) {
+    const copy = matchCentre.TOUCHLINE_FIXTURE_STATUS_CATALOGUES[draft || locale === "pt-BR" ? locale : "en-GB"];
+    for (const [data, score, status] of [
+      [null, "VS", null],
+      [fixture({ status: "Not Started", startsAt: "2026-10-26T12:00:00Z", homeScore: null, awayScore: null }), "VS", null],
+      [fixture({ homeScore: 0, awayScore: null }), "VS", copy.live],
+      [fixture({ homeScore: null, awayScore: 0 }), "VS", copy.live],
+      [fixture({ liveMinute: 0, livePeriod: "1st Half" }), "0 — 0", `0′ · ${copy.firstHalf}`],
+      [fixture({ status: "FT", liveMinute: 88, livePeriod: "2nd Half", homeScore: 2, awayScore: 1 }), "2 — 1", copy.fullTime],
+      [fixture({ status: "  Provider <special>  ", startsAt: undefined }), "0 — 0", null],
+    ] as const) {
+      const actual = runtimeExports.present!(data, fresh, locale, draft);
+      assert.equal(actual.score, score); assert.equal(actual.status, status);
+    }
+    assert.equal(runtimeExports.present!(fixture(), null, locale, draft).status, matchCopy.getTouchlineMatchCentreCopy(locale, draft).liveDataUpdating);
+    assert.equal(runtimeExports.present!(fixture(), { ...fresh, fetchedAt: new Date(now + 1).toISOString() }, locale, draft).status, matchCopy.getTouchlineMatchCentreCopy(locale, draft).liveDataUpdating);
   }
+  const view = parentToChild(i18n.normalizeTouchLineLocale, matchCentre.touchlineFixtureStatusLabel);
+  assert.equal(view.render("en-GB", fixture({ providerId: "other-fixture" })), expectedMarkup("VS"), "mismatched fixture never seeds another match");
 });
 
 test("real parent binding keeps static and disabled score projections isolated from the shared refresh boundary", () => {

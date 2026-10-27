@@ -1,4 +1,4 @@
-export const TOUCHLINE_FANTASY_BETA_BUDGET_EUR = 50_000_000;
+export const TOUCHLINE_FANTASY_BETA_BUDGET_EUR = 100_000_000;
 /** Owner-approved XI budgets. Not wallet balances or subscription prices. */
 export const TOUCHLINE_FANTASY_PLAN_BUDGETS = Object.freeze({
   beta: TOUCHLINE_FANTASY_BETA_BUDGET_EUR,
@@ -12,6 +12,8 @@ export const TOUCHLINE_FANTASY_BETA_ALLOWED_CLUB_TEAM_IDS = Object.freeze([
   "117",
   "116",
   "52",
+  "3",
+  "13",
 ] as const);
 
 const PLAN_KEYS = ["beta", "standard", "pro", "master", "vip"] as const;

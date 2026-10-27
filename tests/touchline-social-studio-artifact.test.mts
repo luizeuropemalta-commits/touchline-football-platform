@@ -65,7 +65,9 @@ test("source boundary retains a protected media endpoint and additive paused-onl
     source("supabase/migrations/20260914212250_touchline_social_studio_review_plans.sql"),
     source("lib/touchlineArena/social-studio-save.ts"),
   ]);
-  assert.ok(page.indexOf("await authorizeStudio()") < page.indexOf("await readStudioSnapshot()"));
+  assert.ok(page.indexOf("await authorizeStudio()") < page.indexOf("createAdminClient()"));
+  assert.match(page, /studioPngLocator/);
+  assert.doesNotMatch(page, /<TouchlineSocialStudio|readStudioSnapshot/);
   assert.ok(video.indexOf("await authorizeStudio()") < video.indexOf("await storage.createSignedPreview(media, 300)"));
   assert.match(video, /status: 307/);
   assert.doesNotMatch(video, /new Uint8Array|Content-Range/);

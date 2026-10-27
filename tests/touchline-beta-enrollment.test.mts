@@ -16,7 +16,7 @@ const api = load(read("../lib/touchlineFantasy/beta-enrollment-server.ts"), "({r
   TOUCHLINE_FANTASY_BETA_ALLOWED_CLUB_TEAM_IDS, TOUCHLINE_FANTASY_BETA_BUDGET_EUR,
 });
 const user = { id: "10000000-0000-4000-8000-000000000002", email: "member@example.com" };
-const receipt = { ok: true, planKey: "beta", status: "active", budgetEur: 50000000, allowedClubTeamIds: ["22", "117", "116", "52"] };
+const receipt = { ok: true, planKey: "beta", status: "active", budgetEur: 100000000, allowedClubTeamIds: ["22", "117", "116", "52", "3", "13"] };
 const plain = (value: unknown) => JSON.parse(JSON.stringify(value));
 
 test("Beta accepts only a bounded empty JSON object, never a requested plan or another account", async () => {

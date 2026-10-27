@@ -1,9 +1,9 @@
 // Collection funding is distinct from the historical XI valuation budget.
 export const CLUB_COLLECTION_BUDGET_VERSION = "2026-10-20-approved-plan-budgets";
-/** Approved 17 Oct 2026 rules. Pure domain code; never authorizes a payment or trusts client balances. */
-export const CLUB_MARKET_RULES_VERSION = "2026-10-18-release-ten-percent";
+/** Approved 25 Oct 2026 Exchange amendment. Pure quotes never authorize a payment or trust client balances. */
+export const CLUB_MARKET_RULES_VERSION = "2026-10-25-exchange-highest-card-beta-seven";
 export const CLUB_PLANS = Object.freeze({
-  beta: { budget: 100_000_000, exchange: null, market: 10, topUpCents: null },
+  beta: { budget: 100_000_000, exchange: 7, market: 10, topUpCents: null },
   standard: { budget: 750_000_000, exchange: 5, market: 10, topUpCents: 1000 },
   master: { budget: 1_500_000_000, exchange: 4, market: 10, topUpCents: 800 },
   vip: { budget: 3_000_000_000, exchange: 2, market: 10, topUpCents: 600 },
@@ -33,17 +33,22 @@ export function creditPercentage(value: number, rate: number) {
   return checkedCredits((BigInt(value) * BigInt(rate) + BigInt(50)) / BigInt(100));
 }
 
-/** The base remains the proposing owner's outgoing card, as in the existing quote. */
+/** Both values must come from the server's canonical card-price snapshot, not
+ * from a bonus, a client price or a prior cash compensation. Only the proposer
+ * pays; the recipient's plan does not change this quotation. The received card
+ * keeps its own value as the next contract base, independently of wallet deltas. */
 export function quoteClubExchange(outgoing: number, incoming: number, proposerPlan: ClubPlan) {
   assertCredits(outgoing, incoming);
+  assertClubRule(outgoing > 0 && incoming > 0, "CLUB_EXCHANGE_CARD_VALUE_REQUIRED");
   const rate = policy(proposerPlan).exchange;
-  assertClubRule(rate !== null, "CLUB_EXCHANGE_PAID_PLAN_REQUIRED");
-  const fee = creditPercentage(outgoing, rate);
+  const feeBase = Math.max(outgoing, incoming);
+  const fee = creditPercentage(feeBase, rate);
   // Half-credit bonuses are not silently rounded into an unapproved distribution.
   assertClubRule(fee % 2 === 0, "CLUB_EXCHANGE_HALF_CREDIT_UNSUPPORTED");
   const bonus = fee / 2;
   const compensation = checkedCredits(BigInt(outgoing) - BigInt(incoming));
-  return { rate, fee, bonus, retired: fee - bonus, compensation,
+  return { rate, feeBase, fee, bonus, retired: fee - bonus, compensation,
+    proposerContractValue: incoming, accepterContractValue: outgoing,
     proposerDelta: checkedCredits(BigInt(compensation) - BigInt(fee)),
     accepterDelta: checkedCredits(-BigInt(compensation) + BigInt(bonus)) };
 }

@@ -32,6 +32,9 @@ function renderAvatar(locale: string, enabled: boolean, draftLocalesEnabled?: bo
     "react/jsx-runtime": require("react/jsx-runtime"),
     "next/navigation": { useRouter: () => ({ refresh: noAction }) },
     "@/lib/supabase/client": { createClient: noAction },
+    "@/lib/touchlineArena/account-locale-identity-observer": {
+      startAccountLocaleIdentityObserver: () => { actionCalls++; throw Error("SSR must not start an identity observer"); },
+    },
     "@/lib/touchlineArena/club-owner-avatar-client": { createClubOwnerAvatarRecoveryClient: noAction },
     "@/lib/touchlineArena/club-owner-avatar-ui-i18n": copy,
     "@/lib/touchlineArena/club-owner-avatar-selection-contract": selectionContract,

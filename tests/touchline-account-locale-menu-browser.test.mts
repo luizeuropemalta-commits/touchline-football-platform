@@ -17,7 +17,19 @@ function fixture(variant: 'menu' | 'select' = 'menu', initialContext: FixtureCon
   const reactDir = dirname(require.resolve('react'));
   const domDir = dirname(require.resolve('react-dom/client'));
   const schedulerDir = dirname(createRequire(require.resolve('react-dom/client')).resolve('scheduler'));
+  const controlsPath = new URL('../components/touchline/TouchlineGlobalNavigation.module.css', import.meta.url);
+  const postcss = createRequire(require.resolve('next/package.json'))('postcss');
+  const controls = postcss([
+    require('next/dist/compiled/postcss-modules-local-by-default')({ mode: 'local' }),
+    require('next/dist/compiled/postcss-modules-scope')({ generateScopedName: (name: string) => `locale_${name}` }),
+  ]).process(readFileSync(controlsPath, 'utf8'), { from: controlsPath.pathname }).sync();
+  const controlClasses: Record<string, string> = {};
+  controls.root.walkRules(':export', (rule: { walkDecls(fn: (decl: {prop: string; value: string}) => void): void; remove(): void }) => {
+    rule.walkDecls(decl => { controlClasses[decl.prop] = decl.value; }); rule.remove();
+  });
+  assert.ok(controlClasses.link, 'shared navigation CSS is bundled');
   const modules: Record<string, string> = {
+    './TouchlineGlobalNavigation.module.css': `exports.default=${JSON.stringify(controlClasses)};`,
     react: readFileSync(join(reactDir, 'cjs/react.development.js'), 'utf8'),
     'react/jsx-runtime': readFileSync(join(reactDir, 'cjs/react-jsx-runtime.development.js'), 'utf8'),
     'react-dom': readFileSync(join(domDir, 'cjs/react-dom.development.js'), 'utf8'),
@@ -25,7 +37,9 @@ function fixture(variant: 'menu' | 'select' = 'menu', initialContext: FixtureCon
     scheduler: readFileSync(join(schedulerDir, 'cjs/scheduler.development.js'), 'utf8'),
     'next/navigation': 'exports.useRouter = () => window.fixtureRouter;',
     'lucide-react': 'exports.Check = exports.Languages = exports.ChevronDown = () => null;',
-    '@/lib/supabase/client': `exports.createClient = () => { window.fixtureAuthCreates++; return {auth:{onAuthStateChange(callback){
+    '@/lib/supabase/client': `exports.createClient = () => { window.fixtureAuthCreates++; return {auth:{
+      getUser(){return window.fixtureDelayIdentity?new Promise(resolve=>window.fixtureIdentityReplies.push(resolve)):Promise.resolve({data:{user:{id:${JSON.stringify(owner)}}},error:null});},
+      onAuthStateChange(callback){
       window.fixtureObservers.add(callback); return {data:{subscription:{unsubscribe(){window.fixtureObservers.delete(callback);}}}};
     }}}; };`,
   };
@@ -39,6 +53,8 @@ function fixture(variant: 'menu' | 'select' = 'menu', initialContext: FixtureCon
     ['./account-locale-selection.ts', '../lib/touchlineArena/account-locale-selection.ts'],
     ['./account-locale-host.ts', '../lib/touchlineArena/account-locale-host.ts'],
     ['@/lib/touchlineArena/account-locale-browser', '../lib/touchlineArena/account-locale-browser.ts'],
+    ['@/lib/touchlineArena/account-locale-identity-observer', '../lib/touchlineArena/account-locale-identity-observer.ts'],
+    ['@/lib/touchlineArena/public-error-i18n', '../lib/touchlineArena/public-error-i18n.ts'],
     ['menu', '../components/touchline/AccountLocaleMenu.tsx'],
   ]) modules[id] = ts.transpileModule(readFileSync(new URL(path, import.meta.url), 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX },
@@ -46,17 +62,19 @@ function fixture(variant: 'menu' | 'select' = 'menu', initialContext: FixtureCon
   modules['@/lib/touchlineArena/i18n'] = 'module.exports = require("./i18n.ts");';
   const definitions = Object.entries(modules).map(([id, source]) => `${JSON.stringify(id)}:function(module,exports,require){${source}\n}`).join(',');
   const css = readFileSync(new URL('../app/touchline-clubs/touchline-clubs.module.css', import.meta.url), 'utf8');
-  return `<!doctype html><html><head><meta charset="utf-8"><style>body{background:#06120c;color:white;font:14px Arial;padding:30px} ${css}</style></head>
+  return `<!doctype html><html><head><meta charset="utf-8"><style>body{background:#06120c;color:white;font:14px Arial;padding:30px} ${css} ${controls.root.toString()}</style></head>
   <body><div id="root"></div><script>
   const process={env:{NODE_ENV:'development'}};const modules={${definitions}};const cache={};
   function require(id){if(cache[id])return cache[id].exports;if(!modules[id])throw Error('Missing fixture module '+id);const m={exports:{}};cache[id]=m;modules[id](m,m.exports,require);return m.exports;}
   window.fixtureObservers=new Set();window.fixtureAuthCreates=0;window.fixtureRefreshes=0;
+  window.fixtureDelayIdentity=false;window.fixtureIdentityReplies=[];
   window.fixtureRouter={refresh(){window.fixtureRefreshes++;}};
   const React=require('react'),root=require('react-dom/client').createRoot(document.getElementById('root'));
   const flushSync=require('react-dom').flushSync,Menu=require('menu').default;
   window.renderFixture=(context)=>flushSync(()=>root.render(React.createElement(React.StrictMode,null,React.createElement(Menu,{context,locale:'en-GB',variant:${JSON.stringify(variant)},menuClassName:${JSON.stringify(variant === 'select' ? 'auth-language-switcher' : 'languageMenu')},panelClassName:${JSON.stringify(variant === 'select' ? '' : 'languagePanel')}}))));
   window.unmountFixture=()=>flushSync(()=>root.unmount());
   window.emitFixture=(id)=>{for(const cb of window.fixtureObservers)cb('SIGNED_IN',id?{user:{id}}:null);};
+  window.emitUnknownFixture=()=>{const user=new Proxy({},{get(){throw Error('user proxy unavailable');}});for(const cb of window.fixtureObservers)cb('INITIAL_SESSION',{user});};
   renderFixture(${JSON.stringify(initialContext)});
   </script></body></html>`;
 }
@@ -124,9 +142,10 @@ type Receipt = 'confirmed' | 'unavailable' | 'malformed';
 const selectUrl = 'http://locale.test/login?returnTo=%2Fadmin%3Ftab%3Dplayers&lang=en-GB#help';
 const selectedUrl = selectUrl.replace('lang=en-GB', 'lang=pt-BR');
 
-async function selectCase(browser: Browser, initialContext: FixtureContext) {
+async function selectCase(browser: Browser, initialContext: FixtureContext, options: { delayedFirstRead?: boolean; virtualClock?: boolean } = {}) {
   const context = await browser.newContext({ viewport: { width: 1024, height: 768 } });
   const page = await context.newPage();
+  if (options.virtualClock) await page.clock.install();
   page.setDefaultTimeout(5_000);
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
@@ -134,6 +153,9 @@ async function selectCase(browser: Browser, initialContext: FixtureContext) {
   let reads = 0;
   const writes: { owner: string | undefined; body: unknown }[] = [];
   const receipts: ((value: Receipt) => void)[] = [];
+  const pendingInitialReads: Array<() => void> = [];
+  let allowRecoveredReads = !options.delayedFirstRead;
+  let recoveryReads = 0;
   const html = fixture('select', initialContext);
   await page.route('**/*', async route => {
     const url = new URL(route.request().url());
@@ -144,7 +166,9 @@ async function selectCase(browser: Browser, initialContext: FixtureContext) {
     }
     if (route.request().method() === 'GET') {
       reads++;
-      await route.fulfill({ json: { ok: true, data: { accountId: currentOwner, gameLocale: 'en-GB', gameLocaleRevision: '3' } } });
+      if (!allowRecoveredReads) await new Promise<void>(resolve => { pendingInitialReads.push(resolve); });
+      else if (options.delayedFirstRead) recoveryReads++;
+      await route.fulfill({ json: { ok: true, data: { accountId: currentOwner, gameLocale: 'en-GB', gameLocaleRevision: '3' } } }).catch(() => {});
       return;
     }
     assert.equal(route.request().method(), 'PUT');
@@ -155,7 +179,8 @@ async function selectCase(browser: Browser, initialContext: FixtureContext) {
       : receipt === 'malformed' ? { status: 200, json: { ok: true, data: { gameLocale: 'pt-BR' } } }
         : { json: { ok: true, data: { gameLocale: 'pt-BR', gameLocaleRevision: '4', updatedAt: '2026-10-02T21:00:00Z' } } }).catch(() => {});
   });
-  return { page, writes, receipts, errors, get reads() { return reads; },
+  return { page, writes, receipts, errors, releaseFirstRead: () => { for (const release of pendingInitialReads) release(); },
+    allowReadRecovery: () => { allowRecoveredReads = true; }, get recoveryReads() { return recoveryReads; }, get reads() { return reads; },
     setOwner(id: string) { currentOwner = id; },
     async open() {
       await page.goto(selectUrl);
@@ -172,7 +197,7 @@ async function selectCase(browser: Browser, initialContext: FixtureContext) {
       assert.equal(await page.evaluate('document.cookie'), initialContext.mode === 'account' ? 'touchline:locale:v1=en-GB' : '');
       assert.equal(await page.evaluate('localStorage.getItem("touchline:locale:v1")'), initialContext.mode === 'account' ? 'en-GB' : null);
     },
-    async close() { for (const release of receipts) release('unavailable'); await context.close(); },
+    async close() { for (const release of pendingInitialReads) release(); for (const release of receipts) release('unavailable'); await context.close(); },
   };
 }
 
@@ -205,15 +230,20 @@ test('real React StrictMode auth select uses confirmed writes and fences uncerta
       for (const receipt of ['unavailable', 'malformed'] as const) await t.test(`${engine.name()}: ${receipt} receipt does not apply locale or retry`, async () => {
         const h = await selectCase(browser, { mode: 'account', accountId: owner });
         try {
-          await h.open(); await h.page.getByRole('combobox').selectOption('pt-BR');
+          await h.open(); const readsBeforeWrite = h.reads;
+          await h.page.getByRole('combobox').selectOption('pt-BR');
           await expect.poll(() => h.writes.length).toBe(1);
           h.receipts[0](receipt);
-          await expect(h.page.getByRole('status')).toHaveText('Language could not be confirmed. Reload the page to try again.');
+          await expect(h.page.getByRole('status')).toHaveText('Language could not be confirmed.');
           await expect(h.page.getByRole('combobox')).toBeDisabled();
           await h.assertUnchanged();
           // Even a synthetic late change event cannot bypass the blocked control.
           await h.page.getByRole('combobox').dispatchEvent('change');
           assert.equal(h.writes.length, 1); assert.deepEqual(h.errors, []);
+          await expect(h.page.getByRole('button', { name: 'Try again', exact: true })).toHaveCount(0);
+          assert.equal(h.reads, readsBeforeWrite, 'an uncertain write does not start automatic read recovery');
+          assert.equal(h.writes.length, 1, 'an uncertain write is never replayed');
+          await h.assertUnchanged();
         } finally { await h.close(); }
       });
 
@@ -249,6 +279,74 @@ test('real React StrictMode auth select uses confirmed writes and fences uncerta
           await h.page.waitForURL(selectedUrl);
           assert.match(await h.page.evaluate('document.cookie'), /pt-BR/);
           assert.deepEqual(h.errors, []);
+        } finally { await h.close(); }
+      });
+    } finally { await browser.close(); }
+  }
+});
+
+
+test('real locale control recovers bounded reads and fences delayed identity and write receipts', { skip: !enabled, timeout: 60_000 }, async t => {
+  for (const engine of [chromium, webkit]) {
+    const browser = await engine.launch({ headless: true });
+    try {
+      await t.test(`${engine.name()}: stalled first GET recovers without manual action or duplicated control`, async () => {
+        const h = await selectCase(browser, { mode: 'account', accountId: owner }, { delayedFirstRead: true, virtualClock: true });
+        try {
+          await h.page.goto(selectUrl);
+          await expect.poll(() => h.reads).toBeGreaterThan(0);
+          await expect(h.page.getByRole('combobox')).toHaveCount(1);
+          await expect(h.page.getByRole('combobox')).toBeDisabled();
+          h.allowReadRecovery(); // StrictMode's aborted mount may also have issued an initial GET.
+          await h.page.clock.fastForward(15_001);
+          await h.page.clock.fastForward(1001);
+          await expect(h.page.getByRole('combobox')).toBeEnabled();
+          assert.equal(h.recoveryReads, 1); assert.equal(h.writes.length, 0);
+          h.releaseFirstRead();
+          await expect(h.page.getByRole('button', { name: 'Try again', exact: true })).toHaveCount(0);
+          await h.assertUnchanged(); assert.deepEqual(h.errors, []);
+          assert.equal(await h.page.evaluate('fixtureRefreshes'), 0);
+        } finally { await h.close(); }
+      });
+      for (const failure of ['503', 'lost-confirmation'] as const) {
+        await t.test(`${engine.name()}: ${failure} PUT stays unconfirmed and is never replayed`, async () => {
+          const h = await selectCase(browser, { mode: 'account', accountId: owner }, { virtualClock: true });
+          try {
+            await h.open(); const readsBeforeWrite = h.reads;
+            await h.page.getByRole('combobox').selectOption('pt-BR');
+            await expect.poll(() => h.writes.length).toBe(1);
+            if (failure === '503') h.receipts[0]('unavailable');
+            else await h.page.clock.fastForward(15_001);
+            await expect(h.page.getByRole('status')).toHaveText('Language could not be confirmed.');
+            if (failure === 'lost-confirmation') h.receipts[0]('confirmed');
+            await h.page.clock.fastForward(50_000);
+            await expect(h.page.getByRole('combobox')).toBeDisabled();
+            assert.equal(h.writes.length, 1); assert.equal(h.reads, readsBeforeWrite);
+            await h.assertUnchanged(); assert.deepEqual(h.errors, []);
+            await expect(h.page.getByRole('button', { name: 'Try again', exact: true })).toHaveCount(0);
+          } finally { await h.close(); }
+        });
+      }
+      await t.test(`${engine.name()}: unreadable session proxy recovers through bounded independent verification`, async () => {
+        const h = await selectCase(browser, { mode: 'account', accountId: owner }, { virtualClock: true });
+        try {
+          await h.open(); const initialReads = h.reads;
+          await h.page.evaluate('fixtureDelayIdentity=true;emitUnknownFixture()');
+          await expect(h.page.getByRole('combobox')).toBeDisabled();
+          await h.page.clock.runFor(1);
+          await h.page.waitForFunction('fixtureIdentityReplies.length===1');
+          await h.page.clock.fastForward(8001);
+          await h.page.clock.fastForward(1001);
+          await h.page.waitForFunction('fixtureIdentityReplies.length===2');
+          await h.page.evaluate(id => { (window as unknown as { fixtureIdentityReplies: Array<(value: unknown) => void> }).fixtureIdentityReplies[1]({ data: { user: { id } }, error: null }); }, owner);
+          await expect(h.page.getByRole('combobox')).toBeEnabled();
+          await h.page.evaluate(id => { (window as unknown as { fixtureIdentityReplies: Array<(value: unknown) => void> }).fixtureIdentityReplies[0]({ data: { user: { id } }, error: null }); }, other);
+          await h.page.clock.runFor(1);
+          await expect(h.page.getByRole('combobox')).toHaveCount(1);
+          await expect(h.page.getByRole('combobox')).toBeEnabled();
+          assert.equal(h.reads, initialReads + 1); assert.equal(h.writes.length, 0);
+          assert.equal(await h.page.evaluate('fixtureRefreshes'), 0);
+          await h.assertUnchanged(); assert.deepEqual(h.errors, []);
         } finally { await h.close(); }
       });
     } finally { await browser.close(); }

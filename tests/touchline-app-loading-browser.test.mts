@@ -2,6 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync, existsSync, statfsSync } from "node:fs";
 import { createHash } from "node:crypto";
+import { createRequire } from "node:module";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { execFileSync } from "node:child_process";
 import { runInNewContext } from "node:vm";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -11,8 +14,17 @@ import ts from "typescript";
 import { webkit } from "@playwright/test";
 import * as resolver from "../lib/touchlineArena/root-locale.ts";
 
+const loadingCases = [
+  ["en-GB", "Loading…"], ["pt-BR", "Carregando…"], ["es-ES", "Cargando…"], ["it-IT", "Caricamento…"],
+  ["fr-FR", "Chargement…"], ["ar-SA", "جارٍ التحميل…"], ["tr-TR", "Yükleniyor…"], ["de-DE", "Wird geladen…"],
+] as const;
 const enabled = process.env.TOUCHLINE_RUN_APP_LOADING_BROWSER_TESTS === "1";
-test("isolated real loading preserves skeleton geometry and accessible status in EN/PT/AR", { skip: !enabled, timeout: 60_000 }, async t => {
+test("isolated real loading preserves skeleton geometry and accessible status in eight locales", { skip: !enabled, timeout: 60_000 }, async t => {
+  const requestedLocales = (process.env.TOUCHLINE_APP_LOADING_LOCALES ?? loadingCases.map(([locale]) => locale).join(",")).split(",");
+  assert.ok(requestedLocales.length > 0 && requestedLocales.every(locale => loadingCases.some(([supported]) => supported === locale)), "explicit supported locale selection");
+  assert.equal(new Set(requestedLocales).size, requestedLocales.length, "duplicate locale selection rejected");
+  const selectedCases = loadingCases.filter(([locale]) => requestedLocales.includes(locale));
+  t.diagnostic(`Isolated loading, ${selectedCases.length} locales × 2 viewports; draft locale gate simulated on. Partial matrix: ${selectedCases.length !== loadingCases.length}. No route transition, native Safari or QA acceptance proof.`);
   const root = new URL("../", import.meta.url);
   const capacity = () => {
     const disk = statfsSync(root), freeBytes = disk.bavail * disk.bsize;
@@ -24,7 +36,17 @@ test("isolated real loading preserves skeleton geometry and accessible status in
   };
   const initialCapacity = capacity();
   const source = readFileSync(new URL("app/(app)/loading.tsx", root), "utf8");
-  const css = readFileSync(new URL(".next/static/chunks/44gb7hj65y9x4.css", root), "utf8");
+  // Compile current source utilities, rather than trusting a stale build chunk.
+  // The scanner is restricted to this real loading component: no repository
+  // scan, Next build, server or dependency installation is involved.
+  const require = createRequire(import.meta.url);
+  const tailwindRequire = createRequire(require.resolve("@tailwindcss/postcss"));
+  const { compile } = tailwindRequire("@tailwindcss/node");
+  const { Scanner } = tailwindRequire("@tailwindcss/oxide");
+  const candidates = new Scanner({ sources: [] }).scanFiles([{ content: source, extension: "tsx" }]);
+  const globals = fileURLToPath(new URL("app/globals.css", root));
+  const compiler = await compile(readFileSync(globals, "utf8"), { base: path.dirname(globals), from: globals, onDependency() {} });
+  const css = compiler.build(candidates);
   for (const required of [".sr-only", ".skeleton", "1500px", ".h-64", ".h-80"]) assert.ok(css.includes(required), required);
   const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText;
   assert.ok(existsSync(webkit.executablePath()), "installed browser only");
@@ -32,9 +54,7 @@ test("isolated real loading preserves skeleton geometry and accessible status in
   t.signal.addEventListener("abort", () => { void browser.close(); }, { once: true });
   const reports: unknown[] = [];
   try {
-    const requestedLocales = (process.env.TOUCHLINE_APP_LOADING_LOCALES ?? "en-GB,pt-BR,ar-SA").split(",");
-    assert.ok(requestedLocales.length > 0 && requestedLocales.every(locale => ["en-GB", "pt-BR", "ar-SA"].includes(locale)), "explicit supported locale selection");
-    for (const [locale, label] of [["en-GB", "Loading…"], ["pt-BR", "Carregando…"], ["ar-SA", "جارٍ التحميل…"]].filter(([locale]) => requestedLocales.includes(locale))) {
+    for (const [locale, label] of selectedCases) {
       const modules: Record<string, unknown> = {
         "react/jsx-runtime": jsx, "next/headers": { headers: async () => ({ get: () => locale }) },
         "@/lib/touchlineArena/root-locale": resolver,
@@ -72,5 +92,6 @@ test("isolated real loading preserves skeleton geometry and accessible status in
       }
     }
   } finally { await browser.close(); }
-  console.log(JSON.stringify({ cssHash: createHash("sha256").update(css).digest("hex"), initialCapacity, finalCapacity: capacity(), reports }));
+  assert.equal(reports.length, selectedCases.length * 2, "every selected locale must cover both viewports");
+  console.log(JSON.stringify({ selectedLocales: requestedLocales, partial: selectedCases.length !== loadingCases.length, cssHash: createHash("sha256").update(css).digest("hex"), initialCapacity, finalCapacity: capacity(), reports }));
 });

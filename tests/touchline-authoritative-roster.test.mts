@@ -727,3 +727,18 @@ test("Arena state GET reconstructs stored lineup from active contracts and never
   assert.match(route, /rosterReadFailure\(roster\.error, user\.id\)/);
   assert.match(route, /resolveServerReadWithin\([\s\S]*?readAuthoritativeTouchlineRoster\(admin, user\.id\)[\s\S]*?TL_ROSTER_READ_TIMEOUT[\s\S]*?ARENA_STATE_ROSTER_READ_TIMEOUT_MS/);
 });
+
+
+test("latest roster match statistics use fixture time, not database response order", () => {
+  const older = { football_player_id: PLAYER_ID, rating: 6.2, statistics_payload: { goals: 0 },
+    football_fixtures: { starts_at: "2026-09-01T15:00:00Z" } };
+  const latest = { football_player_id: PLAYER_ID, rating: 8.4, statistics_payload: { goals: 2 },
+    football_fixtures: { starts_at: "2026-10-24T15:00:00Z" } };
+  for (const playerFixtureStatistics of [[older, latest], [latest, older]]) {
+    const result = mapAuthoritativeRosterRows({ ...completeRows(), playerFixtureStatistics }, publishedCards());
+    assert.equal(result.ok, true);
+    if (!result.ok) continue;
+    assert.equal(result.snapshot.cards[0].matchRating, 8.4);
+    assert.equal(result.snapshot.cards[0].matchStats?.goals, 2);
+  }
+});

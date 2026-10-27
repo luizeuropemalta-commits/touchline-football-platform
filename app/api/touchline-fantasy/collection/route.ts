@@ -1,3 +1,4 @@
+import { TOUCHLINE_FANTASY_BETA_ALLOWED_CLUB_TEAM_IDS } from "@/lib/touchlineFantasy/market-plan-policy";
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -54,12 +55,17 @@ export async function POST(request: NextRequest) {
     const offer = card && position && primaryDetail && football?.current_club_id && card.editorialCard?.marketValueEur !== undefined
       ? { playerId: command.playerId, clubId: String(football.current_club_id), position,
         primaryDetail, valueEur: card.editorialCard.marketValueEur, published: true } : null;
-    // Beta retains its currently deployed flow; the paid-plan collection does not replace it.
-    if (state.plan === "beta") return failure("CLUB_BETA_POLICY_REQUIRED", 409);
+    let allowedClubIds: string[] | null = null;
+    if (state.plan === "beta") {
+      const clubs = await ctx.admin.from("football_clubs").select("id")
+        .eq("provider", "sportmonks").in("provider_team_id", [...TOUCHLINE_FANTASY_BETA_ALLOWED_CLUB_TEAM_IDS]);
+      if (clubs.error || !Array.isArray(clubs.data)) return failure("CLUB_OFFER_UNAVAILABLE", 503);
+      allowedClubIds = clubs.data.map(row => String(row.id));
+    }
     const round = snapshot.activeGameweek;
     const now = Date.now();
     const result = await purchaseClubPlayer(ctx.store, {
-      ownerId: ctx.user.id, seasonId: ctx.seasonId, active: true, allowedClubIds: null, offer,
+      ownerId: ctx.user.id, seasonId: ctx.seasonId, active: true, allowedClubIds, offer,
       primaryDetails,
       geometry: state.formationCode ? snapshot.formationRegistry[state.formationCode] : null,
       marketOpen: snapshot.qaClubMarketOpen === true || (round?.state === "MARKET_OPEN" && Date.parse(round.marketOpensAt) <= now && Date.parse(round.locksAt) > now),

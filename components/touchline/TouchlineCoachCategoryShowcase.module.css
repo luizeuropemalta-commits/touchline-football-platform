@@ -107,6 +107,12 @@
   --touchline-card-reserve-head-award: 1;
 }
 
+.coachCardVisual {
+  /* The real coach trigger includes its 2:3 frame and crown clearance.
+     Let that complete envelope size the row before the identity below it. */
+  aspect-ratio: auto;
+}
+
 .playerCardVisual > *,
 .coachCardVisual > * {
   width: 100%;

@@ -26,3 +26,22 @@ export function parseFixtureAlertStatus(input: unknown, expected: Readonly<{ acc
     device: d.device as FixtureAlertStatusObservation["device"], preference: d.preference as FixtureAlertStatusObservation["preference"],
     operational: "unknown", delivery: "unconfirmed", active: false };
 }
+
+export type FixtureAlertStatusReason = "mobileAlertsUnavailable" | "deviceNotLinked" | "deviceMissing" | "deviceUnverified"
+  | "consentRequired" | "alertsPaused" | "quietHours" | "preferenceUnconfirmed";
+
+/** Present only observed impediments. Configuration, a saved registration and
+ * an enabled preference do not prove permission, possession or push delivery. */
+export function fixtureAlertStatusReasons(observation: FixtureAlertStatusObservation): FixtureAlertStatusReason[] {
+  if (observation.active !== false || observation.delivery !== "unconfirmed" || observation.operational !== "unknown") return [];
+  const reasons: FixtureAlertStatusReason[] = [];
+  if (observation.configuration === "unconfigured") reasons.push("mobileAlertsUnavailable");
+  if (observation.device === "not-requested") reasons.push("deviceNotLinked");
+  else if (observation.device === "missing") reasons.push("deviceMissing");
+  else if (observation.device === "invalid") reasons.push("deviceUnverified");
+  if (observation.preference === "consent-required") reasons.push("consentRequired");
+  else if (observation.preference === "paused") reasons.push("alertsPaused");
+  else if (observation.preference === "quiet-hours") reasons.push("quietHours");
+  else if (observation.preference === "unconfirmed") reasons.push("preferenceUnconfirmed");
+  return reasons;
+}

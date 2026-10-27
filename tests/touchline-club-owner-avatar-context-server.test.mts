@@ -1,3 +1,4 @@
+import { resolveClubOwnerShell } from "./helpers/touchline-resolve-clubowner-shell.mts";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { existsSync, readFileSync } from "node:fs";
@@ -84,6 +85,8 @@ function fixture(patch: Record<string, string | undefined> = {}) {
       if (name === "@/app/fantasy/FantasyGameweekClient") return { default: (props: Record<string, unknown>) => { fantasyProps.push(props); return null; }, __esModule: true };
       // This suite owns the server identity/avatar contract; brand-frame rendering
       // is covered by its dedicated UI tests and must not keep this VM fixture alive.
+      if (name === "@/components/touchline/cards/TouchlineCardLeadershipLayout") return { default: "leadership-boundary", __esModule: true };
+      if (name === "@/components/touchline/TouchlineAccountLoading") return { default: () => null, __esModule: true };
       if (name === "@/components/touchline/TouchlineBrandHeader") return { default: () => null, __esModule: true };
       if (name === "@/components/touchline/TouchlineGlobalNavigation" || name === "@/components/touchline/notifications/TouchlineMarketNotifications") return { default: () => null, __esModule: true };
       // Keep the real new brand frame; audio/auth client controls are outside
@@ -114,7 +117,7 @@ function fixture(patch: Record<string, string | undefined> = {}) {
   }).createClubOwnerAvatarSelectionContextReader(enabled, retentionReady);
   const page = async () => {
     const pageModule = load(resolve(root, "app/clubowner/page.tsx")) as { default: (props: unknown) => Promise<React.ReactNode> };
-    return renderToStaticMarkup(await pageModule.default({ searchParams: Promise.resolve({ lang: "en-GB" }) }));
+    return renderToStaticMarkup(await resolveClubOwnerShell(await pageModule.default({ searchParams: Promise.resolve({ lang: "en-GB" }) })));
   };
   return { create, createSelection, page, environment, calls, accounts, state, headerProps, fantasyProps, timers,
     expire: () => { time = 8001; for (const callback of [...timers.values()]) callback(); }, advance: () => { time = 8001; } };

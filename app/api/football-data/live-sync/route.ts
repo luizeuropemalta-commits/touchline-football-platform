@@ -3,6 +3,7 @@ import { timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 
 import { syncSportmonksLiveState } from "@/lib/football-data/live-sync";
+import { expireClubExchangeProposals } from "@/lib/touchlineFantasy/club-exchange-expiration-server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 // A cold QA run can include the first persisted V2 historical reconciliation
@@ -32,6 +33,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, status: "not_configured" }, { status: 503 });
   }
 
+  // Independent bounded maintenance uses the existing authenticated scheduler.
+  // Gate OFF is a no-op; a provider failure must not strand expired reservations.
+  let exchangeMaintenance: Awaited<ReturnType<typeof expireClubExchangeProposals>>;
+  try { exchangeMaintenance = await expireClubExchangeProposals(admin); }
+  catch { exchangeMaintenance = { status: "unavailable", examined: 0, expired: 0, skipped: 0 }; }
+
   let fixtureId: string | null = null;
   try {
     const body = await request.json() as { fixtureId?: unknown };
@@ -44,12 +51,12 @@ export async function POST(request: NextRequest) {
 
   try {
     const result = await syncSportmonksLiveState(admin, { forceFixtureId: fixtureId });
-    return NextResponse.json(result, {
+    return NextResponse.json({ ...result, exchangeMaintenance }, {
       status: result.ok || result.status === "skipped" ? 200 : 502,
       headers: { "Cache-Control": "private, no-store" },
     });
   } catch {
-    return NextResponse.json({ ok: false, status: "error", error: "Live synchronization failed safely." }, {
+    return NextResponse.json({ ok: false, status: "error", error: "Live synchronization failed safely.", exchangeMaintenance }, {
       status: 502,
       headers: { "Cache-Control": "private, no-store" },
     });

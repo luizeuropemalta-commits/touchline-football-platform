@@ -101,8 +101,10 @@ test("ClubHub matchup keeps both crests and its score in a centered premium fixt
   assert.match(score, /draftLocalesEnabled=\{draftLocalesEnabled\}/);
   assert.match(score, /liveUpdates=\{liveUpdates && !staticVisualQa\}/);
   assert.match(clubHubLineupCss, /grid-template-columns: minmax\(270px, 1fr\) minmax\(154px, \.48fr\)/);
-  assert.match(clubHubLineupCss, /grid-template-columns: minmax\(0,1fr\) minmax\(54px, auto\) minmax\(0,1fr\)/);
-  assert.match(clubHubLineupCss, /\.matchupTeams > b \{ min-width: 54px/);
+  assert.match(clubHubLineupCss, /grid-template-columns: minmax\(0,1fr\) minmax\(54px, 1fr\) minmax\(0,1fr\)/);
+  assert.match(clubHubLineupCss, /\.matchupTeams > b \{[^}]*grid-template-columns: subgrid/);
+  assert.match(clubHubLineupCss, /\[data-clubhub-fixture-score\] \{ grid-column: 2; grid-row: 1/);
+  assert.match(clubHubLineupCss, /\[data-clubhub-fixture-status\] \{ grid-column: 1 \/ -1; grid-row: 2/);
   assert.match(clubHubLineupCss, /\.matchupCrest \{ width: 48px; height: 48px/);
 });
 

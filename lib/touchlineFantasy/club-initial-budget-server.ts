@@ -27,7 +27,7 @@ export async function readClubInitialBudget(
   if (cards.data!.length || coaches.data!.length || selections.data!.length) return null;
   const value = entitlement.data;
   const plan: unknown = value?.plan_key;
-  if (!value || (plan !== "standard" && plan !== "master" && plan !== "vip")) return null;
+  if (!value || (plan !== "beta" && plan !== "standard" && plan !== "master" && plan !== "vip")) return null;
   const now = Date.now();
   const start = value.current_period_start === null ? -Infinity : Date.parse(value.current_period_start);
   const end = value.current_period_end === null ? Infinity : Date.parse(value.current_period_end);

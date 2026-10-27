@@ -23,7 +23,7 @@ function fixture({ enabled = true, storage = true, season = "season", fail = fal
   };
   const exports: { readClubCollectionServer?: (owner: string | null) => Promise<ClubCollectionReadResult> } = {};
   const source = ts.transpileModule(readFileSync(new URL("../lib/touchlineFantasy/club-collection-read-server.ts", import.meta.url), "utf8"), {compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText;
-  runInNewContext(source, { exports, require: (name: string) => { assert.ok(name in modules, name); return modules[name]; } });
+  runInNewContext(source, { exports, process: {env: {}}, require: (name: string) => { assert.ok(name in modules, name); return modules[name]; } });
   return { read: exports.readClubCollectionServer!, calls };
 }
 

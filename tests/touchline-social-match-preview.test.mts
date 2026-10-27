@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import ts from "typescript";
 
 import { TOUCHLINE_ENGLAND_CLUBS, type ClubOwnerSquadCard } from "../lib/touchlineArena/demo-data.ts";
 import type { TouchlineRankedPlayer } from "../lib/touchlineArena/card-ranking.ts";
@@ -345,10 +346,11 @@ test("reader and template are persisted-only, revision-fenced and contain no XI 
   const page = readFileSync(new URL("../app/visual-qa/social-match-preview/page.tsx", import.meta.url), "utf8");
   assert.match(reader, /readPublicCompetitionFixtureByProviderId/);
   assert.doesNotMatch(reader, /readPublicCompetitionFixtures\(\{ includeHistorical/);
-  const exactReader = fixtureStore.slice(
-    fixtureStore.indexOf("export async function readPublicCompetitionFixtureByProviderId"),
-    fixtureStore.indexOf("/** Server-only schedule read shared by ClubHub"),
-  );
+  const fixtureAst = ts.createSourceFile("fixture-schedule-store.ts", fixtureStore, ts.ScriptTarget.Latest, true);
+  const exactFunction = fixtureAst.statements.find(node => ts.isFunctionDeclaration(node)
+    && node.name?.text === "readPublicCompetitionFixtureByProviderId");
+  assert.ok(exactFunction, "exact fixture reader must exist");
+  const exactReader = exactFunction.getText(fixtureAst);
   assert.match(exactReader, /\.eq\("provider_fixture_id", providerFixtureId\)/);
   assert.match(exactReader, /\.limit\(2\)/);
   assert.doesNotMatch(exactReader, /MAX_LIMIT|includeHistorical|order\("starts_at"/);

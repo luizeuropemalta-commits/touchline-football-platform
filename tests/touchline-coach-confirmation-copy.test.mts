@@ -30,18 +30,18 @@ test('coach confirmation copy preserves EN/PT exactly and provides eight gated k
 test('coach confirmation text wiring preserves all conditions, cost and callbacks', () => {
   // Source-only contract: does not invoke a signing or constitute rendered QA.
   const source = readFileSync(new URL('../app/fantasy/FantasyGameweekClient.tsx', import.meta.url), 'utf8');
-  const begin = source.indexOf('{collectionEnabled && selectedCoach && !collection.state ?');
+  const begin = source.indexOf('{collectionEnabled && selectedCoach && (!collection.state || collection.state.coach === null) ?');
   const end = source.indexOf('</section> : null}', begin);
   assert.ok(begin >= 0 && end > begin);
   const block = source.slice(begin, end);
   for (const key of keys) assert.ok(block.includes(`collectionBudgetCopy.${key}`));
   assert.doesNotMatch(block, /locale\.startsWith/);
   assert.ok(source.includes('const collectionBudgetCopy = getClubCollectionBudgetCopy(locale, draftLocalesEnabled);'));
-  assert.ok(block.includes('disabled={!editable || !collection.canInitialize}'));
-  assert.ok(block.includes('onClick={() => collection.initialize(selectedCoach.id)}'));
+  assert.ok(block.includes('disabled={!editable || (!collection.canInitialize && !collection.canHireCoach)}'));
+  assert.ok(block.includes('onClick={() => collection.state?.coach === null ? collection.changeCoach("hire-coach", selectedCoach.id, collection.state.revision) : collection.initialize(selectedCoach.id)}'));
   assert.ok(block.includes('collection.busy ? collectionBudgetCopy.confirmingSigning : collectionBudgetCopy.confirmSigning'));
-  assert.ok(block.includes('disabled={collection.busy || !collection.canInitialize}'));
-  assert.ok(block.includes('if (!collection.canInitialize) return; setSelectedCoachId(null); setQuery(""); setVisibleStep("coach");'));
+  assert.ok(block.includes('disabled={collection.busy || (!collection.canInitialize && !collection.canHireCoach)}'));
+  assert.ok(block.includes('if (!collection.canInitialize && !collection.canHireCoach) return; setSelectedCoachId(null); setQuery(""); setVisibleStep("coach");'));
   assert.ok(block.includes('selectedCoach.coach.displayName'));
   assert.ok(block.includes('Object.hasOwn(CLUB_COACH_VALUES, selectedCoach.slot.cardTier)'));
   assert.ok(block.includes('`${new Intl.NumberFormat(locale).format(CLUB_COACH_VALUES[selectedCoach.slot.cardTier as keyof typeof CLUB_COACH_VALUES])} TC` : "—"'));

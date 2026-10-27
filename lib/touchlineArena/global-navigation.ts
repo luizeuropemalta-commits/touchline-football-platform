@@ -86,17 +86,16 @@ export function touchlineGlobalNavigationArenaHref(locale: string, draftLocalesE
   return `/clubowner?lang=${encodeURIComponent(resolveTouchLinePresentationLocale(locale, draftLocalesEnabled))}`;
 }
 
-/** Public pages cannot infer a role. Resolve their account destination on the
- * server instead of sending an administrator into the customer-only game. */
+/** Public pages cannot infer a role. ClubOwner verifies the session and redirects
+ * administrators before customer reads, so navigation needs no /account hop.
+ * Keep /account available for existing bookmarks and login return URLs. */
 export function touchlineGlobalNavigationEntryHref(
   locale: string,
   surface: TouchlineGlobalNavigationSurface,
   draftLocalesEnabled = false,
 ) {
-  const language = encodeURIComponent(resolveTouchLinePresentationLocale(locale, draftLocalesEnabled));
   if (surface === "auth") return `/admin?lang=${locale === "pt-BR" ? "pt-BR" : "en-GB"}`;
-  if (surface === "authenticated") return touchlineGlobalNavigationArenaHref(locale, draftLocalesEnabled);
-  return `/account?lang=${language}`;
+  return touchlineGlobalNavigationArenaHref(locale, draftLocalesEnabled);
 }
 
 export function isTouchlineGlobalNavigationCurrent(

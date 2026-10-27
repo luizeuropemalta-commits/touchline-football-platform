@@ -107,7 +107,8 @@ test("Match Centre keeps all ten matches in the current round after early fixtur
   const schedule = selectTouchlineMatchCentreSchedule(currentRound, now);
 
   assert.equal(schedule.currentFixtures.length, 10);
-  assert.equal(schedule.recentResults.length, 0);
+  assert.equal(schedule.recentResults.length, 4);
+  assert.deepEqual(schedule.recentResults.map((candidate) => candidate.id), currentRound.slice(0, 4).reverse().map((candidate) => candidate.id));
   assert.deepEqual(new Set(schedule.currentFixtures.map((candidate) => candidate.roundId)), new Set(["round-2"]));
 });
 
@@ -203,7 +204,7 @@ test("Club Hub presents full time instead of a stale live minute or period", () 
     new URL("../components/touchline/ClubHubLiveFixtureScore.tsx", import.meta.url),
     "utf8",
   );
-  assert.match(source, /touchlineFixtureState\(fixture\) === "finished"[\s\S]*?touchlineFixtureStatusLabel\(rawStatus, locale, draftLocalesEnabled\)[\s\S]*?: fixture\.liveMinute !== undefined/);
+  assert.match(source, /state === "finished"[\s\S]*?touchlineFixtureStatusLabel\(rawStatus, locale, draftLocalesEnabled\)[\s\S]*?: fixture\.liveMinute !== undefined/);
 });
 
 test("Match Centre overlays a live snapshot by provider fixture ID without duplicating the matchweek", () => {
@@ -540,7 +541,7 @@ test("Match Centre lets its mobile grid shrink while keeping only the fixture ra
   assert.match(styles, /\.layout \{[^}]*min-width: 0/);
   assert.match(styles, /\.fixtureRail \{[^}]*display: grid[^}]*grid-template-rows: auto minmax\(0, 1fr\)[^}]*height: calc\(100dvh - 28px\)[^}]*min-width: 0/);
   assert.match(styles, /\.matchPanel \{[^}]*min-width: 0/);
-  assert.match(styles, /\.fixtureScroller \{[^}]*min-height: 0[^}]*overflow-y: scroll[^}]*overscroll-behavior-y: contain[^}]*scrollbar-gutter: stable[^}]*touch-action: pan-y[^}]*-webkit-overflow-scrolling: touch/);
+  assert.match(styles, /\.fixtureScroller \{[^}]*min-height: 0[^}]*overflow-y: scroll[^}]*overscroll-behavior-y: contain[^}]*scrollbar-gutter: stable[^}]*touch-action: auto[^}]*-webkit-overflow-scrolling: touch/);
   assert.match(styles, /\.fixtureScroller::-webkit-scrollbar \{[^}]*width:/);
   assert.match(styles, /\.fixtureScroller::-webkit-scrollbar-thumb \{[^}]*border-radius:/);
   assert.match(styles, /\.fixtureScroller:focus-visible \{[^}]*outline:/);
@@ -640,4 +641,53 @@ test("Match Centre keeps the preferred football-field proportion only when the p
   assert.match(styles, /\.hero \{[^}]*box-sizing: border-box/);
   assert.match(styles, /@media \(min-width: 1440px\) \{ \.hero \{ aspect-ratio: 105 \/ 68; \} \}/);
   assert.match(styles, /\.hero \{[^}]*align-content: center/);
+});
+
+
+test("Latest ten results include finished games of the active round and exclude in-play games", () => {
+  const now = Date.parse("2026-08-30T15:00:00Z");
+  const old = Array.from({ length: 10 }, (_, index) => roundFixture({ id: index, round: 1,
+    startsAt: `2026-08-22T${String(10 + index).padStart(2, "0")}:00:00Z`, status: "Full Time" }));
+  const latest = Array.from({ length: 5 }, (_, index) => roundFixture({ id: index, round: 2,
+    startsAt: `2026-08-29T${String(10 + index).padStart(2, "0")}:00:00Z`, status: "Full Time" }));
+  const live = roundFixture({ id: 5, round: 2, startsAt: "2026-08-30T14:00:00Z", status: "In Play" });
+  const result = selectTouchlineMatchCentreSchedule([...old, ...latest, live, latest[0]], now);
+  assert.equal(result.recentResults.length, 10);
+  assert.deepEqual(result.recentResults.slice(0, 5).map(row => row.id), latest.toReversed().map(row => row.id));
+  assert.ok(result.currentFixtures.some(row => row.id === live.id));
+  assert.ok(!result.recentResults.some(row => row.id === live.id));
+  assert.equal(new Set(result.recentResults.map(row => row.id)).size, 10);
+});
+
+
+test("In-play fixtures from different rounds stay visible without duplicating either match", () => {
+  const now = Date.parse("2026-08-30T15:00:00Z");
+  const current = Array.from({ length: 10 }, (_, id) => roundFixture({ id, round: 2,
+    startsAt: "2026-08-30T14:00:00Z", status: id === 0 ? "In Play" : "Full Time" }));
+  const delayed = roundFixture({ id: 0, round: 1, startsAt: "2026-08-30T14:30:00Z", status: "In Play" });
+  const result = selectTouchlineMatchCentreSchedule([...current, delayed, delayed], now);
+  const reordered = selectTouchlineMatchCentreSchedule([delayed, ...current.toReversed()], now);
+  assert.deepEqual(new Set(reordered.currentFixtures.map(row => row.id)), new Set(result.currentFixtures.map(row => row.id)));
+  assert.ok(result.currentFixtures.some(row => row.id === delayed.id));
+  assert.ok(result.currentFixtures.some(row => row.id === current[0].id));
+  assert.equal(result.currentFixtures.length, 11);
+  assert.equal(new Set(result.currentFixtures.map(row => row.id)).size, 11);
+  assert.ok(!result.recentResults.some(row => row.id === delayed.id || row.id === current[0].id));
+});
+
+
+test("A complete old round with one delayed live game cannot hide the current round", () => {
+  const now = Date.parse("2026-08-30T15:00:00Z");
+  const old = Array.from({ length: 10 }, (_, id) => roundFixture({ id, round: 1,
+    startsAt: id === 0 ? "2026-08-30T14:30:00Z" : "2026-08-23T14:00:00Z",
+    status: id === 0 ? "In Play" : "Full Time" }));
+  const current = Array.from({ length: 10 }, (_, id) => roundFixture({ id, round: 2,
+    startsAt: id === 0 ? "2026-08-30T14:00:00Z" : "2026-08-30T17:00:00Z",
+    status: id === 0 ? "In Play" : "Not Started" }));
+  for (const input of [[...old, ...current], [...current.toReversed(), ...old.toReversed()]]) {
+    const result = selectTouchlineMatchCentreSchedule(input, now);
+    assert.equal(result.currentFixtures.length, 11);
+    assert.ok(current.every(game => result.currentFixtures.some(row => row.id === game.id)));
+    assert.ok(result.currentFixtures.some(row => row.id === old[0].id));
+  }
 });

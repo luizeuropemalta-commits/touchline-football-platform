@@ -66,7 +66,6 @@ export default function TouchlineOfficialLeagueTable({
   const seasonStatus = variant === "clubHubRail"
     ? null
     : seasonStatusCopy(table.state, hasLiveFixture, dictionary);
-  const hasScrollableViewport = variant === "profile" || variant === "clubHubRail";
   const scrollLabel = dictionary.scrollLabel;
 
   useEffect(() => {
@@ -130,9 +129,9 @@ export default function TouchlineOfficialLeagueTable({
             {variant === "clubHubRail" ? <TouchlineClubPerimeterTrace accent="#a3ff12" className={styles.clubHubTableTrace} /> : null}
             <div
               className={styles.tableWrap}
-              aria-label={hasScrollableViewport ? scrollLabel : undefined}
+              aria-label={scrollLabel}
               data-club-table-scroll-region={variant === "clubHubRail" ? "true" : undefined}
-              tabIndex={hasScrollableViewport ? 0 : undefined}
+              tabIndex={0}
             >
               <table>
               <caption>{dictionary.caption}</caption>

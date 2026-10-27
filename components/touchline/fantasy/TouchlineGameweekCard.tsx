@@ -11,7 +11,7 @@ import { touchlinePlayerPositionKind } from "@/lib/touchlineArena/position-aware
 import { useTouchlineCardLeadershipAuthority } from "@/components/touchline/cards/TouchlineCardLeadershipProvider";
 import { projectTouchlineSeasonCard } from "@/lib/touchlineArena/player-season-presentation";
 
-export default function TouchlineGameweekCard({ card, locale, compact = false, displayWidth, fitContainer = false, draftLocalesEnabled = false, liveSeasonRating = false, replacementAction, removalAction, releaseAction, signingActions, lockedReason }: {
+export default function TouchlineGameweekCard({ card, locale, compact = false, displayWidth, fitContainer = false, imageLoading = "eager", draftLocalesEnabled = false, liveSeasonRating = false, replacementAction, removalAction, releaseAction, signingActions, lockedReason }: {
   card: ClubOwnerSquadCard;
   locale: string;
   draftLocalesEnabled?: boolean;
@@ -21,6 +21,8 @@ export default function TouchlineGameweekCard({ card, locale, compact = false, d
   displayWidth?: number;
   /** Grid thumbnails follow their column; transformed pitch cards retain an explicit scale. */
   fitContainer?: boolean;
+  /** Thumbnail delivery only; an explicitly opened zoom stays eager. */
+  imageLoading?: "eager" | "lazy";
   replacementAction?: { label: string; onSelect: () => void; disabled?: boolean };
   removalAction?: { label: string; onSelect: () => void; disabled?: boolean };
   releaseAction?: { label: string; onSelect: () => void; disabled?: boolean };
@@ -97,6 +99,7 @@ export default function TouchlineGameweekCard({ card, locale, compact = false, d
       hideMarketValuePanel={false}
       staticRenderScale={fitContainer ? undefined : resolvedDisplayWidth / 430}
       optimizeForLiveCompact={useLiveCompactAsset}
+      imageLoading={imageLoading}
       runtimeLocaleOverride={locale}
       subscribeToRanking={false}
       enableInteractiveNeon={false}
