@@ -558,3 +558,26 @@ test("QA admits only the private Exchange gate name without activating or wideni
     assert.equal(inspectTouchlineIsolatedPreviewEnvironment(qaEnvironment({ [forbidden]: "true" })).status, "invalid");
   }
 });
+
+
+test("QA admits only the eight private company-mail bindings, without leaking values or widening isolated Preview", () => {
+ const keys = ["TOUCHLINE_COMPANY_MAIL_JOB_ENABLED", "TOUCHLINE_COMPANY_MAIL_JOB_SECRET",
+  ...["ADMIN", "PERSONAL"].flatMap(account => ["CLIENT_ID", "CLIENT_SECRET", "REFRESH_TOKEN"].map(field => `TOUCHLINE_COMPANY_GMAIL_${account}_${field}`))];
+ const bindings = Object.fromEntries(keys.map(key => [key, "synthetic-private-mail-value"]));
+ const environment = qaEnvironment({ ...bindings, VERCEL_GIT_COMMIT_REF: "qa", VERCEL_BRANCH_URL: TOUCHLINE_QA_HOSTNAME,
+  NEXT_PUBLIC_TOUCHLINE_AUTH_ORIGIN: TOUCHLINE_QA_ORIGIN,
+  NEXT_PUBLIC_SUPABASE_URL: "https://xgxbwqxjssxxuihuwmgy.supabase.co", SUPABASE_URL: "https://xgxbwqxjssxxuihuwmgy.supabase.co",
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: "synthetic-qa-anon-not-a-real-credential", SUPABASE_SERVICE_ROLE_KEY: "synthetic-qa-service-not-a-real-credential",
+  TOUCHLINE_QA_SUPABASE_PROJECT_REF: "xgxbwqxjssxxuihuwmgy" });
+ const verify = (env: Record<string,string|undefined>) => inspectTouchlineQaVercelEnvironment({environment:env,requestHostname:TOUCHLINE_QA_HOSTNAME});
+ assert.equal(verify(environment).status,"PASS");
+ for(const key of keys){
+  assert.equal(inspectTouchlineIsolatedPreviewEnvironment(isolatedEnvironment({[key]:bindings[key]})).status,"invalid");
+  for(const forbidden of [`NEXT_PUBLIC_${key}`,`${key}_OTHER`]){
+   const result=inspectTouchlineIsolatedPreviewEnvironment({...environment,[forbidden]:bindings[key]});
+   assert.equal(result.status,"invalid"); assert.ok(result.reasons.every(reason=>!reason.includes(bindings[key])));
+  }
+ }
+ for(const patch of [{VERCEL_GIT_COMMIT_REF:"main"},{SUPABASE_URL:"https://other.supabase.co"},{TOUCHLINE_COMPANY_GMAIL_OTHER_REFRESH_TOKEN:"synthetic-private-mail-value"}])
+  assert.equal(verify({...environment,...patch}).status,"FAIL");
+});

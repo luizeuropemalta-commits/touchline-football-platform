@@ -125,6 +125,16 @@ export const TOUCHLINE_QA_PREVIEW_ALLOWED_APPLICATION_ENVIRONMENT_KEYS = [
   "TOUCHLINE_LINEUP_REMINDER_LEAD_SECONDS",
   "TOUCHLINE_LINEUP_REMINDER_PAGE_SIZE",
   "TOUCHLINE_LINEUP_REMINDER_RETRY_SECONDS",
+  // Exact server-only bindings for the two owner-authorized readonly mailboxes.
+  // Route authentication, mailbox SQL gates and scheduler activation stay independent.
+  "TOUCHLINE_COMPANY_MAIL_JOB_ENABLED",
+  "TOUCHLINE_COMPANY_MAIL_JOB_SECRET",
+  "TOUCHLINE_COMPANY_GMAIL_ADMIN_CLIENT_ID",
+  "TOUCHLINE_COMPANY_GMAIL_ADMIN_CLIENT_SECRET",
+  "TOUCHLINE_COMPANY_GMAIL_ADMIN_REFRESH_TOKEN",
+  "TOUCHLINE_COMPANY_GMAIL_PERSONAL_CLIENT_ID",
+  "TOUCHLINE_COMPANY_GMAIL_PERSONAL_CLIENT_SECRET",
+  "TOUCHLINE_COMPANY_GMAIL_PERSONAL_REFRESH_TOKEN",
   "TOUCHLINE_OWNER_EMAILS",
   // Private avatar preparation only. Name admission never enables a route,
   // selects an account, installs a schema/bucket or grants upload consent.
