@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useState } from "react";
 import { useConfirmedClubCollection } from "./fantasy/ClubCollectionContext";
 import { CLUB_ACQUISITION_BUDGETS } from "@/lib/touchlineFantasy/club-acquisition";
@@ -20,7 +21,7 @@ import planStyles from "./ClubOwnerPlanShowcase.module.css";
 
 type Owner = Readonly<{ name: string; avatarUrl: string; city: string; nationality: string; since: string }>;
 
-export default function ClubOwnerMarketHeader({ owner, locale, accountId, avatarContext, rankingPosition = null, remainingMarketPower = null, plan = null, activePlanKey = null, activePlanBudget, draftLocalesEnabled = false, avatarSelectionEnabled = false, retentionReady = false, identityOnly = false, collectionEnabled = false }: Readonly<{
+export default function ClubOwnerMarketHeader({ owner, locale, accountId, avatarContext, rankingPosition = null, followerCount = null, publicDiscoveryEnabled = false, remainingMarketPower = null, plan = null, activePlanKey = null, activePlanBudget, draftLocalesEnabled = false, avatarSelectionEnabled = false, retentionReady = false, identityOnly = false, collectionEnabled = false }: Readonly<{
   owner: Owner | null; locale: string; accountId?: string; avatarContext?: ClubOwnerAvatarUiContext | null;
   plan?: Readonly<{ active: boolean; expiresAt: string | null }> | null;
   /** Validated server entitlement only; never derived from a preview or URL. */
@@ -30,6 +31,9 @@ export default function ClubOwnerMarketHeader({ owner, locale, accountId, avatar
   draftLocalesEnabled?: boolean;
   avatarSelectionEnabled?: boolean; retentionReady?: boolean;
   rankingPosition?: number | null;
+  /** Confirmed, self-scoped public-profile read; unavailable is never zero. */
+  followerCount?: number | null;
+  publicDiscoveryEnabled?: boolean;
   remainingMarketPower?: number | null;
   /** Reuse the canonical cover in a composition that owns its plan summary. */
   identityOnly?: boolean;
@@ -49,6 +53,8 @@ export default function ClubOwnerMarketHeader({ owner, locale, accountId, avatar
   }[resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled)];
   const metricsCopy = getClubOwnerProfileMetricsCopy(locale, draftLocalesEnabled);
   const name = owner?.name || copy.nameUnavailable;
+  const followers = publicDiscoveryEnabled && owner && typeof followerCount === "number" && Number.isSafeInteger(followerCount) && followerCount >= 0
+    ? new Intl.NumberFormat(locale).format(followerCount) : null;
   const rank = owner && typeof rankingPosition === "number" && Number.isSafeInteger(rankingPosition) && rankingPosition > 0
     ? formatClubOwnerRankingPosition(rankingPosition, locale, draftLocalesEnabled) : null;
   const marketPower = typeof confirmedBalance === "number" && Number.isFinite(confirmedBalance)
@@ -96,8 +102,11 @@ export default function ClubOwnerMarketHeader({ owner, locale, accountId, avatar
           <h2 id="clubowner-heading">{name}</h2>
           <dl className={styles.facts}>
             <div><dt>{metricsCopy.ranking}</dt><dd aria-label={rank === null ? metricsCopy.unavailable : undefined}>{rank ?? "—"}</dd></div>
-            <div><dt>{metricsCopy.followers}</dt><dd aria-label={metricsCopy.unavailable}>—</dd></div>
+            <div><dt>{metricsCopy.followers}</dt><dd aria-label={followers === null ? metricsCopy.unavailable : undefined}>{followers ?? "—"}</dd></div>
           </dl>
+          {publicDiscoveryEnabled ? <Link href={`/clubowners?lang=${locale === "pt-BR" ? "pt-BR" : "en-GB"}`} className={controls.link}>
+            {locale === "pt-BR" ? "Encontrar ClubOwners" : "Find ClubOwners"}
+          </Link> : null}
         </div>
       </div>
     </section>

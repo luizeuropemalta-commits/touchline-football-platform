@@ -3,9 +3,10 @@
 import { useCallback, useEffect, useRef, type ReactNode } from "react";
 
 /** Keep the focused navigation control and its ring inside this rail only. */
-export default function TouchlineNavigationRail({ className, children }: { className: string; children: ReactNode }) {
+export default function TouchlineNavigationRail({ className, children, revealVerticalFocus = false }: { className: string; children: ReactNode; revealVerticalFocus?: boolean }) {
   const railRef = useRef<HTMLDivElement | null>(null);
   const pendingFrame = useRef<number | null>(null);
+  const keyboardTab = useRef(false);
   const cancelPendingFrame = useCallback(() => {
     if (pendingFrame.current !== null) cancelAnimationFrame(pendingFrame.current);
     pendingFrame.current = null;
@@ -13,10 +14,12 @@ export default function TouchlineNavigationRail({ className, children }: { class
 
   const revealFocusedControl = useCallback((rail: HTMLDivElement, target: HTMLElement) => {
     cancelPendingFrame();
+    const revealVertically = revealVerticalFocus && keyboardTab.current;
     const reveal = () => {
       if (!rail.isConnected || !target.isConnected || target !== rail.ownerDocument.activeElement) return;
       const railStyle = getComputedStyle(rail);
-      if (!/auto|scroll/.test(railStyle.overflowX) || rail.scrollWidth <= rail.clientWidth) return;
+      const horizontalOverflow = /auto|scroll/.test(railStyle.overflowX) && rail.scrollWidth > rail.clientWidth;
+      if (!horizontalOverflow && !revealVertically) return;
       const targetStyle = getComputedStyle(target);
       const outline = Math.max(0, parseFloat(targetStyle.outlineWidth) + parseFloat(targetStyle.outlineOffset));
       const gutter = Math.max(7, outline + 1);
@@ -27,7 +30,18 @@ export default function TouchlineNavigationRail({ className, children }: { class
       const delta = control.left < left ? control.left - left : control.right > right ? control.right - right : 0;
       // Physical bounds also support negative RTL scroll offsets. Never use
       // scrollIntoView: it can move the document or an ancestor vertically.
-      if (delta) rail.scrollBy({ left: delta, behavior: "instant" });
+      if (delta && horizontalOverflow) rail.scrollBy({ left: delta, behavior: "instant" });
+      // Content forms opt in: WebKit can focus native time inputs without
+      // revealing them vertically. Navigation rails retain horizontal-only behavior.
+      if (revealVertically) {
+        const viewport = rail.ownerDocument.defaultView;
+        if (viewport) {
+          const current = target.getBoundingClientRect();
+          const vertical = current.top < gutter ? current.top - gutter
+            : current.bottom > viewport.innerHeight - gutter ? current.bottom - viewport.innerHeight + gutter : 0;
+          if (vertical) viewport.scrollBy({ top: vertical, behavior: "instant" });
+        }
+      }
     };
     // Reveal immediately even when the next animation frame is throttled.
     // Recheck once after native keyboard scrolling has settled.
@@ -36,7 +50,24 @@ export default function TouchlineNavigationRail({ className, children }: { class
       pendingFrame.current = null;
       reveal();
     });
-  }, [cancelPendingFrame]);
+  }, [cancelPendingFrame, revealVerticalFocus]);
+
+  useEffect(() => {
+    if (!revealVerticalFocus) return;
+    const document = railRef.current?.ownerDocument;
+    if (!document) return;
+    const start = (event: KeyboardEvent) => { keyboardTab.current = event.key === "Tab"; };
+    const end = () => { keyboardTab.current = false; };
+    document.addEventListener("keydown", start, true);
+    document.addEventListener("keyup", end, true);
+    document.addEventListener("pointerdown", end, true);
+    return () => {
+      document.removeEventListener("keydown", start, true);
+      document.removeEventListener("keyup", end, true);
+      document.removeEventListener("pointerdown", end, true);
+      keyboardTab.current = false;
+    };
+  }, [revealVerticalFocus]);
 
   useEffect(() => {
     const rail = railRef.current;

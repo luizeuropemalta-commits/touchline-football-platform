@@ -120,7 +120,7 @@ test("contract writes derive owner identity from the authenticated server sessio
 });
 
 test("coach and club identity are resolved from the canonical registry", () => {
-  assert.match(route, /touchlineLiveCoachForProviderId\(coachProviderId\)/);
+  assert.match(route, /catalogue\.current\.find\(entry => entry\.coach\.providerId === coachProviderId\)/);
   assert.match(route, /\.eq\("provider_team_id", coach\.coach\.teamId\)/);
   assert.doesNotMatch(route, /body\?\.clubId/);
 });
@@ -197,15 +197,16 @@ test("legacy selections are backfilled from migration time with no retroactive p
 });
 
 test("fixture ingestion reconciles coach points through the protected server path", () => {
-  assert.match(fixtureStore, /touchline_reconcile_coach_fixture_points/);
+  assert.match(fixtureStore, /touchline_reconcile_verified_coach_fixture_points/);
   assert.match(fixtureStore, /p_fixture_id: null/);
-  assert.match(fixtureStore, /p_competition_coaches: touchlineCompetitionCoachAssignments\(\)/);
+  assert.match(fixtureStore, /p_competition_coaches: await readCompetitionCoachAssignments\(\)/);
 });
 
 test("current fixture selection skips recently finished fixtures", () => {
-  assert.match(contractReader, /TERMINAL_FIXTURE_STATUS/);
-  assert.match(contractReader, /\.limit\(6\)/);
-  assert.match(contractReader, /\.find\(\(fixture\) => !isTerminalFixtureStatus\(fixture\.status\)\)/);
+  assert.match(contractReader, /import \{ touchlineFixtureState \} from "@\/lib\/touchlineArena\/fixture-state"/);
+  assert.match(contractReader, /touchline_read_verified_coach_current_fixture/);
+  assert.match(contractReader, /touchlineFixtureState\([\s\S]*=== "live"/);
+  assert.doesNotMatch(contractReader, /\.or\(`/);
 });
 
 test("final provider results are locked while live scores remain provisional", () => {
@@ -290,7 +291,7 @@ test("coach zoom centres the shared card between canonical identity and verified
 test("Club Hub always shows the canonical club coach card without claiming an unverified matchday coach", () => {
   assert.match(clubProfile, /<ClubHubCanonicalCoachPanel/);
   assert.match(clubProfile, /teamId=\{club\.teamId\}/);
-  assert.match(clubCoachPanel, /touchlineLiveCoachForTeam\(teamId\)/);
+  assert.match(clubCoachPanel, /catalogueCoachForTeam\(await loadCoachCatalogue\(\), teamId\)/);
   assert.match(clubCoachPanel, /loadTouchLineCoachRanking\(\)/);
   assert.match(clubCoachPanel, /competition=\{competition\}/);
   assert.match(clubCoachPanel, /TouchlineCoachCardZoom/);

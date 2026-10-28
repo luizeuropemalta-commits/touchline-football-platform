@@ -2,11 +2,13 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { socialAdminLanguage, socialAdminError } from "@/lib/touchlineArena/social-admin-language";
 
 type Action = "approve-template-artwork" | "approve-template-caption"
   | "enable-auto-publish" | "pause-template" | "revoke-template";
 
 export default function TouchlineSocialTemplatePolicyActions({
+  locale: localeInput,
   templateId,
   templateIdentityChecksum,
   visualTemplateChecksum,
@@ -15,6 +17,7 @@ export default function TouchlineSocialTemplatePolicyActions({
   artworkApproved,
   captionApproved,
 }: {
+  locale?: string;
   templateId: string;
   templateIdentityChecksum: string;
   visualTemplateChecksum: string;
@@ -23,9 +26,10 @@ export default function TouchlineSocialTemplatePolicyActions({
   artworkApproved: boolean;
   captionApproved: boolean;
 }) {
+  const { locale, t } = socialAdminLanguage(localeInput);
   const router = useRouter();
   const [pending, setPending] = useState<Action | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
+  const [message, setMessage] = useState<{ kind: "success" | "error"; text: string } | null>(null);
 
   async function act(action: Action) {
     if (pending) return;
@@ -45,11 +49,11 @@ export default function TouchlineSocialTemplatePolicyActions({
         }),
       });
       const payload = await response.json() as { ok?: boolean; error?: string };
-      if (!response.ok || !payload.ok) throw new Error(payload.error || "A alteração não pôde ser registrada.");
-      setMessage("Política da versão atualizada com sucesso.");
+      if (!response.ok || !payload.ok) throw new Error(payload.error || t("A alteração não pôde ser registrada."));
+      setMessage({ kind: "success", text: "Política da versão atualizada com sucesso." });
       router.refresh();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "A alteração não pôde ser registrada.");
+      setMessage({ kind: "error", text: socialAdminError(error, "en-GB", "A alteração não pôde ser registrada.") });
     } finally {
       setPending(null);
     }
@@ -62,32 +66,32 @@ export default function TouchlineSocialTemplatePolicyActions({
       aria-busy={pending === "approve-template-artwork"}
       onClick={() => void act("approve-template-artwork")}
       className="rounded-xl border border-cyan-300/25 bg-cyan-300/[.08] px-3 py-2 text-[10px] font-black text-cyan-100 disabled:opacity-45">
-      {artworkApproved ? "Template visual aprovado" : "Aprovar template visual"}
+      {artworkApproved ? t("Template visual aprovado") : t("Aprovar template visual")}
     </button>
     <button type="button" disabled={captionApproved || revoked || pending !== null}
       aria-busy={pending === "approve-template-caption"}
       onClick={() => void act("approve-template-caption")}
       className="rounded-xl border border-[#a3ff12]/25 bg-[#a3ff12]/[.08] px-3 py-2 text-[10px] font-black text-[#caff6d] disabled:opacity-45">
-      {captionApproved ? "Template de copy aprovado" : "Aprovar template de copy"}
+      {captionApproved ? t("Template de copy aprovado") : t("Aprovar template de copy")}
     </button>
     <button type="button" disabled={!fullyApproved || state === "AUTO_PUBLISH_ENABLED" || revoked || pending !== null}
       aria-busy={pending === "enable-auto-publish"}
       onClick={() => void act("enable-auto-publish")}
       className="rounded-xl border border-emerald-300/25 bg-emerald-300/[.08] px-3 py-2 text-[10px] font-black text-emerald-100 disabled:opacity-45">
-      {state === "AUTO_PUBLISH_ENABLED" ? "Elegibilidade automática ativa" : "Ativar elegibilidade automática"}
+      {state === "AUTO_PUBLISH_ENABLED" ? t("Elegibilidade automática ativa") : t("Ativar elegibilidade automática")}
     </button>
     <button type="button" disabled={!fullyApproved || state === "PAUSED" || revoked || pending !== null}
       aria-busy={pending === "pause-template"}
       onClick={() => void act("pause-template")}
       className="rounded-xl border border-amber-300/25 bg-amber-300/[.08] px-3 py-2 text-[10px] font-black text-amber-100 disabled:opacity-45">
-      {state === "PAUSED" ? "Template pausado" : "Pausar imediatamente"}
+      {state === "PAUSED" ? t("Template pausado") : t("Pausar imediatamente")}
     </button>
     <button type="button" disabled={revoked || pending !== null}
       aria-busy={pending === "revoke-template"}
       onClick={() => void act("revoke-template")}
       className="rounded-xl border border-red-300/25 bg-red-300/[.08] px-3 py-2 text-[10px] font-black text-red-100 disabled:opacity-45 sm:col-span-2">
-      {revoked ? "Versão revogada" : "Revogar esta versão"}
+      {revoked ? t("Versão revogada") : t("Revogar esta versão")}
     </button>
-    <p className="min-h-4 text-[10px] font-bold text-slate-400 sm:col-span-2" role="status" aria-live="polite">{message}</p>
+    <p className="min-h-4 text-[10px] font-bold text-slate-400 sm:col-span-2" role="status" aria-live="polite">{message ? message.kind === "success" ? t(message.text) : socialAdminError(message.text, locale, "A alteração não pôde ser registrada.") : null}</p>
   </div>;
 }

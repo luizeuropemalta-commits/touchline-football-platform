@@ -73,7 +73,7 @@ export function assertQaRosterAtomicReceipt(
   }
 }
 
-function assertQaRuntime() {
+export function assertQaRuntime() {
   const inspection = inspectTouchlineIsolatedPreviewEnvironment();
   if (inspection.status !== "qa" || process.env.TOUCHLINE_QA_SUPABASE_PROJECT_REF !== QA_PROJECT_REF) {
     throw new Error("Twenty-club roster sync is available only in the dedicated functional QA Preview.");
@@ -153,7 +153,7 @@ async function readProviderSquads(admin: AdminClient): Promise<ProviderSquad[]> 
   return squads;
 }
 
-function playerInput(member: TouchlineSquadMember): SquadSnapshotPlayerInput {
+export function playerInput(member: TouchlineSquadMember): SquadSnapshotPlayerInput {
   return {
     providerId: member.player.providerId,
     name: member.player.displayName || member.player.name,

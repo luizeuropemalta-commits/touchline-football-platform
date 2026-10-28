@@ -9,7 +9,7 @@ const exports: Record<string, unknown> = {};
 runInNewContext(ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText, {
   exports, require(name: string) {
     if (name === "@/lib/supabase/admin") return { createAdminClient: () => assert.fail("Use the supplied read-only client") };
-    if (name === "@/lib/touchlineArena/live-coaches") return { touchlineCompetitionCoachAssignments: () => [] };
+    if (name === "@/lib/touchlineArena/coach-catalogue-server") return { readCompetitionCoachAssignments: async () => assert.fail("Read-only fixture queries must not reconcile coach assignments") };
     throw new Error(name);
   },
 });

@@ -111,7 +111,7 @@
 .proposalRow p { display: flex; align-items: center; gap: 6px; color: #b6d6a0; font-size: 12px; margin: 6px 0; }
 .proposalRow small { font-size: 11px; color: #a7bdaf; }
 .proposalRow > .actions { margin-left: auto; }
-.backdrop { position: fixed; inset: 0; z-index: 1600; display: flex; align-items: center; justify-content: center; padding: 22px; background: #010907d9; backdrop-filter: blur(10px); }
+.backdrop { position: fixed; inset: 0; z-index: 1600; display: flex; align-items: center; justify-content: center; padding: 22px; background: var(--touchline-modal-backdrop, rgba(0, 5, 6, .72));   -webkit-backdrop-filter: var(--touchline-modal-blur, blur(8px)); backdrop-filter: var(--touchline-modal-blur, blur(8px)); }
 .dialog { width: min(1020px,100%); max-height: calc(100dvh - 44px); overflow-y: auto; overscroll-behavior: contain; padding: 26px; border: 1px solid #a4c89355; border-radius: 24px; background: radial-gradient(ellipse at 100% 0,#1c39294a,transparent 55%),#0a1514; color: #edf8ff; box-shadow: 0 35px 120px #0009; font-family: var(--font-sans,Arial,sans-serif); }
 .dialog:focus { outline: none; }
 .narrow { max-width: 620px; }

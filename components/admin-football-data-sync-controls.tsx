@@ -1,229 +1,87 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui";
 
-type SyncResponse = {
-  ok?: boolean;
-  status?: string;
-  fixturesFetched?: number;
-  fixturesStored?: number;
-  resourceCount?: number;
-  enrichmentCount?: number;
-  providerPlayers?: number;
-  canonicalPlayers?: number;
-  nationalityProvided?: number;
-  countryIdsProvided?: number;
-  shirtNumbersProvided?: number;
-  clubs?: number;
-  recordsUpdated?: number;
-  fixtureRowsWritten?: number;
-  v3FixtureRowsWritten?: number;
-  aggregatesWritten?: number;
-  rankingSnapshotId?: string | null;
-  errors?: string[];
-  error?: string;
-};
+type Action = "live" | "scores" | "rosters" | "countries" | "capabilities";
+type Outcome = { ok?: boolean; status?: string; fixturesUpdated?: number; issueCount?: number; runId?: string };
 
-const OPENING_ROUND_WINDOW = {
-  fromDate: "2026-08-21",
-  throughDate: "2026-08-24",
-};
-
-export function FootballDataSyncControls() {
-  const [state, setState] = useState<"idle" | "syncing" | "success" | "error">("idle");
+export function FootballDataSyncControls({ locale = "en-GB", allowQaMaintenance = false }: {
+  locale?: "pt-BR" | "en-GB"; allowQaMaintenance?: boolean;
+}) {
+  const router = useRouter();
+  const busy = useRef(false);
+  const [pending, setPending] = useState<Action | null>(null);
   const [message, setMessage] = useState("");
+  const [failed, setFailed] = useState(false);
+  const pt = locale === "pt-BR";
+  const t = (portuguese: string, english: string) => pt ? portuguese : english;
+  const labels: Record<Action, string> = {
+    live: t("Atualizar jogos e notas", "Update fixtures and ratings"),
+    scores: t("Recalcular pontos com dados salvos", "Recalculate points from stored data"),
+    rosters: t("Conferir os 20 elencos de QA", "Reconcile 20 QA squads"),
+    countries: t("Conferir nacionalidades em QA", "Reconcile QA nationalities"),
+    capabilities: t("Verificar recursos do fornecedor", "Check provider capabilities"),
+  };
 
-  async function syncOpeningRound() {
-    setState("syncing");
-    setMessage("Reading the verified TouchLine Premier League schedule…");
-
+  async function run(action: Action) {
+    if (busy.current || (!allowQaMaintenance && action !== "live" && action !== "scores")) return;
+    busy.current = true;
+    setPending(action); setFailed(false);
+    setMessage(t("Conferindo os dados. Aguarde a confirmação…", "Checking data. Please wait for confirmation…"));
     try {
-      const params = new URLSearchParams({
-        scope: "fixture_schedule",
-        competitionId: "8",
-        ...OPENING_ROUND_WINDOW,
+      const scopes = { rosters: "qa_twenty_club_roster_sync", countries: "qa_country_sync", capabilities: "capabilities" };
+      const endpoint = action === "live" ? "/api/admin/football-data/sync"
+        : action === "scores" ? "/api/football-data/player-season-statistics/sync"
+          : `/api/football-data/sync-starter?${new URLSearchParams({ scope: scopes[action], runId: crypto.randomUUID() })}`;
+      const response = await fetch(endpoint, {
+        method: "POST", headers: { Accept: "application/json" }, credentials: "same-origin",
+        cache: "no-store", signal: AbortSignal.timeout(310_000),
       });
-      const response = await fetch(`/api/football-data/sync-starter?${params.toString()}`, {
-        method: "POST",
-        headers: { Accept: "application/json" },
-        credentials: "same-origin",
-      });
-      const result = await response.json() as SyncResponse;
-
-      if (!response.ok || !result.ok) {
-        const detail = result.errors?.filter(Boolean).join(" ") || result.error || "The official schedule could not be synchronized.";
-        throw new Error(detail);
-      }
-
-      setState("success");
-      setMessage(`${result.fixturesStored ?? 0} verified fixtures stored from ${result.fixturesFetched ?? 0} provider fixtures. Refreshing the control room…`);
-      window.setTimeout(() => window.location.reload(), 1_200);
-    } catch (error) {
-      setState("error");
-      setMessage(error instanceof Error ? error.message : "The official schedule could not be synchronized.");
-    }
-  }
-
-  async function syncCapabilities() {
-    setState("syncing");
-    setMessage("Reading active TouchLine data capabilities…");
-
-    try {
-      const params = new URLSearchParams({ scope: "capabilities" });
-      const response = await fetch(`/api/football-data/sync-starter?${params.toString()}`, {
-        method: "POST",
-        headers: { Accept: "application/json" },
-        credentials: "same-origin",
-      });
-      const result = await response.json() as SyncResponse;
-      if (!response.ok || !result.ok) {
-        const detail = result.errors?.filter(Boolean).join(" ") || result.error || "The subscription capability check failed.";
-        throw new Error(detail);
-      }
-
-      setState("success");
-      setMessage(`${result.resourceCount ?? 0} resources and ${result.enrichmentCount ?? 0} enrichments recorded from the active subscription.`);
-      window.setTimeout(() => window.location.reload(), 1_200);
-    } catch (error) {
-      setState("error");
-      setMessage(error instanceof Error ? error.message : "The subscription capability check failed.");
-    }
-  }
-
-  async function reconcileQaCountryData() {
-    setState("syncing");
-    setMessage("Validating all 20 TouchLine squads before the QA-only country-data reconcile…");
-
-    try {
-      const params = new URLSearchParams({
-        scope: "qa_country_sync",
-        runId: crypto.randomUUID(),
-      });
-      const response = await fetch(`/api/football-data/sync-starter?${params.toString()}`, {
-        method: "POST",
-        headers: { Accept: "application/json" },
-        credentials: "same-origin",
-      });
-      const result = await response.json() as SyncResponse;
-      if (!response.ok || !result.ok) {
-        const detail = result.errors?.filter(Boolean).join(" ") || result.error || "The QA country-data reconcile failed.";
-        throw new Error(detail);
-      }
-
-      setState("success");
-      setMessage(`${result.recordsUpdated ?? 0} canonical players updated from ${result.providerPlayers ?? 0} verified provider players. Refreshing the control room…`);
-      window.setTimeout(() => window.location.reload(), 1_200);
-    } catch (error) {
-      setState("error");
-      setMessage(error instanceof Error ? error.message : "The QA country-data reconcile failed.");
-    }
-  }
-
-  async function reconcileQaTwentyClubRosters() {
-    setState("syncing");
-    setMessage("Backing up QA, then reconciling all 20 current TouchLine squads…");
-
-    try {
-      const params = new URLSearchParams({
-        scope: "qa_twenty_club_roster_sync",
-        runId: crypto.randomUUID(),
-      });
-      const response = await fetch(`/api/football-data/sync-starter?${params.toString()}`, {
-        method: "POST",
-        headers: { Accept: "application/json" },
-        credentials: "same-origin",
-      });
-      const result = await response.json() as SyncResponse;
-      if (!response.ok || !result.ok) {
-        const detail = result.errors?.filter(Boolean).join(" ") || result.error || "The QA twenty-club roster reconcile failed.";
-        throw new Error(detail);
-      }
-
-      setState("success");
-      setMessage(`${result.clubs ?? 0} clubs reconciled from ${result.providerPlayers ?? 0} verified provider players. No player, publication or history was deleted. Refreshing the control room…`);
-      window.setTimeout(() => window.location.reload(), 1_200);
-    } catch (error) {
-      setState("error");
-      setMessage(error instanceof Error ? error.message : "The QA twenty-club roster reconcile failed.");
-    }
-  }
-
-  async function rebuildPlayerScoreV3() {
-    setState("syncing");
-    setMessage("Rebuilding rating-based V3 settlements from persisted TouchLine feeds…");
-    try {
-      const response = await fetch("/api/football-data/player-season-statistics/sync", {
-        method: "POST",
-        headers: { Accept: "application/json" },
-        credentials: "same-origin",
-      });
-      const result = await response.json() as SyncResponse;
-      if (!response.ok || !result.ok) {
-        throw new Error(result.errors?.filter(Boolean).join(" ") || result.error || "The V3 score rebuild failed.");
-      }
-      setState("success");
-      setMessage(`${result.v3FixtureRowsWritten ?? 0} V3 fixture settlements and ${result.aggregatesWritten ?? 0} season aggregates rebuilt${result.rankingSnapshotId ? ` · ranking ${result.rankingSnapshotId}` : ""}. Refreshing the control room…`);
-      window.setTimeout(() => window.location.reload(), 1_200);
-    } catch (error) {
-      setState("error");
-      setMessage(error instanceof Error ? error.message : "The V3 score rebuild failed.");
+      const result = await response.json() as Outcome;
+      const confirmedPartial = action === "live" && response.status === 502 && result.status === "partial"
+        && typeof result.runId === "string" && result.runId.length > 0;
+      if ((!response.ok || result.ok !== true) && !confirmedPartial) throw new Error("NOT_CONFIRMED");
+      const partial = result.status === "partial" || (result.issueCount ?? 0) > 0;
+      setFailed(partial);
+      setMessage(result.status === "skipped"
+        ? t("Nenhuma nova execução iniciada. O processo respeitou o intervalo ou uma atualização já em andamento.", "No new run started. The process respected its interval or an update already in progress.")
+        : partial
+          ? t("Atualização parcial. Confira o histórico antes de repetir.", "Partial update. Check the history before retrying.")
+          : action === "live"
+            ? t(`${result.fixturesUpdated ?? 0} jogos atualizados. Confira o resultado no histórico abaixo.`, `${result.fixturesUpdated ?? 0} fixtures updated. Check the outcome in the history below.`)
+            : t("Operação confirmada. Os dados do painel serão atualizados.", "Operation confirmed. The panel data will refresh."));
+      router.refresh();
+    } catch {
+      setFailed(true);
+      setMessage(t("Atualização não confirmada. Confira o histórico: o processo pode continuar no servidor. Não há repetição automática.", "Update not confirmed. Check the history: the process may continue on the server. No automatic retry."));
+    } finally {
+      busy.current = false; setPending(null);
     }
   }
 
   return (
-    <section className="mt-6 rounded-3xl border border-[#a3ff12]/20 bg-[#a3ff12]/[.045] p-5">
-      <p className="text-[9px] font-black text-[#c6ff62]">QA owner action · official fixture source</p>
-      <h2 className="mt-2 text-xl font-black italic text-white">Load the Premier League opening round</h2>
-      <p className="mt-2 max-w-3xl text-xs leading-5 text-slate-300/75">
-        Imports only verified TouchLine fixtures for 21–24 August 2026 into the QA database. Existing verified fixtures are upserted; no fixture is deleted and no score, lineup or card is simulated.
+    <section className="mt-6 rounded-3xl border border-[#a3ff12]/20 bg-[#a3ff12]/[.045] p-5" aria-labelledby="football-sync-title">
+      <h2 id="football-sync-title" className="text-xl font-black text-white">{t("Sincronização de jogos e notas", "Fixture and rating synchronization")}</h2>
+      <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300/75">
+        {t("Consulta a fonte oficial e verifica correções após os jogos pelo mesmo processo automático. Atualizar esses dados não exige novo deploy.", "Checks the official source and post-match corrections through the same automatic pipeline. Refreshing this data requires no new deployment.")}
       </p>
-      <div className="mt-4 flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          onClick={rebuildPlayerScoreV3}
-          disabled={state === "syncing"}
-          className="rounded-2xl border border-fuchsia-300/40 bg-fuchsia-300/[.08] px-4 py-3 text-[10px] font-black text-fuchsia-100 transition hover:bg-fuchsia-300/[.14] disabled:cursor-wait disabled:opacity-60"
-        >
-          {state === "syncing" ? "Rebuilding Score V3…" : "Rebuild Score Engine V3"}
-        </button>
-        <button
-          type="button"
-          onClick={reconcileQaTwentyClubRosters}
-          disabled={state === "syncing"}
-          className="rounded-2xl border border-[#a3ff12]/45 bg-[#a3ff12]/[.12] px-4 py-3 text-[10px] font-black text-[#e4ffae] transition hover:bg-[#a3ff12]/[.2] disabled:cursor-wait disabled:opacity-60"
-        >
-          {state === "syncing" ? "Reconciling 20 QA squads…" : "Reconcile 20 QA squads"}
-        </button>
-        <button
-          type="button"
-          onClick={syncCapabilities}
-          disabled={state === "syncing"}
-          className="rounded-2xl border border-cyan-300/30 bg-cyan-300/[.08] px-4 py-3 text-[10px] font-black text-cyan-100 transition hover:bg-cyan-300/[.14] disabled:cursor-wait disabled:opacity-60"
-        >
-          {state === "syncing" ? "Checking active plan…" : "Check active plan"}
-        </button>
-        <button
-          type="button"
-          onClick={syncOpeningRound}
-          disabled={state === "syncing"}
-          className="rounded-2xl bg-[#a3ff12] px-4 py-3 text-[10px] font-black text-black transition hover:bg-[#c6ff62] disabled:cursor-wait disabled:opacity-60"
-        >
-          {state === "syncing" ? "Synchronizing official fixtures…" : "Sync official fixtures"}
-        </button>
-        <button
-          type="button"
-          onClick={reconcileQaCountryData}
-          disabled={state === "syncing"}
-          className="rounded-2xl border border-amber-300/35 bg-amber-300/[.08] px-4 py-3 text-[10px] font-black text-amber-100 transition hover:bg-amber-300/[.14] disabled:cursor-wait disabled:opacity-60"
-        >
-          {state === "syncing" ? "Reconciling QA country data…" : "Reconcile QA country data"}
-        </button>
-        {message ? (
-          <p className={state === "error" ? "text-xs font-bold text-rose-200" : "text-xs font-bold text-slate-300"} role="status">
-            {message}
-          </p>
-        ) : null}
-      </div>
+      <Button className="mt-4 h-auto min-h-11 whitespace-normal py-3 text-center" disabled={pending !== null} aria-busy={pending === "live"} onClick={() => void run("live")}>
+        {pending === "live" ? t("Atualizando…", "Updating…") : labels.live}
+      </Button>
+      <details className="mt-5 border-t border-white/10 pt-4">
+        <summary className="cursor-pointer py-2 text-sm font-bold text-slate-300">{t("Manutenção de dados", "Data maintenance")}</summary>
+        <p className="mt-2 text-sm leading-6 text-slate-400">{t("Recalcular usa os dados já salvos; não consulta novas notas. A atualização principal acima consulta o fornecedor.", "Recalculation uses stored data; it does not fetch new ratings. The main update above checks the provider.")}</p>
+        <div className="mt-3 flex flex-wrap gap-3">
+          {(["scores", ...(allowQaMaintenance ? ["rosters", "countries", "capabilities"] : [])] as Action[]).map(action => (
+            <Button key={action} variant="secondary" className="h-auto min-h-11 whitespace-normal py-3 text-center" disabled={pending !== null} aria-busy={pending === action} onClick={() => void run(action)}>
+              {pending === action ? t("Processando…", "Processing…") : labels[action]}
+            </Button>
+          ))}
+        </div>
+      </details>
+      <p className={`mt-4 min-h-6 text-sm leading-6 ${failed ? "text-amber-200" : "text-slate-300"}`} role="status" aria-live="polite">{message}</p>
     </section>
   );
 }

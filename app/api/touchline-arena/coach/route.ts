@@ -5,11 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { hasTouchLineArenaAccess } from "@/lib/touchlineArena/auth-access";
 import { readTouchlineCoachContracts } from "@/lib/touchlineArena/coach-contracts-server";
 import { resolveCompetitionCardOffer } from "@/lib/touchlineArena/competition-card-offer";
-import {
-  touchlineCoachClassificationForProviderId,
-  TOUCHLINE_LIVE_COACHES,
-  touchlineLiveCoachForProviderId,
-} from "@/lib/touchlineArena/live-coaches";
+import { loadCoachCatalogue } from "@/lib/touchlineArena/coach-catalogue-server";
 
 const TOUCHLINE_ENGLAND_COMPETITION = "england" as const;
 const TOUCHLINE_ENGLAND_SEASON = "2026-27";
@@ -17,8 +13,8 @@ const TOUCHLINE_ENGLAND_SEASON = "2026-27";
 async function authenticatedUser() {
   const supabase = await createClient();
   if (!supabase) return null;
-  const { data: { user } } = await supabase.auth.getUser();
-  return hasTouchLineArenaAccess(user) ? user : null;
+  const { data: { user }, error } = await supabase.auth.getUser();
+  return !error && hasTouchLineArenaAccess(user) ? user : null;
 }
 
 function isSameOriginMutation(request: Request) {
@@ -54,8 +50,9 @@ export async function GET() {
   const admin = createAdminClient();
   if (!admin) return NextResponse.json({ ok: false }, { status: 503 });
 
-  const offers = TOUCHLINE_LIVE_COACHES.map(({ coach }) => {
-    const classification = touchlineCoachClassificationForProviderId(coach.providerId);
+  const catalogue = await loadCoachCatalogue();
+  if (catalogue.phase === "unavailable") return NextResponse.json({ ok: false }, { status: 503 });
+  const offers = catalogue.current.map(({ coach, classification }) => {
     if (!classification) throw new Error(`Missing coach classification: ${coach.providerId}`);
     return resolveCompetitionCardOffer({
       subjectType: "coach",
@@ -95,11 +92,21 @@ export async function PUT(request: Request) {
   const body = await readBoundedJson(request);
   const coachProviderId = typeof body?.coachProviderId === "string" ? body.coachProviderId.trim() : "";
   const idempotencyKey = typeof body?.idempotencyKey === "string" ? body.idempotencyKey.trim() : "";
-  const coach = touchlineLiveCoachForProviderId(coachProviderId);
-  if (!coach) return NextResponse.json({ ok: false, error: "TL_ARENA_COACH_INVALID" }, { status: 400 });
   if (idempotencyKey.length < 8 || idempotencyKey.length > 120) {
     return NextResponse.json({ ok: false, error: "TL_COACH_HIRE_IDEMPOTENCY_REQUIRED" }, { status: 400 });
   }
+  const { data: previous, error: previousError } = await admin.from("touchline_coach_contracts")
+    .select("id,coach_provider_id").eq("user_id", user.id).eq("hire_idempotency_key", idempotencyKey).maybeSingle();
+  if (previousError) return NextResponse.json({ ok: false, error: "TL_COACH_CONTRACT_READ_FAILED" }, { status: 503 });
+  if (previous) {
+    if (previous.coach_provider_id !== coachProviderId) return NextResponse.json({ ok: false, error: "TL_COACH_HIRE_IDEMPOTENCY_CONFLICT" }, { status: 409 });
+    const contracts = await readTouchlineCoachContracts(admin, user.id);
+    return NextResponse.json({ ok: true, replayed: true, activeContract: contracts.find(contract => contract.status === "active") ?? null });
+  }
+  const catalogue = await loadCoachCatalogue();
+  if (catalogue.phase === "unavailable") return NextResponse.json({ ok: false }, { status: 503 });
+  const coach = catalogue.current.find(entry => entry.coach.providerId === coachProviderId);
+  if (!coach) return NextResponse.json({ ok: false, error: "TL_ARENA_COACH_INVALID" }, { status: 400 });
 
   const { data: club, error: clubError } = await admin
     .from("football_clubs")
@@ -115,6 +122,7 @@ export async function PUT(request: Request) {
     p_coach_provider_id: coach.coach.providerId,
     p_club_id: club.id,
     p_idempotency_key: idempotencyKey,
+    ...(catalogue.phase === "ready" ? { p_catalogue_revision: catalogue.revision, p_publication_id: coach.publicationId } : {}),
   });
   if (error?.code === "42883" || error?.code === "42P01") {
     return NextResponse.json(
@@ -123,6 +131,7 @@ export async function PUT(request: Request) {
     );
   }
   if (error) {
+    if (error.message.includes("CLUB_COACH_CATALOGUE_CHANGED")) return NextResponse.json({ ok: false, error: "CLUB_COACH_CATALOGUE_CHANGED" }, { status: 409 });
     if (error.message.includes("CLUB_COLLECTION_ROUTE_REQUIRED")) {
       return NextResponse.json({ ok: false, error: "CLUB_COLLECTION_ROUTE_REQUIRED" }, { status: 409 });
     }

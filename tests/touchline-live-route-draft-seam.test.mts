@@ -1,3 +1,4 @@
+import { legacyCoachCatalogue } from "../lib/touchlineArena/coach-catalogue-contract.ts";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
@@ -32,6 +33,8 @@ function fixture(viewer: unknown = { data: { user }, error: null }, historical =
   const selectionCalls: unknown[][] = [];
   const modules: Record<string, unknown> = {
     "@/lib/touchlineArena/site-locales-release": siteLocalePolicy,
+    // Explicit gate-OFF fixture; identity and classification use the real adapter.
+    "@/lib/touchlineArena/coach-catalogue-server": { loadCoachCatalogue: async () => legacyCoachCatalogue() },
     "react/jsx-runtime": jsx, "@supabase/supabase-js": { AuthSessionMissingError },
     "next/headers": { headers: async () => ({ get: () => "Europe/Malta" }) },
     "next/navigation": { redirect: (href: string) => { throw Object.assign(Error("redirect"), { href }); } },

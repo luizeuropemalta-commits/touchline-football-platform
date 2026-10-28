@@ -4,6 +4,9 @@
 @source not "../work";
 
 :root {
+  /* Approved card-zoom backdrop: shared by every modal surface. */
+  --touchline-modal-backdrop: rgba(0, 5, 6, .72);
+  --touchline-modal-blur: blur(8px);
   --void: #02050a;
   --deep: #07111b;
   --panel: #0b1622;

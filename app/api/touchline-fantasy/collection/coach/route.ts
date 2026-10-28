@@ -40,10 +40,11 @@ export async function POST(request: NextRequest) {
     if (recovered.status !== "not_observed") return fail("CLUB_STORAGE_UNAVAILABLE", 503);
     const snapshot = await loadTouchlineFantasyReadSnapshot(data.user);
     if (!snapshot?.entitlementActive) return fail("CLUB_ACCESS_REQUIRED", 403);
-    const coach = command.action === "hire-coach" ? snapshot.coaches.find(entry => entry.id === command.incomingCoachId) : null;
+    const coach = command.action === "hire-coach" ? snapshot.coaches.find(entry => entry.selectable !== false && entry.id === command.incomingCoachId) : null;
     if (command.action === "hire-coach" && !coach) return fail("CLUB_COACH_UNAVAILABLE", 409);
     await commitClubCoachLifecycle(admin, data.user.id, seasonId, command, coach ? {
       id: coach.id, tier: coach.slot.cardTier, valueEur: CLUB_COACH_VALUES[coach.slot.cardTier], clubId: coach.clubId, published: true,
+      catalogueRevision: coach.catalogueRevision, cataloguePublicationId: coach.cataloguePublicationId,
     } : null);
     // Prove the durable historical record, never infer completion from current vacancy.
     const committed = await readClubCoachLifecycleRecovery(repository, context, { ...envelope.authority, ...command }, true);

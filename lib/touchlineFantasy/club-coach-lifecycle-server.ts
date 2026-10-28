@@ -20,7 +20,7 @@ export function createClubCoachLifecycleRepository(admin: NonNullable<ReturnType
 }
 export async function commitClubCoachLifecycle(admin: NonNullable<ReturnType<typeof createAdminClient>>,
   ownerId: string, seasonId: string, command: ClubCoachLifecycleCommand,
-  offer: (PublishedClubCoachOffer & { clubId: string }) | null) {
+  offer: (PublishedClubCoachOffer & { clubId: string; catalogueRevision?: number; cataloguePublicationId?: string }) | null) {
   const { data, error } = await admin.rpc("touchline_club_coach_lifecycle", {
     p_user_id: ownerId, p_season_id: seasonId, p_command: command, p_offer: offer,
   });

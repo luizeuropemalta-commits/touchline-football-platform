@@ -13,9 +13,18 @@ export async function GET(request:NextRequest){
   const kind=request.nextUrl.searchParams.get("kind")??"suppliers",raw=request.nextUrl.searchParams.get("page")??"0",page=Number(raw);
   if(!companyKinds.includes(kind as typeof companyKinds[number])||!/^\d+$/.test(raw)||!Number.isSafeInteger(page)||page>10000)return reply({error:"INVALID_INPUT"},400);
   const admin=createAdminClient();if(!admin)return reply({error:"UNAVAILABLE"},503);
-  const {data,error}=await admin.from(`touchline_company_${kind}`).select("*").order("id",{ascending:true}).range(page*50,page*50+50);
+  const selection=kind==="settlements"?"*,correction:touchline_company_settlement_corrections(id,reason)":"*";
+  const {data,error}=await admin.from(`touchline_company_${kind}`).select(selection).returns<Record<string,unknown>[]>().order("id",{ascending:true}).range(page*50,page*50+50);
   if(error)return reply({error:"UNAVAILABLE"},503);
-  return reply({rows:(data??[]).slice(0,50),hasNext:(data?.length??0)>50,page,kind});
+  const rows=(data??[]).slice(0,50).map(entry=>{
+   if(kind!=="settlements")return entry;
+   const {correction,...row}=entry as Record<string,unknown>;
+   if(Array.isArray(correction)&&correction.length>1)throw Error("INVALID_CORRECTION");
+   const record=Array.isArray(correction)?correction[0]:correction;
+   if(record!=null&&(typeof record!=="object"||typeof record.id!=="string"||typeof record.reason!=="string"))throw Error("INVALID_CORRECTION");
+   return {...row,correction_id:record?.id??null,correction_reason:record?.reason??null};
+  });
+  return reply({rows,hasNext:(data?.length??0)>50,page,kind});
  }catch{return reply({error:"UNAVAILABLE"},503);}
 }
 export async function POST(request:NextRequest){

@@ -29,7 +29,7 @@ import type { TouchLineLocale } from "@/lib/touchlineArena/i18n";
 import type { TouchlineGlobalNavigationSurface } from "@/lib/touchlineArena/global-navigation";
 import {
   TOUCHLINE_CARD_STUDIO_LAYOUT_KEY,
-  TOUCHLINE_ENGLAND_CLUBS,
+  findTouchLineClub,
   squadCardToExactPlayer,
   type ClubOwnerSquadCard,
 } from "@/lib/touchlineArena/demo-data";
@@ -40,10 +40,7 @@ import type { TouchlineRankingsHighlights } from "@/lib/touchlineArena/rankings-
 import { touchlineTopElevenBroadcastPoint } from "@/lib/touchlineArena/top-eleven-broadcast-layout";
 import type { TouchLineCoachRankingState } from "@/lib/touchlineArena/coach-ranking-server";
 import { createTouchlineArenaCoachSlot } from "@/lib/touchlineArena/coach-card";
-import {
-  touchlineCoachClassificationForProviderId,
-  touchlineLiveCoachForProviderId,
-} from "@/lib/touchlineArena/live-coaches";
+import { catalogueCoachForTeamHistory, legacyCoachCatalogue } from "@/lib/touchlineArena/coach-catalogue-contract";
 import type { getTouchLineRankingsCopy } from "@/lib/touchlineArena/rankings-i18n";
 import { getTouchlineTablesPresentationCopy } from "@/lib/touchlineArena/tables-presentation-i18n";
 import { getTouchlinePlayerPerformanceCopy } from "@/lib/touchlineArena/player-performance-i18n";
@@ -311,14 +308,12 @@ function TopCoachAward({ coachRanking: seed, copy, locale, draftLocalesEnabled =
   const coachRanking = usePublishedCoachRanking(seed);
   const topSevenCoaches = coachRanking.phase === "ranked" ? coachRanking.rows.slice(0, 7) : [];
   const topCoachRow = topSevenCoaches[0] ?? null;
-  const topCoachIdentity = topCoachRow
-    ? touchlineLiveCoachForProviderId(topCoachRow.coachProviderId)
-    : null;
-  const topCoachClub = topCoachIdentity
-    ? TOUCHLINE_ENGLAND_CLUBS.find((club) => club.teamId === topCoachIdentity.coach.teamId) ?? null
+  const topCoachClub = topCoachRow ? findTouchLineClub(topCoachRow.clubName) ?? null : null;
+  const topCoachIdentity = topCoachRow && topCoachClub
+    ? catalogueCoachForTeamHistory(coachRanking.catalogue ?? legacyCoachCatalogue(), topCoachRow.coachProviderId, topCoachClub.teamId)
     : null;
   const topCoachClassification = topCoachRow
-    ? touchlineCoachClassificationForProviderId(topCoachRow.coachProviderId)
+    ? topCoachIdentity?.classification
     : null;
   const topCoachSlot = topCoachIdentity && topCoachRow ? {
     ...createTouchlineArenaCoachSlot(topCoachIdentity.coach, null, topCoachClassification?.tierKey),
@@ -415,7 +410,7 @@ export function TouchlineCoachRankingTable({ coachRanking: seed, copy, locale, d
             aria-label={presentationCopy.coachStandings}
           >
             {topSevenCoaches.map((coach) => {
-              const coachClubLogoUrl = touchlineCoachRankingClubLogo(coach.coachProviderId, coach.clubName);
+              const coachClubLogoUrl = touchlineCoachRankingClubLogo(coach.coachProviderId, coach.clubName, coachRanking.catalogue ?? legacyCoachCatalogue());
               return (
               <li key={coach.coachProviderId} data-coach-rank={coach.rank}>
                 <b>{String(coach.rank).padStart(2, "0")}</b>

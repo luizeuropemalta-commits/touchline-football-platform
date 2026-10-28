@@ -95,7 +95,7 @@ test(`canonical player/coach zoom (${requestedEngine}): two landscape notch side
             assert.match(await expanded.locator('img[data-touchline-card-frame="true"]').first().getAttribute("src") ?? "", /\/templates\/zoom\//, "expanded artwork must not reuse the tiny live frame");
             if (subject === "coach") {
               await expect(expanded.locator('[data-coach-frame-ready]')).toHaveAttribute("data-coach-frame-ready", "true");
-              const coachCard = expanded.locator('[data-coach-card-display="default"]');
+              const coachCard = expanded.locator('[data-coach-card-display="zoom"]');
               const crest = coachCard.locator('img[data-touchline-card-crest="true"]');
               await expect(coachCard).toHaveCount(1);
               await expect(crest).toHaveCount(1);
@@ -129,10 +129,11 @@ test(`canonical player/coach zoom (${requestedEngine}): two landscape notch side
               });
               await expect.poll(async () => {
                 const g = await crestGeometry();
-                const expected = g.card.width * 92 / 300;
+                // Approved zoom parity: same 3/16 crest proportion as player cards.
+                const expected = g.card.width * 3 / 16;
                 return Math.max(Math.abs(g.host.width - expected), Math.abs(g.host.height - expected),
                   Math.abs(g.image.width - expected), Math.abs(g.image.height - expected));
-              }, { message: "crest must retain authored 92/300 proportion after the real zoom cascade" }).toBeLessThan(1);
+              }, { message: "coach zoom crest must match the player-card proportion" }).toBeLessThan(1);
               const g = await crestGeometry();
               assert.ok(g.image.left >= g.inner.left - 1 && g.image.right <= g.inner.right + 1
                 && g.image.top >= g.inner.top - 1 && g.image.bottom <= g.inner.bottom + 1,

@@ -12,19 +12,21 @@ test("actual finance handlers + parser + SQL transport + migration compose atomi
  try{
   await db.exec(`create schema auth;create table auth.users(id uuid primary key);create role anon;create role authenticated;create role service_role bypassrls;insert into auth.users values('${actor}');`);
   await db.exec(readFileSync(new URL("../supabase/migrations/20261025205533_touchline_company_finance_foundation.sql",import.meta.url),"utf8"));
+  for(const file of ['20261027122953_touchline_company_finance_overview.sql','20261027125654_touchline_company_settlement_corrections.sql'])await db.exec(readFileSync(new URL('../supabase/migrations/'+file,import.meta.url),'utf8'));
   await db.exec('set role service_role');
   // Transport only: fluent calls are translated to actual SQL, not canned business responses.
   const transport={from:(table:string)=>{
    assert.match(table,/^touchline_company_(suppliers|contracts|obligations|settlements)$/);
-   let row:Record<string,unknown>|null=null,where:unknown=null,start=0,end=49;
+   let row:Record<string,unknown>|null=null,where:unknown=null,start=0,end=49,selection="*";
    const execute=async(single:boolean)=>{try{
     let result;if(row){const keys=Object.keys(row);keys.forEach(key=>assert.match(key,/^[a-z_]+$/));result=await db.query(`insert into public.${table}(${keys.join(',')}) values(${keys.map((_,i)=>`$${i+1}`).join(',')}) returning *`,Object.values(row));}
     else if(where!==null)result=await db.query(`select * from public.${table} where id=$1`,[where]);
+    else if(selection.includes('correction:')) {assert.equal(table,'touchline_company_settlements');result=await db.query(`select s.*, (select jsonb_build_object('id',c.id,'reason',c.reason) from public.touchline_company_settlement_corrections c where c.settlement_id=s.id) correction from public.${table} s order by s.id asc offset $1 limit $2`,[start,end-start+1]);}
     else result=await db.query(`select * from public.${table} order by id asc offset $1 limit $2`,[start,end-start+1]);
     const rows=result.rows.map((record:Record<string,unknown>)=>Object.fromEntries(Object.entries(record).map(([key,value])=>[key,value instanceof Date?(key.endsWith("_on")?value.toISOString().slice(0,10):value.toISOString()):typeof value==="bigint"?Number(value):value])));
     return{data:single?rows[0]??null:rows,error:null};
    }catch(error){return{data:null,error:{code:(error as any).code,message:String(error)}};}};
-   const builder:any={select:()=>builder,eq:(key:string,value:unknown)=>{assert.equal(key,'id');where=value;return builder;},order:(key:string)=>{assert.equal(key,'id');return builder;},range:(a:number,b:number)=>{start=a;end=b;return execute(false);},insert:(value:Record<string,unknown>)=>{row=value;return builder;},maybeSingle:()=>execute(true),single:()=>execute(true)};return builder;
+   const builder:any={select:(value="*")=>{selection=value;return builder;},returns:()=>builder,eq:(key:string,value:unknown)=>{assert.equal(key,'id');where=value;return builder;},order:(key:string)=>{assert.equal(key,'id');return builder;},range:(a:number,b:number)=>{start=a;end=b;return execute(false);},insert:(value:Record<string,unknown>)=>{row=value;return builder;},maybeSingle:()=>execute(true),single:()=>execute(true)};return builder;
   },rpc:async(name:string,args:Record<string,unknown>)=>{assert.equal(name,'touchline_company_record_settlement');try{const result=await db.query(`select public.touchline_company_record_settlement($1::uuid,$2::uuid,$3::text,$4::smallint,$5::bigint,$6::date,$7::text,$8::text,$9::uuid) result`,[args.p_request_id,args.p_obligation_id,args.p_currency,args.p_unit_exponent,args.p_amount_minor,args.p_paid_on,args.p_source,args.p_source_reference,args.p_actor_id]);return{data:result.rows[0].result,error:null};}catch(error){return{data:null,error:{code:(error as any).code,message:String(error)}};}}};
   class Response{body:any;init:any;constructor(body:any,init:any){this.body=body;this.init=init;}static json(body:any,init:any){return new Response(body,init);}}
   const dependencies:any={"next/server":{NextResponse:Response},"@/lib/admin/owner":{isOwnerEmail:()=>true},"@/lib/touchlineArena/auth-access":{hasTouchLineArenaAccess:()=>true},"@/lib/supabase/server":{createClient:async()=>({auth:{getUser:async()=>({data:{user:{id:actor,email:"owner@example.test"}},error:null})}})},"@/lib/supabase/admin":{createAdminClient:()=>transport},"@/lib/admin/company-finance-api":core};
@@ -41,6 +43,13 @@ test("actual finance handlers + parser + SQL transport + migration compose atomi
    assert.equal((await post('settlements','66666666-6666-4666-8666-666666666666',fields)).init.status,409);
    assert.equal((await post('suppliers',supplier,{name:'Different'})).init.status,409);
    assert.equal(await count(),before);
+  });
+  await t.test("history reads durable cancellation without hiding the original payment",async()=>{
+   const get=()=>exports.GET({nextUrl:new URL('https://qa.test/api/admin/company-finance?kind=settlements')});
+   assert.equal((await get()).body.rows[0].correction_id,null);
+   const correction='99999999-9999-4999-8999-999999999999';
+   await db.query('select public.touchline_company_cancel_settlement($1,$2,$3,$4)',[correction,payment,'Incorrect payment recorded for this invoice',actor]);
+   const result=await get();assert.equal(result.init.status,200);assert.equal(result.body.rows[0].id,payment);assert.equal(result.body.rows[0].correction_id,correction);assert.equal(Number(result.body.rows[0].amount_minor),4029);
   });
   await t.test("pagination returns real persisted rows without duplicates across boundaries",async()=>{
    for(let i=1;i<=51;i++){const id=`77777777-7777-4777-8777-${String(i).padStart(12,'0')}`;assert.equal((await post('suppliers',id,{name:`Supplier ${i}`})).init.status,201);}

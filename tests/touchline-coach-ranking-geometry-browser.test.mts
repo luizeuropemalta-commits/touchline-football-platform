@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { existsSync, readFileSync, realpathSync, statSync, statfsSync } from "node:fs";
-import { execFileSync } from "node:child_process";
+import { requireBrowserCapacity } from "./helpers/touchline-browser-capacity.mts";
 import { createHash } from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -13,12 +13,9 @@ test("real ranking panel contains seven synthetic coach rows without internal sc
   skip: process.env.TOUCHLINE_RUN_COACH_GEOMETRY_BROWSER_TESTS !== "1", timeout: 60_000,
 }, async t => {
   const capacity = () => {
+    requireBrowserCapacity(root, { darwinFreePercent: true });
     const disk = statfsSync(root), freeBytes = disk.bavail * disk.bsize;
-    assert.ok(freeBytes > 5 * 1024 ** 3, "stop own test below 5 GiB");
-    const output = execFileSync("memory_pressure", { encoding: "utf8" });
-    const freeMemory = Number(output.match(/System-wide memory free percentage: (\d+)%/)?.[1]);
-    assert.ok(Number.isFinite(freeMemory) && freeMemory >= 25, "stop own test under memory pressure");
-    return { freeBytes, freeMemory };
+    return { freeBytes, policy: "shared-browser-capacity" };
   };
   const before = capacity();
   const bundle = bundleIsolatedBrowserFixture({

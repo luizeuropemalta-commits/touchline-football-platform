@@ -19,7 +19,7 @@ export default async function AdminVipAccessPage({ searchParams }: {
   const supabase = await createClient();
   const viewer = supabase ? await supabase.auth.getUser().catch(() => null) : null;
   if (!viewer || viewer.error || !viewer.data.user || !hasTouchLineArenaAccess(viewer.data.user) || !isOwnerEmail(viewer.data.user.email)) notFound();
-  if (!createAdminClient()) return <GamePanel className="p-8"><h1 className="text-2xl text-white">VIP</h1><p className="mt-3 text-sm text-slate-300">{pt ? "A configuração protegida está indisponível. Nenhuma concessão pode ser enviada." : "Protected configuration is unavailable. No grant can be submitted."}</p></GamePanel>;
+  if (!createAdminClient()) return <GamePanel className="p-8"><h1 className="text-2xl text-white">{pt ? "Acesso VIP" : "VIP access"}</h1><p className="mt-3 text-sm text-slate-300">{pt ? "A configuração protegida está indisponível. Nenhuma concessão pode ser enviada." : "Protected configuration is unavailable. No grant can be submitted."}</p></GamePanel>;
   return <GamePanel className="mx-auto max-w-4xl p-6 sm:p-8">
     <LivePill>{pt ? "Somente proprietário" : "Owner only"}</LivePill>
     <h1 className="mb-4 mt-5 text-3xl font-bold text-white">{pt ? "Convidados" : "Guest access"}</h1>

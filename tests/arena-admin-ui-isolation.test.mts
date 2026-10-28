@@ -43,6 +43,6 @@ test("Arena admin UI exposes only the three primitives required by official rout
 test("neutral primitives preserve the existing admin visual class contract", () => {
   assert.match(arenaAdminUiSource, /glass console-panel rounded-3xl/);
   assert.match(arenaAdminUiSource, /glass glass-hover console-hud group rounded-2xl p-4/);
-  assert.match(arenaAdminUiSource, /number-glow font-display text-\[28px\] leading-none/);
+  assert.match(arenaAdminUiSource, /number-glow font-display text-\[28px\] leading-tight break-words/);
   assert.match(arenaAdminUiSource, /pulse-live size-1\.5 rounded-full bg-\[#a3ff12\]/);
 });

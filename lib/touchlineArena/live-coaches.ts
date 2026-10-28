@@ -1,3 +1,6 @@
+// Historical July 2026 seed: explicit bootstrap and the gate-OFF legacy path.
+// Production readers use coach-catalogue-server; missing dynamic publications
+// must never be replaced with a coach from this seed.
 import type { TouchlineCoach } from "../football-data/types";
 import {
   classifyTouchlineCoach,

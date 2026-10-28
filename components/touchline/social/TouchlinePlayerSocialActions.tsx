@@ -30,9 +30,11 @@ function PlayerSocialActions({ providerId, playerName, locale, draftLocalesEnabl
   const mutationBusy = useRef(false);
   const invalidationPending = useRef(false);
   const mounted = useRef(false);
+  const polling = useRef<AbortController | null>(null);
 
   useEffect(() => {
     const refresh = () => {
+      polling.current?.abort();
       if (mutationBusy.current) { invalidationPending.current = true; return; }
       setSummary(null); setCanReact(false); setPhase("loading");
       setRevision((value) => value + 1);
@@ -64,9 +66,51 @@ function PlayerSocialActions({ providerId, playerName, locale, draftLocalesEnabl
     return () => { disposed = true; mounted.current = false; clearTimeout(timeout); pending.current?.abort(); };
   }, [providerId, revision]);
 
+  // Other accounts/devices cannot share BroadcastChannel. Reconcile visible
+  // controls against the authorised server total without clearing their UI.
+  // This is bounded polling, not a claim of instantaneous push delivery.
+  useEffect(() => {
+    if (phase === "loading" || phase === "saving") return;
+    let disposed = false;
+    let reading = false;
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    const refresh = async () => {
+      if (disposed || reading || mutationBusy.current || document.visibilityState !== "visible" || !navigator.onLine) return;
+      reading = true;
+      const controller = new AbortController();
+      polling.current = controller;
+      let timedOut = false;
+      timeout = setTimeout(() => { timedOut = true; controller.abort(); }, 15_000);
+      try {
+        const result = await requestPlayerSocial(providerId, { signal: controller.signal });
+        if (disposed || controller.signal.aborted || mutationBusy.current) return;
+        setSummary(result.summary); setCanReact(result.canReact);
+        setPhase(result.canReact ? "ready" : "signed-out");
+      } catch (error) {
+        if (disposed || (controller.signal.aborted && !timedOut) || mutationBusy.current) return;
+        setSummary(null); setCanReact(false);
+        setPhase(error instanceof Error && error.message === "AUTHENTICATION_REQUIRED" ? "signed-out" : "error");
+      } finally {
+        clearTimeout(timeout); reading = false;
+        if (polling.current === controller) polling.current = null;
+      }
+    };
+    const onVisible = () => { void refresh(); };
+    const interval = setInterval(onVisible, 30_000);
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("online", onVisible);
+    return () => {
+      disposed = true; clearInterval(interval); clearTimeout(timeout);
+      polling.current?.abort(); polling.current = null;
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("online", onVisible);
+    };
+  }, [providerId, revision, phase]);
+
   async function mutate(kind: PlayerSocialKind) {
     if (!summary || !canReact || phase !== "ready" || mutationBusy.current) return;
     mutationBusy.current = true;
+    polling.current?.abort();
     const controller = new AbortController();
     pending.current = controller;
     const timeout = setTimeout(() => controller.abort(), 15_000);

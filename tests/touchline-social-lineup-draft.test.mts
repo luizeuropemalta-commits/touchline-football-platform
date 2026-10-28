@@ -156,7 +156,7 @@ test("social draft uses canonical upright cards and regulation vertical pitch", 
   assert.match(component, /data-coach-tier=/);
   assert.match(component, /FULL TIME/);
   assert.match(component, /draft\.score\.home/);
-  assert.match(server, /touchlineLiveCoachForTeam/);
+  assert.match(server, /catalogueCoachForTeamHistory/);
   assert.match(server, /touchlineFixtureState/);
   assert.match(server, /loadTouchLineCoachRanking/);
   assert.match(server, /createTouchlineArenaCoachSlot/);

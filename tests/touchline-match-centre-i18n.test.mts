@@ -1,3 +1,4 @@
+import * as coachCatalogue from "../lib/touchlineArena/coach-catalogue-contract.ts";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
@@ -155,6 +156,7 @@ async function consumer(future = false) {
       if (name === "@/lib/touchlineArena/arabic-fixture-date") return arabicDate;
       if (name === "@/lib/touchlineArena/demo-data") return clubs;
       if (name === "@/lib/touchlineArena/live-coaches") return coaches;
+      if (name === "@/lib/touchlineArena/coach-catalogue-contract") return coachCatalogue;
       if (name === "@/components/logo") return { Logo: (props: Record<string, unknown>) => {
         captures.push({ kind: name, props }); return React.createElement("span", { "data-child": name });
       } };

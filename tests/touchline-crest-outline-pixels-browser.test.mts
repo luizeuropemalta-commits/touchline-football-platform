@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync, realpathSync, statSync, statfsSync, mkdirSync, writeFileSync } from "node:fs";
-import { execFileSync } from "node:child_process";
+import { requireBrowserCapacity } from "./helpers/touchline-browser-capacity.mts";
 import { runInNewContext } from "node:vm";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { ReactElement } from "react";
@@ -93,12 +93,9 @@ test("real card crests have visible solid white contour at small and enlarged sc
   assert.ok(selectedCases.length > 0 && selectedCases.every(value => allCases.includes(value)), "explicit valid crest cases required");
   assert.equal(new Set(selectedCases).size, selectedCases.length, "duplicate crest cases rejected");
   const capacity = () => {
+    requireBrowserCapacity(root, { darwinFreePercent: true });
     const disk = statfsSync(root), freeBytes = disk.bavail * disk.bsize;
-    assert.ok(freeBytes > 5 * 1024 ** 3, "stop own test below 5 GiB");
-    const output = execFileSync("memory_pressure", { encoding: "utf8" });
-    const freeMemory = Number(output.match(/System-wide memory free percentage: (\d+)%/)?.[1]);
-    assert.ok(Number.isFinite(freeMemory) && freeMemory >= 25, "stop own test under memory pressure");
-    return { freeBytes, freeMemory };
+    return { freeBytes, policy: "shared-browser-capacity" };
   };
   const initialCapacity = capacity();
   const engineName = process.env.TOUCHLINE_CREST_OUTLINE_ENGINE ?? "webkit";

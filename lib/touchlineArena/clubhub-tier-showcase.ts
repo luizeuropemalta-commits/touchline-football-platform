@@ -1,9 +1,6 @@
 import type { ClubOwnerSquadCard } from "./demo-data.ts";
-import {
-  TOUCHLINE_LIVE_COACHES,
-  TOUCHLINE_LIVE_COACH_CLASSIFICATIONS,
-  type TouchlineLiveCoachSnapshot,
-} from "./live-coaches.ts";
+import type { TouchlineLiveCoachSnapshot } from "./live-coaches.ts";
+import { legacyCoachCatalogue, type CoachCatalogue } from "./coach-catalogue-contract.ts";
 import {
   TOUCHLINE_ARENA_MARKET_TIERS,
   type TouchlineCardTierKey,
@@ -106,10 +103,10 @@ function promotionRank(classification: TouchlineCoachClassification) {
  * promotion evidence choose among coaches in the same tier. Empty tiers remain
  * explicit instead of borrowing another coach's classification.
  */
-export function selectTouchlineCoachTierRepresentatives(): readonly TouchlineCoachTierRepresentative[] {
-  const ranked = TOUCHLINE_LIVE_COACHES
+export function selectTouchlineCoachTierRepresentatives(catalogue: CoachCatalogue = legacyCoachCatalogue()): readonly TouchlineCoachTierRepresentative[] {
+  const ranked = catalogue.current
     .flatMap((snapshot) => {
-      const classification = TOUCHLINE_LIVE_COACH_CLASSIFICATIONS[snapshot.coach.providerId];
+      const classification = snapshot.classification;
       return classification?.sourceSeasonId ? [{ snapshot, classification }] : [];
     })
     .sort((first, second) => {
@@ -137,8 +134,8 @@ export function selectTouchlineCoachTierRepresentatives(): readonly TouchlineCoa
 export function selectTouchlineCoachTierRepresentativesFromRanking(
   ranking: TouchLineCoachRankingState,
 ): readonly TouchlineRankedCoachTierRepresentative[] {
-  if (ranking.phase !== "ranked" || ranking.rows.length !== 20) {
-    return selectTouchlineCoachTierRepresentatives().map(({ tierKey, snapshot, classification }) => ({
+  if (ranking.phase !== "ranked" || ranking.rows.length < 20) {
+    return selectTouchlineCoachTierRepresentatives(ranking.catalogue ?? legacyCoachCatalogue()).map(({ tierKey, snapshot, classification }) => ({
       tierKey,
       snapshot,
       rankingRow: null,
@@ -147,7 +144,7 @@ export function selectTouchlineCoachTierRepresentativesFromRanking(
   }
 
   const snapshotsByProviderId = new Map(
-    TOUCHLINE_LIVE_COACHES.map((snapshot) => [snapshot.coach.providerId, snapshot]),
+    (ranking.catalogue ?? legacyCoachCatalogue()).history.map((snapshot) => [snapshot.coach.providerId, snapshot]),
   );
   return TOUCHLINE_CLUBHUB_TIER_ORDER.map((tierKey) => {
     const rankingRow = ranking.rows.find((row) => touchlineCoachTierForRankingPosition(row.rank) === tierKey) ?? null;

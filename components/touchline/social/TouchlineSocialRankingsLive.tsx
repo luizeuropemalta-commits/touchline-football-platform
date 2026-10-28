@@ -3,8 +3,8 @@ import type { CSSProperties } from "react";
 import TouchlineEliteExactCard from "@/components/touchline/cards/TouchlineEliteExactCard";
 import TouchlineCoachCard from "@/components/touchline/cards/TouchlineCoachCard";
 import { squadCardToExactPlayer, TOUCHLINE_ENGLAND_CLUBS } from "@/lib/touchlineArena/demo-data";
-import { touchlineCoachClassificationForProviderId, touchlineLiveCoachForProviderId } from "@/lib/touchlineArena/live-coaches";
 import { createTouchlineArenaCoachSlot } from "@/lib/touchlineArena/coach-card";
+import { catalogueCoachForId, legacyCoachCatalogue } from "@/lib/touchlineArena/coach-catalogue-contract";
 import { TOUCHLINE_PLAYER_LEADER_GOLDEN_BALL_ASSET, touchlinePlayerLeaderGoldenBallStyle } from "@/lib/touchlineArena/player-leader-golden-ball-presentation";
 import { leadershipCrownEligibility } from "@/lib/touchlineArena/leadership-decision";
 import { TOUCHLINE_SOCIAL_RANKING_FUME_CSS_VARIABLES } from "@/lib/touchlineArena/social-ranking-visual-tokens";
@@ -49,10 +49,14 @@ export default function TouchlineSocialRankingsLive({ input, artId, placement, f
   }
   function coachCard(scale: number, leader = false) {
     const row = selectedCoach;
-    const identity = touchlineLiveCoachForProviderId(row.coachProviderId);
+    // Older immutable local replay artifacts predate this DTO. Only that
+    // explicit legacy format may use its original seed; new dynamic artifacts
+    // must carry their frozen published identity and never repair a missing one.
+    const identity = row.identity ?? (data.coachCatalogueMode === undefined || data.coachCatalogueMode === "legacy"
+      ? catalogueCoachForId(legacyCoachCatalogue(), row.coachProviderId) : null);
     const club = TOUCHLINE_ENGLAND_CLUBS.find((c) => c.teamId === row.clubProviderId);
     if (!identity || !club || identity.coach.teamId !== row.clubProviderId || (identity.coach.displayName || identity.coach.name) !== row.name) throw new Error("RANKINGS_COACH_PRESENTATION_MISMATCH");
-    const tier = touchlineCoachClassificationForProviderId(row.coachProviderId);
+    const tier = identity.classification;
     if (!tier) throw new Error("COACH_CLASSIFICATION_MISSING");
     const slot = { ...createTouchlineArenaCoachSlot(identity.coach, null, tier.tierKey), touchlinePoints: row.touchlinePoints, status: "audited" as const, scoreEvidence: { provider: "sportmonks" as const, providerEventIds: data.provenance.fixtureIds, scoringVersion: "coach_scoring_v2" } };
     return <div className={styles.coachFrame} style={{ "--card-scale": scale } as CSSProperties}><TouchlineCoachCard coach={identity.coach} slot={slot} clubName={row.clubName} clubLogoUrl={club.logoUrl} clubAccent={club.accent} countryCode3={identity.countryCode3} locale="pt-BR" forceNeonActive enableInteractiveNeon={false} assetLoading="eager" frameLoading="eager" publishedTouchlinePoints={row.touchlinePoints} showLeadershipCrown={leader} /></div>;

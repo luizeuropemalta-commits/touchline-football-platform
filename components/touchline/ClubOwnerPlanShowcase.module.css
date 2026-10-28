@@ -21,14 +21,14 @@
 .planShowcase[data-embedded] .offerSummary { grid-template-columns: 1fr; padding-top: 0; }
 .planShowcase[data-embedded] .offerSummary > div { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
 .planShowcase[data-embedded] .planDialog { width: min(460px,calc(100vw - 32px)); background: radial-gradient(ellipse at 100% 0,rgba(var(--plan-rgb),.18),transparent 65%),rgba(9,17,15,.88); -webkit-backdrop-filter: blur(18px) saturate(120%); backdrop-filter: blur(18px) saturate(120%); border-color: rgba(var(--plan-rgb),.65); box-shadow: inset 0 1px rgba(255,255,255,.15),inset 0 0 0 5px rgba(var(--plan-rgb),.045),0 0 30px rgba(var(--plan-rgb),.2),0 24px 100px rgba(0,0,0,.6); }
-.planShowcase[data-embedded] .planDialog::backdrop { background: rgba(2,7,5,.65); -webkit-backdrop-filter: blur(5px); backdrop-filter: blur(5px); }
+.planShowcase[data-embedded] .planDialog::backdrop { background: var(--touchline-modal-backdrop, rgba(0, 5, 6, .72));    -webkit-backdrop-filter: var(--touchline-modal-blur, blur(8px)); backdrop-filter: var(--touchline-modal-blur, blur(8px)); }
 @supports not (backdrop-filter: blur(1px)) { .planShowcase[data-embedded] .planDialog { background-color: #0b1511; } }
 .zoomCard { margin-top: 16px; }
 .planShowcase .zoomCard .memberCard { min-height: 205px; }
 .visuallyHidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 .dialogDetails { min-width: 0; }
 .planShowcase .planDialog { margin: auto; width: min(960px,calc(100vw - 32px)); max-width: calc(100vw - 32px); background: radial-gradient(ellipse at 100% 0,rgba(var(--plan-rgb),.18),transparent 65%),rgba(9,17,15,.92); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); }
-.planShowcase .planDialog::backdrop { background: rgba(2,7,5,.65); -webkit-backdrop-filter: blur(5px); backdrop-filter: blur(5px); }
+.planShowcase .planDialog::backdrop { background: var(--touchline-modal-backdrop, rgba(0, 5, 6, .72));    -webkit-backdrop-filter: var(--touchline-modal-blur, blur(8px)); backdrop-filter: var(--touchline-modal-blur, blur(8px)); }
 .planDialog .benefitGrid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; border: 0; padding: 0; margin: 20px 0; }
 .benefitGrid > div { min-width: 0; padding: 14px; border: 1px solid rgba(var(--plan-rgb),.2); border-radius: 12px; background: rgba(var(--plan-rgb),.055); }
 .planDialog .benefitGrid dt { line-height: 1.5; }
@@ -125,7 +125,7 @@
 .planShowcase .compareChoice { padding: 6px 10px; min-height: 44px; font-size: 10px; }
 .previewNote { margin: 8px 0 0; color: #92a799; font-size: 10px; line-height: 1.5; }
 .planDialog { box-sizing: border-box; max-width: min(430px,calc(100vw - 32px)); max-height: calc(100dvh - 40px); overflow-y: auto; padding: 26px; border: 1px solid rgba(var(--plan-rgb),.5); border-radius: 22px; background: #101c16; color: #ecf5e7; box-shadow: 0 24px 100px rgba(0,0,0,.5); }
-.planDialog::backdrop { background: rgba(0,6,4,.8); }
+.planDialog::backdrop { background: var(--touchline-modal-backdrop, rgba(0, 5, 6, .72));  -webkit-backdrop-filter: var(--touchline-modal-blur, blur(8px)); backdrop-filter: var(--touchline-modal-blur, blur(8px)); }
 .dialogHeading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .planDialog h2 { margin: 12px 0; font-size: 36px; font-weight: 500; letter-spacing: -.045em; color: var(--plan-accent); }
 .planDialog > strong { font-size: 18px; }

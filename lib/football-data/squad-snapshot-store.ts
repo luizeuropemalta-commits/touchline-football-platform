@@ -43,6 +43,7 @@ export type SquadSnapshotPlayerInput = {
   position?: string | null;
   positionId?: string | null;
   shirtNumber?: number | null;
+  /** Provider metadata only; persistence never writes Admin-owned Market Value. */
   marketValue?: number | null;
 };
 
@@ -217,7 +218,8 @@ export async function readPersistedSquadSnapshot(
 
 /**
  * Persists only validated normalized fields. A missing provider shirt number
- * never overwrites a previously stored valid number.
+ * never overwrites a previously stored valid number. Market Value and currency
+ * belong to Manual Admin and are never written by this provider snapshot.
  */
 export async function persistSquadSnapshot(
   club: SquadSnapshotClubInput,
@@ -283,9 +285,6 @@ export async function persistSquadSnapshot(
     detailed_position_id: player.detailedPositionId ?? null,
     position: player.position ?? null,
     position_id: player.positionId ?? null,
-    ...(player.marketValue
-      ? { market_value: player.marketValue, market_value_currency: "EUR" }
-      : {}),
     source_updated_at: capturedAt,
   }));
 

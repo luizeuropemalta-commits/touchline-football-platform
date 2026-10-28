@@ -18,9 +18,9 @@ test("command injects actor and rejects invalid dates and future/unconfirmed pay
  assert.equal(core.companyReplayMatches({id,name:"x",created_at:"extra"},{id,name:"x"}),true);assert.equal(core.companyReplayMatches({id,name:"x"},{id,name:"y"}),false);
 });
 /* eslint-disable @typescript-eslint/no-explicit-any */
-function harness(options:{auth?:boolean;authError?:boolean;schemaError?:boolean;existing?:Record<string,unknown>}={}){
+function harness(options:{auth?:boolean;authError?:boolean;schemaError?:boolean;rows?:Record<string,unknown>[];existing?:Record<string,unknown>}={}){
  let reads=0,inserts=0,rpcs=0;const stored:Record<string,unknown>|undefined=options.existing;let proposed:Record<string,unknown>={};
- const builder:any={select:()=>builder,eq:()=>builder,order:()=>builder,range:async()=>({data:[],error:options.schemaError?{code:"42P01"}:null}),maybeSingle:async()=>{reads++;return{data:stored??null,error:options.schemaError?{code:"42P01"}:null};},insert:(row:Record<string,unknown>)=>{inserts++;proposed=row;return builder;},single:async()=>({data:proposed,error:null})};
+ const builder:any={select:()=>builder,returns:()=>builder,eq:()=>builder,order:()=>builder,range:async()=>({data:options.rows??[],error:options.schemaError?{code:"42P01"}:null}),maybeSingle:async()=>{reads++;return{data:stored??null,error:options.schemaError?{code:"42P01"}:null};},insert:(row:Record<string,unknown>)=>{inserts++;proposed=row;return builder;},single:async()=>({data:proposed,error:null})};
  class Response{body: any;init:any;constructor(body:any,init:any){this.body=body;this.init=init;}static json(body:any,init:any){return new Response(body,init);}}
  const deps:any={"next/server":{NextResponse:Response},"@/lib/admin/owner":{isOwnerEmail:()=>options.auth!==false},"@/lib/touchlineArena/auth-access":{hasTouchLineArenaAccess:()=>options.auth!==false},"@/lib/supabase/server":{createClient:async()=>({auth:{getUser:async()=>({data:{user:{id:actor,email:"owner@example.test"}},error:options.authError?{}:null})}})},"@/lib/supabase/admin":{createAdminClient:()=>({from:()=>builder,rpc:async()=>{rpcs++;return{data:{id},error:null};}})},"@/lib/admin/company-finance-api":core};
  const exports:any={};vm.runInNewContext(ts.transpileModule(readFileSync(new URL("../app/api/admin/company-finance/route.ts",import.meta.url),"utf8"),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText,{exports,Date,TextEncoder,require:(name:string)=>{assert.ok(Object.hasOwn(deps,name),name);return deps[name];}});
@@ -42,4 +42,12 @@ test("API creates once or replays exact actor-bound record; conflicts and missin
 test("JSON reader bounds streamed body and rejects invalid JSON",async()=>{
  assert.equal(await core.readCompanyJson(new Request("https://qa.test",{method:"POST",headers:{"content-type":"application/json"},body:"x".repeat(12001)})),null);
  assert.equal(await core.readCompanyJson(new Request("https://qa.test",{method:"POST",headers:{"content-type":"application/json"},body:"{"})),null);
+});
+
+test("settlement history projects correction object or array and rejects malformed evidence",async()=>{
+ for(const correction of [null,[],{id,reason:'A documented correction'},[{id,reason:'A documented correction'}]]){
+ const h=harness({rows:[{id,amount_minor:100,correction}]});const result=await h.GET(h.req(command,'https://qa.test','?kind=settlements'));
+ assert.equal(result.init.status,200);assert.equal(result.body.rows[0].correction_id,correction&&(!Array.isArray(correction)||correction.length)?id:null);assert.ok(!('correction' in result.body.rows[0]));
+ }
+ for(const correction of [[{id,reason:'one'},{id,reason:'two'}],{id,reason:123}]){const h=harness({rows:[{id,correction}]});assert.equal((await h.GET(h.req(command,'https://qa.test','?kind=settlements'))).init.status,503);}
 });

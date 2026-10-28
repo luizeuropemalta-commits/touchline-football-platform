@@ -96,7 +96,7 @@ test("Arena keeps an incomplete canonical round intact instead of borrowing a ma
 test("My Club keeps production coach identity out of the demo fallback and owns persistent coach-first selection", () => {
   const coachRoute = readFileSync(new URL("../app/api/touchline-arena/coach/route.ts", import.meta.url), "utf8");
   const stateRoute = readFileSync(new URL("../app/api/touchline-arena/state/route.ts", import.meta.url), "utf8");
-  assert.match(coachRoute, /touchlineLiveCoachForProviderId\(coachProviderId\)/);
+  assert.match(coachRoute, /catalogue\.current\.find\(entry => entry\.coach\.providerId === coachProviderId\)/);
   assert.match(coachRoute, /TL_COACH_CONTRACT_SCHEMA_UNAVAILABLE/);
   assert.match(coachRoute, /touchline_hire_coach_contract/);
   assert.match(coachRoute, /touchline_end_coach_contract/);

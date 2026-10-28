@@ -47,14 +47,8 @@ test("forbidden surface rejects every action before persistence, including direc
   assert.equal(writes, 0);
 });
 
-test("the approval UI and media reader use the same per-art surface policy and Facebook supersession is explicit", async () => {
-  const source = (path: string) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
-  const [ui, server, roadmap] = await Promise.all([source("components/touchline/admin/TouchlineSocialStudio.tsx"), source("lib/touchlineArena/social-studio-server.ts"), source("docs/touchline-arena/social-publishing-playbook/MULTICHANNEL_DESTINATION_ROADMAP.md")]);
-  assert.match(ui, /const surfaces = studioSurfacesForArt\(art\)/);
-  assert.match(ui, /\{surfaces\.map\(/);
-  assert.doesNotMatch(ui, /STUDIO_SURFACES\.(map|filter)\(/);
-  assert.match(server, /studioSurfacesForArt\(art\)\.some\(\(surface\) => surface\.placement === placement\)/);
-  assert.match(server, /STUDIO_CATALOG\.flatMap\(\(art\) => studioSurfacesForArt\(art\)/);
+test("historical per-art destinations retain explicit Facebook supersession", async () => {
+  const roadmap = await readFile(new URL("../docs/touchline-arena/social-publishing-playbook/MULTICHANNEL_DESTINATION_ROADMAP.md", import.meta.url), "utf8");
   assert.match(roadmap, /Instagram AND Facebook required/);
   assert.match(roadmap, /SUPERSEDED/);
   assert.match(roadmap, /both integrations remain disabled\/unverified/);

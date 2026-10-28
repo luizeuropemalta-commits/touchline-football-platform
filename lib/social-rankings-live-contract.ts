@@ -7,7 +7,7 @@ import { isTouchLinePlayerRankingSettlementComplete } from "./touchlineArena/pla
 import { buildTouchlineSelection } from "./touchlineArena/touchline-selection.ts";
 import { classifyTouchlinePlayerLeadershipPublication } from "./touchlineArena/player-ranking-leadership.ts";
 import { touchlineCoachOutcome, touchlineCoachPoints, emptyTouchlineCoachRecord, type TouchlineCoachRecord } from "./touchlineArena/coach-scoring.ts";
-import { touchlineLiveCoachForProviderId } from "./touchlineArena/live-coaches.ts";
+import { catalogueCoachForId, legacyCoachCatalogue, type CoachCatalogue } from "./touchlineArena/coach-catalogue-contract.ts";
 import { TOUCHLINE_ENGLAND_CLUBS } from "./touchlineArena/demo-data.ts";
 import { classifyTouchlineConfirmedMatchEvent } from "./touchlineArena/social-confirmed-event-contract.ts";
 import { touchlineSocialFinalScoreGoalsMatchScore } from "./touchlineArena/social-final-score-events.ts";
@@ -22,6 +22,7 @@ type Fixture = { id: string; provider_fixture_id: string; season_id: string; rou
 type Club = { id: string; provider_team_id: string; name: string; short_code: string; logo_url: string; source_updated_at: string };
 type Goal = { fixture_id: string; provider_event_id: string; provider_team_id: string; provider_player_id: string | null; football_player_id: string | null; event_type: string; event_status: string; info: string | null; addition: string | null; name: string | null; current_club_id: string | null };
 export type RankingsLiveSource = {
+  coachCatalogue?: CoachCatalogue;
   fetchedAt: string; competitionId: string;
   season: { id: string; provider_season_id: string; name: string; source_updated_at: string };
   fixtures: Fixture[]; clubs: Club[]; rounds: { id: string; provider_round_id: string; name: string }[]; goals: Goal[];
@@ -115,12 +116,12 @@ export function deriveRankingsLive(source: RankingsLiveSource, evidence: Ranking
   // runtime lookup supplies existing card assets only; a changed assignment
   // cannot silently move the published score to a different coach or club.
   const publishedCoaches = publishedCoachRows.map((row, index) => {
-    const identity = touchlineLiveCoachForProviderId(row.coachProviderId);
+    const identity = catalogueCoachForId(source.coachCatalogue ?? legacyCoachCatalogue(), row.coachProviderId);
     const club = source.clubs.find(c => c.provider_team_id === identity?.coach.teamId);
     if (!identity || !club || row.clubName !== club.name) throw new Error(`RANKINGS_COACH_IDENTITY_MISMATCH:${row.coachProviderId}`);
     const records = [row.home, row.away];
     if (row.rank !== index + 1 || row.tiebreaker !== "points,wins,awayWins,coachProviderId" || ![row.touchlinePoints, row.wins, row.draws, row.losses, row.awayWins].every(Number.isInteger) || records.some(record => !record || ![record.touchlinePoints, record.wins, record.draws, record.losses].every(Number.isInteger) || [record.wins, record.draws, record.losses].some(n => n < 0))) throw new Error("RANKINGS_COACH_PAYLOAD_INVALID");
-    return { ...row, name: identity.coach.displayName || identity.coach.name, clubId: club.id, clubProviderId: club.provider_team_id };
+    return { ...row, identity, name: identity.coach.displayName || identity.coach.name, clubId: club.id, clubProviderId: club.provider_team_id };
   });
   if (new Set(publishedCoaches.map(c => c.clubId)).size !== source.clubs.length) throw new Error("RANKINGS_COACH_CLUB_COVERAGE_MISMATCH");
   function rankCoaches(scope: Fixture[]) { return publishedCoaches.map((published) => {
@@ -164,6 +165,6 @@ export function deriveRankingsLive(source: RankingsLiveSource, evidence: Ranking
     const identity = evidence.players.find((p) => p.id === player.playerId)!;
     return [player.playerId, clubs.get(identity.current_club_id)!.provider_team_id];
   }));
-  return { provenance: { source: "LOCAL_CANONICAL_REPLAY_NOT_PUBLISHED", revision, fetchedAt: evidence.fetchedAt, asOf: latestFact, competitionId: source.competitionId, seasonId: source.season.id, fixtureIds: finals.map((f) => f.provider_fixture_id), activePlayerSnapshot: source.playerSnapshot.snapshot_id, activeCoachSnapshot: source.coachSnapshot.snapshot_id }, publishable: false as const, outbound: "DISABLED" as const, round, nextRound, nextRoundStartsAt, overall, weeklyOverall, leadership, seasonRanking, weeklyRanking, weeklyLeaders: weeklyRanking.snapshot.positions.map((p) => p.players[0]!), selection, weeklySelection, coaches, weeklyCoaches, playerClubProviderIds, table, goldenBoot: { state: goalMismatches.length ? "BLOCKED_RECONCILIATION" as const : "FACTUAL_REVIEW" as const, mismatchedFixtureIds: goalMismatches, candidates: topScorers }, gates: ["OWNER_VIDEO_AND_CAPTION_REVIEW_REQUIRED", "ACTIVE_PLAYER_SNAPSHOT_REQUIRES_RECONCILIATION", "LOCAL_REPLAY_NOT_REMOTE_RANKING", "WEEKLY_ONE_PER_POSITION_REVIEW_PROPOSAL", "FORMATION_USES_CANONICAL_4_3_3_V2", ...(goalMismatches.length ? ["GOLDEN_BOOT_GOAL_HISTORY_UNRECONCILED"] : [])] };
+  return { coachCatalogueMode: source.coachCatalogue?.phase ?? "legacy", provenance: { source: "LOCAL_CANONICAL_REPLAY_NOT_PUBLISHED", revision, fetchedAt: evidence.fetchedAt, asOf: latestFact, competitionId: source.competitionId, seasonId: source.season.id, fixtureIds: finals.map((f) => f.provider_fixture_id), activePlayerSnapshot: source.playerSnapshot.snapshot_id, activeCoachSnapshot: source.coachSnapshot.snapshot_id }, publishable: false as const, outbound: "DISABLED" as const, round, nextRound, nextRoundStartsAt, overall, weeklyOverall, leadership, seasonRanking, weeklyRanking, weeklyLeaders: weeklyRanking.snapshot.positions.map((p) => p.players[0]!), selection, weeklySelection, coaches, weeklyCoaches, playerClubProviderIds, table, goldenBoot: { state: goalMismatches.length ? "BLOCKED_RECONCILIATION" as const : "FACTUAL_REVIEW" as const, mismatchedFixtureIds: goalMismatches, candidates: topScorers }, gates: ["OWNER_VIDEO_AND_CAPTION_REVIEW_REQUIRED", "ACTIVE_PLAYER_SNAPSHOT_REQUIRES_RECONCILIATION", "LOCAL_REPLAY_NOT_REMOTE_RANKING", "WEEKLY_ONE_PER_POSITION_REVIEW_PROPOSAL", "FORMATION_USES_CANONICAL_4_3_3_V2", ...(goalMismatches.length ? ["GOLDEN_BOOT_GOAL_HISTORY_UNRECONCILED"] : [])] };
 }
 export type RankingsLiveDerived = ReturnType<typeof deriveRankingsLive>;

@@ -187,14 +187,14 @@ test("full-screen review displays athlete record without inventing contract date
   const view = fixture().render({ locale: "pt-BR", card: { id: playerId, name: "Atleta" } });
   assert.match(view.html, /fullscreenOverlay/);
   assert.match(view.html, /Registro do atleta/);
-  assert.match(view.html, /Data não registrada/);
-  assert.match(view.html, /Prazo não informado/);
+  assert.doesNotMatch(view.html, /Data não registrada|Date not recorded|Contratado em|Signed on/);
+  assert.doesNotMatch(view.html, /Prazo não informado|Term not recorded|Meses restantes|Months remaining/);
   assert.doesNotMatch(view.html, /ID do atleta|Player ID/);
   assert.doesNotMatch(view.html, /Seu clube|Valor do elenco contratado|Valores originais pagos/);
   const css = readFileSync(new URL("../components/touchline/fantasy/ClubOwnerReleaseDialog.module.css", import.meta.url), "utf8");
   assert.match(css, /height: 100dvh/);
   assert.match(css, /border: 0; border-radius: 0/);
-  assert.match(css, /background: rgb\(4 11 8 \/ 82%\)/);
+  assert.match(css, /background: var\(--touchline-modal-backdrop/);
   assert.match(css, /grid-auto-rows: minmax\(52px, auto\)/);
   assert.match(css, /\.money strong \{ font-size: 20\.7px/);
 });

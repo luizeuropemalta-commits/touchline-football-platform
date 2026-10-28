@@ -37,7 +37,7 @@
 .slot>button { min-height:44px; }
 .slot>button:not(:first-child) { width:44px; }
 .slot small { color:inherit; opacity:.65; }
-.overlay { position:fixed; inset:0; z-index:120; display:grid; place-items:center; padding:16px; background:rgba(0,0,0,.65); backdrop-filter:blur(8px); }
+.overlay { position:fixed; inset:0; z-index:120; display:grid; place-items:center; padding:16px; background: var(--touchline-modal-backdrop, rgba(0, 5, 6, .72));   -webkit-backdrop-filter: var(--touchline-modal-blur, blur(8px)); backdrop-filter: var(--touchline-modal-blur, blur(8px)); }
 .dialog { width:min(1120px,100%); max-height:calc(100dvh - 32px); overflow:auto; display:grid; gap:16px; padding:clamp(12px,2vw,24px); border:1px solid var(--lime,#aaff3e); border-radius:20px; background:#07100d; color:#f7fff2; }
 .dialog header { display:flex; align-items:center; justify-content:space-between; gap:16px; }
 .dialog h2 { margin:0; font:inherit; font-size:1.2rem; }

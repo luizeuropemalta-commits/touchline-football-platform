@@ -3,7 +3,7 @@
 .notice.notice p { margin:0; max-width:58ch; text-align:start; font-size:.8rem; line-height:1.55; color:#c1cbc5; overflow-wrap:anywhere; }
 .actions { display:flex; flex-wrap:wrap; gap:10px; padding-block:12px 4px; }
 .actions > button { max-width:100%; white-space:normal; overflow-wrap:anywhere; }
-.overlay { --accent:#c4cec8; position:fixed; inset:0; z-index:120; padding:0; background:rgba(0,0,0,.82); overflow:auto; overscroll-behavior:contain; color:#edf3ee; }
+.overlay { --accent:#c4cec8; position:fixed; inset:0; z-index:120; padding:0; background: var(--touchline-modal-backdrop, rgba(0, 5, 6, .72)); overflow:auto; overscroll-behavior:contain; color:#edf3ee;  -webkit-backdrop-filter: var(--touchline-modal-blur, blur(8px)); backdrop-filter: var(--touchline-modal-blur, blur(8px)); }
 .overlay[data-exchange-plan="beta"] { --accent:#ff888e; }
 .overlay[data-exchange-plan="standard"] { --accent:#75bbff; }
 .overlay[data-exchange-plan="master"] { --accent:#a5e4b6; }

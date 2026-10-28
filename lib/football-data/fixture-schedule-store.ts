@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import { touchlineCompetitionCoachAssignments } from "@/lib/touchlineArena/live-coaches";
+import { readCompetitionCoachAssignments } from "@/lib/touchlineArena/coach-catalogue-server";
 import type {
   FootballDataProviderName,
   TouchlineCompetition,
@@ -557,20 +557,23 @@ export async function persistCompetitionFixtureSchedule(
   // reconciled only after the canonical fixture write succeeds; final rows are
   // protected as immutable by the database command.
   const { data: coachReconciliation, error: coachReconciliationError } = await admin
-    .rpc("touchline_reconcile_coach_fixture_points", {
+    .rpc("touchline_reconcile_verified_coach_fixture_points", {
       p_fixture_id: null,
-      p_competition_coaches: touchlineCompetitionCoachAssignments(),
+      p_competition_coaches: await readCompetitionCoachAssignments(),
     });
-  if (coachReconciliationError) {
+  const coachReceiptConfirmed = !coachReconciliationError
+    && Number.isSafeInteger(coachReconciliation?.reconciled) && coachReconciliation.reconciled >= 0;
+  if (!coachReceiptConfirmed || coachReconciliation?.ok !== true) {
     return {
       stored: false as const,
-      reason: `coach-points-reconciliation-failed:${coachReconciliationError.code ?? "unknown"}`,
+      reason: `coach-points-reconciliation-failed:${coachReconciliationError?.code ?? (coachReceiptConfirmed ? "attribution-pending" : "unconfirmed")}`,
       fixturesStored: rows.length,
+      coachPointsReconciled: coachReceiptConfirmed ? coachReconciliation.reconciled : 0,
     };
   }
   return {
     stored: true as const,
     fixturesStored: rows.length,
-    coachPointsReconciled: Number((coachReconciliation as { reconciled?: unknown } | null)?.reconciled ?? 0),
+    coachPointsReconciled: coachReconciliation.reconciled,
   };
 }

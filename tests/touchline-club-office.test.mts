@@ -140,6 +140,6 @@ test("office copy has equal PT/EN coverage and scoped UI is read-only with share
   assert.match(source, /TouchlineGlobalNavigation.module.css/);
   assert.doesNotMatch(source, /fetch\(|localStorage|sessionStorage|supabase|checkout/);
   const css = readFileSync(new URL("../components/touchline/office/ClubOwnerOffice.module.css", import.meta.url), "utf8");
-  assert.match(css, /::backdrop[^}]*backdrop-filter: blur/);
+  assert.match(css, /::backdrop[^}]*backdrop-filter: var\(--touchline-modal-blur, blur\(8px\)\)/);
   assert.match(css, /overflow: auto/);
 });

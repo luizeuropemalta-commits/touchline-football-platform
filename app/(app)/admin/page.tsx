@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 
 import { GamePanel, LivePill, StatTile } from "@/components/arena-admin-ui";
+import { formatTcLedgerSubunits, summarizeTcLedgerSample } from "@/lib/admin/tc-ledger-summary";
 import { isOwnerEmail } from "@/lib/admin/owner";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -148,23 +149,13 @@ function dateLabel(value: string | null | undefined, locale: TouchLineAuthLocale
   return new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(date);
 }
 
-function money(cents: number, locale: TouchLineAuthLocale, currency = "EUR") {
-  try {
-    return new Intl.NumberFormat(locale, {
-      style: "currency",
-      currency: currency.toUpperCase(),
-    }).format(cents / 100);
-  } catch {
-    return `${(cents / 100).toFixed(2)} ${currency.toUpperCase()}`;
-  }
-}
-
-function healthText(status: HealthStatus) {
-  if (status === "READY") return "Ready";
-  if (status === "CONFIGURED_NOT_VERIFIED") return "Configured, not verified";
-  if (status === "ERROR") return "Error";
-  if (status === "PARTIALLY_IMPLEMENTED") return "Partially ready";
-  return "Not configured yet";
+function healthText(status: HealthStatus, locale: TouchLineAuthLocale) {
+  const t = (pt: string, en: string) => locale === "pt-BR" ? pt : en;
+  if (status === "READY") return t("Disponível", "Ready");
+  if (status === "CONFIGURED_NOT_VERIFIED") return t("Configurado, não verificado", "Configured, not verified");
+  if (status === "ERROR") return t("Erro", "Error");
+  if (status === "PARTIALLY_IMPLEMENTED") return t("Parcialmente disponível", "Partially ready");
+  return t("Ainda não configurado", "Not configured yet");
 }
 
 function healthClasses(status: HealthStatus) {
@@ -193,6 +184,24 @@ export default async function AdminOwnerPanel({
 }) {
   const params = (await searchParams) ?? {};
   const locale = normalizeTouchLineAuthLocale(typeof params.lang === "string" ? params.lang : null);
+  const t = (pt: string, en: string) => locale === "pt-BR" ? pt : en;
+  const operationLabels: Record<string, string> = {
+    live_scores: t("Placares ao vivo", "Live scores"), fixture_schedule: t("Calendário de partidas", "Fixture schedule"),
+    player_season_statistics: t("Estatísticas da temporada", "Season statistics"),
+    success: t("Concluída", "Completed"), error: t("Erro", "Error"), partial: t("Parcial", "Partial"),
+    running: t("Em execução", "Running"), pending: t("Pendente", "Pending"), failed: t("Falhou", "Failed"),
+    published: t("Publicado", "Published"), draft: t("Rascunho", "Draft"), archived: t("Arquivado", "Archived"),
+    available: t("Disponível", "Available"), unavailable: t("Indisponível", "Unavailable"), sold_out: t("Esgotado", "Sold out"),
+    ready: t("Pronto", "Ready"), reserved: t("Reservado", "Reserved"), sold: t("Vendido", "Sold"), retired: t("Retirado", "Retired"),
+    not_listed: t("Não listado", "Not listed"), not_configured: t("Não configurado", "Not configured"),
+    starter_foundation: t("Base inicial", "Starter foundation"), competition: t("Competição", "Competition"),
+    club: t("Clube", "Club"), squad: t("Elenco", "Squad"), player: t("Jogador", "Player"),
+    unassigned: t("Não atribuída", "Unassigned"), green: t("Verde", "Green"), blue: t("Azul", "Blue"),
+    gold: t("Dourada", "Gold"), red: t("Vermelha", "Red"), purple: t("Roxa", "Purple"),
+    clubowner: "ClubOwner", live: t("Ao vivo", "Live"), rankings: t("Classificações", "Rankings"), market: t("Mercado", "Market"),
+  };
+  // Unknown provider/internal codes remain visible for diagnosis; never infer their meaning.
+  const operationLabel = (code: string) => Object.hasOwn(operationLabels, code) ? operationLabels[code] : code;
   const supabase = await createClient();
   const admin = createAdminClient();
 
@@ -200,11 +209,10 @@ export default async function AdminOwnerPanel({
     return (
       <div className="mx-auto max-w-[1200px]">
         <GamePanel className="p-8">
-          <LivePill>Configuration required</LivePill>
-          <h1 className="mt-5 text-4xl font-black italic text-white">Arena Owner Control</h1>
+          <LivePill>{t("Configuração necessária", "Configuration required")}</LivePill>
+          <h1 className="mt-5 text-4xl font-black italic text-white">{t("Controle do proprietário", "Arena Owner Control")}</h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400">
-            Supabase public credentials and the protected service role are required before the Arena owner panel can read operational data.
-          </p>
+            {t("Configure as credenciais públicas do Supabase e o acesso protegido do servidor para consultar os dados operacionais.", "Supabase public credentials and the protected service role are required before the Arena owner panel can read operational data.")}</p>
         </GamePanel>
       </div>
     );
@@ -218,12 +226,11 @@ export default async function AdminOwnerPanel({
     return (
       <div className="mx-auto max-w-[1200px]">
         <GamePanel className="p-8">
-          <LivePill>Owner area</LivePill>
-          <h1 className="mt-5 text-4xl font-black italic text-white">Arena Owner Control</h1>
-          <p className="mt-3 max-w-2xl text-sm text-slate-400">Sign in with the TouchLine owner account to continue.</p>
+          <LivePill>{t("Área do proprietário", "Owner area")}</LivePill>
+          <h1 className="mt-5 text-4xl font-black italic text-white">{t("Controle do proprietário", "Arena Owner Control")}</h1>
+          <p className="mt-3 max-w-2xl text-sm text-slate-400">{t("Entre com a conta do proprietário da TouchLine para continuar.", "Sign in with the TouchLine owner account to continue.")}</p>
           <Link href={touchLineAuthEntryHref("/login", locale, touchLineAuthHref("/admin", locale))} className="mt-6 inline-flex rounded-2xl bg-[#a3ff12] px-5 py-3 text-xs font-black text-black">
-            Sign in
-          </Link>
+            {t("Entrar", "Sign in")}</Link>
         </GamePanel>
       </div>
     );
@@ -235,11 +242,10 @@ export default async function AdminOwnerPanel({
     return (
       <div className="mx-auto max-w-[1200px]">
         <GamePanel className="p-8">
-          <LivePill>Configuration required</LivePill>
-          <h1 className="mt-5 text-4xl font-black italic text-white">Arena Owner Control</h1>
+          <LivePill>{t("Configuração necessária", "Configuration required")}</LivePill>
+          <h1 className="mt-5 text-4xl font-black italic text-white">{t("Controle do proprietário", "Arena Owner Control")}</h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400">
-            The protected Supabase administration client is required before operational data can be read.
-          </p>
+            {t("O acesso administrativo protegido do Supabase é necessário para consultar os dados operacionais.", "The protected Supabase administration client is required before operational data can be read.")}</p>
         </GamePanel>
       </div>
     );
@@ -410,60 +416,60 @@ export default async function AdminOwnerPanel({
 
   const healthChecks: HealthCheck[] = [
     {
-      name: "Supabase protected reads",
+      name: t("Consultas protegidas do Supabase", "Supabase protected reads"),
       status: !supabaseReady ? "NOT_CONFIGURED_YET" : !supabaseProjectsAligned || supabaseReadError ? "ERROR" : "READY",
       detail: !supabaseReady
-        ? "Public URL, anon key and service role are required."
+        ? t("São necessários URL pública, chave pública e acesso protegido do servidor.", "Public URL, anon key and service role are required.")
         : !supabaseProjectsAligned
-          ? "Public authentication and protected administration are configured for different Supabase projects."
+          ? t("A autenticação pública e a administração protegida apontam para projetos diferentes do Supabase.", "Public authentication and protected administration are configured for different Supabase projects.")
           : supabaseReadError
-            ? "A protected authentication or database read failed. No server error detail is exposed here."
-            : "The current owner session and protected database reads were validated server-side.",
+            ? t("Uma consulta protegida de autenticação ou banco de dados falhou. Detalhes internos do erro não são exibidos aqui.", "A protected authentication or database read failed. No server error detail is exposed here.")
+            : t("A sessão atual do proprietário e as consultas protegidas foram validadas no servidor.", "The current owner session and protected database reads were validated server-side."),
     },
     {
-      name: "Owner access boundary",
+      name: t("Controle de acesso do proprietário", "Owner access boundary"),
       status: ownerAllowlistConfigured ? "READY" : "PARTIALLY_IMPLEMENTED",
       detail: ownerAllowlistConfigured
-        ? "The current session passed the explicit server-side owner allowlist."
-        : "The current session passed the built-in fallback. Configure an explicit deployment owner allowlist before release.",
+        ? t("A sessão atual foi validada pela lista explícita de proprietários no servidor.", "The current session passed the explicit server-side owner allowlist.")
+        : t("A sessão atual foi validada pela regra alternativa incorporada. Configure uma lista explícita de proprietários antes de publicar.", "The current session passed the built-in fallback. Configure an explicit deployment owner allowlist before release."),
     },
     {
-      name: "Official football schema",
+      name: t("Estrutura dos dados oficiais de futebol", "Official football schema"),
       status: footballSchema,
       detail: footballSchema === "READY"
-        ? "Normalized competitions, clubs, players, squads and sync history are readable."
+        ? t("Competições, clubes, jogadores, elencos e histórico de sincronização estão disponíveis para consulta.", "Normalized competitions, clubs, players, squads and sync history are readable.")
         : footballSchema === "ERROR"
-          ? "All checked football_* reads failed; coverage values are unavailable rather than zero."
-          : "One or more football_* reads failed; unaffected sections remain available.",
+          ? t("Todas as consultas verificadas de futebol falharam; os valores estão indisponíveis, não zerados.", "All checked football_* reads failed; coverage values are unavailable rather than zero.")
+          : t("Uma ou mais consultas de futebol falharam; as demais seções continuam disponíveis.", "One or more football_* reads failed; unaffected sections remain available."),
     },
     {
-      name: "Arena operational schema",
+      name: t("Estrutura operacional da Arena", "Arena operational schema"),
       status: arenaSchema,
       detail: arenaSchema === "READY"
-        ? "Cards, contracts, orders, analytics, legacy grant audit rows, state and credit ledger are readable."
+        ? t("Cards, contratos, pedidos, atividade, concessões históricas, estado e extrato de créditos estão disponíveis para consulta.", "Cards, contracts, orders, analytics, legacy grant audit rows, state and credit ledger are readable.")
         : arenaSchema === "ERROR"
-          ? "All checked Arena operational reads failed; affected values are shown as unavailable."
-          : "One or more Arena operational reads failed; affected values are shown as unavailable.",
+          ? t("Todas as consultas operacionais verificadas falharam; os valores afetados aparecem como indisponíveis.", "All checked Arena operational reads failed; affected values are shown as unavailable.")
+          : t("Uma ou mais consultas operacionais falharam; os valores afetados aparecem como indisponíveis.", "One or more Arena operational reads failed; affected values are shown as unavailable."),
     },
     {
-      name: "TouchLine data configuration",
+      name: t("Configuração dos dados da TouchLine", "TouchLine data configuration"),
       status: sportmonksConfigured ? "CONFIGURED_NOT_VERIFIED" : "NOT_CONFIGURED_YET",
       detail: sportmonksConfigured
-        ? "A server token is configured. Connectivity and subscription entitlement are not probed by this page."
-        : "TouchLine data access is not configured.",
+        ? t("O token do servidor está configurado. Esta página não verifica a conexão nem a cobertura da assinatura.", "A server token is configured. Connectivity and subscription entitlement are not probed by this page.")
+        : t("O acesso aos dados da TouchLine não está configurado.", "TouchLine data access is not configured."),
     },
     {
-      name: "Stripe configuration",
+      name: t("Configuração da Stripe", "Stripe configuration"),
       status: stripeSecretReady && stripeWebhookReady
         ? "CONFIGURED_NOT_VERIFIED"
         : stripeSecretReady || stripeWebhookReady
           ? "PARTIALLY_IMPLEMENTED"
           : "NOT_CONFIGURED_YET",
       detail: stripeSecretReady && stripeWebhookReady
-        ? "Server and webhook credentials are configured, but connectivity and webhook delivery are not probed here."
+        ? t("As credenciais do servidor e do webhook estão configuradas; a conexão e a entrega do webhook não são verificadas aqui.", "Server and webhook credentials are configured, but connectivity and webhook delivery are not probed here.")
         : stripeSecretReady || stripeWebhookReady
-          ? "Only part of the generic Stripe server configuration is present."
-          : "Generic Stripe server and webhook configuration is not present.",
+          ? t("A configuração do servidor da Stripe está incompleta.", "Only part of the generic Stripe server configuration is present.")
+          : t("A configuração do servidor e do webhook da Stripe está ausente.", "Generic Stripe server and webhook configuration is not present."),
     },
   ];
 
@@ -478,33 +484,37 @@ export default async function AdminOwnerPanel({
           : "READY";
 
   const linkCards = [
-    { href: "/admin/cards", label: "Card Inventory", detail: "Art, publication and supply", icon: Layers3 },
-    { href: "/admin/analytics", label: "Arena Analytics", detail: "ClubOwner activity and retention", icon: BarChart3 },
-    { href: "/admin/promotions", label: "Promotions", detail: "Campaigns and credit ledger", icon: Gift },
-    { href: "/admin/football-data", label: "Football Data", detail: "Normalized football foundation", icon: Database },
-    { href: "/admin/market-values", label: "Market Values", detail: "Verified values and review queue", icon: ShieldCheck },
-    { href: "/admin/card-engine", label: "Card Engine", detail: "Protected editorial review and publish", icon: Sparkles },
-    { href: "/admin/social-publications", label: "Social Drafts", detail: "Separate artwork and caption approval", icon: Radio },
-    { href: "/admin/formation-calibration", label: "Formation Calibration", detail: "QA-only flat-pitch geometry versions", icon: Trophy },
-    { href: "/admin/finance", label: "Finance Control", detail: "Protected financial overview", icon: CircleDollarSign },
+    { href: "/admin/cards", label: t("Inventário de cards", "Card Inventory"), detail: t("Arte, publicação e disponibilidade", "Art, publication and supply"), icon: Layers3 },
+    { href: "/admin/analytics", label: t("Análise da Arena", "Arena Analytics"), detail: t("Atividade e retenção de ClubOwners", "ClubOwner activity and retention"), icon: BarChart3 },
+    { href: "/admin/promotions", label: t("Promoções", "Promotions"), detail: t("Campanhas e extrato de créditos", "Campaigns and credit ledger"), icon: Gift },
+    { href: "/admin/football-data", label: t("Dados de futebol", "Football Data"), detail: t("Base oficial de futebol", "Normalized football foundation"), icon: Database },
+    { href: "/admin/market-values", label: t("Valores de mercado", "Market Values"), detail: t("Valores verificados e fila de revisão", "Verified values and review queue"), icon: ShieldCheck },
+    { href: "/admin/card-engine", label: t("Motor de cards", "Card Engine"), detail: t("Revisão editorial e publicação protegidas", "Protected editorial review and publish"), icon: Sparkles },
+    { href: "/admin/social-publications", label: t("Publicações sociais", "Social Drafts"), detail: t("Aprovação separada de arte e legenda", "Separate artwork and caption approval"), icon: Radio },
+    { href: "/admin/formation-calibration", label: t("Calibração de formações", "Formation Calibration"), detail: t("Geometria do campo exclusiva da QA", "QA-only flat-pitch geometry versions"), icon: Trophy },
+    { href: "/admin/finance", label: locale === "pt-BR" ? "Cobranças dos clientes" : "Customer billing", detail: locale === "pt-BR" ? "Faturas e conciliação Stripe" : "Invoices and Stripe reconciliation", icon: CircleDollarSign },
+    { href: "/admin/company-finance", label: locale === "pt-BR" ? "Administração da empresa" : "Company administration", detail: locale === "pt-BR" ? "Fornecedores, contratos e despesas" : "Suppliers, contracts and expenses", icon: WalletCards },
+    { href: "/admin/company-finance/mail", label: t("Documentos por e-mail", "Documents by email"), detail: t("Originais e pendências de importação", "Original messages and import issues"), icon: WalletCards },
+    { href: "/admin/company-finance/alerts", label: t("Alertas da empresa", "Company alerts"), detail: t("Vencimentos e obrigações para revisão", "Deadlines and obligations to review"), icon: AlertTriangle },
+    { href: "/admin/coaches", label: t("Catálogo de treinadores", "Coach catalogue"), detail: t("Identidades, mudanças e publicação", "Identities, changes and publication"), icon: Users },
   ];
 
   const recentAuthUsers = authUsers.slice(0, 10);
-  const ledgerNetCents = ledger.data.reduce((total, entry) => total + Number(entry.amount_cents || 0), 0);
+  const ledgerSample = summarizeTcLedgerSample(ledger.data, Boolean(ledger.error));
   const registeredUsersText = registeredUsers.error
     ? authUsersError ? "—" : String(authUsers.length)
     : String(registeredUsers.value);
   const footballCoverage = [
-    { label: "Competitions", result: footballCompetitions },
-    { label: "Clubs", result: footballClubs },
-    { label: "Players", result: footballPlayers },
-    { label: "Squad rows", result: footballSquadMembers },
+    { label: t("Competições", "Competitions"), result: footballCompetitions },
+    { label: t("Clubes", "Clubs"), result: footballClubs },
+    { label: t("Jogadores", "Players"), result: footballPlayers },
+    { label: t("Registros de elenco", "Squad rows"), result: footballSquadMembers },
   ];
   const economyCoverage = [
-    { label: "Completed orders", result: marketOrders },
-    { label: "Historical contracts", result: retainedLegacyContracts },
-    { label: "Saved Arenas", result: arenaStateCount },
-    { label: "Ledger entries", result: creditLedgerCount },
+    { label: t("Pedidos concluídos", "Completed orders"), result: marketOrders },
+    { label: t("Contratos históricos", "Historical contracts"), result: retainedLegacyContracts },
+    { label: t("Arenas salvas", "Saved Arenas"), result: arenaStateCount },
+    { label: t("Movimentações no extrato", "Ledger entries"), result: creditLedgerCount },
   ];
   const supabaseRef = process.env.NEXT_PUBLIC_SUPABASE_URL?.match(/https:\/\/([^.]+)\.supabase\.co/)?.[1];
 
@@ -513,36 +523,35 @@ export default async function AdminOwnerPanel({
       <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
         <div>
           <div className="mb-3 flex flex-wrap items-center gap-2">
-            <LivePill>Arena owner control</LivePill>
-            <span className={`rounded-full border px-3 py-1.5 text-[8px] font-black ${healthClasses(overallHealth)}`}>
-              {healthText(overallHealth)}
+            <LivePill>{t("Controle do proprietário", "Arena owner control")}</LivePill>
+            <span className={`rounded-full border px-3 py-1.5 text-xs font-black ${healthClasses(overallHealth)}`}>
+              {healthText(overallHealth, locale)}
             </span>
           </div>
-          <h1 className="font-display text-4xl italic text-white sm:text-[52px]">TouchLine Owner Panel</h1>
-          <p className="mt-2 max-w-3xl text-xs leading-6 text-slate-500">
-            Read-only command center for ClubOwners, official football data, Arena operations, cards, engagement and credits.
-          </p>
+          <h1 className="font-display text-4xl italic text-white sm:text-[52px]">{t("Painel do proprietário TouchLine", "TouchLine Owner Panel")}</h1>
+          <p className="mt-2 max-w-3xl text-xs leading-6 text-slate-400">
+            {t("Central de consulta de ClubOwners, dados oficiais de futebol, operações, cards, atividade e créditos.", "Read-only command center for ClubOwners, official football data, Arena operations, cards, engagement and credits.")}</p>
         </div>
         {supabaseRef ? (
           <Link
             href={`https://supabase.com/dashboard/project/${supabaseRef}`}
             target="_blank"
-            className="inline-flex h-11 items-center gap-2 self-start rounded-2xl border border-cyan-300/20 bg-cyan-300/[.07] px-4 text-[9px] font-black text-cyan-100"
+            className="inline-flex h-11 items-center gap-2 self-start rounded-2xl border border-cyan-300/20 bg-cyan-300/[.07] px-4 text-xs font-black text-cyan-100"
           >
-            Supabase project <ExternalLink size={13} />
+            {t("Projeto Supabase", "Supabase project")}<ExternalLink size={13} />
           </Link>
         ) : null}
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-8">
-        <StatTile icon={Users} label="ClubOwners" value={registeredUsersText} delta={registeredUsersText === "—" ? "read unavailable" : "registered"} accent={registeredUsersText === "—" ? "rose" : "cyan"} />
-        <StatTile icon={Radio} label="Active now" value={sessions.error ? "—" : String(activeNow)} delta={sessions.error ? "read unavailable" : "last 2 min"} accent={sessions.error ? "rose" : "lime"} />
-        <StatTile icon={Activity} label="Daily active" value={sessions.error ? "—" : String(dailyActive)} delta={sessions.error ? "read unavailable" : "last 24h"} accent={sessions.error ? "rose" : "cyan"} />
-        <StatTile icon={Trophy} label="Legacy grants" value={betaGrantCount.error ? "—" : String(betaGrantCount.value)} delta={betaGrantCount.error ? "read unavailable" : "historical only"} accent={betaGrantCount.error ? "rose" : "gold"} />
-        <StatTile icon={Database} label="Players" value={countText(footballPlayers)} delta={footballPlayers.error ? "read unavailable" : "football_*"} accent={footballPlayers.error ? "rose" : "cyan"} />
-        <StatTile icon={ShieldCheck} label="Clubs" value={countText(footballClubs)} delta={footballClubs.error ? "read unavailable" : "normalized"} accent={footballClubs.error ? "rose" : "lime"} />
-        <StatTile icon={Sparkles} label="Cards" value={countText(cardInventory)} delta={cardInventory.error ? "read unavailable" : "inventory"} accent={cardInventory.error ? "rose" : "gold"} />
-        <StatTile icon={WalletCards} label="Legacy contracts" value={countText(retainedLegacyContracts)} delta={retainedLegacyContracts.error ? "read unavailable" : "audit only · not gameplay"} accent="gold" />
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <StatTile icon={Users} label="ClubOwners" value={registeredUsersText} delta={registeredUsersText === "—" ? t("consulta indisponível", "read unavailable") : t("cadastrados", "registered")} accent={registeredUsersText === "—" ? "rose" : "cyan"} />
+        <StatTile icon={Radio} label={t("Ativos agora", "Active now")} value={sessions.error ? "—" : String(activeNow)} delta={sessions.error ? t("consulta indisponível", "read unavailable") : t("últimos 2 min", "last 2 min")} accent={sessions.error ? "rose" : "lime"} />
+        <StatTile icon={Activity} label={t("Ativos no dia", "Daily active")} value={sessions.error ? "—" : String(dailyActive)} delta={sessions.error ? t("consulta indisponível", "read unavailable") : t("últimas 24h", "last 24h")} accent={sessions.error ? "rose" : "cyan"} />
+        <StatTile icon={Trophy} label={t("Concessões históricas", "Legacy grants")} value={betaGrantCount.error ? "—" : String(betaGrantCount.value)} delta={betaGrantCount.error ? t("consulta indisponível", "read unavailable") : t("somente histórico", "historical only")} accent={betaGrantCount.error ? "rose" : "gold"} />
+        <StatTile icon={Database} label={t("Jogadores", "Players")} value={countText(footballPlayers)} delta={footballPlayers.error ? t("consulta indisponível", "read unavailable") : "football_*"} accent={footballPlayers.error ? "rose" : "cyan"} />
+        <StatTile icon={ShieldCheck} label={t("Clubes", "Clubs")} value={countText(footballClubs)} delta={footballClubs.error ? t("consulta indisponível", "read unavailable") : t("normalizados", "normalized")} accent={footballClubs.error ? "rose" : "lime"} />
+        <StatTile icon={Sparkles} label="Cards" value={countText(cardInventory)} delta={cardInventory.error ? t("consulta indisponível", "read unavailable") : t("inventário", "inventory")} accent={cardInventory.error ? "rose" : "gold"} />
+        <StatTile icon={WalletCards} label={t("Contratos históricos", "Legacy contracts")} value={countText(retainedLegacyContracts)} delta={retainedLegacyContracts.error ? t("consulta indisponível", "read unavailable") : t("somente auditoria · fora do jogo", "audit only · not gameplay")} accent="gold" />
       </div>
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
@@ -556,7 +565,7 @@ export default async function AdminOwnerPanel({
               <Icon size={16} />
             </span>
             <p className="mt-4 text-xs font-black text-white">{label}</p>
-            <p className="mt-1 text-[9px] leading-4 text-slate-600">{detail}</p>
+            <p className="mt-1 text-xs leading-4 text-slate-400">{detail}</p>
           </Link>
         ))}
       </div>
@@ -564,11 +573,10 @@ export default async function AdminOwnerPanel({
       <div className="grid gap-5 xl:grid-cols-[1.25fr_.75fr]">
         <GamePanel className="overflow-hidden">
           <div className="border-b border-white/[.07] p-5">
-            <p className="text-[9px] font-black text-[#a3ff12]">ClubOwner access</p>
-            <h2 className="mt-1 text-xl font-black italic text-white">Recent registered users</h2>
-            <p className="mt-2 text-[10px] leading-5 text-slate-500">
-              Read-only identity overview. Historical access grants and saved Arena state are shown independently of authentication.
-            </p>
+            <p className="text-xs font-black text-[#a3ff12]">{t("Acesso dos ClubOwners", "ClubOwner access")}</p>
+            <h2 className="mt-1 text-xl font-black italic text-white">{t("Cadastros recentes", "Recent registered users")}</h2>
+            <p className="mt-2 text-xs leading-5 text-slate-400">
+              {t("Consulta de identificação. Concessões históricas e estado salvo da Arena são exibidos separadamente da autenticação.", "Read-only identity overview. Historical access grants and saved Arena state are shown independently of authentication.")}</p>
           </div>
           <div className="divide-y divide-white/[.06]">
             {recentAuthUsers.map((authUser) => {
@@ -581,25 +589,24 @@ export default async function AdminOwnerPanel({
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="truncate text-xs font-black text-white">{profile?.full_name?.trim() || authUser.email || "ClubOwner"}</p>
                       {isOwnerEmail(authUser.email) ? (
-                        <span className="rounded-lg border border-amber-300/20 bg-amber-300/[.08] px-2 py-1 text-[7px] font-black text-amber-200">
-                          Owner
-                        </span>
+                        <span className="rounded-lg border border-amber-300/20 bg-amber-300/[.08] px-2 py-1 text-xs font-black text-amber-200">
+                          {t("Proprietário", "Owner")}</span>
                       ) : null}
                     </div>
-                    <p className="mt-1 truncate text-[9px] text-slate-600">{authUser.email ?? "Email unavailable"} · joined {dateLabel(authUser.created_at, locale)}</p>
+                    <p className="mt-1 truncate text-xs text-slate-400">{authUser.email ?? t("Email indisponível", "Email unavailable")} · {t("cadastro", "joined")} {dateLabel(authUser.created_at, locale)}</p>
                   </div>
-                  <span className={`w-fit rounded-lg border px-2 py-1 text-[8px] font-black ${grant ? "border-[#a3ff12]/20 bg-[#a3ff12]/[.07] text-[#caff6d]" : "border-white/[.08] text-slate-600"}`}>
-                    {grant ? `Legacy grant #${grant.slot_number}` : "No legacy grant"}
+                  <span className={`w-fit rounded-lg border px-2 py-1 text-xs font-black ${grant ? "border-[#a3ff12]/20 bg-[#a3ff12]/[.07] text-[#caff6d]" : "border-white/[.08] text-slate-400"}`}>
+                    {grant ? `${t("Concessão histórica", "Legacy grant")} #${grant.slot_number}` : t("Sem concessão histórica", "No legacy grant")}
                   </span>
-                  <span className={`w-fit rounded-lg border px-2 py-1 text-[8px] font-black ${arenaState ? "border-cyan-300/20 bg-cyan-300/[.06] text-cyan-100" : "border-white/[.08] text-slate-600"}`}>
-                    {arenaState ? `${arenaState.formation_key} saved` : "Arena not saved"}
+                  <span className={`w-fit rounded-lg border px-2 py-1 text-xs font-black ${arenaState ? "border-cyan-300/20 bg-cyan-300/[.06] text-cyan-100" : "border-white/[.08] text-slate-400"}`}>
+                    {arenaState ? `${arenaState.formation_key} ${t("salva", "saved")}` : t("Arena não salva", "Arena not saved")}
                   </span>
                 </div>
               );
             })}
             {!recentAuthUsers.length ? (
-              <p className="p-8 text-center text-xs text-slate-500">
-                {authUsersError ? "Authenticated users are temporarily unavailable." : "No ClubOwners registered yet."}
+              <p className="p-8 text-center text-xs text-slate-400">
+                {authUsersError ? t("Os usuários autenticados estão temporariamente indisponíveis.", "Authenticated users are temporarily unavailable.") : t("Nenhum ClubOwner cadastrado ainda.", "No ClubOwners registered yet.")}
               </p>
             ) : null}
           </div>
@@ -611,27 +618,26 @@ export default async function AdminOwnerPanel({
               <ShieldCheck size={18} />
             </div>
             <div>
-              <p className="text-[9px] font-black text-cyan-300">Operational health</p>
-              <h2 className="mt-1 text-xl font-black italic text-white">Protected read audit</h2>
+              <p className="text-xs font-black text-cyan-300">{t("Saúde operacional", "Operational health")}</p>
+              <h2 className="mt-1 text-xl font-black italic text-white">{t("Auditoria das consultas protegidas", "Protected read audit")}</h2>
             </div>
           </div>
           <div className={`mt-5 rounded-2xl border p-4 ${healthClasses(overallHealth)}`}>
-            <p className="text-[8px] font-black opacity-70">Overall state</p>
-            <p className="mt-1 text-sm font-black italic">{healthText(overallHealth)}</p>
-            <p className="mt-2 text-[10px] leading-5 opacity-70">
-              Readiness reflects only the protected checks shown below. Configured integrations remain unverified until a targeted connectivity check runs.
-            </p>
+            <p className="text-xs font-black opacity-70">{t("Estado geral", "Overall state")}</p>
+            <p className="mt-1 text-sm font-black italic">{healthText(overallHealth, locale)}</p>
+            <p className="mt-2 text-xs leading-5 opacity-70">
+              {t("Este estado reflete apenas as verificações protegidas abaixo. Integrações configuradas continuam sem confirmação até um teste específico de conexão.", "Readiness reflects only the protected checks shown below. Configured integrations remain unverified until a targeted connectivity check runs.")}</p>
           </div>
           <div className="mt-4 space-y-2">
             {healthChecks.map((check) => (
-              <div key={check.name} className="flex items-start gap-3 rounded-2xl border border-white/[.07] bg-white/[.025] p-3">
+              <div key={check.name} className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-3 rounded-2xl border border-white/[.07] bg-white/[.025] p-3">
                 <div className="mt-0.5">{healthIcon(check.status)}</div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-[10px] font-black text-white">{check.name}</p>
-                  <p className="mt-1 text-[8px] leading-4 text-slate-600">{check.detail}</p>
+                  <p className="text-xs font-black text-white">{check.name}</p>
+                  <p className="mt-1 text-xs leading-4 text-slate-400">{check.detail}</p>
                 </div>
-                <span className={`shrink-0 rounded-lg border px-2 py-1 text-[7px] font-black ${healthClasses(check.status)}`}>
-                  {healthText(check.status)}
+                <span className={`col-start-2 w-fit rounded-lg border px-2 py-1 text-xs font-black ${healthClasses(check.status)}`}>
+                  {healthText(check.status, locale)}
                 </span>
               </div>
             ))}
@@ -641,12 +647,12 @@ export default async function AdminOwnerPanel({
 
       <div className="grid gap-5 xl:grid-cols-3">
         <GamePanel className="p-5">
-          <p className="text-[9px] font-black text-cyan-300">Official football data</p>
-          <h2 className="mt-1 text-xl font-black italic text-white">Normalized coverage</h2>
+          <p className="text-xs font-black text-cyan-300">{t("Dados oficiais de futebol", "Official football data")}</p>
+          <h2 className="mt-1 text-xl font-black italic text-white">{t("Cobertura dos dados", "Normalized coverage")}</h2>
           <div className="mt-5 grid grid-cols-2 gap-3">
             {footballCoverage.map(({ label, result }) => (
               <div key={label} className={`rounded-2xl border bg-white/[.025] p-4 ${result.error ? "border-rose-300/20" : "border-white/[.07]"}`}>
-                <p className="text-[8px] font-black text-slate-600">{label}</p>
+                <p className="text-xs font-black text-slate-400">{label}</p>
                 <p className={`mt-2 font-display text-3xl ${result.error ? "text-rose-200" : "text-white"}`}>{countText(result)}</p>
               </div>
             ))}
@@ -655,36 +661,36 @@ export default async function AdminOwnerPanel({
             {syncRuns.data.slice(0, 4).map((run) => (
               <div key={run.id} className="rounded-2xl border border-white/[.07] bg-white/[.025] p-3">
                 <div className="flex items-center justify-between gap-3">
-                  <p className="text-[10px] font-black text-white">{run.provider} · {run.sync_type}</p>
+                  <p className="text-xs font-black text-white">{run.provider} · {operationLabel(run.sync_type)}</p>
                   <span className={run.status === "success" ? "text-[#a3ff12]" : run.status === "error" ? "text-rose-300" : "text-amber-200"}>
-                    {run.status}
+                    {operationLabel(run.status)}
                   </span>
                 </div>
-                <p className="mt-1 text-[8px] text-slate-600">{run.records_created} created · {run.records_updated} updated · {dateLabel(run.completed_at ?? run.started_at, locale)}</p>
+                <p className="mt-1 text-xs text-slate-400">{run.records_created} {t("criados", "created")} · {run.records_updated} {t("atualizados", "updated")} · {dateLabel(run.completed_at ?? run.started_at, locale)}</p>
               </div>
             ))}
             {!syncRuns.data.length ? (
-              <p className={`text-xs ${syncRuns.error ? "text-rose-200" : "text-slate-500"}`}>
-                {syncRuns.error ? "Football sync history is unavailable." : "No football sync history has been recorded yet."}
+              <p className={`text-xs ${syncRuns.error ? "text-rose-200" : "text-slate-400"}`}>
+                {syncRuns.error ? t("O histórico de sincronização do futebol está indisponível.", "Football sync history is unavailable.") : t("Nenhuma sincronização de futebol foi registrada ainda.", "No football sync history has been recorded yet.")}
               </p>
             ) : null}
           </div>
         </GamePanel>
 
         <GamePanel className="p-5">
-          <p className="text-[9px] font-black text-[#a3ff12]">Arena engagement</p>
-          <h2 className="mt-1 text-xl font-black italic text-white">Gameplay activity</h2>
+          <p className="text-xs font-black text-[#a3ff12]">{t("Atividade na Arena", "Arena engagement")}</p>
+          <h2 className="mt-1 text-xl font-black italic text-white">{t("Atividade no jogo", "Gameplay activity")}</h2>
           <div className="mt-5 grid grid-cols-2 gap-3">
             <div className="rounded-2xl border border-white/[.07] bg-white/[.025] p-4">
               <Clock3 size={15} className="text-cyan-300" />
-              <p className="mt-3 text-[8px] font-black text-slate-600">Tracked time</p>
+              <p className="mt-3 text-xs font-black text-slate-400">{t("Tempo registrado", "Tracked time")}</p>
               <p className={`mt-1 font-display text-3xl ${sessions.error ? "text-rose-200" : "text-white"}`}>
                 {sessions.error ? "—" : `${Math.round(activeSeconds / 3600)}h`}
               </p>
             </div>
             <div className="rounded-2xl border border-white/[.07] bg-white/[.025] p-4">
               <Activity size={15} className="text-[#a3ff12]" />
-              <p className="mt-3 text-[8px] font-black text-slate-600">Sessions</p>
+              <p className="mt-3 text-xs font-black text-slate-400">{t("Sessões", "Sessions")}</p>
               <p className={`mt-1 font-display text-3xl ${analyticsSessions.error ? "text-rose-200" : "text-white"}`}>
                 {countText(analyticsSessions)}
               </p>
@@ -694,10 +700,10 @@ export default async function AdminOwnerPanel({
             {topAreas.map(([area, seconds]) => {
               const width = activeSeconds ? Math.max(4, Math.round((seconds / activeSeconds) * 100)) : 0;
               return (
-                <div key={area}>
-                  <div className="flex justify-between gap-3 text-[9px]">
-                    <span className="font-black text-white">{area}</span>
-                    <span className="text-slate-600">{Math.round(seconds / 60)} min</span>
+                <div key={operationLabel(area)}>
+                  <div className="flex justify-between gap-3 text-xs">
+                    <span className="font-black text-white">{operationLabel(area)}</span>
+                    <span className="text-slate-400">{Math.round(seconds / 60)} min</span>
                   </div>
                   <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/[.06]">
                     <div className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-[#a3ff12]" style={{ width: `${width}%` }} />
@@ -706,47 +712,49 @@ export default async function AdminOwnerPanel({
               );
             })}
             {!topAreas.length ? (
-              <p className={`text-xs ${sessions.error ? "text-rose-200" : "text-slate-500"}`}>
-                {sessions.error ? "Engagement data is unavailable." : "Engagement appears after authenticated Arena sessions."}
+              <p className={`text-xs ${sessions.error ? "text-rose-200" : "text-slate-400"}`}>
+                {sessions.error ? t("Os dados de atividade estão indisponíveis.", "Engagement data is unavailable.") : t("A atividade aparece após sessões autenticadas na Arena.", "Engagement appears after authenticated Arena sessions.")}
               </p>
             ) : null}
           </div>
         </GamePanel>
 
         <GamePanel className="p-5">
-          <p className="text-[9px] font-black text-amber-300">Historical economy read model</p>
-          <h2 className="mt-1 text-xl font-black italic text-white">Legacy contracts and credits</h2>
-          <p className="mt-2 text-[9px] leading-4 text-slate-500">Retained for audit and history only. They do not select, limit or compose the current Gameweek XI.</p>
+          <p className="text-xs font-black text-amber-300">{t("Consulta da economia histórica", "Historical economy read model")}</p>
+          <h2 className="mt-1 text-xl font-black italic text-white">{t("Contratos e créditos históricos", "Legacy contracts and credits")}</h2>
+          <p className="mt-2 text-xs leading-4 text-slate-400">{t("Preservados apenas para auditoria e histórico. Não selecionam, limitam ou compõem os titulares da rodada atual.", "Retained for audit and history only. They do not select, limit or compose the current Gameweek XI.")}</p>
           <div className="mt-5 grid grid-cols-2 gap-3">
             {economyCoverage.map(({ label, result }) => (
               <div key={label} className={`rounded-2xl border bg-white/[.025] p-4 ${result.error ? "border-rose-300/20" : "border-white/[.07]"}`}>
-                <p className="text-[8px] font-black text-slate-600">{label}</p>
+                <p className="text-xs font-black text-slate-400">{label}</p>
                 <p className={`mt-2 font-display text-3xl ${result.error ? "text-rose-200" : "text-white"}`}>{countText(result)}</p>
               </div>
             ))}
           </div>
           <div className="mt-4 rounded-2xl border border-amber-300/15 bg-amber-300/[.05] p-4">
-            <p className="text-[8px] font-black text-amber-200">Recent ledger sample</p>
+            <p className="text-xs font-black text-amber-200">{locale === "pt-BR" ? "Movimentações recentes de TC" : "Recent TC movements"}</p>
             <p className="mt-2 text-2xl font-black text-white">
-              {ledger.error ? "—" : money(ledgerNetCents, locale, ledger.data[0]?.currency ?? "EUR")}
+              {ledgerSample ? formatTcLedgerSubunits(ledgerSample.subunits, locale) : "—"}
             </p>
-            <p className="mt-1 text-[8px] leading-4 text-slate-600">
-              {ledger.error
-                ? "The recent ledger sample is unavailable."
-                : `Net of the latest ${ledger.data.length} immutable entries. This panel never changes balances or economy rules.`}
+            <p className="mt-1 text-xs leading-4 text-slate-400">
+              {!ledgerSample
+                ? locale === "pt-BR" ? "Amostra de créditos indisponível. O valor não foi confirmado." : "Credit sample unavailable. The amount is not confirmed."
+                : locale === "pt-BR"
+                  ? `Resultado das últimas ${ledgerSample.count} movimentações históricas. Não representa o saldo atual do clube nem dinheiro da empresa.`
+                  : `Net of the latest ${ledgerSample.count} historical entries. This is not the current club balance or company money.`}
             </p>
           </div>
           <div className="mt-3 space-y-2">
             {recentCards.data.slice(0, 3).map((card) => (
               <div key={card.id} className="flex items-center justify-between gap-3 rounded-xl border border-white/[.06] bg-white/[.025] px-3 py-2">
                 <div className="min-w-0">
-                  <p className="truncate text-[9px] font-black text-white">{card.player_name}</p>
-                  <p className="mt-0.5 text-[7px] text-slate-600">{card.frame_color}</p>
+                  <p className="truncate text-xs font-black text-white">{card.player_name}</p>
+                  <p className="mt-0.5 text-xs text-slate-400">{operationLabel(card.frame_color)}</p>
                 </div>
-                <span className="text-[8px] font-black text-cyan-100">{card.card_status} · {card.sale_status}</span>
+                <span className="text-xs font-black text-cyan-100">{operationLabel(card.card_status)} · {operationLabel(card.sale_status)}</span>
               </div>
             ))}
-            {recentCards.error ? <p className="text-xs text-rose-200">Recent card inventory is unavailable.</p> : null}
+            {recentCards.error ? <p className="text-xs text-rose-200">{t("O inventário recente de cards está indisponível.", "Recent card inventory is unavailable.")}</p> : null}
           </div>
         </GamePanel>
       </div>

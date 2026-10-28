@@ -79,7 +79,7 @@ export default async function ManualCardEditorialPage({
     .order("display_name", { ascending: true })
     .limit(750)
     .returns<EditorialPlayerRow[]>();
-  if (playerError) return <GamePanel className="p-8"><LivePill>Roster unavailable</LivePill><h1 className="mt-5 text-4xl font-black italic text-white">Manual Card Editorial</h1><p className="mt-3 text-sm text-slate-400">{playerError.message}</p></GamePanel>;
+  if (playerError) return <GamePanel className="p-8"><LivePill>{locale === "pt-BR" ? "Elenco indisponível" : "Roster unavailable"}</LivePill><h1 className="mt-5 text-4xl font-black italic text-white">{locale === "pt-BR" ? "Editorial manual de cards" : "Manual Card Editorial"}</h1><p className="mt-3 text-sm text-slate-400">{locale === "pt-BR" ? "Os dados do elenco estão temporariamente indisponíveis. Nenhuma alteração foi feita." : "Roster data is temporarily unavailable. No changes were made."}</p></GamePanel>;
 
   const { data: clubs } = await admin
     .from("football_clubs")
@@ -101,7 +101,7 @@ export default async function ManualCardEditorialPage({
     .select("player_id,publication_status")
     .limit(1_000);
   const migrationPending = Boolean(profileError && migrationMissing(profileError.message));
-  if (profileError && !migrationPending) return <GamePanel className="p-8"><LivePill>Editorial store unavailable</LivePill><h1 className="mt-5 text-4xl font-black italic text-white">Manual Card Editorial</h1><p className="mt-3 text-sm text-slate-400">{profileError.message}</p></GamePanel>;
+  if (profileError && !migrationPending) return <GamePanel className="p-8"><LivePill>{locale === "pt-BR" ? "Armazenamento editorial indisponível" : "Editorial store unavailable"}</LivePill><h1 className="mt-5 text-4xl font-black italic text-white">{locale === "pt-BR" ? "Editorial manual de cards" : "Manual Card Editorial"}</h1><p className="mt-3 text-sm text-slate-400">{locale === "pt-BR" ? "O armazenamento editorial está temporariamente indisponível. Nenhuma alteração foi feita." : "Editorial storage is temporarily unavailable. No changes were made."}</p></GamePanel>;
 
   const publicationRows = (profiles ?? []) as EditorialPublicationRow[];
   const published = publicationRows.filter((profile) => profile.publication_status === "published").length;

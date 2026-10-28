@@ -1,3 +1,4 @@
+import * as coachCatalogue from "../lib/touchlineArena/coach-catalogue-contract.ts";
 import assert from "node:assert/strict";
 import { resolveTouchlineCatalogueLocale } from "../lib/touchlineArena/catalogue-locale.ts";
 import * as profileCopy from "../lib/touchlineArena/coach-profile-i18n.ts";
@@ -86,6 +87,12 @@ async function fixture({ future = false, sentinel = false, missing = "", competi
   const classification = { ...live.touchlineCoachClassificationForProviderId(entry.coach.providerId)!, classificationReason: reason,
     sourceClub: history ? "Official $&<Club>" : null, sourceLeagueName: history ? "Official $&<League>" : null,
     sourceSeasonId: history ? "777" : null, finalPosition: history ? 0 : null };
+  // Instrument the DTO read so metadata still proves it does not consume
+  // classification/ranking. Identity selection executes the real catalogue helper.
+  const catalogueEntry = { ...entry, internalId: null, publicationId: null, sourceKind: "legacy_seed_bootstrap",
+    get classification() { calls.push("classification"); return missing === "classification" ? null : classification; } };
+  const entries = missing === "entry" ? [] : [catalogueEntry];
+  const catalogue = { phase: "legacy", revision: null, current: entries, history: entries };
   const ranking = { phase: competition ? "ranked" : "unavailable", snapshotId: "snapshot-exact", seasonId: "season-exact", scoringVersion: "v-exact", fixtureIds: ["123"],
     rows: [{ coachProviderId: entry.coach.providerId, rank, touchlinePoints: 0, home: { wins: 0, draws: 1, losses: 2, touchlinePoints: 0 }, away: { wins: 3, draws: 4, losses: 5, touchlinePoints: 0 } }] };
   const Card = () => React.createElement("i", { "data-leaf": "card" });
@@ -129,7 +136,8 @@ async function fixture({ future = false, sentinel = false, missing = "", competi
     "@/lib/touchlineArena/coach-competition-projection": projection,
     "@/lib/touchlineArena/country-labels": countries,
     "@/lib/touchlineArena/card-rules": tiers,
-    "@/lib/touchlineArena/live-coaches": { TOUCHLINE_LIVE_COACHES: missing === "entry" ? [] : [entry], touchlineCoachClassificationForProviderId: () => { calls.push("classification"); return missing === "classification" ? null : classification; } },
+    "@/lib/touchlineArena/coach-catalogue-contract": coachCatalogue,
+    "@/lib/touchlineArena/coach-catalogue-server": { loadCoachCatalogue: async () => catalogue },
     "@/lib/touchlineArena/i18n": { normalizeTouchLineLocale: normalize },
     "@/lib/touchlineArena/coach-profile-i18n": copyModule,
     "@/lib/touchlineArena/coach-card-i18n": { getTouchlineCoachCardCopy: (value: string) => shared ?? (future ? coachCardCopy.TOUCHLINE_COACH_CARD_CATALOGUES[normalize(value)] : coachCardCopy.getTouchlineCoachCardCopy(value)) },

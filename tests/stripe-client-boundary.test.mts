@@ -69,24 +69,17 @@ test("neutral webhook verifies, deduplicates, syncs invoices and audits every ac
   assert.doesNotMatch(webhook, /customer\.subscription|checkout\.session\.completed|trial_will_end|stripe\.subscriptions/);
   assert.match(webhook, /request\.headers\.get\("stripe-signature"\)/);
   assert.match(webhook, /stripe\.webhooks\.constructEvent\(/);
-  assert.match(webhook, /from\("stripe_webhook_events"\)\.select\("stripe_event_id"\)/);
-  assert.match(webhook, /if \(processed\) \{\s*if \(processed\.stripe_event_id !== event\.id\) throw new Error\("RECEIPT_MISMATCH"\);\s*return NextResponse\.json\(\{ received: true, duplicate: true \}\)/);
+  assert.match(webhook, /"touchline_billing_claim_event"/);
+  assert.match(webhook, /claim\?\.eventId !== event\.id/);
+  assert.match(webhook, /claim.status === "duplicate"/);
+  for(const event of ['invoice.paid','invoice.payment_failed','invoice.payment_action_required','invoice.voided','invoice.deleted'])assert.ok(webhook.includes(`"${event}"`));
+  assert.doesNotMatch(webhook, /\.from\("billing_invoices"\)\.upsert|\.from\("billing_alerts"\)/, 'invoice and alerts must commit through the atomic RPC');
+  const claim=webhook.indexOf('"touchline_billing_claim_event"'), current=webhook.indexOf('await stripe.invoices.retrieve('), finish=webhook.indexOf('"touchline_billing_finish_event"');
+  assert.ok(claim>=0 && current>claim && finish>current, 'claim, current invoice read and atomic finish must remain ordered');
+  assert.match(webhook, /result\?\.status !== "applied" \|\| result.eventId !== event.id/);
+  const migration=await source('supabase/migrations/20261027120138_touchline_billing_atomic_reconciliation.sql');
+  for(const table of ['billing_invoices','billing_alerts','stripe_webhook_events'])assert.ok(migration.includes(table),table+' must remain in atomic persistence');
 
-  assert.match(webhook, /"invoice\.paid"/);
-  assert.match(webhook, /"invoice\.payment_failed"/);
-  assert.match(webhook, /"invoice\.payment_action_required"/);
-  assert.match(webhook, /from\("billing_customers"\)\.select\("user_id"\)/);
-  assert.match(webhook, /from\("billing_invoices"\)\.upsert\(/);
-  assert.match(webhook, /from\("billing_alerts"\)/);
-  assert.match(webhook, /"payment_failed"/);
-  assert.match(webhook, /"payment_action_required"/);
-
-  const invoiceDispatch = webhook.indexOf("await syncInvoice(");
-  const auditWrite = webhook.indexOf('adminClient.from("stripe_webhook_events").insert');
-  const successAck = webhook.indexOf("return NextResponse.json({ received: true });", auditWrite);
-  assert.ok(invoiceDispatch >= 0, "invoice dispatch must exist");
-  assert.ok(auditWrite > invoiceDispatch, "event audit must happen after optional invoice processing");
-  assert.ok(successAck > auditWrite, "every successfully audited event must be acknowledged");
 });
 
 test("billing persistence, idempotency records, invoices and alerts remain defined", async () => {

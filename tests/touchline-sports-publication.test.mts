@@ -7,7 +7,7 @@ import { buildTouchlineRankingSnapshot } from "../lib/touchlineArena/card-rankin
 import { TOUCHLINE_CARD_PRICE_TABLE_VERSION } from "../lib/touchlineArena/card-rules.ts";
 import { TOUCHLINE_ENGLAND_LEAGUE_KEY, TOUCHLINE_PRESEASON_RANKING_STATE, parseTouchlineActiveRankingState } from "../lib/touchlineArena/card-ranking-live.ts";
 import { parsePersistedTouchlinePlayerLeadership } from "../lib/touchlineArena/player-ranking-leadership.ts";
-import { touchlineLiveCoachForProviderId } from "../lib/touchlineArena/live-coaches.ts";
+import { legacyCoachCatalogue, catalogueCoachForId } from "../lib/touchlineArena/coach-catalogue-contract.ts";
 import { parseTouchlineSportsPublication, touchlinePublishedPlayerFacts } from "../lib/touchlineArena/sports-publication.ts";
 import { readPublishedTouchlineLivePresentationInput } from "../lib/touchlineArena/live-presentation-read-model.ts";
 import { toPublicTouchlineFixtures } from "../lib/football-data/public-fixture.ts";
@@ -71,7 +71,7 @@ function harness(options: { mutate?: (rows: ReturnType<typeof data>) => void; er
   } };
   const globals = { createAdminClient: () => admin, cache: (fn: unknown) => fn,
     TOUCHLINE_ENGLAND_LEAGUE_KEY, TOUCHLINE_PRESEASON_RANKING_STATE, parseTouchlineActiveRankingState,
-    parsePersistedTouchlinePlayerLeadership, touchlineLiveCoachForProviderId };
+    parsePersistedTouchlinePlayerLeadership, legacyCoachCatalogue, catalogueCoachForId, loadCoachCatalogue: async () => legacyCoachCatalogue() };
   const player = runInNewContext(`${code("lib/touchlineArena/card-ranking-server.ts")}\nreadTouchlinePlayerRankingSnapshot;`, globals);
   const coach = runInNewContext(`${code("lib/touchlineArena/coach-ranking-server.ts")}\nreadTouchlineCoachRankingSnapshot;`, globals);
   const parseLiveScoreSnapshot = runInNewContext(`${code("lib/football-data/live-score-snapshot-contract.ts")}\nparseLiveScoreSnapshot;`, {

@@ -272,8 +272,8 @@ async function upsertPlayer(admin: AdminClient, player: TouchlinePlayer, clubId:
         position_id: player.positionId,
         height: player.height,
         weight: player.weight,
-        market_value: player.marketValue,
-        market_value_currency: player.marketValueCurrency,
+        // Manual Admin owns value and currency. Omit both on provider upserts:
+        // conflicts preserve editorial values; new players remain pending.
         contract_until: player.contractUntil,
         source_updated_at: new Date().toISOString(),
       },

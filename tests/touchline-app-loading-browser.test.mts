@@ -1,3 +1,4 @@
+import { requireBrowserCapacity } from "./helpers/touchline-browser-capacity.mts";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync, existsSync, statfsSync } from "node:fs";
@@ -27,6 +28,14 @@ test("isolated real loading preserves skeleton geometry and accessible status in
   t.diagnostic(`Isolated loading, ${selectedCases.length} locales × 2 viewports; draft locale gate simulated on. Partial matrix: ${selectedCases.length !== loadingCases.length}. No route transition, native Safari or QA acceptance proof.`);
   const root = new URL("../", import.meta.url);
   const capacity = () => {
+    // Explicit local operator override; shared helper still enforces disk reserve.
+    if (process.platform === "darwin" && !process.env.CI
+      && process.env.TOUCHLINE_LOCAL_ALLOW_500MIB_RESERVE === "1"
+      && process.env.TOUCHLINE_LOCAL_IGNORE_MEMORY_GATE === "1") {
+      requireBrowserCapacity(fileURLToPath(root), { allowLowDarwinDisk: true });
+      return { operatorOverride: true };
+    }
+
     const disk = statfsSync(root), freeBytes = disk.bavail * disk.bsize;
     assert.ok(freeBytes > 5 * 1024 ** 3, "stop own test below 5 GiB");
     const output = execFileSync("memory_pressure", { encoding: "utf8" });

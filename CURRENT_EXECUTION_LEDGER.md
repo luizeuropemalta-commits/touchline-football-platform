@@ -5401,3 +5401,65 @@ Next: finalize explicit release manifest and migration plan without sweeping unr
 - 37 unexpected untracked suffixed2 files were individually proven identical to df29cf baseline, inventoried and moved intact outside the candidate; none deleted/staged. Origin is unproved. Candidate verified free of those extra files before final gates.
 - Next: one additional owner-authorized Git-native build of the corrected immutable commit, then exact-SHA READY/alias check and published authenticated Safari/data/log/replay validation. Until then, do not claim the QA Live or Pascal rating has been updated. QA migrations remain applied/verified; Production untouched.
 - Evidence:/Users/luizlopez/Documents/Codex/2026-09-05/touchline-prompt-formalizer/outputs/preqa-20261027/CI_RECOVERY.md, CI_RECOVERY_INDEPENDENT_REVIEW.md, QA_RECOVERY_MANIFEST.json, recovery-final-suite.log, recovery-final-build.log, linux-ci-recovery-exec.log and remote-ci-40470479265.log.
+
+
+## 2026-10-27 — Admin functional expansion in progress; deployment paused
+- Current local HEAD: a88179dd52be662bf53c73ce4415b3c24cc0b825. Admin changes are uncommitted and are not covered by the previous full-suite/build result. No further push/build was started after the owner expanded the Admin scope.
+- Latest stable QA remains 0b2ed346271d52805932968b546303aa64c14cb4 (dpl_6QdczpKTobSjdVHPHWbgtd1t5HEf). Failed b5775031 deployment is not the published candidate. Production untouched.
+- Admin sync now has a same-origin, authenticated owner endpoint that reuses the existing live pipeline and its lease/quota/history. Controls use PT/EN, suppress duplicate requests and distinguish confirmed partial results from unknown failures. Fixed August opening-round controls were replaced. Focused endpoint/browser fixtures: 4 PASS; TypeScript and scoped lint passed. This is local evidence, not a hosted Admin operation.
+- Read-only QA inspection confirmed touchline-qa-live-sync active every minute. Recent executions were partial with fantasy-lifecycle:statistics-pending and player-points:lineup-provenance-invalid. Scheduler activity alone is not proof of healthy updates.
+- Active critical writer: migration_release_review, local Stripe invoice reconciliation only. Reproduced stale-event regression and concurrent duplicate alert. Repair and SQL tests in progress; no real payment/provider/bank changes.
+- Open groups: canonical transfer/arrival/departure detection and review; dynamic coach assignment with historical match preservation; company expenses and contract dashboard; corrections/reversals and mail ingestion; verified obsolete video dependency removal; complete Admin PT/EN and rendered/persistence coverage.
+- Additional source defect queued: root Admin sums historical ledger entries across currencies and labels total using the first currency. Must group currencies; never describe the sample as company cash. Root Admin also lacks direct company-finance navigation and retains English-only copy.
+- Preserved customer queue: season-end contract term/acquisition dates; native iPhone page-pinch crash; existing card/neon/navigation batch. None is removed by this Admin expansion.
+- Evidence and exact open items: coordinator outputs/preqa-20261027/ADMIN_FUNCTIONAL_AUDIT_20261027.json and admin-sync-*.log. Full Admin mission is IN_PROGRESS, not approved or ready for deploy.
+
+- Admin ledger audit refinement: migration 027 enforces TC-only currency and defines 100 stored subunits = 1 TC. The mixed-currency hypothesis above is SUPERSEDED by schema evidence. Repair must validate canonical TC and use explicit game-credit formatting, not create a fiat grouping. No live financial-data discrepancy was established.
+
+
+## 2026-10-27 — Admin billing and company overview local checkpoint
+- Billing reconciliation:19/19 local handler+PGlite tests, TypeScript, scoped lint and independent review passed. Invoice/provider snapshot under fenced lease, effects and receipt atomic, direct lifecycle cancellation, draft tombstone, official tax values. Migration20261027120138 remains LOCAL ONLY. No real payments or remote billing changes.
+- Company overview: SQL aggregates complete registered obligations and confirmed settlements, not a50-row UI sample. Outstanding and overpayments reconciled per obligation; currencies and source exponents stay separate. Exact string/BigInt amounts preserve precision. Read-only owner endpoint; unavailable does not become zero.
+- UI: PT/EN overview, shared controls, direct company Admin navigation; historical TC sample clearly separate from fiat/current-wallet balance. Overview refreshes only after confirmed form save.
+- Evidence: overview SQL/parser7PASS; route2PASS; TC+owner7PASS. Overview browser18 cases (Chromium/WebKit/Firefox,PT/EN,phone/tablet/desktop landscape) and form retry/refresh4cases passed in isolated fixtures. Global types/scoped lint passed after product changes. Independent review found no concrete defect. Source/browser-fixture proof is not authenticated QA or physical-device approval.
+- Manifest: coordinator outputs/preqa-20261027/ADMIN_COMPANY_OVERVIEW_MANIFEST.json. Billing evidence BILLING_ATOMIC_REPAIR_MANIFEST.json. Both new migrations unapplied; Admin remains WIP, no deployment.
+- Still open: expense reversals/corrections, mail ingestion and delivered alerts, automatic arrivals/transfers/departures/coaches, obsolete video retirement, full Admin PT/EN parity and integrated published/device validation. Keep customer contract-date and native pinch-crash queue.
+
+## 2026-10-27 — Admin settlement corrections local checkpoint
+Cancellation of an erroneous bookkeeping settlement preserves the original and audit, restores outstanding balance, supports idempotent retry and source-reference replacement without active duplicates. SQL+mutation route 10 PASS; list API 6 PASS; six isolated browser cases PT/EN across Chromium/WebKit/Firefox with compiled project CSS PASS. Independent review: no concrete findings. Types and scoped lint PASS. Real PostgreSQL concurrent sessions and authenticated QA remain unverified. No bank movement, remote migration or deploy. Manifest: outputs/preqa-20261027/ADMIN_SETTLEMENT_CORRECTION_MANIFEST.json (coordinator workspace). Full Admin remains IN_PROGRESS.
+
+### Admin maintenance admission / consolidated checkpoint
+Owner-session maintenance POSTs now require exact Origin, reject cross-site requests and reject auth errors. Server bearer admission and runtime gates preserved. Independent review found no concrete findings; focused tests 27 PASS. Combined Admin/billing/company/sync tests 74 PASS, zero failures/skips; types and scoped lint passed. No remote writes or deployment. Evidence is in coordinator outputs/preqa-20261027/admin-consolidated-74-tests.log and ADMIN_MAINTENANCE_ADMISSION_MANIFEST.json. Automatic player/coach reconciliation, email ingestion and full authenticated Admin QA remain open; do not declare full Admin ready.
+
+## 2026-10-27 — Consolidation and approved modal smoke checkpoint
+- Full local release runner before the latest modal CSS:6974 tests /6911 PASS /0 FAIL /63 SKIP. Existing opt-in gaps remain; this is not whole-site or physical-device approval. Local-only capacity exceptions used with actual behavioral assertions retained; no CI limits changed.
+- Full ESLint:0 errors /10 pre-existing warnings. TypeScript passed. Local webpack production build after shared modal CSS passed, no deployment.
+- User-authorized omission: unsupported acquisition-date and remaining-month placeholders removed from release dialog; no contract, balance or score change.14 component regressions and WebKit four release scenarios passed; independent review no findings.
+- Approved visual reference: user's Gabriel zoom screenshot2026-10-27 16.29.31. Shared root tokens rgba(0,5,6,.72) and blur(8px) reused by eight modal CSS modules, including prefixed Safari filter.42 focused tests and WebKit release passed. All-modal authenticated visual/device validation remains pending; do not equate shared token checks with full visual approval.
+- New social requirements appended to coordinator USER_REVIEW_QUEUE_20261027.json: friend discovery with unique public identifier; public user profiles/follows; cross-device athlete social counts, canonical athlete data distinct from owner contract and historical earned points. Queued, not implemented or activated.
+- Whole Admin, mailbox ingestion, roster/coach automation, native iPhone pinch issue and published QA validation remain open. No remote writes, push or deploy. Production untouched.
+
+- Shared backdrop independent review:23 tests passed, no concrete findings. Chromium release4 scenarios also passed. Visual comparison: Chromium capture visibly blurs background; WebKit isolated capture retains more legible background despite shared CSS. Cause unconfirmed; native Safari rendering remains a visual gate, not PASS.
+
+
+## 2026-10-27 — Local-first completion checkpoint (in progress)
+- Local opt-in card, rail, navigation, Exchange and social reconciliation browser groups passed with isolated clients; no real-device or remote QA proof implied. Athlete social now rechecks visible online accounts every 30s and on reconnect, aborting obsolete reads and never replaying mutations.
+- General run: 6980 total /6916 pass /1 fail /63 skipped. Only failed assertion was stale Office literal blur expectation; corrected and 7 focused tests passed. This is not a current final-suite approval: subsequent Admin edits need rerun.
+- Finance PT/EN, deleted-invoice tombstone translation, root Admin PT/EN and readable shared Admin tiles implemented. First matrix 72 cases passed; reviewer identified populated-state coverage and narrow health description, now corrected and expanded matrix running.
+- Social-publications PT/EN work is delegated with exclusive file ownership; no other concurrent critical writes. Email ingestion, company alerts, automatic historical-safe roster/coach reconciliation and friend discovery remain LOCAL RED, not deferred to deploy.
+- Canonical progress artifact: coordinator outputs/preqa-20261027/LOCAL_COMPLETION_STATUS_20261027.json. No commit, push, deployment, remote migration or production mutation.
+
+
+## Verificação pós-reinício — 2026-10-27
+
+Suíte consolidada7058:6985PASS/0FAIL/73SKIP; 63do baseline anterior executados separadamente. TypeScript,lint112arquivos,diff-check e build localPASS. Notifications: revelação vertical somenteTab opt-in,12casos+revisãoindependentePASS. AdminSSR19/runtime16PASS. Relatório: /Users/luizlopez/Documents/Codex/2026-09-05/touchline-prompt-formalizer/outputs/preqa-20261027/POST_RESTART_VERIFICATION_20261027.md. Semdeploy. Implementação restante e provaQA/física continuamabertas; não declarar siteconcluído.
+
+
+## Local batch V5 — 2026-10-27
+
+Local release runner7184total/7110PASS/0FAIL/74opt-inSKIP; newdiscovery24flows andfinance24scenarios separately passed. Types/lint157files/diffcheck/localwebpackbuildPASS. Historicalcoach attribution, provider editorialpricepreservation, publicfrienddiscovery andfinance recovery implemented locally; independentreviewsPASS. Report: /Users/luizlopez/Documents/Codex/2026-09-05/touchline-prompt-formalizer/outputs/preqa-20261027/LOCAL_BATCH_V5_VERIFICATION_20261027.md. No deploy/remote migration/Production. Four local implementation blocks still open: mail ingestion/provenance; business alerts; continuous roster; dynamiccoachregistry. Nativepinch andQA/deviceproof unresolved. WIPcheckpoint only, notreleaseapproval.
+
+
+## Local batch V6 — 2026-10-27T22:26:22.431540+00:00
+
+Four V5 local implementation blocks completed: readonly mail evidence/review, internal business alerts, protected roster reconciliation and persisted coach editorial catalogue. Consolidated runner 7294 total / 7216 PASS / 0 FAIL / 78 opt-in SKIP. Skips remain distinct from separately executed focused/browser evidence. TypeScript and local webpack build PASS; lint0errors/1existingwarning; diffcheckPASS. Mail/alerts30 isolated browser flows each; coaches24; roster6complete flows plus24captures. Independent reviews passed. No remote migration, commit, push or deploy. Gates/schedulers remain OFF. Native iPhone pinch, real mailbox authorization/backfill, remote authenticated QA, real billing/delivery and physical devices remain unresolved, not release-approved. Full evidence/next actions: /Users/luizlopez/Documents/Codex/2026-09-05/touchline-prompt-formalizer/outputs/preqa-20261027/LOCAL_BATCH_V6_VERIFICATION_20261027.json. V5 archive retained; V6 snapshot verified by readback.

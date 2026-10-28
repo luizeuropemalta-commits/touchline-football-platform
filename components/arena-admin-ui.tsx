@@ -35,10 +35,10 @@ export function StatTile({
         </span>
         <TrendingUp size={12} className="text-slate-700 transition group-hover:text-[#a3ff12]" />
       </div>
-      <p className="mt-5 text-[8px] font-black text-slate-500">{label}</p>
-      <div className="mt-1 flex items-end justify-between gap-2">
-        <strong className="number-glow font-display text-[28px] leading-none">{value}</strong>
-        <span className="mb-0.5 text-[8px] font-bold text-slate-500 transition group-hover:text-slate-300">
+      <p className="mt-5 text-xs font-black text-slate-400">{label}</p>
+      <div className="mt-2 flex flex-wrap items-end justify-between gap-x-3 gap-y-2">
+        <strong className="number-glow font-display text-[28px] leading-tight break-words">{value}</strong>
+        <span className="mb-0.5 min-w-0 text-xs font-bold text-slate-400 transition group-hover:text-slate-300">
           {delta}
         </span>
       </div>
@@ -48,7 +48,7 @@ export function StatTile({
 
 export function LivePill({ children }: { children: ReactNode }) {
   return (
-    <span className="inline-flex items-center gap-2 rounded-full border border-[#a3ff12]/20 bg-[#a3ff12]/[.06] px-3 py-1.5 text-[8px] font-black text-[#b7ff45]">
+    <span className="inline-flex items-center gap-2 rounded-full border border-[#a3ff12]/20 bg-[#a3ff12]/[.06] px-3 py-1.5 text-xs font-black text-[#b7ff45]">
       <span className="pulse-live size-1.5 rounded-full bg-[#a3ff12]" />
       {children}
     </span>

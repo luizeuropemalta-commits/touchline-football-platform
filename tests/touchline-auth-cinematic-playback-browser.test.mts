@@ -1,3 +1,4 @@
+import { requireBrowserCapacity } from "./helpers/touchline-browser-capacity.mts";
 import { setTimeout as pause } from "node:timers/promises";
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -17,8 +18,12 @@ test("real cinematic background loads local media and advances without forcing p
   const engineFilter = process.env.TOUCHLINE_AUTH_CINEMATIC_ENGINE;
   assert.ok(engineFilter === undefined || ["chromium", "webkit"].includes(engineFilter), "invalid engine filter");
   const allowModeratePressure = process.env.TOUCHLINE_LOCAL_ALLOW_MODERATE_PRESSURE === "1" && !process.env.CI;
-  if (allowModeratePressure) t.diagnostic("capacityException=local-moderate-pressure; memory>=25%; disk>5GiB; critical pressure refused");
+  if (allowModeratePressure && process.env.TOUCHLINE_LOCAL_BROWSER_DISK_RESERVE_MIB === undefined) t.diagnostic("capacityException=local-moderate-pressure; memory>=25%; disk>5GiB; critical pressure refused");
   const capacity = async () => {
+    if (process.platform === "darwin" && !process.env.CI && process.env.TOUCHLINE_LOCAL_BROWSER_DISK_RESERVE_MIB !== undefined) {
+      requireBrowserCapacity(root, { darwinFreePercent: true });
+      return;
+    }
     const deadline = performance.now() + 10_000;
     let announced = false;
     while (true) {

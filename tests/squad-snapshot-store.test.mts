@@ -172,6 +172,7 @@ class FakeQuery implements PromiseLike<QueryResult> {
 
     if (this.operation === "upsert") {
       const inputRows = Array.isArray(this.payload) ? this.payload : [this.payload ?? {}];
+      if (this.table === "football_players") this.admin.playerUpserts.push(...inputRows);
       await this.admin.waitBeforeUpsert(this.table, inputRows);
       const affected: Row[] = [];
       for (const rawInput of inputRows) {
@@ -188,7 +189,9 @@ class FakeQuery implements PromiseLike<QueryResult> {
           }
           continue;
         }
-        const inserted = { id: this.admin.nextId(), ...input };
+        const inserted = { id: this.admin.nextId(),
+          ...(this.table === "football_players" ? { market_value: null, market_value_currency: null } : {}),
+          ...input };
         table.push(inserted);
         affected.push(inserted);
       }
@@ -214,6 +217,7 @@ class FakeQuery implements PromiseLike<QueryResult> {
 class FakeAdminClient {
   readonly clubs: Row[] = [];
   readonly players: Row[] = [];
+  readonly playerUpserts: Row[] = [];
   readonly memberships: Row[] = [];
   failNextStaleCleanup = false;
   private idSequence = 0;
@@ -313,6 +317,42 @@ const clubBFillers = squadPlayers(500, 10);
 
 function adminForStore(admin: FakeAdminClient) {
   return admin as never;
+}
+
+for (const providerValue of [5, null]) {
+  test(`snapshot upsert preserves Admin value/currency and new pending value with provider ${providerValue}`, async () => {
+    const admin = new FakeAdminClient();
+    assert.deepEqual(await persistSquadSnapshot(clubA, [playerP, ...clubAFillers], adminForStore(admin)), { stored: true });
+    const approved = admin.players.find(row => row.provider_player_id === playerP.providerId)!;
+    Object.assign(approved, { market_value: 100, market_value_currency: "GBP" });
+    const originalId = approved.id;
+    const previousClubId = approved.current_club_id;
+
+    assert.deepEqual(await persistSquadSnapshot(clubB, [
+      { ...playerP, name: "Updated identity", position: "Midfielder", marketValue: providerValue },
+      { ...playerQ, marketValue: providerValue }, ...clubBFillers,
+    ], adminForStore(admin)), { stored: true });
+
+    // Read through the real persistence reader, as a new server request would.
+    const reloaded = await readPersistedSquadSnapshot(clubB.teamId, adminForStore(admin));
+    const existing = reloaded?.players.find(row => row.providerId === playerP.providerId);
+    const pending = reloaded?.players.find(row => row.providerId === playerQ.providerId);
+    assert.equal(existing?.marketValue, 100);
+    assert.equal(existing?.marketValueCurrency, "GBP");
+    assert.equal(pending?.marketValue, null);
+    assert.equal(pending?.marketValueCurrency, null);
+    assert.equal(existing?.name, "Updated identity");
+    assert.equal(existing?.position, "Midfielder");
+    assert.equal(approved.id, originalId);
+    assert.notEqual(approved.current_club_id, previousClubId);
+    assert.equal(approved.current_club_id, admin.clubs.find(row => row.provider_team_id === clubB.teamId)?.id);
+    assert.equal(admin.memberships.find(row => row.player_id === originalId && row.club_id === previousClubId)?.status, "inactive");
+    assert.equal(admin.memberships.find(row => row.player_id === originalId && row.club_id === approved.current_club_id)?.status, "active");
+    for (const payload of admin.playerUpserts) {
+      assert.equal(Object.hasOwn(payload, "market_value"), false);
+      assert.equal(Object.hasOwn(payload, "market_value_currency"), false);
+    }
+  });
 }
 
 test("inactivates absent memberships and keeps a transferred player only at the new club", async () => {

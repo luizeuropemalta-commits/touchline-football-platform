@@ -12,10 +12,15 @@ const { createFixtureAuthorityServer } = await import('../lib/football-data/fixt
 const { clearFootballDataCache } = await import('../lib/football-data/cache.ts');
 type Row = Record<string, unknown>;
 type Mode = 'success' | 'extended-deny' | 'extended-lost' | 'player-write' | 'player-mapping' | 'competition-mapping' | 'club-mapping';
+type MarketScenario = { existing: boolean; providerValue: number | null };
 const authorityUrl = 'https://authority.invalid/api/internal/football-data/quota';
-async function scenario(mode: Mode) {
+async function scenario(mode: Mode, market?: MarketScenario) {
   const saved = { ...process.env }, originalFetch = globalThis.fetch;
   const token = 'q'.repeat(40), events: string[] = [], writes: Array<{ table: string; row: Row }> = [], ended: Row[] = [];
+  // Mirror nullable database defaults and PostgREST merge-on-conflict semantics.
+  let persistedPlayer: Row | undefined = market?.existing ? { id: 'football_players-id', provider: 'sportmonks', provider_player_id: '200',
+    name: 'Previous identity', current_club_id: 'previous-club-id',
+    market_value: 100, market_value_currency: 'GBP' } : undefined;
   Object.assign(process.env, { SPORTMONKS_API_TOKEN: 'synthetic', SPORTMONKS_BASE_URL: 'https://provider.invalid/v3/football',
     TOUCHLINE_SPORTMONKS_CENTRAL_ENABLED: 'true', TOUCHLINE_SPORTMONKS_CENTRAL_URL: authorityUrl,
     TOUCHLINE_SPORTMONKS_CENTRAL_WORKER_TOKEN: token, TOUCHLINE_SPORTMONKS_FIXTURE_ACCOUNT_SCOPE: 'foundation' });
@@ -37,7 +42,8 @@ async function scenario(mode: Mode) {
     if (String(input) === authorityUrl) return handler(new Request(String(input), init));
     const url = new URL(String(input)); assert.equal(url.origin, 'https://provider.invalid');
     let data: unknown, entity: string, endpoint: string;
-    const player = { id: 200, name: 'Player', position_id: 27, detailed_position_id: 154, nationality_id: 1161 };
+    const player = { id: 200, name: 'Player', position_id: 27, detailed_position_id: 154, nationality_id: 1161,
+      market_value: market?.providerValue ?? null, market_value_currency: market?.providerValue == null ? null : 'EUR' };
     if (url.pathname.endsWith('/leagues/8')) { data = { id: 8, name: 'Premier League' }; entity = 'League'; endpoint = 'league'; }
     else if (url.pathname.endsWith('/teams/19/extended')) { data = [player]; entity = 'Player'; endpoint = 'squadExtended'; }
     else if (url.pathname.endsWith('/squads/teams/19')) { data = [{ id: 300, player_id: 200, jersey_number: 7, player }]; entity = 'PlayerTeam'; endpoint = 'squad'; }
@@ -52,7 +58,11 @@ async function scenario(mode: Mode) {
       const query = {
         insert(value: Row) { action = 'insert'; row = value; return query; },
         update(value: Row) { action = 'update'; row = value; return query; },
-        upsert(value: Row) { action = 'upsert'; row = value; return query; },
+        upsert(value: Row, options: { onConflict: string }) {
+          action = 'upsert'; row = value;
+          if (table === 'football_players') assert.equal(options.onConflict, 'provider,provider_player_id');
+          return query;
+        },
         select() { return query; }, single() { return query; }, eq() { return query; },
         then(resolve: (value: unknown) => unknown) {
           if (action === 'update') { ended.push(row); events.push('run-end'); }
@@ -63,6 +73,10 @@ async function scenario(mode: Mode) {
           }
           const fail = mode === 'player-write' && table === 'football_players'
             || mode.endsWith('-mapping') && table === 'football_provider_mappings' && mode === `${row.provider_entity_type}-mapping`;
+          if (!fail && table === 'football_players' && action === 'upsert') {
+            persistedPlayer ??= { id: 'football_players-id', market_value: null, market_value_currency: null };
+            Object.assign(persistedPlayer, JSON.parse(JSON.stringify(row)));
+          }
           return Promise.resolve(resolve({ data: { id: `${table}-id`, name: row.name }, error: fail ? { message: 'synthetic-persistence-failure' } : null }));
         },
       }; return query;
@@ -89,6 +103,18 @@ async function scenario(mode: Mode) {
       assert.equal(result.playerCount, ['success', 'competition-mapping', 'club-mapping'].includes(mode) ? 1 : 0);
     }
     if (mode !== 'success') assert.ok(result.errors.length > 0);
+    if (market) {
+      assert.ok(persistedPlayer);
+      assert.equal(persistedPlayer.market_value, market.existing ? 100 : null);
+      assert.equal(persistedPlayer.market_value_currency, market.existing ? 'GBP' : null);
+      assert.equal(persistedPlayer.id, 'football_players-id');
+      assert.equal(persistedPlayer.provider_player_id, '200');
+      assert.equal(persistedPlayer.name, 'Player');
+      assert.equal(persistedPlayer.current_club_id, 'football_clubs-id');
+      const playerWrite = writes.find(w => w.table === 'football_players')!.row;
+      assert.equal(Object.hasOwn(playerWrite, 'market_value'), false);
+      assert.equal(Object.hasOwn(playerWrite, 'market_value_currency'), false);
+    }
   } finally {
     globalThis.fetch = originalFetch; clearFootballDataCache();
     for (const key of Object.keys(process.env)) delete process.env[key]; Object.assign(process.env, saved);
@@ -96,3 +122,6 @@ async function scenario(mode: Mode) {
 }
 for (const mode of ['success', 'extended-deny', 'extended-lost', 'player-write', 'player-mapping', 'competition-mapping', 'club-mapping'] as const)
   test(`real starter foundation central to canonical persistence: ${mode}`, () => scenario(mode));
+for (const existing of [true, false]) for (const providerValue of [5, null])
+  test(`starter upsert preserves ${existing ? 'Admin 100/GBP' : 'pending value'} with provider ${providerValue}`,
+    () => scenario('success', { existing, providerValue }));

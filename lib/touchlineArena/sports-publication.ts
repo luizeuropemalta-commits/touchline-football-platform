@@ -1,3 +1,4 @@
+import { parseCoachCatalogueTransport } from "./coach-catalogue-contract.ts";
 import { parseTouchlineActiveRankingState, type TouchlineActiveRankingState } from "./card-ranking-live.ts";
 import type { TouchLineCoachRankingState, TouchLineCoachRankingRow } from "./coach-ranking-server";
 import type { TouchlineCoachRecord } from "./coach-scoring";
@@ -42,6 +43,8 @@ function coachRanking(value: unknown): TouchLineCoachRankingState | null {
     || input.scoringVersion !== "coach_scoring_v2" || !timestamp(input.generatedAt)
     || !Array.isArray(input.fixtureIds) || !input.fixtureIds.every(text)
     || new Set(input.fixtureIds).size !== input.fixtureIds.length || !Array.isArray(input.rows)) return null;
+  const catalogue = input.catalogue === undefined ? undefined : parseCoachCatalogueTransport(input.catalogue);
+  if (catalogue === null || catalogue?.phase === "unavailable") return null;
   const rows: TouchLineCoachRankingRow[] = [];
   const ids = new Set<string>();
   for (const value of input.rows) {
@@ -58,7 +61,7 @@ function coachRanking(value: unknown): TouchLineCoachRankingState | null {
       losses: home.losses + away.losses, awayWins: away.wins,
       touchlinePoints: home.touchlinePoints + away.touchlinePoints, home, away });
   }
-  return { phase: "ranked", snapshotId: input.snapshotId, seasonId: input.seasonId,
+  return { phase: "ranked", ...(catalogue ? { catalogue } : {}), snapshotId: input.snapshotId, seasonId: input.seasonId,
     scoringVersion: "coach_scoring_v2", fixtureIds: [...input.fixtureIds], generatedAt: input.generatedAt, rows };
 }
 

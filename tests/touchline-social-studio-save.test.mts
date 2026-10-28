@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { applyStudioAction, emptyStudioDocument, type StudioAction, type StudioMedia, type StudioRecord } from "../lib/touchlineArena/social-studio-contract.ts";
 import { studioRequestHandler } from "../lib/touchlineArena/social-studio-request.ts";
@@ -102,13 +101,4 @@ test("receipt lookup failure prevents validation/write and infrastructure errors
     if (code === "PERSISTENCE_UNAVAILABLE") assert.equal(result.status, 503);
     if (code === "IDEMPOTENCY_CONFLICT") assert.equal(result.status, 409);
   }
-});
-
-test("the protected server invokes the tested orchestration while preserving QA and transaction controls", async () => {
-  const server = await readFile(new URL("../lib/touchlineArena/social-studio-server.ts", import.meta.url), "utf8");
-  const save = server.slice(server.indexOf("export async function saveStudioAction"));
-  assert.ok(save.indexOf("assertTouchlineSocialQaRuntime()") < save.indexOf("return orchestrateStudioSave(action, actorId"));
-  assert.match(save, /from\("touchline_social_studio_history"\)[\s\S]*\.eq\("request_id", requestId\)/);
-  assert.match(save, /p_expected_revision: action\.expectedRevision/);
-  assert.match(save, /p_actor_id: actorId, p_request_id: action\.requestId, p_request_checksum: requestChecksum/);
 });

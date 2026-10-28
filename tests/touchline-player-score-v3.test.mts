@@ -65,7 +65,7 @@ function rebuildRoute(environment: Record<string, string | undefined>, owner = f
     createAdminClient: () => { calls.push("admin-client"); return {}; },
     syncTouchLinePlayerSeasonStatistics: async () => { calls.push("scorer"); return { ok: scorerOk }; },
   }) as (request: unknown) => Promise<{ status: number }>;
-  return { calls, run: () => post({ headers: { get: () => null } }) };
+  return { calls, run: () => post({ nextUrl: { origin: "https://route-fixture.invalid" }, headers: { get: (key: string) => key === "origin" ? "https://route-fixture.invalid" : null } }) };
 }
 
 test("explicit bound Production rebuild reaches scoring only after owner authentication", async () => {

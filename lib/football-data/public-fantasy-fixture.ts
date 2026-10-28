@@ -33,6 +33,7 @@ export type TouchlinePublicFantasyFixture = Readonly<{
   homeScore?: number;
   awayScore?: number;
   verifiedAt?: string;
+  coachAssignments?: readonly Readonly<{ coachProviderId: string; clubProviderId: string }>[];
 }>;
 
 export type TouchlinePublicFantasyLineupMember = Readonly<{
@@ -277,9 +278,20 @@ export function toPublicFantasyFixtureFeed(
   const capturedAt = nonEmptyString(feed.fetchedAt);
   if (!fixtureId || !capturedAt || !Number.isFinite(Date.parse(capturedAt))) return null;
 
+  const attribution = feed.fixture.coachAttribution;
+  const coachAssignments = attribution?.status === "complete" && attribution.source === "sportmonks.fixture.coaches"
+    && attribution.fixtureProviderId === fixtureId && attribution.competitionProviderId === feed.fixture.competitionId
+    && attribution.seasonProviderId === feed.fixture.seasonId && Array.isArray(attribution.assignments)
+    && attribution.assignments.length === 2 && new Set(attribution.assignments.map(a => a.coachProviderId)).size === 2
+    && new Set(attribution.assignments.map(a => a.clubProviderId)).size === 2
+    && attribution.assignments.every(a => /^[1-9][0-9]{0,15}$/.test(a.coachProviderId)
+      && (a.location === "home" ? feed.fixture.homeTeam?.providerId : a.location === "away" ? feed.fixture.awayTeam?.providerId : null) === a.clubProviderId)
+    ? attribution.assignments.map(({ coachProviderId, clubProviderId }) => ({ coachProviderId, clubProviderId })) : null;
+
   return {
     fixture: {
       id: fixtureId,
+      ...(coachAssignments ? { coachAssignments } : {}),
       name: nonEmptyString(feed.fixture.name),
       startsAt: nonEmptyString(feed.fixture.startsAt),
       status: nonEmptyString(feed.fixture.status),

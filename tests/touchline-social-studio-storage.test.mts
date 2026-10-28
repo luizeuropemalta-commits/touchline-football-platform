@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import { STUDIO_REVIEW_BUCKET, STUDIO_REVIEW_MAX_BYTES, type StudioMedia } from "../lib/touchlineArena/social-studio-contract.ts";
@@ -106,23 +105,4 @@ test("create-only upload validates bytes before I/O and re-hashes the stored MP4
     createSignedUrl: async () => "", fetchImpl: async () => new Response(changed, { status: 200, headers: metadata }),
   });
   await assert.rejects(changedReader.readExact(media), /CHECKSUM_MISMATCH/);
-});
-
-test("route redirects instead of proxying bytes and renewal invalidates the measured review", async () => {
-  const [route, ui, server, manifest] = await Promise.all([
-    readFile("app/api/admin/social-publications/studio/video/route.ts", "utf8"),
-    readFile("components/touchline/admin/TouchlineSocialStudio.tsx", "utf8"),
-    readFile("lib/touchlineArena/social-studio-server.ts", "utf8"),
-    readFile("lib/touchlineArena/social-studio-media.ts", "utf8"),
-  ]);
-  assert.ok(route.indexOf("await authorizeStudio()") < route.indexOf("createSignedPreview"));
-  assert.match(route, /status: 307/);
-  assert.match(route, /Location: signedUrl/);
-  assert.match(route, /private, no-store/);
-  assert.doesNotMatch(route, /new Uint8Array|Content-Range|subarray\(/);
-  assert.match(ui, /function renewPreview\(\)[\s\S]*interruptPlayback\(\)[\s\S]*setPreviewRevision/);
-  assert.match(ui, /onError=\{\(\) => \{ setVideoError\(true\); interruptPlayback\(\); \}\}/);
-  assert.match(server, /await storage\.readExact\(media\)[\s\S]*touchline_social_studio_review_start/);
-  assert.match(manifest, /readonly StudioMedia\[\]/);
-  assert.doesNotMatch(route + server + ui, /media_publish|graph\.facebook|graph\.instagram/);
 });

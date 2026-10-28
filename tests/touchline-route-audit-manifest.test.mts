@@ -16,14 +16,25 @@ function row(route: string) {
 }
 
 test("inventories every page, API method, proxy, metadata route, and error boundary", () => {
-  assert.equal(rows.filter((item) => item.kind === "PAGE").length, 74);
+  assert.equal(rows.filter((item) => item.kind === "PAGE").length, 79);
   assert.equal(row("/account").data, "VERIFIED_AUTH_ROLE_REDIRECT_ONLY_NO_TEAM_WRITES");
   assert.equal(rows.some((item) => item.route === "/visual-qa/arena-main-field"), false);
-  assert.equal(rows.filter((item) => item.kind === "API").length, 120);
+  assert.equal(rows.filter((item) => item.kind === "API").length, 140);
   assert.equal(rows.filter((item) => item.kind === "BOUNDARY").length, 7);
   assert.equal(rows.filter((item) => item.kind === "METADATA").length, 3);
   assert.equal(rows.filter((item) => item.kind === "PROXY").length, 1);
   assert.equal(new Set(rows.map((item) => item.route)).size, rows.length);
+});
+
+test("public ClubOwner discovery separates opt-in reads from authenticated self-scoped writes", () => {
+  for (const route of ["/clubowners", "/clubowners/[publicId]", "GET /api/touchline/clubowners", "GET /api/touchline/clubowners/[publicId]", "GET /api/account/public-profile", "PUT /api/account/public-profile", "PUT /api/touchline/clubowners/[publicId]/follow"]) {
+    assert.match(row(route).data, /^DEFAULT_OFF_/);
+    assert.equal(row(route).status, "PENDING_SCHEMA_AND_AUTHENTICATED_QA");
+  }
+  assert.equal(row("PUT /api/touchline/clubowners/[publicId]/follow").auth, "AUTHENTICATED_ARENA_ACCESS_SAME_ORIGIN");
+  assert.equal(row("PUT /api/account/public-profile").auth, "AUTHENTICATED_ARENA_ACCESS_SAME_ORIGIN");
+  assert.equal(row("GET /api/touchline/clubowners").auth, "PUBLIC");
+  assert.equal(row("/clubowner").auth, "AUTHENTICATED");
 });
 
 test("fixture readiness is a private expected-account read, never delivery or activation proof", () => {
@@ -159,15 +170,8 @@ test("social studio and live-art routes have explicit owner policies without pub
   const studio = row("/admin/social-publications/studio");
   assert.equal(studio.auth, "ADMIN");
   assert.equal(studio.role, "OWNER_ADMIN");
-  assert.equal(studio.data, "PRIVATE_SOCIAL_STUDIO_PAUSED_REVIEW");
+  assert.equal(studio.data, "PRIVATE_PNG_GALLERY_READ_NO_PUBLICATION");
   assert.equal(studio.status, "PENDING_ADMIN_BROWSER_QA");
-  assert.equal(row("POST /api/admin/social-publications/studio").auth, "ADMIN_SAME_ORIGIN");
-  assert.equal(row("POST /api/admin/social-publications/studio").role, "OWNER_ADMIN");
-  assert.equal(row("POST /api/admin/social-publications/studio/review").auth, "ADMIN_SAME_ORIGIN");
-  assert.equal(row("POST /api/admin/social-publications/studio/review").data, "SUPABASE_SERVER_TIMED_SOCIAL_REVIEW_EVIDENCE");
-  assert.equal(row("GET /api/admin/social-publications/studio/video").auth, "ADMIN");
-  assert.equal(row("GET /api/admin/social-publications/studio/video").role, "OWNER_ADMIN");
-  assert.equal(row("GET /api/admin/social-publications/studio/video").browser, "MEDIA_HTTP_CONTRACT");
   for (const route of ["/visual-qa/social-events-live", "/visual-qa/social-lineup-live", "/visual-qa/social-match-preview-live", "/visual-qa/social-rankings-live", "GET /visual-qa/social-rankings-live/input"]) {
     assert.equal(row(route).auth, "ADMIN");
     assert.equal(row(route).role, "OWNER_ADMIN");

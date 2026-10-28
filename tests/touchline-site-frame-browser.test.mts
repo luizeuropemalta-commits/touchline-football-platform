@@ -1,3 +1,4 @@
+import { requireBrowserCapacity } from "./helpers/touchline-browser-capacity.mts";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { existsSync, mkdtempSync, readFileSync, statfsSync } from "node:fs";
@@ -13,6 +14,14 @@ test("real frame CSS reserves the footer position through empty, loading and rea
 }, async t => {
   const root = fileURLToPath(new URL("../", import.meta.url));
   const capacity = async () => {
+    // Explicit local operator override; shared helper still enforces disk reserve.
+    if (process.platform === "darwin" && !process.env.CI
+      && process.env.TOUCHLINE_LOCAL_ALLOW_500MIB_RESERVE === "1"
+      && process.env.TOUCHLINE_LOCAL_IGNORE_MEMORY_GATE === "1") {
+      requireBrowserCapacity(root, { allowLowDarwinDisk: true });
+      return;
+    }
+
     const deadline = performance.now() + 10_000;
     let announced = false;
     while (true) {

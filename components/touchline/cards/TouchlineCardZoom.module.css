@@ -72,9 +72,9 @@
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
   padding: calc(20px + env(safe-area-inset-top, 0px)) calc(20px + env(safe-area-inset-right, 0px)) calc(20px + env(safe-area-inset-bottom, 0px)) calc(20px + env(safe-area-inset-left, 0px));
-  background: rgba(0, 5, 6, .72);
-  backdrop-filter: blur(8px);
-}
+  background: var(--touchline-modal-backdrop, rgba(0, 5, 6, .72));
+
+ -webkit-backdrop-filter: var(--touchline-modal-blur, blur(8px)); backdrop-filter: var(--touchline-modal-blur, blur(8px)); }
 
 .panel {
   position: relative;

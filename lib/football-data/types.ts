@@ -1,4 +1,5 @@
 import type { SportmonksQuotaObserver } from "./sportmonks-quota-observation.ts";
+import type { FixtureCoachAttribution } from "./fixture-coach-attribution.ts";
 
 export type FootballDataProviderName = "sportmonks";
 
@@ -210,6 +211,7 @@ export type TouchlineFixture = {
   periods?: TouchlineFixturePeriod[];
   eventsCount?: number;
   providerUpdatedAt?: string;
+  coachAttribution?: FixtureCoachAttribution;
   source: FootballDataSourceRef;
 };
 

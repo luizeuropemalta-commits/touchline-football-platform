@@ -1,7 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { touchlineFixtureState } from "@/lib/touchlineArena/fixture-state";
 
 import {
   emptyTouchlineCoachRecord,
+  touchlineCoachContractCoversFixture,
   TOUCHLINE_COACH_SCORING_VERSION,
   type TouchlineCoachContractSnapshot,
   type TouchlineCoachFixtureContext,
@@ -28,12 +30,6 @@ function isOutcome(value: unknown): value is TouchlineCoachFixtureOutcome {
 
 function isSettlementStatus(value: unknown): value is "provisional" | "final" {
   return value === "provisional" || value === "final";
-}
-
-const TERMINAL_FIXTURE_STATUS = /(?:^ft(?:_|$)|full[ -]?time|finished|after extra time|aet|after penalties|cancelled|canceled|abandoned|awarded|walkover)/i;
-
-function isTerminalFixtureStatus(value: unknown) {
-  return TERMINAL_FIXTURE_STATUS.test(text(value) ?? "");
 }
 
 function recordFor(rows: DbRow[], context: TouchlineCoachFixtureContext) {
@@ -97,25 +93,24 @@ export async function readTouchlineCoachContracts(
     const home = recordFor(contractPoints, "home");
     const away = recordFor(contractPoints, "away");
     const contractStart = text(contract.started_at);
-    const fixtureFloor = contractStart && Date.parse(contractStart) > Date.parse(nowFloor) ? contractStart : nowFloor;
-    const { data: currentFixtures, error: currentError } = contract.status === "active"
-      ? await admin
-        .from("football_fixtures")
-        .select("id,provider_fixture_id,starts_at,status,home_club_id,away_club_id")
-        .or(`home_club_id.eq.${clubId},away_club_id.eq.${clubId}`)
-        .gte("starts_at", fixtureFloor)
-        .order("starts_at", { ascending: true })
-        .limit(6)
-      : { data: [], error: null };
+    // Purchased club remains an audit field. Current context must belong to
+    // this coach's verified fixture receipt, even after a real-club transfer.
+    // The SQL verifier checks at most six candidates in one server roundtrip.
+    const { data: currentData, error: currentError } = contract.status === "active"
+      ? await admin.rpc("touchline_read_verified_coach_current_fixture", { p_contract_id: contractId })
+      : { data: null, error: null };
     if (currentError) throw new Error(`TL_COACH_CURRENT_FIXTURE_READ_FAILED:${currentError.code ?? "unknown"}`);
-    const current = ((currentFixtures ?? []) as DbRow[]).find((fixture) => !isTerminalFixtureStatus(fixture.status));
-    const currentFixtureId = text(current?.id);
-    const currentPoint = currentFixtureId
-      ? contractPoints.find((row) => text(row.fixture_id) === currentFixtureId)
-      : null;
-    const currentContext = current
-      ? (text(current.home_club_id) === clubId ? "home" : "away")
-      : null;
+    const candidate = currentData && typeof currentData === "object" && !Array.isArray(currentData) ? currentData as DbRow : null;
+    const current = candidate && text(candidate.contractId) === contractId
+      && text(candidate.coachProviderId) === text(contract.coach_provider_id)
+      && text(candidate.provider_fixture_id) && isContext(candidate.context)
+      && touchlineFixtureState({ status: text(candidate.status) ?? undefined, startsAt: text(candidate.starts_at) ?? undefined }) === "live"
+      && Number.isSafeInteger(candidate.sourceRevisionId) && Number(candidate.sourceRevisionId) > 0
+      && /^[a-f0-9]{32}$/.test(text(candidate.checksum) ?? "")
+      && Date.parse(text(candidate.starts_at) ?? "") >= Date.parse(nowFloor)
+      && touchlineCoachContractCoversFixture({ startedAt: contractStart ?? "", endedAt: text(contract.ended_at) }, text(candidate.starts_at) ?? "")
+      ? candidate : null;
+    const currentContext = current && isContext(current.context) ? current.context : null;
     const fixtureHistory = contractPoints.flatMap((row) => {
       const fixture = fixturesById.get(text(row.fixture_id));
       const context = row.fixture_context;
@@ -157,7 +152,7 @@ export async function readTouchlineCoachContracts(
         context: currentContext,
         status: text(current.status),
         startsAt: text(current.starts_at),
-        provisionalPoints: integer(currentPoint?.touchline_points),
+        provisionalPoints: integer(current.provisionalPoints),
       } : null,
       fixtureHistory,
     } satisfies TouchlineCoachContractSnapshot;

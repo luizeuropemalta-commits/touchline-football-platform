@@ -1,3 +1,4 @@
+import { legacyCoachCatalogue } from "../lib/touchlineArena/coach-catalogue-contract.ts";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
@@ -20,6 +21,8 @@ async function render(result: unknown, params: Record<string, string> = {}, clie
   }).outputText, { exports: siteLocalePolicy, process: { env: {} } });
   const modules: Record<string, unknown> = {
     "@/lib/touchlineArena/site-locales-release": siteLocalePolicy,
+    // Explicit gate-OFF fixture; identity and classification use the real adapter.
+    "@/lib/touchlineArena/coach-catalogue-server": { loadCoachCatalogue: async () => legacyCoachCatalogue() },
     "@supabase/supabase-js": { AuthSessionMissingError },
     "react/jsx-runtime": jsxRuntime,
     "next/headers": { headers: async () => ({ get: () => "Europe/Malta" }) },

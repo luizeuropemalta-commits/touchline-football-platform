@@ -12,7 +12,8 @@ const root = fileURLToPath(new URL("../", import.meta.url));
 test("coach frames keep one silhouette and purchase text below the art in every tier and size", {
   skip: process.env.TOUCHLINE_RUN_COACH_BORDER_BROWSER_TESTS !== "1", timeout: 120_000,
 }, async t => {
-  requireBrowserCapacity(root);
+  const capacity = () => requireBrowserCapacity(root, { allowLowDarwinDisk: process.env.TOUCHLINE_LOCAL_ALLOW_500MIB_RESERVE === "1" && !process.env.CI });
+  capacity();
   const bundle = bundleIsolatedBrowserFixture({
     entryPath: "components/touchline/cards/TouchlineCoachCard.tsx",
     requiredSources: ["components/touchline/cards/TouchlineCoachCard.tsx", "components/touchline/cards/TouchlineCoachCard.module.css"],
@@ -25,7 +26,7 @@ test("coach frames keep one silhouette and purchase text below the art in every 
   t.diagnostic(`Screenshots: ${screenshots}`);
   const tiers = ["ruby-red", "sapphire-blue", "emerald-green", "amethyst-purple", "clear-diamond", "radiant-gold", "diamond-gold"];
   for (const engine of [chromium, webkit]) {
-    requireBrowserCapacity(root);
+    capacity();
     const browser = await engine.launch({ headless: true });
     t.signal.addEventListener("abort", () => { void browser.close(); }, { once: true });
     try {
@@ -67,11 +68,13 @@ test("coach frames keep one silhouette and purchase text below the art in every 
           const paintedHeight = Math.min(f.height, f.width * frame.naturalHeight / frame.naturalWidth);
           const before = getComputedStyle(el, "::before");
           return { width:b.width, height:b.height, bottom:b.bottom, priceTop:p.top, priceBottom:p.bottom, priceWidth:p.width, priceScrollWidth:price.scrollWidth, artBottom:f.top+(f.height+paintedHeight)/2,
-            fit:getComputedStyle(frame).objectFit, backgroundSize:before.backgroundSize, border:before.borderWidth, shadow:before.boxShadow, opacity:before.opacity,
+            fit:getComputedStyle(frame).objectFit, pseudoContent:before.content, pseudoImage:before.backgroundImage, border:before.borderWidth, shadow:before.boxShadow,
             outsideInner: !price.closest('[data-coach-card-inner]'), ratio:frame.naturalWidth/frame.naturalHeight };
         });
-        assert.equal(box.fit, "contain"); assert.equal(box.backgroundSize, "contain");
-        assert.equal(box.border, "0px"); assert.equal(box.shadow, "none"); assert.equal(box.opacity, "1");
+        assert.equal(box.fit, "contain");
+        assert.equal(box.pseudoContent, "none", "removed duplicate frame must not return");
+        assert.equal(box.pseudoImage, "none");
+        assert.equal(box.border, "0px"); assert.equal(box.shadow, "none");
         assert.ok(Math.abs(box.ratio - .75) < .01, `${tier}: normalized artwork`);
         assert.ok(box.outsideInner && box.priceTop >= box.artBottom - .1, `${tier}/${width}: price cannot cover bottom gem`);
         assert.ok(box.priceBottom <= box.bottom + .1 && box.priceScrollWidth <= box.priceWidth + 1, `${tier}/${width}: caption stays inside shell`);

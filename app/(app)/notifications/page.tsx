@@ -371,7 +371,7 @@ function NotificationsContent({ draftLocalesEnabled = false }: { draftLocalesEna
 
   return (
     <div dir={locale === "ar-SA" ? "rtl" : "ltr"} className="mx-auto min-w-0 w-full max-w-[1500px]">
-      <TouchlineNavigationRail className={styles.contentRail}>
+      <TouchlineNavigationRail className={styles.contentRail} revealVerticalFocus>
       <div className={styles.canvas}>
       <header className="mb-6">
         <div className="flex items-center gap-2">

@@ -74,9 +74,9 @@ async function scenario(mode: Mode) {
   };
   const admin = {
     async rpc(name: string) {
-      assert.equal(name, 'touchline_reconcile_coach_fixture_points', 'content database cannot handle quota');
+      assert.equal(name, 'touchline_reconcile_verified_coach_fixture_points', 'content database cannot handle quota');
       assert.equal(fixtureWrites.length, 1); assert.notEqual(mode, 'write-failure');
-      events.push('coach'); return { data: { reconciled: 0 }, error: null };
+      events.push('coach'); return { data: { ok: true, reconciled: 0 }, error: null };
     },
     from(table: string) {
       let action = 'read', payload: unknown, single = false;

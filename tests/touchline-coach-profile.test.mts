@@ -16,8 +16,9 @@ const source = readFileSync(
 const publication = readFileSync(new URL("../components/touchline/TouchlineCoachProfilePublication.tsx", import.meta.url), "utf8");
 
 test("Coach Profile resolves the canonical live-coach registry and shared competition ranking", () => {
-  assert.match(source, /TOUCHLINE_LIVE_COACHES/);
-  assert.match(source, /touchlineCoachClassificationForProviderId/);
+  assert.match(source, /loadCoachCatalogue/);
+  assert.match(source, /catalogueCoachForId\(catalogue, coachParam\)/);
+  assert.match(source, /const classification = entry\.classification/);
   assert.match(source, /loadTouchLineCoachRanking/);
   assert.match(source, /<TouchlineCoachProfilePublication coachProviderId=\{entry\.coach\.providerId\} seed=\{competition\} seasonLabel=\{TOUCHLINE_ENGLAND_SEASON\}>/);
   assert.match(publication, /coachCompetitionFromRanking\(ranking, coachProviderId, seasonLabel\)/);

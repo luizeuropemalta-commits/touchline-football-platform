@@ -26,6 +26,7 @@ import {
 } from "@/lib/football-data/http";
 import { parseSportmonksStatisticValue } from "@/lib/football-data/sportmonks-statistics";
 import { mapSportmonksFixtureBallCoordinates } from "@/lib/football-data/sportmonks-ball-coordinates";
+import { mapSportmonksFixtureCoaches } from "@/lib/football-data/fixture-coach-attribution";
 import { sportmonksDetailedPositionName } from "@/lib/football-data/sportmonks-position-taxonomy";
 import {
   SPORTMONKS_INPLAY_LIVESCORES_PATH,
@@ -107,6 +108,23 @@ type SportmonksPaginationOptions = {
 const SPORTMONKS_MAX_PAGE_SIZE = 50;
 const SPORTMONKS_ABSOLUTE_MAX_PAGES = 10;
 const SPORTMONKS_ABSOLUTE_MAX_ITEMS = 500;
+
+/** These two squad endpoints explicitly document Pagination: NO. A future
+ * continuation protocol is rejected rather than guessed or silently truncated.
+ * Extended squads enrich the base roster; former/youth entries never add members. */
+function completeSquadEnvelope(envelope: SportmonksEnvelope<SportmonksEntity[]> | undefined, maximum: number): boolean {
+  if (!envelope || !Array.isArray(envelope.data) || envelope.data.length > maximum
+    || envelope.data.some(item => !item || typeof item !== "object" || Array.isArray(item))) return false;
+  const record = envelope as Record<string, unknown>;
+  if (record.next_cursor != null || record.next_page != null) return false;
+  const page = envelope.pagination;
+  if (page !== undefined && (!page || typeof page !== "object" || Array.isArray(page)
+    || page.has_more !== false || page.next_page != null
+    || (page as Record<string, unknown>).next_cursor != null
+    || (page.current_page !== undefined && page.current_page !== 1)
+    || (page.count !== undefined && page.count !== envelope.data.length))) return false;
+  return true;
+}
 
 type FixtureEndpoint = SportmonksPrequeryEndpoint;
 export type SportmonksFixtureRequestContext = Readonly<{
@@ -295,9 +313,10 @@ export class SportmonksFootballProvider implements FootballDataProvider {
       : /^\/stages\/seasons\/[1-9]\d*$/.test(path) ? "stages"
         : /^\/topscorers\/seasons\/[1-9]\d*$/.test(path) ? "topscorers" : null;
 
+    const rosterCache = /^\/squads\/teams\/[1-9]\d*(?:\/extended)?$/.test(path);
     const cachedResponse = await withFootballDataCache(
       bucket,
-      ["sportmonks", path, JSON.stringify(params), ...(cachePolicy ? [cachePolicy] : []),
+      ["sportmonks", path, JSON.stringify(params), ...(rosterCache ? ["complete-roster-hourly-v1"] : []), ...(cachePolicy ? [cachePolicy] : []),
         ...(endpoint ? ["sportmonks-prequery-enforcement-v2", this.fixtureGuard!.accountScope,
           ...(this.fixtureGuard!.cacheNamespace ? [this.fixtureGuard!.cacheNamespace] : [])] : [])],
       async (): Promise<FootballDataHttpResponse<SportmonksEnvelope<T>> & { quota?: SportmonksRequestQuota }> => {
@@ -357,7 +376,7 @@ export class SportmonksFootballProvider implements FootballDataProvider {
           requestId, observations: Object.freeze(observations.slice()), complete,
         }) };
       },
-      undefined,
+      rosterCache ? 3_600 : undefined,
       footballDataHttpResponseCanBeCached,
     );
 
@@ -739,6 +758,19 @@ export class SportmonksFootballProvider implements FootballDataProvider {
   }
 
   async getSquad(teamId: string): Promise<FootballDataResult<TouchlineSquadMember[]>> {
+    if (!strictSportmonksId(teamId)) return resultError(this.name, "invalid_request", "Invalid squad team identity.");
+    const validBase = (envelope: SportmonksEnvelope<SportmonksEntity[]> | undefined) => {
+      if (!completeSquadEnvelope(envelope, 100)) return false;
+      const ids = new Set<string>();
+      return envelope!.data!.every(item => {
+        const player = this.relationEntity(item, "player") ?? item.player as SportmonksEntity | undefined;
+        const id = strictSportmonksId(player?.id);
+        if (!id || ids.has(id) || (item.player_id != null && strictSportmonksId(item.player_id) !== id)
+          || (item.team_id != null && strictSportmonksId(item.team_id) !== teamId)
+          || !(asString(player?.display_name) || asString(player?.name))) return false;
+        ids.add(id); return true;
+      });
+    };
     const basic = () => this.request<SportmonksEntity[]>(`/squads/teams/${teamId}`, {
         include: "player;player.position;player.detailedPosition;position;detailedPosition",
       }, "daily", "interactive");
@@ -750,12 +782,13 @@ export class SportmonksFootballProvider implements FootballDataProvider {
     const [request, extendedRequest] = this.fixtureGuard !== undefined
       ? await (async () => {
         const first = await basic();
-        return [first, first.configured && first.value.ok ? await extended() : first] as const;
+        return [first, first.configured && first.value.ok && validBase(first.value.data) ? await extended() : first] as const;
       })()
       : await Promise.all([basic(), extended()]);
     if (!request.configured) return this.notConfigured<TouchlineSquadMember[]>();
     const { value, cached } = request;
     if (!value.ok) return this.providerFailure<TouchlineSquadMember[]>(value, "Sportmonks squad failed.");
+    if (!validBase(value.data)) return resultError(this.name, "provider_error", "Squad base completeness could not be confirmed.");
     // Guarded reconciliation must not publish a partial squad after a denied
     // enrichment or an unconfirmed durable completion (including the last club).
     if (this.fixtureGuard !== undefined) {
@@ -765,6 +798,9 @@ export class SportmonksFootballProvider implements FootballDataProvider {
 
     const extendedPlayersById = new Map<string, SportmonksEntity>();
     if (extendedRequest.configured && extendedRequest.value.ok) {
+      if (!completeSquadEnvelope(extendedRequest.value.data, 500)) {
+        return resultError(this.name, "provider_error", "Squad enrichment completeness could not be confirmed.");
+      }
       for (const item of extendedRequest.value.data?.data ?? []) {
         // The documented extended endpoint may return either a player object
         // or a squad-member object containing `player_id`/`player`. Index the
@@ -775,7 +811,11 @@ export class SportmonksFootballProvider implements FootballDataProvider {
           ? this.mergePlayerRaw(nestedPlayer, item) ?? nestedPlayer
           : item;
         const playerId = asString(nestedPlayer?.id) ?? asString(item.player_id) ?? asString(item.id);
-        if (playerId) extendedPlayersById.set(playerId, extendedPlayer);
+        if (!strictSportmonksId(playerId) || extendedPlayersById.has(playerId!)
+          || (nestedPlayer && item.player_id != null && strictSportmonksId(item.player_id) !== playerId)) {
+          return resultError(this.name, "provider_error", "Squad enrichment identities could not be confirmed.");
+        }
+        extendedPlayersById.set(playerId!, extendedPlayer);
       }
     }
 
@@ -811,6 +851,11 @@ export class SportmonksFootballProvider implements FootballDataProvider {
         raw: { ...item, player: mergedPlayerRaw },
       }];
     });
+    const complete = members.length === value.data!.data!.length
+      && members.every(member => extendedPlayersById.has(member.player.providerId));
+    if (this.fixtureGuard !== undefined && !complete) {
+      return resultError(this.name, "provider_error", "Squad enrichment does not cover every base member.");
+    }
     const fetchedAt = earliestFetchedAt(
       value.fetchedAt,
       extendedRequest.configured && extendedRequest.value.ok
@@ -820,7 +865,8 @@ export class SportmonksFootballProvider implements FootballDataProvider {
     return resultOk(
       this.name,
       members,
-      { squad: value.data, extendedSquad: extendedRequest.configured ? extendedRequest.value.data : null },
+      { squad: value.data, extendedSquad: extendedRequest.configured ? extendedRequest.value.data : null,
+        rosterCoverage: { protocol: "documented-unpaginated-v1", complete, baseCount: members.length, extendedCount: extendedPlayersById.size } },
       Boolean(cached && extendedRequest.configured && extendedRequest.cached),
       fetchedAt,
     );
@@ -909,7 +955,7 @@ export class SportmonksFootballProvider implements FootballDataProvider {
       return resultError(this.name, "invalid_request", "Invalid fixture diagnostic budget.");
     }
     const pending = this.request<SportmonksEntity>(`/fixtures/${encodeURIComponent(fixtureId)}`, {
-      include: "participants;scores;league;season;round;state;periods;lineups.player;lineups.position;lineups.details.type;formations;sidelined.sideline;sidelined.player;sidelined.type;events.type;events.player;events.relatedPlayer",
+      include: "participants;coaches;scores;league;season;round;state;periods;lineups.player;lineups.position;lineups.details.type;formations;sidelined.sideline;sidelined.player;sidelined.type;events.type;events.player;events.relatedPlayer",
     }, "live", "live", options?.totalBudgetMs, options ? 1 : 3, options ? "fixture-diagnostic-v1" : undefined);
     // Diagnostics own a separate cache/flight policy: their short single
     // attempt must never reduce a normal caller's retry budget. TTL is unchanged.
@@ -1203,6 +1249,7 @@ export class SportmonksFootballProvider implements FootballDataProvider {
       periods: this.mapPeriods(raw),
       eventsCount: events.length || undefined,
       providerUpdatedAt: providerUpdatedAt && Number.isFinite(Date.parse(providerUpdatedAt)) ? providerUpdatedAt : undefined,
+      coachAttribution: mapSportmonksFixtureCoaches(raw),
       source: { provider: this.name, providerId: id, raw },
     };
   }

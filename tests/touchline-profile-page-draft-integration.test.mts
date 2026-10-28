@@ -9,6 +9,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { AuthSessionMissingError } from "@supabase/supabase-js";
 import test from "node:test";
 import ts from "typescript";
+import { legacyCoachCatalogue } from "../lib/touchlineArena/coach-catalogue-contract.ts";
 import { touchlinePlayerAppearanceLabel, touchlinePlayerDataSourceLabel, TOUCHLINE_PLAYER_APPEARANCE_CATALOGUES } from "../lib/touchlineArena/player-appearance-presentation.ts";
 import { localizedStatLabel } from "../lib/touchlineArena/player-statistic-labels.ts";
 import { formatTouchlineProfileTimestamp } from "../lib/touchlineArena/profile-timestamp.ts";
@@ -37,6 +38,7 @@ function pageHarness(overrides: Record<string, unknown>) {
   const cache = new Map<string, Record<string, unknown>>();
   function load(name: string, from = root): unknown {
     if (Object.hasOwn(overrides, name)) return overrides[name];
+    if (name === "@/lib/touchlineArena/coach-catalogue-server") return { loadCoachCatalogue: async () => legacyCoachCatalogue() };
     if (name === "server-only") throw Error("Unmocked server boundary");
     if (name === "next/navigation") return { notFound: () => { throw Error("NOT_FOUND"); } };
     if (name === "next/link") return { __esModule: true, default: (props: { children?: React.ReactNode; href: string }) => React.createElement("a", { href: props.href }, props.children) };

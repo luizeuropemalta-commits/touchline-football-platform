@@ -11,7 +11,7 @@ runInNewContext(ts.transpileModule(source, { compilerOptions: { module: ts.Modul
   exports: moduleExports,
   require(name: string) {
     if (name === "@/lib/supabase/admin") return { createAdminClient: () => null };
-    if (name === "@/lib/touchlineArena/live-coaches") return { touchlineCompetitionCoachAssignments: () => [] };
+    if (name === "@/lib/touchlineArena/coach-catalogue-server") return { readCompetitionCoachAssignments: async () => assert.fail("Read-only fixture queries must not reconcile coach assignments") };
     throw new Error(`Unexpected dependency: ${name}`);
   },
 });

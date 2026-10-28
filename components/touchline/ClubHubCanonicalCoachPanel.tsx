@@ -4,10 +4,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createTouchlineArenaCoachSlot } from "@/lib/touchlineArena/coach-card";
 import { readTouchlineCoachContracts } from "@/lib/touchlineArena/coach-contracts-server";
 import { loadTouchLineCoachRanking } from "@/lib/touchlineArena/coach-ranking-server";
-import {
-  touchlineCoachClassificationForProviderId,
-  touchlineLiveCoachForTeam,
-} from "@/lib/touchlineArena/live-coaches";
+import { loadCoachCatalogue } from "@/lib/touchlineArena/coach-catalogue-server";
+import { catalogueCoachForTeam } from "@/lib/touchlineArena/coach-catalogue-contract";
 
 import styles from "./ClubHubCanonicalCoachPanel.module.css";
 
@@ -33,10 +31,10 @@ export default async function ClubHubCanonicalCoachPanel({
   presentation = "showcase",
 }: ClubHubCanonicalCoachPanelProps) {
   const copy = getTouchlineClubHubCoachPanelCopy(locale, draftLocalesEnabled);
-  const canonicalCoach = touchlineLiveCoachForTeam(teamId);
+  const canonicalCoach = catalogueCoachForTeam(await loadCoachCatalogue(), teamId);
   if (!canonicalCoach) return null;
 
-  const classification = touchlineCoachClassificationForProviderId(canonicalCoach.coach.providerId);
+  const classification = canonicalCoach.classification;
   if (!classification) return null;
 
   const admin = userId ? createAdminClient() : null;

@@ -41,12 +41,14 @@ export function companyReplayMatches(stored:Record<string,unknown>,proposed:Reco
  return Object.entries(proposed).every(([key,value])=>stored[key]===value);
 }
 
-export async function readCompanyJson(request:Request){
+export async function readCompanyJson(request:Request,timeoutMs=10000){
  if(!request.headers.get("content-type")?.toLowerCase().startsWith("application/json"))return null;
  const size=Number(request.headers.get("content-length"));if(Number.isFinite(size)&&size>12000)return null;
  if(!request.body)return null;const reader=request.body.getReader(),chunks:Uint8Array[]=[];let length=0;
- try{while(true){const {done,value}=await reader.read();if(done)break;length+=value.byteLength;if(length>12000){await reader.cancel();return null;}chunks.push(value);}}
- catch{return null;}finally{reader.releaseLock();}
+ let timer:ReturnType<typeof setTimeout>|undefined;
+ const deadline=new Promise<never>((_,reject)=>{timer=setTimeout(()=>{reject(Error("READ_TIMEOUT"));void reader.cancel().catch(()=>undefined);},timeoutMs);});
+ try{while(true){const {done,value}=await Promise.race([reader.read(),deadline]);if(done)break;length+=value.byteLength;if(length>12000){void reader.cancel().catch(()=>undefined);return null;}chunks.push(value);}}
+ catch{return null;}finally{clearTimeout(timer);reader.releaseLock();}
  const bytes=new Uint8Array(length);let offset=0;for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.byteLength;}
  try{return JSON.parse(new TextDecoder().decode(bytes)) as unknown;}catch{return null;}
 }

@@ -1,7 +1,18 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { requireBrowserCapacity, type BrowserCapacityIO } from "./helpers/touchline-browser-capacity.mts";
+import { browserDiskReserve, requireBrowserCapacity, type BrowserCapacityIO } from "./helpers/touchline-browser-capacity.mts";
 const GiB=1024n**3n;
+test("operator reserve accepts 250 MiB locally but never lowers Linux or CI defaults", () => {
+  const opt = { TOUCHLINE_LOCAL_BROWSER_DISK_RESERVE_MIB: "250" };
+  assert.equal(browserDiskReserve("darwin", false, opt), 250n * 1024n**2n);
+  assert.equal(browserDiskReserve("darwin", true, { ...opt, CI: "true" }), 5n * GiB);
+  assert.equal(browserDiskReserve("linux", true, opt), 5n * GiB);
+  assert.equal(browserDiskReserve("darwin", false, {}), 5n * GiB);
+  assert.equal(browserDiskReserve("darwin", true, {}), 500n * 1024n**2n);
+  for (const value of ["0", "249", "5121", "-1", "250.5", "", "250junk"]) {
+    assert.throws(() => browserDiskReserve("darwin", true, { TOUCHLINE_LOCAL_BROWSER_DISK_RESERVE_MIB: value }), /reserve/);
+  }
+});
 test("explicit low-disk reserve is Darwin-only, strict and preserves memory checks",()=>{
   const h=fixture("darwin");
   h.io.freeDiskBytes=()=>500n*1024n**2n;

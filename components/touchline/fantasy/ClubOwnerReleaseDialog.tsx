@@ -54,10 +54,7 @@ export function ClubOwnerReleaseDialog({ state, playerId, playerName, card, loca
     <div className={styles.contractRecord}>
       <FileSignature size={22} aria-hidden="true" />
       <h3>{playerName}</h3>
-      <dl>
-        <dt>{pt ? "Contratado em" : "Signed on"}</dt><dd>{pt ? "Data não registrada" : "Date not recorded"}</dd>
-        <dt>{pt ? "Meses restantes" : "Months remaining"}</dt><dd>{pt ? "Prazo não informado" : "Term not recorded"}</dd>
-      </dl>
+
     </div>
     </aside> : null}
     <div className={styles.details}>

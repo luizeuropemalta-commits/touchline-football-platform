@@ -126,14 +126,14 @@ test("production exposes only foundation and official fixture schedule mutations
 });
 
 test("QA country reconciliation is an explicit owner POST control", () => {
-  assert.match(controlSource, /scope:\s*"qa_country_sync"/);
+  assert.match(controlSource, /countries:\s*"qa_country_sync"/);
   assert.match(controlSource, /runId:\s*crypto\.randomUUID\(\)/);
   assert.match(controlSource, /method:\s*"POST"/);
-  assert.match(controlSource, /Reconcile QA country data/);
+  assert.match(controlSource, /Reconcile QA nationalities/);
 });
 
 test("QA twenty-club roster reconciliation is an explicit owner POST control", () => {
-  assert.match(controlSource, /scope:\s*"qa_twenty_club_roster_sync"/);
+  assert.match(controlSource, /rosters:\s*"qa_twenty_club_roster_sync"/);
   assert.match(controlSource, /runId:\s*crypto\.randomUUID\(\)/);
   assert.match(controlSource, /Reconcile 20 QA squads/);
 });

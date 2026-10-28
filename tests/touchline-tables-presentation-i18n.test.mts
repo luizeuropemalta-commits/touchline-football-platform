@@ -1,3 +1,4 @@
+import * as coachCatalogue from "../lib/touchlineArena/coach-catalogue-contract.ts";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
@@ -156,6 +157,7 @@ async function harness(locale: Locale = "en-GB", draftLocalesEnabled = false, se
     "@/lib/touchlineArena/catalogue-locale": { resolveTouchlineCatalogueLocale },
     "@/lib/touchlineArena/rankings-i18n": { getTouchLineRankingsCopy: () => copy },
     "@/lib/touchlineArena/demo-data": clubs, "@/lib/touchlineArena/live-coaches": coaches,
+    "@/lib/touchlineArena/coach-catalogue-contract": coachCatalogue,
     "@/lib/touchlineArena/coach-card": slots, "@/lib/touchlineArena/card-rules": tiers,
     "@/lib/touchlineArena/coach-ranking-gems": { touchlineCoachRankingGem: () => null },
     "@/lib/touchlineArena/coach-ranking-club": { touchlineCoachRankingClubLogo: () => null },
@@ -170,7 +172,9 @@ async function harness(locale: Locale = "en-GB", draftLocalesEnabled = false, se
   };
   const client = compile(clientSource, shared);
   const empty = { phase: "unavailable", rows: [], snapshotId: null, seasonId: null, scoringVersion: null, fixtureIds: [] };
-  const rows = Array.from({ length: 9 }, (_, index) => ({ coachProviderId: coaches.TOUCHLINE_LIVE_COACHES[index].coach.providerId, rank: index + 1, coachName: `Official $&<Coach${index}>`, clubName: "Official $&<Club>", wins: 0, draws: 2, losses: 3, touchlinePoints: 0, home: { wins: 0, draws: 1, losses: 2, touchlinePoints: 0 }, away: { wins: 0, draws: 1, losses: 1, touchlinePoints: 0 } }));
+  // A ranking row must name the canonical club for this historical coach/team pair.
+  // Keep adversarial coach names to preserve the original escaping assertions.
+  const rows = Array.from({ length: 9 }, (_, index) => ({ coachProviderId: coaches.TOUCHLINE_LIVE_COACHES[index].coach.providerId, rank: index + 1, coachName: `Official $&<Coach${index}>`, clubName: clubs.TOUCHLINE_ENGLAND_CLUBS.find(club => club.teamId === coaches.TOUCHLINE_LIVE_COACHES[index].coach.teamId)!.name, wins: 0, draws: 2, losses: 3, touchlinePoints: 0, home: { wins: 0, draws: 1, losses: 2, touchlinePoints: 0 }, away: { wins: 0, draws: 1, losses: 1, touchlinePoints: 0 } }));
   const ranked = { ...empty, phase: "ranked", rows, snapshotId: "snapshot", seasonId: "season", scoringVersion: "version" };
   const render = (name: string, props: Record<string, unknown> = {}) => {
     const tree = captureRenderedTree(client[name] as (props: Record<string, unknown>) => Element, {

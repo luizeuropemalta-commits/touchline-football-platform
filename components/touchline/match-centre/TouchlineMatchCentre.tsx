@@ -29,7 +29,7 @@ import { localizedPositionLabel } from "@/lib/touchlineArena/position-labels";
 import { touchlineMatchEventKind, touchlineMatchEventLabel, touchlineMatchEventRelatedPlayerLabel } from "@/lib/touchlineArena/match-event-i18n";
 import { matchHeroScorers } from "@/lib/touchlineArena/match-hero-goals";
 import { getTouchlineMatchCentreCopy } from "@/lib/touchlineArena/match-centre-i18n";
-import { touchlineLiveCoachForTeam } from "@/lib/touchlineArena/live-coaches";
+import { catalogueCoachForTeam, catalogueCoachForTeamHistory, legacyCoachCatalogue, type CoachCatalogue } from "@/lib/touchlineArena/coach-catalogue-contract";
 import {
   orderTouchlineMatchEvents,
   orderTouchlineMatchRatings,
@@ -48,6 +48,7 @@ import styles from "./touchline-match-centre.module.css";
 import sharedControls from "../TouchlineGlobalNavigation.module.css";
 
 type Props = {
+  initialCoachCatalogue?: CoachCatalogue;
   initialFixtures: TouchlinePublicFixture[];
   /** Isolated audit fixtures must never be replaced with account/provider data. */
   liveUpdates?: boolean;
@@ -291,6 +292,7 @@ function MatchTeamSheet({
 
 export default function TouchlineMatchCentre({
   initialFixtures,
+  initialCoachCatalogue = legacyCoachCatalogue(),
   liveUpdates = true,
   railOnly = false,
   hideRecentResults = false,
@@ -422,8 +424,11 @@ export default function TouchlineMatchCentre({
   const bestCards = useMemo(() => verifiedDetail ? topRatedPlayers(verifiedDetail) : [], [verifiedDetail]);
   const bestCoach = useMemo(() => {
     if (!selected || touchlineFixtureState(selected, now) !== "finished") return null;
-    return touchlineLiveCoachForTeam(winningTeamId(selected));
-  }, [now, selected]);
+    const teamId = winningTeamId(selected);
+    if (initialCoachCatalogue.phase === "legacy") return catalogueCoachForTeam(initialCoachCatalogue, teamId);
+    const coachId = verifiedDetail?.fixture.coachAssignments?.find(entry => entry.clubProviderId === teamId)?.coachProviderId;
+    return coachId && teamId ? catalogueCoachForTeamHistory(initialCoachCatalogue, coachId, teamId) : null;
+  }, [initialCoachCatalogue, now, selected, verifiedDetail]);
   const fixtureSections: Array<{ id: FixtureSection; label: string; fixtures: TouchlinePublicFixture[] }> = [
     { id: "current", label: dictionary.currentFixtures, fixtures: schedule.currentFixtures },
     ...(!hideRecentResults ? [{ id: "results" as const, label: dictionary.recentResults, fixtures: schedule.recentResults }] : []),

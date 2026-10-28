@@ -19,10 +19,8 @@ import { loadTouchLineCoachRanking } from "@/lib/touchlineArena/coach-ranking-se
 import { coachCompetitionFromRanking } from "@/lib/touchlineArena/coach-competition-projection";
 import { localizedCountryLabel } from "@/lib/touchlineArena/country-labels";
 import { touchlineCardTierName } from "@/lib/touchlineArena/card-rules";
-import {
-  touchlineCoachClassificationForProviderId,
-  TOUCHLINE_LIVE_COACHES,
-} from "@/lib/touchlineArena/live-coaches";
+import { loadCoachCatalogue } from "@/lib/touchlineArena/coach-catalogue-server";
+import { catalogueCoachForId } from "@/lib/touchlineArena/coach-catalogue-contract";
 import { resolveTouchlineCatalogueLocale } from "@/lib/touchlineArena/catalogue-locale";
 import { getTouchlineCoachProfileCopy, getTouchlineCoachProfileReason } from "@/lib/touchlineArena/coach-profile-i18n";
 import { getTouchlineCoachCardCopy } from "@/lib/touchlineArena/coach-card-i18n";
@@ -56,9 +54,8 @@ async function generateCoachProfileMetadata({
   const [{ coach }, query] = await Promise.all([params, searchParams]);
   const requestedLocale = Array.isArray(query?.lang) ? query.lang[0] : query?.lang;
   const copy = getTouchlineCoachProfileCopy(resolveTouchlineCatalogueLocale(requestedLocale, draftLocalesEnabled), draftLocalesEnabled);
-  const found = TOUCHLINE_LIVE_COACHES.find(({ coach: candidate }) => (
-    candidate.providerId === coach || coachSlug(candidate.displayName) === coachSlug(coach)
-  ));
+  const catalogue = await loadCoachCatalogue();
+  const found = catalogueCoachForId(catalogue, coach) ?? (catalogue.phase === "legacy" ? catalogue.current.find(({ coach: candidate }) => coachSlug(candidate.displayName) === coachSlug(coach)) : null);
   return {
     title: found ? `${found.coach.displayName} | TouchLine England` : copy.metadataFallback,
   };
@@ -83,13 +80,12 @@ async function renderCoachProfilePage({
   const copy = getTouchlineCoachProfileCopy(locale, draftLocalesEnabled);
   const cardCopy = getTouchlineCoachCardCopy(locale, draftLocalesEnabled);
   const matchCopy = getTouchlineMatchCentreCopy(locale, draftLocalesEnabled);
-  const entry = TOUCHLINE_LIVE_COACHES.find(({ coach }) => (
-    coach.providerId === coachParam || coachSlug(coach.displayName) === coachSlug(coachParam)
-  ));
+  const catalogue = await loadCoachCatalogue();
+  const entry = catalogueCoachForId(catalogue, coachParam) ?? (catalogue.phase === "legacy" ? catalogue.current.find(({ coach }) => coachSlug(coach.displayName) === coachSlug(coachParam)) : null);
   if (!entry) notFound();
   const nationalityLabel = localizedCountryLabel(entry.coach.nationality, locale, draftLocalesEnabled) ?? "—";
 
-  const classification = touchlineCoachClassificationForProviderId(entry.coach.providerId);
+  const classification = entry.classification;
   if (!classification) notFound();
   const club = TOUCHLINE_ENGLAND_CLUBS.find((candidate) => candidate.teamId === entry.coach.teamId);
   if (!club) notFound();

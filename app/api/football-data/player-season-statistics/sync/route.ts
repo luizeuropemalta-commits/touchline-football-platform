@@ -18,10 +18,11 @@ function isDedicatedQaRuntime() {
 async function isAuthorized(request: NextRequest) {
   const secret = process.env.FOOTBALL_DATA_SYNC_SECRET ?? process.env.FOOTBALL_DATA_VALIDATION_SECRET;
   if (secret && request.headers.get("authorization") === `Bearer ${secret}`) return true;
+  if (request.headers.get("origin") !== request.nextUrl.origin || request.headers.get("sec-fetch-site") === "cross-site") return false;
   const supabase = await createClient();
   if (!supabase) return false;
-  const { data: { user } } = await supabase.auth.getUser();
-  return hasTouchLineArenaAccess(user) && isOwnerEmail(user?.email);
+  const { data: { user }, error } = await supabase.auth.getUser();
+  return !error && !!user && hasTouchLineArenaAccess(user) && isOwnerEmail(user?.email);
 }
 
 export async function POST(request: NextRequest) {

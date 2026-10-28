@@ -14,7 +14,7 @@ import { createGuardedFixtureProvider } from "@/lib/football-data/fixture-provid
 import type { FootballDataProvider, TouchlineFixture } from "@/lib/football-data/types";
 import { inspectTouchlineIsolatedPreviewEnvironment } from "@/lib/touchlinePreview/isolation";
 import { inspectTouchlineProductionSyncRuntime } from "@/lib/football-data/production-sync-runtime";
-import { touchlineCompetitionCoachAssignments } from "@/lib/touchlineArena/live-coaches";
+import { readCompetitionCoachAssignments, stageObservedCoachFixture } from "@/lib/touchlineArena/coach-catalogue-server";
 import { recordTouchlineLineupAvailableObservation } from "@/lib/football-data/official-team-sheet-readiness";
 import { reconcilePendingTouchlineFantasyGameweeks } from "@/lib/touchlineFantasy/gameweek-lifecycle";
 import { publishTouchlineLivePresentationSnapshot } from "@/lib/touchlineArena/live-presentation-read-model";
@@ -59,6 +59,7 @@ export type LiveSyncResult = {
   lineupObservationsExisting: number;
   playerFixtureRowsWritten: number;
   coachPointsReconciled: number;
+  coachPendingFixtures?: Array<{ fixtureProviderId: string; reason: string }>;
   playerScoringFixtureIds: string[];
   playerFailedFixtureIds: string[];
   playerMissingSettlementFixtureIds: string[];
@@ -153,6 +154,7 @@ async function completeRun(admin: SupabaseClient, result: LiveSyncResult) {
       lineupObservationsExisting: result.lineupObservationsExisting,
       playerFixtureRowsWritten: result.playerFixtureRowsWritten,
       coachPointsReconciled: result.coachPointsReconciled,
+      coachPendingFixtures: result.coachPendingFixtures ?? [],
       playerScoringFixtureIds: result.playerScoringFixtureIds,
       playerFailedFixtureIds: result.playerFailedFixtureIds,
       playerMissingSettlementFixtureIds: result.playerMissingSettlementFixtureIds,
@@ -177,6 +179,7 @@ async function completeRun(admin: SupabaseClient, result: LiveSyncResult) {
     lineupObservationsExisting: result.lineupObservationsExisting,
     playerFixtureRowsWritten: result.playerFixtureRowsWritten,
     coachPointsReconciled: result.coachPointsReconciled,
+    coachPendingFixtures: result.coachPendingFixtures ?? [],
     confirmedEventObservation: result.confirmedEventObservation ?? null,
     matchPushProduction: result.matchPushProduction ?? null,
     errorCount: result.errors.length + (error ? 1 : 0),
@@ -351,6 +354,8 @@ export async function syncSportmonksLiveState(
       incoming.push(feedResponse.data.fixture);
       const persisted = await (dependencies.persistFantasyFeed ?? persistFantasyFixtureFeed)(feedResponse.data);
       if (persisted.persisted) {
+        const coachStagingError = await stageObservedCoachFixture(admin, fixtureId);
+        if (coachStagingError) result.errors.push(coachStagingError);
         // Corrections must not replay historical push notifications.
         if (!postMatchFixtureIds.includes(fixtureId)) persistedCurrentFeedIds.add(fixtureId);
         result.fantasyFeedsStored += 1;
@@ -405,6 +410,8 @@ export async function syncSportmonksLiveState(
       }
       const persisted = await (dependencies.persistRecoveryFeed ?? persistTouchlineRecoveryFeed)(admin, claim, lease.runId, response.data);
       if (persisted.persisted) {
+        const coachStagingError = await stageObservedCoachFixture(admin, response.data.fixture.providerId);
+        if (coachStagingError) result.errors.push(coachStagingError);
         // The recovery RPC already writes the exact canonical fixture under
         // its lease fence. Never repeat that write through the legacy path.
         result.fantasyFeedsStored += 1;
@@ -508,14 +515,26 @@ export async function syncSportmonksLiveState(
       if (!result.errors.includes(rankingError)) result.errors.push(rankingError);
     }
     const { data: coachReconciliation, error: coachReconciliationError } = await admin
-      .rpc("touchline_reconcile_coach_fixture_points", {
+      .rpc("touchline_reconcile_verified_coach_fixture_points", {
         p_fixture_id: null,
-        p_competition_coaches: touchlineCompetitionCoachAssignments(),
+        p_competition_coaches: await readCompetitionCoachAssignments(),
       });
-    if (coachReconciliationError) {
-      result.errors.push(`coach-points:${coachReconciliationError.code ?? "unknown"}`);
-    } else {
-      result.coachPointsReconciled = Number((coachReconciliation as { reconciled?: unknown } | null)?.reconciled ?? 0);
+    // Fixture-aware reconciliation may commit verified fixtures while keeping
+    // other fixtures or the public ranking pending. Retain its confirmed count.
+    const coachReceiptConfirmed = !coachReconciliationError
+      && Number.isSafeInteger(coachReconciliation?.reconciled) && coachReconciliation.reconciled >= 0;
+    if (coachReceiptConfirmed) result.coachPointsReconciled = coachReconciliation.reconciled;
+    if (coachReceiptConfirmed && Array.isArray(coachReconciliation.pending)) {
+      result.coachPendingFixtures = coachReconciliation.pending.flatMap((entry: unknown) => {
+        if (!entry || typeof entry !== "object") return [];
+        const pending = entry as Record<string, unknown>;
+        return typeof pending.fixtureProviderId === "string" && /^[1-9]\d{0,15}$/.test(pending.fixtureProviderId)
+          && typeof pending.reason === "string" && /^PCC0[1235]$/.test(pending.reason)
+          ? [{ fixtureProviderId: pending.fixtureProviderId, reason: pending.reason }] : [];
+      });
+    }
+    if (!coachReceiptConfirmed || coachReconciliation?.ok !== true) {
+      result.errors.push(`coach-points:${coachReconciliationError?.code ?? (coachReceiptConfirmed ? "attribution-pending" : "unconfirmed")}`);
     }
 
     // Distribution follows acknowledged canonical writes, not provider input.

@@ -21,9 +21,11 @@ export default async function AdminAnalyticsPage({
 }) {
   const params = (await searchParams) ?? {};
   const locale = normalizeTouchLineAuthLocale(typeof params.lang === "string" ? params.lang : null);
+  const pt = locale === "pt-BR";
+  const t = { pill: pt ? "Telemetria própria" : "First-party telemetry", title: pt ? "Atividade dos ClubOwners" : "ClubOwner Activity", intro: pt ? "Tempo de jogo ativo e áreas de recurso. A TouchLine não registra senhas, mensagens, texto digitado ou conteúdo da tela." : "Active gameplay time and feature areas only. TouchLine does not record passwords, messages, typed text or screen contents.", admin: pt ? "Admin do proprietário" : "Owner Admin", active: pt ? "Ativos agora" : "Active now", daily: pt ? "Ativos no dia" : "Daily active", activeTime: pt ? "Tempo ativo" : "Active time", sessions: pt ? "Sessões" : "Sessions", grants: pt ? "Concessões antigas" : "Legacy grants", devices: pt ? "Dispositivos" : "Devices", engagement: pt ? "Ranking de envolvimento" : "Engagement ranking", mostActive: pt ? "ClubOwners mais ativos" : "Most active ClubOwners", authOnly: pt ? "Somente jogo autenticado" : "Authenticated gameplay only", noLeaders: pt ? "A atividade aparecerá após jogadores autenticados usarem a Beta." : "Activity will appear after authenticated players use the Beta.", interest: pt ? "Interesse por recurso" : "Feature interest", areas: pt ? "Onde os jogadores passam tempo" : "Where players spend time", noAreas: pt ? "Nenhuma atividade coletada ainda." : "No activity collected yet.", retired: pt ? "Campanha de acesso encerrada" : "Retired access campaign", retiredCopy: pt ? "Concessões históricas ficam visíveis apenas para auditoria. Novos ClubOwners recebem acesso à Arena com 0 TC automático." : "Historical grants remain visible for audit only. New ClubOwners receive Arena access with 0 automatic TC." };
   const supabase = await createClient();
   const admin = createAdminClient();
-  if (!supabase || !admin) return <GamePanel className="p-8 text-white">Analytics requires Supabase configuration.</GamePanel>;
+  if (!supabase || !admin) return <GamePanel className="p-8 text-white">{locale === "pt-BR" ? "A análise exige configuração do Supabase." : "Analytics requires Supabase configuration."}</GamePanel>;
   const { data: { user } } = await supabase.auth.getUser();
   if (!user || !isOwnerEmail(user.email)) notFound();
 
@@ -31,11 +33,24 @@ export default async function AdminAnalyticsPage({
   // eslint-disable-next-line react-hooks/purity
   const requestTime = Date.now();
   const since = new Date(requestTime - 30 * 86400_000).toISOString();
-  const [{ data: sessionsData }, { data: grantsData }, authResult] = await Promise.all([
-    admin.from("touchline_analytics_sessions").select("user_id,active_seconds,started_at,last_seen_at,current_area,device_class").gte("last_seen_at", since).order("last_seen_at", { ascending: false }).limit(10000),
-    admin.from("touchline_beta_tc_grants").select("user_id,slot_number,amount_tc,granted_at").order("slot_number").limit(20),
-    admin.auth.admin.listUsers({ page: 1, perPage: 1000 }),
-  ]);
+  let queryFailure = false;
+  let sessionsData: SessionRow[] | null = null;
+  let grantsData: GrantRow[] | null = null;
+  let authResult: { data: { users: Array<{ id: string; email?: string | null }> } } = { data: { users: [] } };
+  try {
+    const [sessionsResult, grantsResult, usersResult] = await Promise.all([
+      admin.from("touchline_analytics_sessions").select("user_id,active_seconds,started_at,last_seen_at,current_area,device_class").gte("last_seen_at", since).order("last_seen_at", { ascending: false }).limit(10000),
+      admin.from("touchline_beta_tc_grants").select("user_id,slot_number,amount_tc,granted_at").order("slot_number").limit(20),
+      admin.auth.admin.listUsers({ page: 1, perPage: 1000 }),
+    ]);
+    queryFailure = Boolean(sessionsResult.error || grantsResult.error || usersResult.error);
+    sessionsData = (sessionsResult.data ?? null) as SessionRow[] | null;
+    grantsData = (grantsResult.data ?? null) as GrantRow[] | null;
+    authResult = usersResult as typeof authResult;
+  } catch {
+    queryFailure = true;
+  }
+  if (queryFailure) return <GamePanel className="p-8 text-white">{pt ? "A análise está temporariamente indisponível. Tente novamente mais tarde; nenhuma alteração foi feita." : "Analytics is temporarily unavailable. Try again later; no changes were made."}</GamePanel>;
   const sessions = (sessionsData ?? []) as SessionRow[];
   const grants = (grantsData ?? []) as GrantRow[];
   const emails = new Map((authResult.data.users ?? []).map((item) => [item.id, item.email ?? "ClubOwner"]));
@@ -58,23 +73,23 @@ export default async function AdminAnalyticsPage({
   return (
     <div className="mx-auto max-w-[1500px] space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <div><LivePill>First-party telemetry</LivePill><h1 className="font-display mt-3 text-4xl italic text-white sm:text-5xl">ClubOwner Activity</h1><p className="mt-2 max-w-3xl text-xs leading-6 text-slate-500">Active gameplay time and feature areas only. TouchLine does not record passwords, messages, typed text or screen contents.</p></div>
-        <Link href={touchLineAuthHref("/admin", locale)} className="rounded-2xl border border-cyan-300/20 bg-cyan-300/[.07] px-4 py-3 text-[9px] font-black text-cyan-100">Owner Admin</Link>
+        <div><LivePill>{t.pill}</LivePill><h1 className="font-display mt-3 text-4xl italic text-white sm:text-5xl">{t.title}</h1><p className="mt-2 max-w-3xl text-xs leading-6 text-slate-500">{t.intro}</p></div>
+        <Link href={touchLineAuthHref("/admin", locale)} className="rounded-2xl border border-cyan-300/20 bg-cyan-300/[.07] px-4 py-3 text-[9px] font-black text-cyan-100">{t.admin}</Link>
       </div>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
-        <StatTile icon={Radio} label="Active now" value={String(online)} delta="last 2 min" accent="lime" />
-        <StatTile icon={Users} label="Daily active" value={String(daily)} delta="last 24h" accent="cyan" />
-        <StatTile icon={Clock3} label="Active time" value={`${Math.round(totalSeconds / 3600)}h`} delta="last 30 days" accent="gold" />
-        <StatTile icon={Activity} label="Sessions" value={String(sessions.length)} delta="last 30 days" accent="cyan" />
-        <StatTile icon={Trophy} label="Legacy grants" value={String(grants.length)} delta="historical only" accent="gold" />
-        <StatTile icon={MonitorSmartphone} label="Devices" value={String(deviceTotals.size)} delta="classes detected" accent="lime" />
+        <StatTile icon={Radio} label={t.active} value={String(online)} delta={pt ? "últimos 2 min" : "last 2 min"} accent="lime" />
+        <StatTile icon={Users} label={t.daily} value={String(daily)} delta={pt ? "últimas 24h" : "last 24h"} accent="cyan" />
+        <StatTile icon={Clock3} label={t.activeTime} value={`${Math.round(totalSeconds / 3600)}h`} delta={pt ? "últimos 30 dias" : "last 30 days"} accent="gold" />
+        <StatTile icon={Activity} label={t.sessions} value={String(sessions.length)} delta={pt ? "últimos 30 dias" : "last 30 days"} accent="cyan" />
+        <StatTile icon={Trophy} label={t.grants} value={String(grants.length)} delta={pt ? "somente histórico" : "historical only"} accent="gold" />
+        <StatTile icon={MonitorSmartphone} label={t.devices} value={String(deviceTotals.size)} delta={pt ? "classes detectadas" : "classes detected"} accent="lime" />
       </div>
       <div className="grid gap-5 xl:grid-cols-[1.15fr_.85fr]">
         <GamePanel className="overflow-hidden">
-          <div className="border-b border-white/[.07] p-5"><p className="text-[9px] font-black text-[#a3ff12]">Engagement ranking</p><h2 className="mt-1 text-xl font-black italic text-white">Most active ClubOwners</h2></div>
-          <div className="divide-y divide-white/[.06]">{leaders.map(([id, seconds], index) => <div key={id} className="grid grid-cols-[42px_1fr_auto] items-center gap-3 p-4"><span className="font-display text-xl text-[#a3ff12]">#{index + 1}</span><div className="min-w-0"><p className="truncate text-xs font-black text-white">{emails.get(id) ?? "ClubOwner"}</p><p className="mt-1 text-[8px] text-slate-600">Authenticated gameplay only</p></div><strong className="text-sm text-cyan-100">{minutes(seconds)} min</strong></div>)}{!leaders.length && <p className="p-8 text-center text-xs text-slate-500">Activity will appear after authenticated players use the Beta.</p>}</div>
+          <div className="border-b border-white/[.07] p-5"><p className="text-[9px] font-black text-[#a3ff12]">{t.engagement}</p><h2 className="mt-1 text-xl font-black italic text-white">{t.mostActive}</h2></div>
+          <div className="divide-y divide-white/[.06]">{leaders.map(([id, seconds], index) => <div key={id} className="grid grid-cols-[42px_1fr_auto] items-center gap-3 p-4"><span className="font-display text-xl text-[#a3ff12]">#{index + 1}</span><div className="min-w-0"><p className="truncate text-xs font-black text-white">{emails.get(id) ?? "ClubOwner"}</p><p className="mt-1 text-[8px] text-slate-600">{t.authOnly}</p></div><strong className="text-sm text-cyan-100">{minutes(seconds)} min</strong></div>)}{!leaders.length && <p className="p-8 text-center text-xs text-slate-500">{t.noLeaders}</p>}</div>
         </GamePanel>
-        <GamePanel className="p-5"><p className="text-[9px] font-black text-cyan-300">Feature interest</p><h2 className="mt-1 text-xl font-black italic text-white">Where players spend time</h2><div className="mt-5 space-y-3">{areas.map(([area, value]) => { const width = totalSeconds ? Math.max(4, Math.round(value.seconds / totalSeconds * 100)) : 0; return <div key={area}><div className="flex justify-between text-[10px]"><span className="font-black text-white">{area}</span><span className="text-slate-500">{minutes(value.seconds)} min · {value.visits} sessions</span></div><div className="mt-2 h-2 overflow-hidden rounded-full bg-white/[.06]"><div className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-[#a3ff12]" style={{ width: `${width}%` }} /></div></div>; })}{!areas.length && <p className="text-xs text-slate-500">No activity collected yet.</p>}</div><div className="mt-6 rounded-2xl border border-amber-300/15 bg-amber-300/[.05] p-4"><p className="text-[9px] font-black text-amber-200">Retired access campaign</p><p className="mt-2 text-[10px] leading-5 text-slate-500">Historical grants remain visible for audit only. New ClubOwners receive Arena access with 0 automatic TC.</p></div></GamePanel>
+        <GamePanel className="p-5"><p className="text-[9px] font-black text-cyan-300">{t.interest}</p><h2 className="mt-1 text-xl font-black italic text-white">{t.areas}</h2><div className="mt-5 space-y-3">{areas.map(([area, value]) => { const width = totalSeconds ? Math.max(4, Math.round(value.seconds / totalSeconds * 100)) : 0; return <div key={area}><div className="flex justify-between text-[10px]"><span className="font-black text-white">{area}</span><span className="text-slate-500">{minutes(value.seconds)} min · {value.visits} {pt ? "sessões" : "sessions"}</span></div><div className="mt-2 h-2 overflow-hidden rounded-full bg-white/[.06]"><div className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-[#a3ff12]" style={{ width: `${width}%` }} /></div></div>; })}{!areas.length && <p className="text-xs text-slate-500">{t.noAreas}</p>}</div><div className="mt-6 rounded-2xl border border-amber-300/15 bg-amber-300/[.05] p-4"><p className="text-[9px] font-black text-amber-200">{t.retired}</p><p className="mt-2 text-[10px] leading-5 text-slate-500">{t.retiredCopy}</p></div></GamePanel>
       </div>
     </div>
   );

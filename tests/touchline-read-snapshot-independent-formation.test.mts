@@ -66,7 +66,7 @@ function fixture(options: { configuration?: Promise<Result>; entitlement?: Promi
     "./gameweek-lifecycle": { reconcileTouchlineFantasyGameweeks: async () => { events.push("lifecycle"); return { error: null, reconciled: 0 }; } },
     "./market-plan-policy": { resolveTouchlineFantasyMarketAccess: (plan: unknown) => plan === "beta" ? { planKey: "beta", budgetEur: 100 } : null },
     "@/lib/touchlineArena/complete-catalogue-read-server": { createCompleteTouchlineCatalogueAdmin: () => admin },
-    "@/lib/touchlineArena/live-coaches": { TOUCHLINE_LIVE_COACHES: [] },
+    "@/lib/touchlineArena/coach-catalogue-server": { loadCoachCatalogue: async () => ({ phase: "legacy", current: [], history: [] }) },
     "@/lib/touchlineArena/coach-ranking-server": { loadTouchLineCoachRanking: async () => ({ phase: "preseason" }) },
     "@/lib/touchlineArena/player-availability-reader": { readGameweekPlayerAvailability: async () => [] },
   };

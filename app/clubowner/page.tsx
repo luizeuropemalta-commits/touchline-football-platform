@@ -94,13 +94,16 @@ async function renderClubOwnerPageContent({ searchParams }: ClubOwnerPageProps, 
   // These private QA capabilities remain OFF unless explicitly configured.
   const avatarSelectionEnabled = process.env.TOUCHLINE_CLUB_OWNER_AVATAR_SELECTION_ENABLED === "true";
   const retentionReady = process.env.TOUCHLINE_CLUB_OWNER_AVATAR_RETENTION_READY === "true";
+  const publicDiscoveryEnabled = process.env.TOUCHLINE_CLUBOWNER_PUBLIC_ENABLED === "true";
   const readAvatarContext = createClubOwnerAvatarContextReader();
   const login = touchLineAuthEntryHref("/login", locale, destination, draftLocalesEnabled);
   let authenticationReadActive = true;
+  const authenticationContext: { client: Awaited<ReturnType<typeof createClient>> } = { client: null };
   const authentication = await timing.measure("auth", () => resolveServerReadWithin((async () => {
     const supabase = await createClient();
     // A late client setup must not start another network read after timeout.
     if (!authenticationReadActive || !supabase) return null;
+    authenticationContext.client = supabase;
     return supabase.auth.getUser();
   })(), null, 8_000));
   authenticationReadActive = false;
@@ -112,7 +115,7 @@ async function renderClubOwnerPageContent({ searchParams }: ClubOwnerPageProps, 
   // Retain the existing customer-only boundary; never borrow a demo identity.
   if (isOwnerEmail(user.email)) redirect(touchLineAuthEntryHref("/admin", locale));
   const content = (async () => {
-    const [avatarContext, snapshot, liveRail, collectionRead] = await Promise.all([
+    const [avatarContext, snapshot, liveRail, collectionRead, publicProfile] = await Promise.all([
       timing.measure("avatar", () => readAvatarContext(authentication, user.id)),
       // The ClubOwner must not replace a real in-flight roster with the
       // unavailable state merely because a cold local read takes longer than
@@ -121,7 +124,16 @@ async function renderClubOwnerPageContent({ searchParams }: ClubOwnerPageProps, 
       timing.measure("liveRail", () => readPersistedLiveRailWithin()),
       timing.measure("collection", () => resolveServerReadWithin<ClubCollectionReadResult>(readClubCollectionServer(user.id),
         { status: "unavailable", error: "CLUB_STORAGE_UNAVAILABLE", httpStatus: 503 }, 8_000)),
+      // Reuse the verified request's JWT; no second auth read or service-role identity.
+      publicDiscoveryEnabled && authenticationContext.client
+        ? resolveServerReadWithin((async () => authenticationContext.client!.rpc("touchline_people_own_profile")
+          .abortSignal(AbortSignal.timeout(2_000)))(), null, 2_000)
+        : Promise.resolve(null),
     ]);
+    const publicProfileData: unknown = publicProfile && !publicProfile.error ? publicProfile.data : null;
+    const confirmedFollowers = publicProfileData && typeof publicProfileData === "object" && "followerCount" in publicProfileData
+      && typeof publicProfileData.followerCount === "number" && Number.isSafeInteger(publicProfileData.followerCount) && publicProfileData.followerCount >= 0
+      ? publicProfileData.followerCount : null;
     const clubOwner = resolveTouchlineClubOwnerPageIdentity(user, undefined, avatarContext?.avatarUrl);
     const liveTimeZone = normalizeTouchlineMatchCentreTimeZone((await headers()).get("x-vercel-ip-timezone"));
     const initialLiveFixtures = liveRail?.fixtures ?? null;
@@ -140,7 +152,7 @@ async function renderClubOwnerPageContent({ searchParams }: ClubOwnerPageProps, 
     return <div className={styles.content}>
         <ClubCollectionProvider key={`${user.id}:${snapshot?.config.seasonId ?? "unavailable"}`} initialRead={collectionAvailable ? collectionRead : null}
           authority={snapshot?.config.seasonId ? {expectedAccountId:user.id, expectedSeasonId:snapshot.config.seasonId} : null}>
-        <ClubOwnerMarketHeader owner={clubOwner?.isAuthenticatedClubOwner ? clubOwner : null} locale={locale} rankingPosition={clubOwnerRankingPosition(snapshot?.seasonRanking)} remainingMarketPower={remainingMarketPower} plan={snapshot?.plan ?? null} activePlanKey={activePlanKey} activePlanBudget={activePlanKey ? marketAccess?.budgetEur : undefined} planPreview={planPreview} draftLocalesEnabled={draftLocalesEnabled} accountId={user.id} avatarContext={avatarContext} avatarSelectionEnabled={avatarSelectionEnabled} retentionReady={retentionReady} collectionEnabled={collectionAvailable} />
+        <ClubOwnerMarketHeader owner={clubOwner?.isAuthenticatedClubOwner ? clubOwner : null} locale={locale} rankingPosition={clubOwnerRankingPosition(snapshot?.seasonRanking)} followerCount={confirmedFollowers} publicDiscoveryEnabled={publicDiscoveryEnabled} remainingMarketPower={remainingMarketPower} plan={snapshot?.plan ?? null} activePlanKey={activePlanKey} activePlanBudget={activePlanKey ? marketAccess?.budgetEur : undefined} planPreview={planPreview} draftLocalesEnabled={draftLocalesEnabled} accountId={user.id} avatarContext={avatarContext} avatarSelectionEnabled={avatarSelectionEnabled} retentionReady={retentionReady} collectionEnabled={collectionAvailable} />
         <FantasyGameweekClient initialSnapshot={snapshot} locale={locale} liveTimeZone={liveTimeZone} draftLocalesEnabled={draftLocalesEnabled} embedded marketPage
           collectionEnabled={collectionAvailable}
           initialCollectionRead={collectionAvailable ? collectionRead : null}

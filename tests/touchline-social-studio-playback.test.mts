@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import test from "node:test";
 import { advanceStudioPlayback, emptyStudioPlayback, studioPlaybackMayRepeat, type StudioPlaybackState } from "../lib/touchlineArena/social-studio-playback.ts";
 
@@ -35,23 +34,4 @@ test("auto-repeat needs explicit playback intent, visibility and no reduced-moti
   assert.equal(studioPlaybackMayRepeat({ requested: true, visible: false, reducedMotion: false }), false);
   assert.equal(studioPlaybackMayRepeat({ requested: true, visible: true, reducedMotion: true }), false);
   assert.equal(studioPlaybackMayRepeat({ requested: true, visible: true, reducedMotion: false }), true);
-});
-
-test("preview exposes manual controls, reduced motion, visibility pause and seek-safe tracking", () => {
-  const ui = readFileSync("components/touchline/admin/TouchlineSocialStudio.tsx", "utf8");
-  assert.match(ui, /<video[^>]*\bcontrols\b/);
-  assert.match(ui, /prefers-reduced-motion: reduce/);
-  assert.match(ui, /onSeeking=/);
-  assert.match(ui, /onRateChange=/);
-  assert.match(ui, /onEnded=/);
-  assert.match(ui, /advanceStudioPlayback/);
-  assert.doesNotMatch(ui, /previousTime\.current > media\.durationSeconds \* 0\.7/);
-  assert.match(ui, /visibilitychange/);
-  assert.match(ui, /loops >= 2 && serverLoops >= 2/);
-  assert.match(ui, /action: "invalidate"/);
-  assert.match(ui, /recordServerReview\(reviewSession\.current \? "tick" : "start", true\)/);
-  assert.match(ui, /function rewindReviewLoop\(video: HTMLVideoElement\) \{\s*internalLoopSeek\.current = true;\s*video\.currentTime = 0;/);
-  assert.match(ui, /if \(internalLoopSeek\.current\) \{ internalLoopSeek\.current = false; return; \}/);
-  assert.match(ui, /if \(video\.ended\) rewindReviewLoop\(video\)/);
-  assert.equal(ui.match(/rewindReviewLoop\(video\)/g)?.length, 2, "manual and automatic second loops share the protected internal seek");
 });

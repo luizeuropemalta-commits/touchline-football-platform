@@ -1,3 +1,4 @@
+import { requireBrowserCapacity } from "./helpers/touchline-browser-capacity.mts";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { execFileSync, spawn } from "node:child_process";
@@ -20,6 +21,10 @@ test("native delayed ClubHub anchor arrival, reload and history (not Next/RSC ro
   assert.ok(selectedWidth === undefined || ["390", "844", "1280"].includes(selectedWidth));
   assert.ok(selectedCase === undefined || ["navigation", "keyboard-navigation", "touch-navigation", "user-changed-hash", "user-scrolled-away", "user-keyboard-away", "user-touched-page", "user-scrollbar-away"].includes(selectedCase));
   const capacity = () => {
+    if (process.platform === "darwin" && !process.env.CI && process.env.TOUCHLINE_LOCAL_BROWSER_DISK_RESERVE_MIB !== undefined) {
+      requireBrowserCapacity(root, { darwinFreePercent: true });
+      return;
+    }
     const disk = statfsSync(root);
     assert.ok(disk.bavail * disk.bsize > 5 * 1024 ** 3, "more than 5GiB disk required");
     const pressure = execFileSync("sysctl", ["-n", "kern.memorystatus_vm_pressure_level"], { encoding: "utf8" }).trim();

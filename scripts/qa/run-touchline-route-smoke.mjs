@@ -19,7 +19,7 @@ const ALLOWED_GET_APIS = new Set([
   "/api/football-data/premier-squad", "/api/football-data/fixture-schedule",
   "/api/football-data/fantasy/capabilities", "/api/football-data/fantasy/events",
   "/api/football-data/fantasy/fixture", "/api/football-data/fantasy/livescores",
-  "/api/admin/social-publications/studio/video",
+  "/api/admin/social-publications/studio/png",
 ]);
 // Query keys are inventoried from the read handlers and their current callers.
 // An unlisted key is a boundary failure, even if a handler currently ignores it.
@@ -28,7 +28,7 @@ const ALLOWED_API_QUERIES = new Map([
   ["/api/football-data/premier-squad", ["teamId", "clubName", "clubShortCode", "clubLogoUrl"]],
   ["/api/football-data/fantasy/fixture", ["fixtureId", "id"]],
   ["/api/football-data/fantasy/livescores", ["snapshot"]],
-  ["/api/admin/social-publications/studio/video", ["artId", "placement", "identity"]],
+  ["/api/admin/social-publications/studio/png", ["id", "download"]],
 ]);
 // These GET/SSR reads reach loadTouchlineFantasySnapshot, which can synchronize
 // Gameweeks, prepare a user XI and reconcile its state. HTTP-method filtering

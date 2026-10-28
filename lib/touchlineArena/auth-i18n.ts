@@ -10,6 +10,7 @@ const TOUCHLINE_AUTH_RETURN_PATHS = [
   "/my-club",
   TOUCHLINE_CLUB_OWNER_ROUTE_BASE,
   "/clubowner",
+  "/clubowners",
   "/account",
   "/admin",
   "/notifications",

@@ -79,7 +79,7 @@ test("Arena access grants application access only and never automatic TC", () =>
 test("admin credit controls use TouchLine Credits, never fiat currency formatting", () => {
   assert.match(adminRoute, /currency: "TC"/);
   assert.doesNotMatch(adminRoute, /body\.currency/);
-  assert.match(adminActions, /placeholder="Amount in TC"/);
+  assert.match(adminActions, /placeholder=\{pt \? "Valor em TC" : "Amount in TC"\}/);
   assert.doesNotMatch(adminActions, /Amount in EUR|Amount in GBP/);
   assert.match(adminPage, /touchlineCredits/);
   assert.match(adminPage, /\} TC`/);

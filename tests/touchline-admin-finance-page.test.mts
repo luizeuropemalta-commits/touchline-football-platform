@@ -1,115 +1,8 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import { runInNewContext } from "node:vm";
 import test from "node:test";
-import React from "react";
-import * as jsxRuntime from "react/jsx-runtime";
-import { renderToStaticMarkup } from "react-dom/server";
-import * as icons from "lucide-react";
-import ts from "typescript";
-import * as summary from "../lib/admin/finance-summary.ts";
 import * as authI18n from "../lib/touchlineArena/auth-i18n.ts";
+import { fixture, invoice, transaction, privateFailure, type Tile } from "./helpers/admin-finance-page-fixture.mts";
 
-// Integrate the real async page, owner policy and financial projections. Only
-// external clients, Next navigation and presentational UI leaves are replaced.
-// No SDK, credentials, database, account session, network or browser is loaded.
-const compile = (path: string) => ts.transpileModule(readFileSync(new URL(path, import.meta.url), "utf8"), {
-  compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true },
-}).outputText;
-const pageCode = compile("../app/(app)/admin/finance/page.tsx");
-const ownerCode = compile("../lib/admin/owner.ts");
-const ownerEmail = "owner@example.test";
-const privateFailure = "PRIVATE_FINANCE_FAILURE_SENTINEL";
-type Result = { data: unknown; error: unknown };
-type Tile = { label: string; value: string; delta: string };
-type Options = {
-  user?: { id: string; email: string | null; user_metadata?: Record<string, unknown> } | null;
-  sessionAvailable?: boolean;
-  adminAvailable?: boolean;
-  ownerEmails?: string;
-  invoices?: Result;
-  webhooks?: Result;
-  rejectInvoices?: boolean;
-  rejectWebhooks?: boolean;
-  stripeAvailable?: boolean;
-  balance?: unknown;
-  transactions?: unknown[];
-  rejectBalance?: boolean;
-  rejectTransactions?: boolean;
-};
-const invoice = (patch: Record<string, unknown> = {}) => ({
-  id: "invoice-fixture", status: "paid", currency: "eur", subtotal: 1000, tax: 0, total: 1000,
-  amount_paid: 1000, amount_due: 1000, created_at: "2026-10-25T12:00:00Z", paid_at: "2026-10-25T12:00:00Z",
-  stripe_invoice_id: "in_synthetic", number: "INVOICE-SENTINEL", ...patch,
-});
-const transaction = (patch: Record<string, unknown> = {}) => ({
-  id: "txn_synthetic", currency: "eur", amount: 1000, fee: 25, created: 1792929600,
-  description: "TRANSACTION-SENTINEL", type: "charge", ...patch,
-});
-
-function fixture(options: Options = {}) {
-  const calls: string[] = [], queries: Array<{ table: string; select?: string; order?: string; ascending?: boolean; limit?: number }> = [];
-  const tiles: Tile[] = [];
-  const user = options.user === undefined ? { id: "synthetic-owner", email: ownerEmail } : options.user;
-  const ownerExports: Record<string, unknown> = {};
-  runInNewContext(ownerCode, { exports: ownerExports, process: { env: { TOUCHLINE_OWNER_EMAILS: options.ownerEmails ?? ownerEmail } } });
-  const owner = ownerExports as { isOwnerEmail: (email?: string | null) => boolean };
-  const query = (table: string) => {
-    calls.push(`read:${table}`);
-    assert.ok(["billing_invoices", "stripe_webhook_events"].includes(table));
-    const trace: (typeof queries)[number] = { table }; queries.push(trace);
-    const builder = {
-      select(columns: string) { trace.select = columns; return builder; },
-      order(column: string, order: { ascending: boolean }) { trace.order = column; trace.ascending = order.ascending; return builder; },
-      limit(limit: number) { trace.limit = limit; return builder; },
-      returns() { return builder; },
-      then(yes: (value: Result) => unknown, no: (error: unknown) => unknown) {
-        const rejected = table === "billing_invoices" ? options.rejectInvoices : options.rejectWebhooks;
-        const result = (table === "billing_invoices" ? options.invoices : options.webhooks) ?? { data: [], error: null };
-        return (rejected ? Promise.reject(new Error(privateFailure)) : Promise.resolve(result)).then(yes, no);
-      },
-    };
-    return builder;
-  };
-  const pageExports: Record<string, unknown> = {};
-  runInNewContext(pageCode, { exports: pageExports, Intl, URL,
-    fetch: () => assert.fail("SSR finance integration must never access a network"),
-    require(name: string) {
-      if (name === "react/jsx-runtime") return jsxRuntime;
-      if (name === "lucide-react") return icons;
-      if (name === "next/link") return { __esModule: true, default: ({ children, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement>) => React.createElement("a", props, children) };
-      if (name === "next/navigation") return { notFound: () => { calls.push("notFound"); throw new Error("FINANCE_NOT_FOUND"); } };
-      if (name === "@/components/arena-admin-ui") return {
-        GamePanel: ({ children }: { children: React.ReactNode }) => React.createElement("section", null, children),
-        LivePill: ({ children }: { children: React.ReactNode }) => React.createElement("span", null, children),
-        StatTile: ({ label, value, delta }: Tile) => {
-          tiles.push({ label, value, delta });
-          return React.createElement("dl", null, React.createElement("dt", null, label), React.createElement("dd", null, value), React.createElement("small", null, delta));
-        },
-      };
-      if (name === "@/lib/admin/finance-summary") return summary;
-      if (name === "@/lib/admin/owner") return { isOwnerEmail: (email?: string | null) => { calls.push("ownerCheck"); return owner.isOwnerEmail(email); } };
-      if (name === "@/lib/touchlineArena/auth-i18n") return authI18n;
-      if (name === "@/lib/supabase/server") return { createClient: async () => {
-        calls.push("sessionFactory");
-        return options.sessionAvailable === false ? null : { auth: { getUser: async () => { calls.push("getUser"); return { data: { user }, error: null }; } } };
-      } };
-      if (name === "@/lib/supabase/admin") return { createAdminClient: () => {
-        calls.push("adminFactory"); return options.adminAvailable === false ? null : { from: query };
-      } };
-      if (name === "@/lib/stripe/client") return { getStripe: () => {
-        calls.push("stripeFactory");
-        return options.stripeAvailable === false ? null : {
-          balance: { retrieve: async () => { calls.push("stripeBalance"); if (options.rejectBalance) throw new Error(privateFailure); return options.balance ?? { available: [], pending: [] }; } },
-          balanceTransactions: { list: async (request: { limit: number }) => { calls.push("stripeTransactions"); assert.equal(request.limit, 12); assert.deepEqual(Object.keys(request), ["limit"]); if (options.rejectTransactions) throw new Error(privateFailure); return { data: options.transactions ?? [] }; } },
-        };
-      } };
-      throw new Error(`Unmocked finance dependency: ${name}`);
-    },
-  }, { filename: "admin-finance-page.integration.cjs" });
-  const Page = pageExports.default as (props: { searchParams: Promise<Record<string, string | string[]>> }) => Promise<React.ReactNode>;
-  return { calls, queries, tiles, render: async (lang: string | string[] = "en-GB") => renderToStaticMarkup(await Page({ searchParams: Promise.resolve({ lang }) })) };
-}
 const tileValue = (tiles: Tile[], label: string) => {
   const found = tiles.filter(tile => tile.label === label);
   assert.equal(found.length, 1, `Expected exactly one tile: ${label}`);
@@ -121,6 +14,30 @@ const noNet = (html: string, tiles: Tile[]) => {
   assert.match(html, /No reconciled net is calculated from these different samples/);
   assert.doesNotMatch(html, new RegExp(privateFailure));
 };
+
+test("finance Portuguese covers amounts, invoice state and unavailable data without changing currency", async () => {
+  const f = fixture({ invoices: { data: [invoice({ created_at: "invalid-date" })], error: null }, stripeAvailable: false });
+  const html = await f.render("pt-BR");
+  for (const label of ["Controle financeiro", "Consulta financeira", "Exportar últimas 1.000 faturas", "Registros de cobrança", "Paga", "Amostra de taxas da Stripe indisponível"]) assert.ok(html.includes(label), label);
+  assert.equal(tileValue(f.tiles, "Pago · EUR"), new Intl.NumberFormat("pt-BR", { style: "currency", currency: "EUR" }).format(10));
+  assert.doesNotMatch(html, /Finance Control|Owner Admin|Read-only finance|Invoice status summary|Invalid Date/);
+  assert.ok(html.includes('href="/admin?lang=pt-BR"'));
+  assert.ok(html.includes('href="/admin/company-finance?lang=pt-BR"'));
+  const unavailable = fixture({ rejectInvoices: true, rejectWebhooks: true, stripeAvailable: false });
+  const failed = await unavailable.render("pt-BR");
+  assert.match(failed, /Amostra de faturas indisponível/);
+  assert.equal(tileValue(unavailable.tiles, "Faturas em aberto"), "—");
+  assert.doesNotMatch(failed, new RegExp(privateFailure));
+});
+
+test("finance deleted invoice stays visible as an audit tombstone in both languages", async () => {
+  for (const [locale, label] of [["pt-BR", "Excluída"], ["en", "Deleted"]]) {
+    const f = fixture({ invoices: { data: [invoice({ status: "deleted", amount_paid: 0, amount_due: 0 })], error: null } });
+    const html = await f.render(locale);
+    assert.equal(html.split(label).length - 1, 2, "Summary and invoice row retain the tombstone");
+    assert.doesNotMatch(html, />deleted</);
+  }
+});
 
 test("finance SSR owner reads only bounded financial samples and renders no aggregate net", async () => {
   const f = fixture(); const html = await f.render();
@@ -150,7 +67,7 @@ for (const user of [{ id: "customer", email: "other@example.test", user_metadata
 test("finance SSR signed-out or absent session only offers localized sign-in", async () => {
   for (const options of [{ user: null }, { sessionAvailable: false }]) {
     const f = fixture(options); const html = await f.render("pt-BR");
-    assert.match(html, /Sign in as owner/);
+    assert.match(html, /Entre como proprietário/);
     assert.ok(html.includes(authI18n.touchLineAuthEntryHref("/login", "pt-BR", authI18n.touchLineAuthHref("/admin/finance", "pt-BR")).replaceAll("&", "&amp;")));
     assert.deepEqual(f.queries, []); assert.equal(f.calls.includes("ownerCheck"), false);
     assert.equal(f.calls.includes("stripeFactory"), false); assert.deepEqual(f.tiles, []);
@@ -244,4 +161,13 @@ test("finance SSR missing owner allow-list cannot authorize a signed-in account"
   const f = fixture({ ownerEmails: "" });
   await assert.rejects(f.render(), /FINANCE_NOT_FOUND/);
   assert.deepEqual(f.queries, []); assert.equal(f.calls.includes("stripeFactory"), false);
+});
+
+test("finance unknown invoice status cannot resolve inherited Object properties", async () => {
+  for (const status of ["__proto__", "constructor", "future_status"]) {
+    const f = fixture({ invoices: { data: [invoice({ status })], error: null } });
+    const html = await f.render("pt-BR");
+    assert.ok(html.includes(status.replaceAll("_", " ")));
+    assert.match(html, /INVOICE-SENTINEL/);
+  }
 });

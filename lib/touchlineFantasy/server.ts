@@ -28,10 +28,7 @@ import { readGameweekMatchCardIndicators, type GameweekMatchCardIndicator } from
 import { readGameweekPlayerAvailability, type GameweekPlayerAvailabilityIndicator } from "@/lib/touchlineArena/player-availability-reader";
 import { readTouchlineFormationGeometryRegistry } from "@/lib/touchlineArena/formation-geometry-server";
 import type { TouchlineFormationGeometryRegistry } from "@/lib/touchlineArena/formation-geometry";
-import {
-  TOUCHLINE_LIVE_COACHES,
-  touchlineCoachClassificationForProviderId,
-} from "@/lib/touchlineArena/live-coaches";
+import { loadCoachCatalogue } from "@/lib/touchlineArena/coach-catalogue-server";
 import {
   rankTouchlineFantasyManagers,
   type TouchlineFantasyGameweekState,
@@ -62,6 +59,10 @@ export type TouchlineFantasySelectionView = Readonly<{
 export type TouchlineFantasyManagerRank = TouchlineFantasyPublicManagerRank;
 
 export type TouchlineFantasyCoachView = Readonly<{
+  /** Historical contracts remain displayable; only current published coaches can be hired. */
+  selectable?: boolean;
+  catalogueRevision?: number;
+  cataloguePublicationId?: string;
   id: string;
   coach: TouchlineCoach;
   slot: TouchlineArenaCoachSlot;
@@ -300,7 +301,11 @@ async function loadRankings(
 }
 
 async function loadCoaches(admin: NonNullable<ReturnType<typeof createAdminClient>>) {
-  const teamIds = TOUCHLINE_LIVE_COACHES.map(({ coach }) => coach.teamId);
+  const catalogue = await loadCoachCatalogue();
+  if (catalogue.phase === "unavailable") return [];
+  const entries = new Map(catalogue.history.map(entry => [entry.coach.providerId, entry]));
+  for (const entry of catalogue.current) entries.set(entry.coach.providerId, entry);
+  const teamIds = [...new Set([...entries.values()].map(({ coach }) => coach.teamId!))];
   const [{ data, error }, coachRanking] = await Promise.all([
     admin.from("football_clubs")
       .select("id,provider_team_id,name,logo_url")
@@ -313,12 +318,11 @@ async function loadCoaches(admin: NonNullable<ReturnType<typeof createAdminClien
     const teamId = text(club.provider_team_id);
     return teamId ? [[teamId, club] as const] : [];
   }));
-  return TOUCHLINE_LIVE_COACHES.flatMap(({ coach, countryCode3 }): TouchlineFantasyCoachView[] => {
+  return [...entries.values()].flatMap(({ coach, countryCode3, classification, publicationId }): TouchlineFantasyCoachView[] => {
     if (!coach.teamId) return [];
     const club = clubByTeamId.get(coach.teamId);
     const clubId = text(club?.id);
     const clubName = text(club?.name);
-    const classification = touchlineCoachClassificationForProviderId(coach.providerId);
     if (!clubId || !clubName || !classification) return [];
     const rankingRow = coachRanking.phase === "ranked"
       ? coachRanking.rows.find((candidate) => candidate.coachProviderId === coach.providerId) ?? null
@@ -341,6 +345,8 @@ async function loadCoaches(admin: NonNullable<ReturnType<typeof createAdminClien
     const baseSlot = createTouchlineArenaCoachSlot(coach, classification.finalPosition, classification.tierKey);
     return [{
       id: coach.providerId,
+      selectable: catalogue.current.some(entry => entry.coach.providerId === coach.providerId),
+      ...(catalogue.phase === "ready" ? { catalogueRevision: catalogue.revision!, cataloguePublicationId: publicationId! } : {}),
       coach,
       slot: competition ? {
         ...baseSlot,

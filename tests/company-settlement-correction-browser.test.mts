@@ -1,0 +1,21 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {mkdirSync,readFileSync} from 'node:fs';import {chromium,firefox,webkit,expect} from '@playwright/test';
+import {bundleIsolatedBrowserFixture} from './helpers/touchline-isolated-browser-bundle.mts';
+import {createRequire} from 'node:module';import path from 'node:path';
+const origin='https://company-correction-fixture.invalid';
+test('settlement correction requires confirmation, preserves retry identity and refreshes history PT/EN',{skip:process.env.TOUCHLINE_RUN_COMPANY_BROWSER!=='1',timeout:180000},async()=>{
+ const out='/private/tmp/touchline-company-correction-browser';mkdirSync(out,{recursive:true});
+ const id='22222222-2222-4222-8222-222222222222';
+ const bundle=bundleIsolatedBrowserFixture({entryPath:'components/touchline/admin/CompanySettlementCorrection.tsx',requiredSources:['components/touchline/admin/CompanySettlementCorrection.tsx'],mountScript:`const Component=loadEntry().CompanySettlementCorrection;function Harness(){const[done,setDone]=React.useState(false);return done?React.createElement('p',{role:'status'},'History refreshed'):React.createElement(Component,{...window.fixtureProps,onConfirmed:()=>setDone(true)});}flushSync(()=>root.render(React.createElement(Harness)));`});
+ const require=createRequire(import.meta.url),tw=createRequire(require.resolve('@tailwindcss/postcss'));
+ const {compile}=tw('@tailwindcss/node'),{Scanner}=tw('@tailwindcss/oxide');
+ const candidates=new Scanner({sources:[]}).scanFiles(bundle.sources.filter(f=>/\.tsx?$/.test(f)).map(f=>({content:readFileSync(f,'utf8'),extension:path.extname(f).slice(1)})));
+ const globals=path.resolve('app/globals.css'),compiler=await compile(readFileSync(globals,'utf8'),{base:path.dirname(globals),from:globals,onDependency(){}}),css=compiler.build(candidates)+bundle.css;
+ for(const engine of [chromium,webkit,firefox]){const browser=await engine.launch({headless:true});try{for(const portuguese of [true,false]){
+ const context=await browser.newContext({viewport:{width:390,height:844},serviceWorkers:'block'}),page=await context.newPage();const errors:string[]=[],commands:Record<string,unknown>[]=[];let fail=true;
+ page.on('pageerror',e=>errors.push(e.message));const safe=(s:string)=>s.replace(/<\/script/gi,'<\\/script');
+ const html=`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{box-sizing:border-box}body{background:#10251c;color:white;font:16px Arial;padding:16px}textarea{max-width:100%}${css}</style><div id="root"></div><script>window.fixtureProps={portuguese:${portuguese},settlementId:'${id}'}</script><script>${safe(bundle.script)}</script>`;
+ await context.route('**/*',async route=>{const req=route.request(),url=new URL(req.url());if(url.origin!==origin)return route.abort();if(url.pathname==='/fixture')return route.fulfill({contentType:'text/html',body:html});if(url.pathname==='/api/admin/company-finance/settlement-correction'){const body=req.postDataJSON();commands.push(body);return route.fulfill({status:fail?503:200,json:fail?{error:'UNAVAILABLE'}:{record:{id:body.requestId,settlement_id:id}}});}return route.abort();});
+ await page.goto(origin+'/fixture');await page.locator('summary').click();await page.locator('textarea').fill('Incorrect payment entered against this invoice');const button=page.getByRole('button');await button.click();assert.equal(commands.length,0,'unchecked confirmation cannot submit');await page.locator('input[type=checkbox]').check();await button.click();await expect(page.getByRole('status')).toContainText(portuguese?'Correção não confirmada':'Correction not confirmed');assert.equal(commands.length,1);assert.ok(!await page.getByText('History refreshed').count());
+ await page.screenshot({path:`${out}/${engine.name()}-${portuguese?'pt':'en'}.png`,fullPage:true});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'no horizontal overflow');fail=false;await button.click();await expect(page.getByRole('status')).toHaveText('History refreshed');assert.equal(commands.length,2);assert.equal(commands[0].requestId,commands[1].requestId);assert.equal(commands[0].confirmed,true);assert.equal(errors.length,0,errors.join('\n'));await context.close();
+ }}finally{await browser.close();}}
+});

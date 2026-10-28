@@ -192,7 +192,7 @@ test("the QA distribution migration is idempotent and browser roles cannot read 
 test("live sync distributes canonical fixture writes into player and coach reconciliation", async () => {
   const source = await readFile(new URL("../lib/football-data/live-sync.ts", import.meta.url), "utf8");
   assert.match(source, /syncTouchLinePlayerSeasonStatistics\(admin\)/);
-  assert.match(source, /touchline_reconcile_coach_fixture_points/);
+  assert.match(source, /touchline_reconcile_verified_coach_fixture_points/);
   assert.match(source, /playerFixtureRowsWritten/);
   assert.match(source, /coachPointsReconciled/);
 });

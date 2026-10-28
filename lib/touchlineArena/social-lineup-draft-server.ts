@@ -13,10 +13,8 @@ import { buildTouchLineClubMatchdayPresentation } from "@/lib/touchlineArena/clu
 import { createTouchlineArenaCoachSlot, type TouchlineArenaCoachSlot } from "@/lib/touchlineArena/coach-card";
 import { loadTouchLineCoachRanking } from "@/lib/touchlineArena/coach-ranking-server";
 import { TOUCHLINE_ENGLAND_CLUBS, type ClubOwnerSquadCard, type TouchLineClubVisual } from "@/lib/touchlineArena/demo-data";
-import {
-  touchlineCoachClassificationForProviderId,
-  touchlineLiveCoachForTeam,
-} from "@/lib/touchlineArena/live-coaches";
+import { loadCoachCatalogue } from "@/lib/touchlineArena/coach-catalogue-server";
+import { catalogueCoachForTeam, catalogueCoachForTeamHistory, type CoachCatalogueEntry } from "@/lib/touchlineArena/coach-catalogue-contract";
 import {
   applyTouchlineMatchdayPoints,
   applyTouchlineSeasonPoints,
@@ -64,7 +62,7 @@ export type TouchlineSocialLineupDraft = Readonly<{
   home: TouchLineClubVisual;
   away: TouchLineClubVisual;
   coach: Readonly<{
-    identity: NonNullable<ReturnType<typeof touchlineLiveCoachForTeam>>;
+    identity: CoachCatalogueEntry;
     slot: TouchlineArenaCoachSlot;
   }>;
   players: readonly Readonly<{ card: ClubOwnerSquadCard; x: number; y: number }>[];
@@ -175,8 +173,13 @@ export async function readTouchlineSocialLineupDraft(input: {
   if (!venue?.name || !venue.interiorImageUrl || !Number.isInteger(gameweekNumber) || gameweekNumber < 1) {
     return { ok: false, reason: "verified-match-context-unavailable" };
   }
-  const coachIdentity = touchlineLiveCoachForTeam(teamId);
-  const coachClassification = touchlineCoachClassificationForProviderId(coachIdentity?.coach.providerId);
+  const catalogue = await loadCoachCatalogue();
+  const attribution = snapshot.feed.fixture.coachAttribution;
+  const fixtureCoach = attribution?.status === "complete" && attribution.fixtureProviderId === fixtureId
+    ? attribution.assignments.find(entry => entry.clubProviderId === teamId)?.coachProviderId : null;
+  const coachIdentity = catalogue.phase === "legacy" ? catalogueCoachForTeam(catalogue, teamId)
+    : fixtureCoach ? catalogueCoachForTeamHistory(catalogue, fixtureCoach, teamId) : null;
+  const coachClassification = coachIdentity?.classification;
   if (!coachIdentity || !coachClassification) return { ok: false, reason: "canonical-coach-unavailable" };
 
   const [squadResult, coachRanking] = await Promise.all([

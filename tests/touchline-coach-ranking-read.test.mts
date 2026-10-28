@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import vm from 'node:vm';
 import ts from 'typescript';
-import { touchlineLiveCoachForProviderId } from '../lib/touchlineArena/live-coaches.ts';
+import * as catalogueContract from '../lib/touchlineArena/coach-catalogue-contract.ts';
 import type { TouchLineCoachRankingState } from '../lib/touchlineArena/coach-ranking-server.ts';
 
 const source = readFileSync(new URL('../lib/touchlineArena/coach-ranking-server.ts', import.meta.url), 'utf8');
@@ -69,7 +69,7 @@ function project(row: Row, columns: string): Row {
   return result;
 }
 
-function harness(options: { active?: unknown; error?: unknown; noAdmin?: boolean } = {}) {
+function harness(options: { active?: unknown; error?: unknown; noAdmin?: boolean; catalogue?: catalogueContract.CoachCatalogue } = {}) {
   const activeValue = Object.hasOwn(options, 'active') ? options.active : active();
   const reads: Read[] = [];
   const admin = { from(table: string) {
@@ -103,7 +103,8 @@ function harness(options: { active?: unknown; error?: unknown; noAdmin?: boolean
       // not claim to test React's request deduplication implementation.
       if (name === 'react') return { cache: (fn: unknown) => fn };
       if (name === '@/lib/supabase/admin') return { createAdminClient: () => options.noAdmin ? null : admin };
-      if (name === './live-coaches') return { touchlineLiveCoachForProviderId };
+      if (name === './coach-catalogue-contract') return catalogueContract;
+      if (name === './coach-catalogue-server') return { loadCoachCatalogue: async () => options.catalogue ?? catalogueContract.legacyCoachCatalogue() };
       throw new Error(`Unexpected dependency ${name}`);
     },
     fetch() { throw new Error('Network forbidden'); },
@@ -209,4 +210,26 @@ test('a valid published empty ranking preserves existing empty-snapshot semantic
     fixtureIds: [], generatedAt: GENERATED_AT, rows: [],
   });
   assert.equal(h.reads.length, 1);
+});
+
+
+test('enabled catalogue outage never falls back to the static registry, including an absent active ranking', async () => {
+  for (const activeValue of [active(), null]) {
+    const result = await harness({ active: activeValue, catalogue: catalogueContract.UNAVAILABLE_COACH_CATALOGUE }).load();
+    assert.equal(result.phase, 'unavailable');
+    assert.equal(result.catalogue?.phase, 'unavailable');
+    assert.equal(result.catalogue?.current.length, 0);
+  }
+});
+test('published dynamic identity is admitted to the exact ranking without changing its fixture totals', async () => {
+  const original = catalogueContract.legacyCoachCatalogue();
+  const entry = original.current[0];
+  const replacement = { ...entry, coach: { ...entry.coach, id: 'sportmonks:99991', providerId: '99991', name: 'Synthetic coach', displayName: 'Synthetic coach' }, classification: { ...entry.classification, coachProviderId: '99991' } };
+  const catalogue = { ...original, phase: 'ready' as const, revision: 4, current: [replacement, ...original.current.slice(1)], history: [...original.history, replacement] };
+  const value = snapshot();
+  (value.ranking_payload as Row[])[0].coachProviderId = '99991';
+  const result = await harness({ active: { ...active(), snapshot: value }, catalogue }).load();
+  assert.equal(result.phase, 'ranked'); assert.equal(result.rows[0].coachName, 'Synthetic coach');
+  assert.equal(result.rows[0].touchlinePoints, 9); assert.equal(result.rows[0].wins, 2);
+  assert.equal(result.catalogue?.revision, 4);
 });

@@ -35,14 +35,18 @@ async function authorize(request: NextRequest): Promise<SyncAuthResult> {
     return { ok: true, mode: "sync_secret" };
   }
 
+  if (request.headers.get("origin") !== request.nextUrl.origin || request.headers.get("sec-fetch-site") === "cross-site") {
+    return { ok: false, reason: "Same-origin owner request required." };
+  }
+
   const supabase = await createClient();
   if (!supabase) return { ok: false, reason: "Supabase auth client is not configured." };
 
   const {
-    data: { user },
+    data: { user }, error,
   } = await supabase.auth.getUser();
 
-  if (hasTouchLineArenaAccess(user) && isOwnerEmail(user?.email)) {
+  if (!error && user && hasTouchLineArenaAccess(user) && isOwnerEmail(user?.email)) {
     return { ok: true, mode: "owner_session" };
   }
 

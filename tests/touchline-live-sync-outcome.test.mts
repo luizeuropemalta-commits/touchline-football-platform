@@ -1,3 +1,4 @@
+import { catalogueCoachAssignments, legacyCoachCatalogue } from "../lib/touchlineArena/coach-catalogue-contract.ts";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { stripTypeScriptTypes } from "node:module";
@@ -53,6 +54,8 @@ type Input = {
   failedFixtureIds?: string[];
   missingSettlementFixtureIds?: string[];
   coachError?: string;
+  coachUnconfirmed?: boolean;
+  coachAttributionPending?: boolean;
   liveError?: string;
   liveHttpStatus?: number;
   liveRequestDisposition?: unknown;
@@ -180,9 +183,10 @@ function scenario(input: Input = {}) {
         if (input.thrownFantasyWindowError) throw new Error("private-transport-details");
         return { data: null, error: input.fantasyWindowError ?? null };
       }
-      assert.equal(name, "touchline_reconcile_coach_fixture_points");
+      assert.equal(name, "touchline_reconcile_verified_coach_fixture_points");
       calls.push("coaches");
-      return { data: { reconciled: 2 }, error: input.coachError ? { code: input.coachError } : null };
+      return { data: input.coachUnconfirmed ? null : { ok: !input.coachAttributionPending, reconciled: 2,
+        pending: input.coachAttributionPending ? [{ fixtureProviderId: "19722168", reason: "PCC01" }] : [] }, error: input.coachError ? { code: input.coachError } : null };
     },
   };
   const displayFixture = { ...secondFixture, status: "NotStarted", startsAt: new Date(now + 12 * 60 * 60 * 1000).toISOString() };
@@ -195,7 +199,9 @@ function scenario(input: Input = {}) {
     process: { env: input.environment ?? { VERCEL_ENV: "preview", TOUCHLINE_QA_SUPABASE_PROJECT_REF: "xgxbwqxjssxxuihuwmgy" } },
     inspectTouchlineProductionSyncRuntime,
     inspectTouchlineIsolatedPreviewEnvironment: () => ({ status: "qa" }),
-    touchlineCompetitionCoachAssignments: () => [],
+    readCompetitionCoachAssignments: async () => catalogueCoachAssignments(legacyCoachCatalogue()),
+    // Editorial gate is OFF in this orchestrator fixture; staging performs no write.
+    stageObservedCoachFixture: async () => null,
     console: { info: (message: string) => logs.push({ ...JSON.parse(message), level: "info" }), warn: (message: string) => logs.push({ ...JSON.parse(message), level: "warn" }) },
     readPublicCompetitionFixtures: readFixtures,
     createGuardedFixtureProvider: () => { throw new Error("private-provider-configuration-details"); },
@@ -677,6 +683,12 @@ for (const [input, error] of [
   [{ playerErrors: ["aggregate-row:unavailable"] }, "player-points:aggregate-row:unavailable"],
   [{ playerErrors: ["lineup-identity-coverage:players=48;clubs=0"] }, "player-points:lineup-identity-coverage:players=48;clubs=0"],
   [{ coachError: "XX001" }, "coach-points:XX001"],
+  [{ coachError: "PCC01" }, "coach-points:PCC01"],
+  [{ coachError: "PCC02" }, "coach-points:PCC02"],
+  [{ coachError: "PCC04" }, "coach-points:PCC04"],
+  [{ coachError: "PGRST202" }, "coach-points:PGRST202"],
+  [{ coachUnconfirmed: true }, "coach-points:unconfirmed"],
+  [{ coachAttributionPending: true }, "coach-points:attribution-pending"],
   [{ feedError: "provider_unavailable" }, `${fixture.providerId}:provider_unavailable`],
   [{ feedPersistenceError: "write_failed" }, `${fixture.providerId}:fantasy-feed:write_failed`],
   [{ lineupError: "write_failed" }, `${fixture.providerId}:lineup-observation:write_failed`],
@@ -687,6 +699,10 @@ for (const [input, error] of [
     const s = scenario(input); const result = await s.run();
     assert.equal(result.ok, false); assert.equal(result.status, "partial");
     assert.deepEqual([...result.errors], [error]); assert.equal(result.snapshotFixtures, 1);
+    if ("coachAttributionPending" in input && input.coachAttributionPending) {
+      assert.equal(result.coachPointsReconciled, 2, "verified fixture writes survive isolated pending attribution");
+      assert.equal(JSON.stringify(result.coachPendingFixtures), JSON.stringify([{ fixtureProviderId: "19722168", reason: "PCC01" }]));
+    }
     assertCompletion(s, result);
   });
 }

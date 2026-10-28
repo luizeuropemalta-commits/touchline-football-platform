@@ -1371,7 +1371,8 @@ test("collection structure: visible without activating ownership or purchases", 
             const buttons = Array.from(row.querySelectorAll('[data-collection-placeholder]')).map(el => el.getBoundingClientRect());
             return {
               centerError: Math.abs(coachBox.x + coachBox.width / 2 - rowBox.x - rowBox.width / 2),
-              gapToLine: lineBox.bottom - rowBox.bottom,
+              gapToLine: lineBox.top - rowBox.bottom,
+              technicalLabelHeight: lineBox.height,
               green: getComputedStyle(row.querySelector('[data-collection-placeholder]')!).color,
               coachHeight: row.querySelector('[data-coach-card-art]')!.getBoundingClientRect().height,
               coachWidth: row.querySelector('[data-coach-card-art]')!.getBoundingClientRect().width,
@@ -1381,6 +1382,7 @@ test("collection structure: visible without activating ownership or purchases", 
           assert.ok(measured.centerError < 1, `coach center error: ${measured.centerError}`);
           assert.ok(measured.separated, "reserve controls must not touch each other");
           assert.ok(measured.gapToLine > 0 && measured.gapToLine <= 10, `technical line gap: ${measured.gapToLine}`);
+          assert.ok(measured.technicalLabelHeight >= 18, "technical label retains its readable line height");
           assert.equal(measured.green, "rgb(170, 255, 62)");
           const toolbar = page.locator('[data-formation-toolbar="true"]');
           await expect(toolbar.locator("details")).toHaveCount(1);

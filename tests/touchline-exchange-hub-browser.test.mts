@@ -16,7 +16,11 @@ async function assertSmokeDialog(dialog: Locator, width: number) {
   await expect(dialog).toHaveCSS("border-top-width", "0px");
   const overlay = dialog.locator("..");
   await expect(overlay).toHaveCSS("position", "fixed");
-  await expect(overlay).toHaveCSS("background-color", "rgba(0, 0, 0, 0.82)");
+  await expect(overlay).toHaveCSS("background-color", "rgba(0, 5, 6, 0.72)");
+  assert.equal(await overlay.evaluate(node => {
+    const css = getComputedStyle(node);
+    return css.getPropertyValue("backdrop-filter") || css.getPropertyValue("-webkit-backdrop-filter");
+  }), "blur(8px)");
   const bounds = await overlay.boundingBox();
   assert.ok(bounds && Math.abs(bounds.x) <= 1 && Math.abs(bounds.width - width) <= 1);
 }

@@ -35,7 +35,8 @@ test("ClubOwner technical rail preserves nine real cards, coach crown and horizo
     selectedCases: engines.length * cases.length, fullMatrixCases: 2 * matrix.length };
   t.diagnostic(`Selected technical integration scope: ${JSON.stringify(scope)}`);
   let passedCases = 0;
-  const capacity = () => requireBrowserCapacity(rootPath, { darwinFreePercent: true });
+  const capacity = () => requireBrowserCapacity(rootPath, { darwinFreePercent: true,
+    allowLowDarwinDisk: process.env.TOUCHLINE_LOCAL_ALLOW_500MIB_RESERVE === "1" && !process.env.CI });
   capacity();
   const screenshots = mkdtempSync("/private/tmp/touchline-technical-integration-");
   // Compile outside the browser process and wait for process close so the

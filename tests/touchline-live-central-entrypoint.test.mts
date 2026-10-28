@@ -83,7 +83,7 @@ async function scenario(ack: boolean, scoring = false) {
         rankingPublishes++; tables.touchline_card_ranking_active_snapshots = [{ league_key: args?.requested_league_key, snapshot_id: args?.requested_snapshot_id }];
         return { data: null, error: null };
       }
-      assert.equal(name, 'touchline_reconcile_coach_fixture_points'); return { data: { reconciled: 0 }, error: null };
+      assert.equal(name, 'touchline_reconcile_verified_coach_fixture_points'); return { data: { ok: true, reconciled: 0 }, error: null };
     },
     from(table: string) {
       let action = 'read', payload: Row | Row[] = {}, columns = '', single = false, conflict = '';
@@ -167,7 +167,7 @@ async function scenario(ack: boolean, scoring = false) {
     if (!ack) assert.ok(result.errors.includes('19722203:write-unconfirmed'));
     if (scoring) {
       assert.equal(events.filter((event) => event === 'publish-live-presentation').length, 1);
-      assert.ok(events.indexOf('publish-live-presentation') > events.indexOf('touchline_reconcile_coach_fixture_points'));
+      assert.ok(events.indexOf('publish-live-presentation') > events.indexOf('touchline_reconcile_verified_coach_fixture_points'));
       assert.equal(tables.football_fixture_events.length, 1);
       assert.equal(tables.football_fixture_events[0].provider_event_id, '9001');
       assert.equal(tables.touchline_player_fixture_score_settlements.length, 11);

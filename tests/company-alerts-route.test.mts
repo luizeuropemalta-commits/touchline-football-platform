@@ -1,0 +1,26 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import test from "node:test";
+import vm from "node:vm";
+import ts from "typescript";
+import * as job from "../lib/admin/company-alert-job.ts";
+import * as crypto from "node:crypto";
+const id="11111111-1111-4111-8111-111111111111";
+function request(body?:unknown,options:{origin?:string;secret?:string;type?:string;page?:string}={}){const req=new Request(`https://example.test/api?${options.page??''}`,{method:body===undefined?'GET':'POST',headers:{origin:options.origin??'https://example.test','content-type':options.type??'application/json',...(options.secret?{'x-touchline-job-secret':options.secret}:{})},...(body===undefined?{}:{body:JSON.stringify(body)})});return Object.assign(req,{nextUrl:new URL(req.url)});}
+function harness(internal=false,mode='ok'){
+ let calls=0,rpcCalls=0;
+ const compiled=ts.transpileModule(readFileSync(new URL(internal?'../app/api/internal/company-finance/alerts/run/route.ts':'../app/api/admin/company-finance/alerts/route.ts',import.meta.url),'utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText;
+ const exports={} as {GET(req?:unknown):Promise<{status:number;body:unknown;headers:Record<string,string>}>;POST(req:unknown):Promise<{status:number;body:unknown;headers:Record<string,string>}>};
+ const deps:Record<string,unknown>={
+  'next/server':{NextResponse:{json:(body:unknown,init:object)=>({body,...init})}},'node:crypto':crypto,
+  '@/lib/admin/company-alert-job':job,
+  '@/lib/admin/owner':{isOwnerEmail:()=>mode!=='customer'},'@/lib/touchlineArena/auth-access':{hasTouchLineArenaAccess:()=>mode!=='no-access'},
+  '@/lib/supabase/server':{createClient:async()=>mode==='anonymous'?null:{auth:{getUser:async()=>({data:{user:{id,email:'owner@example.test'}},error:mode==='auth-error'?{}:null})}}},
+  '@/lib/supabase/admin':{createAdminClient:()=>{calls++;if(mode==='no-db')return null;const query={select:()=>query,order:()=>query,is:()=>query,range:async()=>({data:[],error:mode==='db-error'?{message:'PRIVATE'}:null})};return {from:()=>query,rpc:async(name:string,args:Record<string,unknown>)=>{rpcCalls++;if(mode==='db-error')return {error:{message:'SECRET'}};if(name==='touchline_company_generate_admin_alerts')return {data:{state:'DISABLED'},error:null};assert.equal(args.p_actor_id,id);return {data:mode==='missing'?null:mode==='bad-receipt'?{id,read_at:null}:{id,read_at:'2026-10-27T00:00:00Z'},error:null};}};}},
+ };
+ vm.runInNewContext(compiled,{exports,require:(key:string)=>{assert.ok(key in deps,key);return deps[key];},process:{env:{TOUCHLINE_COMPANY_ALERT_JOB_SECRET:mode==='no-secret'?'':'secret'}},Buffer});return {...exports,calls:()=>calls,rpcCalls:()=>rpcCalls};
+}
+test('admin alerts deny untrusted users before privileged access',async()=>{for(const mode of ['anonymous','customer','no-access','auth-error']){const h=harness(false,mode);assert.equal((await h.GET(request())).status,403);assert.equal((await h.POST(request({action:'read',alertId:id}))).status,403);assert.equal(h.calls(),0);}});
+test('admin alerts validate CSRF, body bound, UUID, real date and horizon before writes',async()=>{const h=harness();assert.equal((await h.POST(request({action:'read',alertId:id},{origin:'https://other.test'}))).status,403);for(const value of [null,[],{action:'read',alertId:'bad'},{action:'read',alertId:id,padding:'A'.repeat(5000)},{action:'run',runId:id,today:'2026-02-30'},{action:'run',runId:id,today:'2026-10-27',horizonDays:1.5},{action:'run',runId:id,today:'2026-10-27',horizonDays:367}])assert.equal((await h.POST(request(value))).status,400);assert.equal((await h.POST(request({action:'read',alertId:id},{type:'text/plain'}))).status,400);assert.equal(h.rpcCalls(),0);});
+test('admin alerts return exact receipt, distinguish missing/error and retain no-store',async()=>{const h=harness();const list=await h.GET(request());assert.equal(list.status,200);assert.equal(list.headers['Cache-Control'],'private, no-store');const read=await h.POST(request({action:'read',alertId:id}));assert.equal(read.status,200);assert.match(JSON.stringify(read.body),/2026-10-27T00:00:00Z/);assert.equal((await h.POST(request({action:'run',runId:id,today:'2026-10-27'}))).status,200);for(const mode of ['db-error','bad-receipt','no-db']){const result=await harness(false,mode).POST(request({action:'read',alertId:id}));assert.equal(result.status,503);assert.ok(!JSON.stringify(result).includes('SECRET'));}assert.equal((await harness(false,'missing').POST(request({action:'read',alertId:id}))).status,404);});
+test('scheduler fails closed, validates command and returns SQL gate without external delivery',async()=>{const body={runId:id,today:'2026-10-27'};for(const mode of ['ok','no-secret']){const h=harness(true,mode);assert.equal((await h.POST(request(body,{secret:'wrong'}))).status,403);assert.equal(h.calls(),0);}const h=harness(true);assert.equal((await h.GET()).status,405);for(const invalid of [{...body,today:'2026-02-30'},{...body,horizonDays:-1},{...body,padding:'X'.repeat(2200)}])assert.equal((await h.POST(request(invalid,{secret:'secret'}))).status,400);const result=await h.POST(request(body,{secret:'secret'}));assert.equal(result.status,200);assert.match(JSON.stringify(result.body),/DISABLED/);assert.equal(h.rpcCalls(),1);});

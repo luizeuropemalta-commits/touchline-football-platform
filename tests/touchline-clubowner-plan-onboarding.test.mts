@@ -158,7 +158,7 @@ test("onboarding reuses canonical cards/copy and keeps glass styling scoped", ()
   assert.doesNotMatch(source, /fetch\(|localStorage|sessionStorage|supabase|stripe|router\./);
   const css = readFileSync(new URL("../components/touchline/ClubOwnerPlanOnboarding.module.css", import.meta.url), "utf8");
   assert.match(css, /height: 100dvh/); assert.match(css, /max-width: none/); assert.match(css, /border-radius: 0/);
-  assert.match(css, /background: rgba\(0,0,0,\.58\)/); assert.match(css, /backdrop-filter: blur\(7px\)/);
+  assert.match(css, /background: var\(--touchline-modal-backdrop/); assert.match(css, /backdrop-filter: var\(--touchline-modal-blur/);
   assert.doesNotMatch(css, /:global|background: #000|background: black/);
 });
 

@@ -57,25 +57,21 @@ test("private artifact verification fails closed for absent files, malformed vid
   } finally { await rm(root, { recursive: true, force: true }); }
 });
 
-test("source boundary retains a protected media endpoint and additive paused-only persistence", async () => {
+test("PNG retains private reads while historical persistence and verification remain intact", async () => {
   const source = async (path: string) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
-  const [page, video, server, ui, sql, preparation] = await Promise.all([
-    source("app/(app)/admin/social-publications/studio/page.tsx"), source("app/api/admin/social-publications/studio/video/route.ts"),
-    source("lib/touchlineArena/social-studio-server.ts"), source("components/touchline/admin/TouchlineSocialStudio.tsx"),
+  const [page, png, server, sql, preparation] = await Promise.all([
+    source("app/(app)/admin/social-publications/studio/page.tsx"), source("app/api/admin/social-publications/studio/png/route.ts"),
+    source("lib/touchlineArena/social-studio-server.ts"),
     source("supabase/migrations/20260914212250_touchline_social_studio_review_plans.sql"),
     source("lib/touchlineArena/social-studio-save.ts"),
   ]);
   assert.ok(page.indexOf("await authorizeStudio()") < page.indexOf("createAdminClient()"));
+  assert.ok(png.indexOf("await authorizeStudio()") < png.indexOf("createAdminClient()"));
   assert.match(page, /studioPngLocator/);
-  assert.doesNotMatch(page, /<TouchlineSocialStudio|readStudioSnapshot/);
-  assert.ok(video.indexOf("await authorizeStudio()") < video.indexOf("await storage.createSignedPreview(media, 300)"));
-  assert.match(video, /status: 307/);
-  assert.doesNotMatch(video, /new Uint8Array|Content-Range/);
-  assert.match(server, /assertTouchlineSocialQaRuntime\(\)/);
-  assert.match(server, /admin\.rpc\("touchline_social_studio_save_v3"/);
-  assert.match(server, /verifyArtifact: \(candidate, now\) => verifyStudioArtifact\(candidate, process\.cwd\(\), now\)/);
+  assert.match(png, /assertTouchlineSocialQaRuntime\(\)/);
+  assert.match(png, /studioPngBytesMatch/);
+  assert.doesNotMatch(page + png + server, /TouchlineSocialStudio|readStudioSnapshot|saveStudioAction|studio\/video|studio\/review|localStorage|graph\.facebook|graph\.instagram|media_publish/);
   assert.match(preparation, /await dependencies\.verifyArtifact\(media\.manifest, now\)[\s\S]*studioEyesApproved\(verified\.eyes\)[\s\S]*await dependencies\.verifySource/);
-  assert.doesNotMatch(ui + server + video, /localStorage|graph\.facebook|graph\.instagram|media_publish/);
   assert.doesNotMatch(sql, /update public\.touchline_social_(templates|publication_drafts)|insert into public\.touchline_social_.*outbox/i);
   assert.match(sql, /security invoker set search_path = ''/);
 });

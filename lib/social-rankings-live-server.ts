@@ -1,3 +1,4 @@
+import { loadCoachCatalogue } from "./touchlineArena/coach-catalogue-server";
 import "server-only";
 import { readFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
@@ -42,6 +43,8 @@ export async function prepareRankingsLiveRenderInput(): Promise<RankingsLiveRend
   const presentations = await loadTouchlinePublishedCardPresentations({ playerIds: publishedIds, providedAdmin: admin });
   if (!presentations.size) throw new Error("CANONICAL_PUBLICATION_PRESENTATIONS_UNAVAILABLE");
   const source = JSON.parse(sourceBytes.toString()) as RankingsLiveSource;
+  source.coachCatalogue = await loadCoachCatalogue();
+  if (source.coachCatalogue.phase === "unavailable") throw new Error("COACH_CATALOGUE_UNAVAILABLE");
   if (activeCoach.error || activeCoach.data?.snapshot_id !== source.coachSnapshot.snapshot_id) throw new Error("RANKINGS_COACH_ACTIVE_SNAPSHOT_CHANGED");
   const currentCoach = await admin.from("touchline_coach_ranking_snapshots")
     .select("snapshot_id,season_id,league_key,scoring_version,fixture_ids,ranking_payload")

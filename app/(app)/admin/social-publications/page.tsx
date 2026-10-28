@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { socialAdminLanguage, socialAdminDate, socialAdminState } from "@/lib/touchlineArena/social-admin-language";
 import { notFound } from "next/navigation";
 
 import { GamePanel, LivePill } from "@/components/arena-admin-ui";
@@ -222,12 +223,15 @@ export default async function TouchlineSocialPublicationsAdmin({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const query = await searchParams;
+  const { locale, t } = socialAdminLanguage(Array.isArray(query.lang) ? query.lang[0] : query.lang);
+  const label = (value: string) => socialAdminState(value, locale);
+  const date = (value: string | null | undefined) => socialAdminDate(value, locale);
   const draftPage = pageNumber(query.draftPage);
   const reviewPage = pageNumber(query.reviewPage);
   const pageSize = 50;
   const supabase = await createClient();
   const admin = createAdminClient();
-  if (!supabase || !admin) return <GamePanel className="p-8"><LivePill>Configuração necessária</LivePill><h1 className="mt-5 text-4xl font-black italic text-white">Publicações sociais</h1><p className="mt-3 text-sm text-slate-400">A administração protegida ainda não está configurada.</p></GamePanel>;
+  if (!supabase || !admin) return <GamePanel className="p-8"><LivePill>{t("Configuração necessária")}</LivePill><h1 className="mt-5 text-4xl font-black italic text-white">{t("Publicações sociais")}</h1><p className="mt-3 text-sm text-slate-400">{t("A administração protegida ainda não está configurada.")}</p></GamePanel>;
   const { data: { user } } = await supabase.auth.getUser();
   if (!hasTouchLineArenaAccess(user) || !isOwnerEmail(user?.email)) notFound();
 
@@ -370,7 +374,7 @@ export default async function TouchlineSocialPublicationsAdmin({
     || clubFeedStatusResult.error || templatePolicyStatusResult.error;
   if (readFailure && !migrationPending && !executorPending && !matchPreviewPending
     && !finalResultPending && !confirmedEventPending && !rankingPending && !clubFeedPending
-    && !templatePolicyPending) return <GamePanel className="p-8"><LivePill>Leitura indisponível</LivePill><h1 className="mt-5 text-4xl font-black italic text-white">Publicações sociais</h1><p className="mt-3 text-sm text-slate-400">Os rascunhos protegidos não puderam ser lidos.</p></GamePanel>;
+    && !templatePolicyPending) return <GamePanel className="p-8"><LivePill>{t("Leitura indisponível")}</LivePill><h1 className="mt-5 text-4xl font-black italic text-white">{t("Publicações sociais")}</h1><p className="mt-3 text-sm text-slate-400">{t("Os rascunhos protegidos não puderam ser lidos.")}</p></GamePanel>;
 
   const drafts = await Promise.all((data ?? []).map(async (draft) => {
     const { data: signed } = await admin.storage
@@ -417,190 +421,193 @@ export default async function TouchlineSocialPublicationsAdmin({
   const blockedReviews = reviewRows.filter((review) => review.review_state === "REVIEW_REQUIRED");
   const openJobs = openJobsResult.data ?? [];
 
-  return <div className="mx-auto max-w-[1300px] space-y-6">
+  return <div lang={locale} className="mx-auto max-w-[1300px] space-y-6">
     <GamePanel className="p-6 sm:p-8">
-      <LivePill>QA · aprovação humana obrigatória</LivePill>
-      <h1 className="mt-5 text-4xl font-black italic text-white sm:text-6xl">Publicações sociais</h1>
-      <Link href="/admin/social-publications/studio" className="mt-5 inline-flex text-sm font-bold text-[#b7ff45] underline underline-offset-4">Abrir Studio · artes PNG e download</Link>
-      <p className="mt-4 max-w-3xl text-sm leading-6 text-slate-400">Arte e legenda são aprovadas separadamente. Aprovar as duas apenas torna a revisão elegível para uma outbox futura; esta tela não publica, não despacha e não se conecta ao Instagram.</p>
-      <Link href="/admin" className="mt-5 inline-flex rounded-2xl border border-white/10 px-4 py-3 text-xs font-black text-white">Voltar ao Admin</Link>
+      <nav aria-label={t("Idioma")} className="mb-4 flex gap-3 text-sm font-bold">
+        {(["pt-BR", "en-GB"] as const).map((language) => <Link key={language} href={`/admin/social-publications?lang=${language}&draftPage=${draftPage}&reviewPage=${reviewPage}`} aria-current={locale === language ? "page" : undefined} hrefLang={language} className="text-[#b7ff45] underline underline-offset-4">{language === "pt-BR" ? "Português" : "English"}</Link>)}
+      </nav>
+      <LivePill>{t("QA · aprovação humana obrigatória")}</LivePill>
+      <h1 className="mt-5 text-4xl font-black italic text-white sm:text-6xl">{t("Publicações sociais")}</h1>
+      <Link href={`/admin/social-publications/studio?lang=${locale}`} className="mt-5 inline-flex text-sm font-bold text-[#b7ff45] underline underline-offset-4">{t("Abrir Studio · artes PNG e download")}</Link>
+      <p className="mt-4 max-w-3xl text-sm leading-6 text-slate-400">{t("Arte e legenda são aprovadas separadamente. Aprovar as duas apenas torna a revisão elegível para uma outbox futura; esta tela não publica, não despacha e não se conecta ao Instagram.")}</p>
+      <Link href={`/admin?lang=${locale}`} className="mt-5 inline-flex rounded-2xl border border-white/10 px-4 py-3 text-xs font-black text-white">{t("Voltar ao Admin")}</Link>
     </GamePanel>
-    {migrationPending ? <GamePanel className="p-6"><LivePill>Migration 039 ausente</LivePill><h2 className="mt-4 text-2xl font-black text-white">Approval-only indisponível</h2><p className="mt-3 text-sm leading-6 text-slate-400">Nenhum rascunho pode ser aprovado enquanto o contrato 039 não estiver presente no ambiente QA verificado.</p></GamePanel> : null}
-    {!migrationPending && executorPending ? <GamePanel className="p-6"><LivePill>Executor 040 ausente</LivePill><h2 className="mt-4 text-2xl font-black text-white">Geração automática bloqueada</h2><p className="mt-3 text-sm leading-6 text-slate-400">Arte e legenda permanecem bloqueadas até o scheduler e o runner DRAFT-only receberem auditoria independente e ativação explícita somente em QA.</p></GamePanel> : null}
+    {migrationPending ? <GamePanel className="p-6"><LivePill>{t("Migration 039 ausente")}</LivePill><h2 className="mt-4 text-2xl font-black text-white">{t("Approval-only indisponível")}</h2><p className="mt-3 text-sm leading-6 text-slate-400">{t("Nenhum rascunho pode ser aprovado enquanto o contrato 039 não estiver presente no ambiente QA verificado.")}</p></GamePanel> : null}
+    {!migrationPending && executorPending ? <GamePanel className="p-6"><LivePill>{t("Executor 040 ausente")}</LivePill><h2 className="mt-4 text-2xl font-black text-white">{t("Geração automática bloqueada")}</h2><p className="mt-3 text-sm leading-6 text-slate-400">{t("Arte e legenda permanecem bloqueadas até o scheduler e o runner DRAFT-only receberem auditoria independente e ativação explícita somente em QA.")}</p></GamePanel> : null}
     {!migrationPending ? <GamePanel className="p-6">
-      <LivePill>{health === "healthy" ? "GERADOR · SAUDÁVEL" : health === "running" ? "GERADOR · EM EXECUÇÃO" : "GERADOR · ATENÇÃO"}</LivePill>
-      <h2 className="mt-4 text-2xl font-black text-white">Ciclo automático auditável</h2>
+      <LivePill>{health === "healthy" ? t("GERADOR · SAUDÁVEL") : health === "running" ? t("GERADOR · EM EXECUÇÃO") : t("GERADOR · ATENÇÃO")}</LivePill>
+      <h2 className="mt-4 text-2xl font-black text-white">{t("Ciclo automático auditável")}</h2>
       {cycleResult.data ? <div className="mt-4 grid gap-3 text-xs text-slate-300 sm:grid-cols-3">
-        <p><span className="block text-[9px] font-black text-slate-500">ÚLTIMA CONCLUSÃO</span>{cycleResult.data.last_completed_at ? new Date(cycleResult.data.last_completed_at).toLocaleString("pt-BR", { timeZone: "Europe/Malta" }) : "Aguardando primeiro ciclo"}</p>
-        <p><span className="block text-[9px] font-black text-slate-500">RESULTADO</span>{cycleResult.data.last_outcome ?? "Ainda não executado"}</p>
-        <p><span className="block text-[9px] font-black text-slate-500">FALHAS CONSECUTIVAS</span>{cycleResult.data.consecutive_failures}</p>
-      </div> : <p className="mt-3 text-sm text-slate-400">Aguardando a primeira execução protegida do gerador.</p>}
-      {!approvalsOperational ? <p role="alert" className="mt-4 rounded-2xl border border-amber-300/20 bg-amber-300/[.06] p-4 text-xs font-bold text-amber-100">Aprovações bloqueadas: o ciclo está {health}. Aguarde uma verificação automática saudável da fonte oficial.</p> : null}
+        <p><span className="block text-[9px] font-black text-slate-500">{t("ÚLTIMA CONCLUSÃO")}</span>{cycleResult.data.last_completed_at ? date(cycleResult.data.last_completed_at) : t("Aguardando primeiro ciclo")}</p>
+        <p><span className="block text-[9px] font-black text-slate-500">{t("RESULTADO")}</span>{cycleResult.data.last_outcome ? label(cycleResult.data.last_outcome) : t("Ainda não executado")}</p>
+        <p><span className="block text-[9px] font-black text-slate-500">{t("FALHAS CONSECUTIVAS")}</span>{cycleResult.data.consecutive_failures}</p>
+      </div> : <p className="mt-3 text-sm text-slate-400">{t("Aguardando a primeira execução protegida do gerador.")}</p>}
+      {!approvalsOperational ? <p role="alert" className="mt-4 rounded-2xl border border-amber-300/20 bg-amber-300/[.06] p-4 text-xs font-bold text-amber-100">{t("Aprovações bloqueadas: o ciclo está")}{" "}{label(health)}{t(". Aguarde uma verificação automática saudável da fonte oficial.")}</p> : null}
     </GamePanel> : null}
     {!migrationPending && !executorPending ? <GamePanel className="p-6">
-      <LivePill>{executorHealth.operational ? "EXECUTOR · SAUDÁVEL" : "EXECUTOR · ATENÇÃO"}</LivePill>
-      <h2 className="mt-4 text-2xl font-black text-white">Scheduler e runner duráveis</h2>
+      <LivePill>{executorHealth.operational ? t("EXECUTOR · SAUDÁVEL") : t("EXECUTOR · ATENÇÃO")}</LivePill>
+      <h2 className="mt-4 text-2xl font-black text-white">{t("Scheduler e runner duráveis")}</h2>
       <div className="mt-4 grid gap-3 text-xs text-slate-300 sm:grid-cols-3">
         {(["SCHEDULER", "RUNNER"] as const).map((component) => {
           const cycle = (executorCyclesResult.data ?? []).find((item) => item.component === component);
           const componentHealth = component === "SCHEDULER" ? executorHealth.scheduler : executorHealth.runner;
           return <div key={component} className="rounded-2xl border border-white/[.08] bg-black/20 p-4">
-            <strong className="text-white">{component}</strong>
-            <p className="mt-2 font-black text-[#a3ff12]">{componentHealth}</p>
-            <p className="mt-2 text-slate-500">Última execução: {cycle?.last_completed_at ? new Date(cycle.last_completed_at).toLocaleString("pt-BR", { timeZone: "Europe/Malta" }) : "nunca"}</p>
-            <p className="mt-1 text-slate-500">Falhas: {cycle?.consecutive_failures ?? 0} · retries recuperados: {cycle?.timeout_recovery_count ?? 0}</p>
+            <strong className="text-white">{label(component)}</strong>
+            <p className="mt-2 font-black text-[#a3ff12]">{label(componentHealth)}</p>
+            <p className="mt-2 text-slate-500">{t("Última execução:")}{" "}{cycle?.last_completed_at ? date(cycle.last_completed_at) : t("nunca")}</p>
+            <p className="mt-1 text-slate-500">{t("Falhas:")}{" "}{cycle?.consecutive_failures ?? 0}{" "}{t("· retries recuperados:")}{" "}{cycle?.timeout_recovery_count ?? 0}</p>
             {cycle?.last_error_code ? <p className="mt-1 font-mono text-amber-100">{cycle.last_error_code}</p> : null}
           </div>;
         })}
         <div className="rounded-2xl border border-white/[.08] bg-black/20 p-4">
-          <strong className="text-white">FILA ATIVA</strong>
+          <strong className="text-white">{t("FILA ATIVA")}</strong>
           <p className="mt-2 font-black text-[#a3ff12]">{openJobsResult.count ?? 0}</p>
-          <p className="mt-2 text-slate-500">PENDING/RUNNING/RETRY/REVIEW_REQUIRED</p>
+          <p className="mt-2 text-slate-500">{t("PENDING/RUNNING/RETRY/REVIEW_REQUIRED")}</p>
         </div>
       </div>
       {openJobs.length ? <div className="mt-4 grid gap-2 md:grid-cols-2">
         {openJobs.slice(0, 10).map((job) => <div key={job.id} className="rounded-xl border border-white/[.08] px-3 py-2 text-[10px] text-slate-400">
-          <strong className="text-white">Fixture {job.fixture_provider_id} · Team {job.team_provider_id}</strong>
-          <span className="ml-2 font-black text-amber-100">{job.job_state}</span>
-          <p className="mt-1">{job.reason_code} · tentativa {job.attempt_count}/5</p>
+          <strong className="text-white">{t("Fixture")}{" "}{job.fixture_provider_id}{" "}{t("· Team")}{" "}{job.team_provider_id}</strong>
+          <span className="ml-2 font-black text-amber-100">{label(job.job_state)}</span>
+          <p className="mt-1">{t("Código de motivo:")} {job.reason_code}{" "}{t("· tentativa")}{" "}{job.attempt_count}/5</p>
         </div>)}
-      </div> : <p className="mt-4 text-xs text-slate-500">Nenhum job ativo ou em revisão.</p>}
-      {!executorHealth.operational ? <p role="alert" className="mt-4 rounded-2xl border border-amber-300/20 bg-amber-300/[.06] p-4 text-xs font-bold text-amber-100">Aprovações bloqueadas: scheduler {executorHealth.scheduler}; runner {executorHealth.runner}. Nenhuma publicação externa é executada por este sistema.</p> : null}
+      </div> : <p className="mt-4 text-xs text-slate-500">{t("Nenhum job ativo ou em revisão.")}</p>}
+      {!executorHealth.operational ? <p role="alert" className="mt-4 rounded-2xl border border-amber-300/20 bg-amber-300/[.06] p-4 text-xs font-bold text-amber-100">{t("Aprovações bloqueadas: scheduler")}{" "}{label(executorHealth.scheduler)}{t("; runner")}{" "}{label(executorHealth.runner)}{t(". Nenhuma publicação externa é executada por este sistema.")}</p> : null}
     </GamePanel> : null}
     {!migrationPending && !matchPreviewPending ? <GamePanel className="p-6">
-      <LivePill>{matchPreviewExecutorHealth.operational ? "MATCH PREVIEW 041 · SAUDÁVEL" : "MATCH PREVIEW 041 · ATENÇÃO"}</LivePill>
-      <h2 className="mt-4 text-2xl font-black text-white">Preview pré-jogo automático</h2>
-      <p className="mt-3 text-sm leading-6 text-slate-400">Confronto, posições e líderes dos clubes vêm de uma única revisão canônica. Nenhuma escalação é inferida e nenhuma ação externa é executada.</p>
+      <LivePill>{matchPreviewExecutorHealth.operational ? t("MATCH PREVIEW 041 · SAUDÁVEL") : t("MATCH PREVIEW 041 · ATENÇÃO")}</LivePill>
+      <h2 className="mt-4 text-2xl font-black text-white">{t("Preview pré-jogo automático")}</h2>
+      <p className="mt-3 text-sm leading-6 text-slate-400">{t("Confronto, posições e líderes dos clubes vêm de uma única revisão canônica. Nenhuma escalação é inferida e nenhuma ação externa é executada.")}</p>
       <div className="mt-4 grid gap-3 text-xs text-slate-300 sm:grid-cols-3">
         {(["SCHEDULER", "RUNNER"] as const).map((component) => {
           const cycle = (matchPreviewCyclesResult.data ?? []).find((item) => item.component === component);
           const state = component === "SCHEDULER" ? matchPreviewExecutorHealth.scheduler : matchPreviewExecutorHealth.runner;
-          return <div key={component} className="rounded-2xl border border-white/[.08] bg-black/20 p-4"><strong className="text-white">{component}</strong><p className="mt-2 font-black text-[#a3ff12]">{state}</p><p className="mt-2 text-slate-500">Última conclusão: {cycle?.last_completed_at ? new Date(cycle.last_completed_at).toLocaleString("pt-BR", { timeZone: "Europe/Malta" }) : "nunca"}</p></div>;
+          return <div key={component} className="rounded-2xl border border-white/[.08] bg-black/20 p-4"><strong className="text-white">{label(component)}</strong><p className="mt-2 font-black text-[#a3ff12]">{label(state)}</p><p className="mt-2 text-slate-500">{t("Última conclusão:")}{" "}{cycle?.last_completed_at ? date(cycle.last_completed_at) : t("nunca")}</p></div>;
         })}
-        <div className="rounded-2xl border border-white/[.08] bg-black/20 p-4"><strong className="text-white">JOBS 041</strong><p className="mt-2 font-black text-[#a3ff12]">{matchPreviewJobsResult.count ?? 0}</p><p className="mt-2 text-slate-500">Todas as revisões observáveis</p></div>
+        <div className="rounded-2xl border border-white/[.08] bg-black/20 p-4"><strong className="text-white">{t("JOBS 041")}</strong><p className="mt-2 font-black text-[#a3ff12]">{matchPreviewJobsResult.count ?? 0}</p><p className="mt-2 text-slate-500">{t("Todas as revisões observáveis")}</p></div>
       </div>
     </GamePanel> : null}
     {!migrationPending && !finalResultPending ? <GamePanel className="p-6">
-      <LivePill>{finalResultExecutorHealth.operational ? "FINAL RESULT 042 · SAUDÁVEL" : "FINAL RESULT 042 · ATENÇÃO"}</LivePill>
-      <h2 className="mt-4 text-2xl font-black text-white">Full Time Feed e Final Score Story</h2>
-      <p className="mt-3 text-sm leading-6 text-slate-400">Placar, golos, pontuação final e Top Match Card compartilham uma revisão factual. Arte e legenda continuam com aprovações separadas e sem outbound.</p>
+      <LivePill>{finalResultExecutorHealth.operational ? t("FINAL RESULT 042 · SAUDÁVEL") : t("FINAL RESULT 042 · ATENÇÃO")}</LivePill>
+      <h2 className="mt-4 text-2xl font-black text-white">{t("Full Time Feed e Final Score Story")}</h2>
+      <p className="mt-3 text-sm leading-6 text-slate-400">{t("Placar, golos, pontuação final e Top Match Card compartilham uma revisão factual. Arte e legenda continuam com aprovações separadas e sem outbound.")}</p>
       <div className="mt-4 grid gap-3 text-xs text-slate-300 sm:grid-cols-3">
         {(["SCHEDULER", "RUNNER"] as const).map((component) => {
           const cycle = (finalResultCyclesResult.data ?? []).find((item) => item.component === component);
           const state = component === "SCHEDULER" ? finalResultExecutorHealth.scheduler : finalResultExecutorHealth.runner;
-          return <div key={component} className="rounded-2xl border border-white/[.08] bg-black/20 p-4"><strong className="text-white">{component}</strong><p className="mt-2 font-black text-[#a3ff12]">{state}</p><p className="mt-2 text-slate-500">Última conclusão: {cycle?.last_completed_at ? new Date(cycle.last_completed_at).toLocaleString("pt-BR", { timeZone: "Europe/Malta" }) : "nunca"}</p></div>;
+          return <div key={component} className="rounded-2xl border border-white/[.08] bg-black/20 p-4"><strong className="text-white">{label(component)}</strong><p className="mt-2 font-black text-[#a3ff12]">{label(state)}</p><p className="mt-2 text-slate-500">{t("Última conclusão:")}{" "}{cycle?.last_completed_at ? date(cycle.last_completed_at) : t("nunca")}</p></div>;
         })}
-        <div className="rounded-2xl border border-white/[.08] bg-black/20 p-4"><strong className="text-white">JOBS 042</strong><p className="mt-2 font-black text-[#a3ff12]">{finalResultJobsResult.count ?? 0}</p><p className="mt-2 text-slate-500">Feed e Story observáveis</p></div>
+        <div className="rounded-2xl border border-white/[.08] bg-black/20 p-4"><strong className="text-white">{t("JOBS 042")}</strong><p className="mt-2 font-black text-[#a3ff12]">{finalResultJobsResult.count ?? 0}</p><p className="mt-2 text-slate-500">{t("Feed e Story observáveis")}</p></div>
       </div>
     </GamePanel> : null}
     {!migrationPending && !confirmedEventPending ? <GamePanel className="p-6">
-      <LivePill>{confirmedEventExecutorHealth.operational ? "MATCH EVENTS 043 · SAUDÁVEL" : "MATCH EVENTS 043 · ATENÇÃO"}</LivePill>
-      <h2 className="mt-4 text-2xl font-black text-white">Goal e Red Card Stories confirmados</h2>
-      <p className="mt-3 text-sm leading-6 text-slate-400">Somente eventos confirmados e estáveis geram DRAFT. VAR, evento pendente ou dado contraditório permanecem bloqueados; nenhuma ação externa é executada.</p>
+      <LivePill>{confirmedEventExecutorHealth.operational ? t("MATCH EVENTS 043 · SAUDÁVEL") : t("MATCH EVENTS 043 · ATENÇÃO")}</LivePill>
+      <h2 className="mt-4 text-2xl font-black text-white">{t("Goal e Red Card Stories confirmados")}</h2>
+      <p className="mt-3 text-sm leading-6 text-slate-400">{t("Somente eventos confirmados e estáveis geram DRAFT. VAR, evento pendente ou dado contraditório permanecem bloqueados; nenhuma ação externa é executada.")}</p>
       <div className="mt-4 grid gap-3 text-xs text-slate-300 sm:grid-cols-3">
         {(["SCHEDULER", "RUNNER"] as const).map((component) => {
           const cycle = (confirmedEventCyclesResult.data ?? []).find((item) => item.component === component);
           const state = component === "SCHEDULER" ? confirmedEventExecutorHealth.scheduler : confirmedEventExecutorHealth.runner;
-          return <div key={component} className="rounded-2xl border border-white/[.08] bg-black/20 p-4"><strong className="text-white">{component}</strong><p className="mt-2 font-black text-[#a3ff12]">{state}</p><p className="mt-2 text-slate-500">Última conclusão: {cycle?.last_completed_at ? new Date(cycle.last_completed_at).toLocaleString("pt-BR", { timeZone: "Europe/Malta" }) : "nunca"}</p></div>;
+          return <div key={component} className="rounded-2xl border border-white/[.08] bg-black/20 p-4"><strong className="text-white">{label(component)}</strong><p className="mt-2 font-black text-[#a3ff12]">{label(state)}</p><p className="mt-2 text-slate-500">{t("Última conclusão:")}{" "}{cycle?.last_completed_at ? date(cycle.last_completed_at) : t("nunca")}</p></div>;
         })}
-        <div className="rounded-2xl border border-white/[.08] bg-black/20 p-4"><strong className="text-white">JOBS 043</strong><p className="mt-2 font-black text-[#a3ff12]">{confirmedEventJobsResult.count ?? 0}</p><p className="mt-2 text-slate-500">Eventos confirmados observáveis</p></div>
+        <div className="rounded-2xl border border-white/[.08] bg-black/20 p-4"><strong className="text-white">{t("JOBS 043")}</strong><p className="mt-2 font-black text-[#a3ff12]">{confirmedEventJobsResult.count ?? 0}</p><p className="mt-2 text-slate-500">{t("Eventos confirmados observáveis")}</p></div>
       </div>
     </GamePanel> : null}
     {!migrationPending && !rankingPending ? <GamePanel className="p-6">
-      <LivePill>{rankingExecutorHealth.operational ? "RANKING FAMILY 044 · SAUDÁVEL" : "RANKING FAMILY 044 · ATENÇÃO"}</LivePill>
-      <h2 className="mt-4 text-2xl font-black text-white">Rankings, duelos e heróis verificados</h2>
-      <p className="mt-3 text-sm leading-6 text-slate-400">Top 3, Player Duel, Gameweek Hero, Top Performer e Hat-trick Hero usam a mesma revisão canônica. Total Rating e Match Rating permanecem distintos; nenhuma ação externa é executada.</p>
+      <LivePill>{rankingExecutorHealth.operational ? t("RANKING FAMILY 044 · SAUDÁVEL") : t("RANKING FAMILY 044 · ATENÇÃO")}</LivePill>
+      <h2 className="mt-4 text-2xl font-black text-white">{t("Rankings, duelos e heróis verificados")}</h2>
+      <p className="mt-3 text-sm leading-6 text-slate-400">{t("Top 3, Player Duel, Gameweek Hero, Top Performer e Hat-trick Hero usam a mesma revisão canônica. Total Rating e Match Rating permanecem distintos; nenhuma ação externa é executada.")}</p>
       <div className="mt-4 grid gap-3 text-xs text-slate-300 sm:grid-cols-3">
         {(["SCHEDULER", "RUNNER"] as const).map((component) => {
           const cycle = (rankingCyclesResult.data ?? []).find((item) => item.component === component);
           const state = component === "SCHEDULER" ? rankingExecutorHealth.scheduler : rankingExecutorHealth.runner;
-          return <div key={component} className="rounded-2xl border border-white/[.08] bg-black/20 p-4"><strong className="text-white">{component}</strong><p className="mt-2 font-black text-[#a3ff12]">{state}</p><p className="mt-2 text-slate-500">Última conclusão: {cycle?.last_completed_at ? new Date(cycle.last_completed_at).toLocaleString("pt-BR", { timeZone: "Europe/Malta" }) : "nunca"}</p></div>;
+          return <div key={component} className="rounded-2xl border border-white/[.08] bg-black/20 p-4"><strong className="text-white">{label(component)}</strong><p className="mt-2 font-black text-[#a3ff12]">{label(state)}</p><p className="mt-2 text-slate-500">{t("Última conclusão:")}{" "}{cycle?.last_completed_at ? date(cycle.last_completed_at) : t("nunca")}</p></div>;
         })}
-        <div className="rounded-2xl border border-white/[.08] bg-black/20 p-4"><strong className="text-white">JOBS 044</strong><p className="mt-2 font-black text-[#a3ff12]">{rankingJobsResult.count ?? 0}</p><p className="mt-2 text-slate-500">Feed approval-only observável</p></div>
+        <div className="rounded-2xl border border-white/[.08] bg-black/20 p-4"><strong className="text-white">{t("JOBS 044")}</strong><p className="mt-2 font-black text-[#a3ff12]">{rankingJobsResult.count ?? 0}</p><p className="mt-2 text-slate-500">{t("Feed approval-only observável")}</p></div>
       </div>
     </GamePanel> : null}
     {!migrationPending && !clubFeedPending ? <GamePanel className="p-6">
-      <LivePill>{clubFeedExecutorHealth.operational ? "CLUB SOCIAL FEED 045 · SAUDÁVEL" : "CLUB SOCIAL FEED 045 · ATENÇÃO"}</LivePill>
-      <h2 className="mt-4 text-2xl font-black text-white">Canal oficial dos clubes</h2>
-      <p className="mt-3 text-sm leading-6 text-slate-400">Um único post canônico referencia a mídia já aprovada e é distribuído aos clubes elegíveis sem duplicar os bytes. Conteúdo ativo expira em 14 dias; o tombstone mínimo preserva a auditoria.</p>
+      <LivePill>{clubFeedExecutorHealth.operational ? t("CLUB SOCIAL FEED 045 · SAUDÁVEL") : t("CLUB SOCIAL FEED 045 · ATENÇÃO")}</LivePill>
+      <h2 className="mt-4 text-2xl font-black text-white">{t("Canal oficial dos clubes")}</h2>
+      <p className="mt-3 text-sm leading-6 text-slate-400">{t("Um único post canônico referencia a mídia já aprovada e é distribuído aos clubes elegíveis sem duplicar os bytes. Conteúdo ativo expira em 14 dias; o tombstone mínimo preserva a auditoria.")}</p>
       <div className="mt-4 grid gap-3 text-xs text-slate-300 sm:grid-cols-4">
         {(["SCHEDULER", "RUNNER"] as const).map((component) => {
           const cycle = clubFeedCycles.find((item) => item.component === component);
           const state = component === "SCHEDULER" ? clubFeedExecutorHealth.scheduler : clubFeedExecutorHealth.runner;
-          return <div key={component} className="rounded-2xl border border-white/[.08] bg-black/20 p-4"><strong className="text-white">{component}</strong><p className="mt-2 font-black text-[#a3ff12]">{state}</p><p className="mt-2 text-slate-500">Última conclusão: {cycle?.last_completed_at ? new Date(cycle.last_completed_at).toLocaleString("pt-BR", { timeZone: "Europe/Malta" }) : "nunca"}</p></div>;
+          return <div key={component} className="rounded-2xl border border-white/[.08] bg-black/20 p-4"><strong className="text-white">{label(component)}</strong><p className="mt-2 font-black text-[#a3ff12]">{label(state)}</p><p className="mt-2 text-slate-500">{t("Última conclusão:")}{" "}{cycle?.last_completed_at ? date(cycle.last_completed_at) : t("nunca")}</p></div>;
         })}
-        <div className="rounded-2xl border border-white/[.08] bg-black/20 p-4"><strong className="text-white">POSTS ATIVOS</strong><p className="mt-2 font-black text-[#a3ff12]">{clubFeedStatus?.postCount ?? 0}</p><p className="mt-2 text-slate-500">Somente referências, sem cópia de mídia</p></div>
-        <div className="rounded-2xl border border-white/[.08] bg-black/20 p-4"><strong className="text-white">TOMBSTONES</strong><p className="mt-2 font-black text-[#a3ff12]">{clubFeedStatus?.tombstoneCount ?? 0}</p><p className="mt-2 text-slate-500">Auditoria mínima após retenção</p></div>
+        <div className="rounded-2xl border border-white/[.08] bg-black/20 p-4"><strong className="text-white">{t("POSTS ATIVOS")}</strong><p className="mt-2 font-black text-[#a3ff12]">{clubFeedStatus?.postCount ?? 0}</p><p className="mt-2 text-slate-500">{t("Somente referências, sem cópia de mídia")}</p></div>
+        <div className="rounded-2xl border border-white/[.08] bg-black/20 p-4"><strong className="text-white">{t("TOMBSTONES")}</strong><p className="mt-2 font-black text-[#a3ff12]">{clubFeedStatus?.tombstoneCount ?? 0}</p><p className="mt-2 text-slate-500">{t("Auditoria mínima após retenção")}</p></div>
       </div>
       {clubFeedJobs.length ? <div className="mt-4 grid gap-2 md:grid-cols-2">
-        {clubFeedJobs.slice(0, 8).map((job) => <div key={job.id} className="rounded-xl border border-white/[.08] px-3 py-2 text-[10px] text-slate-400"><strong className="text-white">{job.target_provider_team_ids.length} clube(s)</strong><span className="ml-2 font-black text-amber-100">{job.job_state}</span><p className="mt-1">{job.reason_code} · tentativa {job.attempt_count}/5</p></div>)}
-      </div> : <p className="mt-4 text-xs text-slate-500">Nenhum fan-out aguardando execução.</p>}
-      {clubFeedPosts.length ? <p className="mt-4 text-[10px] text-slate-500">Post mais recente: {clubFeedPosts[0]?.content_type} · expira {new Date(clubFeedPosts[0]!.expires_at).toLocaleString("pt-BR", { timeZone: "Europe/Malta" })}</p> : null}
+        {clubFeedJobs.slice(0, 8).map((job) => <div key={job.id} className="rounded-xl border border-white/[.08] px-3 py-2 text-[10px] text-slate-400"><strong className="text-white">{job.target_provider_team_ids.length}{" "}{t("clube(s)")}</strong><span className="ml-2 font-black text-amber-100">{label(job.job_state)}</span><p className="mt-1">{t("Código de motivo:")} {job.reason_code}{" "}{t("· tentativa")}{" "}{job.attempt_count}/5</p></div>)}
+      </div> : <p className="mt-4 text-xs text-slate-500">{t("Nenhum fan-out aguardando execução.")}</p>}
+      {clubFeedPosts.length ? <p className="mt-4 text-[10px] text-slate-500">{t("Post mais recente:")}{" "}{label(clubFeedPosts[0]!.content_type)}{" "}{t("· expira")}{" "}{date(clubFeedPosts[0]!.expires_at)}</p> : null}
     </GamePanel> : null}
     {!migrationPending && templatePolicyPending ? <GamePanel className="p-6">
-      <LivePill>TEMPLATE POLICY 046 · AUSENTE</LivePill>
-      <h2 className="mt-4 text-2xl font-black text-white">Auto-publicação permanece bloqueada</h2>
-      <p className="mt-3 text-sm leading-6 text-slate-400">A política por versão de template ainda não está disponível neste ambiente. Nenhum destino externo pode receber conteúdo.</p>
+      <LivePill>{t("TEMPLATE POLICY 046 · AUSENTE")}</LivePill>
+      <h2 className="mt-4 text-2xl font-black text-white">{t("Auto-publicação permanece bloqueada")}</h2>
+      <p className="mt-3 text-sm leading-6 text-slate-400">{t("A política por versão de template ainda não está disponível neste ambiente. Nenhum destino externo pode receber conteúdo.")}</p>
     </GamePanel> : null}
     {!migrationPending && !templatePolicyPending ? <GamePanel className="p-6 sm:p-8">
-      <LivePill>TEMPLATE POLICY 046 · OUTBOUND {templatePolicyStatus?.outboundMode ?? "DISABLED"}</LivePill>
-      <h2 className="mt-4 text-2xl font-black text-white">Aprovação por versão e controles de emergência</h2>
-      <p className="mt-3 max-w-4xl text-sm leading-6 text-slate-400">O OWNER aprova uma identidade exata de template visual e copy. Dados dinâmicos continuam revalidados em cada item. READY significa apenas elegibilidade interna: Meta, Instagram e qualquer outbound permanecem desativados.</p>
+      <LivePill>{t("TEMPLATE POLICY 046 · OUTBOUND")}{" "}{label(templatePolicyStatus?.outboundMode ?? "DISABLED")}</LivePill>
+      <h2 className="mt-4 text-2xl font-black text-white">{t("Aprovação por versão e controles de emergência")}</h2>
+      <p className="mt-3 max-w-4xl text-sm leading-6 text-slate-400">{t("O OWNER aprova uma identidade exata de template visual e copy. Dados dinâmicos continuam revalidados em cada item. READY significa apenas elegibilidade interna: Meta, Instagram e qualquer outbound permanecem desativados.")}</p>
       <div className="mt-5 grid gap-3 text-xs text-slate-300 sm:grid-cols-4">
-        <div className="rounded-2xl border border-white/[.08] bg-black/20 p-4"><strong className="text-white">VERSÕES</strong><p className="mt-2 font-black text-[#a3ff12]">{templatePolicyStatus?.templateCount ?? 0}</p></div>
-        <div className="rounded-2xl border border-white/[.08] bg-black/20 p-4"><strong className="text-white">READY INTERNO</strong><p className="mt-2 font-black text-[#a3ff12]">{templatePolicyStatus?.readyCount ?? 0}</p></div>
-        <div className="rounded-2xl border border-white/[.08] bg-black/20 p-4"><strong className="text-white">DELIVERY_UNKNOWN</strong><p className="mt-2 font-black text-amber-100">{templatePolicyStatus?.deliveryUnknownCount ?? 0}</p></div>
-        <div className="rounded-2xl border border-red-300/20 bg-red-300/[.06] p-4"><strong className="text-red-100">OUTBOUND</strong><p className="mt-2 font-black text-red-100">DESATIVADO</p></div>
+        <div className="rounded-2xl border border-white/[.08] bg-black/20 p-4"><strong className="text-white">{t("VERSÕES")}</strong><p className="mt-2 font-black text-[#a3ff12]">{templatePolicyStatus?.templateCount ?? 0}</p></div>
+        <div className="rounded-2xl border border-white/[.08] bg-black/20 p-4"><strong className="text-white">{t("READY INTERNO")}</strong><p className="mt-2 font-black text-[#a3ff12]">{templatePolicyStatus?.readyCount ?? 0}</p></div>
+        <div className="rounded-2xl border border-white/[.08] bg-black/20 p-4"><strong className="text-white">{t("DELIVERY_UNKNOWN")}</strong><p className="mt-2 font-black text-amber-100">{templatePolicyStatus?.deliveryUnknownCount ?? 0}</p></div>
+        <div className="rounded-2xl border border-red-300/20 bg-red-300/[.06] p-4"><strong className="text-red-100">{t("OUTBOUND")}</strong><p className="mt-2 font-black text-red-100">{t("DESATIVADO")}</p></div>
       </div>
       <div className="mt-5 grid gap-3 md:grid-cols-2">
         {templatePolicyControls.map((control) => <div key={control.scope_key} className="rounded-2xl border border-white/[.08] bg-black/20 p-4">
-          <div className="flex flex-wrap items-center justify-between gap-2"><strong className="text-xs text-white">{control.scope_key}</strong><span className={control.kill_switch_engaged ? "text-[10px] font-black text-red-100" : "text-[10px] font-black text-emerald-100"}>{control.kill_switch_engaged ? "PAUSADO" : "POLÍTICA LIBERADA"}</span></div>
-          <p className="mt-2 text-[10px] text-slate-500">Quota: {control.daily_quota ?? "não configurada"} · gap: {control.minimum_gap_seconds ?? "não configurado"}s · outbound {control.outbound_mode}</p>
-          <TouchlineSocialDeliveryControlActions scopeKey={control.scope_key} killSwitchEngaged={control.kill_switch_engaged} dailyQuota={control.daily_quota} minimumGapSeconds={control.minimum_gap_seconds} />
+          <div className="flex flex-wrap items-center justify-between gap-2"><strong className="text-xs text-white">{control.scope_key}</strong><span className={control.kill_switch_engaged ? "text-[10px] font-black text-red-100" : "text-[10px] font-black text-emerald-100"}>{control.kill_switch_engaged ? t("PAUSADO") : t("POLÍTICA LIBERADA")}</span></div>
+          <p className="mt-2 text-[10px] text-slate-500">{t("Quota:")}{" "}{control.daily_quota ?? t("não configurada")}{" "}{t("· gap:")}{" "}{control.minimum_gap_seconds ?? t("não configurado")}{t("s · outbound")}{" "}{label(control.outbound_mode)}</p>
+          <TouchlineSocialDeliveryControlActions locale={locale} scopeKey={control.scope_key} killSwitchEngaged={control.kill_switch_engaged} dailyQuota={control.daily_quota} minimumGapSeconds={control.minimum_gap_seconds} />
         </div>)}
       </div>
       <div className="mt-6 grid gap-4 xl:grid-cols-2">
         {templatePolicyTemplates.map((template) => <div key={template.id} className="rounded-2xl border border-white/[.08] bg-black/20 p-5">
-          <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-[10px] font-black text-[#a3ff12]">{template.content_type} · {template.placement}</p><h3 className="mt-1 text-base font-black text-white">{template.template_version}</h3></div><span className="rounded-full border border-white/10 px-3 py-1 text-[9px] font-black text-slate-300">{template.state}</span></div>
-          <p className="mt-3 text-[10px] text-slate-500">{template.width}×{template.height} · {template.locale} · atualizado {new Date(template.updated_at).toLocaleString("pt-BR", { timeZone: "Europe/Malta" })}</p>
-          <p className="mt-2 break-all font-mono text-[9px] text-slate-600">identity {template.template_identity_checksum}</p>
-          <TouchlineSocialTemplatePolicyActions templateId={template.id} templateIdentityChecksum={template.template_identity_checksum} visualTemplateChecksum={template.visual_template_checksum} baseCopyChecksum={template.base_copy_checksum} state={template.state} artworkApproved={template.artwork_template_approval_state === "TEMPLATE_APPROVED"} captionApproved={template.caption_template_approval_state === "TEMPLATE_APPROVED"} />
+          <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-[10px] font-black text-[#a3ff12]">{label(template.content_type)} · {label(template.placement)}</p><h3 className="mt-1 text-base font-black text-white">{template.template_version}</h3></div><span className="rounded-full border border-white/10 px-3 py-1 text-[9px] font-black text-slate-300">{label(template.state)}</span></div>
+          <p className="mt-3 text-[10px] text-slate-500">{template.width}×{template.height} · {template.locale}{" "}{t("· atualizado")}{" "}{date(template.updated_at)}</p>
+          <p className="mt-2 break-all font-mono text-[9px] text-slate-600">{t("identity")}{" "}{template.template_identity_checksum}</p>
+          <TouchlineSocialTemplatePolicyActions locale={locale} templateId={template.id} templateIdentityChecksum={template.template_identity_checksum} visualTemplateChecksum={template.visual_template_checksum} baseCopyChecksum={template.base_copy_checksum} state={template.state} artworkApproved={template.artwork_template_approval_state === "TEMPLATE_APPROVED"} captionApproved={template.caption_template_approval_state === "TEMPLATE_APPROVED"} />
         </div>)}
       </div>
-      {!templatePolicyTemplates.length ? <p className="mt-5 text-xs text-slate-500">Nenhuma versão foi registrada pelo executor local DRAFT-only.</p> : null}
+      {!templatePolicyTemplates.length ? <p className="mt-5 text-xs text-slate-500">{t("Nenhuma versão foi registrada pelo executor local DRAFT-only.")}</p> : null}
     </GamePanel> : null}
     {!migrationPending && blockedReviewCount > 0 ? <GamePanel className="p-6 sm:p-8">
-      <LivePill>REVIEW_REQUIRED · fail-closed</LivePill>
-      <h2 className="mt-4 text-2xl font-black text-white">Escalações bloqueadas antes da arte</h2>
+      <LivePill>{t("REVIEW_REQUIRED · fail-closed")}</LivePill>
+      <h2 className="mt-4 text-2xl font-black text-white">{t("Escalações bloqueadas antes da arte")}</h2>
       <div className="mt-5 grid gap-3 md:grid-cols-2">
         {blockedReviews.map((review) => <div key={review.id} className="rounded-2xl border border-amber-300/20 bg-amber-300/[.06] p-4">
-          <strong className="text-sm text-white">Fixture {review.fixture_provider_id} · Team {review.team_provider_id}</strong>
-          <p className="mt-2 text-xs font-black text-amber-100">{review.reason_code}</p>
-          <p className="mt-2 text-[10px] text-slate-500">{review.template_version} · observado {new Date(review.first_observed_at).toLocaleString("pt-BR", { timeZone: "Europe/Malta" })}</p>
+          <strong className="text-sm text-white">{t("Fixture")}{" "}{review.fixture_provider_id}{" "}{t("· Team")}{" "}{review.team_provider_id}</strong>
+          <p className="mt-2 text-xs font-black text-amber-100">{t("Código de motivo:")} {review.reason_code}</p>
+          <p className="mt-2 text-[10px] text-slate-500">{review.template_version}{" "}{t("· observado")}{" "}{date(review.first_observed_at)}</p>
         </div>)}
       </div>
-      {!blockedReviews.length ? <p role="alert" className="mt-5 rounded-2xl border border-amber-300/20 bg-amber-300/[.06] p-4 text-xs font-bold text-amber-100">Esta página ficou fora do intervalo atual. Existem {blockedReviewCount} revisões bloqueadas. <Link className="underline" href={`/admin/social-publications?draftPage=${draftPage}&reviewPage=0`}>Voltar à primeira página</Link>.</p> : null}
-      <nav className="mt-5 flex items-center justify-between gap-3 text-xs font-black" aria-label="Paginação das revisões bloqueadas">
-        {reviewPage > 0 ? <Link className="rounded-xl border border-white/10 px-3 py-2 text-white" href={`/admin/social-publications?draftPage=${draftPage}&reviewPage=${reviewPage - 1}`}>Anteriores</Link> : <span />}
-        <span className="text-slate-500">{Math.min(reviewPage * pageSize + 1, blockedReviewCount)}–{Math.min((reviewPage + 1) * pageSize, blockedReviewCount)} de {blockedReviewCount}</span>
-        {(reviewPage + 1) * pageSize < blockedReviewCount ? <Link className="rounded-xl border border-white/10 px-3 py-2 text-white" href={`/admin/social-publications?draftPage=${draftPage}&reviewPage=${reviewPage + 1}`}>Próximas</Link> : <span />}
+      {!blockedReviews.length ? <p role="alert" className="mt-5 rounded-2xl border border-amber-300/20 bg-amber-300/[.06] p-4 text-xs font-bold text-amber-100">{t("Esta página ficou fora do intervalo atual. Existem")}{" "}{blockedReviewCount}{" "}{t("revisões bloqueadas.")}{" "}<Link className="underline" href={`/admin/social-publications?lang=${locale}&draftPage=${draftPage}&reviewPage=0`}>{t("Voltar à primeira página")}</Link>.</p> : null}
+      <nav className="mt-5 flex items-center justify-between gap-3 text-xs font-black" aria-label={t("Paginação das revisões bloqueadas")}>
+        {reviewPage > 0 ? <Link className="rounded-xl border border-white/10 px-3 py-2 text-white" href={`/admin/social-publications?lang=${locale}&draftPage=${draftPage}&reviewPage=${reviewPage - 1}`}>{t("Anteriores")}</Link> : <span />}
+        <span className="text-slate-500">{Math.min(reviewPage * pageSize + 1, blockedReviewCount)}–{Math.min((reviewPage + 1) * pageSize, blockedReviewCount)}{" "}{t("de")}{" "}{blockedReviewCount}</span>
+        {(reviewPage + 1) * pageSize < blockedReviewCount ? <Link className="rounded-xl border border-white/10 px-3 py-2 text-white" href={`/admin/social-publications?lang=${locale}&draftPage=${draftPage}&reviewPage=${reviewPage + 1}`}>{t("Próximas")}</Link> : <span />}
       </nav>
     </GamePanel> : null}
-    {!migrationPending && !drafts.length ? <GamePanel className="p-8"><LivePill>Fila vazia</LivePill><p className="mt-4 text-sm text-slate-400">Nenhum DRAFT imutável aguarda revisão.</p></GamePanel> : null}
+    {!migrationPending && !drafts.length ? <GamePanel className="p-8"><LivePill>{t("Fila vazia")}</LivePill><p className="mt-4 text-sm text-slate-400">{t("Nenhum DRAFT imutável aguarda revisão.")}</p></GamePanel> : null}
     <div className="grid gap-5 xl:grid-cols-2">
       {drafts.map((draft) => <GamePanel key={draft.id} className="overflow-hidden">
         <div className="space-y-4 p-5">
-          <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-[10px] font-black text-[#a3ff12]">{draft.content_type} · {draft.placement}</p><h2 className="mt-1 text-xl font-black text-white">Fixture {draft.fixture_provider_id}{draft.event_provider_id ? ` · Event ${draft.event_provider_id}` : ""}{draft.team_provider_id ? ` · Team ${draft.team_provider_id}` : ""}{draft.scope_provider_id ? ` · Gameweek ${draft.scope_provider_id}` : ""}{draft.subject_player_provider_id ? ` · Player ${draft.subject_player_provider_id}` : ""}</h2></div><span className="rounded-full border border-white/10 px-3 py-1 text-[9px] font-black text-slate-300">r{draft.revision} · {draft.locale}</span></div>
+          <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-[10px] font-black text-[#a3ff12]">{label(draft.content_type)} · {label(draft.placement)}</p><h2 className="mt-1 text-xl font-black text-white">{t("Fixture")}{" "}{draft.fixture_provider_id}{draft.event_provider_id ? ` · ${locale === "pt-BR" ? "Evento" : "Event"} ${draft.event_provider_id}` : ""}{draft.team_provider_id ? ` · ${locale === "pt-BR" ? "Clube" : "Team"} ${draft.team_provider_id}` : ""}{draft.scope_provider_id ? ` · ${locale === "pt-BR" ? "Rodada" : "Gameweek"} ${draft.scope_provider_id}` : ""}{draft.subject_player_provider_id ? ` · ${locale === "pt-BR" ? "Jogador" : "Player"} ${draft.subject_player_provider_id}` : ""}</h2></div><span className="rounded-full border border-white/10 px-3 py-1 text-[9px] font-black text-slate-300">{t("r")}{draft.revision} · {draft.locale}</span></div>
           <p className="whitespace-pre-wrap rounded-2xl border border-white/[.08] bg-black/20 p-4 text-xs leading-5 text-slate-300">{draft.caption}</p>
-          <div className="grid grid-cols-2 gap-2 text-[9px] text-slate-500"><span>{draft.width}×{draft.height}</span><span className="text-right">{draft.approval_state}</span></div>
-          <TouchlineSocialDraftReviewActions draftId={draft.id} manifestChecksum={draft.manifest_checksum} artifactChecksum={draft.artifact_checksum} captionChecksum={draft.caption_checksum} artworkPreviewUrl={draft.signedUrl} artworkPreviewAlt={`Prévia integral ${draft.content_type} ${draft.fixture_provider_id}`} artworkApproved={draft.artwork_approval_state === "APPROVED"} captionApproved={draft.caption_approval_state === "APPROVED"} generationCurrent={(draft.content_type === "LINEUP" && approvalsOperational && currentGeneratedDraftIds.has(draft.id)) || (draft.content_type === "MATCH_PREVIEW" && matchPreviewApprovalsOperational && currentMatchPreviewDraftIds.has(draft.id)) || (["FULL_TIME", "FINAL_SCORE"].includes(draft.content_type) && finalResultApprovalsOperational && currentFinalResultDraftIds.has(draft.id)) || (["GOAL_CONFIRMED", "RED_CARD_CONFIRMED"].includes(draft.content_type) && confirmedEventApprovalsOperational && currentConfirmedEventDraftIds.has(draft.id)) || (["GAMEWEEK_RANKING_PREVIEW", "GAMEWEEK_RANKING_FINAL", "PLAYER_DUEL", "GAMEWEEK_HERO", "TOP_PERFORMER", "HAT_TRICK_HERO"].includes(draft.content_type) && rankingApprovalsOperational && currentRankingDraftIds.has(draft.id))} />
+          <div className="grid grid-cols-2 gap-2 text-[9px] text-slate-500"><span>{draft.width}×{draft.height}</span><span className="text-right">{label(draft.approval_state)}</span></div>
+          <TouchlineSocialDraftReviewActions locale={locale} draftId={draft.id} manifestChecksum={draft.manifest_checksum} artifactChecksum={draft.artifact_checksum} captionChecksum={draft.caption_checksum} artworkPreviewUrl={draft.signedUrl} artworkPreviewAlt={`${t("Prévia integral")} ${label(draft.content_type)} ${draft.fixture_provider_id}`} artworkApproved={draft.artwork_approval_state === "APPROVED"} captionApproved={draft.caption_approval_state === "APPROVED"} generationCurrent={(draft.content_type === "LINEUP" && approvalsOperational && currentGeneratedDraftIds.has(draft.id)) || (draft.content_type === "MATCH_PREVIEW" && matchPreviewApprovalsOperational && currentMatchPreviewDraftIds.has(draft.id)) || (["FULL_TIME", "FINAL_SCORE"].includes(draft.content_type) && finalResultApprovalsOperational && currentFinalResultDraftIds.has(draft.id)) || (["GOAL_CONFIRMED", "RED_CARD_CONFIRMED"].includes(draft.content_type) && confirmedEventApprovalsOperational && currentConfirmedEventDraftIds.has(draft.id)) || (["GAMEWEEK_RANKING_PREVIEW", "GAMEWEEK_RANKING_FINAL", "PLAYER_DUEL", "GAMEWEEK_HERO", "TOP_PERFORMER", "HAT_TRICK_HERO"].includes(draft.content_type) && rankingApprovalsOperational && currentRankingDraftIds.has(draft.id))} />
         </div>
       </GamePanel>)}
     </div>
-    {!migrationPending && draftCount > 0 ? <nav className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-black/20 p-4 text-xs font-black" aria-label="Paginação dos rascunhos sociais">
-      {draftPage > 0 ? <Link className="rounded-xl border border-white/10 px-3 py-2 text-white" href={`/admin/social-publications?draftPage=${draftPage - 1}&reviewPage=${reviewPage}`}>Rascunhos anteriores</Link> : <span />}
-      <span className="text-slate-500">{Math.min(draftPage * pageSize + 1, draftCount)}–{Math.min((draftPage + 1) * pageSize, draftCount)} de {draftCount}</span>
-      {(draftPage + 1) * pageSize < draftCount ? <Link className="rounded-xl border border-white/10 px-3 py-2 text-white" href={`/admin/social-publications?draftPage=${draftPage + 1}&reviewPage=${reviewPage}`}>Próximos rascunhos</Link> : <span />}
+    {!migrationPending && draftCount > 0 ? <nav className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-black/20 p-4 text-xs font-black" aria-label={t("Paginação dos rascunhos sociais")}>
+      {draftPage > 0 ? <Link className="rounded-xl border border-white/10 px-3 py-2 text-white" href={`/admin/social-publications?lang=${locale}&draftPage=${draftPage - 1}&reviewPage=${reviewPage}`}>{t("Rascunhos anteriores")}</Link> : <span />}
+      <span className="text-slate-500">{Math.min(draftPage * pageSize + 1, draftCount)}–{Math.min((draftPage + 1) * pageSize, draftCount)}{" "}{t("de")}{" "}{draftCount}</span>
+      {(draftPage + 1) * pageSize < draftCount ? <Link className="rounded-xl border border-white/10 px-3 py-2 text-white" href={`/admin/social-publications?lang=${locale}&draftPage=${draftPage + 1}&reviewPage=${reviewPage}`}>{t("Próximos rascunhos")}</Link> : <span />}
     </nav> : null}
   </div>;
 }

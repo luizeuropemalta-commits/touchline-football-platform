@@ -88,12 +88,17 @@ test("isolated Release review: original card, no-write cancel/Escape, focus and 
         else await expect(confirm).toBeDisabled();
         const geometry = await dialog.evaluate(element => {
           const box=element.getBoundingClientRect(), review=element.querySelector('[data-has-card]')!;
+          const backdrop=getComputedStyle(element.parentElement!);
           return { x:box.x,y:box.y,width:box.width,height:box.height,viewportWidth:innerWidth,viewportHeight:innerHeight,
             overflow:element.scrollWidth>element.clientWidth+1,columns:getComputedStyle(review).gridTemplateColumns,
-            initialScroll:element.scrollTop,rootInert:document.getElementById('root')!.inert };
+            initialScroll:element.scrollTop,rootInert:document.getElementById('root')!.inert,
+            backdropColor:backdrop.backgroundColor,
+            backdropBlur:backdrop.getPropertyValue('backdrop-filter') || backdrop.getPropertyValue('-webkit-backdrop-filter') };
         });
         assert.ok(geometry.x>=0 && geometry.y>=0 && geometry.x+geometry.width<=scenario.width+1 && geometry.y+geometry.height<=scenario.height+1);
         assert.equal(geometry.overflow,false); assert.equal(geometry.initialScroll,0); assert.equal(geometry.rootInert,true);
+        assert.equal(geometry.backdropColor,"rgba(0, 5, 6, 0.72)");
+        assert.equal(geometry.backdropBlur,"blur(8px)","shared approved blur must survive the actual CSS cascade");
         assert.equal(geometry.columns.split(" ").length,scenario.width<=600 && scenario.height>scenario.width ? 1 : 2);
         if (process.env.TOUCHLINE_RELEASE_CAPTURE_PREFIX) await page.screenshot({path:`${process.env.TOUCHLINE_RELEASE_CAPTURE_PREFIX}-${engineName}-${scenario.width}-${scenario.locale}-${scenario.available ? "ready" : "off"}-top.png`});
         await page.keyboard.press("Tab"); await expect(keep).toBeFocused(); await expect(keep).toBeInViewport({ ratio: 1 });

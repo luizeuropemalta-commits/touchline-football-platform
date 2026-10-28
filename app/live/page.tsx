@@ -1,3 +1,4 @@
+import { loadCoachCatalogue } from "@/lib/touchlineArena/coach-catalogue-server";
 import type { Metadata } from "next";
 import { isTouchLineSiteLocalesEnabled } from "@/lib/touchlineArena/site-locales-release";
 import { AuthSessionMissingError } from "@supabase/supabase-js";
@@ -47,6 +48,7 @@ export default async function TouchLineLivePage(props: LivePageProps) {
 }
 
 async function renderLivePage({ searchParams }: LivePageProps, draftLocalesEnabled = false) {
+  const coachCatalogue = loadCoachCatalogue();
   const params = await searchParams;
   const requestedLanguage = Array.isArray(params.lang) ? params.lang[0] : params.lang;
   const requestedFixture = Array.isArray(params.fixture) ? params.fixture[0] : params.fixture;
@@ -101,6 +103,7 @@ async function renderLivePage({ searchParams }: LivePageProps, draftLocalesEnabl
     ? await readPublicFantasyFixtureMatchDetail(initiallySelected.providerId)
     : null;
   return <TouchlineMatchCentre
+    initialCoachCatalogue={await coachCatalogue}
     draftLocalesEnabled={draftLocalesEnabled}
     initialFixtures={fixtures}
     initialFixtureId={initiallySelected?.id ?? requestedFixture}

@@ -1,3 +1,4 @@
+import { requireBrowserCapacity } from "./helpers/touchline-browser-capacity.mts";
 import assert from "node:assert/strict";
 import { execFileSync, spawn } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -41,6 +42,10 @@ test("actual Notifications presentation keeps native quiet-time controls reachab
   t.diagnostic(JSON.stringify({ selectedCases, fullMatrixCases: 12, engineFilter, widthFilter, localeFilter,
     scope: "actual page declarations/handlers/CSS, client mount, synthetic GET only; no Next hydration, native Safari, account or consent delivery proof" }));
   const capacity = () => {
+    if (process.platform === "darwin" && !process.env.CI && process.env.TOUCHLINE_LOCAL_BROWSER_DISK_RESERVE_MIB !== undefined) {
+      requireBrowserCapacity(root, { darwinFreePercent: true });
+      return;
+    }
     const fs = statfsSync(root);
     assert.ok(fs.bavail * fs.bsize > 5 * 1024 ** 3, "disk must exceed 5 GiB");
     const pressure = execFileSync("sysctl", ["-n", "kern.memorystatus_vm_pressure_level"], { encoding: "utf8" }).trim();

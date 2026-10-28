@@ -89,15 +89,9 @@ test("approval and retry use the actual source-checked preparation only after au
   }
 });
 
-test("official source gate protects approval while the preview uses exact private Storage identity", () => {
-  const server = readFileSync("lib/touchlineArena/social-studio-server.ts", "utf8");
+test("historical official-source reader remains server-only and read-only", () => {
   const gateServer = readFileSync("lib/touchlineArena/social-studio-source-gate-server.ts", "utf8");
   const publishedReader = readFileSync("lib/touchlineArena/social-studio-published-source-reader-server.ts", "utf8");
-  const video = readFileSync("app/api/admin/social-publications/studio/video/route.ts", "utf8");
-  assert.match(server, /verifyStudioOfficialSource/);
-  assert.match(server, /prepareStudioSourceCheckedAction/);
-  assert.match(video, /createSignedPreview\(media, 300\)/);
-  assert.doesNotMatch(video, /await inspectStudioArtifact\(|new Uint8Array|Content-Range/);
   assert.match(gateServer, /^import "server-only";/);
   assert.match(gateServer, /media\.artId === "FULL_TIME" \? readStudioPublishedFullTimeSource : null/);
   assert.match(publishedReader, /^import "server-only";/);

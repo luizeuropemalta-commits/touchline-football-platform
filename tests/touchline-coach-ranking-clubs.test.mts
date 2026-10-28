@@ -9,7 +9,7 @@ const css = readFileSync(new URL('../app/rankings/touchline-tables.module.css', 
 const rows = source.slice(source.indexOf('{topSevenCoaches.map((coach)'), source.indexOf('</ol> : <RankingPending', source.indexOf('{topSevenCoaches.map((coach)')));
 
 test('Top 7 resolves the club by coach identity and suppresses a crest contradicting the snapshot', () => {
-  assert.match(rows, /touchlineCoachRankingClubLogo\(coach\.coachProviderId, coach\.clubName\)/);
+  assert.match(rows, /touchlineCoachRankingClubLogo\(coach\.coachProviderId, coach\.clubName, coachRanking\.catalogue \?\? legacyCoachCatalogue\(\)\)/);
   assert.match(rows, /coachClubLogoUrl \? <Image src=\{coachClubLogoUrl\} alt=""/);
   assert.match(rows, /<span>\{coach\.clubName\}<\/span>/);
   assert.match(rows, /touchlineCoachRankingGem\(coach\.rank\)/);

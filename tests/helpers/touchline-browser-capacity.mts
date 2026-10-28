@@ -33,14 +33,27 @@ function memoryRatio(available: bigint,total: bigint) {
   assert.ok(available*4n>=total,"at least 25% available memory required");
 }
 
+/** Operator-selected reserve applies only to local macOS browser tests, never CI. */
+export function browserDiskReserve(platform: string, allowLowDisk: boolean, env: Record<string, string | undefined>): bigint {
+  if (platform !== "darwin" || env.CI) return 5n * 1024n ** 3n;
+  const requested = env.TOUCHLINE_LOCAL_BROWSER_DISK_RESERVE_MIB;
+  if (requested !== undefined) {
+    assert.match(requested, /^(?:[1-9][0-9]*)$/, "invalid local browser disk reserve");
+    const amount = BigInt(requested);
+    assert.ok(amount >= 250n && amount <= 5120n, "local browser disk reserve must be between 250 and 5120 MiB");
+    return amount * 1024n ** 2n;
+  }
+  return allowLowDisk ? 500n * 1024n ** 2n : 5n * 1024n ** 3n;
+}
+
 /** No processes are started except bounded macOS diagnostics. Linux availability
  * is not macOS pressure: check host MemAvailable and every visible cgroup cap.
  * A namespace cannot expose limits above its mount root; never claim otherwise.
  */
 export function requireBrowserCapacity(root: string, options: { darwinFreePercent?: boolean; allowModerateDarwinPressure?: boolean; allowLowDarwinDisk?: boolean } = {}, io: BrowserCapacityIO = local): void {
-  const lowDisk = io.platform === "darwin" && options.allowLowDarwinDisk === true;
-  assert.ok(io.freeDiskBytes(root)>(lowDisk ? 500n*1024n**2n : 5n*1024n**3n),
-    lowDisk ? "browser requires more than 500 MiB emergency reserve" : "browser requires more than 5 GiB free disk");
+  const reserve = browserDiskReserve(io.platform, options.allowLowDarwinDisk === true, io === local ? process.env : {});
+  assert.ok(io.freeDiskBytes(root)>reserve,
+    reserve === 5n*1024n**3n ? "browser requires more than 5 GiB free disk" : `browser requires more than ${reserve / 1024n**2n} MiB emergency reserve`);
   if (io.platform === "darwin") {
     // Explicit operator override for this local test process only, never CI.
     // Keep the disk reserve and real behavioral assertions in place.

@@ -1,3 +1,4 @@
+import { requireBrowserCapacity } from "./helpers/touchline-browser-capacity.mts";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, statfsSync } from "node:fs";
@@ -34,6 +35,14 @@ test("real footer keeps copyright and its configured icon in one row at every wi
   t.diagnostic(JSON.stringify({ selectedCases, fullMatrixCases: 64, engineFilter, widthFilter, localeFilter,
     scope: "real footer SSR/CSS Modules, synthetic configured URL; no click/network, Next hydration, locale navigation or official-profile verification" }));
   const capacity = () => {
+    // Explicit local operator override; shared helper still enforces disk reserve.
+    if (process.platform === "darwin" && !process.env.CI
+      && process.env.TOUCHLINE_LOCAL_ALLOW_500MIB_RESERVE === "1"
+      && process.env.TOUCHLINE_LOCAL_IGNORE_MEMORY_GATE === "1") {
+      requireBrowserCapacity(root, { allowLowDarwinDisk: true });
+      return;
+    }
+
     const fs = statfsSync(root); assert.ok(fs.bavail * fs.bsize > 5 * 1024 ** 3);
     assert.equal(execFileSync("sysctl", ["-n", "kern.memorystatus_vm_pressure_level"], { encoding: "utf8" }).trim(), "1");
     const free = Number(execFileSync("memory_pressure", { encoding: "utf8" }).match(/System-wide memory free percentage: (\d+)%/)?.[1]);

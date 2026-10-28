@@ -807,7 +807,7 @@ export default function FantasyGameweekClient({
       && cardClub?.teamId === selectedPlayerClub?.teamId
       && (!normalizedQuery || `${card.name} ${card.position}`.toLowerCase().includes(normalizedQuery));
   });
-  const filteredCoaches = snapshot.coaches.filter((entry) => findTouchLineClub(entry.clubName)?.teamId === selectedCoachClub?.teamId
+  const filteredCoaches = snapshot.coaches.filter((entry) => entry.selectable !== false && findTouchLineClub(entry.clubName)?.teamId === selectedCoachClub?.teamId
     && (!normalizedQuery || `${entry.coach.displayName} ${entry.clubName}`.toLowerCase().includes(normalizedQuery))
     // A confirmed vacancy must not fall through to the legacy checkout. The
     // collection's dedicated coach command is required before offering a hire.

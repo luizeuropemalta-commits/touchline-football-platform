@@ -129,7 +129,7 @@ test("unguarded Sportmonks bounds and parallelizes the two squad requests", asyn
   const paths: string[] = [];
   let release!: () => void;
   const firstResponse = new Promise<void>(resolve => { release = resolve; });
-  let pending: Promise<{ ok: boolean }> | undefined;
+  let pending: ReturnType<import("../lib/football-data/providers/sportmonks.ts").SportmonksFootballProvider["getSquad"]> | undefined;
   clearFootballDataCache();
   process.env.SPORTMONKS_API_TOKEN = "synthetic-token";
   process.env.SPORTMONKS_BASE_URL = "https://sportmonks.invalid/v3/football";
@@ -137,7 +137,11 @@ test("unguarded Sportmonks bounds and parallelizes the two squad requests", asyn
     const path = new URL(String(input)).pathname;
     paths.push(path);
     if (path === "/v3/football/squads/teams/19") await firstResponse;
-    return new Response(JSON.stringify({ data: [] }), { status: 200 });
+    // Supply an actual JSON envelope and identity-matched enrichment; the
+    // collector now rejects an unparsed text response as incomplete.
+    const player = { id: 101, display_name: "Synthetic latency player" };
+    const data = path.endsWith("/extended") ? [player] : [{ player_id: player.id, team_id: 19, player }];
+    return new Response(JSON.stringify({ data }), { status: 200, headers: { "Content-Type": "application/json" } });
   };
   try {
     const { SportmonksFootballProvider } = await import("../lib/football-data/providers/sportmonks.ts");
@@ -149,7 +153,12 @@ test("unguarded Sportmonks bounds and parallelizes the two squad requests", asyn
     ], "extended HTTP must start while the unguarded base response is still pending");
     release();
     const result = await pending;
-    assert.equal(result.ok, true);
+    if (!result.ok) assert.fail(`A complete, matched synthetic squad must succeed: ${JSON.stringify(result.error)}`);
+    assert.deepEqual(result.data.map(member => member.player.providerId), ["101"]);
+    assert.deepEqual((result.raw as { rosterCoverage: unknown }).rosterCoverage, {
+      protocol: "documented-unpaginated-v1", complete: true, baseCount: 1, extendedCount: 1,
+    });
+    assert.equal(paths.length, 2, "the complete unpaginated contract performs exactly two requests");
   } finally {
     release();
     try { await pending; } finally {

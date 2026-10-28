@@ -1,3 +1,4 @@
+import { requireBrowserCapacity } from "./helpers/touchline-browser-capacity.mts";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { execFile, execFileSync } from "node:child_process";
@@ -12,6 +13,10 @@ test("real Swift output preflight preserves existing targets and rejects lookup 
 }, async t => {
   assert.equal(process.platform, "darwin", "Darwin preflight requires installed macOS toolchain");
   const capacity = (directory: string) => {
+    if (process.platform === "darwin" && !process.env.CI && process.env.TOUCHLINE_LOCAL_BROWSER_DISK_RESERVE_MIB !== undefined) {
+      requireBrowserCapacity(directory, { darwinFreePercent: true });
+      return;
+    }
     const disk = statfsSync(directory);
     assert.ok(disk.bavail * disk.bsize > 5 * 1024 ** 3, "capacity gate: disk must exceed 5 GiB");
     const memory = execFileSync("/usr/bin/memory_pressure", [], { encoding: "utf8", timeout: 3000 });

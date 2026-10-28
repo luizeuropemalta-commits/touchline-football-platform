@@ -22,6 +22,17 @@ const customerArgs = [...publicArgs.filter((arg) => !arg.startsWith("--persona="
 const adminArgs = ["--base-url=http://127.0.0.1:3019", "--persona=admin",
   "--storage-state=/private/tmp/explicit-authorized-admin-state.json", `--expected-user-id=${adminId}`];
 
+test("social smoke allows authenticated PNG resources and blocks retired video and mutation endpoints", () => {
+  const config = parseSmokeConfig(adminArgs);
+  const classify = (path: string, method = "GET") => classifySmokeRequest(config, { method, url: config.baseUrl + path, resourceType: "image" });
+  assert.equal(classify("/api/admin/social-publications/studio/png?id=11111111-1111-4111-8111-111111111111"), null);
+  assert.equal(classify("/api/admin/social-publications/studio/png?id=11111111-1111-4111-8111-111111111111&download=1"), null);
+  assert.equal(classify("/api/admin/social-publications/studio/png?id=x&identity=old-video"), "REQUEST_QUERY_BLOCKED");
+  assert.equal(classify("/api/admin/social-publications/studio/video?artId=MATCH_PREVIEW&placement=FEED&identity=old"), "NON_ALLOWLISTED_API_BLOCKED");
+  assert.equal(classify("/api/admin/social-publications/studio/review", "POST"), "MUTATION_BLOCKED");
+  assert.equal(classify("/api/admin/social-publications/studio", "POST"), "MUTATION_BLOCKED");
+});
+
 test("configuration requires explicit target/persona and never silently reads environment credentials", () => {
   for (const args of [[], [publicArgs[0]], ["--persona=public"], publicArgs.slice(0, 2),
     [...publicArgs, "--storage-state=/private/tmp/forbidden.json"],

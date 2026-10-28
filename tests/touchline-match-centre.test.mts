@@ -621,7 +621,7 @@ test("Live highlights use only verified match ratings and a final winning coach"
   assert.match(topRatedFunction, /slice\(0, 3\)/);
   assert.doesNotMatch(topRatedFunction, /touchlinePoints/);
   assert.match(component, /touchlineFixtureState\(selected, now\) !== "finished"/);
-  assert.match(component, /touchlineLiveCoachForTeam\(winningTeamId\(selected\)\)/);
+  assert.match(component, /catalogueCoachForTeamHistory\(initialCoachCatalogue, coachId, teamId\)/);
   assert.equal(getTouchlineMatchCentreCopy("pt-BR").highlights, "Destaques da partida");
   assert.equal(getTouchlineMatchCentreCopy("en-GB").highlights, "Match Highlights");
   assert.equal(getTouchlineMatchCentreCopy("pt-BR").bestCoach, "Treinador vencedor");

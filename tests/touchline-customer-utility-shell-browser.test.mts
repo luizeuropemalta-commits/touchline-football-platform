@@ -1,3 +1,4 @@
+import { requireBrowserCapacity } from "./helpers/touchline-browser-capacity.mts";
 import { setTimeout as pause } from "node:timers/promises";
 import assert from "node:assert/strict";
 import { execFileSync, spawn } from "node:child_process";
@@ -33,6 +34,14 @@ test("real customer utility shell keeps one header/main/logout and accessible pr
   t.diagnostic(JSON.stringify({ selectedCases, fullMatrixCases: 36, engineFilter, widthFilter, localeFilter, routeFilter,
     scope: "synthetic identity and logout callback; real client mount/CSS, not SSR hydration, authenticated account or Next routing" }));
   const capacity = async () => {
+    // Explicit local operator override; shared helper still enforces disk reserve.
+    if (process.platform === "darwin" && !process.env.CI
+      && process.env.TOUCHLINE_LOCAL_ALLOW_500MIB_RESERVE === "1"
+      && process.env.TOUCHLINE_LOCAL_IGNORE_MEMORY_GATE === "1") {
+      requireBrowserCapacity(root, { allowLowDarwinDisk: true });
+      return;
+    }
+
     const deadline = performance.now() + 10_000;
     let announced = false;
     while (true) {
