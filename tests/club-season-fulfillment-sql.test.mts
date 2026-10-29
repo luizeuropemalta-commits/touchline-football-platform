@@ -34,6 +34,9 @@ test('season test fulfillment preserves collection and contracts in one idempote
  grant select,insert,update on touchline_fantasy_entitlements,touchline_club_collections to service_role;
  insert into touchline_fantasy_entitlements(user_id,entitlement_key,status,source,plan_key) values('${u}','fantasy_access','active','beta_free','beta');
  insert into touchline_club_collections values('${u}','${s}',3,'{"seasonId":"${s}","revision":3,"plan":"beta","balanceEur":55000000,"coach":{"id":"coach","valueEur":5000000},"players":[{"playerId":"preserved"}],"receipts":[{"key":"preserved"}],"formationCode":"4-3-3"}',now());`);
+ // Reproduce hosted Supabase creation-time ACLs. The earlier selective GRANTs
+ // alone do not remove DELETE/TRUNCATE or receipt UPDATE inherited this way.
+ await db.exec('alter default privileges in schema public grant all on tables to service_role');
  for(const name of ['20260825182600_touchline_fantasy_subscription_event_ordering.sql','20261028220000_club_season_test_orders.sql','20261029000100_club_season_test_fulfillment.sql']) {
   if(name==='20261029000100_club_season_test_fulfillment.sql') {
    // Exercise forward repair of the earlier orders definition too. The orders
@@ -45,6 +48,34 @@ test('season test fulfillment preserves collection and contracts in one idempote
   }
   await db.exec(await readFile(new URL('../supabase/migrations/'+name,import.meta.url),'utf8'));
  }
+ await t.test('forward ACL repair removes hosted defaults without weakening other boundaries',async()=>{
+  for(const table of ['touchline_club_season_test_orders','touchline_club_season_test_events']) {
+   assert.equal((await db.query<{allowed:boolean}>("select has_table_privilege('service_role',$1,'DELETE,TRUNCATE') allowed",[table])).rows[0].allowed,true,'positive control: hosted defaults must expose excess privileges');
+  }
+  assert.equal((await db.query<{allowed:boolean}>("select has_table_privilege('service_role','touchline_club_season_test_events','UPDATE') allowed")).rows[0].allowed,true);
+  await db.exec(await readFile(new URL('../supabase/migrations/20261029055452_club_season_test_table_privileges.sql',import.meta.url),'utf8'));
+  for(const [table,expected] of [
+   ['touchline_club_season_test_orders',['INSERT','SELECT','UPDATE']],
+   ['touchline_club_season_test_events',['INSERT','SELECT']],
+  ] as const) {
+   const acl=(await db.query<{privilege_type:string,is_grantable:boolean}>(`select a.privilege_type,a.is_grantable from pg_class c
+    cross join lateral aclexplode(c.relacl) a join pg_roles r on r.oid=a.grantee
+    where c.oid=$1::regclass and r.rolname='service_role' order by a.privilege_type`,[table])).rows;
+   assert.deepEqual(acl,expected.map(privilege_type=>({privilege_type,is_grantable:false})));
+   for(const role of ['anon','authenticated']) {
+    assert.equal((await db.query<{allowed:boolean}>('select has_table_privilege($1,$2,$3) allowed',[role,table,'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER'])).rows[0].allowed,false);
+   }
+   assert.equal((await db.query<{n:number}>(`select count(*)::int n from pg_class c cross join lateral aclexplode(c.relacl) a where c.oid=$1::regclass and a.grantee=0`,[table])).rows[0].n,0,'PUBLIC remains revoked');
+   for(const privilege of ['SELECT','INSERT','UPDATE','DELETE','TRUNCATE','REFERENCES','TRIGGER']) {
+    assert.equal((await db.query<{allowed:boolean}>("select has_table_privilege('postgres',$1,$2) allowed",[table,privilege])).rows[0].allowed,true,'database owner remains privileged');
+   }
+   assert.equal((await db.query<{enabled:boolean}>('select relrowsecurity enabled from pg_class where oid=$1::regclass',[table])).rows[0].enabled,true);
+  }
+  // Repair is scoped to these existing tables, not global default ACL settings.
+  await db.exec('create table local_unrelated_acl_probe(id int)');
+  assert.equal((await db.query<{allowed:boolean}>("select has_table_privilege('service_role','local_unrelated_acl_probe','DELETE') allowed")).rows[0].allowed,true);
+  await db.exec('drop table local_unrelated_acl_probe');
+ });
  await db.exec('set role service_role');
  const prepare=async(plan:string,owner=u)=>(await db.query<{o:Order}>('select to_jsonb(touchline_club_prepare_season_test_order($1::uuid,$2)) o',[owner,plan])).rows[0].o;
  const fulfill=(o:Order,event:string,e= evidence(o))=>db.query<{r:Record<string,unknown>}>('select touchline_club_fulfill_season_test_order($1::uuid,$2,$3::jsonb) r',[o.id,event,JSON.stringify(e)]);
@@ -107,6 +138,20 @@ test('season test fulfillment preserves collection and contracts in one idempote
   assert.equal(result.creditsAdded,650000000);
   assert.equal((await db.query('select plan_key from touchline_fantasy_entitlements where user_id=$1::uuid',[u])).rows[0].plan_key,'standard');
   await db.exec('reset role');assert.equal((await db.query('select value from touchline_card_contracts')).rows[0].value,40000000);await db.exec('set role service_role');
+ });
+ await t.test('service cannot rewrite or erase paid evidence or delete its order',async()=>{
+  const beforeEvents=(await db.query('select * from touchline_club_season_test_events order by event_id')).rows;
+  const beforeOrders=(await db.query('select * from touchline_club_season_test_orders order by id')).rows;
+  assert.ok(beforeEvents.length>0 && beforeOrders.length>0,'exercise real committed payment rows');
+  for(const statement of [
+   "update touchline_club_season_test_events set receipt='{}'::jsonb",
+   'delete from touchline_club_season_test_events',
+   'delete from touchline_club_season_test_orders',
+   'truncate touchline_club_season_test_events',
+   'truncate touchline_club_season_test_events,touchline_club_season_test_orders',
+  ]) await assert.rejects(db.exec(statement),{code:'42501'});
+  assert.deepEqual((await db.query('select * from touchline_club_season_test_events order by event_id')).rows,beforeEvents);
+  assert.deepEqual((await db.query('select * from touchline_club_season_test_orders order by id')).rows,beforeOrders);
  });
  await t.test('same event and different event replay never add credits again',async()=>{
   const before=await collection();assert.equal((await fulfill(standard!,'evt_first')).rows[0].r.replay,true);
