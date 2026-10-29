@@ -80,6 +80,7 @@ test('real AuthForm register/forgot and ResetPasswordForm checking state consume
   const modules = {
     react:React,'next/link':{default:link},'lucide-react':{ArrowRight:empty,Check:empty,Eye:empty,EyeOff:empty,Loader2:empty,Mail:empty},
     '@/lib/touchlineArena/auth-i18n':copy,'./ui':ui,
+    '@/lib/touchlineArena/auth-email-rate-limit':load('lib/touchlineArena/auth-email-rate-limit.ts',{}),
     '@/lib/supabase/client':{createClient:()=>{throw Error('SSR must not authenticate');}},
     '@/lib/touchlineArena/public-origin':{resolveTouchLineAuthOrigin:()=>{throw Error('SSR must not redirect');}},
     '@/lib/touchlineArena/arena-onboarding':{touchlineRegistrationEntryHref:(_destination:string,locale:string)=>`/intro?lang=${locale}`},

@@ -183,9 +183,10 @@ test("the lock notice is localized for all eight languages without changing publ
   assert.deepEqual(Object.keys(TOUCHLINE_FANTASY_MARKET_PLAN_LOCK_COPY), locales);
   for (const locale of locales) {
     const copy = getTouchlineFantasyMarketPlanLockCopy(locale, true);
-    assert.ok(copy.includes("Standard"));
+    if (locale !== "en-GB" && locale !== "pt-BR") assert.ok(copy.includes("Standard"));
     assert.ok(copy.trim());
     if (locale !== "en-GB") assert.notEqual(copy, getTouchlineFantasyMarketPlanLockCopy("en-GB"));
   }
-  assert.equal(getTouchlineFantasyMarketPlanLockCopy("pt-BR"), "Disponível no Standard ou superior");
+  assert.equal(getTouchlineFantasyMarketPlanLockCopy("pt-BR"), "Mude de plano para desbloquear.");
+  assert.equal(getTouchlineFantasyMarketPlanLockCopy("en-GB"), "Upgrade your plan to unlock.");
 });

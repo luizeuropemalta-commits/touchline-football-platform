@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { authEmailRateLimit, authEmailWaitMessage } from "@/lib/touchlineArena/auth-email-rate-limit";
 import { ArrowRight, Check, Eye, EyeOff, Loader2, Mail } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -156,6 +157,31 @@ export function AuthForm({
   const [confirmationResendLoading, setConfirmationResendLoading] = useState(false);
   const [confirmationResendMessage, setConfirmationResendMessage] = useState("");
 
+  const [emailRetryDelaySeconds, setEmailRetryDelaySeconds] = useState(0);
+  const [emailRetrySeconds, setEmailRetrySeconds] = useState(0);
+  useEffect(() => {
+    if (!emailRetryDelaySeconds) return;
+    const deadline = Date.now() + emailRetryDelaySeconds * 1000;
+    const tick = () => {
+      const remaining = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+      setEmailRetrySeconds(remaining);
+      if (remaining === 0) setEmailRetryDelaySeconds(0);
+    };
+    tick();
+    const timer = window.setInterval(tick, 1000);
+    return () => window.clearInterval(timer);
+  }, [emailRetryDelaySeconds]);
+
+  function emailLimitMessage(error: unknown) {
+    const limit = authEmailRateLimit(error);
+    if (!limit) return null;
+    if (limit.seconds !== null) {
+      setEmailRetrySeconds(limit.seconds);
+      setEmailRetryDelaySeconds(limit.seconds);
+    }
+    return authEmailWaitMessage(displayLocale, null);
+  }
+
   async function enterArena(href: string) {
     const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
     setIsArenaTransitioning(true);
@@ -170,6 +196,7 @@ export function AuthForm({
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (loading || emailRetrySeconds > 0) return;
     // Safari Password AutoFill can populate the native inputs without
     // dispatching React's change event. Read the submitted form directly so
     // the authenticated request always uses what the person can see.
@@ -240,8 +267,9 @@ export function AuthForm({
       }
     } catch (err) {
       const code = err instanceof Error ? err.message : "";
+      const rateLimitMessage = emailLimitMessage(err);
       setMessage(
-        code === "invalid_credentials"
+        rateLimitMessage ?? (code === "invalid_credentials"
           ? copy.invalidCredentials
           : code === "email_not_confirmed"
             ? copy.emailNotConfirmed
@@ -255,7 +283,7 @@ export function AuthForm({
             ? copy.welcomeUnavailable
             : code === "auth_unavailable"
               ? copy.authenticationUnavailable
-              : copy.genericError,
+              : copy.genericError),
       );
       setMessageTone("error");
     }
@@ -302,6 +330,7 @@ export function AuthForm({
   }
 
   async function resendRegistrationConfirmation() {
+    if (confirmationResendLoading || emailRetrySeconds > 0) return;
     setConfirmationResendLoading(true);
     setConfirmationResendMessage("");
     const supabase = createClient();
@@ -318,7 +347,7 @@ export function AuthForm({
         emailRedirectTo: buildTouchLineAuthCallbackUrl(firstEntryHref),
       },
     });
-    setConfirmationResendMessage(error ? copy.confirmationResendFailed : copy.confirmationResent);
+    setConfirmationResendMessage(error ? emailLimitMessage(error) ?? copy.confirmationResendFailed : copy.confirmationResent);
     setConfirmationResendLoading(false);
   }
 
@@ -340,7 +369,7 @@ export function AuthForm({
         <button
           type="button"
           className="auth-registration-confirmation__resend"
-          disabled={confirmationResendLoading}
+          disabled={confirmationResendLoading || emailRetrySeconds > 0}
           onClick={resendRegistrationConfirmation}
         >
           {confirmationResendLoading ? (
@@ -348,7 +377,7 @@ export function AuthForm({
           ) : (
             <Mail size={15} />
           )}
-          {copy.resendConfirmation}
+          {emailRetrySeconds > 0 ? authEmailWaitMessage(displayLocale, emailRetrySeconds) : copy.resendConfirmation}
         </button>
         {confirmationResendMessage ? (
           <p className="auth-registration-confirmation__resend-message" role="status">
@@ -408,8 +437,8 @@ export function AuthForm({
       )}
       {mode === "register" && <label className="flex items-start gap-2 pt-1 text-xs leading-5 text-[#9caeaa]"><input required type="checkbox" className="mt-1 accent-[#153f36]"/><span>{copy.terms}</span></label>}
       {message && <div role={messageTone === "error" && mode !== "login" ? "alert" : messageTone === "success" && mode === "forgot" ? "status" : undefined} className={`rounded-xl px-4 py-3 text-xs ${messageTone === "success" ? "bg-[#e7f4df] text-[#2a633b]" : "bg-[#fee8e4] text-[#a5463a]"}`}>{message}</div>}
-      <Button type="submit" disabled={loading || isArenaTransitioning} className="w-full">
-        {loading || isArenaTransitioning ? (
+      <Button type="submit" disabled={loading || isArenaTransitioning || emailRetrySeconds > 0} className="w-full">
+        {emailRetrySeconds > 0 ? authEmailWaitMessage(displayLocale, emailRetrySeconds) : loading || isArenaTransitioning ? (
           <><Loader2 size={16} className="animate-spin" aria-hidden="true"/>{mode === "login" ? copy.signingIn : mode === "register" ? copy.createAccount : copy.sendReset}</>
         ) : (
           <>{mode==="login"?copy.signIn:mode==="register"?copy.createAccount:copy.sendReset}<ArrowRight size={15}/></>

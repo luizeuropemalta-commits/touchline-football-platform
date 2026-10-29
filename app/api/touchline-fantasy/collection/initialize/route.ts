@@ -48,7 +48,6 @@ export async function POST(request: NextRequest) {
   }
   const coach = snapshot.coaches.find(entry => entry.selectable !== false && entry.id === body.coachId);
   if (!coach) return fail("CLUB_COACH_UNAVAILABLE",409);
-  if (plan === "beta" && coach.slot.cardTier !== "ruby-red") return fail("CLUB_BETA_COACH_REQUIRED",409);
   const { data: state, error } = await admin.rpc("touchline_club_initialize_collection", {
     p_user_id: data.user.id, p_season_id: config.season_id, p_plan: plan,
     p_coach: { id: coach.id, tier: coach.slot.cardTier, valueEur: CLUB_COACH_VALUES[coach.slot.cardTier],

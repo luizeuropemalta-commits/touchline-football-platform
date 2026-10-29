@@ -1,4 +1,5 @@
 "use client";
+import { initialCollectionCoachClub, collectionStructureShown } from "@/lib/touchlineFantasy/collection-empty-state";
 import { collectionAreaLabel } from "@/lib/touchlineFantasy/collection-area-label";
 import { getAllocationDialogCopy } from "@/lib/touchlineFantasy/allocation-dialog-i18n";
 
@@ -384,7 +385,7 @@ export default function FantasyGameweekClient({
   const collection = useClubCollection(collectionEnabled && marketPage, locale,
     initialSnapshot?.config.seasonId ? {expectedAccountId:initialSnapshot.userId,expectedSeasonId:initialSnapshot.config.seasonId} : null,
     applyCollectionSnapshot, initialCollectionRead);
-  const showCollectionStructure = marketPage && (collectionStructureVisible || (collectionEnabled && Boolean(collection.state)));
+  const showCollectionStructure = collectionStructureShown(marketPage, collectionStructureVisible, collectionEnabled);
   const collectionSlotsEditable = collectionEnabled && collection.ready && Boolean(collection.state) && !collection.busy && !collection.hasPending;
   const [collectionDestination, setCollectionDestination] = useState<CollectionMarketIntent | null>(null);
   const collectionMarketIntentRef = useRef<CollectionMarketIntent | null>(null);
@@ -446,7 +447,10 @@ export default function FantasyGameweekClient({
     });
     return () => window.cancelAnimationFrame(frame);
   }, [initialPlayerClubTeamId, initialSnapshot?.marketAccess]);
-  const [coachClubTeamId, setCoachClubTeamId] = useState(TOUCHLINE_ENGLAND_CLUBS_BY_RANK[0]?.teamId ?? "");
+  const [coachClubTeamId, setCoachClubTeamId] = useState(() => {
+    const clubName = initialCollectionCoachClub(initialSnapshot?.coaches ?? []);
+    return (clubName ? findTouchLineClub(clubName)?.teamId : null) ?? TOUCHLINE_ENGLAND_CLUBS_BY_RANK[0]?.teamId ?? "";
+  });
   const [feedback, setFeedback] = useState<string | null>(null); const [saving, setSaving] = useState(false);
   const [deadlineReachedFor, setDeadlineReachedFor] = useState<string | null>(null);
   const builderRef = useRef<HTMLElement>(null);
@@ -811,8 +815,7 @@ export default function FantasyGameweekClient({
     && (!normalizedQuery || `${entry.coach.displayName} ${entry.clubName}`.toLowerCase().includes(normalizedQuery))
     // A confirmed vacancy must not fall through to the legacy checkout. The
     // collection's dedicated coach command is required before offering a hire.
-    && (!collectionEnabled || !collection.state || collection.canHireCoach || entry.id === collection.state.coach?.id)
-    && (!collectionEnabled || collection.state !== null || marketPolicy?.planKey !== "beta" || entry.slot.cardTier === "ruby-red"));
+    && (!collectionEnabled || !collection.state || collection.canHireCoach || entry.id === collection.state.coach?.id));
   // The review catalogue stays available when closed, including cards already
   // in the XI. Browsing never calls the lineup mutation functions.
   const browseCards = snapshot.catalogue.filter((card) => (

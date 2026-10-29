@@ -44,6 +44,18 @@ test('fresh Beta forward SQL installs on predecessors and preserves funded init/
   const init=async(tier='ruby-red',value=5_000_000)=>(await db.query<{v:ClubAcquisitionState}>('select touchline_club_initialize_collection($1,$2,$3,$4) v',[id(1),id(3),'beta',JSON.stringify({id:'300',tier,valueEur:value})])).rows[0].v;
   await assert.rejects(init('sapphire-blue',10_000_000),/BETA_COACH_REQUIRED/);
   const initial=await init();assert.equal(initial.balanceEur,95_000_000);assert.deepEqual(await init(),initial);
+  await db.exec(sql('20261029160000_beta_initial_coach_same_selection'));
+  for (const [i, [tier, valueEur]] of Object.entries({"ruby-red":5_000_000,"sapphire-blue":10_000_000,"amethyst-purple":15_000_000,"radiant-gold":25_000_000,"emerald-green":35_000_000,"clear-diamond":50_000_000,"diamond-gold":70_000_000}).entries()) {
+    const owner=id(1000+i);
+    await db.query('insert into users values($1,$2)',[owner,'New Beta']);
+    await db.query("insert into touchline_fantasy_entitlements(user_id,status,source,plan_key) values($1,'active','qa_grant','beta')",[owner]);
+    const args=[owner,id(3),'beta',JSON.stringify({id:'300',tier,valueEur})];
+    const result=(await db.query<{v:ClubAcquisitionState}>('select touchline_club_initialize_collection($1,$2,$3,$4) v',args)).rows[0].v;
+    assert.equal(result.balanceEur,100_000_000-valueEur);
+    assert.equal(result.coach?.tier,tier);
+    assert.deepEqual((await db.query<{v:ClubAcquisitionState}>('select touchline_club_initialize_collection($1,$2,$3,$4) v',args)).rows[0].v,result);
+  }
+  assert.deepEqual(await init(),initial); // Existing contracts are preserved.
   for(const [i,provider] of ['22','117','116','52','3','13','19'].entries())await db.exec(`insert into football_clubs values('${id(50+i)}','sportmonks','${provider}')`);
   for(let i=0;i<6;i++)await db.query('select touchline_club_assert_beta_club($1,$2)',['beta',id(50+i)]);
   await assert.rejects(db.query('select touchline_club_assert_beta_club($1,$2)',['beta',id(56)]),/NOT_ALLOWED/);

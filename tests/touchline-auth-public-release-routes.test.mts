@@ -37,6 +37,7 @@ function harness(flag?: string) {
     'next/link': { default: link },
     'lucide-react': new Proxy({}, { get: () => empty }),
     '@/lib/touchlineArena/auth-i18n': copy,
+    '@/lib/touchlineArena/auth-email-rate-limit': load('lib/touchlineArena/auth-email-rate-limit.ts', {}),
     '@/lib/touchlineArena/i18n': i18n,
     '@/lib/touchlineArena/site-locales-release': load('lib/touchlineArena/site-locales-release.ts', {}),
     '@/lib/touchlineArena/account-locale-context-server': { loadAccountLocaleContext: async () => ({ mode: 'guest' }) },

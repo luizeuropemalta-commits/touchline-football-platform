@@ -37,8 +37,8 @@ const fixtures: TouchlinePublicFixture[] = Array.from({ length: 10 }, (_, index)
   awayTeam: { id: "236", providerId: "236", name: `Synthetic Away ${index}` }, homeScore: 2, awayScore: 1,
 }));
 
-export default function TechnicalRailFixture({ width, direction = "ltr", enabled = true, arenaOpen = false, ArenaBoundary }: {
-  width: number; direction?: "ltr" | "rtl"; enabled?: boolean; arenaOpen?: boolean;
+export default function TechnicalRailFixture({ width, direction = "ltr", enabled = true, arenaOpen = false, empty = false, ArenaBoundary }: {
+  width: number; direction?: "ltr" | "rtl"; enabled?: boolean; arenaOpen?: boolean; empty?: boolean;
   ArenaBoundary: ComponentType<{ expanded: boolean; label: string; onClose(): void; children: ReactNode }>;
 }) {
   const picker = <details data-test-formation="true"><summary>Formation</summary><button type="button">4-3-3</button></details>;
@@ -55,15 +55,15 @@ export default function TechnicalRailFixture({ width, direction = "ltr", enabled
           an isolated geometry composition, not an authenticated XI simulation. */}
       {!arenaOpen ? <ClubOwnerTechnicalRail enabled={enabled} cardWidth={width} label="Technical area">
         <div className={`${fantasy.myClubFieldCoach} ${collection.technicalRow}`} data-technical-test-row="true">
-          <ClubOwnerCollectionSlots state={state} catalogue={catalogue} area="reserves" start={0} count={4} locale="en-GB" displayWidth={width} enabled onChoose={noop} />
+          <ClubOwnerCollectionSlots state={empty ? null : state} catalogue={catalogue} area="reserves" start={0} count={4} locale="en-GB" displayWidth={width} enabled onChoose={noop} />
           <div className={fantasy.technicalCoachCard} data-technical-coach="true" style={{ width: width * 1.3 }}>
-            <TouchlineCoachCardZoom coach={coach} slot={createTouchlineArenaCoachSlot(coach, 1, "sapphire-blue")}
+            {empty ? <button type="button" aria-label="Choose coach">+</button> : <TouchlineCoachCardZoom coach={coach} slot={createTouchlineArenaCoachSlot(coach, 1, "sapphire-blue")}
               clubName="Arsenal" locale="en-GB" contract={null} competition={null} liveCompetitionUpdates
               profileHref="/touchline-coaches/990001?lang=en-GB" assetLoading="eager" showLeadershipCrown
-              acquisitionPrice={{ label: "Signing value", valueTc: 10_000_000 }} />
+              acquisitionPrice={{ label: "Signing value", valueTc: 10_000_000 }} />}
             <span>Coach</span>
           </div>
-          <ClubOwnerCollectionSlots state={state} catalogue={catalogue} area="reserves" start={4} count={5} locale="en-GB" displayWidth={width} enabled onChoose={noop} />
+          <ClubOwnerCollectionSlots state={empty ? null : state} catalogue={catalogue} area="reserves" start={4} count={5} locale="en-GB" displayWidth={width} enabled onChoose={noop} />
         </div>
         <div className={`${fantasy.myClubTechnicalLine} ${collection.technicalLine}`} data-technical-test-line="true"><span>Technical area</span></div>
       </ClubOwnerTechnicalRail> : null}

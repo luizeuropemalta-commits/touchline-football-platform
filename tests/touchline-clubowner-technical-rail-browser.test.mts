@@ -109,6 +109,19 @@ test("ClubOwner technical rail preserves nine real cards, coach crown and horizo
         await page.goto(origin);
         await page.addScriptTag({ content: `(() => {${bundle.script}})()` });
         const width = Math.min(96, touchlineFantasyTechnicalCardWidth(viewport - 32));
+        await page.evaluate(props => (window as unknown as { renderRailFixture(props: object): void }).renderRailFixture(props), { width, direction, empty: true });
+        const emptyRail = page.locator('[data-clubowner-technical-rail="true"]');
+        await expect(emptyRail.locator('[data-collection-slot]')).toHaveCount(9);
+        for (const button of await emptyRail.locator('[data-collection-placeholder]').all()) await expect(button).toBeDisabled();
+        const emptyAlignment = await emptyRail.evaluate(node => {
+          const coach = node.querySelector('[data-technical-coach]')!.getBoundingClientRect();
+          const line = node.querySelector('[data-technical-test-line] span')!.getBoundingClientRect();
+          return Math.abs(coach.x + coach.width / 2 - line.x - line.width / 2);
+        });
+        assert.ok(emptyAlignment < 3, `empty coach is centered over technical area: ${emptyAlignment}`);
+        if (viewport === 844 || viewport === 1280) {
+          await emptyRail.screenshot({ path: path.join(screenshots, `${engine.name()}-${viewport}x${viewportHeight}-empty.png`), animations: "disabled" });
+        }
         await page.evaluate(props => (window as unknown as { renderRailFixture(props: object): void }).renderRailFixture(props), { width, direction });
         const rail = page.locator('[data-clubowner-technical-rail="true"]');
         await expect(rail).toBeVisible();
