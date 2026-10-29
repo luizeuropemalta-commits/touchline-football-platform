@@ -89,6 +89,12 @@ export const TOUCHLINE_QA_PREVIEW_ALLOWED_APPLICATION_ENVIRONMENT_KEYS = [
   // Private Exchange name only; both collection and Exchange runtime gates remain mandatory.
   // This does not enable Exchange or admit it in inert isolated previews.
   "TOUCHLINE_CLUB_EXCHANGE_ENABLED",
+  // Seasonal checkout has its own TEST-only QA contract. Name admission never
+  // activates payments; the route requires its explicit gate and signed evidence.
+  "TOUCHLINE_CLUB_SEASON_CHECKOUT_ENABLED",
+  "TOUCHLINE_STRIPE_MODE",
+  "TOUCHLINE_STRIPE_TEST_SECRET_KEY",
+  "TOUCHLINE_STRIPE_TEST_CLUB_SEASON_WEBHOOK_SECRET",
   // Server-only social gate. Runtime policy remains fail-closed in its route.
   "TOUCHLINE_PLAYER_SOCIAL_ENABLED",
   // Exact server-only award switches and worker bearer. Route gates and
@@ -287,6 +293,27 @@ export function inspectTouchlineIsolatedPreviewEnvironment(
     if (environment.TOUCHLINE_QUOTA_AUTHORITY_PROJECT_REF !== undefined
       && environment.TOUCHLINE_QUOTA_AUTHORITY_PROJECT_REF !== environment.TOUCHLINE_QA_SUPABASE_PROJECT_REF?.trim().toLowerCase()) {
       reasons.push("mismatched-qa-authority-project");
+    }
+    const seasonalPaymentKeys = ["TOUCHLINE_CLUB_SEASON_CHECKOUT_ENABLED", "TOUCHLINE_STRIPE_MODE",
+      "TOUCHLINE_STRIPE_TEST_SECRET_KEY", "TOUCHLINE_STRIPE_TEST_CLUB_SEASON_WEBHOOK_SECRET"];
+    if (seasonalPaymentKeys.some((name) => environment[name] !== undefined)) {
+      if (environment.VERCEL_GIT_COMMIT_REF !== "qa"
+        || environment.TOUCHLINE_QA_SUPABASE_PROJECT_REF !== "xgxbwqxjssxxuihuwmgy") {
+        reasons.push("season-checkout-requires-canonical-qa");
+      }
+      if (environment.TOUCHLINE_STRIPE_MODE !== "test") reasons.push("season-checkout-requires-test-mode");
+      if (environment.TOUCHLINE_CLUB_SEASON_CHECKOUT_ENABLED !== undefined
+        && !["true", "false"].includes(environment.TOUCHLINE_CLUB_SEASON_CHECKOUT_ENABLED)) {
+        reasons.push("invalid-season-checkout-gate");
+      }
+      const key = environment.TOUCHLINE_STRIPE_TEST_SECRET_KEY;
+      if (key !== undefined && (!key.startsWith("sk_test_") || key.length <= 8 || /\s/.test(key))) {
+        reasons.push("invalid-season-checkout-test-key");
+      }
+      const webhook = environment.TOUCHLINE_STRIPE_TEST_CLUB_SEASON_WEBHOOK_SECRET;
+      if (webhook !== undefined && (!webhook.startsWith("whsec_") || webhook.length <= 6 || /\s/.test(webhook))) {
+        reasons.push("invalid-season-checkout-webhook-key");
+      }
     }
     Object.keys(environment)
       .filter(isTouchlineApplicationEnvironmentKey)

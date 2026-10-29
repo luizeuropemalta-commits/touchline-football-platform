@@ -13,6 +13,7 @@ import { resolveTouchlineCatalogueLocale } from "@/lib/touchlineArena/catalogue-
 import { formatClubOwnerRankingPosition, getClubOwnerProfileMetricsCopy } from "@/lib/touchlineArena/club-owner-profile-metrics";
 import ClubOwnerAvatarControl, { type ClubOwnerAvatarUiContext } from "./ClubOwnerAvatarControl";
 import { ClubOwnerPlanCard } from "./ClubOwnerPlanShowcase";
+import type { ClubSeasonCheckoutOffers } from "@/lib/stripe/club-season-checkout-client";
 import ClubOwnerPlanOnboarding from "./ClubOwnerPlanOnboarding";
 import { TouchlineCoinMark } from "./market/TouchlineMarketMarks";
 import controls from "./TouchlineGlobalNavigation.module.css";
@@ -21,7 +22,7 @@ import planStyles from "./ClubOwnerPlanShowcase.module.css";
 
 type Owner = Readonly<{ name: string; avatarUrl: string; city: string; nationality: string; since: string }>;
 
-export default function ClubOwnerMarketHeader({ owner, locale, accountId, avatarContext, rankingPosition = null, followerCount = null, publicDiscoveryEnabled = false, remainingMarketPower = null, plan = null, activePlanKey = null, activePlanBudget, draftLocalesEnabled = false, avatarSelectionEnabled = false, retentionReady = false, identityOnly = false, collectionEnabled = false }: Readonly<{
+export default function ClubOwnerMarketHeader({ owner, locale, accountId, avatarContext, rankingPosition = null, followerCount = null, publicDiscoveryEnabled = false, remainingMarketPower = null, plan = null, activePlanKey = null, activePlanBudget, draftLocalesEnabled = false, avatarSelectionEnabled = false, retentionReady = false, identityOnly = false, collectionEnabled = false, checkoutOffers = {} }: Readonly<{
   owner: Owner | null; locale: string; accountId?: string; avatarContext?: ClubOwnerAvatarUiContext | null;
   plan?: Readonly<{ active: boolean; expiresAt: string | null }> | null;
   /** Validated server entitlement only; never derived from a preview or URL. */
@@ -38,6 +39,7 @@ export default function ClubOwnerMarketHeader({ owner, locale, accountId, avatar
   /** Reuse the canonical cover in a composition that owns its plan summary. */
   identityOnly?: boolean;
   collectionEnabled?: boolean;
+  checkoutOffers?: ClubSeasonCheckoutOffers;
 }>) {
   const { state: confirmedCollection, initialBudget, verificationStatus = "pending" } = useConfirmedClubCollection();
   const confirmedBalance = collectionEnabled ? confirmedCollection?.balanceEur ?? initialBudget?.balanceEur ?? null : remainingMarketPower;
@@ -72,7 +74,7 @@ export default function ClubOwnerMarketHeader({ owner, locale, accountId, avatar
   const [plansOpen, setPlansOpen] = useState(false);
   const displayedTier = currentTier ?? undefined;
   const expiry = plan?.expiresAt ? new Date(plan.expiresAt) : null;
-  const validity = currentTier !== "vip" && planActive && expiry && Number.isFinite(expiry.getTime())
+  const validity = planActive && expiry && Number.isFinite(expiry.getTime())
     ? copy.planUntil.replace("{date}", new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeZone: "UTC" }).format(expiry)) : null;
   return <header className={styles.header} data-clubowner-header="true" data-plan-preview={displayedTier} tabIndex={-1}>
     <section className={styles.profile} data-cover-preview="true" data-active-plan={currentTier ?? undefined} aria-labelledby="clubowner-heading">
@@ -117,7 +119,7 @@ export default function ClubOwnerMarketHeader({ owner, locale, accountId, avatar
       {currentTier ? <div className={planStyles.planShowcase} data-embedded="true" data-plan-preview={currentTier} data-account-plan-card="true">
         <ClubOwnerPlanCard compact tier={currentTier} active activePlanBudget={confirmedBudget} name={name} locale={locale} draftLocalesEnabled={draftLocalesEnabled} />
       </div> : <p className={styles.validity} role="status">{copy.planActionUnavailable}</p>}
-      <ClubOwnerPlanOnboarding open={plansOpen} locale={locale} activePlanKey={currentTier} draftLocalesEnabled={draftLocalesEnabled} onDismiss={() => setPlansOpen(false)} />
+      <ClubOwnerPlanOnboarding checkoutEnabled={Object.keys(checkoutOffers).length > 0} checkoutOffers={checkoutOffers} open={plansOpen} locale={locale} activePlanKey={currentTier} draftLocalesEnabled={draftLocalesEnabled} onDismiss={() => setPlansOpen(false)} />
       <dl className={styles.currentBudget} aria-label={copy.plan}>
         <div><dt>{balanceLabel}</dt><dd data-account-market-power="true" aria-describedby={balanceStatus ? "clubowner-balance-status" : undefined} aria-label={marketPower === null ? copy.marketPowerUnavailable : `${collectionEnabled ? balanceLabel : copy.marketPower} ${marketPower} TouchLine Credits`}>
           <span className={styles.marketPowerValue}><TouchlineCoinMark size={19} /><strong>{marketPower ?? "—"}</strong><small>TC</small></span>

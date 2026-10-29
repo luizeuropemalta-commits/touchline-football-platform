@@ -19,11 +19,21 @@ test("inventories every page, API method, proxy, metadata route, and error bound
   assert.equal(rows.filter((item) => item.kind === "PAGE").length, 79);
   assert.equal(row("/account").data, "VERIFIED_AUTH_ROLE_REDIRECT_ONLY_NO_TEAM_WRITES");
   assert.equal(rows.some((item) => item.route === "/visual-qa/arena-main-field"), false);
-  assert.equal(rows.filter((item) => item.kind === "API").length, 140);
+  assert.equal(rows.filter((item) => item.kind === "API").length, 143);
   assert.equal(rows.filter((item) => item.kind === "BOUNDARY").length, 7);
   assert.equal(rows.filter((item) => item.kind === "METADATA").length, 3);
   assert.equal(rows.filter((item) => item.kind === "PROXY").length, 1);
   assert.equal(new Set(rows.map((item) => item.route)).size, rows.length);
+});
+
+test("season payments inventory separates customer creation, signed fulfillment and private status", () => {
+  for (const endpoint of ["POST /api/touchline-fantasy/season-checkout", "POST /api/touchline-fantasy/season-checkout/webhook", "GET /api/touchline-fantasy/season-checkout/status"]) {
+    assert.match(row(endpoint).auth, /^DEFAULT_OFF_/);
+    assert.equal(row(endpoint).status, "PENDING_MIGRATION_WEBHOOK_AND_CUSTOMER_QA");
+  }
+  assert.match(row("POST /api/touchline-fantasy/season-checkout").auth, /SAME_ORIGIN/);
+  assert.match(row("POST /api/touchline-fantasy/season-checkout/webhook").auth, /SIGNATURE_PROVIDER_REFETCH/);
+  assert.match(row("GET /api/touchline-fantasy/season-checkout/status").data, /OWN_SESSION_STATUS_READ_ONLY/);
 });
 
 test("public ClubOwner discovery separates opt-in reads from authenticated self-scoped writes", () => {

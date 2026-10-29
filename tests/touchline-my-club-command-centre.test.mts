@@ -52,8 +52,20 @@ test("Market preserves its ClubOwner photo, name and finite market power", () =>
   const area = client.slice(start, end);
 
   assert.match(market, /resolveTouchlineClubOwnerPageIdentity\(user, undefined, avatarContext\?\.avatarUrl\)/);
-  assert.match(market, /<ClubOwnerMarketHeader owner=\{clubOwner\?\.isAuthenticatedClubOwner \? clubOwner : null\}/);
-  assert.match(market, /remainingMarketPower=\{remainingMarketPower\} plan=\{snapshot\?\.plan \?\? null\}/);
+  const ast = ts.createSourceFile("page.tsx", market, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const headers: ts.JsxSelfClosingElement[] = [];
+  const visit = (node: ts.Node) => {
+    if (ts.isJsxSelfClosingElement(node) && node.tagName.getText(ast) === "ClubOwnerMarketHeader") headers.push(node);
+    ts.forEachChild(node, visit);
+  };
+  visit(ast);
+  assert.equal(headers.length, 1, "Exactly one real account header remains");
+  const attributes = new Map(headers[0].attributes.properties.filter(ts.isJsxAttribute)
+    .map(attribute => [attribute.name.getText(ast), attribute.initializer?.getText(ast)]));
+  assert.equal(attributes.get("owner"), "{clubOwner?.isAuthenticatedClubOwner ? clubOwner : null}");
+  assert.equal(attributes.get("remainingMarketPower"), "{remainingMarketPower}");
+  assert.equal(attributes.get("plan"), "{snapshot?.plan ?? null}");
+  assert.equal(attributes.get("checkoutOffers"), "{checkoutOffers}");
   assert.match(market, /Math\.max\(0, marketAccess\.budgetEur - \(snapshot\.userGameweek\?\.totalMarketValueEur \?\? 0\)\)/);
   assert.match(header, /<Image src=\{owner\?\.avatarUrl \|\| "\/icons\/touchline-512\.png"\}/);
   assert.match(header, /owner\?\.name/);

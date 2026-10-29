@@ -9,6 +9,7 @@ import ts from "typescript";
 import * as plans from "../lib/touchlineArena/club-owner-plan-showcase.ts";
 import * as market from "../lib/touchlineArena/club-owner-market-i18n.ts";
 import * as catalogue from "../lib/touchlineArena/catalogue-locale.ts";
+import * as checkoutClient from "../lib/stripe/club-season-checkout-client.ts";
 import type { ClubOwnerPlanOnboardingProps } from "../components/touchline/ClubOwnerPlanOnboarding.tsx";
 
 type Element = React.ReactElement<Record<string, unknown>>;
@@ -21,8 +22,9 @@ function nodes(value: unknown): Element[] {
   return [element, ...nodes(element.props.children)];
 }
 
-function fixture(initial: Partial<ClubOwnerPlanOnboardingProps> = {}) {
+function fixture(initial: Partial<ClubOwnerPlanOnboardingProps> = {}, checkoutRequest: typeof checkoutClient.requestClubSeasonCheckout = async () => { throw new Error("unavailable"); }) {
   let props: ClubOwnerPlanOnboardingProps, cursor = 0, tree: React.ReactNode, focused = "", modal = false, shows = 0, dismissals = 0;
+  const redirects: string[] = [];
   const selections: string[] = [], slots: unknown[] = [], effects: (() => void)[] = [];
   class FakeElement { readonly label: string; constructor(label: string) { this.label = label; } focus() { focused = this.label; } }
   const document = { activeElement: new FakeElement("entry-trigger") };
@@ -34,10 +36,11 @@ function fixture(initial: Partial<ClubOwnerPlanOnboardingProps> = {}) {
       if (!prior || prior.deps.some((value, i) => value !== deps[i])) { const next = { deps, cleanup: undefined as void | (() => void) }; slots[index] = next; effects.push(() => { prior?.cleanup?.(); next.cleanup = fn(); }); } },
   };
   const exports: { default?: (props: ClubOwnerPlanOnboardingProps) => React.ReactNode } = {};
-  runInNewContext(compiled, { exports, document, HTMLElement: FakeElement, require(name: string) {
+  runInNewContext(compiled, { exports, document, HTMLElement: FakeElement, AbortController, window: { setTimeout, clearTimeout, location: { assign: (url: string) => redirects.push(url) } }, require(name: string) {
     if (name === "react") return react;
     if (name === "react/jsx-runtime") return runtime;
     if (name === "lucide-react") return new Proxy({}, { get: () => "svg" });
+    if (name.includes("club-season-checkout-client")) return { ...checkoutClient, requestClubSeasonCheckout: checkoutRequest };
     if (name.includes("catalogue-locale")) return catalogue;
     if (name.includes("club-owner-market-i18n")) return market;
     if (name.includes("club-owner-plan-showcase")) return plans;
@@ -61,6 +64,7 @@ function fixture(initial: Partial<ClubOwnerPlanOnboardingProps> = {}) {
   render();
   function find(predicate: (node: Element) => boolean) { const result = nodes(tree).find(predicate); assert.ok(result); return result; }
   return {
+    settle: async () => { await new Promise(resolve => setImmediate(resolve)); render(); }, redirects,
     html: () => renderToStaticMarkup(tree), selections, focused: () => focused, shows: () => shows, dismissals: () => dismissals,
     update: (next: Partial<ClubOwnerPlanOnboardingProps>) => { props = { ...props, ...next }; render(); },
     button: (label: string) => find(node => node.type === "button" && (node.props["aria-label"] === label || renderToStaticMarkup(node).includes(`>${label}<`))),
@@ -73,7 +77,7 @@ function fixture(initial: Partial<ClubOwnerPlanOnboardingProps> = {}) {
 test("the actual ClubOwner cover delegates to the mounted full-screen dialog without opening a second zoom", () => {
   const header = readFileSync(new URL("../components/touchline/ClubOwnerMarketHeader.tsx", import.meta.url), "utf8");
   assert.match(header, /onClick=\{\(\) => setPlansOpen\(true\)\}/);
-  assert.match(header, /<ClubOwnerPlanOnboarding open=\{plansOpen\}/);
+  assert.match(header, /<ClubOwnerPlanOnboarding\b[\s\S]*?\bopen=\{plansOpen\}/);
   assert.match(header, /onDismiss=\{\(\) => setPlansOpen\(false\)\}/);
   const showcase = readFileSync(new URL("../components/touchline/ClubOwnerPlanShowcase.tsx", import.meta.url), "utf8");
   const ast = ts.createSourceFile("cover.tsx", showcase, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
@@ -155,7 +159,8 @@ test("onboarding reuses canonical cards/copy and keeps glass styling scoped", ()
   }
   assert.match(source, /import \{ ClubOwnerPlanCard \} from "\.\/ClubOwnerPlanShowcase"/);
   assert.match(source, /TouchlineGlobalNavigation.module.css/);
-  assert.doesNotMatch(source, /fetch\(|localStorage|sessionStorage|supabase|stripe|router\./);
+  assert.doesNotMatch(source, /fetch\(|localStorage|sessionStorage|supabase|router\./);
+  assert.match(source, /checkoutEnabled = false/);
   const css = readFileSync(new URL("../components/touchline/ClubOwnerPlanOnboarding.module.css", import.meta.url), "utf8");
   assert.match(css, /height: 100dvh/); assert.match(css, /max-width: none/); assert.match(css, /border-radius: 0/);
   assert.match(css, /background: var\(--touchline-modal-backdrop/); assert.match(css, /backdrop-filter: var\(--touchline-modal-blur/);
@@ -173,4 +178,37 @@ test("plan details and gallery prices inherit exactly the existing plan palette"
   assert.match(css, /\.offerPrice strong \{ color: var\(--onboarding-accent\)/);
   assert.match(css, /\.price \{ color: var\(--onboarding-accent\)/);
   assert.match(css, /\.benefits dd \{ color: var\(--onboarding-accent\)/);
+});
+
+
+test("checkout stays unavailable without a server quote even when capability is on",()=> {
+  const view=fixture({checkoutEnabled:true});view.click("Ver benefícios: Master");
+  assert.equal(view.button("Contratar plano").props.disabled,true);
+  assert.doesNotMatch(view.html(),/data-checkout-quote/);
+});
+test("confirmed upgrade quote displays the difference while first click locks further payment attempts",async()=> {
+  let calls=0;let resolve!: (url:string)=>void;
+  const view=fixture({checkoutEnabled:true,activePlanKey:"standard",checkoutOffers:{master:{amountMinor:4000}}},(plan,amount)=>{
+    assert.equal(plan,"master");assert.equal(amount,4000);
+    calls++;return new Promise<string>(done=>{resolve=done;});
+  });
+  view.click("Ver benefícios: Master");assert.match(view.html(),/A pagar agora · teste:.*40,00/);
+  view.click("Continuar para pagamento de teste");view.click("Preparando pagamento de teste…");
+  assert.equal(calls,1);assert.equal(view.button("Preparando pagamento de teste…").props.disabled,true);
+  resolve("https://checkout.stripe.com/c/pay/cs_test_one");await view.settle();
+  assert.deepEqual(view.redirects,["https://checkout.stripe.com/c/pay/cs_test_one"]);
+  assert.deepEqual(view.selections,[]);assert.doesNotMatch(view.html(),/data-current-plan-badge="master"/);
+});
+test("checkout failure is accessible and dismissal cancels a pending redirect",async()=> {
+  const failed=fixture({checkoutEnabled:true,checkoutOffers:{standard:{amountMinor:4990}}});
+  failed.click("Ver benefícios: Standard");failed.click("Continuar para pagamento de teste");await failed.settle();
+  assert.match(failed.html(),/role="alert"/);assert.match(failed.html(),/Confira seu plano antes/);
+  assert.equal(failed.button("Continuar para pagamento de teste").props.disabled,false);
+  let resolve!: (url:string)=>void;let signal!:AbortSignal;
+  const dismissed=fixture({checkoutEnabled:true,checkoutOffers:{standard:{amountMinor:4990}}},(_plan,_amount,s)=>{
+    signal=s;return new Promise<string>(done=>{resolve=done;});
+  });
+  dismissed.click("Ver benefícios: Standard");dismissed.click("Continuar para pagamento de teste");dismissed.click("Fechar");
+  assert.equal(signal.aborted,true);resolve("https://checkout.stripe.com/c/pay/cs_test_one");await dismissed.settle();
+  assert.deepEqual(dismissed.redirects,[]);
 });

@@ -20,6 +20,10 @@ function fixture(environment: string, patch: Record<string, unknown> = {}) {
   const snapshot = Object.freeze({ entitlementActive: true, marketAccess: marketPolicy.resolveTouchlineFantasyMarketAccess("standard"),
     config: { budgetEur: 500_000_000 }, userGameweek: { totalMarketValueEur: 379_000_000 }, plan, ...patch });
   const dependencies: Record<string, unknown> = {
+    "@/lib/stripe/club-season-offers.server": { readClubSeasonCheckoutOffers: async (accountId: string) => {
+      assert.equal(accountId, user.id); return {};
+    } },
+    "@/components/touchline/ClubSeasonCheckoutReturn": { default: () => assert.fail("ordinary preview navigation must not render payment status") },
     "@supabase/supabase-js": { AuthSessionMissingError: class extends Error {} },
     "@/lib/touchlineFantasy/club-collection-server": { clubCollectionEnabled: () => false },
     "@/lib/touchlineFantasy/club-collection-read-server": { readClubCollectionServer: async (accountId: string) => {
@@ -63,7 +67,7 @@ function fixture(environment: string, patch: Record<string, unknown> = {}) {
   });
   return { plan, async render(params: Params) {
     const root = await resolveClubOwnerShell(await exports.default!({ searchParams: Promise.resolve(params) }) as React.ReactElement) as React.ReactElement<Record<string, unknown>>;
-    const [brand, content] = root.props.children as Element[];
+    const [brand, content] = React.Children.toArray(root.props.children as React.ReactNode) as Element[];
     const provider = content.props.children as Element;
     const [header, fantasy] = provider.props.children as Element[];
     assert.equal(header.props.plan, plan, "Navigation must not replace the real subscription");

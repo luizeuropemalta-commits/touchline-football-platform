@@ -2,6 +2,7 @@
 
 import { useId, useLayoutEffect, useRef, useState } from "react";
 import { ArrowLeft, ChevronRight, X } from "lucide-react";
+import { checkoutDisplayAmount, requestClubSeasonCheckout, type ClubSeasonCheckoutOffers, type ClubSeasonCheckoutPlan } from "@/lib/stripe/club-season-checkout-client";
 import { resolveTouchlineCatalogueLocale } from "@/lib/touchlineArena/catalogue-locale";
 import { getTouchlineClubOwnerMarketCopy } from "@/lib/touchlineArena/club-owner-market-i18n";
 import { CLUB_OWNER_PLAN_PREVIEWS, getClubOwnerPlanBenefits, getClubOwnerPlanBenefitTerms, getClubOwnerPlanShowcaseCopy, getClubOwnerPlanDisclosure } from "@/lib/touchlineArena/club-owner-plan-showcase";
@@ -20,6 +21,10 @@ export type ClubOwnerPlanOnboardingProps = Readonly<{
   activePlanKey?: ClubOwnerOnboardingPlan | "pro" | null;
   /** Legacy intent callback; deliberately not invoked without a connected checkout. */
   onSelect?: (plan: ClubOwnerOnboardingPlan) => void;
+  /** Server-confirmed QA checkout capability; never a NEXT_PUBLIC feature flag. */
+  checkoutEnabled?: boolean;
+  /** Current same-season amounts computed from confirmed paid orders by server. */
+  checkoutOffers?: ClubSeasonCheckoutOffers;
   selecting?: boolean;
   selectionError?: boolean;
 }>;
@@ -46,35 +51,79 @@ const hiringCopy = {
   "de-DE": ["Abonnieren", "Dein aktueller Plan", "Abschluss nicht verfügbar: Zahlung noch nicht verbunden."],
 } as const;
 
-/** First-entry presentation only. No account, entitlement, wallet or payment mutations. */
+const checkoutCopy = {
+  "en-GB": { action: "Continue to test checkout", pending: "Preparing test checkout…", due: "Due now · test", note: "Activation follows payment confirmation. Your club balance is not changed here.", error: "Checkout could not be opened. Check your plan before trying again." },
+  "pt-BR": { action: "Continuar para pagamento de teste", pending: "Preparando pagamento de teste…", due: "A pagar agora · teste", note: "A ativação depende da confirmação do pagamento. O saldo do clube não é alterado aqui.", error: "Não foi possível abrir o pagamento. Confira seu plano antes de tentar novamente." },
+  "es-ES": { action: "Continuar al pago de prueba", pending: "Preparando el pago de prueba…", due: "A pagar ahora · prueba", note: "La activación depende de confirmar el pago. El saldo del club no cambia aquí.", error: "No se pudo abrir el pago. Revisa tu plan antes de intentarlo de nuevo." },
+  "it-IT": { action: "Continua al pagamento di prova", pending: "Preparazione del pagamento di prova…", due: "Da pagare ora · prova", note: "L’attivazione richiede la conferma del pagamento. Il saldo del club non cambia qui.", error: "Impossibile aprire il pagamento. Controlla il tuo piano prima di riprovare." },
+  "fr-FR": { action: "Continuer au paiement de test", pending: "Préparation du paiement de test…", due: "À payer maintenant · test", note: "L’activation dépend de la confirmation du paiement. Le solde du club ne change pas ici.", error: "Impossible d’ouvrir le paiement. Vérifiez votre offre avant de réessayer." },
+  "ar-SA": { action: "المتابعة إلى الدفع التجريبي", pending: "جارٍ تجهيز الدفع التجريبي…", due: "المبلغ المستحق الآن · تجريبي", note: "يتوقف التفعيل على تأكيد الدفع. لا يتغير رصيد النادي هنا.", error: "تعذر فتح الدفع. تحقق من خطتك قبل المحاولة مرة أخرى." },
+  "tr-TR": { action: "Test ödemesine devam et", pending: "Test ödemesi hazırlanıyor…", due: "Şimdi ödenecek · test", note: "Etkinleştirme ödeme onayına bağlıdır. Kulüp bakiyesi burada değişmez.", error: "Ödeme açılamadı. Tekrar denemeden önce planınızı kontrol edin." },
+  "de-DE": { action: "Weiter zur Testzahlung", pending: "Testzahlung wird vorbereitet…", due: "Jetzt fällig · Test", note: "Die Aktivierung erfolgt nach Zahlungsbestätigung. Das Vereinsguthaben wird hier nicht geändert.", error: "Die Zahlung konnte nicht geöffnet werden. Prüfe deinen Plan, bevor du es erneut versuchst." },
+} as const;
+
+/** Checkout navigation only. Payment confirmation and activation belong to the server. */
 export default function ClubOwnerPlanOnboarding(props: ClubOwnerPlanOnboardingProps) {
   // Unmounting the session resets navigation. Reopening never selects Beta or
   // resumes an earlier tier without a fresh deliberate choice.
   return props.open ? <PlanOnboardingSession {...props} /> : null;
 }
 
-function PlanOnboardingSession({ open, locale, draftLocalesEnabled = false, onDismiss, activePlanKey = null }: ClubOwnerPlanOnboardingProps) {
+function PlanOnboardingSession({ open, locale, draftLocalesEnabled = false, onDismiss, activePlanKey = null, checkoutEnabled = false, checkoutOffers }: ClubOwnerPlanOnboardingProps) {
   const id = useId();
   const dialog = useRef<HTMLDialogElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
   const cards = useRef<Partial<Record<ClubOwnerOnboardingPlan, HTMLButtonElement | null>>>({});
   const previousPlan = useRef<ClubOwnerOnboardingPlan | null>(null);
   const previousFocus = useRef<HTMLElement | null>(null);
+  const request = useRef<AbortController | null>(null);
+  const [pendingPlan, setPendingPlan] = useState<ClubSeasonCheckoutPlan | null>(null);
+  const [checkoutError, setCheckoutError] = useState<ClubSeasonCheckoutPlan | null>(null);
   const [plan, setPlan] = useState<ClubOwnerOnboardingPlan | null>(null);
   const language = resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled);
   const local = copy[language];
   const hiring = hiringCopy[language];
+  const payment = checkoutCopy[language];
   const labels = getClubOwnerPlanShowcaseCopy(locale, draftLocalesEnabled);
   const disclosure = getClubOwnerPlanDisclosure(locale, draftLocalesEnabled);
   const market = getTouchlineClubOwnerMarketCopy(locale, draftLocalesEnabled);
   const name = (key: ClubOwnerOnboardingPlan) => key === "beta" ? "Beta" : key === "standard" ? market.planStandard : key === "master" ? "Master" : "VIP";
   const price = (key: ClubOwnerOnboardingPlan) => key === "beta" ? labels.betaPrice : key === "standard" ? market.planStandardPrice : key === "master" ? labels.masterPrice : labels.vipPrice;
-  const hiringAction = (key: ClubOwnerOnboardingPlan) => activePlanKey === key
-    ? <p className={styles.note} data-current-plan-badge={key}>{hiring[1]}</p>
-    : <div className={styles.selection}>
-      <button type="button" className={controls.arena} disabled aria-describedby={`${id}-hiring-${key}`}>{hiring[0]}</button>
-      <p id={`${id}-hiring-${key}`} className={styles.note}>{hiring[2]}</p>
+  const startCheckout = async (key: ClubSeasonCheckoutPlan) => {
+    const expectedAmountMinor = checkoutDisplayAmount(checkoutOffers, key);
+    if (!checkoutEnabled || expectedAmountMinor === null || request.current) return;
+    const controller = new AbortController();
+    request.current = controller;
+    setCheckoutError(null);
+    setPendingPlan(key);
+    const timeout = window.setTimeout(() => controller.abort(), 30_000);
+    try {
+      const url = await requestClubSeasonCheckout(key, expectedAmountMinor, controller.signal);
+      if (request.current === controller && !controller.signal.aborted) window.location.assign(url);
+    } catch {
+      if (request.current === controller) setCheckoutError(key);
+    } finally {
+      window.clearTimeout(timeout);
+      if (request.current === controller) { request.current = null; setPendingPlan(null); }
+    }
+  };
+  const hiringAction = (key: ClubOwnerOnboardingPlan) => {
+    if (activePlanKey === key) return <p className={styles.note} data-current-plan-badge={key}>{hiring[1]}</p>;
+    const amount = checkoutDisplayAmount(checkoutOffers, key);
+    const available = checkoutEnabled && key !== "beta" && amount !== null;
+    return <div className={styles.selection}>
+      {available ? <p className={styles.note} data-checkout-quote={key}>{payment.due}: <strong>{new Intl.NumberFormat(language, { style: "currency", currency: "EUR" }).format(amount / 100)}</strong></p> : null}
+      <button type="button" className={controls.arena} disabled={!available || pendingPlan !== null}
+        aria-busy={pendingPlan === key} aria-describedby={`${id}-hiring-${key}`}
+        onClick={available ? () => { void startCheckout(key as ClubSeasonCheckoutPlan); } : undefined}>
+        {pendingPlan === key ? payment.pending : available ? payment.action : hiring[0]}
+      </button>
+      <p id={`${id}-hiring-${key}`} className={styles.note} role="status">{pendingPlan === key ? payment.pending : available ? payment.note : hiring[2]}</p>
+      {checkoutError === key ? <p className={styles.note} role="alert">{payment.error}</p> : null}
     </div>;
+  };
+
+  useLayoutEffect(() => () => { request.current?.abort(); request.current = null; }, []);
 
   useLayoutEffect(() => {
     const node = dialog.current;
@@ -95,7 +144,7 @@ function PlanOnboardingSession({ open, locale, draftLocalesEnabled = false, onDi
     dialog.current?.scrollTo({ top: 0 });
   }, [open, plan]);
 
-  const dismiss = () => { setPlan(null); onDismiss(); };
+  const dismiss = () => { request.current?.abort(); request.current = null; setPlan(null); onDismiss(); };
   if (!open) return null;
   return <dialog open ref={dialog} className={styles.dialog} aria-modal="true" aria-labelledby={`${id}-heading`} onCancel={event => { event.preventDefault(); dismiss(); }} data-plan-onboarding="true" data-plan-preview={plan ?? "all"} dir={language === "ar-SA" ? "rtl" : "ltr"}>
     <div className={styles.shell}>

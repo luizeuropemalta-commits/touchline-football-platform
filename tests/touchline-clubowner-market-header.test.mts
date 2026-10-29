@@ -11,6 +11,7 @@ import * as planShowcase from "../lib/touchlineArena/club-owner-plan-showcase.ts
 import * as acquisition from "../lib/touchlineFantasy/club-acquisition.ts";
 import * as catalogueLocale from "../lib/touchlineArena/catalogue-locale.ts";
 import * as marketBudgetCopy from "../lib/touchlineFantasy/market-budget-i18n.ts";
+import * as checkoutClient from "../lib/stripe/club-season-checkout-client.ts";
 
 const page = readFileSync(new URL("../app/clubowner/page.tsx", import.meta.url), "utf8");
 const stage = readFileSync(new URL("../app/fantasy/FantasyGameweekClient.tsx", import.meta.url), "utf8");
@@ -52,13 +53,14 @@ test("the plan is explicit, uses entitlement state and has no invented payment o
   assert.match(header, /const displayedTier = currentTier \?\? undefined/);
   assert.doesNotMatch(header, /setVisualTier|onPreviewChange/);
   assert.doesNotMatch(header, /showAllPlans/);
-  assert.doesNotMatch(header, /fetch\(|localStorage|checkout|stripe|walletBalance|amountMinor|£|€|\bGBP\b|\bBRL\b/);
+  assert.doesNotMatch(header, /fetch\(|localStorage|requestClubSeasonCheckout|window\.location|walletBalance|amountMinor|£|€|\bGBP\b|\bBRL\b/);
+  assert.match(header, /checkoutOffers=\{checkoutOffers\}/, "only server-confirmed offers reach the checkout dialog");
 });
 
 test("the right-hand plan selector owns the premium interaction without an old gallery", () => {
   const css = readFileSync(new URL("../components/touchline/ClubOwnerMarketHeader.module.css", import.meta.url), "utf8");
   assert.match(header, /<ClubOwnerPlanCard compact tier=\{currentTier\}/);
-  assert.match(header, /<ClubOwnerPlanOnboarding open=\{plansOpen\}/);
+  assert.match(header, /<ClubOwnerPlanOnboarding\b[\s\S]*?\bopen=\{plansOpen\}/);
   assert.match(header, /className=\{styles\.bank\}/);
   assert.match(css, /\.profile::before, \.bank::before/);
   assert.match(css, /\.header\[data-plan-preview\] :is\(\.profile,\.bank\)/);
@@ -278,6 +280,7 @@ function renderHeader(owner: Owner | null, locale: string, copyModule: Record<st
     if (name === "@/lib/touchlineArena/club-owner-plan-showcase") return planShowcase;
     if (name === "@/lib/touchlineFantasy/club-acquisition") return acquisition;
     if (name === "@/lib/touchlineFantasy/market-budget-i18n") return marketBudgetCopy;
+    if (name === "@/lib/stripe/club-season-checkout-client") return checkoutClient;
     if (name === "@/lib/touchlineArena/catalogue-locale") return catalogueLocale;
     if (name === "./fantasy/ClubCollectionContext") return { useConfirmedClubCollection: () => ({ state: collection, initialBudget, verificationStatus }) };
     if (name === "./ClubOwnerPlanShowcase" || name === "./ClubOwnerPlanOnboarding" || name === "./TouchlineClubPerimeterTrace") {
@@ -571,7 +574,11 @@ test("paid plan validity and available budget remain visible outside the plan di
   assert.match(html, /data-plan-validity="true">Valid until 8 Nov 2026/);
   assert.match(html, /data-account-market-power="true"[\s\S]*121,000,000/);
   assert.equal((html.match(/<h2[^>]*>My plan/g) ?? []).length, 1);
-  for (const [activePlanKey, expiresAt] of [["vip", "2026-11-08"], ["standard", "invalid"]]) {
+  const seasonalVip = renderHeader(null, "en-GB", await loadCopy(), {
+    plan: { active: true, expiresAt: "2026-11-08" }, activePlanKey: "vip",
+  });
+  assert.match(seasonalVip, /data-plan-validity="true">Valid until 8 Nov 2026/);
+  for (const [activePlanKey, expiresAt] of [["vip", null], ["vip", "invalid"], ["standard", "invalid"]]) {
     const invalid = renderHeader(null, "en-GB", await loadCopy(), { plan: { active: true, expiresAt }, activePlanKey });
     assert.doesNotMatch(invalid, /data-plan-validity=/);
   }

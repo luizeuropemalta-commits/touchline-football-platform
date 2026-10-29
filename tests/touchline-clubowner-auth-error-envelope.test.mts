@@ -55,6 +55,10 @@ function fixture(getUser: () => Promise<unknown>, clientFailure = false, clientW
     clearTimeout: (id: number) => timers.delete(id),
   });
   const modules: Record<string, unknown> = {
+    "@/lib/stripe/club-season-offers.server": { readClubSeasonCheckoutOffers: async (accountId: string) => {
+      assert.equal(accountId, user("customer@example.test").id);
+      calls.push("checkout-offers"); return {};
+    } },
     "@supabase/supabase-js": { AuthSessionMissingError: MissingSession },
     "@/lib/touchlineFantasy/club-collection-server": { clubCollectionEnabled: () => false },
     "@/lib/touchlineFantasy/club-collection-read-server": { readClubCollectionServer: async (accountId: string) => {
@@ -101,6 +105,7 @@ function fixture(getUser: () => Promise<unknown>, clientFailure = false, clientW
   modules["@/components/touchline/fantasy/ClubCollectionContext"] = { ClubCollectionProvider: "collection-provider" };
   for (const [path, name] of [
     ["@/components/touchline/ClubOwnerMarketHeader", "owner-header"],
+    ["@/components/touchline/ClubSeasonCheckoutReturn", "checkout-return"],
     ["@/components/touchline/TouchlineBrandHeader", "brand-header"],
     ["@/app/fantasy/FantasyGameweekClient", "fantasy-client"],
     ["@/components/touchline/TouchlineGlobalNavigation", "navigation"],
@@ -138,7 +143,7 @@ test("ClubOwner preserves verified customer rendering and verified owner exclusi
   const actor = user("customer@example.test");
   const customer = fixture(async () => ({ data: { user: actor }, error: null }));
   const tree = await customer.run();
-  assert.deepEqual(customer.calls, ["auth", "owner-policy", "avatar", "snapshot", "public-fixtures", "collection-read", "identity"]);
+  assert.deepEqual(customer.calls, ["auth", "owner-policy", "avatar", "snapshot", "public-fixtures", "collection-read", "checkout-offers", "identity"]);
   const all = nodes(tree);
   const context = all.find(node => node.type === "brand-header")!.props.accountLocaleContext;
   assert.equal(JSON.stringify(context), JSON.stringify({ mode: "account", accountId: actor.id }));

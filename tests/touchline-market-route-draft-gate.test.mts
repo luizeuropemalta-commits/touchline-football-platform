@@ -25,7 +25,7 @@ import * as profileMetrics from "../lib/touchlineArena/club-owner-profile-metric
 import { normalizeTouchlineMatchCentreTimeZone } from "../lib/touchlineArena/match-centre.ts";
 
 type User = { id: string; email: string; user_metadata: { full_name: string } };
-type Params = { lang?: string | string[]; club?: string | string[] };
+type Params = { lang?: string | string[]; club?: string | string[]; checkout?: string | string[]; session_id?: string | string[] };
 type Element = React.ReactElement<Record<string, unknown>>;
 const customer: User = { id: "customer-account", email: "customer@example.test", user_metadata: { full_name: "Canonical Customer" } };
 const drafts = ["es-ES", "it-IT", "fr-FR", "ar-SA", "tr-TR", "de-DE"];
@@ -45,6 +45,8 @@ function fixture(options: { user?: User | null; configured?: boolean; rejectAuth
   const events: string[] = [];
   const authentication = { data: { user }, error: null };
   const avatarContext = Object.freeze({ avatarUrl: "/confirmed-avatar.png" });
+  const checkoutOffers = Object.freeze({ master: Object.freeze({ amountMinor: 4000 }) });
+  const checkoutReturn = function CheckoutReturn() { return null; };
   const railFixtures = Object.freeze([{ id: "sportmonks:101", providerId: "101", status: "Not Started" }]);
   const railMetadata = Object.freeze({ state: "persisted-live-snapshot", degraded: false, fetchedAt: "2030-10-24T12:00:00Z" });
   let railReads = 0;
@@ -67,6 +69,13 @@ function fixture(options: { user?: User | null; configured?: boolean; rejectAuth
     } },
     "@/lib/touchlineFantasy/club-collection-presentation": { clubCollectionPresentationEnabled },
     "@/lib/touchlineArena/site-locales-release": siteLocalePolicy,
+    "@/lib/stripe/club-season-offers.server": { readClubSeasonCheckoutOffers: async (accountId: string) => {
+      assert.equal(accountId, user?.id);
+      assert.ok(events.includes("getUser"), "Quotes require the verified account first");
+      events.push("checkout-offers");
+      return checkoutOffers;
+    } },
+    "@/components/touchline/ClubSeasonCheckoutReturn": { default: checkoutReturn },
     react: React,
     "@/components/touchline/TouchlineAccountLoading": { default: "account-loading" },
     "@/components/touchline/cards/TouchlineCardLeadershipLayout": { default: "leadership-boundary" },
@@ -141,7 +150,7 @@ function fixture(options: { user?: User | null; configured?: boolean; rejectAuth
     assert.equal(typeof loaded.internalMetadata, "function", "private generateClubOwnerMetadata seam must exist");
     return (loaded.internalMetadata as (props: { searchParams: Promise<Params> }, enabled?: boolean) => Promise<{ title: string; description: string }>)({ searchParams: Promise.resolve(params) }, enabled);
   };
-  return { events, leaves, snapshot, avatarContext, railFixtures, railMetadata, get railReads() { return railReads; }, internalRoute, internalMetadata, route: (params: Params) => route({ searchParams: Promise.resolve(params) }).then(async node => await resolveClubOwnerShell(node) as Element), metadata: (params: Params) => metadata({ searchParams: Promise.resolve(params) }) };
+  return { events, leaves, snapshot, avatarContext, checkoutOffers, checkoutReturn, railFixtures, railMetadata, get railReads() { return railReads; }, internalRoute, internalMetadata, route: (params: Params) => route({ searchParams: Promise.resolve(params) }).then(async node => await resolveClubOwnerShell(node) as Element), metadata: (params: Params) => metadata({ searchParams: Promise.resolve(params) }) };
 }
 
 function descendants(node: React.ReactNode): Element[] {
@@ -190,6 +199,7 @@ test("default route keeps all draft requests in English and passes false to ever
     assert.equal(elements.find(element => element.type === h.leaves.navigation)!.props.showAudioControl, false);
     const fantasy = elements.find(element => element.type === h.leaves.fantasy)!;
     assert.equal(header.props.accountId, customer.id);
+    assert.equal(header.props.checkoutOffers, h.checkoutOffers);
     assert.equal(header.props.remainingMarketPower, 280_000_000);
     assert.equal(fantasy.props.liveTimeZone, "Europe/Malta");
     assert.equal(header.props.avatarContext, h.avatarContext);
@@ -199,7 +209,7 @@ test("default route keeps all draft requests in English and passes false to ever
     assert.ok((fantasy.props.initialLiveNow as number) > 0);
     assert.equal(fantasy.props.embedded, true);
     assert.equal(fantasy.props.marketPage, true);
-    assert.deepEqual(h.events, ["avatarReaderCreated", "createClient", "getUser", "avatarRead", "snapshot", "fixtures", "collection-read"]);
+    assert.deepEqual(h.events, ["avatarReaderCreated", "createClient", "getUser", "avatarRead", "snapshot", "fixtures", "collection-read", "checkout-offers"]);
   }
 });
 
@@ -225,6 +235,7 @@ test("missing auth, missing configuration and rejected auth redirect before prot
       return true;
     });
     assert.equal(h.events.includes("snapshot"), false);
+    assert.equal(h.events.includes("checkout-offers"), false);
     assert.equal(h.events.includes("avatarRead"), false);
     assert.equal(h.events.includes("collection-read"), false);
   }
@@ -288,13 +299,14 @@ test("trusted private render propagates all eight locales without changing ident
     assert.equal((brand.props.accountLocaleContext as { accountId: string }).accountId, customer.id);
     assert.equal(header.props.avatarContext, h.avatarContext);
     assert.equal(header.props.accountId, customer.id);
+    assert.equal(header.props.checkoutOffers, h.checkoutOffers);
     assert.equal((header.props.owner as { name: string }).name, customer.user_metadata.full_name);
     assert.equal(fantasy.props.initialSnapshot, h.snapshot);
     assert.equal(fantasy.props.initialPlayerClubTeamId, club.teamId);
     assert.equal(fantasy.props.embedded, true);
     assert.equal(fantasy.props.marketPage, true);
     assert.equal(elements.find(element => element.type === h.leaves.navigation)!.props.showAudioControl, false);
-    assert.deepEqual(h.events, ["avatarReaderCreated", "createClient", "getUser", "avatarRead", "snapshot", "fixtures", "collection-read"]);
+    assert.deepEqual(h.events, ["avatarReaderCreated", "createClient", "getUser", "avatarRead", "snapshot", "fixtures", "collection-read", "checkout-offers"]);
   }
 });
 
@@ -367,6 +379,7 @@ test("trusted draft presentation does not bypass auth, owner denial or failed sn
     });
     assert.equal(h.events.includes("avatarRead"), false);
     assert.equal(h.events.includes("snapshot"), false);
+    assert.equal(h.events.includes("checkout-offers"), false);
   }
   const owner = fixture({ user: { ...customer, email: "owner@example.test" } });
   await assert.rejects(owner.internalRoute({ lang: "ar-SA" }, true), (error: unknown) => {
@@ -402,6 +415,7 @@ test("unauthenticated redirect preserves all eight trusted locales and the exact
       });
       assert.equal(h.events.includes("avatarRead"), false);
       assert.equal(h.events.includes("snapshot"), false);
+      assert.equal(h.events.includes("checkout-offers"), false);
       assert.equal(h.events.filter(event => event === "getUser").length, options.configured === false ? 0 : 1);
     }
   }
@@ -425,6 +439,31 @@ test("public and default private auth redirects retain the EN/PT release gate", 
       });
       assert.equal(h.events.includes("avatarRead"), false);
       assert.equal(h.events.includes("snapshot"), false);
+      assert.equal(h.events.includes("checkout-offers"), false);
     }
+  }
+});
+
+test("checkout return is optional and preserves the verified identity, locale and server offers", async () => {
+  for (const checkout of [undefined, "processing", "cancelled", "paid", ["processing"]]) {
+    const h = fixture();
+    const root = await h.route({ lang: "pt-BR", checkout, session_id: "cs_test_return" });
+    const elements = descendants(root);
+    const notices = elements.filter(element => element.type === h.checkoutReturn);
+    const expected = checkout === "processing" || checkout === "cancelled";
+    assert.equal(notices.length, expected ? 1 : 0);
+    if (expected) {
+      assert.equal(notices[0].props.checkout, checkout);
+      assert.equal(notices[0].props.sessionId, "cs_test_return");
+      assert.equal(notices[0].props.locale, "pt-BR");
+    }
+    const children = React.Children.toArray(root.props.children as React.ReactNode) as Element[];
+    assert.equal(children[0].type, h.leaves.brand, "Return notice must not replace the account shell");
+    assert.equal(children.at(-1)?.props.className, "content");
+    const header = elements.find(element => element.type === h.leaves.header)!;
+    assert.equal(header.props.accountId, customer.id);
+    assert.equal(header.props.checkoutOffers, h.checkoutOffers, "URL status must not create a price or plan authority");
+    assert.equal(elements.find(element => element.type === h.leaves.fantasy)!.props.initialSnapshot, h.snapshot);
+    assert.equal(h.events.filter(event => event === "checkout-offers").length, 1);
   }
 });

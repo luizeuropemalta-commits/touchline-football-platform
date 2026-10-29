@@ -46,6 +46,50 @@ function qaEnvironment(overrides: Record<string, string | undefined> = {}) {
   };
 }
 
+test("seasonal payment configuration stays private, canonical QA and TEST only", () => {
+  const settings = {
+    VERCEL_GIT_COMMIT_REF: "qa",
+    TOUCHLINE_QA_SUPABASE_PROJECT_REF: "xgxbwqxjssxxuihuwmgy",
+    SUPABASE_URL: "https://xgxbwqxjssxxuihuwmgy.supabase.co",
+    NEXT_PUBLIC_SUPABASE_URL: "https://xgxbwqxjssxxuihuwmgy.supabase.co",
+    TOUCHLINE_CLUB_SEASON_CHECKOUT_ENABLED: "false",
+    TOUCHLINE_STRIPE_MODE: "test",
+    TOUCHLINE_STRIPE_TEST_SECRET_KEY: "sk_test_synthetic",
+    TOUCHLINE_STRIPE_TEST_CLUB_SEASON_WEBHOOK_SECRET: "whsec_synthetic",
+  };
+  for (const gate of ["true", "false"]) {
+    const result = inspectTouchlineIsolatedPreviewEnvironment(qaEnvironment({ ...settings, TOUCHLINE_CLUB_SEASON_CHECKOUT_ENABLED: gate }));
+    assert.deepEqual(result, { status: "qa", reasons: [] });
+  }
+  // Gate-OFF deployment can be prepared before the dedicated webhook is provisioned.
+  assert.equal(inspectTouchlineIsolatedPreviewEnvironment(qaEnvironment({ ...settings,
+    TOUCHLINE_STRIPE_TEST_CLUB_SEASON_WEBHOOK_SECRET: undefined })).status, "qa");
+  for (const patch of [
+    { VERCEL_ENV: "production" }, { VERCEL_GIT_COMMIT_REF: "main" },
+    { TOUCHLINE_QA_SUPABASE_PROJECT_REF: "other" },
+    { TOUCHLINE_STRIPE_MODE: "live" }, { TOUCHLINE_STRIPE_MODE: undefined },
+    { TOUCHLINE_STRIPE_TEST_SECRET_KEY: "sk_live_synthetic" },
+    { TOUCHLINE_STRIPE_TEST_SECRET_KEY: "sk_test_synthetic\n" },
+    { TOUCHLINE_STRIPE_TEST_CLUB_SEASON_WEBHOOK_SECRET: "invalid_synthetic" },
+    { TOUCHLINE_STRIPE_TEST_CLUB_SEASON_WEBHOOK_SECRET: "" },
+    { TOUCHLINE_CLUB_SEASON_CHECKOUT_ENABLED: "yes" },
+    { STRIPE_SECRET_KEY: "sk_test_synthetic" },
+  ]) {
+    const result = inspectTouchlineIsolatedPreviewEnvironment(qaEnvironment({ ...settings, ...patch }));
+    assert.equal(result.status, "invalid", JSON.stringify(Object.keys(patch)));
+    assert.ok(result.reasons.every((reason) => !reason.includes("synthetic")));
+  }
+  for (const name of Object.keys(settings).filter((name) => name.startsWith("TOUCHLINE_") && name !== "TOUCHLINE_QA_SUPABASE_PROJECT_REF")) {
+    assert.equal(inspectTouchlineIsolatedPreviewEnvironment(isolatedEnvironment({ [name]: settings[name as keyof typeof settings] })).status, "invalid");
+    for (const forbidden of [`NEXT_PUBLIC_${name}`, `${name}_OTHER`]) {
+      assert.equal(inspectTouchlineIsolatedPreviewEnvironment(qaEnvironment({ ...settings, [forbidden]: "synthetic" })).status, "invalid");
+    }
+  }
+  const template = readFileSync(new URL("../.env.example", import.meta.url), "utf8");
+  assert.doesNotMatch(template, /^TOUCHLINE_STRIPE_TEST_CLUB_SEASON_WEBHOOK_SECRET=/m);
+  assert.match(template, /^TOUCHLINE_CLUB_SEASON_CHECKOUT_ENABLED=false$/m);
+});
+
 test("QA admits the exact server-side site locale gate without widening isolated Preview", () => {
   const key = "TOUCHLINE_SITE_LOCALES_ENABLED";
   for (const value of ["true", "false"]) {

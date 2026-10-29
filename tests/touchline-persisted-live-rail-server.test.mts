@@ -95,7 +95,7 @@ function descendants(node: React.ReactNode): Element[] {
   return React.Children.toArray(node).flatMap(child => React.isValidElement<Record<string, unknown>>(child)
     ? [child, ...descendants(child.props.children as React.ReactNode)] : []);
 }
-async function ownerProps(read: typeof readPersistedLiveRail) {
+async function ownerProps(read: typeof readPersistedLiveRail, params: Record<string, string> = {}) {
   const leaf = () => null;
   const modules: Record<string, unknown> = {
     "react": { Suspense: React.Suspense }, "react/jsx-runtime": jsx,
@@ -109,6 +109,10 @@ async function ownerProps(read: typeof readPersistedLiveRail) {
     "@/lib/touchlineArena/server-read-deadline": { resolveServerReadWithin },
     "@/lib/touchlineArena/match-centre": { normalizeTouchlineMatchCentreTimeZone: () => "UTC" },
     "@/lib/touchlineArena/site-locales-release": { isTouchLineSiteLocalesEnabled: () => false },
+    "@/lib/stripe/club-season-offers.server": { readClubSeasonCheckoutOffers: async (accountId: string) => {
+      assert.equal(accountId, "customer", "Checkout read must use the same verified customer");
+      return {};
+    } },
     "@/lib/touchlineArena/catalogue-locale": { resolveTouchlineCatalogueLocale: () => "pt-BR" },
     "@/lib/touchlineFantasy/market-workflow-i18n": { getTouchlineFantasyMarketWorkflowCopy: () => ({}) },
     "@/lib/touchlineArena/club-owner-profile-metrics": { clubOwnerRankingPosition: () => null },
@@ -127,9 +131,9 @@ async function ownerProps(read: typeof readPersistedLiveRail) {
     "@/app/fantasy/FantasyGameweekClient": { default: leaf },
     "./market-game.module.css": { default: {} },
   };
-  for (const name of ["ClubOwnerMarketHeader", "TouchlineBrandHeader", "TouchlineSignOutButton", "TouchlineGlobalNavigation"]) modules[`@/components/touchline/${name}`] = { default: () => null };
+  for (const name of ["ClubOwnerMarketHeader", "ClubSeasonCheckoutReturn", "TouchlineBrandHeader", "TouchlineSignOutButton", "TouchlineGlobalNavigation"]) modules[`@/components/touchline/${name}`] = { default: () => null };
   const page = load(ownerSource, modules).default as (props: { searchParams: Promise<Record<string, string>> }) => Promise<Element>;
-  const tree = await page({ searchParams: Promise.resolve({ lang: "pt-BR" }) });
+  const tree = await page({ searchParams: Promise.resolve({ lang: "pt-BR", ...params }) });
   assert.equal(descendants(tree).some(element => element.type === leaf), false, "The first shell streams before its data body");
   const deferred = descendants(tree).find(element => typeof element.type === "function" && element.type.name === "ClubOwnerDeferredContent");
   assert.ok(deferred, "The real async body must remain behind the streamed shell");
@@ -533,4 +537,15 @@ test("an expired season lookup starts neither snapshot nor archive reads, while 
   assert.equal(timers.size, 0);
   assert.ok(await (reader.readPersistedLiveRail as typeof readPersistedLiveRail)());
   assert.deepEqual(calls, ["season", "season", "snapshot", "schedule"]);
+});
+
+test("checkout return does not change the streamed persisted rail identity or metadata", async () => {
+  const h = harness({ snapshot: fresh(), schedule: [fixture("901", 31, "LIVE")] });
+  const expected = await h.read();
+  for (const checkout of ["processing", "cancelled"]) {
+    const owner = await ownerProps(h.read, { checkout, session_id: "cs_test_return" });
+    assert.deepEqual(json(owner.initialLiveFixtures), json(expected?.fixtures));
+    assert.deepEqual(json(owner.initialLiveMetadata), json(expected?.metadata));
+    assert.deepEqual(json(owner.initialLiveAdmissionScope), json(expected?.admissionScope));
+  }
 });

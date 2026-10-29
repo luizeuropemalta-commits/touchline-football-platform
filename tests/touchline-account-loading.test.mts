@@ -78,6 +78,8 @@ test("actual ClubOwner shell keeps its header while content leadership suspends"
   } }).outputText, {
     exports,
     Suspense: React.Suspense, styles: { page: "page" }, draftLocalesEnabled: false, destination: "/clubowner?lang=en-GB", locale: "en-GB", user: { id: "verified-account" },
+    checkout: null, checkoutSessionId: null,
+    ClubSeasonCheckoutReturn: () => assert.fail("ordinary navigation must not render a checkout return"),
     TouchlineAccountLoading: loadLoading(), TouchlineCardLeadershipLayout: ControlledLeadership,
     ClubOwnerDeferredContent: ({ content }: { content: unknown }) => content,
     TouchlineBrandHeader: () => React.createElement("header", { "data-authenticated-header": "ready" }, "Authenticated navigation"),
