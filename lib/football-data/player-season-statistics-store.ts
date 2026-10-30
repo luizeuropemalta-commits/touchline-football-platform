@@ -68,6 +68,33 @@ function fantasyEvents(value: unknown): TouchlineFantasyEvent[] | null {
   return Array.isArray(value) ? value as TouchlineFantasyEvent[] : null;
 }
 
+/** A provider may name a bench placeholder before assigning a player ID.
+ * Keep that raw row unresolved; it is neither an identity nor absence evidence.
+ * Any recorded statistic or unresolved event actor still closes the barrier. */
+function unresolvedBenchPlaceholder(feed: FeedRow, member: TouchlineFantasyLineupMember) {
+  if (member.playerId != null || member.isStarter !== false || member.isSubstitute !== true
+    || !Array.isArray(member.statistics) || member.statistics.length !== 0
+    || !/^[1-9]\d*$/.test(String(member.providerId ?? ""))
+    || typeof member.playerName !== "string" || !member.playerName.trim()) return false;
+  const payload = feed.fixture_payload as TouchlineFantasyFixtureFeed["fixture"] | null;
+  if (!payload || payload.provider !== feed.provider || payload.providerId !== feed.provider_fixture_id
+    || !isTouchLineSettledFixtureStatus(payload.status)
+    || !Array.isArray(feed.events_payload)) return false;
+  const members = lineupMembers(feed.lineups_payload) ?? [];
+  const ids = new Set(members.flatMap((row) => /^\d+$/.test(String(row?.playerId ?? "")) ? [String(row.playerId)] : []));
+  const name = member.playerName.trim().toLocaleLowerCase("en-GB");
+  return (feed.events_payload as TouchlineFantasyEvent[]).every((event) => {
+    if (!event || event.provider !== feed.provider || event.fixtureId !== feed.provider_fixture_id
+      || !ids.has(String(event.playerId ?? ""))
+      || (event.relatedPlayerId != null && !ids.has(String(event.relatedPlayerId)))
+      || (/substitution/i.test(event.type ?? "") && !ids.has(String(event.relatedPlayerId ?? "")))) return false;
+    // Names only veto conflicting evidence; they never resolve a player ID.
+    return ![event.playerName, event.relatedPlayerName].some((value) => (
+      typeof value === "string" && value.trim().toLocaleLowerCase("en-GB") === name
+    ));
+  });
+}
+
 function providerStatisticMap(member: TouchlineFantasyLineupMember) {
   return Object.fromEntries(member.statistics.flatMap((statistic) => {
     const key = String(statistic.code ?? "").trim().toLowerCase();
@@ -209,17 +236,25 @@ export async function syncTouchLinePlayerSeasonStatistics(admin: SupabaseClient,
 
   // This writer resolves Sportmonks identities only. Reject inconsistent
   // provenance before numeric IDs can collide with that provider's mappings.
+  const unresolvedBenchTeams = new Map<string, Set<string>>();
   for (const feed of feeds as FeedRow[]) {
     const members = lineupMembers(feed.lineups_payload) ?? [];
+    const canonicalFinalFixture = (fixtures as FixtureRow[]).some((fixture) => (
+      fixture.provider === feed.provider && fixture.provider_fixture_id === feed.provider_fixture_id
+      && isTouchLineSettledFixtureStatus(fixture.status)
+    ));
     if (members.some((member) => !member
       || feed.provider !== "sportmonks"
       || member.provider !== feed.provider
       || String(member.fixtureId) !== feed.provider_fixture_id
-      || !/^\d+$/.test(String(member.playerId ?? ""))
+      || (!/^\d+$/.test(String(member.playerId ?? ""))
+        && !(canonicalFinalFixture && unresolvedBenchPlaceholder(feed, member)))
       || !/^\d+$/.test(String(member.teamId ?? "")))) {
       result.errors.push("lineup-provenance-invalid");
       return result;
     }
+    const teams = new Set(members.filter((member) => member.playerId == null).map((member) => String(member.teamId)));
+    if (teams.size) unresolvedBenchTeams.set(`${feed.provider}:${feed.provider_fixture_id}`, teams);
   }
 
   // A persisted official team sheet is itself verified membership evidence.
@@ -530,6 +565,20 @@ export async function syncTouchLinePlayerSeasonStatistics(admin: SupabaseClient,
         && (candidate.club_id === fixture.home_club_id || candidate.club_id === fixture.away_club_id)
       )),
     );
+    const ambiguousAbsences = eligibleFixtures.filter((fixture) => {
+      const key = `${fixture.provider}:${fixture.provider_fixture_id}`;
+      const teams = unresolvedBenchTeams.get(key);
+      if (!teams || lineupMembers(feedByKey.get(key)?.lineups_payload)?.some((row) => String(row.playerId ?? "") === providerPlayerId)) return false;
+      return [...teams].some((teamId) => historicalMemberships.some((row) => row.club_id === clubIdByProviderId.get(teamId)));
+    });
+    if (ambiguousAbsences.length) {
+      // An unknown bench ID could be this known player. Preserve this player's
+      // existing aggregate and all settlements instead of replacing them with
+      // an inferred absence or a season total missing the unresolved fixture.
+      result.failedFixtureIds.push(...ambiguousAbsences.map((fixture) => fixture.id));
+      result.errors.push(`lineup-identity-pending:${membership.football_player_id}`);
+      continue;
+    }
     const fixtureSettlements = eligibleFixtures.map((fixture) => {
       const feed = feedByKey.get(`${fixture.provider}:${fixture.provider_fixture_id}`);
       const lineups = feed ? lineupMembers(feed.lineups_payload) : null;
@@ -717,6 +766,10 @@ export async function syncTouchLinePlayerSeasonStatistics(admin: SupabaseClient,
     }
   }
 
+  if (result.errors.some((error) => error.startsWith("lineup-identity-pending:"))) {
+    result.rankingError = "ranking-source-incomplete";
+    return result;
+  }
   const ranking = await rebuildTouchLinePlayerRankingV4(admin, options);
   result.rankingSnapshotId = ranking.snapshotId;
   result.rankingPlayers = ranking.playerCount;

@@ -40,6 +40,9 @@ export function bundleIsolatedBrowserFixture(options: {
   additionalEntryPaths?: readonly string[];
   /** Explicit synthetic boundary: records refresh intent, never proves a real RSC refresh. */
   allowSyntheticRouteRefresh?: boolean;
+  /** Avatar-control DOM proof only. Auth is an explicit local fixture object;
+   * no SDK transport, credential, session or hosted identity is provided. */
+  syntheticAvatarAuth?: boolean;
 }): BrowserFixtureBundle {
   const modules = new Map<string, { source: string; imports: Record<string, string> }>();
   const css: string[] = [];
@@ -58,6 +61,10 @@ export function bundleIsolatedBrowserFixture(options: {
     // fixture. The SDK is a forbidden transport, not a fake authenticated session.
     "@supabase/ssr": `const forbidden=()=>{throw Error('Unexpected Supabase transport in isolated XI fixture');};exports.createBrowserClient=forbidden;exports.parseCookieHeader=forbidden;exports.serializeCookieHeader=forbidden;`,
   };
+  if (options.syntheticAvatarAuth) {
+    assert.equal(options.entryPath, "components/touchline/ClubOwnerAvatarControl.tsx", "Synthetic auth is restricted to avatar-control fixtures");
+    boundaries["@/lib/supabase/client"] = `exports.createClient=()=>{if(!window.avatarFixtureAuth)throw Error('Missing explicit avatar fixture auth');return window.avatarFixtureAuth;};`;
+  }
   const allowedPackages = new Set(["react", "react-dom", "scheduler", "lucide-react", "clsx", "tailwind-merge"]);
   function resolve(specifier: string, parent: string): string {
     if (Object.hasOwn(boundaries, specifier)) return `boundary:${specifier}`;

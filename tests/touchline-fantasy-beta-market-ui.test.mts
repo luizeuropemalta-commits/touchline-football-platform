@@ -7,7 +7,7 @@ import ts from "typescript";
 import { TOUCHLINE_ENGLAND_CLUBS_BY_RANK, findTouchLineClub } from "../lib/touchlineArena/demo-data.ts";
 import { isTouchlineFantasyMarketAccess, isTouchlineFantasyMarketClubAllowed as canBrowseMarketClub } from "../lib/touchlineFantasy/market-plan-policy.ts";
 import { getTouchlineFantasyMarketWorkflowCopy } from "../lib/touchlineFantasy/market-workflow-i18n.ts";
-import { getTouchlineFantasyMarketPlanLockCopy, TOUCHLINE_FANTASY_MARKET_PLAN_LOCK_COPY } from "../lib/touchlineFantasy/market-access-i18n.ts";
+import { getTouchlineFantasyMarketPlanLockCopy, TOUCHLINE_FANTASY_MARKET_PLAN_LOCK_COPY, getTouchlineFantasyMarketUnlockCopy, TOUCHLINE_FANTASY_MARKET_UNLOCK_COPY } from "../lib/touchlineFantasy/market-access-i18n.ts";
 
 const source = readFileSync(new URL("../app/fantasy/FantasyGameweekClient.tsx", import.meta.url), "utf8");
 const tree = ts.createSourceFile("market.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
@@ -45,15 +45,15 @@ function buttons(element: Rendered): Rendered[] {
   return (element.props.children as Rendered[]).filter(child => child.type === "button");
 }
 
-test("Beta renders all 20 club buttons with 14 locks, without selecting a locked club", () => {
-  const selected: string[] = [], notices: string[] = [];
+test("Beta renders all 20 club buttons with 14 acquisition locks and allows browsing each club", () => {
+  const selected: string[] = [];
   const label = getTouchlineFantasyMarketPlanLockCopy("pt-BR");
   const selector = actualFunction("CompactClubSelector");
   const rendered = selector({ selectedTeamId: "22", locale: "pt-BR", marketAccess: beta, lockedLabel: label,
-    onSelect: (club: { teamId: string }) => selected.push(club.teamId), onLockedSelect: () => notices.push(label) });
+    onSelect: (club: { teamId: string }) => selected.push(club.teamId) });
   const controls = buttons(rendered);
   assert.equal(controls.length, 20);
-  assert.equal(controls.filter(button => button.props["aria-disabled"] === true).length, 14);
+  assert.equal(controls.filter(button => button.props["aria-disabled"] === true).length, 0);
   for (const [index, button] of controls.entries()) {
     const teamId = TOUCHLINE_ENGLAND_CLUBS_BY_RANK[index].teamId;
     const locked = !beta.allowedClubTeamIds.includes(teamId);
@@ -61,8 +61,7 @@ test("Beta renders all 20 club buttons with 14 locks, without selecting a locked
     assert.equal(String(button.props["aria-label"]).includes(label), locked);
     (button.props.onClick as () => void)();
   }
-  assert.deepEqual(selected.sort(), [...beta.allowedClubTeamIds].sort());
-  assert.equal(notices.length, 14);
+  assert.deepEqual(selected.sort(), TOUCHLINE_ENGLAND_CLUBS_BY_RANK.map(club => club.teamId).sort());
 });
 
 test("the selector allows every club only for a recognized unrestricted plan", () => {
@@ -78,7 +77,7 @@ test("the selector allows every club only for a recognized unrestricted plan", (
   }
 });
 
-test("coach selection remains free across all clubs while player selection fails closed", () => {
+test("coach catalogue includes every club while unknown player authority fails closed", () => {
   const selector = actualFunction("CompactClubSelector");
   const selected: string[] = [];
   const coachButtons = buttons(selector({ mode: "coach", selectedTeamId: "22", locale: "pt-BR", marketAccess: null,
@@ -99,7 +98,7 @@ test("coach selection remains free across all clubs while player selection fails
   const shared = clubSelectors.filter(node => node.attributes.properties.some(attribute => ts.isJsxAttribute(attribute)
     && attribute.name.getText(tree) === "mode" && attribute.initializer?.getText(tree) === '{browsingCoaches ? "coach" : "player"}'));
   assert.equal(shared.length, 1);
-  for (const [name, initializer] of [["marketAccess", "{marketPolicy}"], ["lockedLabel", "{marketPlanLockCopy}"]]) {
+  for (const [name, initializer] of [["marketAccess", "{snapshot.entitlementActive === true ? marketPolicy : null}"], ["lockedLabel", "{marketPlanLockCopy}"]]) {
     assert.ok(shared[0].attributes.properties.some(attribute => ts.isJsxAttribute(attribute)
       && attribute.name.getText(tree) === name && attribute.initializer?.getText(tree) === initializer));
   }
@@ -114,7 +113,7 @@ test("Beta initial selection uses an allowed club but preserves a locked deep li
   assert.equal(resolve(null, null), "");
 });
 
-test("both actual Market filters exclude restricted clubs even through search and slot entry", () => {
+test("both actual Market filters expose restricted clubs for consultation while preserving club and search", () => {
   const makeCard = (clubTeamId: string) => ({ id: clubTeamId, canonicalPlayerId: clubTeamId, name: "Synthetic player",
     clubName: TOUCHLINE_ENGLAND_CLUBS_BY_RANK.find(club => club.teamId === clubTeamId)!.name, position: "GK", role: "goalkeeper" });
   const catalogue = [makeCard("19"), makeCard("22")];
@@ -125,7 +124,7 @@ test("both actual Market filters exclude restricted clubs even through search an
         canonicalRosterRole: (value: string) => value, selectedPlayerClub: { teamId }, normalizedQuery: "synthetic" };
       for (const name of ["filtered", "browseCards"]) {
         const cards = actualVariable(name, context) as Array<{ id: string }>;
-        assert.deepEqual(Array.from(cards, card => card.id), teamId === "22" ? ["22"] : []);
+        assert.deepEqual(Array.from(cards, card => card.id), [teamId]);
       }
     }
   }
@@ -189,4 +188,42 @@ test("the lock notice is localized for all eight languages without changing publ
   }
   assert.equal(getTouchlineFantasyMarketPlanLockCopy("pt-BR"), "Mude de plano para desbloquear.");
   assert.equal(getTouchlineFantasyMarketPlanLockCopy("en-GB"), "Upgrade your plan to unlock.");
+});
+
+
+test("only confirmed active Beta authority produces an upgrade action; balance is independent", () => {
+  for (const active of [true, false, undefined]) for (const policy of [beta, {planKey:"standard",budgetEur:400_000_000,allowedClubTeamIds:null}]) {
+    const betaPlanActive = actualVariable("betaPlanActive", {snapshot:{entitlementActive:active},marketPolicy:policy});
+    const isLocked = actualVariable("cardPlanLocked", {betaPlanActive,marketPolicy:policy});
+    assert.equal(isLocked({clubName:findTouchLineClub("19")!.name}), active === true && policy.planKey === "beta");
+    assert.equal(isLocked({clubName:findTouchLineClub("22")!.name}), false);
+  }
+  let opens = 0;
+  const action = actualVariable("unlockSigningAction", {marketUnlockCopy:"Desbloquear",setMarketPlansOpen:(value:boolean)=>{assert.equal(value,true);opens++;}});
+  assert.equal(action.select.label,"Desbloquear"); assert.equal(action.select.disabled,false); assert.equal(action.confirm,undefined); action.select.onSelect(); assert.equal(opens,1);
+  assert.match(source,/data-market-budget-locked=\{!planLocked && overBudget \|\| undefined\}/);
+});
+
+test("short unlock action covers eight catalogues and preserves draft gates", () => {
+  assert.deepEqual(Object.keys(TOUCHLINE_FANTASY_MARKET_UNLOCK_COPY),Object.keys(TOUCHLINE_FANTASY_MARKET_PLAN_LOCK_COPY));
+  assert.equal(getTouchlineFantasyMarketUnlockCopy("pt-BR"),"Desbloquear");
+  assert.equal(getTouchlineFantasyMarketUnlockCopy("en-GB"),"Unlock");
+  for(const [locale,label] of Object.entries(TOUCHLINE_FANTASY_MARKET_UNLOCK_COPY)) {
+    assert.equal(getTouchlineFantasyMarketUnlockCopy(locale,true),label);
+    if(!["en-GB","pt-BR"].includes(locale)) assert.equal(getTouchlineFantasyMarketUnlockCopy(locale),"Unlock");
+  }
+});
+
+
+test("collection confirmation refuses a previously staged restricted card before any purchase", async () => {
+  const intent = {area:"starters",slot:0}, purchases: unknown[] = [];
+  const confirm = actualVariable("confirmCollectionMarket", {
+    collectionDestination:intent, collectionMarketPlayer:"restricted", collectionMarketIntentRef:{current:intent},
+    collectionMarketSending:{current:false}, geometry:{}, snapshot:{userId:"fixture"},
+    collection:{state:{balanceEur:100_000_000},purchase:(...args:unknown[])=>purchases.push(args)},
+    canUseCollectionDestination:()=>true, collectionMarketIntentCurrent:()=>true, collectionMarketPlayerFits:()=>true,
+    primaryDetails:{restricted:"Goalkeeper"},marketPolicy:beta,
+    catalogueById:new Map([["restricted",{clubName:findTouchLineClub("19")!.name,editorialCard:{marketValueEur:1_000_000}}]]),
+  });
+  await confirm(); assert.deepEqual(purchases,[]);
 });

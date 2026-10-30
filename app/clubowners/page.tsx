@@ -23,6 +23,6 @@ export default async function ClubOwnersPage({ searchParams }: { searchParams: P
       <Link className={controls.link} href="/clubowners?lang=en-GB" lang="en-GB" aria-current={locale === "en-GB" ? "page" : undefined}>English</Link>
     </nav>
     <h1 className="sr-only">{copy.title}</h1>
-    <ClubOwnerPublicDirectory locale={locale} enabled={deps.enabled} initialOwn={{ status: response.status, profile }} />
+    <ClubOwnerPublicDirectory locale={locale} enabled={deps.enabled} photoSharingEnabled={deps.photoEnabled === true && data.photoSharingAllowed === true} initialOwn={{ status: response.status, profile }} />
   </div></main>;
 }

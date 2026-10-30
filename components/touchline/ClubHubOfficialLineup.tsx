@@ -20,6 +20,7 @@ import type { TouchlineClubOfficialChannels } from "@/lib/touchlineArena/club-of
 import type { TouchlinePublicFixture } from "@/lib/football-data/public-fixture";
 import type { TouchlineFantasySidelinedPlayer } from "@/lib/football-data/types";
 import { availabilityBadgeForPlayer } from "@/lib/touchlineArena/player-availability-badge";
+import { clubHubLineupIsCompleted } from "@/lib/touchlineArena/club-hub-matchday-context";
 import { isClubHubSquadPreviewWindow, type TouchLineClubLineup, type TouchLineClubMatchdayPresentation } from "@/lib/touchlineArena/club-lineup";
 import type { TouchlineClubMatchPreviewTeam } from "@/lib/touchlineArena/club-match-preview";
 import { squadCardToExactPlayer } from "@/lib/touchlineArena/demo-data";
@@ -117,7 +118,8 @@ export default function ClubHubOfficialLineup({
     fixtureStatus: matchup?.initialFixture?.status,
   });
   const showPreviewContext = !confirmed && squadPreviewWindow;
-  const title = confirmed
+  const completedOfficial = confirmed && clubHubLineupIsCompleted(matchup?.initialFixture);
+  const title = completedOfficial ? lineupCopy.lastXiTitle : confirmed
     ? lineupCopy.confirmedTitle
     : (showLastCompletedXi
       ? lineupCopy.lastXiTitle
@@ -163,7 +165,7 @@ export default function ClubHubOfficialLineup({
         <div className={styles.statusPanel}>
           {matchup ? (
             <aside className={styles.matchup} aria-label={lineupCopy.matchupAria}>
-              <span>{lineupCopy.matchupEyebrow}</span>
+              <span>{clubHubLineupIsCompleted(matchup.initialFixture) ? lineupCopy.lastGameEyebrow : lineupCopy.matchupEyebrow}</span>
               <div className={styles.matchupTeams}>
                 <div className={!matchup.home.logoUrl ? styles.matchupTeamPending : undefined}>
                   {matchup.home.logoUrl && matchup.home.accent ? <ClubHubCrestTrace accent={matchup.home.accent} className={styles.matchupCrest} src={matchup.home.logoUrl} /> : null}
@@ -181,7 +183,7 @@ export default function ClubHubOfficialLineup({
           <div className={styles.formationPanel}>
           <span className={`${styles.status} ${confirmed ? styles.confirmed : ""}`}>
             {confirmed
-              ? lineupCopy.confirmedTitle
+              ? title
               : (showLastCompletedXi ? lineupCopy.lastXiTitle
                 : showPreviewContext ? lineupCopy.previewTitle : lineupCopy.awaitingConfirmation)}
           </span>

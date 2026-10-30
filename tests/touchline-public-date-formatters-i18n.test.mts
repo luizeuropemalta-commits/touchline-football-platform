@@ -15,6 +15,8 @@ import { getTouchlineClubHubFixtureCopy } from "../lib/touchlineArena/club-hub-f
 import { isTouchLineLocaleComplete } from "../lib/touchlineArena/i18n.ts";
 import { resolveTouchlineCatalogueLocale } from "../lib/touchlineArena/catalogue-locale.ts";
 import { getTouchlinePlayerPerformanceCopy } from "../lib/touchlineArena/player-performance-i18n.ts";
+import { selectClubHubNextFixture } from "../lib/touchlineArena/club-hub-next-fixture.ts";
+import { getTouchlineClubHubProfileCopy } from "../lib/touchlineArena/club-hub-profile-i18n.ts";
 
 const locales = ["en-GB", "pt-BR", "es-ES", "it-IT", "fr-FR", "ar-SA", "tr-TR", "de-DE"] as const;
 const options = { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true };
@@ -163,6 +165,8 @@ function fixtureCard(api: typeof kickoff, locale: string, mode: "server" | "brow
     "next/navigation": { useRouter: () => ({ refresh: () => { throw new Error("No refresh in SSR fixture"); } }) },
     "lucide-react": { CalendarDays: () => null, MapPin: () => null },
     "@/lib/touchlineArena/local-kickoff": api,
+    "@/lib/touchlineArena/club-hub-next-fixture": { selectClubHubNextFixture },
+    "@/lib/touchlineArena/club-hub-profile-i18n": { getTouchlineClubHubProfileCopy },
     "@/lib/touchlineArena/sports-publication-client": { useTouchlinePublishedLive: (fixtures: unknown[]) => ({ fixtures }) },
     "@/components/touchline/TouchlineLivePresentationRefresh": { default: () => null },
     "@/lib/touchlineArena/match-centre": { normalizeTouchlineMatchCentreTimeZone },

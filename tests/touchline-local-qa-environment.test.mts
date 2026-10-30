@@ -100,7 +100,12 @@ test("release requires its own explicit local QA opt-in and never inherits sourc
   assert.equal(preview.TOUCHLINE_CLUB_RELEASE_ENABLED, "true");
   assert.equal(inspectTouchlineIsolatedPreviewEnvironment(preview).status, "qa");
   assert.equal(preflight.TOUCHLINE_CLUB_RELEASE_ENABLED, undefined);
-  for (const override of [{ NODE_ENV: "production" }, { VERCEL: "1" }, { VERCEL_GIT_COMMIT_REF: "main" }, { TOUCHLINE_CLUB_COLLECTION_ENABLED: "false" }]) {
+  // Release is also admitted in the exact hosted QA target; the local builder
+  // still requires explicit opt-in and never inherits a host/source flag.
+  for (const override of [{ NODE_ENV: "production" }, { VERCEL: "1" }]) {
+    assert.equal(inspectTouchlineIsolatedPreviewEnvironment({ ...preview, ...override }).status, "qa");
+  }
+  for (const override of [{ VERCEL_ENV: "production" }, { VERCEL_GIT_COMMIT_REF: "main" }, { TOUCHLINE_QA_SUPABASE_PROJECT_REF: "other-project" }, { TOUCHLINE_CLUB_COLLECTION_ENABLED: "false" }]) {
     assert.equal(inspectTouchlineIsolatedPreviewEnvironment({ ...preview, ...override }).status, "invalid");
   }
   assert.throws(() => buildQaCandidateEnvironments(source, {}, { ...options, clubCollection: false }), /requires explicit/);

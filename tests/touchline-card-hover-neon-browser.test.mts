@@ -31,7 +31,11 @@ test("real cards light only on pointer hover, animate their perimeter and never 
     + readFileSync(path.join(root, "app/globals.css"), "utf8").replace(/^@(import|source)[^;]*;\s*/gm, "");
   const publicRoot = realpathSync(path.join(root, "public"));
   const results: unknown[] = [];
-  for (const engine of [chromium, webkit]) {
+  const requestedEngine = process.env.TOUCHLINE_NEON_ENGINE;
+  assert.ok(!requestedEngine || ["chromium", "webkit"].includes(requestedEngine), "unknown neon browser shard");
+  const requestedTier = process.env.TOUCHLINE_NEON_TIER;
+  assert.ok(!requestedTier || ["ruby-red", "sapphire-blue", "amethyst-purple", "radiant-gold", "emerald-green", "clear-diamond", "diamond-gold"].includes(requestedTier), "unknown neon tier shard");
+  for (const engine of [chromium, webkit].filter(engine => !requestedEngine || engine.name() === requestedEngine)) {
     capacity(); assert.ok(existsSync(engine.executablePath()));
     const browser = await engine.launch({ headless: true });
     try {
@@ -52,7 +56,9 @@ test("real cards light only on pointer hover, animate their perimeter and never 
       });
       const cases = ["ruby-red", "sapphire-blue", "amethyst-purple", "radiant-gold", "emerald-green", "clear-diamond", "diamond-gold"].map(tier=>({tier,club:"Arsenal"}));
       cases.push({tier:"sapphire-blue",club:"Tottenham Hotspur"},{tier:"sapphire-blue",club:"Manchester City"},{tier:"emerald-green",club:"Chelsea"});
-      for (const {tier,club} of (process.env.TOUCHLINE_NEON_TOUCH_ONLY === "1" ? [] : process.env.TOUCHLINE_NEON_COMPACT_ONLY === "1" ? cases.filter(entry=>entry.tier==="sapphire-blue"&&entry.club==="Arsenal") : cases)) {
+      const selectedCases = requestedTier ? cases.filter(entry => entry.tier === requestedTier) : cases;
+      for (const {tier,club} of (process.env.TOUCHLINE_NEON_TOUCH_ONLY === "1" ? [] : process.env.TOUCHLINE_NEON_COMPACT_ONLY === "1" ? selectedCases.filter(entry=>entry.tier==="sapphire-blue"&&entry.club==="Arsenal") : selectedCases)) {
+        t.diagnostic(JSON.stringify({ engine: engine.name(), tier, club, stage: "start" }));
         const [width,height]=[1280,900];
         await page.setViewportSize({ width, height });
         await page.goto(`${origin}/?tier=${tier}&club=${encodeURIComponent(club)}`);
@@ -88,9 +94,24 @@ test("real cards light only on pointer hover, animate their perimeter and never 
           await expect.poll(() => trace.evaluate(node => getComputedStyle(node).opacity)).toBe("0");
           assert.equal(await surface.evaluate(node => getComputedStyle(node, "::before").content), "none", "no duplicate bitmap layer");
           await surface.hover();
-          await expect.poll(() => trace.evaluate(node => getComputedStyle(node).opacity)).toBe("1");
+          try {
+            await expect.poll(() => trace.evaluate(node => getComputedStyle(node).opacity)).toBe("1");
+          } catch (error) {
+            t.diagnostic(JSON.stringify({ engine: engine.name(), tier, club, kind, hoverFailure: await surface.evaluate(node => {
+              const trace = node.querySelector('[data-touchline-card-neon-trace="true"]')!;
+              const rect = node.getBoundingClientRect();
+              return { hover: node.matches(":hover"), motion: node.getAttribute("data-card-motion"),
+                rect: rect.toJSON(), opacity: getComputedStyle(trace).opacity,
+                fineHover: matchMedia("(hover: hover) and (pointer: fine)").matches,
+                topAtCenter: document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2)?.outerHTML.slice(0, 500) };
+            }) }));
+            await page.screenshot({path:path.join(output, `${engine.name()}-${club}-${tier}-${kind}-hover-failure.png`), fullPage:true});
+            throw error;
+          }
           assert.notEqual(await trace.evaluate(node => getComputedStyle(node).display), "none");
           await expect.poll(() => run.evaluate(node => node.getAnimations()[0]?.playState)).toBe("running");
+          assert.equal(await run.evaluate(node => getComputedStyle(node).animationDuration), "2s");
+          assert.equal(await run.evaluate(node => getComputedStyle(node).stroke), await trace.evaluate(node => getComputedStyle(node).color), "neon retains its canonical tier colour");
           const before = await run.evaluate(node => getComputedStyle(node).strokeDashoffset);
           await page.waitForTimeout(180);
           const after = await run.evaluate(node => getComputedStyle(node).strokeDashoffset);

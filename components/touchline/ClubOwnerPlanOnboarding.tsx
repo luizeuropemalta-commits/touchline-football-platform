@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useLayoutEffect, useRef, useState } from "react";
+import { useTouchlineDialog } from "./a11y/TouchlineDialog";
 import { ArrowLeft, ChevronRight, X } from "lucide-react";
 import { checkoutDisplayAmount, requestClubSeasonCheckout, type ClubSeasonCheckoutOffers, type ClubSeasonCheckoutPlan } from "@/lib/stripe/club-season-checkout-client";
 import { resolveTouchlineCatalogueLocale } from "@/lib/touchlineArena/catalogue-locale";
@@ -41,14 +42,14 @@ const copy = {
 } as const;
 
 const hiringCopy = {
-  "en-GB": ["Subscribe", "Your current plan", "Subscription unavailable: checkout is not connected."],
-  "pt-BR": ["Contratar plano", "Seu plano atual", "Contratação indisponível: pagamento ainda não conectado."],
-  "es-ES": ["Contratar plan", "Tu plan actual", "Contratación no disponible: pago aún no conectado."],
-  "it-IT": ["Abbonati", "Il tuo piano attuale", "Abbonamento non disponibile: pagamento non ancora collegato."],
-  "fr-FR": ["Souscrire", "Votre offre actuelle", "Souscription indisponible : paiement non connecté."],
-  "ar-SA": ["الاشتراك", "خطتك الحالية", "الاشتراك غير متاح: الدفع غير متصل بعد."],
-  "tr-TR": ["Abone ol", "Mevcut planınız", "Abonelik kullanılamıyor: ödeme henüz bağlı değil."],
-  "de-DE": ["Abonnieren", "Dein aktueller Plan", "Abschluss nicht verfügbar: Zahlung noch nicht verbunden."],
+  "en-GB": ["Subscribe", "Your current plan", "This plan is not available for purchase on your account at the moment."],
+  "pt-BR": ["Contratar plano", "Seu plano atual", "Este plano não está disponível para contratação na sua conta neste momento."],
+  "es-ES": ["Contratar plan", "Tu plan actual", "Este plan no está disponible para contratar en tu cuenta en este momento."],
+  "it-IT": ["Abbonati", "Il tuo piano attuale", "Questo piano non è al momento disponibile per l’acquisto sul tuo account."],
+  "fr-FR": ["Souscrire", "Votre offre actuelle", "Cette offre ne peut pas être souscrite avec votre compte pour le moment."],
+  "ar-SA": ["الاشتراك", "خطتك الحالية", "هذه الخطة غير متاحة للاشتراك من حسابك في الوقت الحالي."],
+  "tr-TR": ["Abone ol", "Mevcut planınız", "Bu plan şu anda hesabınız için satın alınamıyor."],
+  "de-DE": ["Abonnieren", "Dein aktueller Plan", "Dieser Plan ist derzeit für dein Konto nicht buchbar."],
 } as const;
 
 const checkoutCopy = {
@@ -71,7 +72,6 @@ export default function ClubOwnerPlanOnboarding(props: ClubOwnerPlanOnboardingPr
 
 function PlanOnboardingSession({ open, locale, draftLocalesEnabled = false, onDismiss, activePlanKey = null, checkoutEnabled = false, checkoutOffers }: ClubOwnerPlanOnboardingProps) {
   const id = useId();
-  const dialog = useRef<HTMLDialogElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
   const cards = useRef<Partial<Record<ClubOwnerOnboardingPlan, HTMLButtonElement | null>>>({});
   const previousPlan = useRef<ClubOwnerOnboardingPlan | null>(null);
@@ -89,6 +89,10 @@ function PlanOnboardingSession({ open, locale, draftLocalesEnabled = false, onDi
   const market = getTouchlineClubOwnerMarketCopy(locale, draftLocalesEnabled);
   const name = (key: ClubOwnerOnboardingPlan) => key === "beta" ? "Beta" : key === "standard" ? market.planStandard : key === "master" ? "Master" : "VIP";
   const price = (key: ClubOwnerOnboardingPlan) => key === "beta" ? labels.betaPrice : key === "standard" ? market.planStandardPrice : key === "master" ? labels.masterPrice : labels.vipPrice;
+  const dismiss = () => { request.current?.abort(); request.current = null; setPlan(null); onDismiss(); };
+  const { dialogRef: dialog, dialogProps } = useTouchlineDialog<HTMLDialogElement>({
+    open, label: plan ? name(plan) : labels.browse, initialFocusRef: heading, returnFocusRef: previousFocus, onDismiss: dismiss, containEveryTab: true,
+  });
   const startCheckout = async (key: ClubSeasonCheckoutPlan) => {
     const expectedAmountMinor = checkoutDisplayAmount(checkoutOffers, key);
     if (!checkoutEnabled || expectedAmountMinor === null || request.current) return;
@@ -128,13 +132,16 @@ function PlanOnboardingSession({ open, locale, draftLocalesEnabled = false, onDi
   useLayoutEffect(() => {
     const node = dialog.current;
     if (!open || !node) return;
-    previousFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const active = document.activeElement;
+    // StrictMode replays effects while the shared background lock can still
+    // hold focus inside this dialog. Keep the original external trigger.
+    if (active instanceof HTMLElement && !node.contains(active)) previousFocus.current = active;
     // The server already renders a full-viewport open dialog. Upgrade it to the
     // native top layer before paint; no compact modal or uncovered loading frame.
     if (!node.matches(":modal")) { if (node.open) node.close(); node.showModal(); }
     heading.current?.focus();
     return () => { if (node.open) node.close(); previousFocus.current?.focus(); };
-  }, [open]);
+  }, [open, dialog]);
 
   useLayoutEffect(() => {
     if (!open) return;
@@ -142,11 +149,10 @@ function PlanOnboardingSession({ open, locale, draftLocalesEnabled = false, onDi
     else heading.current?.focus();
     previousPlan.current = plan;
     dialog.current?.scrollTo({ top: 0 });
-  }, [open, plan]);
+  }, [open, plan, dialog]);
 
-  const dismiss = () => { request.current?.abort(); request.current = null; setPlan(null); onDismiss(); };
   if (!open) return null;
-  return <dialog open ref={dialog} className={styles.dialog} aria-modal="true" aria-labelledby={`${id}-heading`} onCancel={event => { event.preventDefault(); dismiss(); }} data-plan-onboarding="true" data-plan-preview={plan ?? "all"} dir={language === "ar-SA" ? "rtl" : "ltr"}>
+  return <dialog open {...dialogProps} className={styles.dialog} aria-modal="true" aria-labelledby={`${id}-heading`} onCancel={event => { event.preventDefault(); dismiss(); }} data-plan-onboarding="true" data-plan-preview={plan ?? "all"} dir={language === "ar-SA" ? "rtl" : "ltr"}>
     <div className={styles.shell}>
       <header className={styles.header}>
         <div><span className={styles.eyebrow}>TouchLine / ClubOwner</span><h2 id={`${id}-heading`} ref={heading} tabIndex={-1}>{plan ? name(plan) : labels.browse}</h2></div>

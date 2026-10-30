@@ -12,6 +12,8 @@ import { formatTouchlineLocalKickoff } from "@/lib/touchlineArena/local-kickoff"
 import { normalizeTouchlineMatchCentreTimeZone } from "@/lib/touchlineArena/match-centre";
 import { clubHubFixtureRailRefreshMs, resolveClubHubFixtureRail } from "@/lib/touchlineArena/club-hub-fixture-rail";
 import type { TouchLineLocale } from "@/lib/touchlineArena/i18n";
+import { selectClubHubNextFixture } from "@/lib/touchlineArena/club-hub-next-fixture";
+import { getTouchlineClubHubProfileCopy } from "@/lib/touchlineArena/club-hub-profile-i18n";
 import { getTouchlineClubHubFixtureCopy } from "@/lib/touchlineArena/club-hub-fixture-i18n";
 
 import styles from "./ClubHubPremiumPrototype.module.css";
@@ -26,6 +28,8 @@ type FixtureTeam = Readonly<{
 type Props = Readonly<{
   initialFixture?: TouchlinePublicFixture | null;
   liveUpdates?: boolean;
+  /** The tickets rail never becomes a past-result card. */
+  nextOnly?: boolean;
   awayTeam: FixtureTeam;
   awayPosition: number | null;
   homeTeam: FixtureTeam;
@@ -58,6 +62,7 @@ function readBrowserTimeZone() {
 export default function ClubHubNextFixtureCard({
   initialFixture = null,
   liveUpdates = false,
+  nextOnly = false,
   awayTeam,
   awayPosition,
   homeTeam,
@@ -87,22 +92,32 @@ export default function ClubHubNextFixtureCard({
     () => initialTimeZone,
   );
 
-  const localKickoff = useMemo(
-    () => formatTouchlineLocalKickoff(startsAt, timeZone, locale, draftLocalesEnabled),
-    [locale, startsAt, timeZone, draftLocalesEnabled],
-  );
   const [mountedAt] = useState(() => Date.now());
   const enabled = liveUpdates && Boolean(initialFixture?.providerId && initialFixture.homeTeam?.providerId
     && initialFixture.awayTeam?.providerId && initialFixture.startsAt === startsAt);
-  const { fixtures, receivedAt } = useTouchlinePublishedLive(initialFixture ? [initialFixture] : [], null, mountedAt, enabled);
+  const { fixtures, receivedAt } = useTouchlinePublishedLive(initialFixture ? [initialFixture] : [], null, mountedAt, enabled, null, null, nextOnly);
   const now = receivedAt ?? mountedAt;
   const facts = enabled ? fixtures[0] : null;
+  const displayedStartsAt = nextOnly ? facts?.startsAt ?? startsAt : startsAt;
+  const localKickoff = useMemo(
+    () => formatTouchlineLocalKickoff(displayedStartsAt, timeZone, locale, draftLocalesEnabled),
+    [locale, displayedStartsAt, timeZone, draftLocalesEnabled],
+  );
   const rail = resolveClubHubFixtureRail(facts
-    ? { startsAt, status: facts.status, homeScore: facts.homeScore, awayScore: facts.awayScore, liveMinute: facts.liveMinute }
+    ? { startsAt: displayedStartsAt, status: facts.status, homeScore: facts.homeScore, awayScore: facts.awayScore, liveMinute: facts.liveMinute }
     : { startsAt, status, homeScore, awayScore, liveMinute }, locale, now, draftLocalesEnabled);
-  const refreshMs = clubHubFixtureRailRefreshMs(rail, startsAt, now);
-  const contextWake = rail.state === "upcoming" && Date.parse(startsAt) - now > 60 * 60 * 1_000;
+  const refreshMs = clubHubFixtureRailRefreshMs(rail, displayedStartsAt, now);
+  const contextWake = rail.state === "upcoming" && Date.parse(displayedStartsAt) - now > 60 * 60 * 1_000;
 
+  if (nextOnly && !selectClubHubNextFixture([
+    facts ?? { id: initialFixture?.id ?? "scheduled", startsAt, status },
+  ], () => true, now)) {
+    return <article className={`${styles.nextFixtureCard} ${className}`} data-state="awaiting" role="status">
+      {enabled ? <TouchlineLivePresentationRefresh serverRefreshScope={`${initialFixture?.providerId}:${startsAt}`} /> : null}
+      <div className={styles.nextFixtureHeading}><CalendarDays aria-hidden="true" /><span>{copy.nextMatch}</span></div>
+      <p>{getTouchlineClubHubProfileCopy(locale, draftLocalesEnabled).nextMatchChecking}</p>
+    </article>;
+  }
   if (!localKickoff) return null;
 
   return (
@@ -131,7 +146,7 @@ export default function ClubHubNextFixtureCard({
       </div>
       {rail.state !== "finished" ? (
         <div className={styles.nextFixtureKickoff}>
-          <time dateTime={startsAt}>{rail.liveMinute ?? `${localKickoff.date} · ${localKickoff.time}`}</time>
+          <time dateTime={displayedStartsAt}>{rail.liveMinute ?? `${localKickoff.date} · ${localKickoff.time}`}</time>
           <small>{rail.state === "upcoming"
             ? `${copy.localTime} · ${localKickoff.zoneName}`
             : copy.verifiedScore}</small>

@@ -17,3 +17,18 @@ test('foreign proposals, duplicate records and corrupt amounts cannot enter disc
 test('empty authenticated discovery is explicit, missing discovery stays unavailable',()=>{
  assert.equal(parseExchangeDiscovery(null,scope),null);assert.ok(parseExchangeDiscovery({...data,ownListedIds:[],reservations:[],listings:[],proposals:[]},scope));
 });
+
+test('negotiation permission accepts only explicit server true; missing and malformed values fail closed',()=>{
+ for(const permission of [undefined,null,false,'true',1,true]){
+  const parsed=parseExchangeDiscovery({...data,listings:[{...data.listings[0],negotiationAllowed:permission}],proposals:[{...proposal,negotiationAllowed:permission}]},scope);
+  assert.ok(parsed);assert.equal(parsed.listings[0].negotiationAllowed,permission===true);assert.equal(parsed.proposals[0].negotiationAllowed,permission===true);
+ }
+});
+
+test('only an explicit Beta pairing restriction authorizes upgrade presentation',()=>{
+ for(const permission of [undefined,null,false,'false',true]) for(const reason of [undefined,null,'beta-pair','unavailable',{},1]){
+  const parsed=parseExchangeDiscovery({...data,listings:[{...data.listings[0],negotiationAllowed:permission,restrictionReason:reason}],proposals:[{...proposal,negotiationAllowed:permission,restrictionReason:reason}]},scope)!;
+  const expected=permission===false&&reason==='beta-pair'?'beta-pair':null;
+  assert.equal(parsed.listings[0].restrictionReason,expected);assert.equal(parsed.proposals[0].restrictionReason,expected);
+ }
+});

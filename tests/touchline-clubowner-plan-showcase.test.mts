@@ -84,12 +84,7 @@ test("actual Beta card and login gallery reuse the artwork with 100M TC, free ac
   const execute = (source: string, scope: Record<string, unknown>) => vm.runInNewContext(ts.transpileModule(source, {
     compilerOptions: { jsx: ts.JsxEmit.React, target: ts.ScriptTarget.ES2022 },
   }).outputText, scope);
-  const traceSource = readFileSync(join(root, "components/touchline/TouchlineClubPerimeterTrace.tsx"), "utf8");
-  const traceTree = ts.createSourceFile("trace.tsx", traceSource, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
-  const traceNode = traceTree.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === "TouchlineClubPerimeterTrace");
-  assert.ok(traceNode);
-  const Trace = execute(`${traceNode.getText(traceTree).replace(/^export default\s+/, "")}\nTouchlineClubPerimeterTrace;`, context);
-  const Card = execute(`${card.getText(tree).replace(/^export\s+/, "")}\nClubOwnerPlanCard;`, { ...context, TouchlineClubPerimeterTrace: Trace });
+  const Card = execute(`${card.getText(tree).replace(/^export\s+/, "")}\nClubOwnerPlanCard;`, context);
   let priceDeclaration = "";
   function findPrice(node: ts.Node) {
     if (ts.isVariableDeclaration(node) && node.name.getText(tree) === "priceFor") priceDeclaration = node.getText(tree);
@@ -135,31 +130,28 @@ test("actual Beta card and login gallery reuse the artwork with 100M TC, free ac
     assert.ok(offers[1].includes(copy.planStandardPrice));
     assert.ok(offers[3].includes(labels.vipPrice));
     for (const offer of offers) {
-      assert.equal((offer.match(/data-touchline-club-perimeter-trace="true"/g) ?? []).length, 1);
-      assert.match(offer, /<svg aria-hidden="true" class="trace memberNeon"[^>]+focusable="false"/);
-      assert.match(offer, /--touchline-perimeter-accent:var\(--plan-accent\)/);
-      assert.match(offer, /data-touchline-club-perimeter-trace-base="true" pathLength="100"/);
-      assert.match(offer, /data-touchline-club-perimeter-trace-run="true" pathLength="100"/);
+      assert.doesNotMatch(offer, /data-touchline-club-perimeter-trace|memberNeon/);
+      assert.match(offer, /<span class="tierSeal" aria-hidden="true"><span class="tierIcon">/);
+      assert.equal((offer.match(/class="tierIconGlint"/g) ?? []).length, 1);
+      assert.equal((offer.match(/focusable="false"/g) ?? []).length, 3, "pattern and both decorative icon layers cannot take focus");
       assert.match(offer, /<div dir="ltr" class="memberCard"/);
     }
     assert.doesNotMatch(html, /<form|<button|href=/);
   }
 });
 
-test("membership neon opts into the shared constant-speed perimeter without changing palettes or reduced motion", () => {
+test("membership light moves only through its icon without changing palettes or reduced motion", () => {
   const css = readFileSync(join(root, "components/touchline/ClubOwnerPlanShowcase.module.css"), "utf8");
-  const traceCss = readFileSync(join(root, "components/touchline/TouchlineClubPerimeterTrace.module.css"), "utf8");
-  const neon = css.match(/\.memberNeon\s*\{([^}]+)\}/)?.[1];
+  const neon = css.match(/^\.tierIconGlint\s*\{([^}]+)\}/m)?.[1];
   assert.ok(neon);
-  assert.match(neon, /--touchline-decoration-motion:\s*running/);
-  assert.match(neon, /--touchline-perimeter-speed:\s*6s/);
-  assert.match(neon, /--touchline-perimeter-run-width:\s*2\.4px/);
-  assert.match(neon, /--touchline-perimeter-glow:\s*6px/);
-  assert.doesNotMatch(neon, /transform|opacity|filter/);
-  assert.match(traceCss, /animation:\s*touchlineClubEdgeTravel[^;]+linear infinite/);
-  assert.match(traceCss, /@keyframes touchlineClubEdgeTravel\s*\{\s*to\s*\{\s*stroke-dashoffset:\s*-100/);
-  assert.match(traceCss, /@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{\s*\.run\s*\{\s*animation:\s*none/);
+  assert.match(neon, /animation:\s*planIconSweep 2\.8s linear infinite/);
+  assert.match(neon, /color:\s*var\(--plan-accent\)/);
+  assert.match(neon, /-webkit-mask-image:\s*linear-gradient/);
+  assert.match(neon, /mask-image:\s*linear-gradient/);
+  assert.doesNotMatch(css, /\.memberNeon/);
+  assert.match(css, /\.tierIcon > svg, \.tierIconGlint\s*\{\s*grid-area:\s*1 \/ 1/);
   assert.match(css, /@media\s*\(prefers-reduced-motion:\s*reduce\)[^}]+animation:\s*none !important/);
+  assert.match(css, /\.tierIconGlint\s*\{\s*animation:\s*none !important;\s*-webkit-mask-image:\s*none;\s*mask-image:\s*none;/);
   for (const [tier, color] of [["beta", "#ff888e"], ["standard", "#75bbff"], ["master", "#a5e4b6"], ["vip", "#d5b4f6"]]) {
     assert.ok(css.includes(`[data-plan-preview="${tier}"] { --plan-accent: ${color};`));
   }
@@ -255,22 +247,25 @@ function harness(locale: string, initialPlan = "standard", panelWidth = 600, gal
     return path;
   }
   const entry = bundle(join(root, `components/touchline/${surface === "cover" || surface === "active" ? "ClubOwnerMarketHeader" : surface === "login" ? "LoginPlanGallery" : "ClubOwnerPlanShowcase"}.tsx`));
+  const motion = bundle(join(root, "lib/touchlineArena/visible-decoration-motion.ts"));
   const css = [...stylesheets.values()].join("\n");
   const defs = Object.entries(modules).map(([id, code]) => `${JSON.stringify(id)}:function(module,exports,require){${code}\n}`).join(",");
   return `<!doctype html><html dir="${locale === "ar-SA" ? "rtl" : "ltr"}"><meta charset="utf-8"><style>*{box-sizing:border-box}body{margin:0;background:#08100c;color:white;padding:24px;font-family:Arial,sans-serif}#root{max-width:${gallery ? 1680 : panelWidth}px;margin:auto;${gallery ? "display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:16px" : ""}}${css}</style><div id="root"></div><script>
   const process={env:{NODE_ENV:'development'}},modules={${defs}},cache={};function require(id){if(cache[id])return cache[id].exports;const m={exports:{}};cache[id]=m;modules[id](m,m.exports,require);return m.exports;}
   const React=require('react');require('react-dom/client').createRoot(document.getElementById('root')).render(${JSON.stringify(gallery ? CLUB_OWNER_PLAN_PREVIEWS.map(plan => plan.id) : [initialPlan])}.map(tier => React.createElement(require(${JSON.stringify(entry)}).default,{key:tier,initialPlan:tier,planPreview:${surface === "active" ? "null" : "tier"},plan:${surface === "active" ? "{active:true,expiresAt:null}" : "null"},activePlanKey:${surface === "active" ? "'vip'" : "null"},activePlanBudget:${surface === "active" ? "1000000000" : "undefined"},owner:{name:'ClubOwner',avatarUrl:'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg"/%3E',city:'',nationality:'',since:''},name:'ClubOwner',locale:${JSON.stringify(locale)},remainingMarketPower:${surface === "cover" || surface === "active" ? "121000000" : "'121M'"},rankingPosition:1,draftLocalesEnabled:true})));
+  require(${JSON.stringify(motion)}).observeVisibleDecorationMotion();
   </script></html>`;
 }
 
-if (process.env.TOUCHLINE_RUN_PLAN_BROWSER_TESTS === "1") test("membership neon travels on all four plan frames and stays illuminated with reduced motion", { timeout: 120_000 }, async () => {
-  const { chromium, webkit, expect } = await import("@playwright/test");
+if (process.env.TOUCHLINE_RUN_PLAN_BROWSER_TESTS === "1") test("membership icon light travels on all four plans and becomes static with reduced motion", { timeout: 120_000 }, async () => {
+  const { chromium, webkit, firefox, expect } = await import("@playwright/test");
   const tiers = ["beta", "standard", "master", "vip"];
-  for (const engine of [chromium, webkit]) {
+  const engines = process.env.TOUCHLINE_PLAN_ENGINE === "webkit" ? [webkit] : process.env.TOUCHLINE_PLAN_ENGINE === "firefox" ? [firefox] : process.env.TOUCHLINE_PLAN_ENGINE === "chromium" ? [chromium] : [chromium, webkit];
+  for (const engine of engines) {
     const browser = await engine.launch({ headless: true });
     try {
-      for (const surface of ["showcase", "login"]) for (const [width, locale] of [[1440, "en-GB"], [844, "ar-SA"]] as const) {
-        const page = await browser.newPage({ viewport: { width, height: 900 }, reducedMotion: "no-preference" });
+      for (const surface of ["showcase", "login"]) for (const [width, locale] of [[1440, "en-GB"], [844, "pt-BR"], [390, "ar-SA"]] as const) {
+        const page = await browser.newPage({ viewport: { width, height: width === 844 ? 390 : 900 }, reducedMotion: "no-preference" });
         const errors: string[] = [], requests: string[] = [];
         page.on("pageerror", error => errors.push(error.message));
         page.on("console", message => { if (message.type() === "error") errors.push(message.text()); });
@@ -279,53 +274,67 @@ if (process.env.TOUCHLINE_RUN_PLAN_BROWSER_TESTS === "1") test("membership neon 
         for (const tier of tiers) {
           if (surface === "showcase") await page.locator(`[role="tab"][data-tier="${tier}"]`).click();
           const card = page.locator(`[data-plan-offer="${tier}"]`);
-          const trace = card.locator("[data-touchline-club-perimeter-trace]");
-          const run = trace.locator("[data-touchline-club-perimeter-trace-run]");
+          const glint = card.locator(".tierIconGlint");
           await expect(card).toBeVisible();
-          await expect(trace).toHaveCount(1);
-          await expect(trace).toHaveAttribute("aria-hidden", "true");
-          await expect(trace).toHaveAttribute("focusable", "false");
+          await expect(card.locator("[data-touchline-club-perimeter-trace]")).toHaveCount(0);
+          await expect(glint).toHaveCount(1);
+          await expect(card.locator(".tierSeal")).toHaveAttribute("aria-hidden", "true");
+          await expect(glint.locator("svg")).toHaveAttribute("focusable", "false");
+          await card.scrollIntoViewIfNeeded();
+          await expect.poll(() => glint.evaluate(el => el.getAnimations()[0]?.playState)).toBe("running");
           await expect(card).toHaveAttribute("dir", "ltr");
-          const style = await run.evaluate(el => {
-            const computed = getComputedStyle(el);
-            const card = el.closest("[data-plan-offer]")!;
-            const probe = document.createElement("span");
-            probe.style.color = "var(--plan-accent)"; card.append(probe);
-            const color = getComputedStyle(probe).color; probe.remove();
+          const style = await glint.evaluate(el => {
+            const computed = getComputedStyle(el), card = el.closest("[data-plan-offer]")!;
+            const base = el.previousElementSibling!, seal = el.closest(".tierSeal")!;
+            const a = el.getBoundingClientRect(), b = base.getBoundingClientRect(), c = seal.getBoundingClientRect();
             return { duration: computed.animationDuration, iterations: computed.animationIterationCount,
-              state: computed.animationPlayState, stroke: computed.stroke, color,
-              width: computed.strokeWidth, glow: computed.filter, offset: computed.strokeDashoffset,
-              transform: getComputedStyle(card).transform, direction: getComputedStyle(card).direction };
+              state: el.getAnimations()[0]?.playState, color: computed.color, baseColor: getComputedStyle(base).color,
+              glow: computed.filter, mask: computed.maskImage, position: computed.maskPosition,
+              transform: getComputedStyle(card).transform, direction: getComputedStyle(card).direction,
+              size: b.width, aligned: a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height,
+              insideSeal: a.left >= c.left && a.right <= c.right && a.top >= c.top && a.bottom <= c.bottom };
           });
-          assert.equal(style.duration, "6s");
+          assert.equal(style.duration, "2.8s");
           assert.equal(style.iterations, "infinite");
           assert.equal(style.state, "running");
-          assert.equal(style.stroke, style.color, `${tier} keeps its own existing accent`);
-          assert.equal(style.width, "2.4px");
+          assert.equal(style.color, style.baseColor, `${tier} keeps its existing accent`);
           assert.notEqual(style.glow, "none");
+          assert.notEqual(style.mask, "none");
           assert.equal(style.transform, "none");
           assert.equal(style.direction, "ltr");
-          await expect.poll(() => run.evaluate(el => getComputedStyle(el).strokeDashoffset), { timeout: 3000 }).not.toBe(style.offset);
+          assert.ok(style.size >= 22 && style.size <= 32, "shared button styles cannot shrink the plan icon");
+          assert.equal(style.aligned, true, "highlight overlays the original icon precisely");
+          assert.equal(style.insideSeal, true, "light has no detached card-corner orbit");
+          await expect.poll(() => glint.evaluate(el => getComputedStyle(el).maskPosition), { timeout: 3000 }).not.toBe(style.position);
         }
-        if (engine === chromium && process.env.TOUCHLINE_PLAN_CAPTURE_PREFIX) await page.screenshot({ path: `${process.env.TOUCHLINE_PLAN_CAPTURE_PREFIX}-neon-${surface}-${width}.png`, fullPage: true });
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+        // Prove the production observer stops this new animation outside the viewport.
+        await page.evaluate(() => { document.getElementById("root")!.style.marginTop = "2000px"; window.scrollTo(0, 0); });
+        await expect.poll(() => page.locator(".tierIconGlint").evaluateAll(elements => elements.every(el => el.getAnimations().every(animation => animation.playState === "paused")))).toBe(true);
+        await page.evaluate(() => { document.getElementById("root")!.style.marginTop = ""; });
+        await page.locator(".tierIconGlint").last().scrollIntoViewIfNeeded();
+        await expect.poll(() => page.locator(".tierIconGlint").last().evaluate(el => el.getAnimations()[0]?.playState)).toBe("running");
+        if (process.env.TOUCHLINE_PLAN_CAPTURE_PREFIX) {
+          // Hold the light mid-pass for an inspectable comparison, without changing its geometry.
+          await page.locator(".tierIconGlint").evaluateAll(elements => elements.forEach(el => el.getAnimations().forEach(animation => { animation.pause(); animation.currentTime = 1400; })));
+          await page.screenshot({ path: `${process.env.TOUCHLINE_PLAN_CAPTURE_PREFIX}-${engine.name()}-icons-${surface}-${width}.png`, fullPage: true });
+        }
         await page.emulateMedia({ reducedMotion: "reduce" });
         for (const tier of tiers) {
           if (surface === "showcase") await page.locator(`[role="tab"][data-tier="${tier}"]`).click();
-          const card = page.locator(`[data-plan-offer="${tier}"]`);
-          const run = card.locator("[data-touchline-club-perimeter-trace-run]");
-          await expect.poll(() => run.evaluate(el => getComputedStyle(el).animationName)).toBe("none");
+          const card = page.locator(`[data-plan-offer="${tier}"]`), glint = card.locator(".tierIconGlint");
+          await expect.poll(() => glint.evaluate(el => getComputedStyle(el).animationName)).toBe("none");
           const still = await card.evaluate(async el => {
-            const run = el.querySelector("[data-touchline-club-perimeter-trace-run]")!;
-            const before = getComputedStyle(run).strokeDashoffset;
+            const glint = el.querySelector(".tierIconGlint")!;
+            const before = getComputedStyle(glint).maskPosition;
             await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
-            const base = getComputedStyle(el.querySelector("[data-touchline-club-perimeter-trace-base]")!);
-            return { before, after: getComputedStyle(run).strokeDashoffset, stroke: base.stroke,
-              opacity: Number(base.opacity), width: Number.parseFloat(base.strokeWidth), shadow: getComputedStyle(el).boxShadow };
+            return { before, after: getComputedStyle(glint).maskPosition, mask: getComputedStyle(glint).maskImage,
+              opacity: Number(getComputedStyle(glint).opacity), shadow: getComputedStyle(el).boxShadow };
           });
           assert.equal(still.before, still.after);
-          assert.notEqual(still.stroke, "none");
-          assert.ok(still.opacity > 0 && still.width > 0);
-          assert.notEqual(still.shadow, "none", "static neon remains illuminated");
+          assert.equal(still.mask, "none");
+          assert.equal(still.opacity, .25);
+          assert.notEqual(still.shadow, "none", "static border remains illuminated");
         }
         assert.deepEqual(errors, []);
         assert.deepEqual(requests, []);
@@ -544,11 +553,12 @@ if (process.env.TOUCHLINE_RUN_PLAN_BROWSER_TESTS === "1") test("premium plans: t
   }
 });
 
-test("Beta disclosure agrees on shared budget, initial coach and fees in all eight locales",()=>{
+test("Beta disclosure agrees on shared budget, balance-based coach choice and fees in all eight locales",()=>{
+ const balanceTerms:Record<string,string>={"pt-BR":"conforme seu saldo","en-GB":"within your balance","es-ES":"según tu saldo","it-IT":"in base al tuo saldo","fr-FR":"selon votre solde","ar-SA":"حسب رصيدك","tr-TR":"Bakiyenize uygun","de-DE":"passend zu deinem Guthaben"};
  for(const locale of ["pt-BR","en-GB","es-ES","it-IT","fr-FR","ar-SA","tr-TR","de-DE"]){
   const copy=getClubOwnerPlanShowcaseCopy(locale,true);
-  for(const amount of ["100M","95M","5M","35","7"])assert.ok(copy.betaBenefit.includes(amount));
+  for(const amount of ["100M","35","7",balanceTerms[locale]])assert.ok(copy.betaBenefit.includes(amount));
   const benefits=getClubOwnerPlanBenefits("beta",locale,true);assert.equal(benefits.length,5);assert.equal(benefits[2].value,"7%");assert.equal(benefits[4].value,"10%");
-  assert.doesNotMatch(copy.betaBenefit,/50M|not available|indisponível/);
+  assert.doesNotMatch(copy.betaBenefit,/50M|95M|5M|Ruby|not available|indisponível/);
  }
 });

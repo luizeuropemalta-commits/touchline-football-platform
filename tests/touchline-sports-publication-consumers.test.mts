@@ -20,6 +20,47 @@ const read = (epoch = 5): TouchlinePresentationRead => ({
   }, playerRanking: null, coachRanking: null, live: { fetchedAt: stamp, fixtures: [fixture()] } },
 });
 
+test("next-match opt-in accepts only a valid same-fixture kickoff through the real reader", () => {
+  const original = { ...fixture(), competitionId: "8", seasonId: "season-a", roundId: "9",
+    status: "Not Started", startsAt: "2026-11-01T17:00:00Z", venue: { id: "stadium", name: "Original stadium" } };
+  const revised = "2026-11-02T20:00:00Z";
+  const listeners = new Set<(value: TouchlinePresentationRead) => void>();
+  const store = { getRequestEpoch: () => 0, revalidate() {},
+    subscribe(listener: (value: TouchlinePresentationRead) => void) {
+      listeners.add(listener); return () => { listeners.delete(listener); };
+    } } as unknown as ReturnType<typeof createTouchlineLivePresentationStore>;
+  const reader = createTouchlinePublishedLiveReader(store, [original], null, null, true);
+  const unchanged = createTouchlinePublishedLiveReader(store, [original], null);
+  const stop = reader.subscribe(() => {}), stopDefault = unchanged.subscribe(() => {});
+  const publication = (replacement: typeof original, epoch = 1) => {
+    const value = read(epoch);
+    return { ...value, sportsPublication: { ...value.sportsPublication!, live: { fetchedAt: stamp,
+      fixtures: [replacement, { ...replacement, id: "other", providerId: "other" }] } } };
+  };
+  for (const invalid of ["bad", "2026-11-02T20:00:00", "2026-02-30T20:00:00Z"]) {
+    const value = publication({ ...original, startsAt: invalid });
+    assert.equal(projectTouchlinePublishedLive([original], null, value, NOW, null, null, true).fixtures[0].startsAt, original.startsAt);
+  }
+  for (const foreign of [{ seasonId: "season-b" }, { competitionId: "9" }, { providerId: "different" },
+    { homeTeam: { ...original.homeTeam, providerId: "other-team" } }, { awayTeam: { ...original.awayTeam, providerId: "other-team" } }]) {
+    const value = publication({ ...original, startsAt: revised, ...foreign });
+    assert.equal(projectTouchlinePublishedLive([original], null, value, NOW, null, null, true).fixtures[0].startsAt, original.startsAt);
+  }
+  const next = publication({ ...original, startsAt: revised, roundId: "99", venue: { id: "other", name: "Other stadium" } });
+  for (const listener of listeners) listener(next);
+  const view = reader.getSnapshot();
+  assert.equal(view.fixtures.length, 1, "does not admit another fixture");
+  assert.equal(view.fixtures[0].startsAt, revised);
+  assert.equal(view.fixtures[0].roundId, original.roundId);
+  assert.deepEqual(view.fixtures[0].venue, original.venue);
+  assert.equal(unchanged.getSnapshot().fixtures[0].startsAt, original.startsAt, "default consumers keep the SSR schedule");
+  assert.equal(projectTouchlinePublishedLive(view.fixtures, view.metadata, view.read, NOW, null, null, true).fixtures[0].startsAt, revised);
+  const missing = { ...read(2), sportsPublication: { ...read(2).sportsPublication!, live: { fetchedAt: stamp, fixtures: [] } } };
+  for (const listener of listeners) listener(missing);
+  assert.equal(reader.getSnapshot().fixtures[0].startsAt, revised, "omission does not undo the accepted correction");
+  stop(); stopDefault();
+});
+
 test("mount reader ignores cached and pre-mount reads; requests fresh signal and whole payload", () => {
   const listeners = new Set<(value: TouchlinePresentationRead) => void>();
   let revalidations = 0; let notifications = 0;

@@ -72,3 +72,32 @@ test("new public-profile login return paths are allowed without changing retired
   assert.equal(normalizeTouchLineAuthReturnTo("/club-owner/legacy-name?lang=pt-BR"), "/clubowner?lang=pt-BR");
   assert.equal(normalizeTouchLineAuthReturnTo("https://evil.test/clubowners"), null);
 });
+
+test("public photo URL enrichment is bounded, gated and never passes private metadata", async () => {
+  const url = `/api/touchline/clubowners/${id}/avatar?v=${"a".repeat(64)}`;
+  const reads: string[][] = [];
+  const f = fixture({ photoEnabled: true, photoUrls: async ids => { reads.push([...ids]); return { [id]: url }; } });
+  for (const endpoint of ["directory", "profile"] as const) {
+    const response = await f.invoke(endpoint); assert.equal(response.status, 200);
+    const body = await response.text(); assert.ok(body.includes(url)); assert.doesNotMatch(body, /PRIVATE_|accountId|email|digest|operation/);
+  }
+  assert.deepEqual(reads, [[id], [id]]);
+  const off = fixture({ photoEnabled: false, photoUrls: async () => assert.fail("disabled photo projection") });
+  assert.doesNotMatch(await (await off.invoke("profile")).text(), /avatarUrl/);
+});
+
+test("photo read failing after follow mutation returns uncertain 503 and fresh GET recovers authoritative state", async () => {
+  let following = false, failPhoto = true, mutations = 0;
+  const f = fixture({ photoEnabled: true, rpc: async (name, args) => {
+    if (name === "touchline_people_set_follow") { following = args!.p_active === true; mutations++; }
+    return { ...publicProfile, following, followerCount: following ? 3 : 2 };
+  }, photoUrls: async () => { if (failPhoto) throw Error("PRIVATE_PHOTO_READ"); return {}; } });
+  const unknown = await f.invoke("follow", { active: true });
+  assert.equal(unknown.status, 503); assert.equal(following, true); assert.equal(mutations, 1);
+  assert.doesNotMatch(await unknown.text(), /PRIVATE_PHOTO_READ|following|followerCount/);
+  failPhoto = false;
+  const refreshed = await f.invoke("profile"); assert.equal(refreshed.status, 200);
+  assert.deepEqual(await refreshed.json(), { profile: { ...publicProfile, following: true, followerCount: 3, avatarUrl: null } });
+  assert.equal(mutations, 1);
+  assert.equal((await f.invoke("follow", { active: true })).status, 200); assert.equal(following, true);
+});

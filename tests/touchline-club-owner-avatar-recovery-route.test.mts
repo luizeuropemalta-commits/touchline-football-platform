@@ -22,7 +22,7 @@ function fixture(patch: Record<string, string | undefined> = {}, scenario: "idle
   const newerOperation = "123e4567-e89b-42d3-a456-426614174002";
   let activeOperation: string | null = scenario === "active" ? other : scenario === "stale" ? newerOperation : null;
   let operationState = scenario === "committed" ? "committed" : "pending";
-  const state = { actor, email: "customer@example.invalid", error: false, drift: false };
+  const state = { actor, email: "customer@example.invalid", error: false, drift: false, access: true };
   const cache = new Map<string, unknown>();
   const load = (path: string): unknown => {
     if (cache.has(path)) return cache.get(path);
@@ -32,26 +32,26 @@ function fixture(patch: Record<string, string | undefined> = {}, scenario: "idle
       if (name === "next/headers") return { cookies: async () => ({ getAll: () => [], set: () => {} }) };
       if (name === "@supabase/ssr") return { createServerClient: () => ({ auth: { getUser: async () => {
         calls.push("auth"); if (state.drift) environment.UNRELATED_NEW_KEY = "changed";
-        return { data: { user: { id: state.actor, email: state.email, app_metadata: { touchline_arena_access_v1: true } } }, error: state.error ? Error("PRIVATE") : null };
+        return { data: { user: { id: state.actor, email: state.email, app_metadata: { touchline_arena_access_v1: state.access } } }, error: state.error ? Error("PRIVATE") : null };
       } } }) };
       if (name === "@supabase/supabase-js") return { ...sdk, createClient: (url: string, key: string) => {
         calls.push("privileged"); assert.equal(url, database); assert.equal(key, "synthetic-service-key-not-a-credential");
         return sdk.createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false }, global: { fetch: async (input, init) => {
           const rpc = new URL(String(input)).pathname.split("/").at(-1)!; calls.push(rpc);
-          const args = JSON.parse(String(init?.body)); assert.equal(args.p_actor, actor);
-          const receipt = { actorId: actor, operationId: other, expectedRevision: "0", revision: "1", digest: "a".repeat(64),
-            objectKey: `${actor}/${other}/${"a".repeat(64)}.webp`, avatarUrl: `/api/account/avatar?version=${other}` };
+          const args = JSON.parse(String(init?.body)); assert.equal(args.p_actor, state.actor);
+          const receipt = { actorId: state.actor, operationId: other, expectedRevision: "0", revision: "1", digest: "a".repeat(64),
+            objectKey: `${state.actor}/${other}/${"a".repeat(64)}.webp`, avatarUrl: `/api/account/avatar?version=${other}` };
           const snapshot = (requested: string | null = null) => {
             const selected = requested ?? activeOperation;
             const present = selected !== null && (selected === activeOperation || selected === other && scenario !== "stale");
-            return { version: 1, actorId: actor, revision: scenario === "committed" ? "1" : "0", generation, activeOperationId: activeOperation,
+            return { version: 1, actorId: state.actor, revision: scenario === "committed" ? "1" : "0", generation, activeOperationId: activeOperation,
               fencedThroughGeneration: fenced, requestedOperationId: selected, operation: present ? { operationId: selected, state: operationState,
                 expectedRevision: "0", baseGeneration: "0", generation: "1", legacy: false, receipt: operationState === "committed" ? receipt : null } : null };
           };
           if (rpc === "touchline_read_club_owner_avatar_operation_status") return Response.json(snapshot());
           if (rpc === "touchline_read_club_owner_avatar") return Response.json(scenario === "committed"
-            ? { actorId: actor, revision: "1", avatarUrl: receipt.avatarUrl, operationId: other, digest: receipt.digest }
-            : { actorId: actor, revision: "0", avatarUrl: null, operationId: null, digest: null });
+            ? { actorId: state.actor, revision: "1", avatarUrl: receipt.avatarUrl, operationId: other, digest: receipt.digest }
+            : { actorId: state.actor, revision: "0", avatarUrl: null, operationId: null, digest: null });
           assert.equal(rpc, "touchline_fence_club_owner_avatar_operation");
           assert.equal(args.p_generation, scenario === "idle" ? generation : "1"); assert.equal(args.p_expected_active, scenario === "idle" ? null : other);
           if (scenario === "committed" || scenario === "stale") return Response.json({ version: 1, status: scenario === "committed" ? "committed" : "conflict", snapshot: snapshot(args.p_expected_active) });
@@ -127,10 +127,12 @@ test("recovery real route refuses auth error, changed actor, admin and environme
   }
 });
 
-test("C2 actual recovery route preserves active/committed/stale-ID fence bindings without readiness", async () => {
-  for (const scenario of ["active", "committed", "stale"] as const) {
-    const f = fixture({}, scenario);
-    const response = await f.route.POST(f.request({ action: "fence", generation: "1", expectedActiveOperationId: other, explicitRecoveryConsent: true }));
+test("C2 actual recovery route preserves active/committed/stale-ID fence bindings for legacy and customers audiences", async () => {
+  for (const audience of [undefined, "customers"]) for (const scenario of ["active", "committed", "stale"] as const) {
+    const f = fixture({ TOUCHLINE_CLUB_OWNER_AVATAR_AUDIENCE: audience }, scenario);
+    if (audience === "customers") f.state.actor = "123e4567-e89b-42d3-a456-426614174003";
+    const response = await f.route.POST(f.request({ action: "fence", generation: "1", expectedActiveOperationId: other, explicitRecoveryConsent: true },
+      { "x-touchline-expected-account": f.state.actor }));
     assert.equal(response.status, 200, scenario); const value = await response.json();
     assert.equal(value.barrierStatus, scenario === "active" ? "barrier_applied" : scenario === "committed" ? "committed" : "conflict");
     assert.equal(value.context.generation, scenario === "stale" ? "1" : "2");
@@ -140,5 +142,39 @@ test("C2 actual recovery route preserves active/committed/stale-ID fence binding
     assert.equal(value.context.readyForSelection, false); assert.equal(value.context.canUpload, false);
     assert.deepEqual(f.calls, ["auth", "privileged", "touchline_fence_club_owner_avatar_operation", "touchline_read_club_owner_avatar_operation_status", "touchline_read_club_owner_avatar", "touchline_read_club_owner_avatar_operation_status"]);
     assert.doesNotMatch(JSON.stringify(value), /digest|objectKey|synthetic/);
+  }
+});
+
+test("customers recovery admits both verified customer actors and keeps status/fence consent separate", async () => {
+  for (const customer of [actor, other]) {
+    const f = fixture({ TOUCHLINE_CLUB_OWNER_AVATAR_AUDIENCE: "customers", TOUCHLINE_CLUB_OWNER_AVATAR_UPLOAD_ACCOUNT_ID: customer === actor ? undefined : actor });
+    f.state.actor = customer;
+    const headers = { "x-touchline-expected-account": customer };
+    const response = await f.route.POST(f.request(undefined, headers)); assert.equal(response.status, 200);
+    const result = await response.json(); assert.equal(result.context.accountId, customer); assert.equal(result.context.uploadAllowed, true);
+    assert.equal(result.context.readyForSelection, false); assert.equal(result.context.canUpload, false);
+    assert.deepEqual(f.calls, ["auth", "privileged", "touchline_read_club_owner_avatar_operation_status", "touchline_read_club_owner_avatar", "touchline_read_club_owner_avatar_operation_status"]);
+    const before = [...f.calls];
+    assert.equal((await f.route.POST(f.request({ action: "fence", generation: "0", expectedActiveOperationId: null }, headers))).status, 400);
+    assert.deepEqual(f.calls, before);
+    const fence = await f.route.POST(f.request({ action: "fence", generation: "0", expectedActiveOperationId: null, explicitRecoveryConsent: true }, headers));
+    assert.equal(fence.status, 200); assert.equal((await fence.json()).context.accountId, customer);
+  }
+});
+
+test("customers recovery denies unknown policy, flag OFF, admin, missing access and divergent session identity", async () => {
+  for (const patch of [{ TOUCHLINE_CLUB_OWNER_AVATAR_AUDIENCE: "all" }, { TOUCHLINE_CLUB_OWNER_AVATAR_AUDIENCE: "" },
+    { TOUCHLINE_CLUB_OWNER_AVATAR_UPLOAD_ACCOUNT_ID: "bad" }, { TOUCHLINE_CLUB_OWNER_AVATAR_READ_ENABLED: "false" },
+    { TOUCHLINE_CLUB_OWNER_AVATAR_UPLOAD_ENABLED: "false" }, { VERCEL_ENV: "production" }, { VERCEL_GIT_COMMIT_REF: "main" },
+    { TOUCHLINE_OWNER_EMAILS: "" }, { NEXT_PUBLIC_TOUCHLINE_CLUB_OWNER_AVATAR_AUDIENCE: "customers" }]) {
+    const f = fixture({ TOUCHLINE_CLUB_OWNER_AVATAR_AUDIENCE: "customers", ...patch });
+    assert.equal((await f.route.POST(f.request())).status, 503); assert.deepEqual(f.calls, []);
+  }
+  for (const mode of ["actor", "admin", "access"] as const) {
+    const f = fixture({ TOUCHLINE_CLUB_OWNER_AVATAR_AUDIENCE: "customers" });
+    if (mode === "actor") f.state.actor = other;
+    if (mode === "admin") f.state.email = "admin@example.invalid";
+    if (mode === "access") f.state.access = false;
+    assert.equal((await f.route.POST(f.request())).status, mode === "actor" ? 409 : 403); assert.deepEqual(f.calls, ["auth"]);
   }
 });

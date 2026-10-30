@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {clubRoundDatabase} from './helpers/club-round-database.mts';
+import {clubSeasonCalendarMigration} from './helpers/club-season-calendar.mts';
 import {acquireClubPlayer,inspectClubAcquisition, type ClubAcquisitionState} from '../lib/touchlineFantasy/club-acquisition.ts';
 import {releaseClubCoach,hireClubCoach} from '../lib/touchlineFantasy/club-coach-lifecycle.ts';
 import {TOUCHLINE_FANTASY_BETA_BUDGET_EUR} from '../lib/touchlineFantasy/market-plan-policy.ts';
@@ -73,7 +74,34 @@ test('fresh Beta forward SQL installs on predecessors and preserves funded init/
   await db.query('select touchline_club_exchange_listing($1,$2,$3,true)',[id(2),id(3),id(220)]);
   const proposal=(await db.query<{v:Proposal}>('select touchline_club_exchange_propose($1,$2,$3,$4,$5,$6,1,1) v',[id(1),id(3),id(300),id(2),id(120),id(220)])).rows[0].v;
   assert.equal(proposal.terms.quote.feeTc,700_000);assert.equal(proposal.terms.quote.bonusTc,350_000);
-  const accepted=(await db.query<{v:{status:string}}>('select touchline_club_exchange_resolve($1,$2,$3,$4) v',[id(2),id(3),id(300),'accept'])).rows[0].v;
+  await db.exec(sql('20261030011416_club_exchange_beta_pair_boundary'));
+  const blockedDiscovery=(await db.query<{v:{proposals:{negotiationAllowed:boolean;restrictionReason:string|null}[]}}>('select touchline_club_exchange_discovery($1,$2) v',[id(1),id(3)])).rows[0].v;
+  assert.equal(blockedDiscovery.proposals[0].negotiationAllowed,false);assert.equal(blockedDiscovery.proposals[0].restrictionReason,"beta-pair");
+
+  const snapshot = async () => (await db.query('select user_id,state from touchline_club_collections order by user_id')).rows;
+  const unchanged = await snapshot();
+  await assert.rejects(db.query('select touchline_club_exchange_resolve($1,$2,$3,$4)',[id(2),id(3),id(300),'accept']),/CLUB_BETA_EXCHANGE_ONLY/);
+  assert.deepEqual(await snapshot(),unchanged);
+  await db.query('select touchline_club_exchange_resolve($1,$2,$3,$4)',[id(1),id(3),id(300),'cancel']);
+  const listingsPermission=async(actor:number)=>(await db.query<{v:{listings:{owner:{accountId:string};negotiationAllowed:boolean;restrictionReason:string|null}[]}}>('select touchline_club_exchange_discovery($1,$2) v',[id(actor),id(3)])).rows[0].v.listings;
+  for(const actor of [1,2]){
+   const listings=await listingsPermission(actor);assert.equal(listings.length,2);
+   assert.equal(listings.find(l=>l.owner.accountId===id(actor))?.negotiationAllowed,true);
+   assert.equal(listings.find(l=>l.owner.accountId!==id(actor))?.negotiationAllowed,false);
+   assert.equal(listings.find(l=>l.owner.accountId!==id(actor))?.restrictionReason,"beta-pair");
+   assert.equal(listings.find(l=>l.owner.accountId===id(actor))?.restrictionReason,null);
+  }
+
+  for (const [sender,receiver,outgoing,incoming] of [[1,2,120,220],[2,1,220,120]]) {
+    await assert.rejects(db.query('select touchline_club_exchange_propose($1,$2,$3,$4,$5,$6,1,1)',[id(sender),id(3),id(302),id(receiver),id(outgoing),id(incoming)]),/CLUB_BETA_EXCHANGE_ONLY/);
+  }
+  assert.deepEqual(await snapshot(),unchanged);
+  assert.equal((await db.query<{n:number}>('select count(*)::int n from touchline_club_player_reservations')).rows[0].n,0);
+  await db.query("update touchline_club_collections set state=jsonb_set(state,'{plan}','\"beta\"') where user_id=$1",[id(2)]);
+  await db.query("update touchline_fantasy_entitlements set plan_key='beta' where user_id=$1",[id(2)]);
+  assert.ok((await listingsPermission(1)).every(l=>l.negotiationAllowed&&l.restrictionReason===null));
+  await db.query('select touchline_club_exchange_propose($1,$2,$3,$4,$5,$6,1,1)',[id(1),id(3),id(303),id(2),id(120),id(220)]);
+  const accepted=(await db.query<{v:{status:string}}>('select touchline_club_exchange_resolve($1,$2,$3,$4) v',[id(2),id(3),id(303),'accept'])).rows[0].v;
   assert.equal(accepted.status,'accepted');
   const after=(await db.query<{state:ClubAcquisitionState}>('select state from touchline_club_collections where user_id=$1',[id(1)])).rows[0].state;
   assert.equal(after.balanceEur,92_300_000);assert.equal(after.players.find((x)=>x.playerId===id(220))?.valueEur,10_000_000);
@@ -107,5 +135,17 @@ test('fresh Beta forward SQL installs on predecessors and preserves funded init/
   assert.equal(hired.state.balanceEur,54_500_000);assert.equal(hired.state.coach?.tier,'sapphire-blue');
   const definitions=(await db.query<{definition:string}>("select pg_get_functiondef(oid) definition from pg_proc where proname in('touchline_fantasy_prepare_user_gameweek','touchline_fantasy_save_lineup','touchline_club_project_lineup')")).rows;
   assert.equal(definitions.length,3);for(const d of definitions)assert.ok(!d.definition.includes("when v_plan_key = 'beta' then 50000000"));
+  // The real free entitlement is unlimited; the season, not its null expiry,
+  // still closes all new collection operations. Historical receipts survive.
+  await db.exec(clubSeasonCalendarMigration);
+  assert.equal((await db.query<{expiry:string|null}>('select current_period_end expiry from touchline_fantasy_entitlements where user_id=$1',[id(9)])).rows[0].expiry,null);
+  await db.exec(`insert into users values('${id(9999)}','Next Beta');insert into touchline_fantasy_entitlements(user_id,status,source,plan_key) values('${id(9999)}','active','qa_grant','beta');
+    update football_seasons set starts_at=current_date-10,ends_at=current_date-1;`);
+  const closedBefore=await snapshot();
+  await assert.rejects(db.query('select touchline_club_initialize_collection($1,$2,$3,$4)',[id(9999),id(3),'beta',JSON.stringify({id:'300',tier:'ruby-red',valueEur:5_000_000})]),/CLUB_MARKET_CLOSED/);
+  await assert.rejects(db.query('select touchline_club_coach_lifecycle($1,$2,$3,null)',[id(9),id(3),JSON.stringify({action:'release-coach',currentCoachId:'301',expectedRevision:37,idempotencyKey:'beta_closed_coach'})]),/CLUB_MARKET_CLOSED/);
+  const replayed=(await db.query<{v:{state:ClubAcquisitionState;replayed:boolean}}>('select touchline_club_coach_lifecycle($1,$2,$3,null) v',[id(9),id(3),JSON.stringify(releaseCommand)])).rows[0].v;
+  assert.equal(replayed.replayed,true);assert.deepEqual(replayed.state,vacant.state);
+  assert.deepEqual(await snapshot(),closedBefore);
  } finally {await db.close();}
 });

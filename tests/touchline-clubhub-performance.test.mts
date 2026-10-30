@@ -12,15 +12,16 @@ import {
 
 const clubsPage = readFileSync(new URL("../app/touchline-clubs/page.tsx", import.meta.url), "utf8");
 const clubPage = readFileSync(new URL("../app/touchline-clubs/[club]/page.tsx", import.meta.url), "utf8");
-test("official league section does not wait for squad presentation", () => {
+test("tickets and XI commit the shared presentation together while keeping football reads independent", () => {
   const section = clubPage.slice(clubPage.indexOf("async function ClubHubOfficialLeagueSection"), clubPage.indexOf("async function ClubHubHeroNextMatch"));
   assert.doesNotMatch(section, /presentationPromise/);
   // OWNER SCOPE UPDATE / PREVIEWNOFEED9 (CURRENT_STATE, 2026-10-03
   // 09:05/09:18 UTC): remove the public feed dependency, not admin/art assets.
   assert.match(section, /const \[matchSnapshot, table\] = await Promise\.all\(\[\s*matchSnapshotPromise,\s*tablePromise,\s*\]\)/);
   assert.doesNotMatch(section, /feedPage|loadTouchlineClubFeed|ClubHubFeed/);
-  assert.match(section, /const fixture = matchSnapshot\.railFixture/);
-  assert.match(clubPage, /<ClubHubOfficialLeagueSection[\s\S]*?matchSnapshotPromise=\{matchSnapshotPromise\}/);
+  assert.match(section, /const fixture = matchSnapshot\.nextFixture/);
+  assert.match(clubPage, /ClubHubOfficialLeagueSection\(\{[\s\S]*?nextFixture: presentation\.fixtureContext\.nextFixture/);
+  assert.match(clubPage, /<ClubHubMatchdayPanels[\s\S]*?presentationPromise=\{presentationPromise\}/);
 });
 test("next-match hero waits only for the shared match snapshot, never squad or season points", () => {
   const ast = ts.createSourceFile("club-page.tsx", clubPage, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);

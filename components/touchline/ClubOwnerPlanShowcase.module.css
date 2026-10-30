@@ -75,8 +75,7 @@
 .memberCard[data-plan-offer="pro"] { --plan-accent: #e7cf91; --plan-rgb: 190,157,82; --plan-surface: #14251e; --plan-ink: #f5f1df; }
 .memberCard[data-plan-offer="master"] { --plan-accent: #a5e4b6; --plan-rgb: 111,191,143; --plan-surface: #101c19; --plan-ink: #e6f9ef; }
 .memberCard[data-plan-offer="vip"] { --plan-accent: #d5b4f6; --plan-rgb: 162,116,206; --plan-surface: #2b1e38; --plan-ink: #f4e8ff; }
-/* Reuse the shared perimeter engine; only membership opts into this brightness. */
-.memberNeon { --touchline-perimeter-radius: 17px; --touchline-perimeter-base-width: 1.1px; --touchline-perimeter-run-width: 2.4px; --touchline-perimeter-glow: 6px; --touchline-perimeter-speed: 6s; --touchline-decoration-motion: running; }
+.tierSeal svg { width: 29px; height: 29px; }
 @media (min-width: 1101px) {
   .memberCard { min-height: 250px; padding: 24px; }
   .tierSeal { width: 66px; height: 66px; }
@@ -92,6 +91,11 @@
 .cardKicker { display: block; color: var(--plan-accent); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; line-height: 1.4; }
 .cardIdentity h3 { margin: 4px 0 0; font-size: clamp(32px,9cqi,52px); font-weight: 500; letter-spacing: -.055em; line-height: 1.05; color: var(--plan-ink); }
 .tierSeal { display: grid; place-items: center; flex: 0 0 auto; width: 58px; height: 58px; border-radius: 50%; border: 1px solid rgba(var(--plan-rgb),.4); background: linear-gradient(125deg,rgba(var(--plan-rgb),.2),transparent 75%); color: var(--plan-accent); box-shadow: inset 0 0 0 5px rgba(var(--plan-rgb),.035); }
+.tierIcon { display: grid; place-items: center; pointer-events: none; }
+.tierIcon > svg, .tierIconGlint { grid-area: 1 / 1; }
+/* The light travels through the existing icon; no detached orbit around the card. */
+.tierIconGlint { display: grid; place-items: center; color: var(--plan-accent); filter: brightness(1.65) drop-shadow(0 0 1px var(--plan-accent)) drop-shadow(0 0 3px var(--plan-accent)); -webkit-mask-image: linear-gradient(115deg,transparent 40%,#000 47%,#000 53%,transparent 60%); mask-image: linear-gradient(115deg,transparent 40%,#000 47%,#000 53%,transparent 60%); -webkit-mask-size: 300% 100%; mask-size: 300% 100%; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; animation: planIconSweep 2.8s linear infinite; animation-play-state: paused; }
+@keyframes planIconSweep { from { -webkit-mask-position: 100% 0; mask-position: 100% 0; } to { -webkit-mask-position: 0 0; mask-position: 0 0; } }
 .cardBottom { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; }
 .cardOwner { display: grid; gap: 6px; min-width: 0; }
 .cardOwner > small, .cardPower > small { display: block; color: var(--plan-accent); font-size: 9px; font-weight: 500; letter-spacing: .06em; text-transform: uppercase; line-height: 1.5; }
@@ -163,4 +167,4 @@
   .planShowcase .tierTab { font-size: 10px; padding-inline: 2px; }
 }
 @media (max-width: 720px) { .planShowcase { padding: 18px; border-radius: 18px; } }
-@media (prefers-reduced-motion: reduce) { .planShowcase * { animation: none !important; transition: none !important; } }
+@media (prefers-reduced-motion: reduce) { .planShowcase * { animation: none !important; transition: none !important; } .tierIconGlint { animation: none !important; -webkit-mask-image: none; mask-image: none; opacity: .25; } }

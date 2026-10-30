@@ -90,6 +90,7 @@ export function validateExchangePair(
   requireRule(sender.ownerId !== receiver.ownerId, "SELF_EXCHANGE_FORBIDDEN");
   const own = inspectExchangeAllocation(sender);
   const other = inspectExchangeAllocation(receiver);
+  requireRule((sender.plan === "beta") === (receiver.plan === "beta"), "CLUB_BETA_EXCHANGE_ONLY");
   const outgoing = own.byId.get(outgoingId);
   const incoming = other.byId.get(incomingId);
   requireRule(outgoing && incoming, "OWNERSHIP_REQUIRED");

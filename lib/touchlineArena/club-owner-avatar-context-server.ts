@@ -1,4 +1,5 @@
 import "server-only";
+import { allowsClubOwnerAvatarAudience, parseClubOwnerAvatarAudience } from "./club-owner-avatar-audience";
 import { allowsClubOwnerAvatarLocalEnvironment } from "./club-owner-avatar-local-admission";
 import { headers } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -82,9 +83,10 @@ export function createClubOwnerAvatarContextReader() {
       } });
       const current = await awaitAvatarStep(() => persistence.readRecoveryContext(signal), signal);
       guard();
-      const configuredActor = environment.TOUCHLINE_CLUB_OWNER_AVATAR_UPLOAD_ACCOUNT_ID;
+      const audience = parseClubOwnerAvatarAudience({ audience: environment.TOUCHLINE_CLUB_OWNER_AVATAR_AUDIENCE,
+        accountId: environment.TOUCHLINE_CLUB_OWNER_AVATAR_UPLOAD_ACCOUNT_ID });
       const uploadAllowed = environment.TOUCHLINE_CLUB_OWNER_AVATAR_UPLOAD_ENABLED === "true"
-        && isAvatarAccountId(configuredActor) && configuredActor.toLowerCase() === actor;
+        && allowsClubOwnerAvatarAudience(audience, actor);
       const context = projectAvatarRecoveryContext(current, uploadAllowed);
       guard();
       return context;

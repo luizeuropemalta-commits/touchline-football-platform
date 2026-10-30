@@ -19,7 +19,7 @@ test("inventories every page, API method, proxy, metadata route, and error bound
   assert.equal(rows.filter((item) => item.kind === "PAGE").length, 79);
   assert.equal(row("/account").data, "VERIFIED_AUTH_ROLE_REDIRECT_ONLY_NO_TEAM_WRITES");
   assert.equal(rows.some((item) => item.route === "/visual-qa/arena-main-field"), false);
-  assert.equal(rows.filter((item) => item.kind === "API").length, 143);
+  assert.equal(rows.filter((item) => item.kind === "API").length, 144);
   assert.equal(rows.filter((item) => item.kind === "BOUNDARY").length, 7);
   assert.equal(rows.filter((item) => item.kind === "METADATA").length, 3);
   assert.equal(rows.filter((item) => item.kind === "PROXY").length, 1);
@@ -45,6 +45,19 @@ test("public ClubOwner discovery separates opt-in reads from authenticated self-
   assert.equal(row("PUT /api/account/public-profile").auth, "AUTHENTICATED_ARENA_ACCESS_SAME_ORIGIN");
   assert.equal(row("GET /api/touchline/clubowners").auth, "PUBLIC");
   assert.equal(row("/clubowner").auth, "AUTHENTICATED");
+});
+
+test("public avatar inventory is a separately gated consented current-only read, never public bucket or activation approval", () => {
+  const route = "GET /api/touchline/clubowners/[publicId]/avatar";
+  const avatar = row(route);
+  assert.equal(avatar.auth, "DEFAULT_OFF_EXACT_QA_PUBLIC_SAME_ORIGIN");
+  assert.equal(avatar.role, "ANY_VIEWER_ELIGIBLE_CUSTOMER_TARGET");
+  assert.equal(avatar.data, "EXPLICIT_PHOTO_OPT_IN_CURRENT_ONLY_MEDIATED_BYTES_NO_STORE_NO_PRIVATE_IDENTIFIERS");
+  assert.equal(avatar.browser, "BOUNDED_CANCELABLE_READ_WITH_CONSENT_AND_VERSION_RECHECK");
+  assert.equal(avatar.status, "PENDING_SCHEMA_RETENTION_STORAGE_AND_CUSTOMER_QA");
+  assert.equal(avatar.sourceFile, "app/api/touchline/clubowners/[publicId]/avatar/route.ts");
+  assert.equal(rows.filter(item => item.route.endsWith(" /api/touchline/clubowners/[publicId]/avatar")).length, 1);
+  assert.notEqual(avatar.auth, row("GET /api/account/avatar").auth, "public consent never grants private-account avatar access");
 });
 
 test("fixture readiness is a private expected-account read, never delivery or activation proof", () => {

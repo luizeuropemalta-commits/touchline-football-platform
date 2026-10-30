@@ -212,3 +212,23 @@ return labels[locale]??labels['en-GB'];
 }
 
 export function getExchangeRecoveryLabel(locale:string):string{return ({'pt-BR':'Reenviar a mesma operação','en-GB':'Retry the same operation','es-ES':'Reintentar la misma operación','it-IT':'Riprova la stessa operazione','fr-FR':'Réessayer la même opération','de-DE':'Denselben Vorgang erneut senden','tr-TR':'Aynı işlemi tekrar gönder','ar-SA':'إعادة إرسال العملية نفسها'} as Record<string,string>)[locale]??'Retry the same operation';}
+
+export function getExchangePlanLockLabel(locale:string):string {
+ const labels:Record<string,string>={'pt-BR':'Beta negocia só com Beta','en-GB':'Beta trades with Beta only','es-ES':'Beta solo negocia con Beta','it-IT':'Beta scambia solo con Beta','fr-FR':'Beta échange uniquement avec Beta','de-DE':'Beta tauscht nur mit Beta','tr-TR':'Beta yalnızca Beta ile takas yapar','ar-SA':'بيتا يتبادل مع بيتا فقط'};
+ return labels[locale]??labels['en-GB'];
+}
+
+const planLockActions:Record<string,readonly [string,string,string]>={
+ 'pt-BR':['Desbloquear','Restrito ao Beta','Indisponível'],
+ 'en-GB':['Unlock','Beta only','Unavailable'],
+ 'es-ES':['Desbloquear','Solo Beta','No disponible'],
+ 'it-IT':['Sblocca','Solo Beta','Non disponibile'],
+ 'fr-FR':['Débloquer','Beta uniquement','Indisponible'],
+ 'de-DE':['Freischalten','Nur Beta','Nicht verfügbar'],
+ 'tr-TR':['Kilidi aç','Yalnızca Beta','Kullanılamıyor'],
+ 'ar-SA':['فتح القفل','بيتا فقط','غير متاح'],
+};
+export function getExchangePlanLockActions(locale:string){
+ const [unlock,restricted,unavailable]=planLockActions[locale]??planLockActions['en-GB'];
+ return {unlock,restricted,unavailable};
+}

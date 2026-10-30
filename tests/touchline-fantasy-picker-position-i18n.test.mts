@@ -45,7 +45,7 @@ function actual(position: string | null | undefined, locale: string, overrides: 
     workflowCopy: getTouchlineFantasyMarketWorkflowCopy(locale), localizedPositionLabel: helper, touchlineCardTierPalette,
     styles: { marketClosedLabel: "marketClosedLabel", myClubMarketResults: "myClubMarketResults" },
     TouchlineGameweekCard: CardBoundary, TouchlineClubPerimeterTrace: TraceBoundary,
-    playerExceedsBudget: () => false, selectedPlayerClubLocked: false,
+    playerExceedsBudget: () => false, selectedPlayerClubLocked: false, cardPlanLocked: () => false,
     selectMyClubPlayer: (value: unknown) => selected.push(value), ...overrides,
   };
   const element = runInNewContext(compiled, context) as Element;
@@ -154,4 +154,19 @@ test("picker disables a later empty position and unconfirmed collection while re
   assert.equal(unconfirmed.selected.length, 0);
   const occupied = actual("GK", "en-GB", { guidedChoice: later, selections: [{ slotId: "GK", playerId: "old-id" }] });
   assert.equal(occupied.all.find(node => node.type === "button")?.props.disabled, false);
+});
+
+test("plan-locked picker preserves the real card and opens plans without selecting a player", () => {
+  const opened: boolean[] = [];
+  const view = actual("GK", "en-GB", {
+    cardPlanLocked: () => true, marketPlanLockCopy: "Available with a paid plan", marketUnlockCopy: "Unlock",
+    unlockSigningAction: { select: { label: "Unlock", disabled: false } },
+    LockKeyhole: () => null, controls: { link: "link" }, setMarketPlansOpen: (value: boolean) => opened.push(value),
+  });
+  const action = view.all.find(node => node.type === "button")!;
+  assert.equal(action.props["aria-haspopup"], "dialog");
+  assert.equal(view.all.find(node => node.type === CardBoundary)?.props.card, view.card);
+  (action.props.onClick as (event: unknown) => void)({ currentTarget: { focus() {} } });
+  assert.deepEqual(opened, [true]);
+  assert.equal(view.selected.length, 0);
 });

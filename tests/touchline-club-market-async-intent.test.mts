@@ -17,7 +17,7 @@ import { clubStarterSelections } from "../lib/touchlineFantasy/club-allocation.t
 import { previewPlannedClubAllocation } from "../lib/touchlineFantasy/collection-slot-plan.ts";
 import { canChooseGuidedSlot, nextGuidedChoice } from "../lib/touchlineFantasy/next-guided-choice.ts";
 import { TOUCHLINE_DEFAULT_FORMATION_GEOMETRY_REGISTRY as formations } from "../lib/touchlineArena/formation-geometry.ts";
-import { findTouchLineClub } from "../lib/touchlineArena/demo-data.ts";
+import { TOUCHLINE_ENGLAND_CLUBS_BY_RANK, findTouchLineClub } from "../lib/touchlineArena/demo-data.ts";
 import { isTouchlineFantasyMarketClubAllowed as canBrowseMarketClub, resolveTouchlineFantasyMarketAccess } from "../lib/touchlineFantasy/market-plan-policy.ts";
 import { getTouchlineFantasyMarketWorkflowCopy } from "../lib/touchlineFantasy/market-workflow-i18n.ts";
 import { getClubCollectionBudgetCopy } from "../lib/touchlineFantasy/market-budget-i18n.ts";
@@ -202,7 +202,7 @@ function clientFixture(owned = false) {
     marketPlanLockCopy: getTouchlineFantasyMarketPlanLockCopy("en-GB"),
     ...domain, canChooseGuidedSlot, nextGuidedChoice, clubStarterSelections, previewPlannedClubAllocation,
     primaryDetails, primaryPositionFitsTacticalSlot,
-    findTouchLineClub, canBrowseMarketClub, initialSnapshot: snapshot, snapshot, marketPolicy: policy,
+    TOUCHLINE_ENGLAND_CLUBS_BY_RANK, findTouchLineClub, canBrowseMarketClub, initialSnapshot: snapshot, snapshot, marketPolicy: policy,
     collectionEnabled: true, collectionSlotsEditable: true, collection, marketPage: true,
     editable: true, saving: false, marketOpen: true, geometry, formationCode: "4-3-3", selectedCoachId: "coach", selections: [],
     activeSlot: geometry.slots.find(slot => slot.id === "GK"), activeSlotId: "GK",

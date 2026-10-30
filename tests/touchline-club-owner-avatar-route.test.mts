@@ -28,7 +28,7 @@ function fixture(patch: Record<string, string | undefined> = {}, clock = perform
   const calls: string[] = [], actors: string[] = [], pending: Array<(value: unknown) => void> = [];
   const boundaries: string[] = [], objects = new Map<string, Uint8Array>(), rpcInputs: Array<Record<string, string>> = [];
   let receipt: Record<string, string> | null = null, nativeCalls = 0, begun = false;
-  const envelope = (status: string) => ({ version: 1, status, snapshot: { version: 1, actorId: actor, revision: receipt ? "1" : "0",
+  const envelope = (status: string) => ({ version: 1, status, snapshot: { version: 1, actorId: state.id, revision: receipt ? "1" : "0",
     generation: receipt ? "2" : "1", activeOperationId: receipt ? null : version, fencedThroughGeneration: "-1", requestedOperationId: version,
     operation: { operationId: version, state: receipt ? "committed" : "pending", expectedRevision: "0", baseGeneration: "0", generation: "1", legacy: false, receipt } } });
   const boundary = (name: string) => { boundaries.push(name); onBoundary(name, environment); };
@@ -101,12 +101,12 @@ function fixture(patch: Record<string, string | undefined> = {}, clock = perform
           if (init?.method === "POST") {
             assert.equal(new Headers(init.headers).get("x-upsert"), "false");
             const bytes = new Uint8Array(init.body as Uint8Array), key = url.pathname.replace("/storage/v1/object/", "");
-            assert.ok(key.startsWith(`touchline-club-owner-avatars/${actor}/${version}/`));
+            assert.ok(key.startsWith(`touchline-club-owner-avatars/${state.id}/${version}/`));
             objects.set(key, bytes); return Response.json({}, { status: 201 });
           }
           const stored = objects.get(url.pathname.replace("/storage/v1/object/authenticated/", ""));
           if (stored) return new Response(new Uint8Array(stored), { headers: { "content-type": "image/webp" } });
-          assert.equal(url.pathname, `/storage/v1/object/authenticated/touchline-club-owner-avatars/${actor}/${version}/${digest}.webp`);
+          assert.equal(url.pathname, `/storage/v1/object/authenticated/touchline-club-owner-avatars/${state.id}/${version}/${digest}.webp`);
           if (state.objectMissing) return new Response(null, { status: 404 });
           return new Response(new Uint8Array(image), { headers: { "content-type": "image/webp" } });
         } }, { filename: path });
@@ -306,6 +306,61 @@ test("prepared POST composes real adapters with one actor and returns only a ref
   const [key, bytes] = [...f.objects.entries()][0];
   assert.equal(key, `touchline-club-owner-avatars/${actor}/${version}/${createHash("sha256").update(bytes).digest("hex")}.webp`);
   assert.ok(!f.boundaries.some(name => /notification|rehearsal|consent/.test(name)));
+});
+
+test("explicit customers POST publishes each authenticated customer through its own immutable path and RPC actor", async () => {
+  for (const customer of [actor, other]) {
+    const f = fixture({ ...uploadSettings, TOUCHLINE_CLUB_OWNER_AVATAR_AUDIENCE: "customers",
+      TOUCHLINE_CLUB_OWNER_AVATAR_UPLOAD_ACCOUNT_ID: customer === actor ? undefined : actor });
+    f.state.id = customer;
+    const response = await post(f, uploadRequest({ "x-touchline-expected-account": customer }).request);
+    assert.equal(response.status, 200, JSON.stringify(f.boundaries)); privateHeaders(response);
+    assert.equal((await response.json()).accountId, customer);
+    assert.equal(f.calls.filter(call => call === "getUser").length, 1);
+    assert.deepEqual(f.rpcInputs.map(input => input.rpc), ["touchline_begin_club_owner_avatar_operation", "touchline_read_club_owner_avatar", "touchline_publish_club_owner_avatar_v2"]);
+    assert.ok(f.rpcInputs.every(input => input.p_actor === customer));
+    assert.equal(f.objects.size, 1); assert.ok([...f.objects.keys()][0].startsWith(`touchline-club-owner-avatars/${customer}/${version}/`));
+    assert.equal(f.receipt()?.actorId, customer);
+  }
+});
+
+test("customers POST still denies admin, missing access and divergent authenticated accounts before privileged/image work", async () => {
+  for (const mode of ["other", "admin", "no-access", "user-metadata"] as const) {
+    const f = fixture({ ...uploadSettings, TOUCHLINE_CLUB_OWNER_AVATAR_AUDIENCE: "customers" }), input = uploadRequest();
+    if (mode === "other") f.state.id = other;
+    if (mode === "admin") f.state.email = "admin@example.invalid";
+    if (mode === "no-access") f.state.access = false;
+    if (mode === "user-metadata") f.state.userMetadataOnly = true;
+    const response = await post(f, input.request); assert.equal(response.status, mode === "other" ? 409 : 403);
+    assert.equal(f.calls.filter(call => call === "getUser").length, 1); assert.ok(!f.calls.includes("privileged"));
+    assert.equal(input.bodyReads(), 0); assert.equal(f.nativeCalls(), 0); assert.equal(f.objects.size, 0); assert.deepEqual(f.rpcInputs, []);
+  }
+});
+
+test("audience never bypasses exact flags, QA/owner configuration or invalid mode/account rejection", async () => {
+  const patches: Record<string, string | undefined>[] = [
+    ...["", "all", "CUSTOMERS", " customers "].map(value => ({ TOUCHLINE_CLUB_OWNER_AVATAR_AUDIENCE: value })),
+    ...["", "bad", ` ${actor}`].map(value => ({ TOUCHLINE_CLUB_OWNER_AVATAR_UPLOAD_ACCOUNT_ID: value })),
+    ...["READ_ENABLED", "UPLOAD_ENABLED", "SELECTION_ENABLED", "RETENTION_READY"].map(suffix => ({ [`TOUCHLINE_CLUB_OWNER_AVATAR_${suffix}`]: "false" })),
+    { VERCEL_ENV: "production" }, { VERCEL_GIT_COMMIT_REF: "main" }, { TOUCHLINE_OWNER_EMAILS: "" },
+    { NEXT_PUBLIC_TOUCHLINE_CLUB_OWNER_AVATAR_AUDIENCE: "customers" },
+  ];
+  for (const patch of patches) {
+    const f = fixture({ ...uploadSettings, TOUCHLINE_CLUB_OWNER_AVATAR_AUDIENCE: "customers", ...patch }), input = uploadRequest();
+    assert.equal((await post(f, input.request)).status, 503); assert.deepEqual(f.calls, []);
+    assert.equal(input.bodyReads(), 0); assert.equal(f.nativeCalls(), 0); assert.deepEqual(f.rpcInputs, []);
+  }
+  const f = fixture({ ...uploadSettings, TOUCHLINE_CLUB_OWNER_AVATAR_AUDIENCE: "customers" }), input = uploadRequest({}, "https://foreign.invalid");
+  assert.equal((await post(f, input.request)).status, 503); assert.deepEqual(f.calls, []); assert.equal(input.bodyReads(), 0);
+});
+
+test("audience drift during getUser cannot authorize a later privileged operation", async () => {
+  const f = fixture({ ...uploadSettings, TOUCHLINE_CLUB_OWNER_AVATAR_AUDIENCE: "customers" }, performance, (name, environment) => {
+    if (name === "auth") environment.TOUCHLINE_CLUB_OWNER_AVATAR_AUDIENCE = undefined;
+  });
+  const input = uploadRequest(); assert.equal((await post(f, input.request)).status, 503);
+  assert.equal(f.calls.filter(call => call === "getUser").length, 1); assert.ok(!f.calls.includes("privileged"));
+  assert.equal(input.bodyReads(), 0); assert.equal(f.nativeCalls(), 0); assert.deepEqual(f.rpcInputs, []);
 });
 test("prepared POST snapshot hook blocks continuation after cookies, auth, native, RPC and Storage drift", async () => {
   const stages = ["cookies", "auth", "touchline_begin_club_owner_avatar_operation", "native", "touchline_read_club_owner_avatar", "bucket", "storage:POST", "storage:GET", "touchline_publish_club_owner_avatar_v2"];

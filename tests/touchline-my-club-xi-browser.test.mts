@@ -1681,3 +1681,31 @@ test("real My Club XI DOM: replace, focus, explicit save and readback", { skip: 
     } finally { await browser.close(); }
   }
 });
+
+
+test("compact market clock remains visible with completed setup and before squad symbols", {
+  skip: process.env.TOUCHLINE_RUN_MARKET_CLOCK_BROWSER !== "1", timeout: 120_000,
+}, async () => {
+  const bundle = bundleProduct();
+  for (const engine of [chromium, webkit]) {
+    const browser = await engine.launch({headless:true});
+    try {
+      const h = await openFixture(browser,bundle,modes[0]);
+      try {
+        for (const width of [1280,844]) {
+          await h.page.setViewportSize({width,height:844});
+          const status = h.page.locator('[data-market-status-compact="true"]');
+          await expect(status).toBeVisible();
+          await expect(status.locator('[data-market-clock-phase="closing"]')).toBeVisible();
+          await expect(status.locator('i svg')).toBeVisible();
+          const statusBox=await status.boundingBox(), pitchBox=await h.pitch.boundingBox();
+          assert.ok(statusBox && pitchBox && statusBox.y+statusBox.height<=pitchBox.y,'clock precedes squad');
+          assert.equal(await status.evaluate(e=>e.scrollWidth>e.clientWidth+1),false);
+          await h.page.screenshot({path:`/private/tmp/touchline-market-clock-${engine.name()}-${width}-20261030.png`,fullPage:true});
+        }
+        assert.equal(h.writes.length,0);
+        await h.assertClean();
+      } finally {await h.close();}
+    } finally {await browser.close();}
+  }
+});

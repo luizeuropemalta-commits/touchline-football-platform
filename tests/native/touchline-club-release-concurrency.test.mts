@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { clubRoundDatabase } from "../helpers/club-round-database.mts";
+import { installTestClubSeasonCalendar } from "../helpers/club-season-calendar.mts";
 import type { ClubAcquisitionState } from "../../lib/touchlineFantasy/club-acquisition.ts";
 
 const runtime=process.env.TOUCHLINE_QUOTA_NATIVE_RUNTIME;
@@ -47,6 +48,7 @@ test("native release serializes concurrent requests and commits exactly one 90 p
     // Same disposable-only target guard as the isolated atomic-release suite.
     await admin.exec(`create function touchline_assert_qa_fixture_target(text) returns void language plpgsql as $$begin
       if $1<>'xgxbwqxjssxxuihuwmgy' then raise exception 'WRONG_TARGET';end if;end;$$;`);
+    await installTestClubSeasonCalendar(admin,id(3),id(2));
     await admin.exec(readFileSync(new URL("../../supabase/qa/club_market_test_opening.sql",import.meta.url),"utf8"));
     await admin.exec("update touchline_qa_club_market_control set enabled=true");
     await first.exec("set role service_role");

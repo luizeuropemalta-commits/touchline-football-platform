@@ -148,3 +148,23 @@ test("real directory search submits a literal bounded query and handles empty an
   const failed = submit(form()); h.pending[1].resolve(Response.json({ error: "PRIVATE_DETAIL" }, { status: 503 })); await failed;
   const html = renderToStaticMarkup(h.render()); assert.ok(html.includes(copy.error)); assert.ok(!html.includes(copy.empty)); assert.ok(!html.includes("PRIVATE_DETAIL")); h.unmount();
 });
+
+test("real photo consent is separate, initially unchecked and cleared when hiding; unknown writes require a read", async () => {
+  const copy = contract.peopleCopy("en-GB"), h = harness(directoryFile, { locale: "en-GB", enabled: true, photoSharingEnabled: true, initialOwn: { status: 200, profile: null } });
+  const checkbox = (label: string) => h.select(node => node.type === "label" && Array.isArray(node.props.children) && node.props.children.includes(label));
+  const input = (label: string) => nodes(checkbox(label)).find(node => node.type === "input")!;
+  assert.equal(input(copy.consent).props.checked, false); assert.equal(input(copy.photoConsent).props.checked, false); assert.equal(input(copy.photoConsent).props.disabled, true);
+  h.change("people-name", "Customer");
+  (input(copy.consent).props.onChange as (event: unknown) => void)({ target: { checked: true } });
+  (input(copy.photoConsent).props.onChange as (event: unknown) => void)({ target: { checked: true } });
+  const form = () => h.select(node => node.type === "form" && nodes(node.props.children as React.ReactNode).some(child => child.props.id === "people-name"));
+  const work = submit(form()); await submit(form()); assert.equal(h.pending.length, 1);
+  assert.deepEqual(JSON.parse(String(h.pending[0].init.body)), { displayName: "Customer", published: true, photoPublished: true });
+  h.pending[0].resolve(Response.json({ error: "unavailable" }, { status: 503 })); await work;
+  assert.equal(h.button(copy.save).props.disabled, true); await submit(form()); assert.equal(h.pending.length, 1);
+  const refreshed = click(h.button(copy.retry));
+  h.pending[1].resolve(Response.json({ profile: { publicId: id, displayName: "Customer", published: true, photoPublished: true, followerCount: 1 }, photoSharingAllowed: true })); await refreshed;
+  (input(copy.consent).props.onChange as (event: unknown) => void)({ target: { checked: false } }); assert.equal(input(copy.photoConsent).props.checked, false);
+  const hidden = submit(form()); assert.deepEqual(JSON.parse(String(h.pending[2].init.body)), { displayName: "Customer", published: false, photoPublished: false });
+  h.pending[2].resolve(Response.json({ profile: { publicId: id, displayName: "Customer", published: false, photoPublished: false, followerCount: 1 } })); await hidden; h.unmount();
+});

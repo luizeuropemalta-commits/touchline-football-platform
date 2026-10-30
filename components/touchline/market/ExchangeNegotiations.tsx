@@ -1,7 +1,8 @@
 "use client";
 import {readExchangeCommandJournal,writeExchangeCommandJournal,clearExchangeCommandJournal} from '@/lib/touchlineFantasy/exchange-command-journal';
-import {getExchangeNegotiationCopy,getExchangeProposalStatus,getExchangeBalancePreviewLabel,getExchangeRecoveryLabel} from '@/lib/touchlineFantasy/exchange-negotiations-i18n';
+import {getExchangeNegotiationCopy,getExchangeProposalStatus,getExchangeBalancePreviewLabel,getExchangeRecoveryLabel,getExchangePlanLockLabel,getExchangePlanLockActions} from '@/lib/touchlineFantasy/exchange-negotiations-i18n';
 import {projectExchangeReadiness} from '@/lib/touchlineFantasy/exchange-eligibility';
+import {LockKeyhole} from 'lucide-react';
 import {useEffect,useRef,useState} from 'react';
 import {readExchangeDiscovery,type ExchangeDiscovery,type ExchangeOffer,type ExchangeProposal} from '@/lib/touchlineFantasy/exchange-discovery';
 import {prepareExchangeCommand,submitExchangeCommand,type ExchangeCommand,type ExchangeCommandEnvelope} from '@/lib/touchlineFantasy/exchange-command-client';
@@ -14,11 +15,12 @@ import styles from './ClubOwnerExchangeHub.module.css';
 // The session journal restores uncertain commands after reload without resubmission.
 const uncertain=new Map<string,ExchangeCommandEnvelope>();
 
-type Props={locale:string;state:ClubAcquisitionState|null;ready:boolean;accountId?:string;catalogue:readonly ClubOwnerSquadCard[];onCommitted?:()=>void};
+type Props={locale:string;state:ClubAcquisitionState|null;ready:boolean;accountId?:string;catalogue:readonly ClubOwnerSquadCard[];onCommitted?:()=>void;onExplorePlans?:()=>void};
 function clearJournal(accountId:string,seasonId:string){try{clearExchangeCommandJournal(window.sessionStorage,accountId,seasonId);}catch{/* Keep persisted identity if storage becomes unavailable. */}}
 type Confirmation={command:ExchangeCommand;incoming:ExchangeOffer;outgoing:ExchangeOffer;fee:number;bonus:number;difference:number};
-export default function ExchangeNegotiations({locale,state,ready,accountId,catalogue,onCommitted}:Props){
+export default function ExchangeNegotiations({locale,state,ready,accountId,catalogue,onCommitted,onExplorePlans}:Props){
  const text=getExchangeNegotiationCopy(locale);
+ const lockActions=getExchangePlanLockActions(locale);
  const key=JSON.stringify([accountId,state?.seasonId]);
  const scopeKey=JSON.stringify([accountId,state?.seasonId,state?.revision,ready]);
  const alive=useRef(true),sending=useRef(false),controllers=useRef(new Set<AbortController>());
@@ -66,12 +68,18 @@ export default function ExchangeNegotiations({locale,state,ready,accountId,catal
   const matches=catalogue.filter(c=>c.canonicalPlayerId===offer.playerId&&c.editorialCard);const art=matches.length===1?matches[0]:null;
   return <section className={styles.receiptCard}><h4>{label}</h4><div className={styles.cardArtwork}>{art?<TouchlineGameweekCard card={art} locale={locale} compact fitContainer imageLoading="lazy"/>:null}</div><h5>{offer.name}</h5><strong>{amount(offer.valueTc)}</strong></section>;
  };
- function review(p:ExchangeProposal){setConfirmation({command:{action:'accept',proposalId:p.proposalId},incoming:p.outgoing,outgoing:p.incoming,fee:0,bonus:p.quote.bonusTc,difference:-p.quote.compensationTc});}
+ function review(p:ExchangeProposal){if(!p.negotiationAllowed||locked)return;setConfirmation({command:{action:'accept',proposalId:p.proposalId},incoming:p.outgoing,outgoing:p.incoming,fee:0,bonus:p.quote.bonusTc,difference:-p.quote.compensationTc});}
  function propose(owner:string,revision:number,incoming:ExchangeOffer){
   const own=data?.listings.find(l=>l.owner.accountId===accountId&&l.player.playerId===selected);
-  if(!own||!state||locked)return;
+  if(!own||!state||locked||!data?.listings.some(l=>l.owner.accountId===owner&&l.player.playerId===incoming.playerId&&l.negotiationAllowed))return;
   try{const q=quoteClubExchange(own.player.valueTc,incoming.valueTc,state.plan);setConfirmation({command:{action:'propose',proposalId:crypto.randomUUID(),otherAccountId:owner,outgoingPlayerId:own.player.playerId,incomingPlayerId:incoming.playerId,expectedRevision:state.revision,otherExpectedRevision:revision},incoming,outgoing:own.player,fee:q.fee,bonus:q.bonus,difference:q.compensation});}catch{setMessage(text.failed);}
  }
+ // Do not infer a plan problem from unavailable or stale discovery data.
+ const restrictedAction=(reason:unknown)=>reason==='beta-pair'
+  ? state?.plan==='beta'&&onExplorePlans
+   ? <button type="button" className={controls.link} title={getExchangePlanLockLabel(locale)} aria-haspopup="dialog" disabled={locked} onClick={event=>{if(!locked){event.currentTarget.focus({preventScroll:true});onExplorePlans();}}}><LockKeyhole size={16} aria-hidden="true"/>{lockActions.unlock}</button>
+   : <button type="button" className={controls.link} title={getExchangePlanLockLabel(locale)} disabled><LockKeyhole size={16} aria-hidden="true"/>{lockActions.restricted}</button>
+  : <button type="button" className={controls.link} disabled>{lockActions.unavailable}</button>;
  if(!allowed)return <p role="status">{text.error}</p>;
  return <>
   <div role="status">{message|| (remote===null?text.loading:!data?text.error:'')}</div>
@@ -87,9 +95,9 @@ export default function ExchangeNegotiations({locale,state,ready,accountId,catal
     return <li key={p.playerId}><span>{label??'—'}{reserved?` · ${text.reserved}`:''}</span><button type="button" className={controls.link} disabled={locked||reserved||!label} onClick={()=>void send({action:listed?'unlist':'list',playerId:p.playerId})}>{listed?text.unlist:text.list}</button></li>;
    })}</ul></section>
    <section className={styles.section}><h3>{text.market}</h3><label>{text.choose}<select className={styles.negotiationSelect} value={selected} disabled={locked} onChange={e=>setSelected(e.target.value)}><option value="">—</option>{data.listings.filter(l=>l.owner.accountId===accountId&&!data.reservations.some(r=>r.playerId===l.player.playerId)).map(l=><option key={l.player.playerId} value={l.player.playerId}>{l.player.name}</option>)}</select></label>
-    <ul className={styles.history}>{data.listings.filter(l=>l.owner.accountId!==accountId).map(l=><li key={`${l.owner.accountId}:${l.player.playerId}`}><span>{l.player.name} · {l.owner.name} · {amount(l.player.valueTc)}</span><button type="button" className={controls.link} disabled={locked||!selected} onClick={()=>propose(l.owner.accountId,l.collectionRevision,l.player)}>{text.propose}</button></li>)}</ul>{!data.listings.some(l=>l.owner.accountId!==accountId)?<p>{text.empty}</p>:null}
+    <ul className={styles.history}>{data.listings.filter(l=>l.owner.accountId!==accountId).map(l=><li key={`${l.owner.accountId}:${l.player.playerId}`}><span>{l.player.name} · {l.owner.name} · {amount(l.player.valueTc)}</span>{l.negotiationAllowed?<button type="button" className={controls.link} disabled={locked||!selected} onClick={()=>propose(l.owner.accountId,l.collectionRevision,l.player)}>{text.propose}</button>:restrictedAction(l.restrictionReason)}</li>)}</ul>{!data.listings.some(l=>l.owner.accountId!==accountId)?<p>{text.empty}</p>:null}
    </section>
-   <section className={styles.section}><h3>{text.inbox}</h3><ul className={styles.history}>{data.proposals.map(p=><li key={p.proposalId}><span>{p.proposer.accountId===accountId?text.sent:text.received} · {p.outgoing.name} ↔ {p.incoming.name} · {getExchangeProposalStatus(locale,p.status)}</span>{p.status==='pending'?(p.accepter.accountId===accountId?<><button className={controls.link} disabled={locked} onClick={()=>review(p)}>{text.accept}</button><button className={controls.link} disabled={locked} onClick={()=>void send({action:'decline',proposalId:p.proposalId})}>{text.decline}</button></>:<button className={controls.link} disabled={locked} onClick={()=>void send({action:'cancel',proposalId:p.proposalId})}>{text.cancel}</button>):null}</li>)}</ul>{!data.proposals.length?<p>{text.none}</p>:null}</section>
+   <section className={styles.section}><h3>{text.inbox}</h3><ul className={styles.history}>{data.proposals.map(p=><li key={p.proposalId}><span>{p.proposer.accountId===accountId?text.sent:text.received} · {p.outgoing.name} ↔ {p.incoming.name} · {getExchangeProposalStatus(locale,p.status)}</span>{p.status==='pending'?(p.accepter.accountId===accountId?<>{p.negotiationAllowed?<button type="button" className={controls.link} disabled={locked} onClick={()=>review(p)}>{text.accept}</button>:restrictedAction(p.restrictionReason)}<button className={controls.link} disabled={locked} onClick={()=>void send({action:'decline',proposalId:p.proposalId})}>{text.decline}</button></>:<button className={controls.link} disabled={locked} onClick={()=>void send({action:'cancel',proposalId:p.proposalId})}>{text.cancel}</button>):null}</li>)}</ul>{!data.proposals.length?<p>{text.none}</p>:null}</section>
   </>:null}
  </>;
 }

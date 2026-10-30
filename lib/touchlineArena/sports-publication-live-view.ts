@@ -1,3 +1,4 @@
+import { parseTouchlineFixtureTimestamp } from "./fixture-timestamp.ts";
 import type { TouchlinePublicFixture } from "../football-data/public-fixture";
 import type { TouchlinePresentationRead } from "./live-presentation-client-store";
 import { touchlinePublicFixtureIdentity, touchlineFixtureState, type TouchlineLiveReadMetadata } from "./match-centre.ts";
@@ -14,6 +15,7 @@ export function projectTouchlinePublishedLive(
   now: number,
   admissionScope: TouchlineLiveAdmissionScope | null = null,
   focusedProviderId: string | null = null,
+  updateSameFixtureKickoff = false,
 ) {
   const publication = read?.sportsPublication;
   const freshness = read?.state.liveFreshness;
@@ -42,7 +44,13 @@ export function projectTouchlinePublishedLive(
     // The server owns which round/fixtures are on this page. A wider live
     // window must not introduce a new round, erase its stadium or move focus.
     // Explicit undefined clears withdrawn live facts instead of retaining them.
-    return { ...fixture, ...(scope ? { startsAt: next.startsAt ?? fixture.startsAt, roundId: next.roundId ?? fixture.roundId, roundName: next.roundName ?? fixture.roundName } : {}), status: next.status, homeScore: next.homeScore, awayScore: next.awayScore,
+    // A next-match card may accept a rescheduled kickoff without opting into
+    // carousel admission. Keep the fixture, teams, round and venue unchanged.
+    const correctedKickoff = updateSameFixtureKickoff && fixture.competitionId && fixture.seasonId
+      && next.competitionId === fixture.competitionId && next.seasonId === fixture.seasonId
+      && parseTouchlineFixtureTimestamp(next.startsAt) !== null
+      ? { startsAt: next.startsAt } : {};
+    return { ...fixture, ...correctedKickoff, ...(scope ? { startsAt: next.startsAt ?? fixture.startsAt, roundId: next.roundId ?? fixture.roundId, roundName: next.roundName ?? fixture.roundName } : {}), status: next.status, homeScore: next.homeScore, awayScore: next.awayScore,
       providerStateId: next.providerStateId, liveMinute: next.liveMinute, liveSecond: next.liveSecond,
       livePeriod: next.livePeriod, eventsCount: next.eventsCount, providerUpdatedAt: next.providerUpdatedAt,
       verifiedAt: next.verifiedAt };

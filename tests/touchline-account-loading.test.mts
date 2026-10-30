@@ -158,13 +158,13 @@ test("actual ClubOwner shell keeps its header while content leadership suspends"
   }
 });
 
-test("fallback renders one accessible status and decorative skeletons without fictional account data", () => {
+test("fallback renders accessible status without fake cards or pitch", () => {
   const html = renderLoading();
   assert.equal((html.match(/<main /g) ?? []).length, 1);
   assert.match(html, /aria-busy="true"/);
   assert.equal((html.match(/role="status"/g) ?? []).length, 1);
   assert.match(html, /aria-live="polite" aria-atomic="true"/);
-  assert.equal((html.match(/aria-hidden="true"/g) ?? []).length, 3);
+  assert.doesNotMatch(html, /class="(?:header|cards|pitch)"|aria-hidden="true"/);
   assert.doesNotMatch(html, /<button|<a |<img|0\.00|Haaland|Luiz|€|\$/);
 });
 
@@ -181,11 +181,11 @@ test("all eight messages are available before hydration and CSS follows the docu
   assert.match(css, /html:is\([^)]+\)\) \.statusText\[lang="en-GB"\]\s*\{ display:none/);
 });
 
-test("placeholder layout stays static and reserves safe areas with shrinkable cards", () => {
+test("loading status stays static and respects safe areas", () => {
   assert.doesNotMatch(css, /animation:|@keyframes|transition:/);
   for (const side of ["top", "right", "bottom", "left"]) assert.ok(css.includes(`env(safe-area-inset-${side})`));
   assert.match(css, /box-sizing:border-box/);
-  assert.match(css, /grid-template-columns:repeat\(5,minmax\(0,64px\)\)/);
+  assert.doesNotMatch(css, /\.cards|\.pitch|\.header/);
   assert.match(css, /min-height:100vh; min-height:100dvh/);
 });
 

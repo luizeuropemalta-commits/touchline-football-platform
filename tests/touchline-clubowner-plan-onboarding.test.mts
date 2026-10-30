@@ -39,6 +39,7 @@ function fixture(initial: Partial<ClubOwnerPlanOnboardingProps> = {}, checkoutRe
   runInNewContext(compiled, { exports, document, HTMLElement: FakeElement, AbortController, window: { setTimeout, clearTimeout, location: { assign: (url: string) => redirects.push(url) } }, require(name: string) {
     if (name === "react") return react;
     if (name === "react/jsx-runtime") return runtime;
+    if (name === "./a11y/TouchlineDialog") return { useTouchlineDialog: () => { const ref=react.useRef(null); return {dialogRef:ref,dialogProps:{ref,"data-touchline-dialog-root":"true"}}; } };
     if (name === "lucide-react") return new Proxy({}, { get: () => "svg" });
     if (name.includes("club-season-checkout-client")) return { ...checkoutClient, requestClubSeasonCheckout: checkoutRequest };
     if (name.includes("catalogue-locale")) return catalogue;
@@ -48,7 +49,7 @@ function fixture(initial: Partial<ClubOwnerPlanOnboardingProps> = {}, checkoutRe
     if (name.endsWith(".module.css")) return { default: new Proxy({}, { get: (_target, key) => String(key) }) };
     throw new Error(name);
   } });
-  const dialogNode = { open: true, matches: () => modal, close() { this.open = false; modal = false; }, showModal() { this.open = true; modal = true; shows++; }, scrollTo() {} };
+  const dialogNode = { open: true, contains: () => false, matches: () => modal, close() { this.open = false; modal = false; }, showModal() { this.open = true; modal = true; shows++; }, scrollTo() {} };
   function render() {
     cursor = 0; tree = exports.default!(props);
     while (React.isValidElement(tree) && typeof tree.type === "function") tree = (tree.type as (p: unknown) => React.ReactNode)(tree.props);
@@ -106,7 +107,7 @@ test("benefits remain in the same dialog; back restores focus; hiring stays unav
   const view = fixture(); view.click("Ver benefícios: VIP");
   assert.match(view.html(), /35 jogadores \+ 1 treinador/);
   assert.doesNotMatch(view.html(), /Elenco Beta previsto/);
-  assert.match(view.html(), /regras previstas, ainda indisponíveis/);
+  assert.match(view.html(), /Rescisão: multa de 10% do valor original pago; retorno de 90%/);
   assert.equal((view.html().match(/<dialog/g) ?? []).length, 1);
   assert.match(view.html(), /data-plan-detail="vip"/);
   assert.match(view.html(), /Jogadores no elenco/); assert.match(view.html(), />35<|>3</);
@@ -122,13 +123,14 @@ test("benefits remain in the same dialog; back restores focus; hiring stays unav
 test("Beta exploration never invokes legacy selection or hiring callbacks", () => {
   const view = fixture(); view.click("Ver benefícios: Beta"); assert.deepEqual(view.selections, []);
   assert.match(view.html(), /100M TC compartilhados entre 35 jogadores e 1 treinador/);
-  assert.match(view.html(), /Treinador inicial Ruby: 5M TC; saldo restante: 95M TC/);
+  assert.match(view.html(), /Escolha o treinador conforme seu saldo/);
+  assert.doesNotMatch(view.html(), /Treinador inicial Ruby|95M TC/);
   assert.doesNotMatch(view.html(), /Jogadores e treinador usam o mesmo saldo/);
   assert.match(view.html(), /100M TC/); assert.doesNotMatch(view.html(), /Pagamento indisponível/);
   view.click("Contratar plano"); view.click("Contratar plano"); assert.deepEqual(view.selections, []);
   view.update({ selecting: true }); assert.equal(view.button("Contratar plano").props.disabled, true);
   view.update({ selecting: false, onSelect: undefined, selectionError: true }); assert.equal(view.button("Contratar plano").props.disabled, true);
-  assert.match(view.html(), /pagamento ainda não conectado/);
+  assert.match(view.html(), /Este plano não está disponível para contratação na sua conta neste momento/);
 });
 
 test("current badge follows received entitlement only, never explored offer", () => {

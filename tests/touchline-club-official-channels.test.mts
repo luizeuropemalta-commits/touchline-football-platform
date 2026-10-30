@@ -20,6 +20,7 @@ test("official ClubHub channel allow-list uses HTTPS and never falls back for an
   }
 
   assert.deepEqual(getTouchlineOfficialClubChannels("not-verified"), {});
+  assert.equal(Object.values(TOUCHLINE_OFFICIAL_CLUB_CHANNELS).filter(channels => channels.tickets).length, 20);
   assert.equal(getTouchlineOfficialClubChannels("hull-city").tickets?.url, "https://www.wearehullcity.co.uk/tickets/");
   assert.equal(getTouchlineOfficialClubChannels("hull-city").store?.url, "https://www.tigerleisure.com/");
   assert.equal(getTouchlineOfficialClubChannels("coventry-city").membership?.url, "https://www.ccfc.co.uk/memberships");

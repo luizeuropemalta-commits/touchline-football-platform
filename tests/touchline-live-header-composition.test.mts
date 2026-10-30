@@ -117,9 +117,10 @@ test("actual Live JSX uses canonical Logo interface and real nav/controls with o
 
 test("compact lineup reuses shared button family while retaining touch/focus/destination guards", () => {
   assert.match(source, /className=\{`\$\{sharedControls\.link\} \$\{styles\.homeLineupLink\}`\} href=\{link\.href\}/);
-  assert.match(source, /return available && club/);
-  assert.match(source, /verifiedDetail\?\.lineups\.some/);
-  assert.match(source, /\[selected\.homeTeam, selected\.awayTeam\]/);
+  assert.match(source, /touchlineLiveClubLineupLinks\(selected, TOUCHLINE_ENGLAND_CLUBS, language\)/);
+  assert.doesNotMatch(source, /verifiedDetail\?\.lineups\.some/);
+  assert.match(source, /\{lineupLink\(0\)\}/);
+  assert.match(source, /\{lineupLink\(1\)\}/);
   assert.match(css, /\.homeLineupLink\s*\{[^}]*min-height:\s*44px/);
   assert.match(css, /\.homeLineupLink:focus-visible/);
   assert.ok(!css.includes(".toolbarNavigation"), "Live must not override shared navigation button dimensions");

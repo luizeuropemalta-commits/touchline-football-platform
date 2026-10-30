@@ -23,7 +23,7 @@ function rounds(phase: 'closing' | 'opening' | 'awaiting-final' | 'syncing', sec
 // Actual clock function + JSX, with only React lifecycle/time controlled. The
 // real canonical resolver and London formatter are used; no window algorithm
 // or rendering implementation is copied into the fixture.
-function renderClock(input: { locale: string; gameweeks?: Gameweeks; nowMs?: number | null; marketStatus?: string; bindings?: object; hideAwaitingFinalHeading?: boolean; draftLocalesEnabled?: boolean }) {
+function renderClock(input: { locale: string; gameweeks?: Gameweeks; nowMs?: number | null; marketStatus?: string; qaOverride?: string; bindings?: object; hideAwaitingFinalHeading?: boolean; draftLocalesEnabled?: boolean }) {
   const source = readFileSync(new URL('../app/fantasy/FantasyGameweekClient.tsx', import.meta.url), 'utf8');
   const ast = ts.createSourceFile('Fantasy.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
   const declarations = ast.statements.filter(node => ts.isFunctionDeclaration(node) && ['MarketWindowClock', 'countdownUnit'].includes(node.name?.text ?? ''));
@@ -45,7 +45,7 @@ function renderClock(input: { locale: string; gameweeks?: Gameweeks; nowMs?: num
     Date: class ClockDate extends Date { static now() { return now; } },
     window: { setInterval(_callback: () => void, delay: number) { intervals.push(delay); return 7; }, clearInterval(id: number) { cleared.push(id); } },
   });
-  const html = renderToStaticMarkup(exports.MarketWindowClock!({ locale: input.locale, gameweeks: input.gameweeks ?? [], marketStatus: input.marketStatus, hideAwaitingFinalHeading: input.hideAwaitingFinalHeading, draftLocalesEnabled: input.draftLocalesEnabled }));
+  const html = renderToStaticMarkup(exports.MarketWindowClock!({ locale: input.locale, gameweeks: input.gameweeks ?? [], marketStatus: input.marketStatus, qaOverride: input.qaOverride, hideAwaitingFinalHeading: input.hideAwaitingFinalHeading, draftLocalesEnabled: input.draftLocalesEnabled }));
   for (const effect of effects) effect()();
   assert.deepEqual(intervals, [1000]); assert.deepEqual(cleared, [7]); assert.deepEqual(ticks, [now]);
   return html;
@@ -191,4 +191,16 @@ test('real consumer reads catalogue text while preserving supplied market status
     const html = renderClock({ locale: 'pt-BR', gameweeks: rounds(phase, 90000), bindings });
     assert.match(html, /copy:/); assert.doesNotMatch(html, /Mercado|Market Open|Market Closed|Sincronizando|Último apito/);
   }
+});
+
+
+test('QA override stays separate from the official schedule and never invents a reopening', async () => {
+  const bindings = await load();
+  for (const phase of ['closing', 'awaiting-final', 'syncing'] as const) {
+    const html = renderClock({locale:'pt-BR', gameweeks:rounds(phase), bindings, qaOverride:'Mercado aberto para testes'});
+    assert.match(html, /data-market-test-override="true">Mercado aberto para testes/);
+    assert.ok(html.includes(`data-market-clock-phase="${phase}"`));
+    if (phase !== 'closing') assert.doesNotMatch(html, /clockDigits|<time/);
+  }
+  assert.doesNotMatch(renderClock({locale:'pt-BR',gameweeks:rounds('closing'),bindings}), /data-market-test-override/);
 });

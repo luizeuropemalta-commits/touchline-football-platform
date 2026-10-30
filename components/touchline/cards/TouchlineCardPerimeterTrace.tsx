@@ -75,10 +75,13 @@ export function TouchlineCardPerimeterTrace({
   variant = "player",
   frameUrl,
 }: Readonly<{ tier?: string | null; variant?: TouchlineCardPerimeterVariant; frameUrl?: string | null }>) {
-  const path = variant === "player"
+  const approvedArtwork = variant === "player"
     ? resolvePlayerCardArtPerimeterPath(frameUrl)
     : isPerimeterTier(tier) ? CARD_ART_PERIMETER_PATHS.coach[tier] : null;
-  if (!path) return null;
+  if (!approvedArtwork || !isPerimeterTier(tier)) return null;
+  // Restore the thin travelling geometric outline; artwork approval still
+  // gates visibility, so an unknown or failed frame never acquires a neon.
+  const path = touchlineCardPerimeterPath(tier, variant);
   const isCoach = variant === "coach";
   return (
     <svg

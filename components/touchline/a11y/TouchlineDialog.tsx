@@ -36,6 +36,8 @@ type TouchlineDialogOptions = {
   returnFocusRef?: RefObject<HTMLElement | null>;
   /** Safe page anchor when a live list removes the original trigger. */
   returnFocusFallbackRef?: RefObject<HTMLElement | null>;
+  /** Native dialogs in WebKit may skip buttons in platform Tab navigation. */
+  containEveryTab?: boolean;
 };
 
 type InertSnapshot = {
@@ -171,6 +173,7 @@ export function useTouchlineDialog<T extends HTMLElement = HTMLElement>({
   initialFocusRef,
   returnFocusRef,
   returnFocusFallbackRef,
+  containEveryTab = false,
 }: TouchlineDialogOptions) {
   const dialogRef = useRef<T | null>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
@@ -214,6 +217,15 @@ export function useTouchlineDialog<T extends HTMLElement = HTMLElement>({
     // Those anchors are inside the dialog but outside its sequential tab order.
     const activeIsTabStop = active instanceof HTMLElement && focusable.includes(active);
 
+    if (containEveryTab) {
+      event.preventDefault();
+      const index = activeIsTabStop ? focusable.indexOf(active as HTMLElement) : -1;
+      const next = index < 0 ? (event.shiftKey ? focusable.length - 1 : 0)
+        : (index + (event.shiftKey ? -1 : 1) + focusable.length) % focusable.length;
+      focusElement(focusable[next], false);
+      return;
+    }
+
     if (event.shiftKey && (active === first || !activeIsTabStop)) {
       event.preventDefault();
       // Keyboard traversal must reveal an offscreen control in a long dialog.
@@ -223,7 +235,7 @@ export function useTouchlineDialog<T extends HTMLElement = HTMLElement>({
       event.preventDefault();
       focusElement(first, false);
     }
-  }, []);
+  }, [containEveryTab]);
 
   useEffect(() => {
     if (!open) return;

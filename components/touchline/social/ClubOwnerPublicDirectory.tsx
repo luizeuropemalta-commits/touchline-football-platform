@@ -6,13 +6,16 @@ import { parseOwnPublicOwner, parsePublicOwners, peopleCopy, publicOwnerHref, pu
 import { PublicOwnersRequestError, usePublicOwnersRequest } from "./usePublicOwnersRequest";
 import controls from "../TouchlineGlobalNavigation.module.css";
 import styles from "./ClubOwnerPublic.module.css";
+import ClubOwnerPublicAvatar from "./ClubOwnerPublicAvatar";
 
-export default function ClubOwnerPublicDirectory({ locale, enabled, initialOwn }: { locale: PeopleLocale; enabled: boolean; initialOwn: { status: number; profile: OwnPublicOwner | null } }) {
+export default function ClubOwnerPublicDirectory({ locale, enabled, initialOwn, searchOnly = false, photoSharingEnabled = false }: { locale: PeopleLocale; enabled: boolean; searchOnly?: boolean; photoSharingEnabled?: boolean; initialOwn: { status: number; profile: OwnPublicOwner | null } }) {
   const copy = peopleCopy(locale), io = usePublicOwnersRequest();
   const [profile, setProfile] = useState(initialOwn.profile);
   const [ownStatus, setOwnStatus] = useState(initialOwn.status);
   const [name, setName] = useState(initialOwn.profile?.displayName ?? "");
   const [published, setPublished] = useState(initialOwn.profile?.published ?? false);
+  const [photoPublished, setPhotoPublished] = useState(initialOwn.profile?.photoPublished ?? false);
+  const [canSharePhoto, setCanSharePhoto] = useState(photoSharingEnabled);
   const [ownBusy, setOwnBusy] = useState(false), ownLock = useRef(false);
   const [notice, setNotice] = useState<"saved" | "invalid" | "writeError" | "error" | null>(null);
   const [query, setQuery] = useState("");
@@ -26,8 +29,9 @@ export default function ClubOwnerPublicDirectory({ locale, enabled, initialOwn }
     if (ownLock.current) return;
     ownLock.current = true; setOwnBusy(true);
     try {
-      const data = parseOwnPublicOwner((await io.request("/api/account/public-profile")).profile);
-      if (io.alive()) { setProfile(data); setName(data?.displayName ?? ""); setPublished(data?.published ?? false); setOwnStatus(200); setNotice(null); }
+      const response = await io.request("/api/account/public-profile"), data = parseOwnPublicOwner(response.profile);
+      if (io.alive()) { setProfile(data); setName(data?.displayName ?? ""); setPublished(data?.published ?? false); setPhotoPublished(data?.photoPublished ?? false);
+        setCanSharePhoto(response.photoSharingAllowed === true); setOwnStatus(200); setNotice(null); }
     } catch (error) {
       if (io.alive()) { setOwnStatus(error instanceof PublicOwnersRequestError ? error.status : 503); setNotice("error"); }
     } finally { ownLock.current = false; if (io.alive()) setOwnBusy(false); }
@@ -39,9 +43,10 @@ export default function ClubOwnerPublicDirectory({ locale, enabled, initialOwn }
     if (!publicOwnerName(displayName)) { setNotice("invalid"); return; }
     ownLock.current = true; setOwnBusy(true); setNotice(null);
     try {
-      const saved = parseOwnPublicOwner((await io.request("/api/account/public-profile", { displayName, published })).profile);
+      const saved = parseOwnPublicOwner((await io.request("/api/account/public-profile", { displayName, published,
+        ...(canSharePhoto ? { photoPublished: published && photoPublished } : {}) })).profile);
       if (!saved) throw new Error("MISSING_SAVED_PROFILE");
-      if (io.alive()) { setProfile(saved); setName(saved.displayName); setPublished(saved.published); setNotice("saved"); setResults(null); }
+      if (io.alive()) { setProfile(saved); setName(saved.displayName); setPublished(saved.published); setPhotoPublished(saved.photoPublished ?? false); setNotice("saved"); setResults(null); }
     } catch {
       if (io.alive()) setNotice("writeError");
     } finally { ownLock.current = false; if (io.alive()) setOwnBusy(false); }
@@ -58,7 +63,7 @@ export default function ClubOwnerPublicDirectory({ locale, enabled, initialOwn }
     finally { searchLock.current = false; if (io.alive()) setSearchBusy(false); }
   }
   if (!enabled) return <p role="status">{copy.unavailable}</p>;
-  return <div className={styles.sections}>
+  return <div className={searchOnly ? undefined : styles.sections} lang={locale}>
     <section aria-labelledby="people-search-heading" className={styles.panel}>
       <h2 id="people-search-heading">{copy.title}</h2><p>{copy.introduction}</p>
       <form onSubmit={search} className={styles.form}>
@@ -71,14 +76,15 @@ export default function ClubOwnerPublicDirectory({ locale, enabled, initialOwn }
       {results ? <div aria-live="polite" aria-busy={searchBusy}>
         <p>{searched}</p>
         {results.length === 0 ? <p>{copy.empty}</p> : <ul className={styles.results}>{results.map(result => <li key={result.publicId}>
+          <ClubOwnerPublicAvatar publicId={result.publicId} avatarUrl={result.avatarUrl} displayName={result.displayName} locale={locale} />
           <Link href={publicOwnerHref(result.publicId, locale)} className={controls.link}>{result.displayName}</Link>
           <small>{copy.id}: <span className={styles.id}>{result.publicId}</span></small>
         </li>)}</ul>}
         {results.length === 20 ? <small>{copy.limit}</small> : null}
       </div> : null}
     </section>
-    <section aria-labelledby="people-own-heading" className={styles.panel}>
-      <h2 id="people-own-heading">{copy.own}</h2><p>{copy.privacy}</p>
+    {!searchOnly ? <section aria-labelledby="people-own-heading" className={styles.panel}>
+      <h2 id="people-own-heading">{copy.own}</h2><p>{canSharePhoto ? copy.photoPrivacy : copy.privacy}</p>
       {ownStatus === 401 ? <Link className={controls.link} href={login}>{copy.login}</Link> : ownStatus === 403 ? <p role="status">{copy.forbidden}</p> : ownStatus !== 200 ? <>
         <p role="alert">{copy.error}</p><button className={controls.link} type="button" onClick={readOwn} disabled={ownBusy}>{copy.retry}</button>
       </> : <>
@@ -86,7 +92,8 @@ export default function ClubOwnerPublicDirectory({ locale, enabled, initialOwn }
           <label htmlFor="people-name">{copy.name}</label>
           <input id="people-name" value={name} minLength={2} maxLength={60} required autoComplete="off" disabled={ownBusy} onChange={event => setName(event.target.value)} aria-describedby="people-name-help" />
           <small id="people-name-help">{copy.nameHelp}</small>
-          <label className={styles.consent}><input type="checkbox" checked={published} disabled={ownBusy} onChange={event => setPublished(event.target.checked)} />{copy.consent}</label>
+          <label className={styles.consent}><input type="checkbox" checked={published} disabled={ownBusy} onChange={event => { setPublished(event.target.checked); if (!event.target.checked) setPhotoPublished(false); }} />{copy.consent}</label>
+          {canSharePhoto ? <label className={styles.consent}><input type="checkbox" checked={photoPublished} disabled={ownBusy || !published} onChange={event => setPhotoPublished(event.target.checked)} />{copy.photoConsent}</label> : null}
           <button className={controls.link} disabled={ownBusy || notice === "writeError"} type="submit">{ownBusy ? copy.saving : copy.save}</button>
         </form>
         {notice ? <p role={notice === "saved" ? "status" : "alert"}>{copy[notice]}</p> : null}
@@ -96,6 +103,6 @@ export default function ClubOwnerPublicDirectory({ locale, enabled, initialOwn }
           {profile.published ? <Link className={controls.link} href={publicOwnerHref(profile.publicId, locale)}>{copy.view}</Link> : null}
         </div> : null}
       </>}
-    </section>
+    </section> : null}
   </div>;
 }

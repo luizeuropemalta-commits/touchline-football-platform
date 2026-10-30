@@ -16,24 +16,24 @@ const load = () => import("../lib/touchlineArena/club-hub-lineup-i18n.ts");
 const locales = ["en-GB", "pt-BR", "es-ES", "it-IT", "fr-FR", "ar-SA", "tr-TR", "de-DE"] as const;
 const baseline = {
   "en-GB": {
-    confirmedTitle: "Line-up confirmed", previewTitle: "Squad Preview", unconfirmedTitle: "Line-up not yet confirmed",
+    confirmedTitle: "Line-up", previewTitle: "Squad Preview", unconfirmedTitle: "Line-up not yet confirmed",
     matchdayEyebrow: "Matchday line-up", previewNotice: "This preview can change until the official TouchLine line-up is confirmed.",
     lastXiTitle: "Last line-up", lastXiNotice: "Latest completed match recorded in TouchLine; newer games may be missing. Not the confirmed next line-up.", lastXiDateLabel: "Recorded match date:",
     illustrativeNotice: "Illustrative squad arrangement, not a prediction of the starting XI. Await the official team sheet for the match shown.",
-    matchupAria: "Match-up", matchupEyebrow: "MATCH-UP", awaitingConfirmation: "Awaiting confirmation",
+    matchupAria: "Match-up", matchupEyebrow: "MATCH-UP", lastGameEyebrow: "LAST GAME", awaitingConfirmation: "Awaiting confirmation",
     pitchAriaSuffix: "line-up pitch", emptyLineup: "No published TouchLine cards in this line-up.", positionLeadersAria: "Club leaders by position",
   },
   "pt-BR": {
-    confirmedTitle: "Escalação confirmada", previewTitle: "Prévia do elenco", unconfirmedTitle: "Escalação ainda não confirmada",
+    confirmedTitle: "Escalação", previewTitle: "Prévia do elenco", unconfirmedTitle: "Escalação ainda não confirmada",
     matchdayEyebrow: "Escalação da partida", previewNotice: "A prévia pode mudar até a escalação oficial TouchLine ser confirmada.",
     lastXiTitle: "Última escalação", lastXiNotice: "Última partida concluída registrada no TouchLine; jogos mais recentes podem faltar. Não confirma a próxima escalação.", lastXiDateLabel: "Data da partida registrada:",
     illustrativeNotice: "Distribuição ilustrativa do elenco, não uma previsão de titulares. Aguarde a escalação oficial da partida indicada.",
-    matchupAria: "Confronto da partida", matchupEyebrow: "CONFRONTO", awaitingConfirmation: "Aguardando confirmação",
+    matchupAria: "Confronto da partida", matchupEyebrow: "CONFRONTO", lastGameEyebrow: "ÚLTIMO JOGO", awaitingConfirmation: "Aguardando confirmação",
     pitchAriaSuffix: "campo de escalação", emptyLineup: "Nenhum card TouchLine publicado nesta escalação.", positionLeadersAria: "Líderes do clube por posição",
   },
 };
 
-test("exact fifteen keys across eight catalogues preserve EN/PT and protected TouchLine/XI", async () => {
+test("exact keys across eight catalogues preserve EN/PT and protected TouchLine/XI", async () => {
   const mod = await load();
   assert.deepEqual(Object.keys(mod.TOUCHLINE_CLUB_HUB_LINEUP_CATALOGUES), locales);
   for (const locale of locales) {
@@ -235,6 +235,8 @@ test("real SSR preserves EN/PT confirmed, T−24 preview, waiting, terminal and 
     const copy = baseline[locale];
     const scenarios = [
       { options: { confirmed: true }, title: copy.confirmedTitle, notice: null },
+      { options: { confirmed: true, fixtureStatus: "Live" }, title: copy.confirmedTitle, notice: null },
+      { options: { confirmed: true, fixtureStatus: "FT" }, title: copy.lastXiTitle, notice: null },
       { options: {}, title: copy.previewTitle, notice: copy.previewNotice },
       { options: { lastXi: true }, title: copy.lastXiTitle, notice: copy.lastXiNotice },
       { options: { kickoff: "2026-11-02T12:00:00.001Z" }, title: copy.unconfirmedTitle, notice: copy.illustrativeNotice },
@@ -245,7 +247,7 @@ test("real SSR preserves EN/PT confirmed, T−24 preview, waiting, terminal and 
       const html = view.render(locale, options); assert.ok(html.includes(`<h2>${title}</h2>`));
       assert.ok(html.includes(`aria-label="Club &lt;&amp;&gt; ${title}"`));
       if (notice) assert.ok(html.includes(notice.replaceAll("'", "&#x27;"))); else assert.doesNotMatch(html, /<p>/);
-      assert.ok(html.includes(`aria-label="${copy.matchupAria}"`)); assert.ok(html.includes(copy.matchupEyebrow));
+      assert.ok(html.includes(`aria-label="${copy.matchupAria}"`)); assert.ok(html.includes(options.fixtureStatus === "FT" ? copy.lastGameEyebrow : copy.matchupEyebrow));
       assert.ok(html.includes(`aria-label="Club &lt;&amp;&gt; ${copy.pitchAriaSuffix}"`));
       assert.ok(html.includes(`aria-label="${copy.positionLeadersAria}"`));
       assert.ok(html.includes(TOUCHLINE_FANTASY_MARKET_WORKFLOW_CATALOGUES[locale].formation));
@@ -273,11 +275,11 @@ test("all twelve real consumer bindings and shared formation use full locale, in
   const sentinel = Object.fromEntries(Object.keys(baseline["en-GB"]).map(key => [key, `copy:${key}`])) as Copy;
   const view = await consumer(locale => { calls.push(locale); return sentinel; }, locale => { formationCalls.push(locale); return { formation: "shared:formation" }; });
   for (const locale of locales) {
-    const html = [view.render(locale, { confirmed: true }), view.render(locale), view.render(locale, { lastXi: true, lastXiStartsAt: "2026-09-20T16:30:00Z" }), view.render(locale, { kickoff: "invalid", empty: true })].join("");
+    const html = [view.render(locale, { confirmed: true }), view.render(locale, { confirmed: true, fixtureStatus: "FT" }), view.render(locale), view.render(locale, { lastXi: true, lastXiStartsAt: "2026-09-20T16:30:00Z" }), view.render(locale, { kickoff: "invalid", empty: true })].join("");
     for (const text of Object.values(sentinel)) assert.ok(html.includes(text), text);
     assert.ok(html.includes("shared:formation"));
   }
-  assert.deepEqual(calls, locales.flatMap(locale => [locale, locale, locale, locale])); assert.deepEqual(formationCalls, calls);
+  assert.deepEqual(calls, locales.flatMap(locale => [locale, locale, locale, locale, locale])); assert.deepEqual(formationCalls, calls);
   for (const locale of locales) {
     const draftView = await consumer(() => mod.TOUCHLINE_CLUB_HUB_LINEUP_CATALOGUES[locale], () => TOUCHLINE_FANTASY_MARKET_WORKFLOW_CATALOGUES[locale]);
     const html = draftView.render(locale, { confirmed: true });

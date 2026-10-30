@@ -39,3 +39,7 @@
 @media(max-width:540px) { .cardPair { grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; } .receiptCard { padding:10px 6px; } .receiptCard strong { font-size:1rem; } .dialog { padding:max(18px,env(safe-area-inset-top)) max(18px,env(safe-area-inset-right)) max(18px,env(safe-area-inset-bottom)) max(18px,env(safe-area-inset-left)); } }
 .negotiationSelect { display:block; width:min(100%,520px); min-height:44px; margin-block:10px 18px; padding:10px 14px; border:1px solid color-mix(in srgb,var(--accent) 45%,transparent); border-radius:14px; color:#edf3ee; background:#0b1a13; font:inherit; }
 .negotiationSelect:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
+
+.peopleSearch { margin-block: 1rem; min-width: 0; }
+.peopleSearch > summary { cursor: pointer; padding-block: .75rem; color: inherit; font-weight: 600; min-height: 44px; }
+.peopleSearch > summary:focus-visible { outline: 2px solid currentColor; outline-offset: 4px; }

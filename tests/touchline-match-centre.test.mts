@@ -3,6 +3,8 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import { getTouchlineMatchCentreCopy } from "../lib/touchlineArena/match-centre-i18n.ts";
 import { touchlineDocumentDirection } from "../lib/touchlineArena/root-locale.ts";
+import { touchlineLiveClubLineupLinks } from "../lib/touchlineArena/live-club-lineup-links.ts";
+import { TOUCHLINE_ENGLAND_CLUBS } from "../lib/touchlineArena/demo-data.ts";
 
 import {
   hasTouchlineMatchCentreFixture,
@@ -329,7 +331,7 @@ test("Match Centre puts kickoff time in the top bar and localizes the live state
   assert.match(styles, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.statusPill \{ animation: none; \}/);
 });
 
-test("every canonical home hero exposes the same honest verified-lineup call to action", () => {
+test("both canonical hero clubs expose neutral fixture lineup navigation below their crests", () => {
   const source = readFileSync(
     new URL("../components/touchline/match-centre/TouchlineMatchCentre.tsx", import.meta.url),
     "utf8",
@@ -343,8 +345,8 @@ test("every canonical home hero exposes the same honest verified-lineup call to 
     "utf8",
   );
 
-  assert.match(source, /const lineupLinks = selected \? \[selected\.homeTeam, selected\.awayTeam\]/);
-  assert.match(source, /verifiedDetail\?\.lineups\.some\(\(member\) => member\.teamId === team\?\.providerId\)/);
+  assert.match(source, /const lineupLinks = touchlineLiveClubLineupLinks\(selected, TOUCHLINE_ENGLAND_CLUBS, language\)/);
+  assert.doesNotMatch(source, /verifiedDetail\?\.lineups\.some\(\(member\) => member\.teamId === team\?\.providerId\)/);
   assert.doesNotMatch(source, /verifiedDetail\?\.lineupAvailableAt/);
   assert.doesNotMatch(source, /selectedCanonicalState/);
   assert.equal(getTouchlineMatchCentreCopy("pt-BR").viewLineup, "VER ESCALAÇÃO");
@@ -353,26 +355,28 @@ test("every canonical home hero exposes the same honest verified-lineup call to 
   assert.equal(getTouchlineMatchCentreCopy("pt-BR").lineupPendingCopy, "A escalação será exibida aqui quando estiver disponível e verificada.");
   assert.equal(getTouchlineMatchCentreCopy("en-GB").lineupPendingCopy, "The line-up will appear here when it is available and verified.");
   assert.match(source, /const dictionary = getTouchlineMatchCentreCopy\(language, draftLocalesEnabled\)/);
-  assert.match(source, /dictionary\.matchLineup : dictionary\.officialLineup/);
+  assert.match(source, /<span>\{dictionary\.viewLineup\}<\/span>/);
   assert.doesNotMatch(source, /\{dictionary\.lineupPending(?:Copy)?\}/);
-  assert.match(source, /className=\{styles\.heroTopbar\}[\s\S]*?lineupLinks\.map[\s\S]*?className=\{styles\.heroKickoff\}[\s\S]*?className=\{styles\.heroTeams\}/);
-  assert.match(source, /\{lineupLabel\}<small>\{link\.name\}<\/small>/);
+  assert.match(source, /className=\{styles\.heroTopbar\}[\s\S]*?className=\{styles\.heroKickoff\}[\s\S]*?className=\{styles\.heroTeams\}/);
+  for (const [side, index] of [["home", 0], ["away", 1]] as const) {
+    assert.match(source, new RegExp(`<TeamMark fixture=\\{selected\\} side="${side}" \\/>[\\s\\S]*?<strong>\\{selected\\.${side}Team\\?\\.name \\?\\? dictionary\\.${side}Fallback\\}<\\/strong>\\s*\\{lineupLink\\(${index}\\)\\}`));
+  }
   assert.match(styles, /\.scoreSeparator\s*\{[^}]*font-size:\s*\.48em/);
   const pendingCopy = ["en-GB", "pt-BR"].map((locale) => getTouchlineMatchCentreCopy(locale).lineupPendingCopy);
   assert.equal(pendingCopy.length, 2, "both supported locales retain pending-lineup copy");
   for (const copy of pendingCopy) {
     assert.doesNotMatch(copy, /notif|avis|alert/i, "pending lineups must not promise notification delivery");
   }
-  assert.match(source, /fixtureId=\$\{encodeURIComponent\(selected\.providerId\)\}#touchline-club-lineup/);
   assert.match(source, /const verifiedDetail = matchDetail\?\.fixture\.id === selected\?\.providerId \? matchDetail : null/);
   assert.match(source, /<section id="touchline-match-lineups" className=\{styles\.lineupGrid\} aria-label=\{dictionary\.form\} tabIndex=\{-1\}>/);
-  assert.match(source, /href=\{link\.href\} aria-label=\{`\$\{lineupLabel\} · \$\{link\.name\}`\}/);
+  assert.match(source, /href=\{link\.href\} aria-label=\{`\$\{dictionary\.viewLineup\} · \$\{link\.name\}`\}/);
   assert.doesNotMatch(source, /href=\{homeLineupHref\}[^\n]*target=/);
   assert.doesNotMatch(source, /`\/touchline-clubs\/\$\{selectedHomeClub\.slug\}\?lang=\$\{language\}#touchline-club-lineup`/);
   assert.doesNotMatch(source, /\/touchline-clubs\/manchester-united\?lang=pt-BR#touchline-club-lineup/);
   assert.doesNotMatch(source, /isManchesterUnitedHome/);
   assert.doesNotMatch(source, /lineup[^\n]*(?:60|90)\s*\*\s*60_000/i);
-  assert.match(styles, /\.homeLineupCallout \{[^}]*border-radius:[^}]*backdrop-filter:/);
+  assert.match(source, /className=\{`\$\{sharedControls\.link\} \$\{styles\.homeLineupLink\}`\}/);
+  assert.match(styles, /\.homeLineupLink \{[^}]*min-height:\s*44px/);
   assert.match(styles, /\.homeLineupLink:focus-visible/);
   assert.match(clubHub, /<section id="touchline-club-lineup" className=\{styles\.shell\}/);
 });
@@ -383,16 +387,26 @@ test("lineup links use normal club navigation and retain the selected fixture", 
     "utf8",
   );
   assert.doesNotMatch(source, /function openSelectedLineup/);
-  assert.match(source, /href: `\/touchline-clubs\/\$\{club\.slug\}\?lang=\$\{encodeURIComponent\(language\)\}&fixtureId=/);
+  assert.match(source, /touchlineLiveClubLineupLinks\(selected, TOUCHLINE_ENGLAND_CLUBS, language\)/);
   const clubPage = readFileSync(new URL("../app/touchline-clubs/[club]/page.tsx", import.meta.url), "utf8");
   assert.match(clubPage, /candidate\.providerId === requestedFixtureId && fixtureHasClub\(candidate, club\)/);
   assert.match(clubPage, /if \(requestedFixtureId && !requestedFixture\) return empty/);
-  assert.match(clubPage, /lastCompletedXi: requestedFixtureId \? null/);
+  assert.match(clubPage, /const lastCompletedXi = requestedFixtureId \? null/);
   for (const locale of ["en-GB", "pt-BR", "es-ES", "it-IT", "fr-FR", "ar-SA", "tr-TR", "de-DE"]) {
     const copy = getTouchlineMatchCentreCopy(locale, true);
     assert.ok(copy.officialLineup);
     assert.ok(copy.matchLineup);
     assert.notEqual(copy.officialLineup, copy.matchLineup);
+    const [home, away] = TOUCHLINE_ENGLAND_CLUBS;
+    const selected: TouchlinePublicFixture = {
+      id: "selected", providerId: "19722203", status: "NS",
+      homeTeam: { id: home.teamId, providerId: home.teamId, name: home.name },
+      awayTeam: { id: away.teamId, providerId: away.teamId, name: away.name },
+    };
+    const links = touchlineLiveClubLineupLinks(selected, TOUCHLINE_ENGLAND_CLUBS, locale);
+    for (const [index, club] of [home, away].entries()) {
+      assert.equal(links[index]?.href, `/touchline-clubs/${club.slug}?lang=${encodeURIComponent(locale)}&fixtureId=19722203#touchline-club-lineup`);
+    }
   }
 });
 

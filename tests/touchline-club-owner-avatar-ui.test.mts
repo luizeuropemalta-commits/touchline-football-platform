@@ -24,7 +24,7 @@ type Node = { type: unknown; props: Record<string, unknown> };
 const nodes = (tree: unknown, type: string): Node[] => Array.isArray(tree) ? tree.flatMap(child => nodes(child, type))
   : tree && typeof tree === "object" && "props" in tree ? [...((tree as Node).type === type ? [tree as Node] : []), ...nodes((tree as Node).props.children, type)] : [];
 const text = (tree: unknown): string => typeof tree === "string" ? tree : Array.isArray(tree) ? tree.map(text).join(" ")
-  : tree && typeof tree === "object" && "props" in tree ? text((tree as Node).props.children) : "";
+  : tree && typeof tree === "object" && "props" in tree ? (tree as Node).type === "dialog" && (tree as Node).props["aria-modal"] !== true ? "" : text((tree as Node).props.children) : "";
 const tick = () => new Promise<void>(resolve => setImmediate(resolve));
 function deferred<T>() { let resolve!: (value: T) => void; return { promise: new Promise<T>(done => { resolve = done; }), resolve: (value: T) => resolve(value) }; }
 function compile(path: string, dependencies: Record<string, unknown>, globals = {}) {
@@ -95,6 +95,10 @@ function fixture(options: { context?: unknown; locale?: string; missingAuth?: bo
   };
   const mod = compile("components/touchline/ClubOwnerAvatarControl.tsx", {
     react: hook, "react/jsx-runtime": jsx,
+    "react-dom": { createPortal: (node: unknown) => node },
+    "lucide-react": { X: "close-icon" },
+    "./a11y/TouchlineDialog": { useTouchlineDialog: () => ({ dialogRef: { current: null }, dialogProps: { role: "dialog" } }), useTouchlineDialogScrollLock: () => {} },
+    "./ClubOwnerAvatarControl.module.css": { default: {} },
     "next/navigation": { useRouter: () => ({ refresh: () => calls.push("refresh") }) },
     "@/lib/supabase/client": { createClient: () => { calls.push("auth-client"); return options.missingAuth ? null : { auth: {
       getUser: () => { assert.equal(notifying, false, "getUser must run outside the SDK callback"); calls.push("getUser"); return userResponse(); },
@@ -111,12 +115,12 @@ function fixture(options: { context?: unknown; locale?: string; missingAuth?: bo
     },
     "@/lib/touchlineArena/club-owner-avatar-client": { ...client, createClubOwnerAvatarRecoveryClient: (input: Parameters<typeof client.createClubOwnerAvatarRecoveryClient>[0]) => client.createClubOwnerAvatarRecoveryClient({ ...input,
       now: () => now, scheduleTimeout: callback => { timers.add(callback); return () => { timers.delete(callback); }; } }) },
-    "@/lib/touchlineArena/club-owner-avatar-ui-i18n": options.copy ?? copyModule(options.drafts),
+    "@/lib/touchlineArena/club-owner-avatar-ui-i18n": { ...copyModule(options.drafts), ...options.copy },
     "@/lib/touchlineArena/club-owner-avatar-selection-contract": selection,
     "./ClubOwnerAvatarUploadSelection": { default: function DormantSelection() { throw Error("Selection must remain off in recovery fixtures"); } },
     "./TouchlineGlobalNavigation.module.css": { default: { link: "global-link" } },
     "./ClubOwnerMarketHeader.module.css": { default: new Proxy({}, { get: (_, key) => String(key) }) },
-  }, { fetch: (input: unknown, init: RequestInit) => {
+  }, { document: { body: {} }, fetch: (input: unknown, init: RequestInit) => {
     assert.equal(input, "/api/account/avatar/recovery"); assert.equal(init.method, "POST"); assert.equal(init.credentials, "same-origin");
     requests.push({ input, init }); return responder(input, init);
   } });
@@ -165,7 +169,7 @@ test("C3 real control opens locally, observes only by gesture and requires separ
   h.click("confirm-fence"); await tick();
   assert.deepEqual(JSON.parse(h.requests[1].init.body as string), { action: "fence", generation: "2", expectedActiveOperationId: operation, explicitRecoveryConsent: true });
   assert.equal(h.calls.filter(call => call === "refresh").length, 1); assert.match(text(h.render()), /No photo was uploaded/);
-  assert.equal(nodes(h.render(), "input").length, 0); assert.ok(h.calls.includes("focus:panel")); h.click("close"); assert.ok(h.calls.includes("focus:portrait")); h.unmount();
+  assert.equal(nodes(h.render(), "input").length, 0); assert.equal(nodes(h.render(), "dialog")[0].props["aria-modal"], true); h.click("close"); assert.equal(nodes(h.render(), "dialog")[0].props["aria-modal"], undefined); h.unmount();
 });
 
 test("C3 Back only closes; lost fence keeps its exact pair across close and locale changes", async () => {

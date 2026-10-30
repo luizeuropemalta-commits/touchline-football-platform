@@ -49,14 +49,14 @@ export const CLUB_OWNER_PLAN_EXPERIENCE_COPY: Readonly<Record<TouchLineLocale, R
   "de-DE": { membership: "Mitgliedschaft", fantasyFootball: "Fantasy-Fußball", comparePlans: "Pläne vergleichen", details: "Plandetails", close: "Schließen", previewShort: "Planvorschau", plan: "Plan", viewPlan: "Plan ansehen", selected: "Ausgewählt", choosePlan: "Plan wählen", working: "Wir bereiten Planwechsel vor. Dein aktueller Plan und dein Guthaben bleiben unverändert." },
 };
 const BETA_MARKET_BENEFIT: Readonly<Record<TouchLineLocale, string>> = {
-  "en-GB": "100M TC shared by 35 players and 1 coach. Initial Ruby coach: 5M TC; remaining balance: 95M TC. Player Market: Hull City, Coventry City, Ipswich Town, Bournemouth, Sunderland and Everton. Exchange fee: 7%.",
-  "pt-BR": "100M TC compartilhados entre 35 jogadores e 1 treinador. Treinador inicial Ruby: 5M TC; saldo restante: 95M TC. Mercado de jogadores: Hull City, Coventry City, Ipswich Town, Bournemouth, Sunderland e Everton. Taxa de Exchange: 7%.",
-  "es-ES": "100M TC compartidos entre 35 jugadores y 1 entrenador. Entrenador inicial Ruby: 5M TC; saldo restante: 95M TC. Mercado: Hull City, Coventry City, Ipswich Town, Bournemouth, Sunderland y Everton. Comisión de Exchange: 7%.",
-  "it-IT": "100M TC condivisi tra 35 giocatori e 1 allenatore. Allenatore iniziale Ruby: 5M TC; saldo restante: 95M TC. Mercato: Hull City, Coventry City, Ipswich Town, Bournemouth, Sunderland ed Everton. Commissione Exchange: 7%.",
-  "fr-FR": "100M TC partagés entre 35 joueurs et 1 entraîneur. Entraîneur initial Ruby : 5M TC ; solde restant : 95M TC. Marché : Hull City, Coventry City, Ipswich Town, Bournemouth, Sunderland et Everton. Frais Exchange : 7%.",
-  "ar-SA": "100M TC مشتركة بين 35 لاعبًا ومدرب واحد. المدرب الأول من فئة Ruby: 5M TC؛ الرصيد المتبقي: 95M TC. السوق: هال سيتي وكوفنتري سيتي وإيبسويتش تاون وبورنموث وسندرلاند وإيفرتون. رسوم Exchange: 7%.",
-  "tr-TR": "35 oyuncu ve 1 teknik direktör için ortak 100M TC. İlk Ruby teknik direktör: 5M TC; kalan bakiye: 95M TC. Pazar: Hull City, Coventry City, Ipswich Town, Bournemouth, Sunderland ve Everton. Exchange ücreti: %7.",
-  "de-DE": "100M TC gemeinsam für 35 Spieler und 1 Trainer. Erster Ruby-Trainer: 5M TC; verbleibendes Guthaben: 95M TC. Markt: Hull City, Coventry City, Ipswich Town, Bournemouth, Sunderland und Everton. Exchange-Gebühr: 7%."
+  "en-GB": "100M TC shared by 35 players and 1 coach. Choose a coach within your balance. Player Market: Hull City, Coventry City, Ipswich Town, Bournemouth, Sunderland and Everton. Exchange with Beta accounts only; 7% fee.",
+  "pt-BR": "100M TC compartilhados entre 35 jogadores e 1 treinador. Escolha o treinador conforme seu saldo. Mercado de jogadores: Hull City, Coventry City, Ipswich Town, Bournemouth, Sunderland e Everton. Trocas somente entre contas Beta; taxa de 7%.",
+  "es-ES": "100M TC compartidos entre 35 jugadores y 1 entrenador. Elige un entrenador según tu saldo. Mercado: Hull City, Coventry City, Ipswich Town, Bournemouth, Sunderland y Everton. Intercambios solo entre cuentas Beta; comisión del 7%.",
+  "it-IT": "100M TC condivisi tra 35 giocatori e 1 allenatore. Scegli l’allenatore in base al tuo saldo. Mercato: Hull City, Coventry City, Ipswich Town, Bournemouth, Sunderland ed Everton. Scambi solo tra account Beta; commissione del 7%.",
+  "fr-FR": "100M TC partagés entre 35 joueurs et 1 entraîneur. Choisissez l’entraîneur selon votre solde. Marché : Hull City, Coventry City, Ipswich Town, Bournemouth, Sunderland et Everton. Échanges entre comptes Beta uniquement ; frais de 7%.",
+  "ar-SA": "100M TC مشتركة بين 35 لاعبًا ومدرب واحد. اختر المدرب حسب رصيدك. السوق: هال سيتي وكوفنتري سيتي وإيبسويتش تاون وبورنموث وسندرلاند وإيفرتون. التبادل بين حسابات Beta فقط؛ الرسوم 7%.",
+  "tr-TR": "35 oyuncu ve 1 teknik direktör için ortak 100M TC. Bakiyenize uygun teknik direktörü seçin. Pazar: Hull City, Coventry City, Ipswich Town, Bournemouth, Sunderland ve Everton. Takas yalnızca Beta hesapları arasında; ücret %7.",
+  "de-DE": "100M TC gemeinsam für 35 Spieler und 1 Trainer. Wähle einen Trainer passend zu deinem Guthaben. Markt: Hull City, Coventry City, Ipswich Town, Bournemouth, Sunderland und Everton. Tausch nur zwischen Beta-Konten; Gebühr 7%."
 };
 const BETA_PRICE: Readonly<Record<TouchLineLocale, string>> = {
   "en-GB": "Free", "pt-BR": "Gratuito", "es-ES": "Gratis", "it-IT": "Gratuito",
@@ -103,14 +103,14 @@ export function getClubOwnerPlanBenefitTerms(locale: string, draftLocalesEnabled
 }
 
 const PLAN_DISCLOSURE = {
-  "en-GB": { viewBenefits: "View benefits", squad: "35 players + 1 coach. Players and coach share the same credit balance.", status: "Exchange and release: planned rules, not available yet. Release: 10% of the original purchase price; 90% returned. Exploring a plan does not activate it or credit your balance." },
-  "pt-BR": { viewBenefits: "Ver benefícios", squad: "35 jogadores + 1 treinador. Jogadores e treinador usam o mesmo saldo de créditos.", status: "Exchange e rescisão: regras previstas, ainda indisponíveis. Rescisão: multa de 10% do valor original pago; retorno de 90%. Explorar um plano não o ativa nem credita seu saldo." },
-  "es-ES": { viewBenefits: "Ver ventajas", squad: "35 jugadores + 1 entrenador. Jugadores y entrenador comparten el saldo de créditos.", status: "Exchange y rescisión: reglas previstas, aún no disponibles. Rescisión: 10% del precio original; devolución del 90%. Explorar un plan no lo activa ni añade saldo." },
-  "it-IT": { viewBenefits: "Vedi vantaggi", squad: "35 giocatori + 1 allenatore. Giocatori e allenatore condividono lo stesso saldo.", status: "Exchange e rescissione: regole previste, non ancora disponibili. Rescissione: 10% del prezzo originale; rimborso del 90%. Esplorare un piano non lo attiva né accredita il saldo." },
-  "fr-FR": { viewBenefits: "Voir les avantages", squad: "35 joueurs + 1 entraîneur. Joueurs et entraîneur partagent le même solde.", status: "Exchange et résiliation : règles prévues, pas encore disponibles. Résiliation : 10 % du prix initial ; remboursement de 90 %. Consulter une offre ne l’active pas et ne crédite pas le solde." },
-  "ar-SA": { viewBenefits: "عرض المزايا", squad: "35 لاعبًا + مدرب واحد. يتشارك اللاعبون والمدرب رصيد الاعتمادات نفسه.", status: "التبادل والفسخ: قواعد مخططة وغير متاحة بعد. الفسخ: خصم 10٪ من سعر الشراء الأصلي وإعادة 90٪. استعراض الخطة لا يفعّلها ولا يضيف رصيدًا." },
-  "tr-TR": { viewBenefits: "Avantajları gör", squad: "35 oyuncu + 1 teknik direktör. Oyuncular ve teknik direktör aynı kredi bakiyesini kullanır.", status: "Exchange ve fesih: planlanan kurallar, henüz kullanılamıyor. Fesih: ilk alış fiyatının %10’u kesilir, %90’ı iade edilir. Planı incelemek etkinleştirmez veya bakiye eklemez." },
-  "de-DE": { viewBenefits: "Vorteile ansehen", squad: "35 Spieler + 1 Trainer. Spieler und Trainer nutzen dasselbe Guthaben.", status: "Exchange und Vertragsauflösung: geplante Regeln, noch nicht verfügbar. Auflösung: 10 % des ursprünglichen Kaufpreises; 90 % zurück. Ein Plan wird durch Ansehen weder aktiviert noch gutgeschrieben." },
+  "en-GB": { viewBenefits: "View benefits", squad: "35 players + 1 coach. Players and coach share the same credit balance.", status: "Release: 10% of the original purchase price; 90% returned. Exploring a plan does not activate it or credit your balance." },
+  "pt-BR": { viewBenefits: "Ver benefícios", squad: "35 jogadores + 1 treinador. Jogadores e treinador usam o mesmo saldo de créditos.", status: "Rescisão: multa de 10% do valor original pago; retorno de 90%. Explorar um plano não o ativa nem credita seu saldo." },
+  "es-ES": { viewBenefits: "Ver ventajas", squad: "35 jugadores + 1 entrenador. Jugadores y entrenador comparten el saldo de créditos.", status: "Rescisión: 10% del precio original; devolución del 90%. Explorar un plan no lo activa ni añade saldo." },
+  "it-IT": { viewBenefits: "Vedi vantaggi", squad: "35 giocatori + 1 allenatore. Giocatori e allenatore condividono lo stesso saldo.", status: "Rescissione: 10% del prezzo originale; rimborso del 90%. Esplorare un piano non lo attiva né accredita il saldo." },
+  "fr-FR": { viewBenefits: "Voir les avantages", squad: "35 joueurs + 1 entraîneur. Joueurs et entraîneur partagent le même solde.", status: "Résiliation : 10 % du prix initial ; remboursement de 90 %. Consulter une offre ne l’active pas et ne crédite pas le solde." },
+  "ar-SA": { viewBenefits: "عرض المزايا", squad: "35 لاعبًا + مدرب واحد. يتشارك اللاعبون والمدرب رصيد الاعتمادات نفسه.", status: "الفسخ: خصم 10٪ من سعر الشراء الأصلي وإعادة 90٪. استعراض الخطة لا يفعّلها ولا يضيف رصيدًا." },
+  "tr-TR": { viewBenefits: "Avantajları gör", squad: "35 oyuncu + 1 teknik direktör. Oyuncular ve teknik direktör aynı kredi bakiyesini kullanır.", status: "Fesih: ilk alış fiyatının %10’u kesilir, %90’ı iade edilir. Planı incelemek etkinleştirmez veya bakiye eklemez." },
+  "de-DE": { viewBenefits: "Vorteile ansehen", squad: "35 Spieler + 1 Trainer. Spieler und Trainer nutzen dasselbe Guthaben.", status: "Auflösung: 10 % des ursprünglichen Kaufpreises; 90 % zurück. Ein Plan wird durch Ansehen weder aktiviert noch gutgeschrieben." },
 } as const;
 
 export function getClubOwnerPlanDisclosure(locale: string, draftLocalesEnabled = false) {
@@ -118,16 +118,7 @@ export function getClubOwnerPlanDisclosure(locale: string, draftLocalesEnabled =
   return { ...PLAN_DISCLOSURE[code], betaSquad: BETA_SQUAD_DISCLOSURE[code] };
 }
 
-const BETA_SQUAD_DISCLOSURE: Readonly<Record<TouchLineLocale, string>> = {
-  "en-GB": "100M TC shared by 35 players and 1 coach. Initial Ruby coach: 5M TC; remaining balance: 95M TC. Player Market: Hull City, Coventry City, Ipswich Town, Bournemouth, Sunderland and Everton. Exchange fee: 7%.",
-  "pt-BR": "100M TC compartilhados entre 35 jogadores e 1 treinador. Treinador inicial Ruby: 5M TC; saldo restante: 95M TC. Mercado de jogadores: Hull City, Coventry City, Ipswich Town, Bournemouth, Sunderland e Everton. Taxa de Exchange: 7%.",
-  "es-ES": "100M TC compartidos entre 35 jugadores y 1 entrenador. Entrenador inicial Ruby: 5M TC; saldo restante: 95M TC. Mercado: Hull City, Coventry City, Ipswich Town, Bournemouth, Sunderland y Everton. Comisión de Exchange: 7%.",
-  "it-IT": "100M TC condivisi tra 35 giocatori e 1 allenatore. Allenatore iniziale Ruby: 5M TC; saldo restante: 95M TC. Mercato: Hull City, Coventry City, Ipswich Town, Bournemouth, Sunderland ed Everton. Commissione Exchange: 7%.",
-  "fr-FR": "100M TC partagés entre 35 joueurs et 1 entraîneur. Entraîneur initial Ruby : 5M TC ; solde restant : 95M TC. Marché : Hull City, Coventry City, Ipswich Town, Bournemouth, Sunderland et Everton. Frais Exchange : 7%.",
-  "ar-SA": "100M TC مشتركة بين 35 لاعبًا ومدرب واحد. المدرب الأول من فئة Ruby: 5M TC؛ الرصيد المتبقي: 95M TC. السوق: هال سيتي وكوفنتري سيتي وإيبسويتش تاون وبورنموث وسندرلاند وإيفرتون. رسوم Exchange: 7%.",
-  "tr-TR": "35 oyuncu ve 1 teknik direktör için ortak 100M TC. İlk Ruby teknik direktör: 5M TC; kalan bakiye: 95M TC. Pazar: Hull City, Coventry City, Ipswich Town, Bournemouth, Sunderland ve Everton. Exchange ücreti: %7.",
-  "de-DE": "100M TC gemeinsam für 35 Spieler und 1 Trainer. Erster Ruby-Trainer: 5M TC; verbleibendes Guthaben: 95M TC. Markt: Hull City, Coventry City, Ipswich Town, Bournemouth, Sunderland und Everton. Exchange-Gebühr: 7%."
-};
+const BETA_SQUAD_DISCLOSURE = BETA_MARKET_BENEFIT;
 
 /** Presentation of approved rules only: never activates a plan or a payment. */
 export function getClubOwnerPlanBenefits(plan: typeof CLUB_OWNER_PLAN_PREVIEWS[number]["id"], locale: string, draftLocalesEnabled = false) {

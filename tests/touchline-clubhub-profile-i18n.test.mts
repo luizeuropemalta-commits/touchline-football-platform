@@ -141,6 +141,7 @@ function compileUnavailableLoaders(copy: Copy) {
     readPublicPremierSquad: () => { throw new Error("unavailable"); },
     readPersistedSquadSnapshot: () => Promise.resolve(null),
     buildTouchLineClubMatchdayPresentation: () => ({ lineup: {} }),
+    resolveClubHubMatchdayContext: () => ({ lineupFixture: null, nextFixture: null }),
     TOUCHLINE_DEFAULT_FORMATION_GEOMETRY_REGISTRY: {},
   });
 }
@@ -180,7 +181,7 @@ async function fixture(locale: string, options: { future?: boolean; sentinel?: b
     touchlineCardTierPalette: () => ({ accent: "#abc" }),
     Suspense: (props: Props) => React.createElement(React.Fragment, null, props.fallback as React.ReactNode),
   };
-  for (const name of ["TouchlineBrandHeader", "ClubHubBrandHeader", "Image", "ClubTrophyCarousel", "ClubHubCrestTrace", "TouchlineGlobalNavigation", "ClubHubSectionNavigation", "ClubHubFixtureStrip", "ClubHubNextFixtureCard", "TouchlineClubPerimeterTrace", "TouchlineClubSocialFeed", "TouchlineOfficialLeagueTable", "TouchlineGameweekCard", "ClubHubPositionLeaders", "ClubHubOfficialLineup", "ClubHubTechnicalSections", "ClubHubOfficialChannel"]) context[name] = leaf(name);
+  for (const name of ["TouchlineBrandHeader", "ClubHubBrandHeader", "Image", "ClubTrophyCarousel", "ClubHubCrestTrace", "TouchlineGlobalNavigation", "ClubHubSectionNavigation", "ClubHubFixtureStrip", "ClubHubNextFixtureCard", "TouchlineClubPerimeterTrace", "TouchlineClubSocialFeed", "TouchlineOfficialLeagueTable", "TouchlineGameweekCard", "ClubHubPositionLeaders", "ClubHubOfficialLineup", "ClubHubTechnicalSections", "ClubHubMatchdayPanels", "ClubHubOfficialChannel"]) context[name] = leaf(name);
   const exports = compile(declarations + "\nObject.assign(exports, {" + names.join(",") + "});", context);
   // Resolve only the newly streamed rail with the real extracted server
   // wrapper. Keep all other deliberately deferred football/viewer fallbacks.
@@ -249,7 +250,7 @@ test("ClubHub real page keeps async lookup, deferred reads, official identities,
     assert.equal(strips[0].props.locale, locale);
     assert.equal(strips[0].props.draftLocalesEnabled, false);
     const expected = baseline[locale as keyof typeof baseline];
-    for (const key of ["officialProfile", "updatingLeague", "preparingLineup", "preparingTechnical", "lineupCoachBench"] as const) assert.ok(html.includes(esc(expected[key])), key);
+    for (const key of ["officialProfile", "preparingLineup", "preparingTechnical", "lineupCoachBench"] as const) assert.ok(html.includes(esc(expected[key])), key);
     assert.doesNotMatch(html, /<footer\b/);
     assert.equal(html.includes(esc(expected.rights)), false);
     assertGlobalFooter(locale as keyof typeof baseline, false);
@@ -277,7 +278,7 @@ test("ClubHub real page keeps async lookup, deferred reads, official identities,
 test("ClubHub real league and hero preserve fixture facts, nullable positions and awaiting states", async () => {
   for (const locale of ["en-GB", "pt-BR"]) {
     const f = await fixture(locale), expected = baseline[locale as keyof typeof baseline];
-    const pending = { publicFixture: null, railFixture: null };
+    const pending = { publicFixture: null, nextFixture: null };
     const props = { club: f.club, locale, cursor: "opaque", dataSource: "direct", mirrorResultPromise: null, matchSnapshotPromise: Promise.resolve(pending), tablePromise: Promise.resolve({ rows: [] }) };
     const html = renderToStaticMarkup(await f.invoke("ClubHubOfficialLeagueSection", props));
     for (const key of ["nextAndTable", "nextFixture", "nextMatchChecking", "matchupPending"] as const) assert.ok(html.includes(esc(expected[key])), key);
@@ -286,7 +287,7 @@ test("ClubHub real league and hero preserve fixture facts, nullable positions an
     const hero = renderToStaticMarkup(await f.invoke("ClubHubHeroNextMatch", { locale, matchSnapshotPromise: Promise.resolve(pending) }));
     assert.ok(hero.includes(expected.nextMatch)); assert.ok(hero.includes(expected.fixtureChecking));
     const match = { id: "fixture-stable", homeTeam: { providerId: "A", name: "Official $&<> Home" }, awayTeam: { providerId: "B", name: "Official Away" }, startsAt: "2026-10-25T01:30:00Z", status: "live", homeScore: 0, awayScore: 2, liveMinute: 0 };
-    renderToStaticMarkup(await f.invoke("ClubHubOfficialLeagueSection", { ...props, matchSnapshotPromise: Promise.resolve({ railFixture: match }), tablePromise: Promise.resolve({ rows: [{ team: { providerTeamId: "A" }, displayPosition: 0 }] }) }));
+    renderToStaticMarkup(await f.invoke("ClubHubOfficialLeagueSection", { ...props, matchSnapshotPromise: Promise.resolve({ nextFixture: match }), tablePromise: Promise.resolve({ rows: [{ team: { providerTeamId: "A" }, displayPosition: 0 }] }) }));
     renderToStaticMarkup(await f.invoke("ClubHubHeroNextMatch", { locale, matchSnapshotPromise: Promise.resolve({ publicFixture: match }) }));
     const cards = f.calls.filter(c => c.kind === "ClubHubNextFixtureCard");
     assert.equal(cards[0].props.roundName, expected.roundPending); assert.equal(cards[1].props.roundName, expected.matchdayRound);
@@ -307,20 +308,20 @@ test("ClubHub draft consumer seams expose active texts and existing authorities 
     assert.equal(strips[0].props.locale, locale);
     assert.equal(strips[0].props.draftLocalesEnabled, true);
     chunks.push(renderToStaticMarkup(await f.invoke("ClubHubHomeStadiumIdentity", { locale, stadium: { name: "$&<>", city: "CITY", country: "COUNTRY" } })));
-    const presentation = { clubCards: [], matchSnapshot: { preview: { status: "unknown", home: {}, away: {} }, publicFixture: null }, matchdayPresentation: { lineup: {} } };
+    const presentation = { fixtureContext: { lineupFixture: null, nextFixture: null }, clubCards: [], matchSnapshot: { preview: { status: "unknown", home: {}, away: {} }, publicFixture: null }, matchdayPresentation: { lineup: {} } };
     const lineup = await f.invoke("ClubHubLineupSection", { club: f.club, locale, cardLabels: {}, dataSource: "direct", presentationPromise: Promise.resolve(presentation), viewerAccessPromise: Promise.resolve({ canEditCardEngine: false }) });
     chunks.push(renderToStaticMarkup(lineup));
     const leaderProps = f.calls.find(c => c.kind === "ClubHubOfficialLineup")!.props;
     chunks.push(renderToStaticMarkup(leaderProps.leaderCards as React.ReactElement));
     chunks.push(renderExtractedPositionLeaders({ cards: [], seed: { phase: "ranked", players: [] }, enabled: true, locale, draftLocalesEnabled: true }, f.copy));
     const base = { club: f.club, locale, dataSource: "direct", cursor: null, mirrorResultPromise: null, tablePromise: Promise.resolve({ rows: [] }) };
-    chunks.push(renderToStaticMarkup(await f.invoke("ClubHubOfficialLeagueSection", { ...base, matchSnapshotPromise: Promise.resolve({ railFixture: null }) })));
+    chunks.push(renderToStaticMarkup(await f.invoke("ClubHubOfficialLeagueSection", { ...base, matchSnapshotPromise: Promise.resolve({ nextFixture: null }) })));
     chunks.push(renderToStaticMarkup(await f.invoke("ClubHubHeroNextMatch", { locale, matchSnapshotPromise: Promise.resolve({ publicFixture: null }) })));
     const match = { startsAt: "2026-10-03T12:00:00Z", homeTeam: { providerId: "A" }, awayTeam: { providerId: "B" } };
-    renderToStaticMarkup(await f.invoke("ClubHubOfficialLeagueSection", { ...base, matchSnapshotPromise: Promise.resolve({ railFixture: match }) }));
+    renderToStaticMarkup(await f.invoke("ClubHubOfficialLeagueSection", { ...base, matchSnapshotPromise: Promise.resolve({ nextFixture: match }) }));
     renderToStaticMarkup(await f.invoke("ClubHubHeroNextMatch", { locale, matchSnapshotPromise: Promise.resolve({ publicFixture: match }) }));
     const output = chunks.join("") + JSON.stringify(f.calls);
-    for (const key of Object.keys(baseline["en-GB"]).filter(key => !["scheduled", "live", "finished", "postponed", "cancelled", "leagueAndChannel", "squadUnavailable", "sourceUnavailable", "rights"].includes(key))) assert.ok(output.includes(`${locale}:${key}:`), key);
+    for (const key of Object.keys(baseline["en-GB"]).filter(key => !["updatingLeague", "scheduled", "live", "finished", "postponed", "cancelled", "leagueAndChannel", "squadUnavailable", "sourceUnavailable", "rights"].includes(key))) assert.ok(output.includes(`${locale}:${key}:`), key);
     assert.equal(output.includes(`${locale}:rights:`), false);
     assert.doesNotMatch(chunks[0], /<footer\b/);
     assertGlobalFooter(locale, true);
@@ -366,7 +367,7 @@ test("ClubHub passes the verified roster and ranking seed to the extracted posit
   assert.equal(projected[0].leader?.card.publishedRanking?.totalRating, 0);
   for (const locale of ["en-GB", "pt-BR"]) {
     const f = await fixture(locale, { ranking });
-    const presentation = { clubCards: roster, matchSnapshot: { preview: { status: "FT", home: {}, away: {} }, publicFixture: null }, matchdayPresentation: { lineup: {} } };
+    const presentation = { fixtureContext: { lineupFixture: null, nextFixture: null }, clubCards: roster, matchSnapshot: { preview: { status: "FT", home: {}, away: {} }, publicFixture: null }, matchdayPresentation: { lineup: {} } };
     const before = JSON.stringify(presentation);
     renderToStaticMarkup(await f.invoke("ClubHubLineupSection", { club: f.club, locale, cardLabels: {}, dataSource: "direct", presentationPromise: Promise.resolve(presentation), viewerAccessPromise: Promise.resolve({ canEditCardEngine: false }) }));
     const props = f.calls.find(c => c.kind === "ClubHubOfficialLineup")!.props;
@@ -376,7 +377,7 @@ test("ClubHub passes the verified roster and ranking seed to the extracted posit
     assert.equal((boundary.props.seed as Props).phase, "ranked");
     assert.equal(boundary.props.enabled, true);
     assert.equal(boundary.props.locale, locale);
-    assert.equal((props.matchup as Props).status, locale === "pt-BR" ? "Encerrada" : "FT");
+    assert.equal(props.matchup, null, "no verified fixture means no invented matchup from preview data");
     assert.equal(JSON.stringify(presentation), before);
   }
   const leaders = readFileSync(new URL("../components/touchline/ClubHubPositionLeaders.tsx", import.meta.url), "utf8");

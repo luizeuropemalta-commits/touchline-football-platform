@@ -11,6 +11,14 @@ import * as selectionContract from "../lib/touchlineArena/club-owner-avatar-sele
 
 const require = createRequire(import.meta.url);
 const locales = ["en-GB", "pt-BR", "es-ES", "it-IT", "fr-FR", "ar-SA", "tr-TR", "de-DE"] as const;
+const dialog = {};
+// Use the real shared hooks. SSR must leave their DOM/focus effects dormant.
+runInNewContext(ts.transpileModule(readFileSync(new URL("../components/touchline/a11y/TouchlineDialog.tsx", import.meta.url), "utf8"), {
+  compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX },
+}).outputText, { exports: dialog, require(name: string) {
+  assert.equal(name, "react", `Unexpected dialog dependency: ${name}`);
+  return require(name);
+} });
 
 test("avatar copy opts into authored catalogues without changing default locale gates", () => {
   for (const locale of locales) {
@@ -30,6 +38,9 @@ function renderAvatar(locale: string, enabled: boolean, draftLocalesEnabled?: bo
   const modules: Record<string, unknown> = {
     "react": require("react"),
     "react/jsx-runtime": require("react/jsx-runtime"),
+    "react-dom": require("react-dom"),
+    "lucide-react": require("lucide-react"),
+    "./a11y/TouchlineDialog": dialog,
     "next/navigation": { useRouter: () => ({ refresh: noAction }) },
     "@/lib/supabase/client": { createClient: noAction },
     "@/lib/touchlineArena/account-locale-identity-observer": {
@@ -72,6 +83,7 @@ test("actual avatar presentation propagates draft copy and keeps initial actions
       assert.ok(!html.includes('data-avatar-action="observe"'));
       assert.ok(!html.includes('data-avatar-action="confirm-fence"'));
       assert.ok(!html.includes('type="file"'));
+      assert.ok(!html.includes('data-avatar-dialog="true"'), "SSR must not mount the portaled modal");
       if (locale === "en-GB" || locale === "pt-BR") {
         assert.equal(html, renderAvatar(locale, enabled));
       } else {

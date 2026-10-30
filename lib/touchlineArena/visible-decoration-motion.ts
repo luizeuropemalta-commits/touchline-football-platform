@@ -8,7 +8,7 @@ export function observeVisibleDecorationMotion(root: Document = document) {
     // Control animation objects without changing React-owned server markup.
     // Inline style writes here can race streamed hydration and reset the page.
     for (const animation of node.getAnimations({ subtree: true })) {
-      if (!('animationName' in animation) || !/touchlineClubEdgeTravel|touchlinePitchBoundaryTrace|touchlineLedMarquee|touchline-card-perimeter-trace|club-owner-portrait-perimeter-trace|club-hub-stadium-breathe|club-hub-border-sweep/.test(String(animation.animationName))) continue;
+      if (!('animationName' in animation) || !/planIconSweep|touchlineClubEdgeTravel|touchlinePitchBoundaryTrace|touchlineLedMarquee|touchline-card-perimeter-trace|club-owner-portrait-perimeter-trace|club-hub-stadium-breathe|club-hub-border-sweep/.test(String(animation.animationName))) continue;
       if (visible && !root.hidden) animation.play();
       else animation.pause();
     }

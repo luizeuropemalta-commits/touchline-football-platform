@@ -143,3 +143,15 @@ test("podium source receives explicit seed/catalogue, preserves owner actions an
   assert.match(page, /catalogue=\{rankedCards\}[\s\S]*seedRanking=\{activeRanking\}/);
   assert.match(page, /includeGoalCandidates:\s*true/);
 });
+
+test("same canonical player can hold Ball and Boot; changing either leader withdraws only its own award", () => {
+ const catalogue=[card(0),card(1),card(2)];
+ for(const [snapshot,totals,goals,ball,boot] of [
+  ['dual',[20,10,9],[7,2,1],id(0),id(0)],
+  ['rating-change',[20,21,9],[7,2,1],id(1),id(0)],
+  ['goals-change',[20,10,9],[7,8,1],id(0),id(1)],
+ ] as const){
+  const state=ranking(snapshot,totals,goals),result=awarded(catalogue,state,state);
+  assert.deepEqual(result.goldenBall.awardedPlayerIds,[ball]);assert.deepEqual(result.goldenBoot.awardedPlayerIds,[boot]);
+ }
+});

@@ -29,6 +29,7 @@ import { localizedPositionLabel } from "@/lib/touchlineArena/position-labels";
 import { touchlineMatchEventKind, touchlineMatchEventLabel, touchlineMatchEventRelatedPlayerLabel } from "@/lib/touchlineArena/match-event-i18n";
 import { matchHeroScorers } from "@/lib/touchlineArena/match-hero-goals";
 import { getTouchlineMatchCentreCopy } from "@/lib/touchlineArena/match-centre-i18n";
+import { touchlineLiveClubLineupLinks } from "@/lib/touchlineArena/live-club-lineup-links";
 import { catalogueCoachForTeam, catalogueCoachForTeamHistory, legacyCoachCatalogue, type CoachCatalogue } from "@/lib/touchlineArena/coach-catalogue-contract";
 import {
   orderTouchlineMatchEvents,
@@ -409,18 +410,11 @@ export default function TouchlineMatchCentre({
   const verifiedDetail = matchDetail?.fixture.id === selected?.providerId ? matchDetail : null;
   const selectedHomeClub = TOUCHLINE_ENGLAND_CLUBS.find((club) => club.teamId === selected?.homeTeam?.providerId);
   const verifiedHomeAccent = selected?.venue ? selectedHomeClub?.accent : undefined;
-  const lineupLabel = selected && touchlineFixtureState(selected, now) === "finished"
-    ? dictionary.matchLineup : dictionary.officialLineup;
-  const lineupLinks = selected ? [selected.homeTeam, selected.awayTeam].map((team) => {
-    const club = TOUCHLINE_ENGLAND_CLUBS.find((candidate) => candidate.teamId === team?.providerId);
-    // Historical canonical sheets can exist without a publication timestamp.
-    // The selected fixture's persisted teamsheet is the availability evidence.
-    const available = Boolean(verifiedDetail?.lineups.some((member) => member.teamId === team?.providerId));
-    return available && club ? {
-      name: team?.name ?? club.name,
-      href: `/touchline-clubs/${club.slug}?lang=${encodeURIComponent(language)}&fixtureId=${encodeURIComponent(selected.providerId)}#touchline-club-lineup`,
-    } : null;
-  }) : [];
+  const lineupLinks = touchlineLiveClubLineupLinks(selected, TOUCHLINE_ENGLAND_CLUBS, language);
+  function lineupLink(side: 0 | 1) {
+    const link = lineupLinks[side];
+    return link ? <a className={`${sharedControls.link} ${styles.homeLineupLink}`} href={link.href} aria-label={`${dictionary.viewLineup} · ${link.name}`} data-lineup-team={link.teamId}><UsersRound size={14} aria-hidden="true" /><span>{dictionary.viewLineup}</span></a> : null;
+  }
   const bestCards = useMemo(() => verifiedDetail ? topRatedPlayers(verifiedDetail) : [], [verifiedDetail]);
   const bestCoach = useMemo(() => {
     if (!selected || touchlineFixtureState(selected, now) !== "finished") return null;
@@ -556,7 +550,6 @@ export default function TouchlineMatchCentre({
               {dictionary.liveNow}
             </span> : null}
             <div className={styles.heroTopbar}>
-              {lineupLinks.map((link, index) => <div key={index} style={{ gridColumn: index === 0 ? 1 : 3, gridRow: 1 }}>{link ? <a className={`${sharedControls.link} ${styles.homeLineupLink}`} href={link.href} aria-label={`${lineupLabel} · ${link.name}`}><UsersRound size={14} aria-hidden="true" /><span>{lineupLabel}<small>{link.name}</small></span></a> : null}</div>)}
               <time className={styles.heroKickoff} dateTime={selected.startsAt}>
                 <span><CalendarDays size={14} aria-hidden="true" />{fixtureDate(selected, language, timeZone, { day: "numeric", month: "short", year: "numeric" }, draftLocalesEnabled)}</span>
                 <strong><Clock3 size={15} aria-hidden="true" />{fixtureDate(selected, language, timeZone, { hour: "2-digit", minute: "2-digit", hour12: false }, draftLocalesEnabled)}</strong>
@@ -566,12 +559,13 @@ export default function TouchlineMatchCentre({
               <div>
                 <TeamMark fixture={selected} side="home" />
                 <strong>{selected.homeTeam?.name ?? dictionary.homeFallback}</strong>
+                {lineupLink(0)}
               </div>
               <div className={styles.scoreColumn}>
                 <b className={styles.score}>{score(selected, selectedDisplayState)}</b>
                 {selectedDisplayState === "finished" ? <span className={styles.scoreStatus}>{dictionary.completed}</span> : null}
               </div>
-              <div><TeamMark fixture={selected} side="away" /><strong>{selected.awayTeam?.name ?? dictionary.awayFallback}</strong></div>
+              <div><TeamMark fixture={selected} side="away" /><strong>{selected.awayTeam?.name ?? dictionary.awayFallback}</strong>{lineupLink(1)}</div>
             </div>
             <div className={styles.heroGoals} dir={textDirection}>
               {[selected.homeTeam, selected.awayTeam].map((team, index) => {

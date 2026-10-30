@@ -115,6 +115,32 @@ test("QA collection activation and locales coexist without admitting release or 
   }
 });
 
+test("hosted lifecycle switches require canonical QA and collection activation", () => {
+  const canonical = {
+    VERCEL: "1", VERCEL_GIT_COMMIT_REF: "qa",
+    TOUCHLINE_QA_SUPABASE_PROJECT_REF: "xgxbwqxjssxxuihuwmgy",
+    SUPABASE_URL: "https://xgxbwqxjssxxuihuwmgy.supabase.co",
+    NEXT_PUBLIC_SUPABASE_URL: "https://xgxbwqxjssxxuihuwmgy.supabase.co",
+    TOUCHLINE_CLUB_COLLECTION_ENABLED: "true",
+  };
+  for (const key of ["TOUCHLINE_CLUB_RELEASE_ENABLED", "TOUCHLINE_CLUB_COACH_LIFECYCLE_ENABLED"]) {
+    for (const value of ["true", "false"]) {
+      assert.deepEqual(inspectTouchlineIsolatedPreviewEnvironment(qaEnvironment({ ...canonical, [key]: value })), { status: "qa", reasons: [] });
+      assert.equal(inspectTouchlineIsolatedPreviewEnvironment(isolatedEnvironment({ [key]: value })).status, "invalid");
+    }
+    for (const patch of [
+      { VERCEL_GIT_COMMIT_REF: "main" }, { VERCEL_GIT_COMMIT_REF: undefined },
+      { TOUCHLINE_QA_SUPABASE_PROJECT_REF: "another-project" },
+      { VERCEL_ENV: "production" }, { TOUCHLINE_CLUB_COLLECTION_ENABLED: "false" },
+      { [key]: "yes" }, { [key]: "" }, { [`NEXT_PUBLIC_${key}`]: "true" }, { [`${key}_OTHER`]: "true" },
+    ]) {
+      assert.equal(inspectTouchlineIsolatedPreviewEnvironment(qaEnvironment({ ...canonical, [key]: "true", ...patch })).status, "invalid", JSON.stringify(patch));
+    }
+    assert.equal(inspectTouchlineIsolatedPreviewEnvironment(qaEnvironment({ ...canonical,
+      TOUCHLINE_CLUB_COLLECTION_ENABLED: "false", [key]: "false" })).status, "qa");
+  }
+});
+
 test("Fixture account scope admits only its exact private name in the complete QA envelope", () => {
   const key = "TOUCHLINE_SPORTMONKS_FIXTURE_ACCOUNT_SCOPE";
   const environment: Readonly<Record<string, string | undefined>> = Object.freeze(qaEnvironment({
@@ -279,8 +305,8 @@ test("avatar read flag name is QA-only, never public, isolated or environment ac
 });
 
 test("avatar upload configuration names admit only private QA preparation, never activation or notification authority", () => {
-  const keys = ["TOUCHLINE_CLUB_OWNER_AVATAR_UPLOAD_ENABLED", "TOUCHLINE_CLUB_OWNER_AVATAR_UPLOAD_ACCOUNT_ID"];
-  const settings = { [keys[0]]: "false", [keys[1]]: "11111111-1111-4111-8111-111111111111" };
+  const keys = ["TOUCHLINE_CLUB_OWNER_AVATAR_UPLOAD_ENABLED", "TOUCHLINE_CLUB_OWNER_AVATAR_UPLOAD_ACCOUNT_ID", "TOUCHLINE_CLUB_OWNER_AVATAR_AUDIENCE"];
+  const settings = { [keys[0]]: "false", [keys[1]]: "11111111-1111-4111-8111-111111111111", [keys[2]]: "customers" };
   const before = { ...settings };
   assert.equal(inspectTouchlineIsolatedPreviewEnvironment(qaEnvironment(settings)).status, "qa");
   for (const key of keys) {
@@ -306,6 +332,16 @@ test("avatar selection/readiness flags are private QA-only inputs, not inferred 
         assert.equal(inspectTouchlineIsolatedPreviewEnvironment(qaEnvironment({ [forbidden]: value })).status, "invalid");
       }
     }
+  }
+});
+
+test("public discovery and photo names coexist in QA without admitting public or isolated variants", () => {
+  for (const key of ["TOUCHLINE_CLUBOWNER_PUBLIC_ENABLED", "TOUCHLINE_CLUBOWNER_PUBLIC_AVATAR_ENABLED"]) {
+    assert.equal(inspectTouchlineIsolatedPreviewEnvironment(qaEnvironment({ [key]: "false" })).status, "qa");
+    assert.equal(inspectTouchlineIsolatedPreviewEnvironment(qaEnvironment({ [key]: "true" })).status, "qa");
+    assert.equal(inspectTouchlineIsolatedPreviewEnvironment(isolatedEnvironment({ [key]: "true" })).status, "invalid");
+    for (const forbidden of [`NEXT_PUBLIC_${key}`, `${key}_OTHER`]) assert.equal(inspectTouchlineIsolatedPreviewEnvironment(qaEnvironment({ [forbidden]: "true" })).status, "invalid");
+    assert.equal(inspectTouchlineIsolatedPreviewEnvironment(qaEnvironment({ [key]: "true", VERCEL_ENV: "production" })).status, "invalid");
   }
 });
 

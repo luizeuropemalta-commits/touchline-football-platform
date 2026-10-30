@@ -10,7 +10,7 @@ export default function LoginPlanGallery({ locale, draftLocalesEnabled = false }
   const labels = getClubOwnerPlanShowcaseCopy(locale, draftLocalesEnabled);
   const copy = getTouchlineClubOwnerMarketCopy(locale, draftLocalesEnabled);
   return <section dir="ltr" className={styles.gallery} aria-labelledby="login-plans-heading" data-login-plans="true">
-    <div className={styles.heading}><div><span>TouchLine / {labels.fantasyFootball}</span><h2 id="login-plans-heading">{labels.browse}</h2></div><p>{copy.planActionUnavailable}</p></div>
+    <div className={styles.heading}><div><span>TouchLine / {labels.fantasyFootball}</span><h2 id="login-plans-heading">{labels.browse}</h2></div><p>{labels.preview}</p></div>
     <div className={styles.grid}>
       {CLUB_OWNER_PLAN_PREVIEWS.map(plan => <article key={plan.id} className={`${cardStyles.planShowcase} ${styles.offer}`} data-plan-preview={plan.id}>
         <ClubOwnerPlanCard tier={plan.id} locale={locale} draftLocalesEnabled={draftLocalesEnabled} />

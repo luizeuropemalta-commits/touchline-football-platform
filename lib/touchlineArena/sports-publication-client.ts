@@ -26,18 +26,17 @@ export function useTouchlinePublishedLive(
   enabled = true,
   admissionScope: TouchlineLiveAdmissionScope | null = null,
   focusedProviderId: string | null = null,
+  updateSameFixtureKickoff = false,
 ) {
-  const seedKey = JSON.stringify([seed, metadata, admissionScope]);
+  const seedKey = JSON.stringify([seed, metadata, admissionScope, updateSameFixtureKickoff]);
   const adapter = useMemo(() => {
-    const [fixtures, initialMetadata, scope] = JSON.parse(seedKey) as [TouchlinePublicFixture[], TouchlineLiveReadMetadata | null, TouchlineLiveAdmissionScope | null];
-    return scope
-      ? createTouchlinePublishedLiveReader(touchlineLivePresentationStore, fixtures, initialMetadata, scope)
-      : createTouchlinePublishedLiveReader(touchlineLivePresentationStore, fixtures, initialMetadata);
+    const [fixtures, initialMetadata, scope, kickoffUpdates] = JSON.parse(seedKey) as [TouchlinePublicFixture[], TouchlineLiveReadMetadata | null, TouchlineLiveAdmissionScope | null, boolean];
+    return createTouchlinePublishedLiveReader(touchlineLivePresentationStore, fixtures, initialMetadata, scope, kickoffUpdates);
   }, [seedKey]);
   const view = useSyncExternalStore(enabled ? adapter.subscribe : inactive,
     enabled ? adapter.getSnapshot : adapter.getServerSnapshot, adapter.getServerSnapshot);
   return useMemo(() => ({
-    ...projectTouchlinePublishedLive(view.fixtures, view.metadata, view.read, Math.max(now, view.read?.receivedAt ?? 0), admissionScope, focusedProviderId),
+    ...projectTouchlinePublishedLive(view.fixtures, view.metadata, view.read, Math.max(now, view.read?.receivedAt ?? 0), admissionScope, focusedProviderId, updateSameFixtureKickoff),
     receivedAt: view.read?.receivedAt ?? null,
-  }), [view, now, admissionScope, focusedProviderId]);
+  }), [view, now, admissionScope, focusedProviderId, updateSameFixtureKickoff]);
 }

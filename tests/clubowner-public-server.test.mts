@@ -8,7 +8,7 @@ import { hasTouchLineArenaAccess } from "../lib/touchlineArena/auth-access.ts";
 import { resolveServerReadWithin } from "../lib/touchlineArena/server-read-deadline.ts";
 
 const source = ts.transpileModule(readFileSync(new URL("../lib/touchlineArena/clubowner-public-server.ts", import.meta.url), "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
-function fixture(options: { enabled?: boolean; error?: { name: string } | null; user?: unknown; missingClient?: boolean; rpcError?: boolean } = {}) {
+function fixture(options: { enabled?: boolean; photoEnabled?: boolean; error?: { name: string } | null; user?: unknown; missingClient?: boolean; rpcError?: boolean } = {}) {
   let clients = 0, authenticated = 0;
   const calls: { name: string; args: unknown; signal?: AbortSignal }[] = [];
   const exports: Record<string, unknown> = {};
@@ -25,6 +25,8 @@ function fixture(options: { enabled?: boolean; error?: { name: string } | null; 
       if (name === "@/lib/supabase/server") return { createClient: async () => { clients++; return options.missingClient ? null : client; } };
       if (name === "./auth-access") return { hasTouchLineArenaAccess };
       if (name === "./server-read-deadline") return { resolveServerReadWithin };
+      if (name === "@/lib/admin/owner") return { isOwnerEmail: (email: string) => email === "admin@example.invalid" };
+      if (name === "./clubowner-public-avatar-server") return { publicOwnerAvatarService: () => ({ enabled: options.photoEnabled === true, urls: async () => ({}), assertCurrent() {} }) };
       throw new Error(`Unexpected server dependency ${name}`);
     },
   });
@@ -35,6 +37,17 @@ test("real server adapter reuses request session, bounds RPC transport, and neve
   await f.deps.rpc("touchline_people_own_profile");
   assert.deepEqual(f.counts(), { clients: 1, authenticated: 1 }); assert.equal(f.calls[0].signal instanceof AbortSignal, true);
   assert.equal(JSON.stringify(f.calls[0].args), "{}");
+});
+test("photo opt-in capability uses verified request user and canonical owner exclusion without changing legacy access", async () => {
+  const customer = { id: "11111111-1111-4111-8111-111111111111", email: "customer@example.invalid", is_anonymous: false, app_metadata: { touchline_arena_access_v1: true } };
+  assert.deepEqual(JSON.parse(JSON.stringify(await fixture({ photoEnabled: true, user: customer }).deps.currentActor())), { allowed: true, photoAllowed: true });
+  for (const user of [{ ...customer, email: "admin@example.invalid" }, { ...customer, email: "" }, { ...customer, email: undefined }, { ...customer, is_anonymous: true }, { ...customer, app_metadata: {}, user_metadata: { touchline_arena_access_v1: true } }]) {
+    assert.equal((await fixture({ photoEnabled: true, user }).deps.currentActor())?.photoAllowed, false);
+  }
+  const legacy = fixture({ user: customer });
+  assert.equal(Object.hasOwn((await legacy.deps.currentActor())!, "photoAllowed"), false);
+  await assert.rejects(legacy.deps.rpc("touchline_people_save_profile_v2", {}), /PHOTO_UNAVAILABLE/);
+  assert.equal(legacy.calls.length, 0);
 });
 test("real server adapter treats auth errors, untrusted metadata and anonymous users as unauthorized", async () => {
   await assert.rejects(fixture({ error: { name: "AuthApiError" } }).deps.currentActor(), /AUTH_UNAVAILABLE/);

@@ -1,4 +1,5 @@
 import "server-only";
+import { allowsClubOwnerAvatarAudience, parseClubOwnerAvatarAudience } from "./club-owner-avatar-audience.ts";
 import { AuthSessionMissingError, type SupabaseClient } from "@supabase/supabase-js";
 import { hasTouchLineArenaAccess } from "./auth-access.ts";
 import { isTouchlineIsolatedPreviewRequest, TOUCHLINE_ISOLATED_PREVIEW_HEADER, TOUCHLINE_QA_PREVIEW_MODE } from "../touchlinePreview/isolation.ts";
@@ -237,10 +238,11 @@ export function createClubOwnerAvatarServer(config: ClubOwnerAvatarServerConfig,
 /** Control lane only: status never mutates; fence requires a separate explicit
  * consent and exact epoch. It neither reads image bytes nor claims readiness.
  * The original auth/SDK work is tracked independently of abort/timeout races. */
-export function createClubOwnerAvatarRecoveryServer(config: ClubOwnerAvatarServerConfig & { accountId?: string },
+export function createClubOwnerAvatarRecoveryServer(config: ClubOwnerAvatarServerConfig & { accountId?: string; audience?: string },
   dependencies: ClubOwnerAvatarServerDependencies & { assertEnvironment?: () => void }): (request: Request) => Promise<Response> {
   const settings = { ...config }, deps = { ...dependencies };
-  const configured = configuredServer(settings, deps) && isAvatarAccountId(settings.accountId);
+  const audience = parseClubOwnerAvatarAudience(settings);
+  const configured = configuredServer(settings, deps) && audience !== null;
   const response = (status: number, value: unknown) => Response.json(value, { status, headers: {
     "Cache-Control": "private, no-store", Vary: "Cookie", "X-Content-Type-Options": "nosniff", "Cross-Origin-Resource-Policy": "same-origin",
   } });
@@ -261,7 +263,7 @@ export function createClubOwnerAvatarRecoveryServer(config: ClubOwnerAvatarServe
       if (target.origin !== settings.requestOrigin || target.pathname !== "/api/account/avatar/recovery" || target.search
         || request.headers.get("origin") !== target.origin || (request.headers.has("sec-fetch-site") && request.headers.get("sec-fetch-site") !== "same-origin")
         || isTouchlineIsolatedPreviewRequest(request.headers.get(TOUCHLINE_ISOLATED_PREVIEW_HEADER))) return fail(403);
-      if (!isAvatarAccountId(expected) || expected.toLowerCase() !== settings.accountId!.toLowerCase()) return fail(403);
+      if (!allowsClubOwnerAvatarAudience(audience, expected)) return fail(403);
       if (request.headers.get("content-type")?.toLowerCase() !== "application/json" || request.headers.has("content-encoding")) return fail(415);
       const declared = request.headers.get("content-length");
       if (declared !== null && (!/^(0|[1-9][0-9]*)$/.test(declared) || BigInt(declared) > BigInt(512))) return fail(413);

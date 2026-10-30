@@ -85,10 +85,17 @@ test("unlisted, unavailable, foreign and self trades are refused without modifyi
 });
 
 
-test("approved Beta economics can validate an allocation without enabling the collection or bypassing slot rules", () => {
-  const a = { ...club("a"), plan: "beta" as const };
-  assert.doesNotThrow(() => pair(a, club("b")));
-  assert.doesNotThrow(() => pair(club("a"), { ...club("b"), plan: "beta" }));
-  assert.throws(() => pair({ ...a, players: a.players.slice(1) }, club("b")), /COMPLETE_ROSTER/);
-  assert.throws(() => validateExchangePair(a, club("b"), "a-starters-0", "b-outside-0"), /MATCH_RELATED/);
+test("Beta trades only with Beta; every paid-plan pair remains eligible in both directions", () => {
+  for (const senderPlan of ["beta", "standard", "master", "vip"] as const) {
+    for (const receiverPlan of ["beta", "standard", "master", "vip"] as const) {
+      const a = { ...club("a"), plan: senderPlan }, b = { ...club("b"), plan: receiverPlan };
+      const before = structuredClone([a,b]);
+      if ((senderPlan === "beta") !== (receiverPlan === "beta")) assert.throws(() => pair(a,b), /CLUB_BETA_EXCHANGE_ONLY/);
+      else assert.doesNotThrow(() => pair(a,b));
+      assert.deepEqual([a,b], before);
+    }
+  }
+  const a = { ...club("a"), plan: "beta" as const }, b = { ...club("b"), plan: "beta" as const };
+  assert.throws(() => pair({ ...a, players: a.players.slice(1) }, b), /COMPLETE_ROSTER/);
+  assert.throws(() => validateExchangePair(a, b, "a-starters-0", "b-outside-0"), /MATCH_RELATED/);
 });

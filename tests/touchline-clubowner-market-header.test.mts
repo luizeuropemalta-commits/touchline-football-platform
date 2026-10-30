@@ -48,6 +48,18 @@ test("the actual account owns the ClubOwner header, while the approved countdown
   assert.equal(getTouchlineFantasyMarketWorkflowCopy("pt-BR").market, "Mercado");
 });
 
+test("ClubOwner retains the authoritative clock above the squad after coach and formation selection", () => {
+  const start = stage.indexOf('{marketPage ? <section className={styles.myClubMarketStatus}');
+  const end = stage.indexOf('</section> : null}', start);
+  assert.ok(start > 0 && end > start);
+  const clock = stage.slice(start, end);
+  assert.match(clock, /data-market-status-compact="true"/);
+  assert.match(clock, /<MarketWindowClock gameweeks=\{gameweeks\}/);
+  assert.doesNotMatch(clock, /selectedCoach|formationCode|lineupWindow|windowRule/);
+  assert.match(clock, /qaOverride=\{qaClubMarketOpen \? collectionBudgetCopy.qaMarketOpen : undefined\}/);
+  assert.ok(end < stage.indexOf('data-clubowner-live-position="above-reserves"'));
+});
+
 test("the plan is explicit, uses entitlement state and has no invented payment or balance", () => {
   assert.match(header, /data-plan-state=/);
   assert.match(header, /const displayedTier = currentTier \?\? undefined/);
@@ -283,7 +295,7 @@ function renderHeader(owner: Owner | null, locale: string, copyModule: Record<st
     if (name === "@/lib/stripe/club-season-checkout-client") return checkoutClient;
     if (name === "@/lib/touchlineArena/catalogue-locale") return catalogueLocale;
     if (name === "./fantasy/ClubCollectionContext") return { useConfirmedClubCollection: () => ({ state: collection, initialBudget, verificationStatus }) };
-    if (name === "./ClubOwnerPlanShowcase" || name === "./ClubOwnerPlanOnboarding" || name === "./TouchlineClubPerimeterTrace") {
+    if (name === "./ClubOwnerPlanShowcase" || name === "./ClubOwnerPlanOnboarding" || name === "./TouchlineClubPerimeterTrace" || name === "./a11y/TouchlineDialog") {
       const source = readFileSync(new URL(`../components/touchline/${name.slice(2)}.tsx`, import.meta.url), "utf8");
       const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true } }).outputText;
       const showcase = { exports: {} };

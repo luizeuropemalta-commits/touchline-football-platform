@@ -21,6 +21,7 @@ test('Exchange actual SQL: bilateral atomic receipt, rollback, authorization, re
   const primary=sql('20261018073030_club_collection_primary_position_contract');
   await db.exec(primary.slice(primary.indexOf('create function public.touchline_club_normalize_primary_detail'),primary.indexOf('create function public.touchline_club_owned_primary_detail')));
   await db.exec(sql('20261025204101_club_exchange_atomic_ledger'));
+  await db.exec(sql('20261030011416_club_exchange_beta_pair_boundary'));
   const positions=['GK','GK','GK',...Array(6).fill('CB'),...Array(3).fill('RB'),...Array(3).fill('LB'),...Array(5).fill('DM'),...Array(5).fill('MID'),...Array(3).fill('RW'),...Array(3).fill('LW'),...Array(4).fill('CF')];
   const roster=(offset:number)=>positions.map((position,index)=>({playerId:id(offset+index),clubId:id(5),position,valueEur:100_000_000,area:index<11?'starters':index<20?'reserves':'outside',slot:index<11?index:index<20?index-11:index-20}));
   const before=(offset:number)=>({revision:1,seasonId:id(3),plan:'standard',balanceEur:100_000_000,coach:null,players:roster(offset),receipts:[]});
@@ -47,6 +48,9 @@ test('Exchange actual SQL: bilateral atomic receipt, rollback, authorization, re
 
   await db.exec(`update football_fixtures set status='FT' where id='${id(50)}'`);
   await listing(1,120);await listing(2,220);
+  await propose(12);
+  assert.equal((await resolve(2,'decline',12)).status,'declined');
+  assert.equal((await db.query<{n:number}>('select count(*)::int n from touchline_club_player_reservations')).rows[0].n,0);
   await propose(11);await assert.rejects(resolve(1,'expire',11),/CLUB_PROPOSAL_NOT_EXPIRED/);
   await db.exec(`update touchline_club_exchange_proposals set expires_at=clock_timestamp()-interval '1 second' where id='${id(11)}'`);
   await assert.rejects(resolve(2,'accept',11),/CLUB_PROPOSAL_EXPIRED/);
@@ -56,7 +60,7 @@ test('Exchange actual SQL: bilateral atomic receipt, rollback, authorization, re
   assert.equal((await db.query<{n:number}>('select count(*)::int n from touchline_club_player_reservations')).rows[0].n,0);
 
   const discovery=async(owner:number)=>(await db.query<{v:{listings:{owner:{accountId:string};player:{valueTc:number}}[];reservations:unknown[];proposals:{proposer:{accountId:string}}[]}}>('select touchline_club_exchange_discovery($1,$2) v',[id(owner),id(3)])).rows[0].v;
-  const visible=await discovery(1);assert.ok(parseExchangeDiscovery(visible,{ready:true,accountId:id(1),seasonId:id(3),collectionRevision:1}));assert.equal(visible.listings.length,2);assert.equal(visible.listings[1].owner.accountId,id(2));assert.equal(visible.listings[1].player.valueTc,100_000_000);assert.equal(JSON.stringify(visible).includes('balanceEur'),false);
+  const visible=await discovery(1);assert.ok(parseExchangeDiscovery(visible,{ready:true,accountId:id(1),seasonId:id(3),collectionRevision:1}));assert.equal(visible.listings.length,2);assert.ok(parseExchangeDiscovery(visible,{ready:true,accountId:id(1),seasonId:id(3),collectionRevision:1})!.listings.every(l=>l.negotiationAllowed));assert.equal(visible.listings[1].owner.accountId,id(2));assert.equal(visible.listings[1].player.valueTc,100_000_000);assert.equal(JSON.stringify(visible).includes('balanceEur'),false);
   assert.equal((await propose()).status,'pending');
   assert.equal((await discovery(1)).listings.length,0);assert.equal((await discovery(1)).reservations.length,1);
 assert.equal((await propose()).replayed,true);

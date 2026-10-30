@@ -11,7 +11,9 @@ import { clubReleaseConfirmation } from "@/lib/touchlineFantasy/club-release";
 import layout from "./ClubOwnerCollectionSlots.module.css";
 import controls from "@/components/touchline/TouchlineGlobalNavigation.module.css";
 import TouchlineEliteExactCard from "@/components/touchline/cards/TouchlineEliteExactCard";
+import { useTouchlineCardLeadershipAuthority } from "@/components/touchline/cards/TouchlineCardLeadershipProvider";
 import { squadCardToExactPlayer, type ClubOwnerSquadCard } from "@/lib/touchlineArena/demo-data";
+import { projectTouchlineSeasonCard } from "@/lib/touchlineArena/player-season-presentation";
 import styles from "./ClubOwnerReleaseDialog.module.css";
 
 /** Review never mutates. Freeze the quoted revision until the owner closes/reopens. */
@@ -23,6 +25,7 @@ export function ClubOwnerReleaseDialog({ state, playerId, playerName, card, loca
   onClose: () => void; onConfirm: (playerId: string, revision: number) => Promise<boolean>;
 }) {
   const [quote] = useState(() => clubReleaseConfirmation(state, playerId));
+  const authority = useTouchlineCardLeadershipAuthority();
   const heading = useRef<HTMLHeadingElement>(null);
   const pt = locale.startsWith("pt");
   const title = pt ? "Rescisão de contrato" : "Contract termination";
@@ -38,15 +41,18 @@ export function ClubOwnerReleaseDialog({ state, playerId, playerName, card, loca
   const projectedBalance = state.balanceEur + quote.refund;
   const showProjection = !changed && Number.isSafeInteger(projectedBalance);
   const matchingCard = card && (card.canonicalPlayerId ?? card.id) === playerId ? card : null;
+  // The financial quote stays frozen; current season presentation follows the
+  // same shared authority as the squad card and its zoom, without another read.
+  const displayCard = matchingCard ? projectTouchlineSeasonCard(matchingCard, authority, true) : null;
   return createPortal(<div className={`${layout.overlay} ${styles.fullscreenOverlay}`}><div {...dialogProps} className={styles.fullscreen}>
     <header className={styles.releaseHeader}>
       <LogOut size={26} aria-hidden="true" />
       <h2 ref={heading} tabIndex={-1}>{title}</h2>
     </header>
     <div className={`${styles.review} ${styles.fullscreenReview}`} data-has-card={Boolean(matchingCard)}>
-    {matchingCard ? <aside className={styles.athlete} aria-label={pt ? "Registro do atleta" : "Player record"}>
+    {displayCard ? <aside className={styles.athlete} aria-label={pt ? "Registro do atleta" : "Player record"}>
     <div className={styles.athleteCard} inert aria-label={playerName}>
-      <TouchlineEliteExactCard player={squadCardToExactPlayer(matchingCard)} staticRenderScale={240 / 430}
+      <TouchlineEliteExactCard player={squadCardToExactPlayer(displayCard)} staticRenderScale={240 / 430}
         runtimeLocaleOverride={locale} hideMarketValuePanel={false} subscribeToRanking={false}
         enableInteractiveNeon={false} showCardActions={false} showProfileAction={false}
         showSocialMetrics={false} rankingMode="preview" forceNeonActive />

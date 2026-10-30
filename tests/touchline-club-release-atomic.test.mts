@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { clubRoundDatabase } from "./helpers/club-round-database.mts";
+import { installTestClubSeasonCalendar } from "./helpers/club-season-calendar.mts";
 import type { ClubAcquisitionState } from "../lib/touchlineFantasy/club-acquisition.ts";
 const id=(n:number)=>`30000000-0000-4000-8000-${String(n).padStart(12,"0")}`;
 const migration=readFileSync(new URL("../supabase/migrations/20261018051627_club_collection_atomic_release.sql",import.meta.url),"utf8");
@@ -38,6 +39,7 @@ test("ordinary release is atomic, owner-scoped, ten percent of paid contract and
     // Install the actual QA override in this isolated fixture, not on remote QA.
     await db.exec(`create function touchline_assert_qa_fixture_target(text) returns void language plpgsql as $$begin
       if $1<>'xgxbwqxjssxxuihuwmgy' then raise exception 'WRONG_TARGET';end if;end;$$;`);
+    await installTestClubSeasonCalendar(db,id(3),id(2));
     await db.exec(readFileSync(new URL("../supabase/qa/club_market_test_opening.sql",import.meta.url),"utf8"));
     await db.exec("update touchline_qa_club_market_control set enabled=true");
     await db.query(`insert into touchline_fantasy_user_gameweeks(user_id,gameweek_id,formation_code,state,budget_eur_snapshot,max_players_per_club_snapshot,collection_revision_snapshot,collection_related_snapshot)

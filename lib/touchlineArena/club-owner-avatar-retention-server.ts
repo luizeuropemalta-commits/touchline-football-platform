@@ -4,20 +4,11 @@ import { createAvatarRetentionListStorage } from "./club-owner-avatar-retention-
 import { runAvatarRetentionDiscoveryPage } from "./club-owner-avatar-retention-discovery-worker.ts";
 import { runAvatarRetentionBatch, type AvatarRetentionRpc } from "./club-owner-avatar-retention-worker.ts";
 import { awaitAvatarStep, createAvatarEnvironmentGuard } from "./club-owner-avatar-upload-contract.ts";
+import { avatarRetentionConfigurationFailure } from "./club-owner-avatar-retention-configuration.ts";
 
 type Config = Readonly<{ enabled: boolean; supabaseOrigin: string; serviceRoleKey: string; assertEnvironment: () => void }>;
 type Dependencies = Readonly<{ rpc: AvatarRetentionRpc; fetchImpl: typeof fetch }>;
-const project = "xgxbwqxjssxxuihuwmgy";
 const paths = new Set(["/touchline-avatar-retention", "/functions/v1/touchline-avatar-retention"]);
-function keyBoundToQa(key: string) {
-  try {
-    if (typeof key !== "string" || key.length > 4096 || !/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(key)) return false;
-    const claims: unknown = JSON.parse(Buffer.from(key.split(".")[1], "base64url").toString("utf8"));
-    if (!claims || typeof claims !== "object" || Array.isArray(claims)) return false;
-    const values = claims as Record<string, unknown>;
-    return values.ref === project && values.role === "service_role";
-  } catch { return false; }
-}
 /** LOCAL composition only, not a deployed route or scheduler. JWT payload checks
  * bind configured credentials; they do NOT authenticate caller-supplied claims.
  * Caller authentication is exact constant-time comparison with the captured key.
@@ -26,7 +17,7 @@ function keyBoundToQa(key: string) {
 export function createAvatarRetentionServer(config: Config, deps: Dependencies): (request: Request) => Promise<Response> {
   const { enabled, supabaseOrigin, serviceRoleKey } = config;
   const { rpc: rawRpc, fetchImpl: rawFetch } = deps;
-  const configured = supabaseOrigin === `https://${project}.supabase.co` && keyBoundToQa(serviceRoleKey)
+  const configured = avatarRetentionConfigurationFailure(supabaseOrigin, serviceRoleKey) === null
     && typeof config.assertEnvironment === "function" && typeof rawRpc === "function" && typeof rawFetch === "function";
   const assertEnvironment = createAvatarEnvironmentGuard(config.assertEnvironment);
   const expectedAuthorization = Buffer.from(`Bearer ${serviceRoleKey}`);

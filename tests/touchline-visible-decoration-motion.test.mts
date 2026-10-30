@@ -6,13 +6,13 @@ import ts from 'typescript';
 
 const source = readFileSync(new URL('../lib/touchlineArena/visible-decoration-motion.ts', import.meta.url), 'utf8');
 
-test('shared decorative motion pauses offscreen/hidden, resumes, discovers streamed cards and cleans up', () => {
+for (const animationName of ['touchline-card-perimeter-trace', 'ClubOwnerPlanShowcase_planIconSweep__test']) test(`shared ${animationName} pauses offscreen/hidden, resumes, discovers streamed decorations and cleans up`, () => {
   class Element {
     isConnected = true;
     state = 'paused';
     style = { setProperty: () => { throw new Error('React-owned markup must not be mutated'); }, removeProperty: () => { throw new Error('React-owned markup must not be mutated'); } };
     getAnimations() { return [
-      { animationName: 'touchline-card-perimeter-trace', play: () => { this.state = 'running'; }, pause: () => { this.state = 'paused'; } },
+      { animationName, play: () => { this.state = 'running'; }, pause: () => { this.state = 'paused'; } },
       { animationName: 'page-in', play: () => { throw new Error('Content animation must remain untouched'); }, pause: () => { throw new Error('Content animation must remain untouched'); } },
     ]; }
     querySelectorAll() { return []; }

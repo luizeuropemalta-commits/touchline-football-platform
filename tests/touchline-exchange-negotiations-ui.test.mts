@@ -1,18 +1,19 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';import {runInNewContext} from 'node:vm';import React from 'react';import * as jsx from 'react/jsx-runtime';import {renderToStaticMarkup} from 'react-dom/server';import ts from 'typescript';
-import {getExchangeNegotiationCopy,getExchangeProposalStatus,getExchangeBalancePreviewLabel,getExchangeRecoveryLabel,EXCHANGE_NEGOTIATION_ROWS} from '../lib/touchlineFantasy/exchange-negotiations-i18n.ts';
+import {getExchangeNegotiationCopy,getExchangeProposalStatus,getExchangeBalancePreviewLabel,getExchangeRecoveryLabel,getExchangePlanLockLabel,getExchangePlanLockActions,EXCHANGE_NEGOTIATION_ROWS} from '../lib/touchlineFantasy/exchange-negotiations-i18n.ts';
 import {projectExchangeReadiness} from '../lib/touchlineFantasy/exchange-eligibility.ts';
+import {LockKeyhole} from 'lucide-react';
 import * as journal from '../lib/touchlineFantasy/exchange-command-journal.ts';
 import {prepareExchangeCommand} from '../lib/touchlineFantasy/exchange-command-client.ts';import {quoteClubExchange} from '../lib/touchlineFantasy/club-market-rules.ts';
 const id=(n:number)=>`00000000-0000-4000-8000-${String(n).padStart(12,'0')}`;
 const own={playerId:id(5),clubId:id(9),name:'Own athlete',valueTc:80_000_000,position:'MID',primaryDetail:'CM'};
 const other={...own,playerId:id(6),name:'Other athlete',valueTc:100_000_000};
-const data={version:1,accountId:id(1),seasonId:id(2),collectionRevision:7,ownListedIds:[id(5)],reservations:[],proposals:[],listings:[{owner:{accountId:id(1),name:'Me'},collectionRevision:7,player:own},{owner:{accountId:id(4),name:'Other club'},collectionRevision:8,player:other}]};
+const data={version:1,accountId:id(1),seasonId:id(2),collectionRevision:7,ownListedIds:[id(5)],reservations:[],proposals:[],listings:[{negotiationAllowed:true,owner:{accountId:id(1),name:'Me'},collectionRevision:7,player:own},{negotiationAllowed:true,owner:{accountId:id(4),name:'Other club'},collectionRevision:8,player:other}]};
 function harness(discovery:unknown=data,outcome='confirmed',plan='standard'){
- const values:unknown[]=[],effects:{deps:unknown[];cleanup?:()=>void}[]=[];let cursor=0,effectCursor=0,reads=0,reloads=0;const queued:(()=>void)[]=[];const commands:unknown[]=[];
+ const values:unknown[]=[],effects:{deps:unknown[];cleanup?:()=>void}[]=[];let cursor=0,effectCursor=0,reads=0,reloads=0,explores=0;const queued:(()=>void)[]=[];const commands:unknown[]=[];
  const exports:{default?:(props:Record<string,unknown>)=>React.ReactNode}={};
  const source=readFileSync(new URL('../components/touchline/market/ExchangeNegotiations.tsx',import.meta.url),'utf8');
  const js=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText;
- const modules:Record<string,unknown>={'@/lib/touchlineFantasy/exchange-eligibility':{projectExchangeReadiness},'@/lib/touchlineFantasy/exchange-command-journal':journal,'@/lib/touchlineFantasy/exchange-negotiations-i18n':{getExchangeNegotiationCopy,getExchangeProposalStatus,getExchangeBalancePreviewLabel,getExchangeRecoveryLabel},react:{useState:(initial:unknown)=>{const n=cursor++;if(!(n in values))values[n]=typeof initial==='function'?initial():initial;return [values[n],(next:unknown)=>{values[n]=typeof next==='function'?next(values[n]):next;}];},useRef:(initial:unknown)=>{const n=cursor++;if(!(n in values))values[n]={current:initial};return values[n];},useEffect:(fn:()=>void|(()=>void),deps:unknown[])=>{const n=effectCursor++,old=effects[n];if(!old||deps.some((v,i)=>v!==old.deps[i])){queued.push(()=>{old?.cleanup?.();effects[n]={deps,cleanup:fn()||undefined};});}}},'react/jsx-runtime':jsx,
+ const modules:Record<string,unknown>={'lucide-react':{LockKeyhole},'@/lib/touchlineFantasy/exchange-eligibility':{projectExchangeReadiness},'@/lib/touchlineFantasy/exchange-command-journal':journal,'@/lib/touchlineFantasy/exchange-negotiations-i18n':{getExchangeNegotiationCopy,getExchangeProposalStatus,getExchangeBalancePreviewLabel,getExchangeRecoveryLabel,getExchangePlanLockLabel,getExchangePlanLockActions},react:{useState:(initial:unknown)=>{const n=cursor++;if(!(n in values))values[n]=typeof initial==='function'?initial():initial;return [values[n],(next:unknown)=>{values[n]=typeof next==='function'?next(values[n]):next;}];},useRef:(initial:unknown)=>{const n=cursor++;if(!(n in values))values[n]={current:initial};return values[n];},useEffect:(fn:()=>void|(()=>void),deps:unknown[])=>{const n=effectCursor++,old=effects[n];if(!old||deps.some((v,i)=>v!==old.deps[i])){queued.push(()=>{old?.cleanup?.();effects[n]={deps,cleanup:fn()||undefined};});}}},'react/jsx-runtime':jsx,
  '@/lib/touchlineFantasy/exchange-discovery':{readExchangeDiscovery:async()=>{reads++;return discovery;}},
  '@/lib/touchlineFantasy/exchange-command-client':{prepareExchangeCommand,submitExchangeCommand:async(command:unknown)=>{commands.push(command);return {status:outcome};}},
  '@/lib/touchlineFantasy/club-market-rules':{quoteClubExchange},
@@ -20,12 +21,12 @@ function harness(discovery:unknown=data,outcome='confirmed',plan='standard'){
  const storage=new Map<string,string>();
  runInNewContext(js,{exports,window:{sessionStorage:{getItem:(k:string)=>storage.get(k)??null,setItem:(k:string,v:string)=>storage.set(k,v),removeItem:(k:string)=>storage.delete(k)}},AbortController,crypto:{randomUUID:()=>id(20)},require:(name:string)=>name.endsWith('.css')?{default:new Proxy({},{get:(_,k)=>String(k)})}:modules[name]??(()=>{throw Error(name);})()});
  const state={seasonId:id(2),revision:7,plan,balanceEur:200_000_000,players:Array.from({length:35},(_,i)=>({playerId:i===20?id(5):id(100+i),area:i<11?'starters':i<20?'reserves':'outside',slot:i<11?i:i<20?i-11:i-20,valueEur:80}))};
- const props={locale:'en-GB',ready:true,state,accountId:id(1),catalogue:[{canonicalPlayerId:id(5),name:own.name,editorialCard:{}},{canonicalPlayerId:id(6),name:other.name,editorialCard:{}}],onCommitted:()=>{reloads++;}};
+ const props={locale:'en-GB',ready:true,state,accountId:id(1),catalogue:[{canonicalPlayerId:id(5),name:own.name,editorialCard:{}},{canonicalPlayerId:id(6),name:other.name,editorialCard:{}}],onCommitted:()=>{reloads++;},onExplorePlans:()=>{explores++;}};
  let tree:React.ReactNode;
  function render(){cursor=0;effectCursor=0;tree=exports.default!(props);return renderToStaticMarkup(tree);}
  async function flush(){for(const fn of queued.splice(0))fn();await Promise.resolve();await Promise.resolve();return render();}
  function nodes(type:string){const found:React.ReactElement<Record<string,unknown>>[]=[];function walk(node:React.ReactNode){if(!React.isValidElement<Record<string,unknown>>(node))return;if(node.type===type)found.push(node);React.Children.forEach(node.props.children as React.ReactNode,walk);}walk(tree);return found;}
- return {render,flush,commands,setOutcome:(next:string)=>{outcome=next;},reads:()=>reads,reloads:()=>reloads,nodes,close:()=>effects.forEach(e=>e.cleanup?.())};
+ return {render,flush,commands,setOutcome:(next:string)=>{outcome=next;},reads:()=>reads,reloads:()=>reloads,explores:()=>explores,nodes,close:()=>effects.forEach(e=>e.cleanup?.())};
 }
 test('gate unavailable never reads as empty; approved Beta may query scoped discovery',async()=>{
  const closed=harness(null);assert.match(closed.render(),/Loading negotiations/);assert.match(await closed.flush(),/currently unavailable/);assert.equal(closed.commands.length,0);closed.close();
@@ -59,4 +60,35 @@ test('explicit recovery preserves exact identity and remains locked after reject
  await h.flush();h.setOutcome('rejected');(h.nodes('button').find(b=>b.props.children==='Retry the same operation')!.props.onClick as ()=>void)();await h.flush();
  assert.equal(h.commands.length,2);assert.deepEqual(h.commands[0],h.commands[1]);assert.match(h.render(),/not yet confirmed/);
  assert.equal(h.nodes('button').find(b=>b.props.children==='Prepare proposal')!.props.disabled,true);h.close();
+});
+
+test('mixed-plan listing stays visible but cannot create a proposal even through a stale click handler',async()=>{
+ const blocked={...data,listings:data.listings.map(l=>({...l,negotiationAllowed:false}))};
+ const h=harness(blocked,'confirmed','beta');h.render();await h.flush();
+ (h.nodes('select')[0].props.onChange as (e:unknown)=>void)({target:{value:id(5)}});h.render();
+ const button=h.nodes('button').find(b=>b.props.children==='Unavailable')!;
+ assert.equal(button.props.disabled,true);assert.equal(button.props.onClick,undefined);assert.equal(h.explores(),0);
+ assert.match(h.render(),/Other athlete/);assert.equal(h.nodes('button').some(b=>b.props.children==='Confirm'),false);assert.equal(h.commands.length,0);h.close();
+});
+test('legacy mixed-plan proposal cannot be accepted but can be declined',async()=>{
+ const proposal={proposalId:id(7),status:'pending',negotiationAllowed:false,restrictionReason:'beta-pair',proposer:{accountId:id(4),name:'Other'},accepter:{accountId:id(1),name:'Me'},outgoing:other,incoming:own,quote:{feeTc:5_000_000,bonusTc:2_500_000,compensationTc:20_000_000}};
+ const h=harness({...data,proposals:[proposal]});h.render();await h.flush();
+ const blocked=h.nodes('button').find(b=>renderToStaticMarkup(b).includes('Beta only'))!;assert.equal(blocked.props.disabled,true);assert.equal(blocked.props.onClick,undefined);h.render();
+ assert.equal(h.nodes('button').some(b=>b.props.children==='Confirm'),false);
+ const decline=h.nodes('button').find(b=>b.props.children==='Decline')!;assert.equal(decline.props.disabled,false);(decline.props.onClick as ()=>void)();await h.flush();
+ assert.equal(h.commands.length,1);assert.equal((h.commands[0] as {command:{action:string}}).command.action,'decline');h.close();
+});
+
+test('known Beta restriction opens plans without selection, checkout or exchange mutation',async()=>{
+ const blocked={...data,listings:data.listings.map(l=>({...l,negotiationAllowed:false,restrictionReason:'beta-pair'}))};
+ const h=harness(blocked,'confirmed','beta');h.render();await h.flush();
+ const unlock=h.nodes('button').find(b=>renderToStaticMarkup(b).includes('Unlock'))!;
+ assert.equal(unlock.props.disabled,false);assert.equal(unlock.props['aria-haspopup'],'dialog');
+ (unlock.props.onClick as (event:unknown)=>void)({currentTarget:{focus:()=>{}}});assert.equal(h.explores(),1);assert.equal(h.commands.length,0);h.close();
+});
+test('paid owner cannot unlock the Beta counterpart by upgrading their own plan',async()=>{
+ for(const plan of ['standard','master','vip']){
+  const h=harness({...data,listings:data.listings.map(l=>({...l,negotiationAllowed:false,restrictionReason:'beta-pair'}))},'confirmed',plan);
+  h.render();await h.flush();assert.doesNotMatch(h.render(),/>Unlock</);assert.match(h.render(),/Beta only/);assert.equal(h.explores(),0);assert.equal(h.commands.length,0);h.close();
+ }
 });

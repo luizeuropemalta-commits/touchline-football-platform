@@ -7,7 +7,8 @@ test("login plans share the approved live-text artwork without payment, fictiona
   const gallery = readFileSync(new URL("../components/touchline/LoginPlanGallery.tsx", import.meta.url), "utf8");
   assert.match(gallery, /CLUB_OWNER_PLAN_PREVIEWS\.map/);
   assert.match(gallery, /<ClubOwnerPlanCard/);
-  assert.match(gallery, /planActionUnavailable/);
+  assert.match(gallery, /labels\.preview/);
+  assert.doesNotMatch(gallery, /planActionUnavailable/);
   assert.match(gallery, /labels\.masterPrice/);
   assert.match(gallery, /labels\.betaPrice/);
   assert.match(gallery, /labels\.vipPrice/);

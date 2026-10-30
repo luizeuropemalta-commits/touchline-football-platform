@@ -63,7 +63,9 @@ test("default gates, previous statuses and unknown factual values remain intact"
 });
 
 test("localized status remains wired into the rendered matchup without exporting a new route API", () => {
-  assert.match(source, /status: localizedFixtureStatus\(matchPreview\.status, locale, draftLocalesEnabled\)/);
+  assert.match(source, /status: lineupFixture\.status\s*\? localizedFixtureStatus\(lineupFixture\.status, locale, draftLocalesEnabled\)\s*:\s*localizedFixtureStatus\(matchPreview\.status, locale, draftLocalesEnabled\)/);
+  assert.match(source, /const lineupFixture = presentation\.fixtureContext\.lineupFixture/);
+  assert.match(source, /fixtureId: lineupFixture\.providerId/);
   assert.ok(!declaration.modifiers?.some(modifier => modifier.kind === ts.SyntaxKind.ExportKeyword));
   const lineup = readFileSync(new URL("../components/touchline/ClubHubOfficialLineup.tsx", import.meta.url), "utf8");
   // A frozen parent status must not sit beside a refreshed child score.

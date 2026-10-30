@@ -7,7 +7,6 @@ import {
 } from "./card-rules.ts";
 import type { TouchlineCoachClassification } from "./coach-classification.ts";
 import type { TouchLineCoachRankingRow, TouchLineCoachRankingState } from "./coach-ranking-server.ts";
-import { touchlineCoachTierForRankingPosition } from "./coach-card.ts";
 
 /** Commercial order is canonical: most valuable border first. */
 export const TOUCHLINE_CLUBHUB_TIER_ORDER: readonly TouchlineCardTierKey[] =
@@ -24,10 +23,7 @@ export type TouchlineCoachTierRepresentative = Readonly<{
   classification: TouchlineCoachClassification | null;
 }>;
 
-/** A present-tense gallery projection. It changes only the public gallery
- * representative; the coach's stored profile tier, contract and market rules
- * remain untouched. A complete verified table is required so no colour is
- * inferred from a partial live update. */
+/** Season classification owns the border; current ranking supplies performance only. */
 export type TouchlineRankedCoachTierRepresentative = Readonly<{
   tierKey: TouchlineCardTierKey;
   snapshot: TouchlineLiveCoachSnapshot | null;
@@ -134,21 +130,10 @@ export function selectTouchlineCoachTierRepresentatives(catalogue: CoachCatalogu
 export function selectTouchlineCoachTierRepresentativesFromRanking(
   ranking: TouchLineCoachRankingState,
 ): readonly TouchlineRankedCoachTierRepresentative[] {
-  if (ranking.phase !== "ranked" || ranking.rows.length < 20) {
-    return selectTouchlineCoachTierRepresentatives(ranking.catalogue ?? legacyCoachCatalogue()).map(({ tierKey, snapshot, classification }) => ({
-      tierKey,
-      snapshot,
-      rankingRow: null,
-      classification,
-    }));
-  }
-
-  const snapshotsByProviderId = new Map(
-    (ranking.catalogue ?? legacyCoachCatalogue()).history.map((snapshot) => [snapshot.coach.providerId, snapshot]),
-  );
-  return TOUCHLINE_CLUBHUB_TIER_ORDER.map((tierKey) => {
-    const rankingRow = ranking.rows.find((row) => touchlineCoachTierForRankingPosition(row.rank) === tierKey) ?? null;
-    const snapshot = rankingRow ? snapshotsByProviderId.get(rankingRow.coachProviderId) ?? null : null;
-    return { tierKey, snapshot, rankingRow: snapshot ? rankingRow : null, classification: null };
-  });
+  return selectTouchlineCoachTierRepresentatives(ranking.catalogue ?? legacyCoachCatalogue()).map((representative) => ({
+    ...representative,
+    rankingRow: ranking.phase === "ranked" && representative.snapshot
+      ? ranking.rows.find((row) => row.coachProviderId === representative.snapshot!.coach.providerId) ?? null
+      : null,
+  }));
 }

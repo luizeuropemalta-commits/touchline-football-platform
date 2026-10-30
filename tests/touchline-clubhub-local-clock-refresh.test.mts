@@ -52,7 +52,9 @@ test('ClubHub delegates periodic and T-24/T-1 refresh to the shared boundary wit
   assert.match(code, /serverRefreshAfterMs=\{contextWake \? null : refreshMs\}/);
   assert.match(code, /serverRefreshAt=\{contextWake && refreshMs !== null \? now \+ refreshMs : null\}/);
   assert.match(code, /serverRefreshScope=/);
-  assert.match(code, /clubHubFixtureRailRefreshMs\(rail, startsAt, now\)/);
+  assert.match(code, /clubHubFixtureRailRefreshMs\(rail, displayedStartsAt, now\)/);
+  assert.match(code, /const displayedStartsAt = nextOnly \? facts\?\.startsAt \?\? startsAt : startsAt/);
+  assert.match(code, /Date\.parse\(displayedStartsAt\) - now/);
   // Real shared-store transitions/wakes, pending ownership and unmount are
   // exercised in touchline-live-refresh-lifecycle.test.mts.
 });

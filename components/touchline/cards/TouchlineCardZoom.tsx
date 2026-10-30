@@ -461,7 +461,7 @@ export default function TouchlineCardZoom({
     releaseAction.onSelect();
   }}><LogOut size={22} aria-hidden="true" /><span>{releaseAction.label}</span></button> : null;
   const signingButtons = signingActions ? <div className={styles.lineupActions} data-zoom-signing-actions="true">
-    <button type="button" className={styles.contractAction} disabled={signingActions.select.disabled} onClick={() => { if (!signingActions.select.disabled) signingActions.select.onSelect(); }}>{signingActions.select.label}</button>
+    <button type="button" className={styles.contractAction} disabled={signingActions.select.disabled} onClick={(event) => { if (!signingActions.select.disabled) { event.currentTarget.focus({ preventScroll: true }); signingActions.select.onSelect(); } }}>{signingActions.select.label}</button>
     {signingActions.confirm ? <button type="button" className={styles.contractAction} disabled={signingActions.confirm.disabled} onClick={() => { if (!signingActions.confirm?.disabled) signingActions.confirm?.onSelect(); }}>{signingActions.confirm.label}</button> : null}
     {signingActions.status ? <p role="status">{signingActions.status}</p> : null}
   </div> : null;

@@ -16,6 +16,7 @@ import * as isolation from "../lib/touchlinePreview/isolation.ts";
 import * as admission from "../lib/touchlineArena/club-owner-avatar-resource-admission.ts";
 import * as controlAdmission from "../lib/touchlineArena/club-owner-avatar-control-admission.ts";
 import * as localAdmission from "../lib/touchlineArena/club-owner-avatar-local-admission.ts";
+import * as audience from "../lib/touchlineArena/club-owner-avatar-audience.ts";
 import { createClubOwnerAvatarClient } from "../lib/touchlineArena/club-owner-avatar-client.ts";
 import * as avatarClient from "../lib/touchlineArena/club-owner-avatar-client.ts";
 import * as selectionContract from "../lib/touchlineArena/club-owner-avatar-selection-contract.ts";
@@ -136,6 +137,7 @@ function load(name = "createClubOwnerAvatarServer", clock = performance, replace
     "./club-owner-avatar-resource-admission.ts": admission, ...replacements,
     "./club-owner-avatar-control-admission.ts": controlAdmission,
     "./club-owner-avatar-local-admission.ts": localAdmission,
+    "./club-owner-avatar-audience.ts": audience,
   };
   const exports: Record<string, unknown> = {};
   vm.runInNewContext(javascript, { exports, require: (name: string) => {
@@ -237,28 +239,47 @@ function fixture(options: { config?: Record<string, unknown>; auth?: () => Promi
   return { serve, calls, objects, settings, dependencies, current: () => current };
 }
 
-function controlFixture(options: { auth?: () => Promise<unknown>; clock?: Performance; rpc?: (name: string, args: Record<string, unknown>) => Promise<unknown> | unknown } = {}) {
-  const f = fixture({ auth: options.auth }); let generation = "0", fence = "-1";
+function controlFixture(options: { auth?: () => Promise<unknown>; clock?: Performance; rpc?: (name: string, args: Record<string, unknown>) => Promise<unknown> | unknown;
+  actor?: string; config?: { accountId?: string; audience?: string; enabled?: boolean } } = {}) {
+  const controlActor = options.actor ?? actorId;
+  const f = fixture({ auth: options.auth ?? (async () => ({ data: { user: { ...user(), id: controlActor } }, error: null })) }); let generation = "0", fence = "-1";
   const rpcCalls: Array<{ name: string; args: Record<string, unknown> }> = [];
-  const snapshot = () => ({ version: 1, actorId, revision: "0", generation, activeOperationId: null,
+  const snapshot = () => ({ version: 1, actorId: controlActor, revision: "0", generation, activeOperationId: null,
     fencedThroughGeneration: fence, requestedOperationId: null, operation: null });
   const client = supabase.createClient(supabaseOrigin, "synthetic-test-key", { auth: { persistSession: false, autoRefreshToken: false },
     global: { fetch: async (input, init) => {
       const name = new URL(String(input)).pathname.split("/").at(-1)!, args = JSON.parse(String(init?.body)); rpcCalls.push({ name, args });
+      assert.equal(args.p_actor, controlActor);
       let data: unknown;
       if (options.rpc) data = await options.rpc(name, args);
       else if (name === "touchline_read_club_owner_avatar_operation_status") data = snapshot();
-      else if (name === "touchline_read_club_owner_avatar") data = { actorId, revision: "0", avatarUrl: null, operationId: null, digest: null };
+      else if (name === "touchline_read_club_owner_avatar") data = { actorId: controlActor, revision: "0", avatarUrl: null, operationId: null, digest: null };
       else { assert.equal(name, "touchline_fence_club_owner_avatar_operation"); assert.equal(args.p_generation, generation);
         fence = generation; generation = String(BigInt(generation) + BigInt(1)); data = { version: 1, status: "barrier_applied", snapshot: snapshot() }; }
       return Response.json(data);
     } } });
-  const serve = (load("createClubOwnerAvatarRecoveryServer", options.clock) as typeof import("../lib/touchlineArena/club-owner-avatar-server.ts").createClubOwnerAvatarRecoveryServer)({ ...config, accountId: actorId }, { ...f.dependencies, createPrivilegedClient: () => client } as never);
+  const serve = (load("createClubOwnerAvatarRecoveryServer", options.clock) as typeof import("../lib/touchlineArena/club-owner-avatar-server.ts").createClubOwnerAvatarRecoveryServer)({ ...config, accountId: actorId, ...options.config }, { ...f.dependencies, createPrivilegedClient: () => client } as never);
   const request = (body: unknown = { action: "status" }, signal?: AbortSignal) => new Request(`${origin}/api/account/avatar/recovery`, {
-    method: "POST", signal, body: JSON.stringify(body), headers: { origin, "content-type": "application/json", "x-touchline-expected-account": actorId },
+    method: "POST", signal, body: JSON.stringify(body), headers: { origin, "content-type": "application/json", "x-touchline-expected-account": controlActor },
   });
   return { serve, request, rpcCalls, calls: f.calls };
 }
+
+test("recovery factory retains accountId-only contract and admits explicit customers without weakening invalid config or OFF", async () => {
+  const legacy = controlFixture({ actor: other });
+  assert.equal((await legacy.serve(legacy.request())).status, 403); assert.deepEqual(legacy.calls, []); assert.deepEqual(legacy.rpcCalls, []);
+  for (const customer of [actorId, other]) {
+    const f = controlFixture({ actor: customer, config: { audience: "customers", accountId: undefined } });
+    const response = await f.serve(f.request()); assert.equal(response.status, 200);
+    assert.equal((await response.json()).context.accountId, customer);
+    assert.equal(f.calls.filter(call => call === "getUser").length, 1); assert.ok(f.rpcCalls.every(call => call.args.p_actor === customer));
+  }
+  for (const patch of [{ audience: "all" }, { audience: "" }, { accountId: undefined },
+    { audience: "customers", accountId: "bad" }, { audience: "customers", enabled: false }]) {
+    const f = controlFixture({ config: patch }); assert.equal((await f.serve(f.request())).status, 503);
+    assert.deepEqual(f.calls, []); assert.deepEqual(f.rpcCalls, []);
+  }
+});
 
 test("control server status is read-only, independent of native busy, and an idle fence requires explicit consent", async () => {
   const f = controlFixture(), native = admission.getClubOwnerAvatarResourceAdmission(), ticket = native.tryAcquire(); assert.ok(ticket);
@@ -584,13 +605,18 @@ test("real selection UI confirms once through local handler and reload reads per
   };
   const dependencies: Record<string, unknown> = { react: hooks, "react/jsx-runtime": jsxRuntime,
     "@/lib/touchlineArena/club-owner-avatar-client": avatarClient,
+    // Native resizing/orientation is covered by the real-browser preparation
+    // suite. This fixture hands its already tiny PNG through that boundary.
+    "@/lib/touchlineArena/club-owner-avatar-preparation": { prepareClubOwnerAvatar: async (file: File) => ({ ok: true,
+      bytes: new Uint8Array(await file.arrayBuffer()), contentType: "image/png", width: 2, height: 2 }) },
     "@/lib/touchlineArena/club-owner-avatar-selection-contract": selectionContract,
     "@/lib/touchlineArena/club-owner-avatar-ui-i18n": avatarCopy,
-    "./TouchlineGlobalNavigation.module.css": { default: { link: "control" } } };
+    "./TouchlineGlobalNavigation.module.css": { default: { link: "control" } },
+    "./ClubOwnerAvatarControl.module.css": { default: {} } };
   const exports: Record<string, unknown> = {};
   vm.runInNewContext(ts.transpileModule(readFileSync(new URL("../components/touchline/ClubOwnerAvatarUploadSelection.tsx", import.meta.url), "utf8"), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX },
-  }).outputText, { exports, require: (key: string) => { assert.ok(key in dependencies); return dependencies[key]; }, Uint8Array, Blob,
+  }).outputText, { exports, require: (key: string) => { assert.ok(key in dependencies); return dependencies[key]; }, Uint8Array, Blob, AbortController,
     crypto: { randomUUID: () => operationId }, performance: { now: () => 0 },
     URL: { createObjectURL: () => "blob:test-preview", revokeObjectURL: () => { revoked++; } },
     setTimeout: () => 1, clearTimeout: () => {}, fetch: async (input: unknown, init: RequestInit) => {
@@ -611,7 +637,7 @@ test("real selection UI confirms once through local handler and reload reads per
     (nodes(render(), "input")[0].props.onChange as (event: unknown) => void)({ currentTarget: { value: "", files: [{ size: bytes.length, type: "image/png", arrayBuffer: async () => bytes.buffer }] } });
     await new Promise(resolve => setImmediate(resolve));
     assert.equal(f.calls.length, 0); assert.equal(nodes(render(), "img")[0].props.src, "blob:test-preview");
-    const confirm = nodes(render(), "button")[0].props.onClick as () => void;
+    const confirm = nodes(render(), "button").find(node => node.props["data-avatar-selection"] === "confirm")!.props.onClick as () => void;
     confirm(); confirm();
     const deadline = Date.now() + 3000;
     while (!refreshes && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 5));

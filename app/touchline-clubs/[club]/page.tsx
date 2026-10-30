@@ -51,6 +51,8 @@ import { toPublicFantasyFixtureFeed, type TouchlinePublicFixturePlayerStatistics
 import { readPublicCompetitionFixtureByProviderId, readPublicCompetitionFixtures } from "@/lib/football-data/fixture-schedule-store";
 import { parseClubHubFixtureQuery, readClubHubRequestedFixture, selectClubHubRequestedFormation } from "@/lib/touchlineArena/club-hub-requested-fixture";
 import { loadTouchlineOfficialLeagueTable } from "@/lib/football-data/official-league-table-server";
+import { selectClubHubNextFixture } from "@/lib/touchlineArena/club-hub-next-fixture";
+import { resolveClubHubMatchdayContext } from "@/lib/touchlineArena/club-hub-matchday-context";
 import { selectPublicClubFixture } from "@/lib/football-data/public-fixture-selection";
 import { buildTouchLineClubMatchdayPresentation } from "@/lib/touchlineArena/club-lineup";
 import { selectTouchlineLastCompletedXi, type TouchlineLastCompletedXi } from "@/lib/touchlineArena/club-last-xi";
@@ -124,6 +126,9 @@ type ClubMatchSnapshot = {
   coach: null;
   publicFixture: TouchlinePublicFixture | null;
   railFixture: TouchlinePublicFixture | null;
+  nextFixture: TouchlinePublicFixture | null;
+  fixtureCandidates: TouchlinePublicFixture[];
+  lastCompletedXiFixture: TouchlinePublicFixture | null;
   playerStatistics: TouchlinePublicFixturePlayerStatistics[];
 };
 
@@ -322,6 +327,9 @@ async function loadClubMatchSnapshot(
     coach: null,
     publicFixture: null,
     railFixture: null,
+    nextFixture: null,
+    fixtureCandidates: [] as TouchlinePublicFixture[],
+    lastCompletedXiFixture: null,
     playerStatistics: [],
   };
 
@@ -349,19 +357,31 @@ async function loadClubMatchSnapshot(
       coach: null,
       publicFixture: fixture,
       railFixture: fixture,
+      nextFixture: selectClubHubNextFixture([fixture], () => true) ?? null,
+      fixtureCandidates: [fixture],
+      lastCompletedXiFixture: null,
       playerStatistics: [],
     };
   }
 
   try {
-    const { persistedFeeds, scheduledFixtures } = requestedFixtureId
-      ? await readClubHubRequestedFixture(requestedFixtureId, (candidate) => [candidate.homeTeam?.providerId, candidate.awayTeam?.providerId].includes(club.teamId), {
-        readFeed: readPersistedFantasyFixtureFeedResult,
-        readFixture: readPublicCompetitionFixtureByProviderId,
-      })
+    const { persistedFeeds, scheduledFixtures, nextScheduledFixtures } = requestedFixtureId
+      ? await Promise.all([
+        readClubHubRequestedFixture(requestedFixtureId, (candidate) => [candidate.homeTeam?.providerId, candidate.awayTeam?.providerId].includes(club.teamId), {
+          readFeed: readPersistedFantasyFixtureFeedResult,
+          readFixture: readPublicCompetitionFixtureByProviderId,
+        }),
+        // An unavailable next-game calendar must not erase an explicitly
+        // requested historical match whose own read succeeded.
+        readPublicCompetitionFixtures().catch(() => []),
+      ]).then(([requested, nextScheduledFixtures]) => ({ ...requested, nextScheduledFixtures }))
       : await Promise.all([readPublicFantasyFixtureSnapshots(), readPublicCompetitionFixtures()])
-        .then(([persistedFeeds, scheduledFixtures]) => ({ persistedFeeds, scheduledFixtures }));
+        .then(([persistedFeeds, scheduledFixtures]) => ({ persistedFeeds, scheduledFixtures, nextScheduledFixtures: scheduledFixtures }));
     const persistedFixtures = persistedFeeds.map((feed) => feed.fixture);
+    const nextFixture = selectClubHubNextFixture(
+      [...persistedFixtures, ...nextScheduledFixtures],
+      (candidate) => fixtureHasClub(candidate, club),
+    );
     const requestedFixture = requestedFixtureId
       ? [...persistedFixtures, ...scheduledFixtures].find((candidate) => candidate.providerId === requestedFixtureId && fixtureHasClub(candidate, club))
       : null;
@@ -386,6 +406,8 @@ async function loadClubMatchSnapshot(
     const formation = requestedFixtureId
       ? selectClubHubRequestedFormation(matchdayFeed?.formations ?? [], requestedFixtureId, club.teamId)
       : matchdayFeed?.formations.find((item) => feedTeamBelongsToClub(item.teamId, item.teamName, club))?.formation ?? null;
+    const lastCompletedXi = requestedFixtureId ? null : selectTouchlineLastCompletedXi(persistedFeeds, club.teamId, fixture?.startsAt ?? null);
+    const lastCompletedFixture = lastCompletedXi ? persistedFixtures.find(candidate => candidate.providerId === lastCompletedXi.fixtureId && fixtureHasClub(candidate, club)) : null;
     return {
       preview: {
         home: resolveTouchlineClubMatchPreviewTeam(previewFixture.homeTeam, club, locale, draftLocalesEnabled),
@@ -399,7 +421,7 @@ async function loadClubMatchSnapshot(
       previewFixtureId: previewFixture.providerId,
       fixtureId: matchdayFeed?.fixture.providerId ?? null,
       lineups: matchdayFeed?.lineups ?? [],
-      lastCompletedXi: requestedFixtureId ? null : selectTouchlineLastCompletedXi(persistedFeeds, club.teamId, fixture?.startsAt ?? null),
+      lastCompletedXi,
       sidelined: matchdayFeed?.sidelined ?? [],
       formation,
       coach: null,
@@ -408,6 +430,9 @@ async function loadClubMatchSnapshot(
       // preference to the next scheduled fixture so it can say LIVE and FULL
       // TIME at the correct moment.
       railFixture: toTouchlineLiveFixture(scoringFixture ?? fixture ?? previewFixture),
+      nextFixture: nextFixture ? toTouchlineLiveFixture(nextFixture) : null,
+      fixtureCandidates: [...persistedFixtures, ...nextScheduledFixtures].map(toTouchlineLiveFixture),
+      lastCompletedXiFixture: lastCompletedFixture ? toTouchlineLiveFixture(lastCompletedFixture) : null,
       playerStatistics: matchDetail?.playerStatistics ?? [],
     };
   } catch {
@@ -519,6 +544,7 @@ async function loadClubHubPresentation(
       squadLoad,
       matchSnapshot,
       matchdayPresentation,
+      fixtureContext: resolveClubHubMatchdayContext({ clubTeamId: club.teamId, presentation: matchdayPresentation, matchdayFixtureId: matchSnapshot.fixtureId, publicFixture: matchSnapshot.publicFixture, lastCompletedXiFixture: matchSnapshot.lastCompletedXiFixture, candidates: matchSnapshot.fixtureCandidates }),
       outsideMatchdayCards: [] as ClubOwnerSquadCard[],
       clubCards: [] as ClubOwnerSquadCard[],
     };
@@ -560,6 +586,7 @@ async function loadClubHubPresentation(
     squadLoad,
     matchSnapshot,
     matchdayPresentation,
+    fixtureContext: resolveClubHubMatchdayContext({ clubTeamId: club.teamId, presentation: matchdayPresentation, matchdayFixtureId: matchSnapshot.fixtureId, publicFixture: matchSnapshot.publicFixture, lastCompletedXiFixture: matchSnapshot.lastCompletedXiFixture, candidates: matchSnapshot.fixtureCandidates }),
     outsideMatchdayCards,
     clubCards,
   };
@@ -609,6 +636,7 @@ async function ClubHubLineupSection({
   viewerAccessPromise,
   dataSource, draftLocalesEnabled = false,
   officialChannels,
+  activeRankingPromise,
 }: {
   club: NonNullable<ReturnType<typeof findTouchLineClub>>;
   locale: TouchLineLocale;
@@ -618,23 +646,24 @@ async function ClubHubLineupSection({
   dataSource: ReturnType<typeof resolveTouchlineClubHubDataSource>;
   draftLocalesEnabled?: boolean;
   officialChannels: TouchlineClubOfficialChannels;
+  activeRankingPromise?: Promise<Awaited<ReturnType<typeof loadTouchLineActiveRanking>>>;
 }) {
   const [presentation, viewerAccess, activeRanking] = await Promise.all([
     presentationPromise,
     viewerAccessPromise,
-    dataSource === "direct" ? loadTouchLineActiveRanking() : Promise.resolve(TOUCHLINE_PRESEASON_RANKING_STATE),
+    activeRankingPromise ?? (dataSource === "direct" ? loadTouchLineActiveRanking() : Promise.resolve(TOUCHLINE_PRESEASON_RANKING_STATE)),
   ]);
   const { matchSnapshot, matchdayPresentation } = presentation;
   const matchPreview = matchSnapshot.preview;
   // The formation header is the record of the displayed XI. It must show the
   // final score for that record when one is available, not the next fixture.
-  const lineupFixture = matchSnapshot.railFixture ?? matchSnapshot.publicFixture;
+  const lineupFixture = presentation.fixtureContext.lineupFixture;
   const lineupHomeClub = findTouchLineClub(lineupFixture?.homeTeam?.providerId)
     ?? findTouchLineClub(lineupFixture?.homeTeam?.name);
   const lineupAwayClub = findTouchLineClub(lineupFixture?.awayTeam?.providerId)
     ?? findTouchLineClub(lineupFixture?.awayTeam?.name);
   const lineupMatchup = lineupFixture ? {
-    fixtureId: lineupFixture.id,
+    fixtureId: lineupFixture.providerId,
     initialFixture: lineupFixture,
     home: {
       accent: lineupHomeClub?.accent,
@@ -655,15 +684,7 @@ async function ClubHubLineupSection({
       ? new Intl.DateTimeFormat(locale, { calendar: "gregory", dateStyle: "medium", timeStyle: "short" }).format(new Date(lineupFixture.startsAt))
       : matchPreview.startsAt,
     startsAtIso: lineupFixture.startsAt ?? null,
-  } : {
-    fixtureId: matchSnapshot.previewFixtureId,
-    initialFixture: matchSnapshot.publicFixture,
-    home: matchPreview.home,
-    away: matchPreview.away,
-    status: localizedFixtureStatus(matchPreview.status, locale, draftLocalesEnabled),
-    startsAt: matchPreview.startsAt,
-    startsAtIso: matchSnapshot.publicFixture?.startsAt ?? null,
-  };
+  } : null;
   return (
     <ClubHubOfficialLineup liveSeasonRating={dataSource === "direct"} draftLocalesEnabled={draftLocalesEnabled}
       liveUpdates={dataSource === "direct"}
@@ -682,6 +703,37 @@ async function ClubHubLineupSection({
       matchup={lineupMatchup}
     />
   );
+}
+
+/** One streamed boundary commits the official XI and the next tickets game
+ * together. Their shared read model is resolved once; no independent transport
+ * or partial reveal can show the new XI beside its own stale Next game. */
+async function ClubHubMatchdayPanels(props: Parameters<typeof ClubHubLineupSection>[0] & {
+  tablePromise: ReturnType<typeof loadClubHubLeagueTable>;
+}) {
+  const { club, locale, dataSource, draftLocalesEnabled = false, officialChannels } = props;
+  const [presentation, viewer, table, ranking] = await Promise.all([
+    props.presentationPromise, props.viewerAccessPromise, props.tablePromise,
+    dataSource === "direct" ? loadTouchLineActiveRanking() : Promise.resolve(TOUCHLINE_PRESEASON_RANKING_STATE),
+  ]);
+  const [lineup, next] = await Promise.all([
+    ClubHubLineupSection({ ...props, presentationPromise: Promise.resolve(presentation),
+      viewerAccessPromise: Promise.resolve(viewer), activeRankingPromise: Promise.resolve(ranking) }),
+    ClubHubOfficialLeagueSection({ club, locale, draftLocalesEnabled, fixtureOnly: true,
+      liveReadsEnabled: dataSource === "direct", tablePromise: Promise.resolve(table),
+      matchSnapshotPromise: Promise.resolve({ ...presentation.matchSnapshot, nextFixture: presentation.fixtureContext.nextFixture }) }),
+  ]);
+  return <div className="club-hub-field-table-layout" data-clubhub-field-table-layout="true">
+    {lineup}
+    <div className="club-hub-right-rail" data-clubhub-right-rail="true">
+      <div className="club-hub-matchday-channel club-hub-matchday-tickets">
+        <ClubHubOfficialChannel channels={officialChannels} kind="tickets" locale={locale} draftLocalesEnabled={draftLocalesEnabled} />
+      </div>
+      {next}
+      <ClubHubOfficialTablePanel liveReadsEnabled={dataSource === "direct"} draftLocalesEnabled={draftLocalesEnabled}
+        club={club} locale={locale} tablePromise={Promise.resolve(table)} />
+    </div>
+  </div>;
 }
 
 async function ClubHubTechnicalSections({
@@ -759,13 +811,9 @@ async function ClubHubOfficialLeagueSection({
     matchSnapshotPromise,
     tablePromise,
   ]);
-  // The side rail announces the next verified fixture. A live/final result is
-  // presented beside the XI it belongs to, above the pitch.
-  // The compact rail is the authoritative next fixture. The public fixture is
-  // intentionally reserved for the completed/live match shown with the line-up.
-  // Keeping the two roles separate prevents a newer result from replacing the
-  // next-match panel when the snapshot contains both states.
-  const fixture = matchSnapshot.railFixture;
+  // Tickets belong to the next scheduled match. The historical/live fixture
+  // remains beside its own XI and must never replace this upcoming-game panel.
+  const fixture = matchSnapshot.nextFixture;
   const homeClub = findTouchLineClub(fixture?.homeTeam?.providerId)
     ?? findTouchLineClub(fixture?.homeTeam?.name);
   const awayClub = findTouchLineClub(fixture?.awayTeam?.providerId)
@@ -789,6 +837,7 @@ async function ClubHubOfficialLeagueSection({
         <TouchlineClubPerimeterTrace accent="#a3ff12" className={officialLeagueStyles.surfaceTrace} />
         {hasVerifiedFixture && fixture?.startsAt && homeClub?.logoUrl && awayClub?.logoUrl ? (
           <ClubHubNextFixtureCard draftLocalesEnabled={draftLocalesEnabled}
+            nextOnly
             initialFixture={fixture}
             liveUpdates={liveReadsEnabled}
             awayTeam={{ teamId: awayClub.teamId, name: fixture.awayTeam?.name ?? awayClub.name, shortCode: awayClub.shortCode, logoUrl: awayClub.logoUrl }}
@@ -1083,36 +1132,12 @@ async function renderClubHubPage({ params, searchParams }: ClubHubPageProps, dra
             label={getTouchlineClubHubSectionNavigationCopy(locale, draftLocalesEnabled).matchday}
             note={copy.lineupCoachBench}
           />
-          <div className="club-hub-field-table-layout" data-clubhub-field-table-layout="true">
-            <Suspense fallback={<ClubHubDeferredSection size="lineup" label={copy.preparingLineup} />}>
-              <ClubHubLineupSection draftLocalesEnabled={draftLocalesEnabled}
-                club={club}
-                locale={locale}
-                cardLabels={cardLabels}
-                presentationPromise={presentationPromise}
-                viewerAccessPromise={viewerAccessPromise}
-                dataSource={dataSource}
-                officialChannels={officialChannels}
-              />
-            </Suspense>
-            <div className="club-hub-right-rail" data-clubhub-right-rail="true">
-              <div className="club-hub-matchday-channel club-hub-matchday-tickets">
-                <ClubHubOfficialChannel channels={officialChannels} kind="tickets" locale={locale} draftLocalesEnabled={draftLocalesEnabled} />
-              </div>
-              <Suspense fallback={<ClubHubDeferredSection size="panel" label={copy.nextMatchChecking} />}>
-                <ClubHubOfficialLeagueSection draftLocalesEnabled={draftLocalesEnabled} fixtureOnly
-                  liveReadsEnabled={dataSource === "direct"}
-                  club={club}
-                  locale={locale}
-                  matchSnapshotPromise={matchSnapshotPromise}
-                  tablePromise={tablePromise}
-                />
-              </Suspense>
-              <Suspense fallback={<ClubHubDeferredSection size="table" label={copy.updatingLeague} />}>
-                <ClubHubOfficialTablePanel liveReadsEnabled={dataSource === "direct"} draftLocalesEnabled={draftLocalesEnabled} club={club} locale={locale} tablePromise={tablePromise} />
-              </Suspense>
-            </div>
-          </div>
+          <Suspense fallback={<ClubHubDeferredSection size="lineup" label={copy.preparingLineup} />}>
+            <ClubHubMatchdayPanels draftLocalesEnabled={draftLocalesEnabled}
+              club={club} locale={locale} cardLabels={cardLabels} dataSource={dataSource}
+              presentationPromise={presentationPromise} viewerAccessPromise={viewerAccessPromise}
+              tablePromise={tablePromise} officialChannels={officialChannels} />
+          </Suspense>
 
           <div className="club-hub-matchday-support">
             <Suspense fallback={<ClubHubDeferredSection size="panel" label={copy.preparingTechnical} />}>

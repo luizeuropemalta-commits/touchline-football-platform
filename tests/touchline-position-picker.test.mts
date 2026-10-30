@@ -64,6 +64,6 @@ test("market field keeps direct mobile position actions unscaled and visible", (
   assert.match(marketMobile, /\[data-fantasy-context="market"\] \.myClubPitchViewport \.myClubTacticalPitch\s*\{\s*width: 100%;\s*transform: none;/);
   assert.match(marketMobile, /\.emptyPosition \{[^}]*display: grid;[^}]*width: 44px; height: 44px;/);
   assert.match(marketMobile, /\.emptyPosition:focus-visible \{[^}]*outline: 2px solid/);
-  assert.match(marketMobile, /\.myClubMarket\[data-inline-selection="true"\] \.myClubMarketResults article button \{ min-height: 44px;/);
+  assert.match(marketMobile, /\.myClubMarket\[data-inline-selection="true"\] \.myClubMarketResults article button:not\(\[data-market-plan-unlock\]\) \{ min-height: 44px;/);
   assert.match(marketMobile, /\.myClubPitchViewport \.myClubTacticalSlot > \.pitchRemove \{[^}]*width: 44px; height: 44px; min-height: 44px;/);
 });

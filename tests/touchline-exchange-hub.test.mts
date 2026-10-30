@@ -6,6 +6,7 @@ import React from "react";
 import * as jsx from "react/jsx-runtime";
 import { renderToStaticMarkup } from "react-dom/server";
 import ts from "typescript";
+import * as people from "../lib/touchlineArena/clubowner-public-contract.ts";
 import * as eligibility from "../lib/touchlineFantasy/exchange-eligibility.ts";
 import * as exchangeHistory from "../lib/touchlineFantasy/exchange-history-presentation.ts";
 import * as hubCopy from "../lib/touchlineFantasy/exchange-hub-i18n.ts";
@@ -19,6 +20,9 @@ function fixture(ready = true, locale = "en-GB", roster: readonly ClubRosterEntr
   const modules: Record<string, unknown> = {
     react: { ...React, useState: () => [panel, (value: unknown) => { panel = value; }], useRef: () => ({ current: null }) },
     "react/jsx-runtime": jsx,
+    "@/lib/touchlineArena/clubowner-public-contract": people,
+    "../social/ClubOwnerPublicDirectory": { default: (props: { searchOnly: boolean }) => { assert.equal(props.searchOnly, true); return React.createElement("div", {"data-friend-search": true}); } },
+    "../ClubOwnerPlanOnboarding": { default: () => null },
     "./ExchangeNegotiations": { default: () => React.createElement("div", {"data-connected-negotiations": true}) },
     "./useExchangeHistory": { useExchangeHistory: () => null },
     "@/lib/touchlineFantasy/exchange-eligibility": eligibility,
@@ -252,4 +256,13 @@ test("receipt dialogs inherit the full-screen smoked shell and preserve native p
   for (const edge of ["top", "right", "bottom", "left"]) assert.ok(css.includes(`env(safe-area-inset-${edge})`));
   assert.doesNotMatch(css, /touch-action\s*:\s*none/);
   assert.match(source, /useTouchlineDialogScrollLock\(true\)/);
+});
+
+
+test("friend search follows the explicit server feature gate and stays hidden by default", () => {
+  for (const enabled of [undefined, false, true]) {
+    const h = fixture(true, "pt-BR", null, "beta", false, false, { publicDiscoveryEnabled: enabled });
+    assert.equal(h.html().includes("data-friend-search"), enabled === true);
+    assert.equal(h.html().includes("Encontrar amigos"), enabled === true);
+  }
 });

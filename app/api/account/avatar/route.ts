@@ -1,4 +1,5 @@
 import "server-only";
+import { allowsClubOwnerAvatarAudience, parseClubOwnerAvatarAudience } from "@/lib/touchlineArena/club-owner-avatar-audience";
 import { allowsClubOwnerAvatarLocalEnvironment } from "@/lib/touchlineArena/club-owner-avatar-local-admission";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -16,8 +17,8 @@ const unavailable = () => Response.json({ ok: false, error: "AVATAR_READ_UNAVAIL
   "Cache-Control": "private, no-store", Vary: "Cookie", "X-Content-Type-Options": "nosniff", "Cross-Origin-Resource-Policy": "same-origin",
 } });
 
-// Preparation only: GET and POST default OFF. POST also requires its own exact
-// configured account; no account/configuration, grant or bucket is installed here.
+// Preparation only: GET and POST default OFF. POST also requires an explicit
+// audience; absent mode retains the configured account. No resources are installed.
 // Activation, hosted resources and unknown-result reload recovery remain gates.
 export async function GET(request: Request) {
   try {
@@ -65,9 +66,9 @@ export async function GET(request: Request) {
   } catch { return unavailable(); }
 }
 
-// This is not push-rehearsal authority or general customer activation. The
-// configured UUID must match the request expectation AND getUser's actor in
-// the existing composition before body decoding or privileged work begins.
+// Audience admission is not authentication. The expected account must still
+// match getUser's customer actor in the existing composition before body
+// decoding or privileged work begins.
 export async function POST(request: Request) {
   const reply = (status = 503, error = "AVATAR_UPLOAD_UNAVAILABLE") => Response.json({
     ok: false, state: status >= 500 ? "unknown" : "rejected", error,
@@ -79,20 +80,21 @@ export async function POST(request: Request) {
     const expires = performance.now() + AVATAR_UPLOAD_TOTAL_TIMEOUT_MS;
     const target = new URL(request.url);
     const local = allowsClubOwnerAvatarLocalEnvironment(environment, target.origin);
-    const configuredAccount = environment.TOUCHLINE_CLUB_OWNER_AVATAR_UPLOAD_ACCOUNT_ID;
+    const audience = parseClubOwnerAvatarAudience({ audience: environment.TOUCHLINE_CLUB_OWNER_AVATAR_AUDIENCE,
+      accountId: environment.TOUCHLINE_CLUB_OWNER_AVATAR_UPLOAD_ACCOUNT_ID });
     if (environment.TOUCHLINE_CLUB_OWNER_AVATAR_READ_ENABLED !== "true"
       || environment.TOUCHLINE_CLUB_OWNER_AVATAR_UPLOAD_ENABLED !== "true"
       // Selection is also a server gate; hiding a picker alone cannot prevent
       // direct POST. Readiness is an operator assertion, never inferred here.
       || environment.TOUCHLINE_CLUB_OWNER_AVATAR_SELECTION_ENABLED !== "true"
       || environment.TOUCHLINE_CLUB_OWNER_AVATAR_RETENTION_READY !== "true"
-      || !isAvatarAccountId(configuredAccount)
+      || audience === null
       || (!local && inspectTouchlineQaVercelEnvironment({ environment, requestHostname: target.hostname }).status !== "PASS")
       || (!local && target.origin !== TOUCHLINE_QA_ORIGIN) || resolveTouchlineDataSource(environment) !== "direct"
       || ownerEmails().length === 0) return reply();
     const expectedAccount = request.headers.get("x-touchline-expected-account");
     if (!isAvatarAccountId(expectedAccount)) return reply(400, "INVALID_ACCOUNT_OR_OPERATION");
-    if (expectedAccount.toLowerCase() !== configuredAccount.toLowerCase()) return reply(403, "ACCESS_REQUIRED");
+    if (!allowsClubOwnerAvatarAudience(audience, expectedAccount)) return reply(403, "ACCESS_REQUIRED");
     const assertSnapshot = () => {
       if (Object.keys(environment).length !== Object.keys(process.env).length
         || Object.keys(environment).some(key => process.env[key] !== environment[key])) throw Error("AVATAR_CONFIGURATION_CHANGED");

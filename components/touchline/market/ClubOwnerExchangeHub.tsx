@@ -1,6 +1,10 @@
 "use client";
 
 import { useRef, useState, type RefObject } from "react";
+import ClubOwnerPlanOnboarding from "../ClubOwnerPlanOnboarding";
+import type { ClubSeasonCheckoutOffers } from "@/lib/stripe/club-season-checkout-client";
+import ClubOwnerPublicDirectory from "../social/ClubOwnerPublicDirectory";
+import { peopleCopy, peopleLocale } from "@/lib/touchlineArena/clubowner-public-contract";
 import ExchangeNegotiations from "./ExchangeNegotiations";
 import { useExchangeHistory } from "./useExchangeHistory";
 import { createPortal } from "react-dom";
@@ -20,6 +24,9 @@ type Props = { locale: string; draftLocalesEnabled?: boolean; plan?: ExchangePla
   /** Optional preloaded authenticated receipt projection. Otherwise read on panel opening. */
   exchangeHistory?: ExchangeHistorySnapshot | null;
   expectedAccountId?: string;
+  /** Same server feature gate used by the canonical public directory. */
+  publicDiscoveryEnabled?: boolean;
+  checkoutOffers?: ClubSeasonCheckoutOffers;
   onCommitted?: () => void;
 };
 
@@ -51,6 +58,10 @@ export default function ClubOwnerExchangeHub(props: Props) {
       <ExchangeReadinessNotice {...props} />
 
     </div>
+    {props.publicDiscoveryEnabled === true ? <details className={styles.peopleSearch}>
+      <summary>{peopleCopy(peopleLocale(props.locale)).friends}</summary>
+      <ClubOwnerPublicDirectory locale={peopleLocale(props.locale)} enabled searchOnly initialOwn={{ status: 200, profile: null }} />
+    </details> : null}
     <nav className={styles.actions} aria-label="ClubOwner Exchange">
       {(["negotiations", "history", "finances"] as const).map(key => <button key={key} type="button" className={controls.link} aria-haspopup="dialog" onClick={event => { trigger.current = event.currentTarget; setPanel(key); }}>{titles[key]}</button>)}
     </nav>
@@ -59,8 +70,9 @@ export default function ClubOwnerExchangeHub(props: Props) {
   </>;
 }
 
-function ExchangePanel({ panel, title, locale, draftLocalesEnabled = false, plan, ownerName, state, ready, catalogue, exchangeHistory, expectedAccountId, onCommitted, returnFocusRef, onClose }: Props & { panel: Panel; title: string; returnFocusRef: RefObject<HTMLButtonElement | null>; onClose: () => void }) {
+function ExchangePanel({ panel, title, locale, draftLocalesEnabled = false, plan, ownerName, state, ready, catalogue, exchangeHistory, expectedAccountId, checkoutOffers, onCommitted, returnFocusRef, onClose }: Props & { panel: Panel; title: string; returnFocusRef: RefObject<HTMLButtonElement | null>; onClose: () => void }) {
   const close = useRef<HTMLButtonElement>(null);
+  const [plansOpen, setPlansOpen] = useState(false);
   const { dialogProps } = useTouchlineDialog<HTMLDivElement>({ open: true, label: title, initialFocusRef: close, returnFocusRef, onDismiss: onClose });
   useTouchlineDialogScrollLock(true);
   const copy = getExchangeHubCopy(locale, draftLocalesEnabled);
@@ -75,7 +87,7 @@ function ExchangePanel({ panel, title, locale, draftLocalesEnabled = false, plan
   return createPortal(<div className={styles.overlay} data-exchange-plan={plan}>
     <div {...dialogProps} className={styles.dialog} dir={locale === "ar-SA" ? "rtl" : "ltr"}>
       <header className={styles.heading}><div><small>ClubOwner Exchange{ownerName ? ` · ${ownerName}` : ""}</small><h2>{title}</h2></div><button ref={close} className={controls.link} type="button" onClick={onClose}>{copy.close}</button></header>
-      {panel === "negotiations" ? <ExchangeNegotiations key={JSON.stringify([expectedAccountId,state?.seasonId,state?.revision,ready])} locale={locale} state={state} ready={ready} accountId={expectedAccountId} catalogue={catalogue} onCommitted={onCommitted} /> : !ready || !state ? <p role="status">{copy.waiting}</p> : panel === "history" ? <>
+      {panel === "negotiations" ? <ExchangeNegotiations key={JSON.stringify([expectedAccountId,state?.seasonId,state?.revision,ready])} locale={locale} state={state} ready={ready} accountId={expectedAccountId} catalogue={catalogue} onCommitted={onCommitted} onExplorePlans={() => setPlansOpen(true)} /> : !ready || !state ? <p role="status">{copy.waiting}</p> : panel === "history" ? <>
         <section className={styles.section}><h3>{copy.signings}</h3><p>{copy.records}</p>
         {state.receipts.length ? <ul className={styles.history}>{[...state.receipts].sort((a,b) => b.revision - a.revision).map(receipt => <li key={receipt.key}><span>{byId.get(receipt.playerId) ?? (copy.identityUnavailable)}</span><strong>{credits(receipt.valueEur)}</strong></li>)}</ul> : <p>{copy.empty}</p>}</section>
         <section className={styles.section}><h3>{copy.confirmedExchanges}</h3>
@@ -98,6 +110,10 @@ function ExchangePanel({ panel, title, locale, draftLocalesEnabled = false, plan
           </> : <p role="status">{copy.statementUnavailable}</p>}
         </section>
       </>}
+      {/* Keep Exchange mounted: selection and the invoking focus target survive browsing plans. */}
+      <ClubOwnerPlanOnboarding open={plansOpen === true} locale={locale} draftLocalesEnabled={draftLocalesEnabled}
+        activePlanKey={state?.plan ?? null} checkoutOffers={checkoutOffers} checkoutEnabled={Object.keys(checkoutOffers ?? {}).length > 0}
+        onDismiss={() => setPlansOpen(false)} />
     </div>
   </div>, document.body);
 }

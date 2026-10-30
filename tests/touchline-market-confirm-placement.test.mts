@@ -9,7 +9,7 @@ test("signing confirmation lives only beside the selected canonical player; Sign
   const source = readFileSync(new URL("../app/fantasy/FantasyGameweekClient.tsx", import.meta.url), "utf8");
   const destination = source.slice(source.indexOf('data-collection-market-destination='), source.indexOf('<label className={styles.myClubSearch}'));
   assert.ok(!destination.includes("onClick={confirmCollectionMarket}"));
-  const results = source.slice(source.indexOf('{browseCards.map((card)'), source.indexOf('{!selectedPlayerClubLocked && browseCards.length'));
+  const results = source.slice(source.indexOf('{browseCards.map((card)'), source.indexOf('{browseCards.length === 0'));
   assert.ok(results.includes('collectionMarketPlayer === (card.canonicalPlayerId ?? card.id)'));
   assert.equal((source.match(/onClick=\{confirmCollectionMarket\}/g) ?? []).length, 1);
   assert.ok(results.includes('data-collection-signing-confirmation={card.canonicalPlayerId ?? card.id}'));
@@ -23,20 +23,21 @@ test("signing confirmation lives only beside the selected canonical player; Sign
 test("actual zoom action fragment only confirms explicitly and respects disabled state", () => {
   const source = readFileSync(new URL("../components/touchline/cards/TouchlineCardZoom.tsx", import.meta.url), "utf8");
   const fragment = source.slice(source.indexOf("const signingButtons ="), source.indexOf("const lineupActions ="));
-  let selected = 0, confirmed = 0;
+  let selected = 0, confirmed = 0, focused = 0;
+  const event = { currentTarget: { focus: (options: unknown) => { assert.deepEqual(JSON.parse(JSON.stringify(options)), { preventScroll: true }); focused++; } } };
   const actions: { select: { label: string; disabled: boolean; onSelect: () => void }; confirm?: { label: string; disabled: boolean; onSelect: () => void }; status?: string }
-    = { select: { label: "Sign", disabled: false, onSelect: () => { selected++; } } };
+    = { select: { label: "Sign", disabled: false, onSelect: () => { assert.equal(focused, selected + 1, "focus precedes opening any nested plans"); selected++; } } };
   const render = () => vm.runInNewContext(ts.transpileModule(`${fragment}\nsigningButtons;`, { compilerOptions: { jsx: ts.JsxEmit.React } }).outputText, { React, styles: {}, signingActions: actions });
   let tree = render();
   assert.equal(tree.props.children[1], null);
-  tree.props.children[0].props.onClick();
+  tree.props.children[0].props.onClick(event);
   assert.equal(selected, 1); assert.equal(confirmed, 0);
   actions.confirm = { label: "Confirm", disabled: true, onSelect: () => { confirmed++; } };
   tree = render(); tree.props.children[1].props.onClick(); assert.equal(confirmed, 0);
   actions.confirm.disabled = false;
   tree = render(); tree.props.children[1].props.onClick(); assert.equal(confirmed, 1);
   actions.select.disabled = true;
-  render().props.children[0].props.onClick(); assert.equal(selected, 1);
+  render().props.children[0].props.onClick(event); assert.equal(selected, 1); assert.equal(focused, 1);
   const client = readFileSync(new URL("../app/fantasy/FantasyGameweekClient.tsx", import.meta.url), "utf8");
   assert.ok(client.includes('confirm: collectionMarketPlayer === (card.canonicalPlayerId ?? card.id) ?'));
   assert.ok(client.includes('onSelect: confirmCollectionMarket'));

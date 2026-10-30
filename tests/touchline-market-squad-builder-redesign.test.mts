@@ -143,7 +143,9 @@ test("canonical XI cards retain the shared expanded card and suppress duplicate 
 test("formation vacancies and replacements use the inline list with eligible-only controls", async () => {
   const stage = await readFile(stagePath, "utf8");
 
-  assert.doesNotMatch(stage, /TouchlinePositionPicker|positionPickerOpen|aria-haspopup/);
+  assert.doesNotMatch(stage, /TouchlinePositionPicker|positionPickerOpen/);
+  // Plan exploration is a dialog; formation selection remains inline.
+  assert.equal((stage.match(/aria-haspopup=/g) ?? []).length, (stage.match(/data-market-plan-unlock="true" aria-haspopup="dialog"/g) ?? []).length);
   assert.match(stage, /id="my-club-player-selection" tabIndex=\{-1\} data-open="true" data-inline-selection="true"/);
   assert.match(stage, /touchlineFantasySlotAcceptsPlayer\(activeSlot, player\)/);
   assert.match(stage, /replaceTouchlineFantasyPlayerAtSlot/);

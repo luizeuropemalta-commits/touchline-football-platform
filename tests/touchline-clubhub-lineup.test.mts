@@ -446,7 +446,7 @@ test("ClubHub keeps the field beside the premium table and the four leaders belo
   assert.doesNotMatch(page, /ClubHubPremiumOverviewSection/);
   assert.match(lineup, /className=\{styles\.pitchAndLeaders\}/);
   assert.match(lineup, /className=\{styles\.positionLeaders\}/);
-  assert.match(page, /className="club-hub-field-table-layout"[\s\S]*?<ClubHubLineupSection[\s\S]*?<ClubHubOfficialTablePanel/);
+  assert.match(page, /className="club-hub-field-table-layout"[\s\S]*?\{lineup\}[\s\S]*?<ClubHubOfficialTablePanel/);
   assert.match(page, /\.club-hub-field-table-layout \{[\s\S]*?grid-template-columns: minmax\(0, 1fr\) minmax\(290px, 340px\)/);
   assert.match(styles, /\.pitchAndLeaders \{[\s\S]*?grid-template-columns: minmax\(0, 1fr\)/);
   assert.match(styles, /\.positionLeaders \{[\s\S]*?grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/);

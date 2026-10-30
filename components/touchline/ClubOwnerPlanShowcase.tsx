@@ -6,7 +6,6 @@ import { getTouchlineClubOwnerMarketCopy } from "@/lib/touchlineArena/club-owner
 import { getClubCollectionBudgetCopy } from "@/lib/touchlineFantasy/market-budget-i18n";
 import { CLUB_OWNER_PLAN_PREVIEWS, getClubOwnerPlanBenefits, getClubOwnerPlanBenefitTerms, getClubOwnerPlanShowcaseCopy, getClubOwnerVipPlanName, type ClubOwnerPlanPreview } from "@/lib/touchlineArena/club-owner-plan-showcase";
 import { TouchlineCoinMark } from "./market/TouchlineMarketMarks";
-import TouchlineClubPerimeterTrace from "./TouchlineClubPerimeterTrace";
 import controls from "./TouchlineGlobalNavigation.module.css";
 import styles from "./ClubOwnerPlanShowcase.module.css";
 
@@ -26,7 +25,6 @@ export function ClubOwnerPlanCard({ tier, name, locale, active = false, activePl
     ? new Intl.NumberFormat(locale, { notation: "compact", maximumFractionDigits: 1 }).format(budget) : plan.amount;
   const budgetLabel = `${labels.planBudget}: ${budget === null ? labels.unlimited : `${budget.toLocaleString(locale)} TouchLine Credits`}`;
   return <div dir="ltr" className={styles.memberCard} data-compact={compact || undefined} data-plan-offer={tier} data-current-plan={active || undefined}>
-    <TouchlineClubPerimeterTrace accent="var(--plan-accent)" className={styles.memberNeon} />
     <svg className={styles.cardPattern} viewBox="0 0 360 240" aria-hidden="true" focusable="false">
       <path d="M145 -30C40 50 24 156 82 270" />
       <path d="M213 -30C108 50 92 156 150 270" />
@@ -35,7 +33,10 @@ export function ClubOwnerPlanCard({ tier, name, locale, active = false, activePl
     <div className={styles.cardTop}>{!compact ? <span className={styles.cardBrand}>TouchLine<small>CLUBOWNER</small></span> : null}<span className={styles.cardEdition}>{active ? copy.planActive : labels.previewShort}</span></div>
     <div className={styles.cardIdentity}>
       <div>{!compact ? <span className={styles.cardKicker}>{labels.membership}</span> : null}<h3 data-plan-tier={tier}>{title}</h3></div>
-      <span className={styles.tierSeal}><TierIcon size={29} aria-hidden="true" /></span>
+      <span className={styles.tierSeal} aria-hidden="true"><span className={styles.tierIcon}>
+        <TierIcon size={29} focusable="false" />
+        <span className={styles.tierIconGlint} data-touchline-decoration-motion="plan-icon"><TierIcon size={29} focusable="false" /></span>
+      </span></span>
     </div>
     <div className={styles.cardBottom}>
       {name && !compact ? <span className={styles.cardOwner}><small>ClubOwner</small><strong>{name}</strong></span> : null}

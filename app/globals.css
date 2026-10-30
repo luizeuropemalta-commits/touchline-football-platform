@@ -882,7 +882,7 @@ a, button { outline: none; }
   color: var(--touchline-card-frame-color);
   /* One restrained tier-coloured light for every shared player/coach card.
      Glow only the perimeter, never the shirt, text or entire card bitmap. */
-  filter: drop-shadow(0 0 2px color-mix(in srgb, currentColor 32%, transparent));
+  filter: drop-shadow(0 0 2px color-mix(in srgb, currentColor 72%, transparent));
   pointer-events: none;
   user-select: none;
 }
@@ -905,9 +905,9 @@ a, button { outline: none; }
   stroke-width: 2.2;
   stroke-dasharray: 16 84;
   stroke-dashoffset: 0;
-  opacity: .56;
+  opacity: .9;
   transition: opacity 240ms ease;
-  animation: touchline-card-perimeter-trace 3s linear infinite;
+  animation: touchline-card-perimeter-trace 2s linear infinite;
   animation-play-state: var(--touchline-decoration-motion, paused);
 }
 
@@ -916,7 +916,7 @@ a, button { outline: none; }
 }
 
 .touchline-card-surface:is(:hover, :focus-within, [data-neon-active="true"]) [data-touchline-card-neon-trace-run="true"] {
-  opacity: .68;
+  opacity: 1;
 }
 
 @keyframes touchline-card-perimeter-trace {

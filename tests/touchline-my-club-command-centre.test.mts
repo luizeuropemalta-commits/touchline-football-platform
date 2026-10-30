@@ -113,7 +113,9 @@ test("My Club opens the tactical field by default and keeps eligibility contextu
   assert.match(client, /<TouchlinePitchSurface className=\{styles\.myClubTacticalPitch\}/);
   const embedded = client.slice(client.indexOf("if (embedded) {"), client.indexOf('className={styles.shell}'));
   assert.match(embedded, /<CompactClubSelector mode=\{browsingCoaches \? "coach" : "player"\} selectedTeamId=\{\(browsingCoaches \? selectedCoachClub : selectedPlayerClub\)\?\.teamId/);
-  assert.match(embedded, /marketAccess=\{marketPolicy\} lockedLabel=\{marketPlanLockCopy\} onLockedSelect=\{\(\) => setFeedback\(marketPlanLockCopy\)\}/);
+  assert.match(embedded, /marketAccess=\{snapshot.entitlementActive === true \? marketPolicy : null\} lockedLabel=\{marketPlanLockCopy\}/);
+  assert.match(embedded, /data-market-plan-unlock="true" aria-haspopup="dialog"/);
+  assert.match(embedded, /setMarketPlansOpen\(true\)/);
   assert.match(embedded, /id="my-club-player-selection"/);
   assert.match(embedded, /scrollToLineupSection\("my-club-player-selection"\)/);
   assert.match(embedded, /scrollToLineupSection\("my-club-xi-pitch"\)/);

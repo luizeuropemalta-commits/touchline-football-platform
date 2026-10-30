@@ -73,7 +73,7 @@ function fixture(patch: Record<string, string | undefined> = {}) {
             then: (yes: (value: unknown) => unknown, no: (error: unknown) => unknown) => Promise.resolve().then(async () => {
               await state.rpcWait; state.afterRpc?.();
               return state.rpcError ? { data: null, status: 500, error: { message: "PRIVATE_SCHEMA_ERROR" } }
-                : { data: name === "touchline_read_club_owner_avatar" ? state.row : { version: 1, actorId: actor,
+                : { data: name === "touchline_read_club_owner_avatar" ? state.row : { version: 1, actorId: state.row?.actorId,
                   revision: state.row?.revision, generation: state.generation, activeOperationId: null, fencedThroughGeneration: "-1", requestedOperationId: null, operation: null }, error: null, status: 200 };
             }).then(yes, no) };
           return builder;
@@ -201,6 +201,37 @@ test("control context policy permission is distinct from readiness and torn stat
   }
   const h = fixture(); h.state.afterRpc = () => { if (h.calls.at(-1) === "readCurrent") h.state.generation = "1"; };
   assert.equal(await h.create()(auth(), actor), null);
+});
+
+test("SSR customers audience uses both authenticated actors while default keeps the configured UUID", async () => {
+  for (const customer of [actor, other]) {
+    for (const audience of [undefined, "customers"]) {
+      const h = fixture({ TOUCHLINE_CLUB_OWNER_AVATAR_UPLOAD_ENABLED: "true", TOUCHLINE_CLUB_OWNER_AVATAR_UPLOAD_ACCOUNT_ID: actor,
+        TOUCHLINE_CLUB_OWNER_AVATAR_AUDIENCE: audience });
+      h.state.row!.actorId = customer;
+      const result = await h.createSelection(true, true)(auth(customer), customer);
+      const allowed = audience === "customers" || customer === actor;
+      assert.equal(result.recovery?.accountId, customer); assert.equal(result.recovery?.uploadAllowed, allowed);
+      assert.equal(result.recovery?.canUpload, false); assert.equal(result.recovery?.readyForSelection, false);
+      assert.equal(result.selection?.accountId ?? null, allowed ? customer : null);
+      assert.deepEqual(h.accounts, [customer, customer, customer]); assert.ok(!h.calls.includes("getUser"));
+    }
+  }
+});
+
+test("SSR audience remains fail-closed for invalid mode/config and cannot authorize admin or account mismatch", async () => {
+  for (const patch of [{ TOUCHLINE_CLUB_OWNER_AVATAR_AUDIENCE: "all" }, { TOUCHLINE_CLUB_OWNER_AVATAR_AUDIENCE: "" },
+    { TOUCHLINE_CLUB_OWNER_AVATAR_UPLOAD_ACCOUNT_ID: "bad" }, { TOUCHLINE_CLUB_OWNER_AVATAR_UPLOAD_ENABLED: "false" }]) {
+    const h = fixture({ TOUCHLINE_CLUB_OWNER_AVATAR_UPLOAD_ENABLED: "true", TOUCHLINE_CLUB_OWNER_AVATAR_AUDIENCE: "customers", ...patch });
+    const result = await h.createSelection(true, true)(auth(), actor);
+    assert.equal(result.recovery?.uploadAllowed, false); assert.equal(result.selection, null);
+  }
+  for (const authentication of [auth(other), { data: { user: { ...auth().data.user, email: "admin@example.invalid" } }, error: null }]) {
+    const h = fixture({ TOUCHLINE_CLUB_OWNER_AVATAR_UPLOAD_ENABLED: "true", TOUCHLINE_CLUB_OWNER_AVATAR_AUDIENCE: "customers" });
+    assert.equal(await h.create()(authentication, actor), null); assert.ok(!h.calls.includes("privileged"));
+  }
+  const h = fixture({ TOUCHLINE_CLUB_OWNER_AVATAR_READ_ENABLED: "false", TOUCHLINE_CLUB_OWNER_AVATAR_AUDIENCE: "customers" });
+  assert.equal(await h.create()(auth(), actor), null); assert.deepEqual(h.calls, []);
 });
 
 test("finite deadline and abort prevent late privileged creation and late DTO settlement", async () => {

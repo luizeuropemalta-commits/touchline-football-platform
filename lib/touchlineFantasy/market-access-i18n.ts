@@ -81,3 +81,13 @@ export const TOUCHLINE_FANTASY_MARKET_PLAN_LOCK_COPY = {
 export function getTouchlineFantasyMarketPlanLockCopy(locale?: string | null, draftLocalesEnabled = false) {
   return TOUCHLINE_FANTASY_MARKET_PLAN_LOCK_COPY[resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled)];
 }
+
+/** Short plan action; budget failures deliberately keep their own copy. */
+export const TOUCHLINE_FANTASY_MARKET_UNLOCK_COPY = {
+  "en-GB": "Unlock", "pt-BR": "Desbloquear", "es-ES": "Desbloquear", "it-IT": "Sblocca",
+  "fr-FR": "Débloquer", "ar-SA": "فتح", "tr-TR": "Kilidi aç", "de-DE": "Freischalten",
+} as const satisfies Readonly<Record<TouchLineLocale, string>>;
+
+export function getTouchlineFantasyMarketUnlockCopy(locale?: string | null, draftLocalesEnabled = false) {
+  return TOUCHLINE_FANTASY_MARKET_UNLOCK_COPY[resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled)];
+}

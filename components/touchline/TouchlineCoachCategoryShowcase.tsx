@@ -143,8 +143,8 @@ export default function TouchlineCoachCategoryShowcase({ locale, playerCards, co
             const cardSlot = snapshot
               ? createTouchlineArenaCoachSlot(
                 snapshot.coach,
-                rankingRow?.rank ?? representative.classification?.finalPosition ?? null,
-                rankingRow ? tierKey : representative.classification?.tierKey ?? tierKey,
+                representative.classification?.finalPosition ?? null,
+                representative.classification?.tierKey ?? tierKey,
               )
               : null;
             const competition = snapshot ? coachCompetitionFromRanking(coachRanking, snapshot.coach.providerId) : null;

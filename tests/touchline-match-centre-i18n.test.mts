@@ -11,6 +11,7 @@ import * as i18n from "../lib/touchlineArena/i18n.ts";
 import * as match from "../lib/touchlineArena/match-centre.ts";
 import * as clubs from "../lib/touchlineArena/demo-data.ts";
 import * as coaches from "../lib/touchlineArena/live-coaches.ts";
+import * as lineupLinks from "../lib/touchlineArena/live-club-lineup-links.ts";
 import * as catalogueLocale from "../lib/touchlineArena/catalogue-locale.ts";
 import * as matchEvents from "../lib/touchlineArena/match-event-i18n.ts";
 import * as matchHeroGoals from "../lib/touchlineArena/match-hero-goals.ts";
@@ -156,6 +157,7 @@ async function consumer(future = false) {
       if (name === "@/lib/touchlineArena/arabic-fixture-date") return arabicDate;
       if (name === "@/lib/touchlineArena/demo-data") return clubs;
       if (name === "@/lib/touchlineArena/live-coaches") return coaches;
+      if (name === "@/lib/touchlineArena/live-club-lineup-links") return lineupLinks;
       if (name === "@/lib/touchlineArena/coach-catalogue-contract") return coachCatalogue;
       if (name === "@/components/logo") return { Logo: (props: Record<string, unknown>) => {
         captures.push({ kind: name, props }); return React.createElement("span", { "data-child": name });
@@ -200,10 +202,10 @@ function detail() {
   };
 }
 
-function assertClubLineupLinks(html: string, locale: typeof locales[number], phase: "official" | "finished", expectedClubs = ["arsenal", "chelsea"]) {
-  const label = phase === "finished" ? lineupLabelOracles[locale].matchLineup : lineupLabelOracles[locale].officialLineup;
+function assertClubLineupLinks(html: string, locale: typeof locales[number], expectedClubs = ["arsenal", "chelsea"]) {
+  const label = locale === "en-GB" || locale === "pt-BR" ? baseline[locale].viewLineup : draftStringOracles[locale].viewLineup;
   const links = [...html.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/g)].filter(([, attributes]) => attributes.includes('href="/touchline-clubs/'));
-  assert.equal(links.length, expectedClubs.length, `${locale}: one confirmed teamsheet link per club`);
+  assert.equal(links.length, expectedClubs.length, `${locale}: one fixture-specific navigation link per canonical club, independent of XI availability`);
   const names: Record<string, string> = { arsenal: "Arsenal <&>", chelsea: "Chelsea <&>" };
   for (const slug of expectedClubs) {
     const href = `/touchline-clubs/${slug}?lang=${locale}&fixtureId=19722203#touchline-club-lineup`;
@@ -211,7 +213,8 @@ function assertClubLineupLinks(html: string, locale: typeof locales[number], pha
     assert.ok(link, `${locale}: ${slug} keeps the selected fixture and locale`);
     assert.ok(link[1].includes(`aria-label="${escape(`${label} · ${names[slug]}`)}"`));
     assert.ok(link[2].includes(escape(label)));
-    assert.ok(link[2].includes(`<small>${escape(names[slug])}</small>`));
+    assert.ok(link[2].includes(`<span>${escape(label)}</span>`));
+    assert.ok(!link[2].includes(escape(lineupLabelOracles[locale].officialLineup)), "navigation alone must not imply a confirmed XI");
   }
   assert.doesNotMatch(html, /href="#touchline-match-lineups"/, "old same-page lineup link is superseded");
 }
@@ -222,16 +225,16 @@ test("real EN/PT SSR retains empty, live, finished, pending/available lineups, s
     const b = baseline[locale];
     const pending = view.render(locale);
     for (const text of [b.title, "0′", "2099/2100"]) assert.ok(pending.includes(escape(text)), text);
-    for (const text of [b.lineupPending, b.lineupPendingCopy, b.viewLineup]) assert.ok(!pending.includes(escape(text)), text);
-    assertClubLineupLinks(pending, locale, "official", []);
+    for (const text of [b.lineupPending, b.lineupPendingCopy]) assert.ok(!pending.includes(escape(text)), text);
+    assertClubLineupLinks(pending, locale);
     assert.match(pending, /class="score"><span>0<\/span><span class="scoreSeparator">–<\/span><span>0<\/span>/);
     assert.ok(!pending.includes("0 — 0"), "the old long score dash is superseded");
     const empty = view.render(locale, { initialFixtures: [] });
     assert.ok(empty.includes(escape(b.noFixturesCopy)));
     const verified = view.render(locale, { initialMatchDetail: detail() });
     for (const text of [b.highlights, b.form, b.starters, b.bench, b.assist, b.substitutedFor, ...eventOracles[locale], `3 ${b.events}`, locale === "pt-BR" ? "1 rating oficial" : "1 official rating"]) assert.ok(verified.includes(escape(text)), text);
-    assertClubLineupLinks(verified, locale, "official");
-    assert.ok(!verified.includes(escape(b.viewLineup)));
+    assertClubLineupLinks(verified, locale);
+    assert.ok(verified.includes(escape(b.viewLineup)));
     assert.ok(verified.includes(escape(`${b.assist}: Assist <&>`)));
     assert.ok(verified.includes(escape(`${b.substitutedFor}: Official <&>`)));
     assert.ok(verified.includes(escape(`${eventOracles[locale][1]}: Neutral <&>`)));
@@ -243,7 +246,7 @@ test("real EN/PT SSR retains empty, live, finished, pending/available lineups, s
     assert.match(verified, /id="touchline-match-lineups"/); assert.match(verified, /tabindex="-1"/);
     const ended = view.render(locale, { initialFixtures: [fixture({ status: "FT", homeScore: 2, awayScore: 1 })], initialMatchDetail: detail() });
     assert.ok(ended.includes(escape(b.completed))); assert.ok(ended.includes(escape(b.winnerVerified)));
-    assertClubLineupLinks(ended, locale, "finished");
+    assertClubLineupLinks(ended, locale);
     for (const state of ["persisted-live-snapshot", "partial-persisted-schedule"]) {
       const html = view.render(locale, { initialReadMetadata: { state, degraded: true, fetchedAt: "2026-10-03T11:00:00Z" } });
       assert.match(html, /data-state="stale"/); assert.ok(html.includes(escape(b.lastVerified)));
@@ -281,9 +284,9 @@ test("future isolated seam carries complete locale through real JSX, countdown, 
   for (const locale of locales) {
     const copy = mod.TOUCHLINE_MATCH_CENTRE_CATALOGUES[locale];
     const verified = view.render(locale, { initialMatchDetail: detail() });
-    for (const text of [copy.title, copy.league, copy.highlights, copy.form, copy.starters, copy.bench, ...eventOracles[locale], copy.eventCount(3), copy.ratingCount(1), `${copy.season} 2099/2100`, copy.officialLineup, copy.lineupAvailable, copy.bestCoach, copy.bestCards, copy.ratingVerified, copy.substitutedFor, copy.assist, copy.minutes, copy.rating, copy.currentFixtures, copy.recentResults, copy.select, copy.selectedFixture, copy.england, copy.venuePending, copy.timezone, copy.dataPending, copy.recent, copy.players, copy.archive]) assert.ok(verified.includes(escape(text)), `${locale}: ${text}`);
-    assertClubLineupLinks(verified, locale, "official");
-    assert.ok(!verified.includes(escape(copy.viewLineup)), `${locale}: old lineup CTA is absent`);
+    for (const text of [copy.title, copy.league, copy.highlights, copy.form, copy.starters, copy.bench, ...eventOracles[locale], copy.eventCount(3), copy.ratingCount(1), `${copy.season} 2099/2100`, copy.viewLineup, copy.lineupAvailable, copy.bestCoach, copy.bestCards, copy.ratingVerified, copy.substitutedFor, copy.assist, copy.minutes, copy.rating, copy.currentFixtures, copy.recentResults, copy.select, copy.selectedFixture, copy.england, copy.venuePending, copy.timezone, copy.dataPending, copy.recent, copy.players, copy.archive]) assert.ok(verified.includes(escape(text)), `${locale}: ${text}`);
+    assertClubLineupLinks(verified, locale);
+    assert.ok(verified.includes(escape(copy.viewLineup)), `${locale}: neutral lineup CTA is localized`);
     assert.ok(verified.includes(escape(`${copy.assist}: Assist <&>`)), `${locale}: goal assist`);
     assert.ok(verified.includes(escape(`${copy.substitutedFor}: Official <&>`)), `${locale}: substitution relationship`);
     assert.ok(verified.includes(escape(`${eventOracles[locale][1]}: Neutral <&>`)), `${locale}: neutral relationship`);
@@ -300,16 +303,17 @@ test("future isolated seam carries complete locale through real JSX, countdown, 
     const pending = view.render(locale);
     assert.ok(pending.includes(escape(copy.liveNow)), locale);
     for (const text of [copy.lineupPending, copy.lineupPendingCopy]) assert.ok(!pending.includes(escape(text)), `${locale}: no premature lineup notice`);
-    assertClubLineupLinks(pending, locale, "official", []);
+    assertClubLineupLinks(pending, locale);
     const beforeKickoff = view.render(locale, { initialFixtures: [fixture({ status: "Not Started", startsAt: "2026-10-04T14:03:00Z", homeScore: undefined, awayScore: undefined })], initialMatchDetail: detail() });
-    assertClubLineupLinks(beforeKickoff, locale, "official");
+    assertClubLineupLinks(beforeKickoff, locale);
     const finished = view.render(locale, { initialFixtures: [fixture({ status: "FT", homeScore: 2, awayScore: 1 })], initialMatchDetail: { ...detail(), lineupAvailableAt: null } });
-    assertClubLineupLinks(finished, locale, "finished");
+    assertClubLineupLinks(finished, locale);
     assert.ok(finished.includes(escape(copy.completed)), `${locale}: finished status remains localized`);
     const homeOnly = view.render(locale, { initialMatchDetail: { ...detail(), lineups: detail().lineups.filter(member => member.teamId === "19") } });
-    assertClubLineupLinks(homeOnly, locale, "official", ["arsenal"]);
+    assertClubLineupLinks(homeOnly, locale);
     const wrongFixture = view.render(locale, { initialMatchDetail: { ...detail(), fixture: { ...detail().fixture, id: "other-fixture" } } });
-    assertClubLineupLinks(wrongFixture, locale, "official", []);
+    assertClubLineupLinks(wrongFixture, locale);
+    assert.doesNotMatch(wrongFixture, /data-testid="touchline-verified-match-data"/, "a mismatched feed never becomes this fixture’s XI");
     for (const state of ["persisted-live-snapshot", "partial-persisted-schedule"]) {
       const stale = view.render(locale, { initialReadMetadata: { state, degraded: true, fetchedAt: "2026-10-03T11:00:00Z" } });
       for (const text of [copy.liveDataUpdating, copy.lastVerified, copy.lastVerifiedAt, state === "partial-persisted-schedule" ? copy.partialScheduleCopy : copy.liveDataUpdatingCopy]) assert.ok(stale.includes(escape(text)), locale);

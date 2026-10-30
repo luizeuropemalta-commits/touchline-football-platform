@@ -11,6 +11,8 @@ import * as matchCentre from "../lib/touchlineArena/match-centre.ts";
 import * as matchCopy from "../lib/touchlineArena/match-centre-i18n.ts";
 import * as kickoff from "../lib/touchlineArena/local-kickoff.ts";
 import * as catalogueLocale from "../lib/touchlineArena/catalogue-locale.ts";
+import { selectClubHubNextFixture } from "../lib/touchlineArena/club-hub-next-fixture.ts";
+import { getTouchlineClubHubProfileCopy } from "../lib/touchlineArena/club-hub-profile-i18n.ts";
 
 const read = (path: string) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 const componentSource = read("components/touchline/club-hub/ClubHubNextFixtureCard.tsx");
@@ -69,6 +71,8 @@ function consumer(getCopy: (locale?: string | null, enabled?: boolean) => Copy, 
     "next/link": { default: (props: Record<string, unknown>) => React.createElement("a", props, props.children as React.ReactNode) },
     "lucide-react": { CalendarDays: icon, MapPin: icon },
     "@/lib/touchlineArena/local-kickoff": kickoff,
+    "@/lib/touchlineArena/club-hub-next-fixture": { selectClubHubNextFixture },
+    "@/lib/touchlineArena/club-hub-profile-i18n": { getTouchlineClubHubProfileCopy },
     "@/lib/touchlineArena/sports-publication-client": { useTouchlinePublishedLive: (fixtures: unknown[]) => ({ fixtures }) },
     "@/components/touchline/TouchlineLivePresentationRefresh": { default: (props: { serverRefreshAfterMs: number | null; serverRefreshAt: number | null }) => { boundaries.push(props); return null; } },
     "@/lib/touchlineArena/match-centre": matchCentre,
@@ -213,6 +217,31 @@ test("rail algorithm and component remain byte-identical outside admitted copy a
     .replace('heading: copy.matchUpdate', 'heading: portuguese ? "ATUALIZAÇÃO DA PARTIDA" : "MATCH UPDATE"');
   assert.equal(createHash("sha256").update(railRestored).digest("hex"), "bfafa9422d353c0ecc219570067440065ee2521529d51f50e96202937f2f8991");
   let componentBaseline = componentSource;
+  // The later tickets-only path is intentionally different: it can accept a
+  // corrected kickoff for the same fixture and must not become a past result.
+  // Reverse precisely that reviewed delta, preserving this historical digest
+  // for the general-purpose card. Behavior is covered by next-fixture and the
+  // shared-reader consumers, not by silently accepting a new checksum.
+  for (const added of [
+    'import { selectClubHubNextFixture } from "@/lib/touchlineArena/club-hub-next-fixture";\n',
+    'import { getTouchlineClubHubProfileCopy } from "@/lib/touchlineArena/club-hub-profile-i18n";\n',
+    '  /** The tickets rail never becomes a past-result card. */\n  nextOnly?: boolean;\n',
+    '  nextOnly = false,\n',
+    '  const displayedStartsAt = nextOnly ? facts?.startsAt ?? startsAt : startsAt;\n',
+  ]) componentBaseline = undoOnce(componentBaseline, added, '');
+  componentBaseline = undoOnce(componentBaseline,
+    'null, mountedAt, enabled, null, null, nextOnly)', 'null, mountedAt, enabled)');
+  const nextOnlyGuard = componentBaseline.match(/  if \(nextOnly && !selectClubHubNextFixture\(\[[\s\S]*?    <\/article>;\n  }\n/);
+  assert.ok(nextOnlyGuard);
+  componentBaseline = undoOnce(componentBaseline, nextOnlyGuard[0], '');
+  componentBaseline = componentBaseline.replaceAll('displayedStartsAt', 'startsAt');
+  componentBaseline = undoOnce(componentBaseline, '? { startsAt: startsAt, status:', '? { startsAt, status:');
+  const kickoffBlock = componentBaseline.match(/  const localKickoff = useMemo\([\s\S]*?\n  \);\n/);
+  assert.ok(kickoffBlock);
+  componentBaseline = undoOnce(componentBaseline, kickoffBlock[0], '');
+  componentBaseline = undoOnce(componentBaseline,
+    '  const [mountedAt] = useState(() => Date.now());',
+    kickoffBlock[0] + '  const [mountedAt] = useState(() => Date.now());');
   // This mission replaces only transport/lifecycle. Reverse that explicit
   // delta before the previous copy-only inverse; historical hashes are kept.
   componentBaseline = undoOnce(componentBaseline,

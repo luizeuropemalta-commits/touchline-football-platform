@@ -124,12 +124,14 @@ test("page rejects invalid query before loaders and retains explicit/mirror fail
   assert.ok(render.indexOf('if (fixtureQuery.state === "invalid") notFound()') < render.indexOf("loadClubMatchSnapshot("));
   assert.match(page, /if \(dataSource !== "direct"\) \{\s*if \(requestedFixtureId\) return empty/);
   assert.match(page, /if \(requestedFixtureId && !requestedFixture\) return empty/);
-  assert.match(page, /lastCompletedXi: requestedFixtureId \? null/);
+  assert.match(page, /const lastCompletedXi = requestedFixtureId \? null/);
   assert.match(page, /readClubHubRequestedFixture\(requestedFixtureId,[\s\S]*?readFeed: readPersistedFantasyFixtureFeedResult,[\s\S]*?readFixture: readPublicCompetitionFixtureByProviderId/);
   assert.ok(page.includes('[candidate.homeTeam?.providerId, candidate.awayTeam?.providerId].includes(club.teamId)'), "explicit participant check uses provider identity, not a name match");
   assert.match(page, /const formation = requestedFixtureId\s*\? selectClubHubRequestedFormation\(matchdayFeed\?\.formations \?\? \[\], requestedFixtureId, club\.teamId\)\s*:\s*matchdayFeed\?\.formations\.find/);
   assert.match(render, /resolveTouchlineCatalogueLocale\(lang, draftLocalesEnabled\)/);
   const live = readFileSync(new URL("../components/touchline/match-centre/TouchlineMatchCentre.tsx", import.meta.url), "utf8");
   assert.match(live, /\[selected\.homeTeam, selected\.awayTeam\]\.map/);
-  assert.ok(live.includes('/touchline-clubs/${club.slug}?lang=${encodeURIComponent(language)}&fixtureId=${encodeURIComponent(selected.providerId)}#touchline-club-lineup'));
+  assert.match(live, /touchlineLiveClubLineupLinks\(selected, TOUCHLINE_ENGLAND_CLUBS, language\)/);
+  const links = readFileSync(new URL("../lib/touchlineArena/live-club-lineup-links.ts", import.meta.url), "utf8");
+  assert.ok(links.includes('/touchline-clubs/${club.slug}?lang=${encodeURIComponent(locale)}&fixtureId=${encodeURIComponent(fixture.providerId)}#touchline-club-lineup'));
 });

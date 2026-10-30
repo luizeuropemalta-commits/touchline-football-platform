@@ -84,7 +84,7 @@ export const TOUCHLINE_QA_PREVIEW_ALLOWED_APPLICATION_ENVIRONMENT_KEYS = [
   "TOUCHLINE_SITE_LOCALES_ENABLED",
   // Owner-approved collection activation in functional QA only. Admission of
   // this private name does not bypass collection auth/entitlement or enable
-  // termination; hosted QA still excludes the separate release flag.
+  // termination; lifecycle switches require the canonical QA contract below.
   "TOUCHLINE_CLUB_COLLECTION_ENABLED",
   // Private Exchange name only; both collection and Exchange runtime gates remain mandatory.
   // This does not enable Exchange or admit it in inert isolated previews.
@@ -147,6 +147,9 @@ export const TOUCHLINE_QA_PREVIEW_ALLOWED_APPLICATION_ENVIRONMENT_KEYS = [
   "TOUCHLINE_CLUB_OWNER_AVATAR_READ_ENABLED",
   "TOUCHLINE_CLUB_OWNER_AVATAR_UPLOAD_ENABLED",
   "TOUCHLINE_CLUB_OWNER_AVATAR_UPLOAD_ACCOUNT_ID",
+  "TOUCHLINE_CLUB_OWNER_AVATAR_AUDIENCE",
+  "TOUCHLINE_CLUBOWNER_PUBLIC_ENABLED",
+  "TOUCHLINE_CLUBOWNER_PUBLIC_AVATAR_ENABLED",
   "TOUCHLINE_CLUB_OWNER_AVATAR_SELECTION_ENABLED",
   "TOUCHLINE_CLUB_OWNER_AVATAR_RETENTION_READY",
   "TOUCHLINE_SITE_OFFLINE",
@@ -318,14 +321,14 @@ export function inspectTouchlineIsolatedPreviewEnvironment(
     Object.keys(environment)
       .filter(isTouchlineApplicationEnvironmentKey)
       .filter((name) => !allowedQaApplicationEnvironmentKeys.has(name))
-      // Owner-authorized candidate test only. Never admits this switch in
-      // hosted QA, isolated Preview or a noncanonical database environment.
-      .filter((name) => !(name === "TOUCHLINE_CLUB_RELEASE_ENABLED"
-        && environment.NODE_ENV === "development" && environment.VERCEL === undefined
+      // Owner-authorized lifecycle operations for the two QA customer fixtures.
+      // Both switches remain server-only and restricted to the canonical QA
+      // branch/database. OFF is valid before activating collection operations.
+      .filter((name) => !(["TOUCHLINE_CLUB_RELEASE_ENABLED", "TOUCHLINE_CLUB_COACH_LIFECYCLE_ENABLED"].includes(name)
         && environment.VERCEL_GIT_COMMIT_REF === "qa"
         && environment.TOUCHLINE_QA_SUPABASE_PROJECT_REF === "xgxbwqxjssxxuihuwmgy"
-        && environment.TOUCHLINE_CLUB_COLLECTION_ENABLED === "true"
-        && environment[name] === "true"))
+        && (environment[name] === "false"
+          || (environment[name] === "true" && environment.TOUCHLINE_CLUB_COLLECTION_ENABLED === "true"))))
       // Request timing is diagnostic only and must never be admitted to hosted
       // QA/Production or an isolated Preview. It logs no payload or identity.
       .filter((name) => !(name === "TOUCHLINE_LOCAL_READ_TIMING"

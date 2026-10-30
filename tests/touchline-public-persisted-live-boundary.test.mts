@@ -54,7 +54,10 @@ test("Live prefers a fresh snapshot and marks every non-live fallback degraded",
   // The metadata validator now lives at the shared publication boundary;
   // requiring it inside each surface would restore independent live pollers.
   assert.match(matchCentre, /useTouchlinePublishedLive\(initialFixtures, initialReadMetadata, now, liveUpdates\)/);
-  assert.match(sharedClient, /createTouchlinePublishedLiveReader\(touchlineLivePresentationStore, fixtures, initialMetadata\)/);
+  assert.match(sharedClient, /const seedKey = JSON\.stringify\(\[seed, metadata, admissionScope, updateSameFixtureKickoff\]\)/);
+  assert.match(sharedClient, /const \[fixtures, initialMetadata, scope, kickoffUpdates\] = JSON\.parse\(seedKey\)/);
+  assert.match(sharedClient, /createTouchlinePublishedLiveReader\(touchlineLivePresentationStore, fixtures, initialMetadata, scope, kickoffUpdates\)/);
+  assert.match(sharedReader, /projectTouchlinePublishedLive\(current\.fixtures, current\.metadata, read, read\.receivedAt, admissionScope, null, updateSameFixtureKickoff\)/);
   assert.match(sharedStore, /parseTouchlineSportsPublication\(/);
   assert.match(sharedReader, /read\.state\.livePresentationSnapshotId !== publication\.publication\.contentDigest/);
   assert.match(sharedReader, /read\.state\.liveFreshness\.fetchedAt !== publication\.live\.fetchedAt/);

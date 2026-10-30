@@ -6,6 +6,7 @@ import { parsePublicOwnerProfile, peopleCopy, publicOwnerHref, type PeopleLocale
 import { PublicOwnersRequestError, usePublicOwnersRequest } from "./usePublicOwnersRequest";
 import controls from "../TouchlineGlobalNavigation.module.css";
 import styles from "./ClubOwnerPublic.module.css";
+import ClubOwnerPublicAvatar from "./ClubOwnerPublicAvatar";
 
 export default function ClubOwnerPublicProfile({ locale, publicId, enabled, initial }: { locale: PeopleLocale; publicId: string; enabled: boolean; initial: { status: number; profile: PublicOwnerProfile | null } }) {
   const copy = peopleCopy(locale), io = usePublicOwnersRequest();
@@ -33,6 +34,7 @@ export default function ClubOwnerPublicProfile({ locale, publicId, enabled, init
     {status !== 404 ? <button className={controls.link} onClick={() => update(false)} disabled={busy}>{copy.retry}</button> : null}
   </section>;
   return <section className={styles.panel} aria-labelledby="public-owner-name" aria-busy={busy}>
+    <ClubOwnerPublicAvatar publicId={profile.publicId} avatarUrl={profile.avatarUrl} displayName={profile.displayName} locale={locale} />
     <h1 id="public-owner-name">{profile.displayName}</h1>
     <p>{copy.id}: <span className={styles.id}>{profile.publicId}</span></p>
     <dl className={styles.metrics}><div><dt>{copy.followers}</dt><dd>{new Intl.NumberFormat(locale).format(profile.followerCount)}</dd></div></dl>

@@ -46,7 +46,12 @@ test("mail review PT/EN recovers errors, paginates and renders untrusted text sa
    assert.equal(reviews.length,2);assert.equal(reviews[0].requestId,reviews[1].requestId);assert.ok(!JSON.stringify(reviews).includes("actor_id"));
    await page.getByRole("button",{name:portuguese?"Próxima":"Next",exact:true}).click();await expect(page.getByText(portuguese?/Nenhum registro nesta página/:/No records on this page/)).toBeVisible();
    await page.getByRole("button",{name:portuguese?"Pendências de leitura":"Reading issues",exact:true}).click();await expect(page.getByText(/MAIL_CONTENT_LIMIT/)).toBeVisible();
-   await page.getByRole("button",{name:portuguese?"Importações":"Imports",exact:true}).click();await page.getByRole("button",{name:portuguese?"Importar próximo lote":"Import next batch",exact:true}).click();await expect(page.getByText(portuguese?"Esta caixa ainda não está habilitada para importação.":"This mailbox is not enabled for import yet.",{exact:true})).toBeVisible();
+   await page.getByRole("button",{name:portuguese?"Importações":"Imports",exact:true}).click();await expect(page.getByRole("heading",{name:portuguese?"Importação de documentos":"Document import",exact:true})).toBeVisible();
+   await expect(page.getByText("from:billing@example.test",{exact:true})).toBeHidden();
+   await expect(page.getByText(/UTC/)).toContainText("2026");
+   await page.getByText(portuguese?"Detalhes da importação":"Import details",{exact:true}).click();
+   await expect(page.getByText("from:billing@example.test",{exact:true})).toBeVisible();
+   await page.getByRole("button",{name:portuguese?"Importar próximo lote":"Import next batch",exact:true}).click();await expect(page.getByText(portuguese?"Esta caixa ainda não está habilitada para importação.":"This mailbox is not enabled for import yet.",{exact:true})).toBeVisible();
    assert.deepEqual(errors,[]);await page.screenshot({path:`/private/tmp/touchline-mail-browser/${engine.name()}-${portuguese?"pt":"en"}-${width}.png`,fullPage:true});await context.close();
   }}finally{await browser.close();}
  }

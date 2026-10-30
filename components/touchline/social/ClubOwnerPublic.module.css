@@ -17,6 +17,8 @@
 .results a { justify-self: start; max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
 .id { font-family: ui-monospace, monospace; overflow-wrap: anywhere; }
 .identity { display: grid; gap: .5rem; }
+.avatar { display: inline-flex; align-items: center; gap: .75rem; flex-wrap: wrap; max-width: 100%; }
+.avatar img, .avatarFallback { display: grid; place-items: center; width: 56px; height: 56px; flex: 0 0 56px; border: 1px solid var(--lime); border-radius: 50%; object-fit: cover; background: #183124; color: #c2d5c9; }
 .metrics dd { font-size: 1.5rem; font-weight: 700; }
 .actions { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; margin-top: 1rem; }
 @media (max-width: 48rem) { .sections { grid-template-columns: minmax(0, 1fr); } }

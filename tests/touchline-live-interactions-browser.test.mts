@@ -260,14 +260,14 @@ test('Live mounted interactions: recovery, disclosure, detail identity and guest
         assert.ok(h.requests.every(r => r.startsWith('GET ')));
       } finally { await h.close(); }
     });
-    await t.test('matching detail unlocks verified lineup; changing fixture never leaks old detail', async () => {
+    await t.test('lineup navigation stays available while changing fixture never leaks old detail', async () => {
       const h = await harness({ canReadMatchDetail: true });
       try {
         await h.snapshot(0);
         await (await h.take('fixture?')).fulfill({ json: { ok: true, data: detail() } });
         await expect(h.page.getByTestId('touchline-verified-match-data')).toBeVisible();
         const history = await h.page.evaluate(() => window.history.length);
-        const lineupLink = h.page.getByRole('link', { name: 'Confirmed line-up · Synthetic Home 0', exact: true });
+        const lineupLink = h.page.getByRole('link', { name: 'VIEW LINE-UP · Synthetic Home 0', exact: true });
         await expect(lineupLink).toHaveAttribute('href', '/touchline-clubs/arsenal?lang=en-GB&fixtureId=19700001#touchline-club-lineup');
         await lineupLink.focus(); await expect(lineupLink).toBeFocused();
         // The current link navigates to ClubHub, not this page's local section.
@@ -278,7 +278,10 @@ test('Live mounted interactions: recovery, disclosure, detail identity and guest
         await h.page.locator('button[aria-pressed]').nth(1).click();
         await (await h.take('fixture?fixtureId=19700002')).fulfill({ json: { ok: true, data: detail('19700001') } });
         await expect(h.page.getByTestId('touchline-verified-match-data')).toHaveCount(0);
-        await expect(h.page.getByRole('link', { name: /^Confirmed line-up ·/ })).toHaveCount(0);
+        await expect(h.page.getByRole('link', { name: /^VIEW LINE-UP ·/ })).toHaveCount(2);
+        for (const link of await h.page.locator('[data-lineup-team]').all()) {
+          await expect(link).toHaveAttribute('href', /fixtureId=19700002#touchline-club-lineup$/);
+        }
         await expect(h.page.locator('button[aria-pressed=true]')).toHaveCount(1);
       } finally { await h.close(); }
     });

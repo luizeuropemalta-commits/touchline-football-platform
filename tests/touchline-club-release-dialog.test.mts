@@ -8,6 +8,10 @@ import { renderToStaticMarkup } from "react-dom/server";
 import ts from "typescript";
 import * as release from "../lib/touchlineFantasy/club-release.ts";
 import type { ClubAcquisitionState } from "../lib/touchlineFantasy/club-acquisition.ts";
+import { squadCardToExactPlayer, type ClubOwnerSquadCard } from "../lib/touchlineArena/demo-data.ts";
+import * as seasonPresentation from "../lib/touchlineArena/player-season-presentation.ts";
+import { buildTouchlineCardLeadershipValue, type TouchlineCardLeadershipAuthority } from "../lib/touchlineArena/card-leadership-authority.ts";
+import { TOUCHLINE_PRESEASON_RANKING_STATE } from "../lib/touchlineArena/card-ranking-live.ts";
 
 const require = createRequire(import.meta.url);
 const playerId = "50000000-0000-4000-8000-000000000003";
@@ -29,6 +33,8 @@ function fixture(success = true) {
   let dialogOptions: { onDismiss: () => void; initialFocusRef: unknown } | undefined;
   const confirmations: [string, number][] = [];
   const refs: { current: unknown }[] = [];
+  let authority: TouchlineCardLeadershipAuthority | null = null;
+  let renderedPlayer: ReturnType<typeof squadCardToExactPlayer> | undefined;
   const modules: Record<string, unknown> = {
     "lucide-react": require("lucide-react"),
     "@/components/touchline/market/TouchlineMarketMarks": { TouchlineCoinMark: () => React.createElement("svg", { "data-touchline-coin": true }) },
@@ -47,11 +53,14 @@ function fixture(success = true) {
     "react/jsx-runtime": require("react/jsx-runtime"),
     "react-dom": { createPortal: (children: React.ReactNode) => children },
     "@/lib/touchlineFantasy/club-release": release,
-    "@/lib/touchlineArena/demo-data": { squadCardToExactPlayer: (card: unknown) => card },
+    "@/lib/touchlineArena/demo-data": { squadCardToExactPlayer },
+    "@/lib/touchlineArena/player-season-presentation": seasonPresentation,
+    "@/components/touchline/cards/TouchlineCardLeadershipProvider": { useTouchlineCardLeadershipAuthority: () => authority },
     "@/components/touchline/cards/TouchlineEliteExactCard": { __esModule: true, default: (props: Props) => {
       assert.equal(props.showCardActions,false);assert.equal(props.showProfileAction,false);
       assert.equal(props.enableInteractiveNeon,false);assert.equal(props.subscribeToRanking,false);
-      return React.createElement("span", { "data-original-card": true }, (props.player as {name:string}).name);
+      renderedPlayer = props.player as ReturnType<typeof squadCardToExactPlayer>;
+      return React.createElement("span", { "data-original-card": true, "data-total-rating": renderedPlayer.totalRating ?? "—" }, renderedPlayer.name);
     } },
     "@/components/touchline/a11y/TouchlineDialog": {
       useTouchlineDialog(options: typeof dialogOptions) {
@@ -68,6 +77,7 @@ function fixture(success = true) {
   } });
   function render(overrides: Props = {}) {
     cursor = 0;
+    renderedPlayer = undefined;
     const currentState = (overrides.state ?? structuredClone(state)) as ClubAcquisitionState;
     const before = structuredClone(currentState);
     const tree = exports.ClubOwnerReleaseDialog!({ state: currentState, playerId, playerName: "Owned player", locale: "en-GB",
@@ -88,12 +98,25 @@ function fixture(success = true) {
     walk(tree);
     assert.equal(buttons.length, 2);
     assert.ok(heading);
-    return { html: renderToStaticMarkup(tree), heading, keep: buttons[0], confirm: buttons[1], dismiss: () => dialogOptions!.onDismiss(),
+    const html = renderToStaticMarkup(tree);
+    return { html, exactPlayer: renderedPlayer, heading, keep: buttons[0], confirm: buttons[1], dismiss: () => dialogOptions!.onDismiss(),
       initialFocusRef: dialogOptions!.initialFocusRef };
   }
-  return { render, confirmations, get closes() { return closes; } };
+  return { render, confirmations, setAuthority(value: TouchlineCardLeadershipAuthority | null) { authority = value; }, get closes() { return closes; } };
 }
 const click = async (button: Element) => (button.props.onClick as () => Promise<void> | void)();
+const ratedCard: ClubOwnerSquadCard = {
+  id: playerId, canonicalPlayerId: playerId, providerPlayerId: "123", name: "Ibrahim Sangaré", shortName: "Sangaré",
+  clubName: "Nottingham Forest", position: "Defensive Midfielder", role: "DM", countryCode3: "CIV", shirtNumber: 6,
+  marketValue: "€95M", touchlinePoints: 999, seasonTotalRating: 33.46, matchRating: 7,
+  seasonStats: { goals: 1 }, matchStats: { goals: 0 }, cardPriceAuthority: "active-contract",
+};
+const seasonRanking = (totalRating: number | null) => ({
+  ...TOUCHLINE_PRESEASON_RANKING_STATE, phase: "ranked" as const, snapshotId: `release-snapshot-${totalRating}`,
+  seasonId: state.seasonId, scoringVersion: "player_scoring_v4" as const,
+  players: [{ playerId, providerPlayerId: "123", totalRating, positionGroup: "midfielder" as const, positionRank: 1, groupSize: 1,
+    minutesPlayed: 90, appearances: 1, tierKey: "radiant-gold" as const, priceTc: 999 }],
+});
 
 test("release review renders paid45M/fee4.5M/refund40.5M with no opening or keep mutation", async () => {
   for (const [locale, paid, fee, refund, keepLabel] of [
@@ -138,6 +161,63 @@ test("release review shows original matching card and confirmed/preview balances
   assert.match(stale.html,/1,000,000,000 TC/);assert.doesNotMatch(stale.html,/1,040,500,000 TC/);
   assert.equal(stale.confirm.props.disabled,true);
   assert.doesNotMatch(h.render({card:{...card,canonicalPlayerId:"another"}}).html,/data-original-card/);
+});
+
+test("release card follows current season corrections while the mounted financial quote stays frozen", async () => {
+  const h = fixture(), card = structuredClone(ratedCard), before = structuredClone(card);
+  const originalExact = squadCardToExactPlayer(card);
+  let view = h.render({ card });
+  assert.equal(view.exactPlayer?.totalRating, 33.46, "initial catalogue is the fallback before shared authority arrives");
+  for (const total of [33.38, 33.37]) {
+    h.setAuthority(buildTouchlineCardLeadershipValue(seasonRanking(total), null));
+    view = h.render({ card });
+    assert.equal(view.exactPlayer?.totalRating, total, "an open release review must follow the same rating as card zoom");
+    assert.deepEqual(view.exactPlayer, { ...originalExact, totalRating: total }, "only the displayed season total changes");
+    assert.match(view.html, new RegExp(`data-total-rating="${total}"`));
+    for (const amount of ["45,000,000 TC", "4,500,000 TC", "40,500,000 TC", "1,145,000,000 TC", "1,185,500,000 TC"])
+      assert.ok(view.html.includes(`aria-label="${amount}"`), amount);
+    assert.equal(view.confirm.props.disabled, false);
+    assert.deepEqual(h.confirmations, []);
+    assert.equal(h.closes, 0);
+  }
+  assert.deepEqual(card, before, "presentation must not mutate the catalogue or acquisition values");
+  await click(view.confirm);
+  assert.deepEqual(h.confirmations, [[playerId, 1]], "submission still uses only the frozen canonical player and quote revision");
+  assert.equal(h.closes, 1);
+});
+
+test("release card preserves explicit absence and canonical identity without borrowing another athlete's total", () => {
+  const rank = seasonRanking(33.38), otherPlayerId = "50000000-0000-4000-8000-000000000004";
+  for (const ranking of [
+    seasonRanking(null), TOUCHLINE_PRESEASON_RANKING_STATE,
+    { ...rank, players: [] },
+    { ...rank, players: [{ ...rank.players[0], playerId: otherPlayerId }] },
+    { ...rank, players: [{ ...rank.players[0], providerPlayerId: "wrong-provider" }] },
+  ]) {
+    const h = fixture();
+    h.setAuthority(buildTouchlineCardLeadershipValue(ranking, null));
+    const view = h.render({ card: ratedCard });
+    assert.equal(view.exactPlayer?.totalRating, null, "withdrawn or mismatched provider data must not revive the stale 33.46");
+    assert.match(view.html, /data-total-rating="—"/);
+    assert.match(view.html, /aria-label="40,500,000 TC"/);
+    assert.equal(view.confirm.props.disabled, false, "football rating absence does not alter the contract quote");
+    const mismatchedCard = h.render({ card: { ...ratedCard, canonicalPlayerId: otherPlayerId } });
+    assert.equal(mismatchedCard.exactPlayer, undefined);
+    assert.match(mismatchedCard.html, /data-has-card="false"/);
+  }
+});
+
+test("release card falls back to its own catalogue when current authority is unavailable and retains valid zero", () => {
+  const h = fixture();
+  for (const authority of [null, buildTouchlineCardLeadershipValue(null, null)]) {
+    h.setAuthority(authority);
+    assert.equal(h.render({ card: ratedCard }).exactPlayer?.totalRating, 33.46);
+  }
+  h.setAuthority(buildTouchlineCardLeadershipValue(seasonRanking(0), null));
+  const view = h.render({ card: ratedCard });
+  assert.equal(view.exactPlayer?.totalRating, 0);
+  assert.match(view.html, /data-total-rating="0"/);
+  assert.deepEqual(h.confirmations, []);
 });
 
 test("release review removes club identity and contracted squad total while preserving cash",()=>{

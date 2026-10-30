@@ -161,6 +161,7 @@ async function renderClubOwnerPageContent({ searchParams }: ClubOwnerPageProps, 
           authority={snapshot?.config.seasonId ? {expectedAccountId:user.id, expectedSeasonId:snapshot.config.seasonId} : null}>
         <ClubOwnerMarketHeader checkoutOffers={checkoutOffers} owner={clubOwner?.isAuthenticatedClubOwner ? clubOwner : null} locale={locale} rankingPosition={clubOwnerRankingPosition(snapshot?.seasonRanking)} followerCount={confirmedFollowers} publicDiscoveryEnabled={publicDiscoveryEnabled} remainingMarketPower={remainingMarketPower} plan={snapshot?.plan ?? null} activePlanKey={activePlanKey} activePlanBudget={activePlanKey ? marketAccess?.budgetEur : undefined} planPreview={planPreview} draftLocalesEnabled={draftLocalesEnabled} accountId={user.id} avatarContext={avatarContext} avatarSelectionEnabled={avatarSelectionEnabled} retentionReady={retentionReady} collectionEnabled={collectionAvailable} />
         <FantasyGameweekClient initialSnapshot={snapshot} locale={locale} liveTimeZone={liveTimeZone} draftLocalesEnabled={draftLocalesEnabled} embedded marketPage
+          publicDiscoveryEnabled={publicDiscoveryEnabled} checkoutOffers={checkoutOffers}
           collectionEnabled={collectionAvailable}
           initialCollectionRead={collectionAvailable ? collectionRead : null}
           collectionStructureVisible={collectionStructureVisible}

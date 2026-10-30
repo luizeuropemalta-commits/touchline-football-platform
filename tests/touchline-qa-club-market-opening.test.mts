@@ -4,6 +4,7 @@ import { stripTypeScriptTypes } from "node:module";
 import { PGlite } from "@electric-sql/pglite";
 import test from "node:test";
 import { runInNewContext } from "node:vm";
+import { installTestClubSeasonCalendar } from "./helpers/club-season-calendar.mts";
 
 const sql = readFileSync(new URL("../supabase/qa/club_market_test_opening.sql", import.meta.url), "utf8");
 const season = "00000000-0000-4000-8000-000000000001";
@@ -13,13 +14,20 @@ test("QA opening installs closed, opens only its season, preserves rounds and re
     await db.exec(`create role anon; create role authenticated; create role service_role bypassrls;
       create function touchline_assert_qa_fixture_target(text) returns void language plpgsql as $$begin
         if $1 <> 'xgxbwqxjssxxuihuwmgy' then raise exception 'WRONG_TARGET'; end if; end;$$;
-      create table touchline_fantasy_configs(season_id uuid, competition_key text, status text);
+      create table football_seasons(id uuid primary key);
+      create table touchline_fantasy_configs(season_id uuid, competition_key text, status text, competition_id uuid);
       create table touchline_fantasy_gameweeks(id uuid, season_id uuid, round_id uuid, gameweek_number int, state text);
-      insert into touchline_fantasy_configs values('${season}','england','active');
+      insert into football_seasons values('${season}');
+      insert into touchline_fantasy_configs values('${season}','england','active','${season}');
       insert into touchline_fantasy_gameweeks values('${season}','${season}','${season}',8,'LOCKED');
       create function touchline_fantasy_market_window_projection(timestamptz)
       returns table(season_id uuid,round_id uuid,state text) language sql as $$
-        select season_id,round_id,state from public.touchline_fantasy_gameweeks;$$;`);
+        select season_id,round_id,state from public.touchline_fantasy_gameweeks;$$;
+      create function touchline_club_market_is_open(p_season_id uuid)
+      returns boolean language sql volatile security definer set search_path='' as $$
+        select exists(select 1 from public.touchline_fantasy_market_window_projection(clock_timestamp()) p
+          where p.season_id=p_season_id and p.state='MARKET_OPEN');$$;`);
+    await installTestClubSeasonCalendar(db,season,season);
     await db.exec(sql);
     const opened = async () => (await db.query<{open:boolean}>("select touchline_club_market_is_open($1) as open",[season])).rows[0].open;
     assert.equal(await opened(), false);
@@ -37,6 +45,12 @@ test("QA opening installs closed, opens only its season, preserves rounds and re
     assert.equal(await opened(),false);
     await db.exec("update touchline_fantasy_gameweeks set state='MARKET_OPEN'");
     assert.equal(await opened(),true);
+    await db.exec("update touchline_qa_club_market_control set enabled=true");
+    for (const dates of ["starts_at=null", "ends_at=null", "starts_at=current_date+5,ends_at=current_date+10", "starts_at=current_date-10,ends_at=current_date-1"]) {
+      await db.exec(`update football_seasons set ${dates}`);
+      assert.equal(await opened(),false,`QA and open round cannot override ${dates}`);
+      assert.equal((await db.query<{open:boolean}>("select touchline_qa_club_market_is_open($1) open",[season])).rows[0].open,false,"QA snapshot agrees with the committing guard");
+    }
   } finally { await db.close(); }
 });
 

@@ -29,7 +29,7 @@ const baseline = {
     playerEyebrow: "TouchLine player borders", playerTitle: "Seven official player-card borders",
     playerDescription: "Ordered from the highest-value border to the entry border. Each card is a real published representative with the highest verified market value in its tier; Erling Haaland leads Golden Diamond.",
     coachEyebrow: "TouchLine coach borders", coachTitle: "Seven official coach-card borders",
-    coachDescription: "A complete verified current ranking selects the representative for each border. If that ranking is unavailable, the last verified representative remains visible rather than guessing a colour.",
+    coachDescription: "Borders stay fixed throughout the season. Points and ranking update separately.",
     verifiedValue: "Verified market value", previousFinish: "Previous-season finish", promotedChampion: "Promoted champion", promotedPlayoff: "Promoted through play-offs", approvedFallback: "Approved promotion fallback",
     representativePending: "Representative pending", representativePendingDescription: "No current coach has approved evidence for this border. TouchLine will not borrow another coach’s position.",
     playerPending: "Published representative pending", playerPendingDescription: "No published card currently owns this border.",
@@ -39,7 +39,7 @@ const baseline = {
     playerEyebrow: "Bordas de jogadores TouchLine", playerTitle: "As sete bordas oficiais dos cards de jogadores",
     playerDescription: "Ordem da borda de maior valor até a borda de entrada. Cada card é um representante real publicado com o maior valor de mercado verificado do seu tier; Erling Haaland lidera o Diamante Dourado.",
     coachEyebrow: "Bordas de treinadores TouchLine", coachTitle: "As sete bordas oficiais dos cards de treinadores",
-    coachDescription: "Um ranking atual completo e verificado seleciona o representante de cada borda. Se esse ranking não estiver disponível, o último representante verificado permanece visível sem adivinhar uma cor.",
+    coachDescription: "As borduras permanecem fixas durante a temporada. Os pontos e o ranking são atualizados separadamente.",
     verifiedValue: "Valor de mercado verificado", previousFinish: "Posição na temporada anterior", promotedChampion: "Campeão promovido", promotedPlayoff: "Promovido pelos play-offs", approvedFallback: "Fallback de promoção aprovado",
     representativePending: "Representante pendente", representativePendingDescription: "Nenhum treinador atual possui evidência aprovada para esta borda. A TouchLine não empresta a posição de outro treinador.",
     playerPending: "Representante publicado pendente", playerPendingDescription: "Nenhum card publicado ocupa esta borda no momento.",
@@ -280,6 +280,8 @@ test("showcase JSX, tier styling and evidence logic retain the admitted preimage
       // restoration of football market value (not commercial card price), plus
       // the public live-record opt-in replacing frozen point/crown props.
       for (const [added, previous, count] of [
+        ['                representative.classification?.finalPosition ?? null,', '                rankingRow?.rank ?? representative.classification?.finalPosition ?? null,', 1],
+        ['                representative.classification?.tierKey ?? tierKey,', '                rankingRow ? tierKey : representative.classification?.tierKey ?? tierKey,', 1],
         ['touchlineCardTierName(tierKey, effectiveLocale, draftLocalesEnabled)', 'touchlineCardTierName(tierKey, effectiveLocale)', 2],
         ['<TouchlineEliteExactCard draftLocalesEnabled={draftLocalesEnabled}', '<TouchlineEliteExactCard', 1],
         ['<TouchlineCoachCardZoom draftLocalesEnabled={draftLocalesEnabled}', '<TouchlineCoachCardZoom', 1],

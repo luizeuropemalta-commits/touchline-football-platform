@@ -37,14 +37,14 @@ function harness() {
   return { calls, render: exports.render as (props: Props) => Promise<React.ReactElement> };
 }
 const input = (locale: string, dataSource: string) => ({ club, locale, dataSource, cursor: "legacy-cursor", mirrorResultPromise: null,
-  matchSnapshotPromise: Promise.resolve({ railFixture: fixture }), tablePromise: Promise.resolve(table) });
+  matchSnapshotPromise: Promise.resolve({ nextFixture: fixture }), tablePromise: Promise.resolve(table) });
 
 test("fixture-only accessible heading follows verified finished/live/upcoming state in all eight locales", async () => {
   for (const locale of ["en-GB", "pt-BR", "es-ES", "it-IT", "fr-FR", "ar-SA", "tr-TR", "de-DE"] as const) {
     const copy = getTouchlineClubHubFixtureCopy(locale, true);
     for (const [status, startsAt, expected] of [["finished", "2000-01-01T00:00:00Z", copy.finished], ["live", "2000-01-01T00:00:00Z", copy.live], ["scheduled", "2099-01-01T00:00:00Z", copy.nextMatch]]) {
       const h = harness();
-      const element = await h.render({ ...input(locale, "direct"), locale, draftLocalesEnabled: true, fixtureOnly: true, matchSnapshotPromise: Promise.resolve({ railFixture: { ...fixture, status, startsAt } }) });
+      const element = await h.render({ ...input(locale, "direct"), locale, draftLocalesEnabled: true, fixtureOnly: true, matchSnapshotPromise: Promise.resolve({ nextFixture: { ...fixture, status, startsAt } }) });
       assert.equal((element.props as Props)["aria-label"], expected);
     }
   }
@@ -70,7 +70,7 @@ test("public overview renders real fixture/table bindings without direct or mirr
 test("missing fixture and unavailable table remain factual and localized, without a substitute social card", async () => {
   for (const locale of ["en-GB", "pt-BR"]) {
     const h = harness(), absent = { state: "unavailable", rows: [] };
-    const html = renderToStaticMarkup(await h.render({ ...input(locale, "direct"), matchSnapshotPromise: Promise.resolve({ railFixture: null }), tablePromise: Promise.resolve(absent) }));
+    const html = renderToStaticMarkup(await h.render({ ...input(locale, "direct"), matchSnapshotPromise: Promise.resolve({ nextFixture: null }), tablePromise: Promise.resolve(absent) }));
     assert.ok(html.includes('data-state="awaiting"')); assert.ok(html.includes('role="status"'));
     assert.ok(html.includes(locale === "pt-BR" ? "Próxima partida em verificação" : "Next match under verification"));
     assert.equal(h.calls.filter(call => call.kind === "fixture").length, 0);
@@ -84,7 +84,7 @@ test("overview awaits only the original football promises and preserves rejectio
   void result.then(() => { settled = true; }, () => { settled = true; });
   await Promise.resolve(); assert.equal(settled, false);
   resolveTable(table); await Promise.resolve(); assert.equal(settled, false);
-  resolveMatch({ railFixture: fixture }); await result;
+  resolveMatch({ nextFixture: fixture }); await result;
   await assert.rejects(h.render({ ...input("en-GB", "direct"), tablePromise: Promise.reject(new Error("TABLE_UNAVAILABLE")) }), /TABLE_UNAVAILABLE/);
 });
 
@@ -92,10 +92,13 @@ test("page retires only social cursor/imports while retaining football loaders, 
   assert.doesNotMatch(source, /readTouchlineClubSocialFeed|loadTouchlineQaMirroredSocialFeed|TouchlineClubSocialFeed|feedCursor|club-feed/);
   assert.match(source, /persistedFeeds/); assert.match(source, /feedTeamBelongsToClub/);
   for (const name of ["ClubHubHeroNextMatch", "ClubHubHomeStadiumIdentity", "ClubHubLineupSection", "ClubHubTechnicalSections", "ClubHubOutsideMatchRoster"]) assert.ok(source.includes(name), name);
-  const navigation = source.indexOf("<ClubHubSectionNavigation"), overview = source.indexOf("<ClubHubOfficialLeagueSection", navigation), lineup = source.indexOf("<ClubHubLineupSection", navigation);
-  assert.ok(navigation < lineup && lineup < overview, "the field precedes the next fixture");
-  assert.match(source, /<ClubHubLineupSection[\s\S]*?<ClubHubOfficialTablePanel/);
-  assert.match(source, /matchSnapshotPromise=\{matchSnapshotPromise\}/); assert.match(source, /tablePromise=\{tablePromise\}/);
+  const navigation = source.indexOf("<ClubHubSectionNavigation"), panels = source.indexOf("<ClubHubMatchdayPanels", navigation);
+  assert.ok(navigation < panels, "the field and next fixture share a boundary after navigation");
+  const group = source.slice(source.indexOf("async function ClubHubMatchdayPanels"), source.indexOf("async function ClubHubTechnicalSections"));
+  assert.ok(group.indexOf("{lineup}") < group.indexOf("{next}"));
+  assert.match(group, /nextFixture: presentation\.fixtureContext\.nextFixture/);
+  assert.match(group, /<ClubHubOfficialTablePanel/);
+  assert.match(source, /tablePromise=\{tablePromise\}/);
 });
 
 test("next-fixture base geometry remains bounded for the compact right rail, not a rendered visual proof", () => {

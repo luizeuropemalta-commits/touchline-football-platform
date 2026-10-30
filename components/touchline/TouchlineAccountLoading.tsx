@@ -21,8 +21,5 @@ export default function TouchlineAccountLoading({ contentOnly = false }: { conte
       {Object.entries(loadingCopy).map(([locale, label]) => <span key={locale}
         className={styles.statusText} lang={locale} dir={locale === "ar-SA" ? "rtl" : "ltr"}>{label}</span>)}
     </div>
-    <div className={styles.header} aria-hidden="true" />
-    <div className={styles.cards} aria-hidden="true">{Array.from({ length: 5 }, (_, index) => <span key={index} />)}</div>
-    <div className={styles.pitch} aria-hidden="true" />
   </Container>;
 }

@@ -82,7 +82,7 @@ test("coach border representatives preserve the same immutable tier as their pro
   }
 });
 
-test("a complete persisted coach table fills every gallery border from its current rank", () => {
+test("current ranking changes never recolour the season classification", () => {
   assert.equal(TOUCHLINE_LIVE_COACHES.length, 20);
   const ranking: TouchLineCoachRankingState = {
     phase: "ranked", snapshotId: "snapshot-current", seasonId: "2026-27", scoringVersion: "coach_scoring_v2",
@@ -96,7 +96,16 @@ test("a complete persisted coach table fills every gallery border from its curre
   };
   const representatives = selectTouchlineCoachTierRepresentativesFromRanking(ranking);
   assert.equal(representatives.length, 7);
-  assert.equal(representatives.every((item) => item.snapshot && item.rankingRow), true);
-  assert.equal(representatives.at(-1)?.tierKey, "ruby-red");
-  assert.equal(representatives.at(-1)?.rankingRow?.rank, 18);
+  const baseline = selectTouchlineCoachTierRepresentatives();
+  assert.deepEqual(representatives.map(({ rankingRow: _rankingRow, ...rest }) => rest), baseline);
+  for (const item of representatives) {
+    if (item.snapshot) {
+      assert.equal(item.tierKey, item.classification?.tierKey);
+      assert.equal(item.rankingRow?.coachProviderId, item.snapshot.coach.providerId);
+    }
+  }
+  const reversed = selectTouchlineCoachTierRepresentativesFromRanking({ ...ranking,
+    rows: ranking.rows.map(row => ({ ...row, rank: 21 - row.rank, touchlinePoints: 99 })) });
+  assert.deepEqual(reversed.map(({ rankingRow: _rankingRow, ...rest }) => rest), baseline);
+  assert.equal(reversed.find(item => item.snapshot)?.rankingRow?.touchlinePoints, 99);
 });

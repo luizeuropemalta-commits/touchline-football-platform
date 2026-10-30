@@ -105,6 +105,90 @@ for (const fault of ["foreign-provider", "member-provider", "wrong-fixture", "mi
   });
 }
 
+function addUnresolvedBench(t: Record<string, Row[]>, i = 0) {
+  const f = t.football_fantasy_fixture_feeds[i];
+  const member = { provider: "sportmonks", providerId: "14674515841", fixtureId: f.provider_fixture_id,
+    teamId: "10", playerName: "Unresolved reserve", isStarter: false, isSubstitute: true, statistics: [] } as Row;
+  (f.lineups_payload as Row[]).push(member);
+  f.fixture_payload = { provider: "sportmonks", providerId: f.provider_fixture_id, status: "Full Time" };
+  return member;
+}
+
+test("one unscored reserve without ID does not stop the other 79 feeds or invent a player/point", async () => {
+  const t = tables(80);
+  addUnresolvedBench(t);
+  const before = JSON.stringify(t.football_fantasy_fixture_feeds[0]);
+  const x = await execute(t);
+  assert.equal(x.result.ok, true);
+  assert.equal((x.aggregate?.summary_payload as Row).totalRating, 560);
+  assert.equal(x.aggregate?.expected_fixture_count, 80);
+  const settlements = x.writes.filter((w) => w.table === "touchline_player_fixture_score_settlements").flatMap((w) => w.rows);
+  assert.equal(settlements.length, 80);
+  assert.ok(settlements.every((r) => r.football_player_id === player.id && r.touchline_points === 7));
+  assert.equal(JSON.stringify(t.football_fantasy_fixture_feeds[0]), before);
+  assert.equal(x.rankings, 1);
+});
+
+test("unresolved reserve never replaces a known player's history with a presumed absence", async () => {
+  const t = tables(2);
+  addUnresolvedBench(t);
+  const absent = { ...player, id: "known-missing", provider_player_id: "2" };
+  t.football_players.push(absent);
+  t.football_player_season_memberships.push({ id: "m2", ...membership("club-a"), football_player_id: absent.id, football_players: absent });
+  const x = await execute(t);
+  assert.equal(x.result.ok, false);
+  assert.ok(x.result.errors.includes("lineup-identity-pending:known-missing"));
+  assert.equal(JSON.stringify(x.result.failedFixtureIds), JSON.stringify(["f1"]));
+  assert.equal(x.result.rankingError, "ranking-source-incomplete");
+  assert.equal(x.rankings, 0);
+  const scoringWrites = x.writes.filter((w) => ["football_player_season_statistics", "touchline_player_fixture_score_settlements"].includes(w.table)).flatMap((w) => w.rows);
+  assert.ok(scoringWrites.length > 0);
+  assert.ok(scoringWrites.every((r) => r.football_player_id === player.id));
+  assert.equal((x.aggregate?.summary_payload as Row).totalRating, 14);
+});
+
+for (const fault of ["starter", "unknown-role", "minutes", "zero-minutes", "rating", "malformed-id", "live", "canonical-live", "events-missing", "unresolved-event", "named-event", "substitution-related-missing", "foreign-event"]) {
+  test(`unresolved bench ${fault} remains fatal before every write`, async () => {
+    const t = tables(1);
+    const member = addUnresolvedBench(t);
+    const f = t.football_fantasy_fixture_feeds[0];
+    if (fault === "starter") member.isStarter = true;
+    if (fault === "unknown-role") delete member.isSubstitute;
+    if (fault === "minutes") member.statistics = [{ code: "minutes-played", value: 1 }];
+    if (fault === "zero-minutes") member.statistics = [{ code: "minutes-played", value: 0 }];
+    if (fault === "rating") member.statistics = [{ code: "rating", value: 7 }];
+    if (fault === "malformed-id") member.playerId = "unresolved";
+    if (fault === "live") (f.fixture_payload as Row).status = "Live";
+    if (fault === "canonical-live") t.football_fixtures[0].status = "Live";
+    if (fault === "events-missing") f.events_payload = null;
+    if (fault === "unresolved-event") f.events_payload = [{ provider: "sportmonks", fixtureId: "1", type: "Goal" }];
+    if (fault === "named-event") f.events_payload = [{ provider: "sportmonks", fixtureId: "1", playerId: "1", playerName: "Unresolved reserve", type: "Goal" }];
+    if (fault === "substitution-related-missing") f.events_payload = [{ provider: "sportmonks", fixtureId: "1", playerId: "1", type: "Substitution" }];
+    if (fault === "foreign-event") f.events_payload = [{ provider: "other", fixtureId: "1", playerId: "1", type: "Goal" }];
+    const x = await execute(t);
+    assert.equal(x.result.ok, false);
+    assert.ok(x.result.errors.includes("lineup-provenance-invalid"));
+    assert.equal(x.writes.length, 0);
+    assert.equal(x.rankings, 0);
+  });
+}
+
+test("a later authoritative ID replaces the unresolved bench without any inferred identity", async () => {
+  const t = tables(1);
+  const member = addUnresolvedBench(t);
+  const second = { ...player, id: "resolved-later", provider_player_id: "2" };
+  t.football_players.push(second);
+  const before = await execute(t);
+  assert.equal(before.result.ok, true);
+  assert.ok(before.writes.every((w) => w.rows.every((r) => r.football_player_id !== second.id)));
+  member.playerId = "2";
+  member.statistics = [{ code: "minutes-played", value: 12 }, { code: "rating", value: 6.2 }];
+  const after = await execute(t);
+  assert.equal(after.result.ok, true);
+  const settlements = after.writes.filter((w) => w.table === "touchline_player_fixture_score_settlements").flatMap((w) => w.rows);
+  assert.equal(settlements.find((r) => r.football_player_id === second.id)?.touchline_points, 6.2);
+});
+
 test("first-ever derived membership retains season competition and club labels",async()=>{
  const t=tables(1);t.football_player_season_memberships=[];
  Object.assign(t.football_fixtures[0],{football_seasons:{name:"2026/2027"},football_competitions:{name:"Premier League"}});

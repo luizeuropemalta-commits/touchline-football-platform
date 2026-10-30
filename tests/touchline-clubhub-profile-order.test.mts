@@ -93,8 +93,8 @@ function indexOfRequired(source: string, token: string) {
 
 test("ClubHub places identity and honours before the field and fixture rail", () => {
   const heroStart = indexOfRequired(page, '<header className="club-hub-hero" data-touchline-decoration-motion="club-cover">');
-  const officialLeagueStart = page.indexOf("<ClubHubOfficialLeagueSection", heroStart);
-  const lineupStart = page.indexOf("<ClubHubLineupSection", heroStart);
+  const officialLeagueStart = page.indexOf("<ClubHubMatchdayPanels", heroStart);
+  const lineupStart = page.indexOf("<ClubHubMatchdayPanels", heroStart);
   const technicalStart = page.indexOf("<ClubHubTechnicalSections", lineupStart);
   const outsideRosterStart = page.indexOf("<ClubHubOutsideMatchRoster");
   const lineupHelperStart = indexOfRequired(page, "async function ClubHubLineupSection");
@@ -107,10 +107,10 @@ test("ClubHub places identity and honours before the field and fixture rail", ()
   assert.doesNotMatch(hero, /<ClubHubHeroNextMatch/);
   assert.doesNotMatch(hero, /ClubHubLiveFixtureScore/);
   assert.match(lineupSection, /matchup=\{lineupMatchup\}/);
-  assert.match(lineupSection, /fixtureId: matchSnapshot\.previewFixtureId/);
+  assert.match(lineupSection, /fixtureId: lineupFixture\.providerId/);
   assert.ok(heroStart < officialLeagueStart);
   assert.ok(heroStart < lineupStart);
-  assert.ok(lineupStart < officialLeagueStart);
+  assert.equal(lineupStart, officialLeagueStart, "XI and next game share one streamed boundary");
   assert.ok(lineupStart < technicalStart);
   assert.ok(lineupStart < technicalStart);
   assert.doesNotMatch(hero, /Official club value|Valor oficial do clube|marketValuePending|formatCompactEuro/);
@@ -210,14 +210,14 @@ test("the official league table remains server-owned and separate from TouchLine
   assert.doesNotMatch(page, /ClubHubCardsSection/);
 });
 
-test("the first chapter places the fixture above the table in an independently streamed right rail", () => {
+test("the first chapter commits XI and next fixture together, above the table", () => {
   const navigationStart = indexOfRequired(page, "<ClubHubSectionNavigation");
-  const officialLeagueStart = page.indexOf("<ClubHubOfficialLeagueSection", navigationStart);
-  const lineupStart = page.indexOf("<ClubHubLineupSection", navigationStart);
-
-  assert.ok(navigationStart < lineupStart && lineupStart < officialLeagueStart);
-  assert.match(page, /<ClubHubLineupSection[\s\S]*?data-clubhub-right-rail="true"[\s\S]*?<ClubHubOfficialLeagueSection[\s\S]*?<\/Suspense>[\s\S]*?<Suspense[\s\S]*?<ClubHubOfficialTablePanel/);
-  assert.equal((page.match(/<ClubHubOfficialLeagueSection/g) ?? []).length, 1);
+  const panelsStart = page.indexOf("<ClubHubMatchdayPanels", navigationStart);
+  const lineupStart = panelsStart;
+  assert.ok(navigationStart < panelsStart);
+  const group = page.slice(page.indexOf("async function ClubHubMatchdayPanels"), page.indexOf("async function ClubHubTechnicalSections"));
+  assert.match(group, /\{lineup\}[\s\S]*?data-clubhub-right-rail="true"[\s\S]*?\{next\}[\s\S]*?<ClubHubOfficialTablePanel/);
+  assert.equal((page.match(/ClubHubOfficialLeagueSection\(\{/g) ?? []).length, 2);
   assert.match(page, /data-clubhub-official-league="true"/);
   assert.doesNotMatch(page, /TouchlineClubSocialFeed|readTouchlineClubSocialFeed/);
   assert.match(page, /className=\{officialLeagueStyles\.panel\}[\s\S]*?<ClubHubNextFixtureCard[\s\S]*?<TouchlineOfficialLeagueTable/);

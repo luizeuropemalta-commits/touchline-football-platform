@@ -11,11 +11,5 @@
 :global(html[lang="ar-SA"]) .statusText[lang="ar-SA"],
 :global(html[lang="tr-TR"]) .statusText[lang="tr-TR"],
 :global(html[lang="de-DE"]) .statusText[lang="de-DE"] { display:block; }
-.header,.pitch,.cards span { border:1px solid #aaff3e30; border-radius:14px; background:#aaff3e08; }
-.header { height:72px; margin-bottom:24px; }
-.cards { display:grid; grid-template-columns:repeat(5,minmax(0,64px)); justify-content:center; gap:clamp(8px,2vw,16px); margin:24px 0; }
-.cards span { display:block; width:100%; aspect-ratio:430/691; }
-.pitch { width:100%; aspect-ratio:105/68; }
-
 /* The authenticated header remains outside this streamed body placeholder. */
 .contentLoading { min-height:70vh; min-height:70dvh; padding:24px 0; background:none; }

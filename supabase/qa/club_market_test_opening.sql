@@ -14,17 +14,23 @@ revoke all on public.touchline_qa_club_market_control from public, anon, authent
 
 create function public.touchline_qa_club_market_is_open(p_season_id uuid)
 returns boolean language sql stable security definer set search_path = '' as $$
-  select exists(select 1 from public.touchline_qa_club_market_control
-    where season_id = p_season_id and enabled);
+  select public.touchline_club_season_is_open(p_season_id,clock_timestamp()) and (
+    select exists(select 1 from public.touchline_qa_club_market_control
+      where season_id = p_season_id and enabled)
+  );
 $$;
 revoke all on function public.touchline_qa_club_market_is_open(uuid) from public, anon, authenticated;
 grant execute on function public.touchline_qa_club_market_is_open(uuid) to service_role;
 
+-- Requires the collection season-calendar migration. QA may open a round
+-- window, never extend a season or invent its dates.
 create or replace function public.touchline_club_market_is_open(p_season_id uuid)
 returns boolean language sql volatile security definer set search_path = '' as $$
-  select public.touchline_qa_club_market_is_open(p_season_id)
-    or exists(select 1 from public.touchline_fantasy_market_window_projection(clock_timestamp()) p
-      where p.season_id=p_season_id and p.state='MARKET_OPEN');
+  select public.touchline_club_season_is_open(p_season_id,clock_timestamp()) and (
+    select public.touchline_qa_club_market_is_open(p_season_id)
+      or exists(select 1 from public.touchline_fantasy_market_window_projection(clock_timestamp()) p
+        where p.season_id=p_season_id and p.state='MARKET_OPEN')
+  );
 $$;
 revoke all on function public.touchline_club_market_is_open(uuid) from public, anon, authenticated;
 grant execute on function public.touchline_club_market_is_open(uuid) to service_role;

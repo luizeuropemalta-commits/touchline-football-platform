@@ -18,7 +18,7 @@ test("tr-TR ClubHub line-up copy is complete, Turkish, and preserves roster sema
   }
   assert.deepEqual(
     [copy.confirmedTitle, copy.previewTitle, copy.unconfirmedTitle, copy.matchdayEyebrow, copy.matchupAria, copy.matchupEyebrow, copy.awaitingConfirmation, copy.pitchAriaSuffix, copy.positionLeadersAria],
-    ["İlk 11 onaylandı", "Kadro ön izlemesi", "İlk 11 henüz onaylanmadı", "Maç kadrosu", "Maç eşleşmesi", "EŞLEŞME", "Onay bekleniyor", "kadro sahası", "Pozisyona göre kulüp liderleri"],
+    ["İlk 11", "Kadro ön izlemesi", "İlk 11 henüz onaylanmadı", "Maç kadrosu", "Maç eşleşmesi", "EŞLEŞME", "Onay bekleniyor", "kadro sahası", "Pozisyona göre kulüp liderleri"],
   );
   assert.match(copy.previewNotice, /TouchLine/);
   assert.match(copy.illustrativeNotice, /ilk 11 tahmini değildir/);
@@ -29,5 +29,5 @@ test("tr-TR ClubHub line-up copy remains an unpublished draft", () => {
   assert.equal(TOUCHLINE_CLUB_HUB_LINEUP_DRAFT_STATUS, "draft");
   assert.deepEqual([...TOUCHLINE_COMPLETE_LOCALES], ["en-GB", "pt-BR"]);
   assert.equal(isTouchLineLocaleComplete("tr-TR"), false);
-  assert.equal(getTouchlineClubHubLineupCopy("tr-TR").confirmedTitle, "Line-up confirmed");
+  assert.equal(getTouchlineClubHubLineupCopy("tr-TR").confirmedTitle, "Line-up");
 });

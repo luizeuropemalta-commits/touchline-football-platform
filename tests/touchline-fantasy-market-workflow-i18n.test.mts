@@ -249,7 +249,8 @@ function actual(input: Record<string, unknown> = {}, getCopy: (locale: string, d
     Link: ({ children, ...props }: React.ComponentProps<"a">) => React.createElement("a", props, children), Image: icon,
     TouchlineGameweekCard: icon, FantasyCoachZoom: icon, FantasyBudgetNotice: icon, TouchlineBetaEnrollment: icon, CompactClubIdentity: icon, TouchlineClubPerimeterTrace: icon, MarketWindowClock: icon, TouchlinePitchSurface: child,
     canBrowseMarketClub: () => true, marketPolicy: undefined, marketPlanLockCopy: "Plan locked", selectedPlayerClubLocked: false, findTouchLineClub, marketBudgetEur: 900,
-    playerExceedsBudget: () => false,
+    playerExceedsBudget: () => false, cardPlanLocked: () => false, marketPlanChooser: null,
+    isTouchlineFantasyMarketAccess: () => false,
     Search: icon, touchlineCardTierPalette: () => ({ accent: "#fff" }),
     scrollToLineupSection: (value: string) => calls.push(["scroll", value]),
     setCollectionMarketPlayer: (value: unknown) => calls.push(["setCollectionMarketPlayer", value]),
@@ -610,7 +611,7 @@ test("actual JSX events retain coach, club, search, slot and navigation actions 
     assert.ok(coachButton); (coachButton.props.onClick as () => void)();
     assert.deepEqual(setup.calls, [["setSelectedCoachId", "coach-1"], ["setQuery", ""], ["setVisibleStep", "formation"], ["setFeedback", copy.coachChosen], ["scroll", "my-club-xi-pitch"]]);
     const selected: unknown[] = [];
-    const selector = setup.api.CompactClubSelector({ locale, selectedTeamId: "club-1", onSelect: (club: unknown) => selected.push(club) });
+    const selector = setup.api.CompactClubSelector({ mode: "coach", locale, selectedTeamId: "club-1", onSelect: (club: unknown) => selected.push(club) });
     assert.equal(selector.props["aria-label"], copy.chooseClub);
     const clubButton = elements(selector).find(node => node.type === "button"); assert.ok(clubButton);
     assert.equal(clubButton.props["aria-label"], "Canonical Club"); assert.equal(clubButton.props["aria-pressed"], true);

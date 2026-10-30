@@ -35,6 +35,7 @@ export function createTouchlinePublishedLiveReader(
   seed: TouchlinePublicFixture[],
   metadata: TouchlineLiveReadMetadata | null,
   admissionScope: TouchlineLiveAdmissionScope | null = null,
+  updateSameFixtureKickoff = false,
 ) {
   const reader = createTouchlineSportsPublicationReader(store);
   const initial = { fixtures: seed, metadata, read: null as TouchlinePresentationRead | null };
@@ -46,7 +47,7 @@ export function createTouchlinePublishedLiveReader(
       return reader.subscribe(() => {
         const read = reader.getSnapshot();
         if (!read) return;
-        current = { ...projectTouchlinePublishedLive(current.fixtures, current.metadata, read, read.receivedAt, admissionScope), read };
+        current = { ...projectTouchlinePublishedLive(current.fixtures, current.metadata, read, read.receivedAt, admissionScope, null, updateSameFixtureKickoff), read };
         notify();
       });
     },

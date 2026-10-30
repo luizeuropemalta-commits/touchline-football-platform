@@ -64,14 +64,14 @@ test("every TouchLine card keeps the permanent tier neon contract", () => {
   assert.match(traceCss, /pointer-events: none/);
   assert.match(traceCss, /overflow: visible/);
   assert.match(traceCss, /@keyframes touchline-card-perimeter-trace/);
-  assert.match(traceCss, /animation: touchline-card-perimeter-trace 3s linear infinite/);
+  assert.match(traceCss, /animation: touchline-card-perimeter-trace 2s linear infinite/);
   assert.match(traceCss, /stroke-dasharray: 16 84/);
   assert.match(traceCss, /@keyframes touchline-card-perimeter-trace \{\s*from \{ stroke-dashoffset: 0; \}\s*to \{ stroke-dashoffset: -100; \}\s*\}/);
   assert.doesNotMatch(traceCss, /1500ms cubic-bezier\(\.22,\.74,\.28,1\) both/);
   assert.match(traceCss, /stroke-dashoffset/);
   assert.doesNotMatch(traceCss, /clip-path|background:/);
-  assert.match(traceCss, /filter: drop-shadow\(0 0 2px color-mix\(in srgb, currentColor 32%, transparent\)\)/);
-  assert.match(traceCss, /stroke-width: 2\.2;[\s\S]*?opacity: \.56/);
+  assert.match(traceCss, /filter: drop-shadow\(0 0 2px color-mix\(in srgb, currentColor 72%, transparent\)\)/);
+  assert.match(traceCss, /stroke-width: 2\.2;[\s\S]*?opacity: \.9/);
   assert.match(traceCss, /transition: opacity 240ms ease/);
   assert.doesNotMatch(traceCss, /rgba\(163|#a3ff12|brightness\(/);
   assert.match(exactCard, /drop-shadow\(0 0 3px rgba\(163,255,18,\.20\)\)/);
@@ -198,7 +198,7 @@ test("card controls stay inside the master safe zone and contracting stays outsi
   assert.equal(signing.length, 1);
   const signingMarkup = signing[0].getText(tree);
   assert.match(signingMarkup, /disabled=\{signingActions.select.disabled\}/);
-  assert.match(signingMarkup, /if \(!signingActions.select.disabled\) signingActions.select.onSelect\(\)/);
+  assert.match(signingMarkup, /if \(!signingActions.select.disabled\) \{ event.currentTarget.focus\(\{ preventScroll: true \}\); signingActions.select.onSelect\(\); \}/);
   assert.match(signingMarkup, /signingActions.confirm \? <button/);
   assert.match(signingMarkup, /disabled=\{signingActions.confirm.disabled\}/);
   assert.match(signingMarkup, /if \(!signingActions.confirm\?\.disabled\) signingActions.confirm\?\.onSelect\(\)/);

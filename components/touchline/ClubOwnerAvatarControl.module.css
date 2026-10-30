@@ -1,0 +1,24 @@
+.dialog { position: fixed; inset: 0; box-sizing: border-box; width: 100%; height: 100dvh; max-width: none; max-height: none; margin: 0; padding: max(24px,env(safe-area-inset-top)) max(24px,env(safe-area-inset-right)) max(24px,env(safe-area-inset-bottom)) max(24px,env(safe-area-inset-left)); overflow: auto; overscroll-behavior: contain; border: 0; border-radius: 0; color: #f6ffec; background: var(--touchline-modal-backdrop,rgba(0,5,6,.72)); -webkit-backdrop-filter: var(--touchline-modal-blur,blur(8px)); backdrop-filter: var(--touchline-modal-blur,blur(8px)); }
+.dialog:not([open]) { display: none; }
+.dialog::backdrop { background: transparent; }
+.shell { width: min(1060px,100%); margin-inline: auto; padding-block: clamp(8px,5vh,48px); }
+.header { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; }
+.header > div { min-width: 0; }
+.eyebrow { color: #b8ff3c; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; }
+.header h2 { margin: 14px 0; font-size: clamp(28px,4vw,48px); font-weight: 500; letter-spacing: -.035em; overflow-wrap: anywhere; }
+.header h2:focus { outline: none; }
+.close { flex: 0 0 44px; width: 44px; padding: 0; }
+.hint { max-width: 640px; margin: 8px 0 32px; color: #d6dfd7; font-size: 16px; line-height: 1.6; }
+.content { display: grid; grid-template-columns: minmax(0,1.15fr) minmax(0,1fr); gap: clamp(28px,5vw,64px); align-items: start; }
+.content > :only-child { grid-column: 1 / -1; max-width: 680px; }
+.selection { min-width: 0; }
+.selection[hidden] { display: none; }
+.selection p, .recovery p { margin: 20px 0; font-size: 15px; line-height: 1.6; color: #d6dfd7; overflow-wrap: anywhere; }
+.preview { display: block; width: auto; height: auto; max-width: min(100%,224px); max-height: 280px; margin-block: 24px; }
+.actions { display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-start; }
+.actions > button, .selection > button, .confirmation > button { max-width: 100%; white-space: normal; line-height: 1.45; }
+.recovery { min-width: 0; border-inline-start: 1px solid rgba(234,255,199,.2); padding-inline-start: clamp(20px,3vw,36px); }
+.recovery:only-child { border: 0; padding: 0; }
+.recovery h3, .confirmation h4 { margin: 0; font-size: 18px; font-weight: 500; line-height: 1.4; }
+.confirmation { margin-top: 26px; padding-top: 22px; border-top: 1px solid rgba(234,255,199,.2); }
+@media(max-width:700px) { .dialog { padding: max(20px,env(safe-area-inset-top)) max(18px,env(safe-area-inset-right)) max(24px,env(safe-area-inset-bottom)) max(18px,env(safe-area-inset-left)); } .content { grid-template-columns: minmax(0,1fr); gap: 32px; } .recovery { border-inline-start: 0; padding-inline-start: 0; border-top: 1px solid rgba(234,255,199,.2); padding-top: 26px; } .header { gap: 14px; } .hint { margin-bottom: 26px; } }

@@ -76,7 +76,7 @@ const compiledDialog = ts.transpileModule(source("components/touchline/a11y/Touc
 }).outputText;
 
 /** Execute the real keyboard handler; DOM layout and React effects are not simulated. */
-function keyboardFixture(empty = false) {
+function keyboardFixture(empty = false, containEveryTab = false) {
   const document: { activeElement: TestElement | null } = { activeElement: null };
   class TestElement {
     isConnected = true;
@@ -120,7 +120,7 @@ function keyboardFixture(empty = false) {
       };
     },
   });
-  const hook = exports.useTouchlineDialog!({ open: true, label: "Review contract", onDismiss: () => { dismissals++; } });
+  const hook = exports.useTouchlineDialog!({ open: true, label: "Review contract", containEveryTab, onDismiss: () => { dismissals++; } });
   hook.dialogRef.current = dialog;
   return { dialog, heading, first, middle, last, outside, nestedButton,
     get dismissals() { return dismissals; },
@@ -313,4 +313,19 @@ test("live removal of the focused detail repairs focus inside the same dialog wi
 
   for (const cleanup of h.cleanups) cleanup();
   assert.equal(h.observer.disconnected, true, "StrictMode/unmount cleanup disconnects the observer");
+});
+
+
+test("opt-in native plan dialog contains every Tab, skips unavailable controls and preserves nested ownership",()=>{
+ const h=keyboardFixture(false,true);
+ assert.equal(h.key(h.first).focused,h.middle);assert.equal(h.key(h.middle).focused,h.last);
+ assert.equal(h.key(h.middle,'Tab',true).focused,h.first);assert.equal(h.key(h.last).focused,h.first);
+ assert.equal(h.key(h.first,'Tab',true).focused,h.last);assert.equal(h.key(h.heading).focused,h.first);
+ assert.equal(h.key(h.heading,'Tab',true).focused,h.last);
+ h.middle.attributes.set('disabled','');assert.equal(h.key(h.first).focused,h.last);
+ h.middle.attributes.delete('disabled');h.middle.visible=false;assert.equal(h.key(h.first).focused,h.last);
+ h.middle.visible=true;h.middle.attributes.set('aria-hidden','true');assert.equal(h.key(h.first).focused,h.last);
+ assert.equal(h.key(h.nestedButton).prevented,0);assert.equal(h.key(h.nestedButton,'Escape').prevented,0);
+ assert.equal(h.key(h.first,'Escape').stopped,1);assert.equal(h.dismissals,1);
+ const empty=keyboardFixture(true,true);assert.equal(empty.key(empty.heading).focused,empty.dialog);
 });

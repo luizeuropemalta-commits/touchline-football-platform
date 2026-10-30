@@ -99,7 +99,8 @@ test("zoom distinguishes draft removal from collection allocation and keeps guar
   assert.match(source, /function addPlayer[^]*?if \(saving \|\| \(collectionEnabled && !collectionSlotsEditable\)\) return false/);
   assert.match(source, /: marketPage \|\| marketOpen \? budgetExhausted \? <button[^\n]*className=\{styles.emptyPosition\} disabled[^\n]*<LockKeyhole[^\n]*: <button[^\n]*className=\{styles.emptyPosition\}[^\n]*>\+<\/button> : null/);
   assert.match(source, /disabled=\{!editable \|\| saving \|\| !selectedCoach \|\| !geometry \|\| \(collectionEnabled && !collectionSlotsEditable\) \|\| \(marketPage && !\(guidedChoice\?\.area === "starters" && guidedChoice.slot === slot.id\)\)\}/);
-  assert.doesNotMatch(source, /TouchlinePositionPicker|data-slot-action|aria-haspopup/);
+  assert.doesNotMatch(source, /TouchlinePositionPicker|data-slot-action/);
+  assert.equal((source.match(/aria-haspopup=/g) ?? []).length, (source.match(/data-market-plan-unlock="true" aria-haspopup="dialog"/g) ?? []).length);
   assert.match(css, /\.pitchRemove[^}]*width: 44px; height: 44px; min-height: 44px/);
   assert.match(css, /@media \(hover: hover\) and \(pointer: fine\)/);
   assert.match(css, /:focus-within > \.pitchRemove/);

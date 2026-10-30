@@ -107,7 +107,9 @@
 .homeLineupCallout > span { font-size: 9px; font-weight: 900; letter-spacing: .04em; line-height: 1.35; }
 .homeLineupCallout > small { color: rgba(238,255,224,.64); font-size: 8px; line-height: 1.35; }
 .homeLineupCallout[data-state="available"] { border-color: rgba(183,255,75,.48); background: linear-gradient(120deg, rgba(72,120,34,.4), rgba(2,12,8,.72)); box-shadow: 0 0 24px rgba(163,255,18,.1), inset 0 1px rgba(255,255,255,.07); }
-.homeLineupLink { min-height: 44px; max-width: 100%; padding: 0 10px; }
+.homeLineupLink { min-height: 44px; max-width: 100%; padding: 6px 10px; white-space: normal; text-align: center; font-size: 11px; }
+.homeLineupLink svg { flex-shrink: 0; }
+.heroTeams > div:not(.scoreColumn) { min-width: 0; }
 .homeLineupLink:hover { color: #fff; }
 .homeLineupLink:focus-visible { outline: 2px solid #d8ff94; outline-offset: 3px; }
 .score { display: inline-flex; align-items: center; justify-content: center; gap: .18em; color: #fff; font-size: clamp(26px,5vw,52px); font-variant-numeric: tabular-nums; letter-spacing: 0; white-space: nowrap; }
@@ -137,10 +139,8 @@
 .heroTopbar { display: grid; grid-template-columns: minmax(0,1fr) auto minmax(0,1fr); align-items: start; align-content: start; min-height: 74px; gap: 12px; width: 100%; }
 .heroTopbar > div { display: flex; justify-content: center; min-width: 0; }
 .heroTopbar .heroKickoff { grid-column: 2; grid-row: 1; margin: 0; flex-direction: row; padding: 7px 10px; gap: 8px; font-size: 11px; align-self: center; }
-.heroTopbar .homeLineupLink { font-size: 10px; min-height: 36px; max-width: 100%; white-space: normal; text-align: center; padding: 4px 8px; background: rgba(3,12,9,.58); text-shadow: 0 1px 3px rgba(0,0,0,.85); }
 .heroTopbar .heroKickoff { background: rgba(2,11,7,.52); backdrop-filter: blur(3px); text-shadow: 0 1px 3px rgba(0,0,0,.85); }
-.heroTopbar .homeLineupLink small { display: block; margin-top: 2px; font-size: 10px; color: #d8ff94; }
-@media (max-width: 520px) { .heroTopbar { gap: 5px; } .heroTopbar .homeLineupLink { padding-inline: 5px; font-size: 10px; } .heroTopbar .homeLineupLink svg { display: none; } .heroTopbar .homeLineupLink small { font-size: 10px; } }
+@media (max-width: 520px) { .heroTopbar { gap: 5px; } .heroTeams .homeLineupLink { padding-inline: 6px; gap: 4px; } }
 .heroKickoff { display: inline-flex; flex-wrap: wrap; justify-content: center; gap: 9px; align-items: center; padding: 8px 11px 8px 14px; border: 1px solid rgba(216,255,148,.24); border-radius: 999px; background: rgba(2,11,7,.62); box-shadow: inset 0 1px rgba(255,255,255,.06), 0 12px 30px rgba(0,0,0,.24); color: rgba(244,255,235,.76); font-size: 12px; text-transform: capitalize; backdrop-filter: blur(12px); }
 .heroKickoff span, .heroKickoff strong { display: inline-flex; gap: 6px; align-items: center; }
 .heroKickoff svg { color: #b7ff4b; }

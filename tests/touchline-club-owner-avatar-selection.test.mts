@@ -34,7 +34,7 @@ test("local byte admission distinguishes HEIC from supported signatures without 
 test("selection copy covers approved eight locales behind the real catalogue gate", () => {
   for (const { code } of TOUCHLINE_APPROVED_LOCALES) {
     const translated = copy.getTouchlineClubOwnerAvatarSelectionCopy(code, true);
-    assert.equal(Object.keys(translated).length, 9);
+    assert.equal(Object.keys(translated).length, 18);
     for (const value of Object.values(translated)) assert.ok(value.trim());
     assert.match(translated.guidance, /JPEG/); assert.match(translated.heic, /HEIC\/HEIF/);
     if (!["en-GB", "pt-BR"].includes(code)) assert.deepEqual(copy.getTouchlineClubOwnerAvatarSelectionCopy(code), copy.getTouchlineClubOwnerAvatarSelectionCopy("en-GB"));
@@ -61,15 +61,18 @@ function fixture(enabled = true, retentionReady = true) {
   const dependencies: Record<string, unknown> = {
     react: hook, "react/jsx-runtime": jsx,
     "@/lib/touchlineArena/club-owner-avatar-client": client,
+    // Image pixels are covered by preparation + real browser tests; this suite isolates the existing account/recovery lifetime.
+    "@/lib/touchlineArena/club-owner-avatar-preparation": { prepareClubOwnerAvatar: async () => ({ ok: true, bytes: Uint8Array.of(137,80,78,71,13,10,26,10), contentType: "image/png", width: 1, height: 1 }) },
     "@/lib/touchlineArena/club-owner-avatar-selection-contract": contract,
     "@/lib/touchlineArena/club-owner-avatar-ui-i18n": copy,
     "./TouchlineGlobalNavigation.module.css": { default: { link: "shared-control" } },
+    "./ClubOwnerAvatarControl.module.css": { default: {} },
   };
   const exports: Record<string, unknown> = {};
   vm.runInNewContext(ts.transpileModule(readFileSync(new URL("../components/touchline/ClubOwnerAvatarUploadSelection.tsx", import.meta.url), "utf8"), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX },
   }).outputText, { exports, require: (name: string) => { assert.ok(name in dependencies, name); return dependencies[name]; },
-    Uint8Array, Blob, crypto: { randomUUID: () => operation }, performance: { now: () => now },
+    Uint8Array, Blob, AbortController, crypto: { randomUUID: () => operation }, performance: { now: () => now },
     URL: { createObjectURL: () => { calls.push("preview"); return "blob:local-preview"; }, revokeObjectURL: () => calls.push("revoke") },
     setTimeout: (callback: () => void) => { timers.add(callback); return callback; }, clearTimeout: (callback: () => void) => timers.delete(callback),
     fetch: async (_input: unknown, init: RequestInit) => { requests.push(init); return response(); },
@@ -84,7 +87,7 @@ function fixture(enabled = true, retentionReady = true) {
     choose: () => { const input = nodes(render(), "input")[0]; assert.ok(input); (input.props.onChange as (event: unknown) => void)({ currentTarget: {
       value: "", files: [{ size: 4, type: "image/jpeg", arrayBuffer: async () => Uint8Array.of(255,216,255,1).buffer }],
     } }); },
-    confirm: () => { const button = nodes(render(), "button")[0]; assert.ok(button); (button.props.onClick as () => void)(); },
+    confirm: () => { const button = nodes(render(), "button").find(node => node.props["data-avatar-selection"] === "confirm"); assert.ok(button); (button.props.onClick as () => void)(); },
     expire: () => { now = 60_001; for (const timer of [...timers]) timer(); },
     identity: () => { identity = false; },
     committed: () => { response = () => Response.json({ ok: true, state: "committed", requiresRefresh: true, accountId: actor, operationId: operation, revision: "1", avatarUrl: `/api/account/avatar?version=${operation}` }); },
@@ -98,13 +101,13 @@ test("real selection component is dormant by either gate and file choice alone s
 test("explicit confirm sends once; unknown including output cap blocks replacement and preserves old photo", async () => {
   const h = fixture(); h.choose(); await tick(); h.confirm(); await tick();
   assert.equal(h.requests.length, 1); assert.equal(nodes(h.render(), "input")[0].props.disabled, true);
-  h.choose(); await tick(); assert.equal(h.requests.length, 1); assert.equal(nodes(h.render(), "button").length, 0);
+  h.choose(); await tick(); assert.equal(h.requests.length, 1); assert.equal(nodes(h.render(), "button").filter(node => node.props.disabled !== true).length, 0);
   assert.ok(!h.calls.includes("refresh")); h.dispose();
 });
 test("committed result requests authoritative refresh, not preview publication; expiry and identity block confirm", async () => {
   const committed = fixture(); committed.committed(); committed.choose(); await tick(); committed.confirm(); await tick();
   assert.equal(committed.calls.filter(value => value === "refresh").length, 1); assert.equal(nodes(committed.render(), "img")[0].props.src, "blob:local-preview"); committed.dispose();
-  const expired = fixture(); expired.choose(); await tick(); expired.expire(); assert.equal(nodes(expired.render(), "button").length, 0); assert.equal(expired.requests.length, 0); expired.dispose();
+  const expired = fixture(); expired.choose(); await tick(); expired.expire(); assert.equal(nodes(expired.render(), "button").filter(node => node.props.disabled !== true).length, 0); assert.equal(expired.requests.length, 0); expired.dispose();
   const drift = fixture(); drift.choose(); await tick(); drift.identity(); drift.confirm(); await tick(); assert.equal(drift.requests.length, 0); drift.dispose();
 });
 
@@ -137,6 +140,8 @@ function hostFixture() {
   const dependencies: Record<string, unknown> = {
     react: hook, "react/jsx-runtime": jsx,
     "@/lib/touchlineArena/club-owner-avatar-client": client,
+    // Image pixels are covered by preparation + real browser tests; this suite isolates the existing account/recovery lifetime.
+    "@/lib/touchlineArena/club-owner-avatar-preparation": { prepareClubOwnerAvatar: async () => ({ ok: true, bytes: Uint8Array.of(137,80,78,71,13,10,26,10), contentType: "image/png", width: 1, height: 1 }) },
     "@/lib/touchlineArena/club-owner-avatar-selection-contract": contract,
     "@/lib/touchlineArena/club-owner-avatar-ui-i18n": copy,
     "next/navigation": { useRouter: () => ({ refresh: () => calls.push("refresh") }) },
@@ -151,14 +156,18 @@ function hostFixture() {
       authCallback = callback; calls.push("auth-subscription"); callback("INITIAL_SESSION", { user: { id: actor } }); return { data: { subscription: { unsubscribe: () => calls.push("unsubscribe") } } };
     } } }) },
     "./TouchlineGlobalNavigation.module.css": { default: { link: "shared-control" } },
+    "./ClubOwnerAvatarControl.module.css": { default: {} },
     "./ClubOwnerMarketHeader.module.css": { default: {} },
+    "react-dom": { createPortal: (node: unknown) => node },
+    "lucide-react": { X: "close-icon" },
+    "./a11y/TouchlineDialog": { useTouchlineDialog: () => ({ dialogRef: { current: null }, dialogProps: { role: "dialog" } }), useTouchlineDialogScrollLock: () => {} },
   };
   function compile(name: string) {
     const exports: Record<string, unknown> = {};
     vm.runInNewContext(ts.transpileModule(readFileSync(new URL(`../components/touchline/${name}.tsx`, import.meta.url), "utf8"), {
       compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX },
     }).outputText, { exports, require: (path: string) => { assert.ok(path in dependencies, path); return dependencies[path]; },
-      Uint8Array, Blob, crypto: { randomUUID: () => operation }, performance: { now: () => now }, fetch: request,
+      Uint8Array, Blob, AbortController, document: { body: {} }, crypto: { randomUUID: () => operation }, performance: { now: () => now }, fetch: request,
       URL: { createObjectURL: () => "blob:preview", revokeObjectURL: () => calls.push("revoke") },
       setTimeout: (callback: () => void, ms: number) => { timers.set(callback, ms); return callback; }, clearTimeout: (callback: () => void) => timers.delete(callback),
     });

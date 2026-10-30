@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { clubRoundDatabase } from "./helpers/club-round-database.mts";
+import { installTestClubSeasonCalendar } from "./helpers/club-season-calendar.mts";
 import { parseClubCoachLifecycleResponse } from "../lib/touchlineFantasy/club-coach-lifecycle-response.ts";
 import type { ClubCoachLifecycleResponse } from "../lib/touchlineFantasy/club-coach-lifecycle-response.ts";
 import type { ClubAcquisitionState } from "../lib/touchlineFantasy/club-acquisition.ts";
@@ -82,6 +83,7 @@ test("coach lifecycle atomically releases, retains vacancy, hires, preserves ear
   await assert.rejects(run({...release,currentCoachId:'308'}),/CLUB_IDEMPOTENCY_CONFLICT/);
   await db.exec(`create function touchline_assert_qa_fixture_target(text) returns void language plpgsql as $$begin
     if $1<>'xgxbwqxjssxxuihuwmgy' then raise exception 'WRONG_TARGET';end if;end;$$;`);
+  await installTestClubSeasonCalendar(db,id(3),id(2));
   await db.exec(readFileSync(new URL('../supabase/qa/club_market_test_opening.sql',import.meta.url),'utf8'));
   await db.exec("update touchline_qa_club_market_control set enabled=true;update touchline_fantasy_gameweeks set state='LIVE'");
   assert.equal((await run(hire,offer)).replayed,true,'read-only replay survives market closure');

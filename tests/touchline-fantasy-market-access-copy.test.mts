@@ -47,7 +47,7 @@ function hasClass(node: ts.JsxElement, name: string) {
     && attribute.initializer?.getText(tree) === `{styles.${name}}`);
 }
 function firstStrongIn(name: string) {
-  const container = elements.find((node) => hasClass(node, name));
+  const container = elements.find((node) => hasClass(node, name) && !node.getText(tree).includes('data-market-status-compact="true"'));
   assert.ok(container, name);
   const strong = elements.find((node) => node.pos > container.pos && node.end < container.end && node.openingElement.tagName.getText(tree) === "strong");
   assert.ok(strong, `${name} strong`);
@@ -135,7 +135,7 @@ test("nine access/window labels cover eight catalogues with exact EN/PT parity a
 });
 
 test("actual complete window section preserves calendar vs permission, read-only text, ARIA and canonical status handoff", () => {
-  const section = elements.find(node => hasClass(node, "myClubMarketStatus")); assert.ok(section);
+  const section = elements.find(node => hasClass(node, "myClubMarketStatus") && !node.getText(tree).includes('data-market-status-compact="true"')); assert.ok(section);
   for (const locale of ["pt-BR", "en-GB"] as const) {
     const expected = baseline[locale];
     for (const marketPage of [false, true]) {
@@ -145,12 +145,17 @@ test("actual complete window section preserves calendar vs permission, read-only
             const open = state === "MARKET_OPEN" && !deadlineReached;
             const editable = open && entitlementActive === true;
             const status = state ? (open ? expected.open : expected.closed) : expected.unavailable;
-            const html = renderMarkup(section, { locale, pt: locale === "pt-BR", marketPage, snapshot: { entitlementActive }, activeGameweek: state ? { state } : null, deadlineReached });
+            const chosenSection = marketPage ? elements.find(node => hasClass(node, "myClubMarketStatus") && node.getText(tree).includes('data-market-status-compact="true"'))! : section;
+            const html = renderMarkup(chosenSection, { locale, pt: locale === "pt-BR", marketPage, snapshot: { entitlementActive }, activeGameweek: state ? { state } : null, deadlineReached });
             assert.ok(html.includes(`data-market-open="${open}"`));
             assert.ok(html.includes(`aria-label="${expected.statusAria}"`));
+            if (!marketPage) {
             assert.ok(html.includes(`<span>${expected.lineupWindow}</span>`));
             assert.ok(html.includes(`<small>${editable ? expected.manageXI : expected.browseReadOnly}</small>`));
             assert.ok(html.includes(`<p class="myClubMarketRule">${expected.windowRule}</p>`));
+            } else {
+              assert.doesNotMatch(html, /myClubMarketRule|<small>|<span>/);
+            }
             if (marketPage) { assert.ok(html.includes(`data-clock-status="${status}"`)); assert.doesNotMatch(html, /<strong>/); }
             else { assert.ok(html.includes(`<strong>${status}</strong>`)); assert.doesNotMatch(html, /data-clock-status=/); }
           }
@@ -161,8 +166,8 @@ test("actual complete window section preserves calendar vs permission, read-only
 });
 
 test("actual labels and window section consume the catalogue rather than retaining duplicate inline text", () => {
-  assert.match(source, /import \{ getTouchlineFantasyMarketAccessCopy, getTouchlineFantasyMarketPlanLockCopy \} from "@\/lib\/touchlineFantasy\/market-access-i18n"/);
-  const section = elements.find(node => hasClass(node, "myClubMarketStatus")); assert.ok(section);
+  assert.match(source, /import \{ getTouchlineFantasyMarketAccessCopy, getTouchlineFantasyMarketPlanLockCopy, getTouchlineFantasyMarketUnlockCopy \} from "@\/lib\/touchlineFantasy\/market-access-i18n"/);
+  const section = elements.find(node => hasClass(node, "myClubMarketStatus") && !node.getText(tree).includes('data-market-status-compact="true"')); assert.ok(section);
   const sentinel = Object.fromEntries(Object.keys(baseline["en-GB"]).map(key => [key, `copy:${key}`]));
   const base = { pt: false, locale: "en-GB", snapshot: { entitlementActive: false }, activeGameweek: { state: "MARKET_OPEN" }, deadlineReached: false,
     getTouchlineFantasyMarketAccessCopy: () => sentinel };
@@ -181,7 +186,7 @@ test("actual labels and window section consume the catalogue rather than retaini
 
 test("draft/invalid locales keep actual window and access labels in English until public release gates open", () => {
   assert.ifError(catalogueResult.error);
-  const section = elements.find(node => hasClass(node, "myClubMarketStatus")); assert.ok(section);
+  const section = elements.find(node => hasClass(node, "myClubMarketStatus") && !node.getText(tree).includes('data-market-status-compact="true"')); assert.ok(section);
   const base = { pt: false, snapshot: { entitlementActive: false }, activeGameweek: { state: "MARKET_OPEN" }, deadlineReached: false };
   const english = renderMarkup(section, { ...base, locale: "en-GB" });
   for (const locale of [...codes.slice(2), "", "invalid"]) {
