@@ -15,7 +15,7 @@ import { createGuardedFixtureProvider } from "@/lib/football-data/fixture-provid
 import type { FootballDataProvider, TouchlineFixture } from "@/lib/football-data/types";
 import { inspectTouchlineIsolatedPreviewEnvironment } from "@/lib/touchlinePreview/isolation";
 import { inspectTouchlineProductionSyncRuntime } from "@/lib/football-data/production-sync-runtime";
-import { readCompetitionCoachAssignments, stageObservedCoachFixture } from "@/lib/touchlineArena/coach-catalogue-server";
+import { readCompetitionCoachAssignments } from "@/lib/touchlineArena/coach-catalogue-server";
 import { recordTouchlineLineupAvailableObservation } from "@/lib/football-data/official-team-sheet-readiness";
 import { reconcilePendingTouchlineFantasyGameweeks } from "@/lib/touchlineFantasy/gameweek-lifecycle";
 import { publishTouchlineLivePresentationSnapshot } from "@/lib/touchlineArena/live-presentation-read-model";
@@ -373,8 +373,7 @@ export async function syncSportmonksLiveState(
       incoming.push(feedResponse.data.fixture);
       const persisted = await (dependencies.persistFantasyFeed ?? persistFantasyFixtureFeed)(feedResponse.data);
       if (persisted.persisted) {
-        const coachStagingError = await stageObservedCoachFixture(admin, fixtureId);
-        if (coachStagingError) result.errors.push(coachStagingError);
+        if (persisted.editorialError) result.errors.push(persisted.editorialError);
         // Corrections must not replay historical push notifications.
         if (!postMatchFixtureIds.includes(fixtureId)) persistedCurrentFeedIds.add(fixtureId);
         result.fantasyFeedsStored += 1;
@@ -429,8 +428,7 @@ export async function syncSportmonksLiveState(
       }
       const persisted = await (dependencies.persistRecoveryFeed ?? persistTouchlineRecoveryFeed)(admin, claim, lease.runId, response.data);
       if (persisted.persisted) {
-        const coachStagingError = await stageObservedCoachFixture(admin, response.data.fixture.providerId);
-        if (coachStagingError) result.errors.push(coachStagingError);
+        if (persisted.editorialError) result.errors.push(persisted.editorialError);
         // The recovery RPC already writes the exact canonical fixture under
         // its lease fence. Never repeat that write through the legacy path.
         result.fantasyFeedsStored += 1;

@@ -48,7 +48,7 @@ test("coach editorial rejects incomplete, stale or mismatched command receipts a
 });
 
 test("coach editorial accepts the SQL receipt shape for every supported action",async()=>{
-  for(const action of ["bootstrap","approve","ignore","reopen","publish"]) {
+  for(const action of ["bootstrap","approve","ignore","reopen","publish","publish_history"]) {
     const command={...input,action,...(action==="bootstrap"?{candidateId:null,revision:null}:{})};
     const receipt={requestId,action,candidateId:command.candidateId,revision:2};
     const result=await fixture({receipt}).run(request(command));

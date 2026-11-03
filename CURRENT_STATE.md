@@ -1,3 +1,46 @@
+## 2026-11-03 — Preparação completa da candidata QA, domínio mantido offline
+
+SUPERSEDES o escopo somente leitura de 09:36 para esta missão autorizada. O proprietário confirmou: concluir site completo na candidata Vercel QA; Beta gratuito e planos pagos em sandbox; Stripe Live e abertura de .com.br somente após documentos da empresa e cadastro aprovado. Apple Developer e Android são etapa posterior. Regra existente de manutenção do domínio preservada; 403 é intencional.
+
+- Base canônica b4c4a10c636899a3e97fbcd429c63157a843e6f0, /Users/luizlopez/Developer/touchline-qa-release-20261103. Nenhum push/novo deploy nesta missão até este checkpoint.
+- Corrigido TC inteiro com escala decimal (ex.: 1155435000.000000000000) que bloqueava congelamento automático. QA recebeu forward migration 20261103111327; saldos/contratos não reescritos, helper privado. Preimages de quatro funções preservados.
+- Ensaio integrado no QA passou duas fases: prioridade salva e alterada pelo proprietário; XI automático sem confirmação, banco da posição antes dos15 externos, prioridade respeitada, ausência de estatísticas aguarda, pontuação66 uma vez/correção62, XI original imutável. Todos os dados simulados revertidos por subtransação; lacunas de sequences são possíveis. Não equivale ao fechamento futuro real de GW10.
+- Safari QA2: prioridade de CB alterada, persistida após reload (rev40) e restaurada (rev41), saldo2250000 preservado. Foto/ranking já publicados na base b4c4a10; evidência anterior preservada.
+- Evidência privada de coach: nomes associados ao recibo exato e revisão imutável; novo publish_history preserva as20 nomeações atuais. QA recebeu migrations20261103103735 e20261103110630. Observações/candidatos/publicações permaneciam0 e gates DB OFF na verificação.
+- Runtime switch20261103120001 aplicado QA: OFF explícito retorna modo legado; erros/configuração ausente/ON incompleto falham. RPCs service-only. Pré-liberação das variáveis TOUCHLINE_COACH_CATALOGUE_ENABLED e TOUCHLINE_COACH_EDITORIAL_ENABLED limitada aPreview/qa; gates DB continuamOFF. As variáveis valem no próximo deploy, não alteram a versão publicada atual.
+- Revisões independentes semP0/P1 para ingestão, histórico, parserTC e runtime switch. Testes focais122 ingestão,23 histórico,8TC e14runtime PASS. Primeira suíte7899total/7793PASS/8falhas por capacidade do navegador/98SKIP; repetição sequencial dos arquivos afetados+copy16/16PASS. Primeiro build localexit0 antecede runtime switch; nova suíte completa/build obrigatórios em andamento.
+- Pendências: novo build/release limpo, smoke de QA, ativação/revisão oficial do catálogo e coach30314, dados incompletos da fonte19722185, auditoria restante de jornadas/páginas/dispositivos. Não inferir identidade ausente. Produção, DNS, firewall, Stripe Live e migração de handles previamente rejeitada permanecem intocados.
+- Evidências desta etapa na pasta da conversa outputs/escalação-automatica-qa-recibo.json e outputs/prioridade-reservas-safari-qa.png; logs locais /private/tmp/touchline-launch-final-gate.log e touchline-launch-local-build.log. Preservados preimages e work/launch-progress.json.
+
+- Verificação final deste delta: TypeScript/ESLint exit0 (12 avisos preexistentes); suíte completa7901:7788PASS/8FAIL/7cancelados/98SKIP, com8 recusas por reserva de5GiB e7timeouts locais. Reexecução de TODOS os7arquivos afetados, sequencial e reserva local3GiB:44/44PASS,0FAIL/0cancelados/0SKIP; nenhum teste/assert alterado. Build finalexit0, compilação2.5min, TypeScript102s e136/136páginas. Logs completos preservados nos outputs da conversa.
+- Ensaio remoto de bootstrap do catálogo:20 atuais/20históricos, parserready/revisão1, manifesto exato, replayidempotente;8tabelas restauradas por hashes após rollback. Gates DB seguemOFF/revisão0; nenhuma nomeação atual mudou.
+- Auditoria renderizada:20ClubHubs,11cards dentro do campo semoverflowhorizontal; modal de card abre/fecha; viewporttelefone844x390 e tablet1024x768 conferidos. SafariQA2prioridadepersistida/restaurada. Capturas reais preservadas; viewportdesktop não equivale a aparelho físico.
+- Novo achado de publicação:5cards já aprovados com valorverified e vínculo editorial antigo após transferência. Ensaio da rotina existente de revalidação+compensação auditada PASS paraTimIroegbunam,AxelDisasi,CarlosBaleba,MykhayloMudryk eTosinAdarabioyo; valores/fontes/elencos inalterados e simulações revertidas. Aplicação real ainda pendente, com postimages/CAS para compensação sem restaurar membership inválido.
+
+## 2026-11-03 09:36 UTC — Auditoria da sincronização após deploy
+
+- Modo AUDIT, somente leitura remota. Nenhum novo build, push, migration, flag ou publicação editorial. Código publicado b4c4a10c636899a3e97fbcd429c63157a843e6f0 preservado.
+- Diagnóstico oficial protegido da partida 19722185 retornou provider-lineup-identity-invalid em consulta nova. UI publicada confirma reserva sem identidade; execução automática de 09:36 UTC continua PARTIAL com dois registros atualizados. Não marcar sincronização integral PASS.
+- Definição SQL instalada trava XI antes das estatísticas. Teste focal sobre função TypeScript real provou que pendingStatistics em FINAL antiga não impede LOCKED/LIVE seguintes: 1 PASS, 0 FAIL. RPCs simuladas; fechamento real de GW 10 ainda futuro (2026-11-06 20:00 UTC).
+- Coach 30314: zero observações privadas, catálogo editorial/publicação OFF e revisão 0. Ausência de nome oficial e sanitização do raw impedem revisão válida; projeto privado de evidência continua pendente. Não inferir identidade nem substituir nomeação atual a partir de história.
+- EXTERNAL: identidade incompleta na fonte da partida. BLOCKED: evidência editorial de treinador ainda não implementada/validada; habilitação de flag depende da autoridade prevista em AGENTS.md. Nenhuma tentativa de contornar a migração de handles rejeitada anteriormente.
+- Evidências: /Users/luizlopez/Documents/Codex/2026-11-03/touchline-continuidade-20261103/outputs/continuacao-pos-deploy.txt, diagnostico-fonte-oficial.txt, diagnostico-sync-publicado.jpg e verificacao-ciclo-rodadas.log.
+- Caffeinate PID 22803 confirmado ativo, duração original de 20 horas preservada. Production NOT TOUCHED. Auditoria não encerra backlog integral nem valida iPhone físico.
+
+## 2026-11-03 — Deploy QA concluído e verificado
+
+SUPERSEDE o estado de publicação pendente do checkpoint abaixo, somente para este lote QA.
+
+- Commit publicado: `b4c4a10c636899a3e97fbcd429c63157a843e6f0`; deployment `dpl_DN8AJPf2Hjr1JwELfRpgcdeLj2aJ` READY; alias `https://touchline-arena-official-git-qa-fifa-agent-plataform.vercel.app` atribuído ao SHA exato. Push normal único para qa; orçamento 1/1. Production/main intocados.
+- Worktree limpa antes do push; manifesto explícito de 355 arquivos. Estes dois checkpoints são a única atualização documental local posterior ao deploy, sem segundo push/build.
+- CI `41591766126` SUCCESS: 7867 testes, 7769 PASS, 0 FAIL, 98 SKIP; 709188.402289 ms. Type/lint/build locais aprovados; build hospedado READY.
+- Smoke público hospedado 9/9 PASS: perfil e foto real 200/WebP/59318 bytes; portal antigo 307 para ClubOwner; APIs privadas bem formadas 401 sem sessão; requisição inválida de avatar 400. Foto visível no ranking e clique ao UUID correto confirmados no navegador integrado; console sem erros, desktop e landscape sem overflow.
+- Safari nativo ficou acessível novamente. Sessão cliente já existente `Luiz — QA 2` / Standard preservada: elenco salvo e prioridades por posição carregados, saldo 2.250.000 TC, pontos da temporada 48.30, status aguardando início. Clicar retrato abriu seletor nativo diretamente, cancelado sem upload. Ranking carregou foto pública Luiz VIP. Não houve login/logout, troca de conta ou alteração de escalação/foto no smoke final; não confundir esta sessão com o perfil VIP visto pela composição local.
+- Logs do deployment: nenhuma entrada de erro na janela final de 10 minutos após smoke. Rotina QA de retenção ativa. Caffeinate PID 22803 / 72000 segundos continuava ativo na conferência final.
+- Evidências: `/Users/luizlopez/Documents/Codex/2026-11-03/touchline-continuidade-20261103/outputs/recibo-release-qa.json`, `smoke-qa-publicado.json`, `manifesto-candidata-qa.json`, capturas local/publicado/Safari e `resultado-deploy-qa.txt`.
+- Limites: iPhone físico e backlog histórico de sincronização de dados oficiais permanecem fora deste aceite. Migração de handles rejeitada por Auto-review e demais exclusões documentadas não foram aplicadas nem incluídas. Sem promoção Production.
+- Rollback QA preparado e não executado: `dpl_APvEmDEoWaThLWxw2N5M9k6a66fd`.
+
 ## 2026-11-03 — Candidata QA consolidada; publicação autorizada, ainda pendente
 
 - Verificação visual integrada concluída antes do commit: conta QA real pela composição local autorizada, foto carregada no perfil e no ranking; clique abre UUID público correto; `/clubowners` redireciona ao ClubOwner canônico; zero botões locais EN/PT; desktop 1280 e telefone landscape 844 sem overflow horizontal. Prioridades 1/2/3 observadas para os três CB fora da partida. Evidências em outputs do chat de continuidade. Não é prova de Safari/iPhone nativo nem da futura publicação.

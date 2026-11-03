@@ -5,6 +5,8 @@ import type { TouchlineFantasyFixtureFeed, TouchlineFixture } from "./types.ts";
 import { sanitizeProviderPayloadForPersistence } from "./provider-payload-sanitize.ts";
 import { selectTouchlineOfficialLineupShirtFacts } from "./card-engine-provisional-lineup-sync.ts";
 
+import { coachEditorialEvidenceEnabled, parseCoachFeedReceipt, stageObservedCoachEvidence } from "./coach-editorial-evidence.ts";
+
 export type RecoveryScope = { seasonId: string; providerSeasonId: string; competitionId: string };
 export type RecoveryClaim = { fixtureId: string; providerFixtureId: string; attemptCount: number; status: string; reservationId?: string };
 
@@ -85,11 +87,18 @@ export async function finishTouchlineFixtureRecovery(admin: SupabaseClient, clai
   if (error) throw new Error("recovery-finish-failed");
 }
 
-export async function persistTouchlineRecoveryFeed(admin: SupabaseClient, claim: RecoveryClaim, runId: string, feed: TouchlineFantasyFixtureFeed) {
-  const { data, error } = await admin.rpc("touchline_persist_recovery_feed", {
-    p_fixture_id: claim.fixtureId, p_run_id: runId, p_feed: sanitizeProviderPayloadForPersistence(feed),
+export async function persistTouchlineRecoveryFeed(admin: SupabaseClient, claim: RecoveryClaim, runId: string, feed: TouchlineFantasyFixtureFeed): Promise<{ persisted: boolean; reconciliationReady: boolean; reason?: string; editorialError?: string }> {
+  const editorial = coachEditorialEvidenceEnabled();
+  const sanitized = sanitizeProviderPayloadForPersistence(feed);
+  const { data, error } = await admin.rpc(editorial ? "touchline_persist_recovery_feed_v2" : "touchline_persist_recovery_feed", {
+    p_fixture_id: claim.fixtureId, p_run_id: runId, p_feed: sanitized,
     p_shirt_facts: selectTouchlineOfficialLineupShirtFacts(feed),
     p_reservation_id: claim.reservationId ?? null,
   });
-  return { persisted: !error, reconciliationReady: !error && data === true, reason: error ? "recovery-fenced-write-failed" : undefined };
+  if (!editorial) return { persisted: !error, reconciliationReady: !error && data === true, reason: error ? "recovery-fenced-write-failed" : undefined };
+  if (error || !data || data.persisted !== true || typeof data.reconciliationReady !== "boolean") {
+    return { persisted: false, reconciliationReady: false, reason: "recovery-fenced-write-failed" };
+  }
+  const editorialError = await stageObservedCoachEvidence(admin, feed, sanitized, parseCoachFeedReceipt(data.receipt));
+  return { persisted: true, reconciliationReady: data.reconciliationReady, ...(editorialError ? { editorialError } : {}) };
 }

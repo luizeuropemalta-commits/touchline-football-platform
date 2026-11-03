@@ -11,7 +11,7 @@ for(const locale of ["pt-BR","en-GB"]){
   });
   test(`coach Admin ${locale}: empty and approved states are explicit`,async()=>{
     const empty=await coachPageFixture({state:{revision:0,currentCount:0,publicEnabled:false,candidates:[]}}).render(locale);assert.match(empty,locale==="pt-BR"?/Importar os 20 registros legados/:/Import the 20 legacy entries/);
-    const approved=await coachPageFixture({state:{...coachEditorialFixtureState,candidates:coachEditorialFixtureState.candidates.map(c=>({...c,status:"approved"}))}}).render(locale);assert.match(approved,locale==="pt-BR"?/Publicar associação atual/:/Publish current appointment/);
+    const approved=await coachPageFixture({state:{...coachEditorialFixtureState,candidates:coachEditorialFixtureState.candidates.map(c=>({...c,status:"approved"}))}}).render(locale);assert.match(approved,locale==="pt-BR"?/Publicar associação atual/:/Publish current appointment/);assert.match(approved,locale==="pt-BR"?/Publicar identidade histórica/:/Publish historical identity/);
   });
 }
 test("coach Admin denies non-owner and denied-access actors before any catalogue read",async()=>{for(const options of [{owner:false},{allowed:false}]){const f=coachPageFixture(options);await assert.rejects(f.render(),/ACCESS_DENIED/);assert.equal(f.reads(),0);}});

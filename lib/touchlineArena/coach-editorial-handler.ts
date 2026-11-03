@@ -36,7 +36,7 @@ export async function handleCoachEditorial(request: Request, dependencies: Coach
     const input = await body(request);
     if (!input || !uuid(input.requestId) || input.confirmed !== true || typeof input.reason !== "string"
       || input.reason.trim().length < 20 || input.reason.length > 1000
-      || !["bootstrap", "approve", "ignore", "reopen", "publish"].includes(String(input.action))
+      || !["bootstrap", "approve", "ignore", "reopen", "publish", "publish_history"].includes(String(input.action))
       || Object.keys(input).some(key => !["requestId", "confirmed", "reason", "action", "candidateId", "revision", "catalogueRevision"].includes(key))) return response({ error: "INVALID_INPUT" }, 400);
     if (!Number.isSafeInteger(input.catalogueRevision) || Number(input.catalogueRevision) < 0) return response({ error: "INVALID_INPUT" }, 400);
     const bootstrap = input.action === "bootstrap";

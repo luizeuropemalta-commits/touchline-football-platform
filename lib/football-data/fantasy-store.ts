@@ -3,9 +3,12 @@ import type { TouchlineFantasyFixtureFeed, TouchlineProviderCapabilities } from 
 import { sanitizeProviderPayloadForPersistence } from "@/lib/football-data/provider-payload-sanitize";
 import { reconcileTouchlineProvisionalShirtsFromOfficialLineup } from "@/lib/football-data/card-engine-provisional-lineup-sync";
 
+import { coachEditorialEvidenceEnabled, parseCoachFeedReceipt, stageObservedCoachEvidence } from "./coach-editorial-evidence.ts";
+
 export type FantasyPersistenceResult = {
   persisted: boolean;
   reason?: string;
+  editorialError?: string;
 };
 
 export async function persistFantasyFixtureFeed(feed: TouchlineFantasyFixtureFeed): Promise<FantasyPersistenceResult> {
@@ -14,7 +17,8 @@ export async function persistFantasyFixtureFeed(feed: TouchlineFantasyFixtureFee
   const sanitizedFeed = sanitizeProviderPayloadForPersistence(feed);
   const persistedAt = new Date().toISOString();
 
-  const { error } = await supabase.from("football_fantasy_fixture_feeds").upsert(
+  const editorial = coachEditorialEvidenceEnabled();
+  const write = supabase.from("football_fantasy_fixture_feeds").upsert(
     {
       provider: sanitizedFeed.fixture.provider,
       provider_fixture_id: sanitizedFeed.fixture.providerId,
@@ -28,7 +32,10 @@ export async function persistFantasyFixtureFeed(feed: TouchlineFantasyFixtureFee
     { onConflict: "provider,provider_fixture_id" },
   );
 
+  const { data, error } = editorial ? await write.select("id,last_synced_at").single() : await write;
   if (error) return { persisted: false, reason: error.message };
+  const editorialError = await stageObservedCoachEvidence(supabase, feed, sanitizedFeed,
+    parseCoachFeedReceipt(data && { id: data.id, persistedAt: data.last_synced_at }));
   const provisionalReconciliation = await reconcileTouchlineProvisionalShirtsFromOfficialLineup({
     admin: supabase,
     feed: sanitizedFeed,
@@ -41,7 +48,7 @@ export async function persistFantasyFixtureFeed(feed: TouchlineFantasyFixtureFee
   ) {
     return { persisted: false, reason: `card_engine_provisional_reconciliation:${provisionalReconciliation.reason}` };
   }
-  return { persisted: true };
+  return { persisted: true, ...(editorialError ? { editorialError } : {}) };
 }
 
 export async function persistProviderCapabilities(capabilities: TouchlineProviderCapabilities): Promise<FantasyPersistenceResult> {

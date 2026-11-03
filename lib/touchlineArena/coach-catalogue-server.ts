@@ -6,14 +6,18 @@ import { legacyCoachCatalogue, parseCoachCatalogue, UNAVAILABLE_COACH_CATALOGUE,
 
 export const coachCatalogueEnabled = () => process.env.TOUCHLINE_COACH_CATALOGUE_ENABLED === "true";
 export const coachEditorialEnabled = () => process.env.TOUCHLINE_COACH_EDITORIAL_ENABLED === "true";
-/** Request-local cache only. Gate ON never falls back to an old seed on missing rows, errors or ignored candidates. */
+/** Request-local cache only. Only an explicit database OFF receipt selects legacy mode. Missing rows, errors and ignored candidates never do. */
 export const loadCoachCatalogue = cache(async (): Promise<CoachCatalogue> => {
   if (!coachCatalogueEnabled()) return legacyCoachCatalogue();
   const admin = createAdminClient();
   if (!admin) return UNAVAILABLE_COACH_CATALOGUE;
   try {
-    const result = await resolveServerReadWithin(admin.rpc("touchline_read_coach_catalogue").abortSignal(AbortSignal.timeout(8_000)), null, 8_000);
-    return result && !result.error ? parseCoachCatalogue(result.data) : UNAVAILABLE_COACH_CATALOGUE;
+    const result = await resolveServerReadWithin(admin.rpc("touchline_read_coach_catalogue_state").abortSignal(AbortSignal.timeout(8_000)), null, 8_000);
+    if (!result || result.error || !result.data || typeof result.data !== "object" || Array.isArray(result.data)) return UNAVAILABLE_COACH_CATALOGUE;
+    const state = result.data as Record<string, unknown>;
+    if (state.mode === "legacy" && Object.keys(state).length === 1) return legacyCoachCatalogue();
+    if (state.mode === "published" && Object.keys(state).length === 2 && Object.hasOwn(state, "catalogue")) return parseCoachCatalogue(state.catalogue);
+    return UNAVAILABLE_COACH_CATALOGUE;
   } catch { return UNAVAILABLE_COACH_CATALOGUE; }
 });
 export async function readCompetitionCoachAssignments() { return catalogueCoachAssignments(await loadCoachCatalogue()); }

@@ -7,14 +7,14 @@ import * as contract from "../lib/touchlineArena/coach-catalogue-contract.ts";
 import { resolveServerReadWithin } from "../lib/touchlineArena/server-read-deadline.ts";
 
 const code=ts.transpileModule(readFileSync(new URL("../lib/touchlineArena/coach-catalogue-server.ts",import.meta.url),"utf8"),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
-function fixture(env:Record<string,string>={},mode="error"){
+function fixture(env:Record<string,string>={},mode="error",data:unknown=null){
   let admins=0;const calls:Array<{name:string;args:unknown}>=[];
   const admin={rpc(name:string,args?:unknown){
     calls.push({name,args});
     return {abortSignal(signal:AbortSignal){
       assert.ok(signal instanceof AbortSignal);
       return mode==="reject" ? Promise.reject(new Error("SECRET")) : mode==="timeout" ? new Promise(()=>{})
-        : Promise.resolve({data:mode==="staged"?1:null,error:mode==="staged"?null:{code:"missing"}});
+        : Promise.resolve({data:mode==="staged"?1:data,error:["staged","data"].includes(mode)?null:{code:"missing"}});
     }};
   }};
   const exports:Record<string,unknown>={};runInNewContext(code,{exports,process:{env},AbortSignal,require(name:string){
@@ -30,10 +30,18 @@ test("coach public/editorial gates default OFF execute zero DB/provider work",as
   const f=fixture();assert.deepEqual(await f.read(),contract.legacyCoachCatalogue());assert.equal(await f.stage(f.admin,"123"),null);assert.equal(f.admins(),0);assert.deepEqual(f.calls,[]);
 });
 for(const mode of ["error","reject","timeout"])test(`enabled coach reader ${mode} is bounded and fails closed without seed fallback`,async()=>{
-  const f=fixture({TOUCHLINE_COACH_CATALOGUE_ENABLED:"true"},mode),result=await f.read();assert.equal(result.phase,"unavailable");assert.deepEqual(result.current,[]);assert.equal(f.calls.length,1);assert.equal(f.calls[0].name,"touchline_read_coach_catalogue");
+  const f=fixture({TOUCHLINE_COACH_CATALOGUE_ENABLED:"true"},mode),result=await f.read();assert.equal(result.phase,"unavailable");assert.deepEqual(result.current,[]);assert.equal(f.calls.length,1);assert.equal(f.calls[0].name,"touchline_read_coach_catalogue_state");
 });
 test("coach detection submits only persisted fixture ID, reports failure and never calls a provider",async()=>{
   const f=fixture({TOUCHLINE_COACH_EDITORIAL_ENABLED:"true"},"staged");assert.equal(await f.stage(f.admin,"123"),null);assert.deepEqual(JSON.parse(JSON.stringify(f.calls)),[{name:"touchline_stage_coach_fixture",args:{p_fixture_id:"123"}}]);
   const rejected=fixture({TOUCHLINE_COACH_EDITORIAL_ENABLED:"true"},"reject");assert.equal(await rejected.stage(rejected.admin,"123"),"coach-editorial:staging-unavailable");
   const failed=fixture({TOUCHLINE_COACH_EDITORIAL_ENABLED:"true"},"error");assert.equal(await failed.stage(failed.admin,"123"),"coach-editorial:staging-unconfirmed");
+});
+
+test("database OFF explicitly keeps legacy catalogue; malformed and missing states never become legacy",async()=>{
+  const off=fixture({TOUCHLINE_COACH_CATALOGUE_ENABLED:"true"},"data",{mode:"legacy"});
+  assert.deepEqual(await off.read(),contract.legacyCoachCatalogue());assert.equal(off.calls.length,1);
+  for(const data of [null,{},[],{mode:"legacy",error:"unavailable"},{mode:"published"},{mode:"published",catalogue:null},{mode:"unknown"}]){
+    assert.equal((await fixture({TOUCHLINE_COACH_CATALOGUE_ENABLED:"true"},"data",data).read()).phase,"unavailable");
+  }
 });

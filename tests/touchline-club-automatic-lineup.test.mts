@@ -26,6 +26,7 @@ async function database() {
     const actual=JSON.parse(readFileSync(new URL("./fixtures/qa-auto-lineup-predecessors-20261103.json",import.meta.url),"utf8"));
     await db.exec(actual.map((p:{definition:string})=>p.definition).join(";\n"));
     await db.exec(migration);
+    await db.exec(sql("20261103111327_club_lineup_integral_tc_parsing"));
     await db.exec(`update touchline_club_automatic_lineup_policy set starts_at=clock_timestamp()-interval '1 day';
       insert into users values('${id(1)}'),('${id(2)}');
       insert into football_competitions values('${id(3)}');
@@ -194,5 +195,33 @@ test("delayed first worker locks a completed future-policy round and uses frozen
     assert.equal((await db.query<{player_id:string}>("select player_id from touchline_club_resolve_effective_xi($1) where source_player_id=$2",[ug.id,cb.playerId])).rows[0].player_id,id(200),"a started bench player is never skipped because minutes/rating are missing");
     await db.query("update touchline_fantasy_player_fixture_scores set appearance_status='started' where player_id=$1",[cb.playerId]);
     assert.equal((await db.query<{player_id:string}>("select player_id from touchline_club_resolve_effective_xi($1) where source_player_id=$2",[ug.id,cb.playerId])).rows[0].player_id,cb.playerId);
+  }finally{await db.close();}
+});
+
+test('decimal serialization of integral TC never blocks manual preparation or automatic XI and never rewrites the wallet',async()=>{
+  const {db}=await database();
+  try {
+    await db.query(`update touchline_club_collections set state=jsonb_set(state,'{balanceEur}','1155435000.000000000000'::jsonb)||jsonb_build_object('players',(
+      select jsonb_agg(jsonb_set(p,'{valueEur}',to_jsonb((p->>'valueEur')::numeric(30,12)))) from jsonb_array_elements(state->'players') p)) where user_id=$1`,[id(1)]);
+    const before=(await db.query<{state:unknown}>('select state from touchline_club_collections where user_id=$1',[id(1)])).rows[0].state;
+    // Same preparation used when opening ClubOwner before the deadline.
+    const prepared=(await db.query<{id:string}>('select touchline_fantasy_prepare_user_gameweek($1,$2) id',[id(1),id(6)])).rows[0].id;
+    assert.ok(prepared);
+    const ug=await closeRound(db);
+    const locked=(await db.query<{n:number}>('select count(*)::int n from touchline_fantasy_locked_selections where user_gameweek_id=$1',[ug])).rows[0].n;
+    assert.equal(locked,11);
+    const row=(await db.query<{budget:string}>('select budget_eur_snapshot::text budget from touchline_fantasy_user_gameweeks where id=$1',[ug])).rows[0];
+    assert.equal(row.budget,'1171435000');
+    assert.deepEqual((await db.query<{state:unknown}>('select state from touchline_club_collections where user_id=$1',[id(1)])).rows[0].state,before);
+  } finally {await db.close();}
+});
+
+
+test('TC parser rejects fractional, negative, missing and unsafe amounts instead of rounding',async()=>{
+  const {db}=await database();try{
+    for(const value of ['1.25','-1',null,'not-money','9007199254740992','NaN','Infinity'])
+      await assert.rejects(db.query('select public.touchline_club_integral_tc($1)',[value]),/CLUB_BUDGET_AMOUNT_INVALID/);
+    assert.equal((await db.query<{v:string}>("select public.touchline_club_integral_tc('2250000.000000000000')::text v")).rows[0].v,'2250000');
+    for(const role of ['anon','authenticated','service_role'])assert.equal((await db.query<{allowed:boolean}>("select has_function_privilege($1,'public.touchline_club_integral_tc(text)','execute') allowed",[role])).rows[0].allowed,false);
   }finally{await db.close();}
 });

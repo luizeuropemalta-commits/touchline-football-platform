@@ -6,6 +6,7 @@ import ts from 'typescript';
 import test from 'node:test';
 import { clearFootballDataCache } from '../lib/football-data/cache.ts';
 import { sanitizeProviderPayloadForPersistence } from '../lib/football-data/provider-payload-sanitize.ts';
+import * as coachEvidence from '../lib/football-data/coach-editorial-evidence.ts';
 import { matchPushLiveEventWindow } from '../lib/touchlineArena/match-push-live-event-window.ts';
 
 const root = new URL('../', import.meta.url);
@@ -17,7 +18,7 @@ const period = { id: 77, fixture_id: 8, type_id: 1, started: 1782765014, ended: 
   counts_from: 0, ticking: true, sort_order: 1, minutes: 23, seconds: 42, has_timer: true,
   description: '1st-half', image_path: 'https://sportmonks.com/private.png', api_token: 'synthetic-secret' };
 
-async function mapped(periods: unknown, events: unknown = [{ id: 9, fixture_id: 8, period_id: 77, type: { name: 'Goal' }, minute: 23 }], sanitize = true) {
+async function mapped(periods: unknown, events: unknown = [{ id: 9, fixture_id: 8, period_id: 77, type: { name: 'Goal' }, minute: 23 }], sanitize = true, identity: Record<string, unknown> = {}) {
   const original = globalThis.fetch;
   clearFootballDataCache();
   const provider = new SportmonksFootballProvider();
@@ -28,7 +29,7 @@ async function mapped(periods: unknown, events: unknown = [{ id: 9, fixture_id: 
     const url = new URL(String(input));
     assert.equal(url.pathname, '/v3/football/fixtures/8');
     assert.ok(url.searchParams.get('include')?.split(';').includes('periods'));
-    return new Response(JSON.stringify({ data: { id: 8, periods, events, api_token: 'synthetic-secret' } }), { status: 200, headers: { 'content-type': 'application/json' } });
+    return new Response(JSON.stringify({ data: { id: 8, ...identity, periods, events, api_token: 'synthetic-secret' } }), { status: 200, headers: { 'content-type': 'application/json' } });
   };
   try {
     const result = await provider.getFixtureFantasyFeed('8');
@@ -78,6 +79,7 @@ test('actual feed persistence writes typed period evidence but never raw provide
   const writes: Array<{ table: string; row: Record<string, unknown>; options: unknown }> = [];
   let reconciled = 0;
   const dependencies: Record<string, unknown> = {
+    './coach-editorial-evidence.ts': coachEvidence,
     '@/lib/supabase/admin': { createAdminClient: () => ({ from: (table: string) => ({
       upsert: async (row: Record<string, unknown>, options: unknown) => { writes.push({ table, row, options }); return { error: null }; },
     }) }) },
@@ -128,3 +130,65 @@ test('missing, duplicate and foreign period identities cannot become event evide
   ]);
   assert.ok(feed.events.every(event => event.periodId === undefined));
 });
+
+for (const mode of ['ok', 'staging-failed', 'missing-receipt', 'write-failed']) {
+  test(`official provider through normal persistence and private coach staging: ${mode}`, async () => {
+    const before = process.env.TOUCHLINE_COACH_EDITORIAL_ENABLED;
+    process.env.TOUCHLINE_COACH_EDITORIAL_ENABLED = 'true';
+    try {
+      const feed = await mapped([period], undefined, false, {
+        league_id: 8, season_id: 701,
+        participants: [{ id: 10, meta: { location: 'home' } }, { id: 11, meta: { location: 'away' } }],
+        coaches: [{ id: 101, display_name: 'Synthetic Coach A', meta: { fixture_id: 8, coach_id: 101, participant_id: 10 } },
+          { id: 102, display_name: 'Synthetic Coach B', meta: { fixture_id: 8, coach_id: 102, participant_id: 11 } }],
+      });
+      const writes: unknown[] = [], stages: Record<string, unknown>[] = [];
+      let reconciled = 0;
+      const receipt = { id: '91000000-0000-4000-8000-000000000001', last_synced_at: '2026-11-03T09:00:00.123456Z' };
+      const admin = {
+        from(table: string) {
+          assert.equal(table, 'football_fantasy_fixture_feeds');
+          return { upsert(row: unknown) { writes.push(row); return { select(columns: string) {
+            assert.equal(columns, 'id,last_synced_at');
+            return { single: async () => ({ data: mode === 'missing-receipt' ? null : receipt,
+              error: mode === 'write-failed' ? { message: 'synthetic write failure' } : null }) };
+          } }; } };
+        },
+        rpc(name: string, args: Record<string, unknown>) {
+          assert.equal(name, 'touchline_stage_coach_fixture_v2'); stages.push(args);
+          return { abortSignal: () => Promise.resolve({ data: 2, error: mode === 'staging-failed' ? { code: '22023' } : null }) };
+        },
+      };
+      const dependencies: Record<string, unknown> = {
+        '@/lib/supabase/admin': { createAdminClient: () => admin },
+        '@/lib/football-data/provider-payload-sanitize': { sanitizeProviderPayloadForPersistence },
+        './coach-editorial-evidence.ts': coachEvidence,
+        '@/lib/football-data/card-engine-provisional-lineup-sync': {
+          reconcileTouchlineProvisionalShirtsFromOfficialLineup: async () => { reconciled++; return { reconciled: true }; },
+        },
+      };
+      const exports = {};
+      const source = readFileSync(new URL('../lib/football-data/fantasy-store.ts', import.meta.url), 'utf8');
+      vm.runInNewContext(ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText,
+        { exports, Date, require: (name: string) => { assert.ok(name in dependencies, name); return dependencies[name]; } });
+      const result = await (exports as typeof import('../lib/football-data/fantasy-store')).persistFantasyFixtureFeed(feed);
+      assert.equal(result.persisted, mode !== 'write-failed');
+      assert.equal(reconciled, mode === 'write-failed' ? 0 : 1);
+      assert.equal(writes.length, 1);
+      assert.doesNotMatch(JSON.stringify(writes), /Synthetic Coach|display_name|displayName|"raw"|api_token|synthetic-secret/);
+      if (mode === 'write-failed' || mode === 'missing-receipt') assert.equal(stages.length, 0);
+      else {
+        assert.equal(stages.length, 1); assert.equal(stages[0].p_feed_id, receipt.id);
+        assert.equal(stages[0].p_synced_at, receipt.last_synced_at, 'use acknowledged timestamp, including microseconds');
+        assert.match(JSON.stringify(stages[0].p_projection), /Synthetic Coach A/);
+        assert.doesNotMatch(JSON.stringify(stages[0].p_expected), /Synthetic Coach|displayName|"raw"|api_token|synthetic-secret/);
+      }
+      if (mode === 'ok') assert.equal(result.editorialError, undefined);
+      if (mode === 'missing-receipt') assert.equal(result.editorialError, 'coach-editorial:receipt-unconfirmed');
+      if (mode === 'staging-failed') assert.equal(result.editorialError, 'coach-editorial:staging-unconfirmed');
+    } finally {
+      if (before === undefined) delete process.env.TOUCHLINE_COACH_EDITORIAL_ENABLED;
+      else process.env.TOUCHLINE_COACH_EDITORIAL_ENABLED = before;
+    }
+  });
+}
