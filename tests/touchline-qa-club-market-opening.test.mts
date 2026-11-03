@@ -46,7 +46,7 @@ test("QA opening installs closed, opens only its season, preserves rounds and re
     await db.exec("update touchline_fantasy_gameweeks set state='MARKET_OPEN'");
     assert.equal(await opened(),true);
     await db.exec("update touchline_qa_club_market_control set enabled=true");
-    for (const dates of ["starts_at=null", "ends_at=null", "starts_at=current_date+5,ends_at=current_date+10", "starts_at=current_date-10,ends_at=current_date-1"]) {
+    for (const dates of ["starts_at=null", "ends_at=null", "starts_at=(clock_timestamp() at time zone 'UTC')::date+5,ends_at=(clock_timestamp() at time zone 'UTC')::date+10", "starts_at=(clock_timestamp() at time zone 'UTC')::date-10,ends_at=(clock_timestamp() at time zone 'UTC')::date-1"]) {
       await db.exec(`update football_seasons set ${dates}`);
       assert.equal(await opened(),false,`QA and open round cannot override ${dates}`);
       assert.equal((await db.query<{open:boolean}>("select touchline_qa_club_market_is_open($1) open",[season])).rows[0].open,false,"QA snapshot agrees with the committing guard");

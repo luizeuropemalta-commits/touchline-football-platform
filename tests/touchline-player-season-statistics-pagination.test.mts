@@ -138,6 +138,13 @@ test("unresolved reserve never replaces a known player's history with a presumed
   const x = await execute(t);
   assert.equal(x.result.ok, false);
   assert.ok(x.result.errors.includes("lineup-identity-pending:known-missing"));
+  assert.equal(x.result.lineupIdentityIssues.length, 1);
+  const issue = x.result.lineupIdentityIssues[0];
+  assert.equal(issue.fixtureId, "f1");
+  assert.equal(issue.providerFixtureId, t.football_fantasy_fixture_feeds[0].provider_fixture_id);
+  assert.equal(issue.affectedPlayerId, "known-missing");
+  assert.equal(issue.sourceSyncedAt, t.football_fantasy_fixture_feeds[0].last_synced_at ?? null);
+  assert.equal(JSON.stringify(issue.unresolvedRows), JSON.stringify([{ providerLineupId: "14674515841", providerTeamId: "10" }]));
   assert.equal(JSON.stringify(x.result.failedFixtureIds), JSON.stringify(["f1"]));
   assert.equal(x.result.rankingError, "ranking-source-incomplete");
   assert.equal(x.rankings, 0);

@@ -6,6 +6,44 @@ type Dependencies = {
 };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+/** Bound the complete stream, including clients that never finish sending JSON. */
+async function readDeviceBody(request: Request): Promise<unknown> {
+  const length = request.headers.get("content-length");
+  const limit = 16 * 1024;
+  if (length !== null && (!/^\d+$/.test(length) || Number(length) > limit)) return null;
+  const reader = request.body?.getReader();
+  if (!reader) return null;
+  const buffer = new Uint8Array(limit);
+  let size = 0;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let abort: (() => void) | undefined;
+  const deadline = new Promise<never>((_, reject) => {
+    abort = () => {
+      reject(new Error("DEVICE_BODY_INTERRUPTED"));
+      void reader.cancel().catch(() => undefined);
+    };
+    timer = setTimeout(abort, 10_000);
+    request.signal.addEventListener("abort", abort, { once: true });
+    if (request.signal.aborted) abort();
+  });
+  try {
+    while (true) {
+      const next = await Promise.race([reader.read(), deadline]);
+      if (next.done) break;
+      if (size + next.value.byteLength > limit) return null;
+      buffer.set(next.value, size); size += next.value.byteLength;
+    }
+    return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(buffer.subarray(0, size)));
+  } catch { return null; }
+  finally {
+    clearTimeout(timer);
+    if (abort) request.signal.removeEventListener("abort", abort);
+    // Do not await an untrusted stream's cancellation callback.
+    void reader.cancel().catch(() => undefined);
+    reader.releaseLock();
+  }
+}
+
 /** Registration acknowledges storage only, never consent to an event or delivery. */
 export async function handlePushDeviceRegistration(request: Request, deps: Dependencies): Promise<Response> {
   const json = (status: number, body: unknown) => Response.json(body, {
@@ -23,7 +61,7 @@ export async function handlePushDeviceRegistration(request: Request, deps: Depen
     if (!actor) return json(401, { ok: false, error: "AUTHENTICATION_REQUIRED" });
     if (!actor.allowed) return json(403, { ok: false, error: "ARENA_ACCESS_REQUIRED" });
     if (expectedAccount !== null && expectedAccount.toLowerCase() !== actor.id.toLowerCase()) return json(409, { ok: false, error: "ACCOUNT_CHANGED" });
-    const value = await request.json().catch(() => null);
+    const value = await readDeviceBody(request);
     request.signal.throwIfAborted();
     if (!value || typeof value !== "object" || Array.isArray(value)
       || Object.keys(value).some((key) => !["installationId", "permission", "subscription"].includes(key))) {

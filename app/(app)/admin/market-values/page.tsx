@@ -7,6 +7,7 @@ import { isOwnerEmail } from "@/lib/admin/owner";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { normalizeTouchLineAuthLocale, touchLineAuthEntryHref, touchLineAuthHref, type TouchLineAuthLocale } from "@/lib/touchlineArena/auth-i18n";
+import { hasTouchLineArenaAccess } from "@/lib/touchlineArena/auth-access";
 import { resolveServerReadWithin } from "@/lib/touchlineArena/server-read-deadline";
 
 export const dynamic = "force-dynamic";
@@ -47,14 +48,14 @@ export default async function MarketValueAdminPage({ searchParams }: { searchPar
   const admin = createAdminClient();
   const user = supabase
     ? await resolveServerReadWithin(
-      supabase.auth.getUser().then(({ data }) => data.user),
+      supabase.auth.getUser().then(({ data, error }) => error ? null : data.user),
       null,
       MARKET_VALUE_ADMIN_READ_TIMEOUT_MS,
     )
     : null;
 
   if (!user) return <GamePanel className="p-8"><LivePill>{t("Área do proprietário", "Owner area")}</LivePill><h1 className="mt-4 text-4xl font-black italic text-white">{t("Administração de valores de mercado", "Market Value Admin")}</h1><p className="mt-3 text-sm text-slate-400">{t("Entre como proprietário da TouchLine para revisar importações de valores licenciados.", "Sign in as the TouchLine owner to review licensed value imports.")}</p><Link className="mt-6 inline-flex rounded-2xl bg-[#a3ff12] px-5 py-3 text-xs font-black text-black" href={touchLineAuthEntryHref("/login", locale, touchLineAuthHref("/admin/market-values", locale))}>{t("Entrar", "Sign in")}</Link></GamePanel>;
-  if (!isOwnerEmail(user.email)) notFound();
+  if (!hasTouchLineArenaAccess(user) || !isOwnerEmail(user.email)) notFound();
   if (!admin) return <GamePanel className="p-8"><LivePill>{t("Configuração necessária", "Configuration required")}</LivePill><h1 className="mt-4 text-4xl font-black italic text-white">{t("Administração de valores de mercado", "Market Value Admin")}</h1><p className="mt-3 text-sm text-slate-400">{t("O acesso protegido do servidor é necessário para revisar valores.", "The protected server client is required for value review.")}</p></GamePanel>;
 
   let query = admin

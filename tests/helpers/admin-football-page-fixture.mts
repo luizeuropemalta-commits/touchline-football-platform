@@ -9,14 +9,16 @@ import ts from "typescript";
 import * as auth from "../../lib/touchlineArena/auth-i18n.ts";
 import * as deadline from "../../lib/touchlineArena/server-read-deadline.ts";
 import * as rosterContract from "../../lib/football-data/roster-reconciliation-contract.ts";
+import * as coachDiagnostic from "../../lib/football-data/coach-reconciliation-diagnostic.ts";
 import { cn } from "../../lib/utils.ts";
 const compile = (file: string) => ts.transpileModule(readFileSync(new URL(file, import.meta.url), "utf8"), {
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true },
 }).outputText;
 const controlsCode = compile("../../components/admin-football-data-sync-controls.tsx"), buttonCode = compile("../../components/ui.tsx");
 const rosterCode = compile("../../components/admin-football-roster-controls.tsx");
+const coachDiagnosticCode = compile("../../components/admin-coach-sync-diagnostic.tsx");
 const pageCode = compile("../../app/(app)/admin/football-data/page.tsx"), uiCode = compile("../../components/arena-admin-ui.tsx"), ownerCode = compile("../../lib/admin/owner.ts");
-export function footballDataFixture(options: { user?: { email: string } | null; state?: "empty" | "populated" | "error" | "rejected" | "stalled"; admin?: boolean } = {}) {
+export function footballDataFixture(options: { user?: { email: string } | null; state?: "empty" | "populated" | "error" | "rejected" | "stalled"; admin?: boolean; identityIssues?: unknown; coachDiagnostic?: unknown } = {}) {
   const calls: string[] = [], filters: string[] = [], exports: Record<string, unknown> = {}, ui: Record<string, unknown> = {}, owner: Record<string, unknown> = {};
   runInNewContext(ownerCode, { exports: owner, process: { env: { TOUCHLINE_OWNER_EMAILS: "owner@example.test" } } });
   const common = (name: string): unknown => {
@@ -41,6 +43,11 @@ export function footballDataFixture(options: { user?: { email: string } | null; 
     if (name === "@/lib/football-data/roster-reconciliation-contract") return rosterContract;
     return common(name);
   } });
+  const coachDiagnosticUi: Record<string, unknown> = {};
+  runInNewContext(coachDiagnosticCode, { exports: coachDiagnosticUi, require(name: string) {
+    if (name === "@/lib/football-data/coach-reconciliation-diagnostic") return coachDiagnostic;
+    return common(name);
+  } });
   const query = (table: string) => {
     calls.push(table); let head = false;
     const chain = {
@@ -54,7 +61,7 @@ export function footballDataFixture(options: { user?: { email: string } | null; 
           football_clubs: [{ id: "club", provider: "sportmonks", provider_team_id: "10", name: "Synthetic Club", short_code: "SC", country: null, logo_url: null, venue_id: null, source_updated_at: null }],
           football_squad_members: [{ id: "member", club_id: "club", player_id: "player", jersey_number: 7, position: null, status: "active" }],
           football_players: [{ id: "player", provider_player_id: "20", display_name: "Synthetic Player", photo_url: null, nationality: null, position: null }],
-          football_data_sync_runs: [{ id: "run", provider: "sportmonks", sync_type: "live_scores", status: "partial", records_updated: 2, records_skipped: 1, started_at: "2026-10-27T08:00:00Z", completed_at: null, error_message: "PRIVATE_FOOTBALL_ERROR" }],
+          football_data_sync_runs: [{ id: "run", provider: "sportmonks", sync_type: "live_scores", status: "partial", records_updated: 2, records_skipped: 1, started_at: "2026-10-27T08:00:00Z", completed_at: null, error_message: "PRIVATE_FOOTBALL_ERROR", lineup_identity_issues: options.identityIssues, coach_ranking_diagnostic: options.coachDiagnostic }],
         };
         const data = options.state === "populated" ? rows[table] ?? [] : [];
         return (options.state === "rejected" ? Promise.reject(new Error("PRIVATE_FOOTBALL_ERROR")) : Promise.resolve({ data: head ? null : data, count: head ? data.length : null, error: options.state === "error" ? { message: "PRIVATE_FOOTBALL_ERROR" } : null })).then(resolve, reject);
@@ -72,6 +79,7 @@ export function footballDataFixture(options: { user?: { email: string } | null; 
       if (name === "@/lib/football-data/provider-factory") return { getConfiguredFootballDataProviderName: () => "sportmonks" };
       if (name === "@/components/admin-football-data-sync-controls") return { FootballDataSyncControls: ({ locale, allowQaMaintenance }: { locale: string; allowQaMaintenance: boolean }) => React.createElement("div", { "data-control-locale": locale, "data-qa-controls": String(allowQaMaintenance) }, React.createElement(controls.FootballDataSyncControls as React.ComponentType<{ locale: string; allowQaMaintenance: boolean }>, { locale, allowQaMaintenance })) };
       if (name === "@/components/admin-football-roster-controls") return { FootballRosterControls: ({ locale }: { locale: string }) => React.createElement("div", { "data-roster-locale": locale }, React.createElement(roster.FootballRosterControls as React.ComponentType<{ locale: string }>, { locale })) };
+      if (name === "@/components/admin-coach-sync-diagnostic") return coachDiagnosticUi;
       if (name === "@/lib/supabase/server") return { createClient: async () => ({ auth: { getUser: async () => ({ data: { user: options.user === undefined ? { email: "owner@example.test" } : options.user } }) } }) };
       if (name === "@/lib/supabase/admin") return { createAdminClient: () => options.admin === false ? null : { from: query } };
       return common(name);

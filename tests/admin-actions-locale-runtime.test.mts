@@ -92,6 +92,11 @@ function harness(scenario: Scenario) {
   let resolveResponse: ((response: ResponseFixture) => void) | undefined;
   const hooks = {
     ...React,
+    useRef(initial: unknown) {
+      const slot = cursor++;
+      if (!Object.hasOwn(state, slot)) state[slot] = { current: initial };
+      return state[slot];
+    },
     useState(initial: unknown) {
       const slot = cursor++;
       if (!Object.hasOwn(state, slot)) state[slot] = initial;
@@ -102,7 +107,7 @@ function harness(scenario: Scenario) {
   };
   const exports: Record<string, unknown> = {};
   runInNewContext(compiled.get(scenario.file)!, {
-    exports, Date, Error,
+    exports, Date, Error, crypto: { randomUUID: () => "synthetic-command" },
     window: { location: { reload() { reloads++; } } },
     fetch(url: string, options: Omit<Request, "url">) {
       requests.push({ url, ...options });
@@ -121,11 +126,11 @@ function harness(scenario: Scenario) {
     reloads: () => reloads,
     render(locale: Locale) {
       cursor = 0;
-      return Component({ locale, cardId: "synthetic-card", cardStatus: "pending", saleStatus: "not_listed", artStatus: "missing", frameColor: "gold" });
+      return Component({ expectedRevision: 0, locale, cardId: "synthetic-card", cardStatus: "pending", saleStatus: "not_listed", artStatus: "missing", frameColor: "gold" });
     },
     settle(ok: boolean) {
       assert.ok(resolveResponse, "a synthetic request must be pending");
-      resolveResponse({ ok, json: async () => ok ? { status: "RAW_STATUS_NOT_FOR_DISPLAY" } : { error: "PRIVATE_ERROR_SENTINEL" } });
+      resolveResponse({ ok, json: async () => ok ? { status: "RAW_STATUS_NOT_FOR_DISPLAY", requestId: "synthetic-command", historyId: "synthetic-history" } : { error: "PRIVATE_ERROR_SENTINEL" } });
     },
   };
 }

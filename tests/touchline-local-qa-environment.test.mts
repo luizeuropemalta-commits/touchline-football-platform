@@ -151,3 +151,20 @@ test("input objects remain unchanged and prototype properties are not admitted",
   const inherited = Object.assign(Object.create({ TOUCHLINE_CLUB_COLLECTION_ENABLED: "true" }), source);
   assert.equal(Object.hasOwn(buildQaCandidateEnvironments(inherited, {}, { qaMarketContext: false }).preview, "TOUCHLINE_CLUB_COLLECTION_ENABLED"), false);
 });
+
+
+test("public discovery is explicit source configuration, never inherited or coupled to avatar and release", () => {
+  const flag = "TOUCHLINE_CLUBOWNER_PUBLIC_ENABLED";
+  const host = { [flag]: "true" };
+  assert.equal(buildQaCandidateEnvironments(source, host, { qaMarketContext: true }).preview[flag], undefined);
+  for (const value of ["true", "false"]) {
+    const { preview, preflight } = buildQaCandidateEnvironments({ ...source, [flag]: value }, host, { qaMarketContext: true });
+    assert.equal(preview[flag], value);
+    assert.equal(preflight[flag], undefined);
+    assert.equal(inspectTouchlineIsolatedPreviewEnvironment(preview).status, "qa");
+    for (const other of ["TOUCHLINE_CLUBOWNER_PUBLIC_AVATAR_ENABLED", "TOUCHLINE_CLUB_RELEASE_ENABLED"]) {
+      assert.equal(preview[other], undefined);
+    }
+  }
+  assert.throws(() => buildQaCandidateEnvironments({ ...source, [flag]: "true", NEXT_PUBLIC_SUPABASE_URL: "https://foreign.invalid" }, host, { qaMarketContext: true }), /canonical project/);
+});

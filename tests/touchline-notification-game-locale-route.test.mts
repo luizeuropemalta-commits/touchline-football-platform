@@ -95,7 +95,7 @@ test("game locale action rejects malformed, non-exact, extra and inherited paylo
 
 test("game locale action requires authenticated eligible owner and same origin", async () => {
   for (const [options,status] of [
-    [{anonymous:true},401],[{access:false},401],[{unavailable:true},401],
+    [{anonymous:true},401],[{access:false},401],[{unavailable:true},503],
     [{origin:null},403],[{origin:"https://other.test"},403],[{crossSite:true},403],
   ] as Array<[Options,number]>) {
     const {response,calls} = await invoke({action:"set_game_locale",locale:"en-GB",expectedRevision:"0"},options);

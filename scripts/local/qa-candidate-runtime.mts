@@ -16,7 +16,7 @@ export function assertNoImplicitEnvironment(cwd: string, present = existsSync) {
 }
 
 /** No cleanup, no process termination and no estimate based on free-memory percentages. */
-export function assertCandidateCapacity(cwd: string, allowWarning = false) {
+export function assertCandidateCapacity(cwd: string, allowWarning = true) {
   if (process.platform !== "darwin") throw new Error("This capacity gate requires macOS.");
   const pressure = Number(execFileSync("/usr/sbin/sysctl", ["-n", "kern.memorystatus_vm_pressure_level"], { encoding: "utf8" }).trim());
   const rows = execFileSync("/bin/df", ["-Pk", cwd], { encoding: "utf8" }).trim().split("\n");
@@ -34,16 +34,14 @@ export function assertCandidateCapacityReadings(pressure: number, availableKiB: 
 
 class CandidateCapacityError extends Error {}
 
-/** Start only at normal pressure; WARN alone never shuts down the candidate.
+/** Owner authorized WARN startup on 2026-11-01; critical pressure still stops.
  * The sysctl exposes dispatch levels (1 normal, 2 warning, 4 critical), not the
  * kernel's internal enum. Critical/unknown pressure and low disk still stop now.
  */
 export function createCapacityMonitor(check = assertCandidateCapacity) {
-  let started = false;
   return (cwd: string) => {
     assertNoImplicitEnvironment(cwd);
-    check(cwd, started);
-    started = true;
+    check(cwd, true);
   };
 }
 
@@ -125,12 +123,12 @@ export function runCandidateStage(stage: Stage, dependencies = {
 export function parseCandidateArguments(argv: string[]) {
   const mode = argv[0];
   const flags = argv.slice(3);
-  if ((mode !== "--check" && mode !== "--start") || argv[1] !== "--env-file"
+  if ((mode !== "--check" && mode !== "--start" && mode !== "--build") || argv[1] !== "--env-file"
     || !argv[2] || !isAbsolute(argv[2]) || flags.length > 3
     || new Set(flags).size !== flags.length
     || flags.some(flag => !["--qa-market-context", "--club-collection", "--club-release"].includes(flag))
     || (flags.includes("--club-release") && (!flags.includes("--club-collection") || !flags.includes("--qa-market-context")))) {
-    throw new Error("Usage: qa-candidate-runtime.mts --check|--start --env-file /absolute/existing/QA.env [--qa-market-context] [--club-collection] [--club-release requires both]");
+    throw new Error("Usage: qa-candidate-runtime.mts --check|--start|--build --env-file /absolute/existing/QA.env [--qa-market-context] [--club-collection] [--club-release requires both]");
   }
   return { mode, sourcePath: argv[2], qaMarketContext: flags.includes("--qa-market-context"), clubCollection: flags.includes("--club-collection"), clubRelease: flags.includes("--club-release") };
 }
@@ -141,7 +139,7 @@ export async function main(argv = process.argv.slice(2)) {
   const gitRoot = execFileSync("git", ["rev-parse", "--show-toplevel"], { cwd, encoding: "utf8" }).trim();
   if (realpathSync(gitRoot) !== cwd) throw new Error("Candidate repository mismatch.");
   assertNoImplicitEnvironment(cwd);
-  const { preview, preflight } = buildQaCandidateEnvironments(parseEnv(readFileSync(sourcePath, "utf8")), process.env, { qaMarketContext, clubCollection, clubRelease });
+  const { preview, preflight } = buildQaCandidateEnvironments(parseEnv(readFileSync(sourcePath, "utf8")), process.env, { qaMarketContext, clubCollection, clubRelease, localBuild: mode === "--build" });
   if (mode === "--check") {
     console.log("Local QA environment contract checked. No server, persona query or browser started.");
     return 0;
@@ -152,6 +150,16 @@ export async function main(argv = process.argv.slice(2)) {
   if (before !== 0) return before;
   // Recheck after preflight, before Next can load any local configuration.
   assertNoImplicitEnvironment(cwd);
+  if (mode === "--build") {
+    // Measure the exact allowlisted child environment, never the calling shell's
+    // NODE_OPTIONS. No credentials are printed and this does not start Next.
+    const measurement = execFileSync(process.execPath, ["-e", "const v8=require('node:v8'); console.log(JSON.stringify({heapLimitMiB:Math.round(v8.getHeapStatistics().heap_size_limit/1048576),rssMiB:Math.round(process.memoryUsage().rss/1048576)}))"], { cwd, env: preview, encoding: "utf8" });
+    console.log(JSON.stringify({ localQaBuild: true, nodeOptions: preview.NODE_OPTIONS,
+      webpackParallelism: preview.NEXT_WEBPACK_PARALLELISM, cpus: 1, webpackMemoryOptimizations: true,
+      childStartup: JSON.parse(measurement) }));
+    return runCandidateStage({ executable: process.execPath,
+      args: ["node_modules/next/dist/bin/next", "build", "--webpack"], cwd, env: preview, expectedExit: true });
+  }
   console.log("Starting local QA at http://localhost:3100; startup is not authenticated browser validation.");
   return runCandidateStage({ executable: process.execPath,
     args: ["node_modules/next/dist/bin/next", "dev", "--webpack", "--hostname", "localhost", "--port", "3100"],

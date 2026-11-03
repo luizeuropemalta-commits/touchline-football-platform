@@ -27,7 +27,7 @@ test("calendar migration preserves normal/QA predecessors, privileges and strict
           language sql volatile security definer set search_path='' as $$${normalBody}$$;
         revoke all on function touchline_club_market_is_open(uuid) from public,anon,authenticated;
         grant execute on function touchline_club_market_is_open(uuid) to service_role;
-        insert into football_seasons values('${id(3)}','${id(2)}',current_date-1,current_date+1),('${id(4)}','${id(2)}',current_date-1,current_date+1);
+        insert into football_seasons values('${id(3)}','${id(2)}',(clock_timestamp() at time zone 'UTC')::date-1,(clock_timestamp() at time zone 'UTC')::date+1),('${id(4)}','${id(2)}',(clock_timestamp() at time zone 'UTC')::date-1,(clock_timestamp() at time zone 'UTC')::date+1);
         insert into touchline_fantasy_configs values('${id(3)}','${id(2)}','england','active');
         insert into test_rounds values('${id(3)}','${qa?"LOCKED":"MARKET_OPEN"}'),('${id(4)}','MARKET_OPEN');`);
       if(qa) await db.exec(`create table touchline_qa_club_market_control(season_id uuid,enabled boolean,reason text);
@@ -65,7 +65,7 @@ test("calendar migration preserves normal/QA predecessors, privileges and strict
       assert.equal(await opened(),true);
       assert.equal(await opened(id(4)),false,"another open season cannot satisfy the requested active season");
       if(!qa){await db.exec(`update test_rounds set state='LOCKED' where season_id='${id(3)}'`);assert.equal(await opened(),false,"other season's open round never opens this one");await db.exec("update test_rounds set state='MARKET_OPEN'");}
-      for(const dates of ["starts_at=null", "ends_at=null", "starts_at=current_date+5,ends_at=current_date+10", "starts_at=current_date-10,ends_at=current_date-1", "starts_at=current_date+1,ends_at=current_date-1"]){
+      for(const dates of ["starts_at=null", "ends_at=null", "starts_at=(clock_timestamp() at time zone 'UTC')::date+5,ends_at=(clock_timestamp() at time zone 'UTC')::date+10", "starts_at=(clock_timestamp() at time zone 'UTC')::date-10,ends_at=(clock_timestamp() at time zone 'UTC')::date-1", "starts_at=(clock_timestamp() at time zone 'UTC')::date+1,ends_at=(clock_timestamp() at time zone 'UTC')::date-1"]){
         await db.exec(`update football_seasons set ${dates} where id='${id(3)}'`);
         assert.equal(await opened(),false,dates);
         if(qa) assert.equal((await db.query<{open:boolean}>("select touchline_qa_club_market_is_open($1) open",[id(3)])).rows[0].open,false,`QA read snapshot: ${dates}`);
@@ -129,7 +129,7 @@ test("five actual collection operations reject new writes after season end while
     await db.exec(qaSql);await db.exec("update touchline_qa_club_market_control set enabled=true");
     assert.equal((await db.query<{open:boolean}>("select touchline_club_market_is_open($1) open",[id(3)])).rows[0].open,true);
     // A request prepared while open must still be rejected by the later SQL commit.
-    await db.exec("update football_seasons set starts_at=current_date-10,ends_at=current_date-1");
+    await db.exec("update football_seasons set starts_at=(clock_timestamp() at time zone 'UTC')::date-10,ends_at=(clock_timestamp() at time zone 'UTC')::date-1");
     const snapshot=async()=>(await db.query(`select
       (select jsonb_agg(to_jsonb(c) order by user_id) from touchline_club_collections c) collections,
       (select jsonb_agg(to_jsonb(o) order by idempotency_key) from touchline_club_collection_operations o) operations,

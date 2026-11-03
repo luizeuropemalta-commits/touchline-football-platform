@@ -1,3 +1,4 @@
+import * as avatarInvalidation from "../lib/touchlineArena/clubowner-avatar-invalidation.ts";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -46,6 +47,7 @@ function renderAvatar(locale: string, enabled: boolean, draftLocalesEnabled?: bo
     "@/lib/touchlineArena/account-locale-identity-observer": {
       startAccountLocaleIdentityObserver: () => { actionCalls++; throw Error("SSR must not start an identity observer"); },
     },
+    "@/lib/touchlineArena/clubowner-avatar-invalidation": avatarInvalidation,
     "@/lib/touchlineArena/club-owner-avatar-client": { createClubOwnerAvatarRecoveryClient: noAction },
     "@/lib/touchlineArena/club-owner-avatar-ui-i18n": copy,
     "@/lib/touchlineArena/club-owner-avatar-selection-contract": selectionContract,
@@ -76,8 +78,9 @@ test("actual avatar presentation propagates draft copy and keeps initial actions
     for (const enabled of [false, true]) {
       const html = renderAvatar(locale, enabled, true);
       const dictionary = copy.TOUCHLINE_CLUB_OWNER_AVATAR_UI_CATALOGUES[locale];
-      assert.ok(html.includes(escaped(enabled ? dictionary.blocked : dictionary.off)), locale);
-      assert.ok(html.includes(`aria-label="${escaped(dictionary.open)}"`), locale);
+      assert.ok(!html.includes(escaped(dictionary.unobserved)), "healthy portrait has no recovery guidance");
+      const selectionCopy = copy.getTouchlineClubOwnerAvatarSelectionCopy(locale, true);
+      assert.ok(html.includes(`aria-label="${escaped(selectionCopy.choose)}"`), locale);
       assert.ok(html.includes('disabled=""'));
       assert.ok(html.includes("Official Owner"));
       assert.ok(!html.includes('data-avatar-action="observe"'));
@@ -87,9 +90,7 @@ test("actual avatar presentation propagates draft copy and keeps initial actions
       if (locale === "en-GB" || locale === "pt-BR") {
         assert.equal(html, renderAvatar(locale, enabled));
       } else {
-        assert.ok(renderAvatar(locale, enabled).includes(escaped(enabled
-          ? copy.TOUCHLINE_CLUB_OWNER_AVATAR_UI_CATALOGUES["en-GB"].blocked
-          : copy.TOUCHLINE_CLUB_OWNER_AVATAR_UI_CATALOGUES["en-GB"].off)));
+        assert.ok(renderAvatar(locale, enabled).includes(escaped(copy.getTouchlineClubOwnerAvatarSelectionCopy("en-GB").choose)));
       }
     }
   }

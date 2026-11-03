@@ -17,6 +17,13 @@ export type TouchlineCardEngineBatchAction = "approve" | "publish" | "rollback";
 type EngineRpcResult = { data: unknown[] | null; error: { message: string } | null };
 type EngineRpc = { rpc: (name: string, args: Record<string, unknown>) => PromiseLike<EngineRpcResult> };
 
+function receiptRow(data: unknown): Record<string, unknown> | null {
+  if (!Array.isArray(data) || data.length !== 1 || !data[0] || typeof data[0] !== "object" || Array.isArray(data[0])) return null;
+  const row = data[0] as Record<string, unknown>;
+  return typeof row.batch_id === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(row.batch_id) ? row : null;
+}
+const count = (value: unknown): value is number => Number.isSafeInteger(value) && Number(value) >= 0;
+
 function digest(value: string) {
   return createHash("sha256").update(value).digest("hex");
 }
@@ -59,8 +66,15 @@ export async function createTouchlineCardEngineBatch(admin: SupabaseClient, inpu
     p_rows: persistedRows(input.rows),
     p_actor_id: input.actorId,
   });
-  if (error || !data?.[0]) throw new Error(error?.message ?? "Card Engine batch creation returned no result.");
-  return data[0];
+  const result = receiptRow(data);
+  const counts = result && [result.matched_rows, result.review_rows, result.conflict_rows, result.unmatched_rows];
+  if (error || !result || typeof result.replayed !== "boolean"
+    || !["draft", "review", "approved", "published", "reverted"].includes(String(result.status))
+    || !count(result.rows_received) || result.rows_received !== input.rows.length
+    || !counts || !counts.every(count) || counts.reduce((sum, value) => sum + value, 0) !== result.rows_received
+    || (!result.replayed && result.status !== (Number(result.review_rows) + Number(result.conflict_rows) + Number(result.unmatched_rows) > 0 ? "review" : "draft")))
+    throw new Error(error?.message ?? "Card Engine batch creation returned no confirmed result.");
+  return result;
 }
 
 export async function transitionTouchlineCardEngineBatch(admin: SupabaseClient, input: Readonly<{
@@ -68,6 +82,7 @@ export async function transitionTouchlineCardEngineBatch(admin: SupabaseClient, 
   batchId: string;
   actorId: string;
 }>) {
+  if (!["approve", "publish", "rollback"].includes(input.action)) throw new Error("Invalid Card Engine action.");
   const functionName = input.action === "approve"
     ? "touchline_card_engine_approve_batch"
     : input.action === "publish"
@@ -77,7 +92,12 @@ export async function transitionTouchlineCardEngineBatch(admin: SupabaseClient, 
     p_batch_id: input.batchId,
     p_actor_id: input.actorId,
   });
-  if (error || !data?.[0]) throw new Error(error?.message ?? "Card Engine command returned no result.");
+  const result = receiptRow(data);
+  const expected = input.action === "approve" ? "approved" : input.action === "publish" ? "published" : "reverted";
+  if (error || !result || result.batch_id !== input.batchId.toLowerCase() || result.status !== expected
+    || (input.action === "publish" && !count(result.published_rows))
+    || (input.action === "rollback" && !count(result.reverted_rows)))
+    throw new Error(error?.message ?? "Card Engine command returned no confirmed result.");
   if (input.action === "publish" || input.action === "rollback") {
     try {
       revalidateTag(
@@ -90,5 +110,5 @@ export async function transitionTouchlineCardEngineBatch(admin: SupabaseClient, 
       console.error("TouchLine Card Engine projection cache expiration failed", { batchId: input.batchId });
     }
   }
-  return data[0];
+  return result;
 }

@@ -197,6 +197,13 @@ export function socialAdminDate(value: string | null | undefined, locale: TouchL
 }
 
 const apiErrors: Readonly<Record<string, string>> = {
+  "JSON social review command required.": "A revisão social deve ser enviada em formato JSON.",
+  "Owner authentication could not be confirmed.": "Não foi possível confirmar a autenticação do proprietário.",
+  "Invalid or incomplete social review command.": "O comando de revisão social é inválido ou está incompleto.",
+  "Social review could not be confirmed. Reload the current draft before retrying.": "Não foi possível confirmar a revisão social. Recarregue o rascunho atual antes de tentar novamente.",
+  "JSON template policy command required.": "O comando de política de modelos deve ser enviado em formato JSON.",
+  "Invalid or incomplete template policy command.": "O comando de política de modelos é inválido ou está incompleto.",
+  "Template policy change could not be confirmed. Reload its current state before retrying.": "Não foi possível confirmar a alteração da política de modelos. Recarregue o estado atual antes de tentar novamente.",
   "Owner access required.": "Acesso do proprietário necessário.",
   "Invalid request origin.": "Origem da solicitação inválida.",
   "Social review is restricted to the verified QA runtime.": "A revisão social é restrita ao ambiente QA verificado.",

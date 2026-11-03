@@ -6,6 +6,12 @@ export default defineConfig([
   ...nextVitals,
   ...nextTs,
   {
+    // This audit entry is loaded by the isolated CommonJS browser bundler.
+    // Keep the exemption exact; application modules retain the import rule.
+    files: ["artifacts/avatar-notifications-20261031/vip-score-browser-fixture-20261101.js"],
+    rules: { "@typescript-eslint/no-require-imports": "off" },
+  },
+  {
     rules: {
       "@next/next/no-html-link-for-pages": "off",
       "@typescript-eslint/no-unused-vars": [

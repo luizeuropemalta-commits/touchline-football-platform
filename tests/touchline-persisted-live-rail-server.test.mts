@@ -100,6 +100,10 @@ async function ownerProps(read: typeof readPersistedLiveRail, params: Record<str
   const modules: Record<string, unknown> = {
     "react": { Suspense: React.Suspense }, "react/jsx-runtime": jsx,
     "@/components/touchline/TouchlineAccountLoading": { default: () => null },
+    "@/components/touchline/social/ClubOwnerDiscoveryOnboarding": { default: () => null },
+    "@/components/touchline/social/ClubOwnerPublicDirectory": { default: () => assert.fail("Public settings render only for an explicit settings request") },
+    "@/lib/touchlineArena/clubowner-public-contract": { parseOwnPublicOwner: () => assert.fail("No unsolicited settings read"), peopleLocale: (locale: string) => locale },
+    "@/lib/touchlineArena/clubowner-public-avatar-server": { publicOwnerAvatarService: () => ({ enabled: false }) },
     "@/components/touchline/cards/TouchlineCardLeadershipLayout": { default: React.Fragment },
     "@/lib/touchlineArena/local-read-timing": { createLocalReadTiming: () => ({ measure: (_name: string, run: () => unknown) => run() }) },
     "@supabase/supabase-js": { AuthSessionMissingError: class extends Error {} },

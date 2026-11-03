@@ -24,7 +24,7 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3
 function text(value: unknown, max = 1_000) { return typeof value === "string" ? value.trim().slice(0, max) : ""; }
 function isSameOrigin(request: NextRequest) {
   const origin = request.headers.get("origin");
-  return !origin || origin === request.nextUrl.origin;
+  return origin === request.nextUrl.origin && request.headers.get("sec-fetch-site") !== "cross-site";
 }
 
 async function readBoundedJson(request: NextRequest) {
@@ -33,15 +33,25 @@ async function readBoundedJson(request: NextRequest) {
   if (!reader) return { body: null, tooLarge: false } as const;
   const chunks: Uint8Array[] = [];
   let received = 0;
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    received += value.byteLength;
-    if (received > MAX_REQUEST_BYTES) {
-      await reader.cancel();
-      return { body: null, tooLarge: true } as const;
+  let complete = false;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => { reject(new Error("BODY_TIMEOUT")); void reader.cancel().catch(() => {}); }, 10_000);
+  });
+  try {
+    while (true) {
+      const { done, value } = await Promise.race([reader.read(), deadline]);
+      if (done) { complete = true; break; }
+      received += value.byteLength;
+      if (received > MAX_REQUEST_BYTES) return { body: null, tooLarge: true } as const;
+      chunks.push(value);
     }
-    chunks.push(value);
+  } catch (error) {
+    return { body: null, tooLarge: false, timedOut: error instanceof Error && error.message === "BODY_TIMEOUT" } as const;
+  } finally {
+    clearTimeout(timer);
+    if (!complete) void reader.cancel().catch(() => {});
+    reader.releaseLock();
   }
   const payload = new Uint8Array(received);
   let offset = 0;
@@ -51,17 +61,25 @@ async function readBoundedJson(request: NextRequest) {
 }
 
 async function ownerContext() {
-  const supabase = await createClient();
-  const admin = createAdminClient();
-  if (!supabase || !admin) return { error: NextResponse.json({ error: "Protected Card Engine administration is not configured." }, { status: 503 }) };
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user?.id || !hasTouchLineArenaAccess(user) || !isOwnerEmail(user.email)) return { error: NextResponse.json({ error: "Owner access required." }, { status: 403 }) };
-  return { admin, user };
+  try {
+    const supabase = await createClient();
+    if (!supabase) return { error: NextResponse.json({ error: "Protected Card Engine administration is not configured." }, { status: 503 }) };
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (error) return { error: NextResponse.json({ error: "Owner authentication could not be confirmed." }, { status: 503 }) };
+    if (!user?.id || !hasTouchLineArenaAccess(user) || !isOwnerEmail(user.email)) return { error: NextResponse.json({ error: "Owner access required." }, { status: 403 }) };
+    const admin = createAdminClient();
+    if (!admin) return { error: NextResponse.json({ error: "Protected Card Engine administration is not configured." }, { status: 503 }) };
+    return { admin, user };
+  } catch {
+    return { error: NextResponse.json({ error: "Owner authentication could not be confirmed." }, { status: 503 }) };
+  }
 }
 
 export async function POST(request: NextRequest) {
   if (!isSameOrigin(request)) return NextResponse.json({ error: "Cross-origin Card Engine write blocked." }, { status: 403 });
+  if (request.headers.get("content-type")?.split(";", 1)[0].trim().toLowerCase() !== "application/json") return NextResponse.json({ error: "JSON Card Engine request required." }, { status: 415 });
   const parsedRequest = await readBoundedJson(request);
+  if ("timedOut" in parsedRequest && parsedRequest.timedOut) return NextResponse.json({ error: "Card Engine request body timed out." }, { status: 408 });
   if (parsedRequest.tooLarge) return NextResponse.json({ error: "Import exceeds the 250 KB limit." }, { status: 413 });
   const context = await ownerContext();
   if ("error" in context) return context.error;
@@ -89,14 +107,16 @@ export async function POST(request: NextRequest) {
       contentIdentity: importText,
     });
     return NextResponse.json({ ok: true, batch, summary, rows: resolved });
-  } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Card Engine resolution failed." }, { status: 409 });
+  } catch {
+    return NextResponse.json({ error: "Card Engine resolution could not be confirmed. Reload the review history before retrying." }, { status: 409 });
   }
 }
 
 export async function PATCH(request: NextRequest) {
   if (!isSameOrigin(request)) return NextResponse.json({ error: "Cross-origin Card Engine write blocked." }, { status: 403 });
+  if (request.headers.get("content-type")?.split(";", 1)[0].trim().toLowerCase() !== "application/json") return NextResponse.json({ error: "JSON Card Engine request required." }, { status: 415 });
   const parsedRequest = await readBoundedJson(request);
+  if ("timedOut" in parsedRequest && parsedRequest.timedOut) return NextResponse.json({ error: "Card Engine request body timed out." }, { status: 408 });
   if (parsedRequest.tooLarge) return NextResponse.json({ error: "Card Engine request exceeds the size limit." }, { status: 413 });
   const context = await ownerContext();
   if ("error" in context) return context.error;
@@ -111,7 +131,7 @@ export async function PATCH(request: NextRequest) {
       actorId: context.user.id,
     });
     return NextResponse.json({ ok: true, result });
-  } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Card Engine command failed." }, { status: 409 });
+  } catch {
+    return NextResponse.json({ error: "Card Engine command could not be confirmed. Reload the review history before retrying." }, { status: 409 });
   }
 }

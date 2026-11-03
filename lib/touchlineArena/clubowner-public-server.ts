@@ -4,6 +4,8 @@ import { hasTouchLineArenaAccess } from "./auth-access";
 import type { PeopleDependencies } from "./clubowner-public-handler";
 import { resolveServerReadWithin } from "./server-read-deadline";
 import { isOwnerEmail } from "@/lib/admin/owner";
+import { readPublicOwnerSearchPage, readPublicOwnerStanding } from "./clubowner-public-search-server";
+import { publicOwnerId } from "./clubowner-public-contract";
 import { publicOwnerAvatarService } from "./clubowner-public-avatar-server";
 
 export const publicOwnersEnabled = () => process.env.TOUCHLINE_CLUBOWNER_PUBLIC_ENABLED === "true";
@@ -11,11 +13,7 @@ export function publicOwnerDependencies(): PeopleDependencies {
   const photo = publicOwnerAvatarService();
   let client: ReturnType<typeof createClient> | undefined;
   const getClient = () => client ??= createClient();
-  return {
-    enabled: publicOwnersEnabled(),
-    photoEnabled: photo.enabled,
-    photoUrls: photo.urls,
-    currentActor: async () => {
+  const readUser = async () => {
       const supabase = await getClient();
       if (!supabase) throw new Error("AUTH_UNAVAILABLE");
       const result = await resolveServerReadWithin(supabase.auth.getUser(), null, 8_000);
@@ -25,10 +23,26 @@ export function publicOwnerDependencies(): PeopleDependencies {
         if (error.name === "AuthSessionMissingError" && !data.user) return null;
         throw new Error("AUTH_UNAVAILABLE");
       }
+      return data.user;
+  };
+  return {
+    enabled: publicOwnersEnabled(),
+    profileStanding: readPublicOwnerStanding,
+    photoEnabled: photo.enabled,
+    photoOriginAllowed: photo.allowsOrigin,
+    photoUrls: photo.urls,
+    searchDirectory: async (query, cursor) => {
+      const user = await readUser();
+      const allowed = !!user && !user.is_anonymous && hasTouchLineArenaAccess(user);
+      if (allowed && !publicOwnerId(user.id)) throw new Error("AUTH_UNAVAILABLE");
+      return readPublicOwnerSearchPage(query, cursor, allowed ? user.id : null);
+    },
+    currentActor: async () => {
+      const user = await readUser();
       if (photo.enabled) photo.assertCurrent();
-      return data.user ? { allowed: !data.user.is_anonymous && hasTouchLineArenaAccess(data.user),
-        ...(photo.enabled ? { photoAllowed: !data.user.is_anonymous && hasTouchLineArenaAccess(data.user)
-          && typeof data.user.email === "string" && !!data.user.email.trim() && !isOwnerEmail(data.user.email) } : {}) } : null;
+      return user ? { allowed: !user.is_anonymous && hasTouchLineArenaAccess(user),
+        ...(photo.enabled ? { photoAllowed: !user.is_anonymous && hasTouchLineArenaAccess(user)
+          && typeof user.email === "string" && !!user.email.trim() && !isOwnerEmail(user.email) } : {}) } : null;
     },
     rpc: async (name, args = {}) => {
       if (name === "touchline_people_save_profile_v2") { if (!photo.enabled) throw new Error("PHOTO_UNAVAILABLE"); photo.assertCurrent(); }

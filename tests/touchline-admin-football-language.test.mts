@@ -49,3 +49,15 @@ test("football Admin times out stalled protected queries and returns an unavaila
  assert.match(html, /consulta indisponível/);
  assert.doesNotMatch(html, /PRIVATE_FOOTBALL_ERROR|>0</);
 });
+
+
+test("identity diagnostic shows only validated fixture IDs, deduplicates and keeps raw data private", async () => {
+  const issues = [null, { providerFixtureId: "19722185", affectedPlayerId: "PRIVATE_PLAYER_ID" },
+    { providerFixtureId: "19722185" }, { providerFixtureId: "<script>PRIVATE_PAYLOAD</script>" }];
+  for (const locale of ["pt-BR", "en-GB"]) {
+    const html = await footballDataFixture({ state: "populated", identityIssues: issues }).render(locale);
+    assert.equal((html.match(/19722185/g) ?? []).length, 1);
+    assert.doesNotMatch(html, /PRIVATE_PLAYER_ID|PRIVATE_PAYLOAD|PRIVATE_FOOTBALL_ERROR/);
+    assert.match(html, locale === "pt-BR" ? /Identificação pendente na escalação oficial/ : /Identity pending in official line-up/);
+  }
+});

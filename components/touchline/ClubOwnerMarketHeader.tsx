@@ -1,7 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
+import ClubOwnerSearchTrigger from "./social/ClubOwnerSearchDialog";
+import { peopleLocale } from "@/lib/touchlineArena/clubowner-public-contract";
 import { useState } from "react";
 import { useConfirmedClubCollection } from "./fantasy/ClubCollectionContext";
 import { CLUB_ACQUISITION_BUDGETS } from "@/lib/touchlineFantasy/club-acquisition";
@@ -106,9 +107,9 @@ export default function ClubOwnerMarketHeader({ owner, locale, accountId, avatar
             <div><dt>{metricsCopy.ranking}</dt><dd aria-label={rank === null ? metricsCopy.unavailable : undefined}>{rank ?? "—"}</dd></div>
             <div><dt>{metricsCopy.followers}</dt><dd aria-label={followers === null ? metricsCopy.unavailable : undefined}>{followers ?? "—"}</dd></div>
           </dl>
-          {publicDiscoveryEnabled ? <Link href={`/clubowners?lang=${locale === "pt-BR" ? "pt-BR" : "en-GB"}`} className={controls.link}>
-            {locale === "pt-BR" ? "Encontrar ClubOwners" : "Find ClubOwners"}
-          </Link> : null}
+          {publicDiscoveryEnabled ? <>
+            <ClubOwnerSearchTrigger locale={peopleLocale(locale)} compact />
+          </> : null}
         </div>
       </div>
     </section>
@@ -125,6 +126,7 @@ export default function ClubOwnerMarketHeader({ owner, locale, accountId, avatar
           <span className={styles.marketPowerValue}><TouchlineCoinMark size={19} /><strong>{marketPower ?? "—"}</strong><small>TC</small></span>
         </dd></div>
       </dl>
+      <div id="clubowner-market-clock-slot" data-market-clock-placement="balance" />
       {balanceStatus ? <p id="clubowner-balance-status" className={styles.validity} role="status" data-balance-verification={verificationStatus}>{balanceStatus}</p> : null}
       {validity ? <p className={styles.validity} data-plan-validity="true">{validity}</p> : null}
       <p id="clubowner-plan-interest" className={styles.planInterest} tabIndex={-1} role="status">{labels.working}</p>

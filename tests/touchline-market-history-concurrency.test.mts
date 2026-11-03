@@ -1,3 +1,4 @@
+import { projectGameweekScoreStatus } from "../lib/touchlineFantasy/gameweek-score-status.ts";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { stripTypeScriptTypes } from "node:module";
@@ -46,7 +47,7 @@ function scenario(options: Options = {}) {
         order() { return query; }, maybeSingle() { return query; },
         then(resolve: (value: unknown) => unknown, reject: (error: unknown) => unknown) {
           const key = table === "touchline_fantasy_user_gameweek_scores"
-            ? columns === "gameweek_score" ? "scores" : "season"
+            ? columns === "gameweek_score,settlement_status" ? "scores" : "season"
             : ({ touchline_fantasy_configs: "config", touchline_fantasy_gameweeks: "rounds",
               touchline_fantasy_entitlements: "entitlement", touchline_fantasy_user_gameweeks: "userRound",
               touchline_fantasy_user_gameweek_selections: "draft", touchline_fantasy_locked_selections: "locked",
@@ -70,6 +71,7 @@ function scenario(options: Options = {}) {
   };
   const context = {
     process: { env: {} },
+    projectGameweekScoreStatus,
     createAdminClient: () => admin,
     readTouchlineFormationGeometryRegistry: async () => ({}),
     reconcileTouchlineFantasyGameweeks: async () => { events.push("lifecycle"); return { error: options.writerError === "lifecycle" ? "failed" : null, reconciled: 0 }; },

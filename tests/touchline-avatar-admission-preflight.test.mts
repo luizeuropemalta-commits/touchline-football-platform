@@ -9,8 +9,8 @@ test("canonical builder projection proves independent origin, envelope and capab
   assert.equal(result.credentialsRead, false); assert.equal(result.serverStarted, false);
   assert.equal(result.authenticated, false); assert.equal(result.retentionExecutionVerified, false);
   assert.equal(result.hostedEnvelopePresent, true);
-  assert.deepEqual(result.candidate3100.codes, ["local_origin_rejected", "local_environment_rejected", "read_disabled", "upload_disabled", "selection_disabled", "retention_unverified", "configured_actor_invalid", "actor_unverified"]);
-  assert.deepEqual(result.contract3319.codes, result.candidate3100.codes.filter(code => code !== "local_origin_rejected"));
+  assert.deepEqual(result.candidate3100.codes, ["local_environment_rejected", "read_disabled", "upload_disabled", "selection_disabled", "retention_unverified", "configured_actor_invalid", "actor_unverified"]);
+  assert.deepEqual(result.contract3319.codes, result.candidate3100.codes);
   assert.equal(result.candidate3100.configuration, "blocked"); assert.equal(result.contract3319.configuration, "blocked");
 });
 test("CLI executes read-only projection and never echoes inherited secrets or host overrides", () => {

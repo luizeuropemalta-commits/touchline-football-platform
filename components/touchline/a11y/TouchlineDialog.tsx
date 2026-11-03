@@ -295,7 +295,14 @@ export function useTouchlineDialog<T extends HTMLElement = HTMLElement>({
     const focusObserver = new MutationObserver(repairFocusAfterRemoval);
     focusObserver.observe(dialog, { childList: true, subtree: true });
     const focusFrame = window.requestAnimationFrame(() => {
-      if (!dialog.isConnected) return;
+      if (!dialog.isConnected || isCoveredByAnotherDialog()) return;
+      // Native showModal can focus the heading before this frame. If the user
+      // has already tabbed/clicked to another control, do not take that focus
+      // back. Only post-observer movement counts: the browser's initial
+      // autofocus still yields to our deliberate initialFocusRef.
+      const active = document.activeElement;
+      if (active instanceof HTMLElement && active === lastDialogFocusRef.current
+        && active !== dialog && active !== initialFocusRef?.current && dialog.contains(active)) return;
       focusInsideDialog();
     });
 

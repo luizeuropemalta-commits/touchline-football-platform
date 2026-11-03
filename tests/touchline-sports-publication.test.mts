@@ -19,6 +19,7 @@ const P = "player:publication-a";
 const C = "coach:publication-a";
 const scope = "touchline-england";
 const code = (path: string) => stripTypeScriptTypes(readFileSync(new URL(`../${path}`, import.meta.url), "utf8"))
+  .replace(/^export\s+\{[^}]*\}\s+from[^;]*;\s*$/gm, "")
   .replace(/^import\s+[\s\S]*?;\s*$/gm, "").replace(/^export /gm, "");
 
 function data() {
@@ -53,7 +54,7 @@ function data() {
   };
 }
 
-function harness(options: { mutate?: (rows: ReturnType<typeof data>) => void; errorTable?: string; absent?: boolean } = {}) {
+function harness(options: { mutate?: (rows: ReturnType<typeof data>) => void; errorTable?: string; absent?: boolean; noAdmin?: boolean } = {}) {
   const rows = data(); options.mutate?.(rows);
   const reads: Array<{ table: string; filters: Array<[string, unknown]> }> = [];
   const admin = { from(table: string) {
@@ -69,19 +70,29 @@ function harness(options: { mutate?: (rows: ReturnType<typeof data>) => void; er
       } };
     return query;
   } };
-  const globals = { createAdminClient: () => admin, cache: (fn: unknown) => fn,
+  // Emulate request-local memoization only; this does not test React itself.
+  const requestCache = (fn: () => Promise<unknown>) => {
+    let result: Promise<unknown> | undefined;
+    return () => result ??= fn();
+  };
+  const globals = { createAdminClient: () => options.noAdmin ? null : admin, cache: requestCache,
     TOUCHLINE_ENGLAND_LEAGUE_KEY, TOUCHLINE_PRESEASON_RANKING_STATE, parseTouchlineActiveRankingState,
     parsePersistedTouchlinePlayerLeadership, legacyCoachCatalogue, catalogueCoachForId, loadCoachCatalogue: async () => legacyCoachCatalogue() };
-  const player = runInNewContext(`${code("lib/touchlineArena/card-ranking-server.ts")}\nreadTouchlinePlayerRankingSnapshot;`, globals);
-  const coach = runInNewContext(`${code("lib/touchlineArena/coach-ranking-server.ts")}\nreadTouchlineCoachRankingSnapshot;`, globals);
+  const player = runInNewContext(`${code("lib/touchlineArena/card-ranking-snapshot-server.ts")}\nreadTouchlinePlayerRankingSnapshot;`, globals);
+  const coach = runInNewContext(`${code("lib/touchlineArena/coach-ranking-snapshot-server.ts")}\nreadTouchlineCoachRankingSnapshot;`, globals);
   const parseLiveScoreSnapshot = runInNewContext(`${code("lib/football-data/live-score-snapshot-contract.ts")}\nparseLiveScoreSnapshot;`, {
     isOfficialSportmonksFixtureId: (value: unknown) => typeof value === "string" && /^[1-9]\d{0,19}$/.test(value),
   });
-  const read = runInNewContext(`${code("lib/touchlineArena/sports-publication-server.ts")}\nreadTouchlineSportsPublication;`, {
+  const server = runInNewContext(`${code("lib/touchlineArena/sports-publication-server.ts")}\n({ read: readTouchlineSportsPublication, request: loadRequestTouchlineSportsPublication });`, {
     ...globals, readPublishedTouchlineLivePresentationInput, readTouchlinePlayerRankingSnapshot: player,
     readTouchlineCoachRankingSnapshot: coach, parseLiveScoreSnapshot, toPublicTouchlineFixtures, parseTouchlineSportsPublication,
-  }) as typeof import("../lib/touchlineArena/sports-publication-server.ts").readTouchlineSportsPublication;
-  return { rows, reads, read: () => read(admin as never), player: () => player(admin, P), coach: () => coach(admin, C) };
+  }) as { read: typeof import("../lib/touchlineArena/sports-publication-server.ts").readTouchlineSportsPublication;
+    request: typeof import("../lib/touchlineArena/sports-publication-server.ts").loadRequestTouchlineSportsPublication };
+  const publicGlobals = { ...globals, loadRequestTouchlineSportsPublication: server.request,
+    EMPTY_COACH_RANKING: { phase: "unavailable", snapshotId: null, seasonId: null, scoringVersion: null, fixtureIds: [], generatedAt: null, rows: [] } };
+  const publicPlayer = runInNewContext(`${code("lib/touchlineArena/card-ranking-server.ts")}\nloadTouchLineActiveRanking;`, publicGlobals);
+  const publicCoach = runInNewContext(`${code("lib/touchlineArena/coach-ranking-server.ts")}\nloadTouchLineCoachRanking;`, publicGlobals);
+  return { rows, reads, publicPlayer, publicCoach, read: () => server.read(admin as never), player: () => player(admin, P), coach: () => coach(admin, C) };
 }
 
 test("one published pointer pins all five reads and exposes no raw/private fields", async () => {
@@ -165,4 +176,55 @@ test("public route redacts failure and marks every outcome no-store", async () =
     assert.doesNotMatch(await response.text(), /PRIVATE/);
     for (const header of ["Cache-Control", "CDN-Cache-Control", "Vercel-CDN-Cache-Control"]) assert.equal(response.headers.get(header), "no-store");
   }
+});
+
+
+test("SSR player, coach and client publication pin the same envelope instead of newer active pointers", async () => {
+  const h = harness();
+  const [player, coach] = await Promise.all([h.publicPlayer(), h.publicCoach()]);
+  assert.equal(player.snapshotId, P); assert.equal(coach.snapshotId, C);
+  assert.equal(h.reads.length, 5, "both SSR consumers share one request-local envelope");
+  const client = await h.read();
+  assert.deepEqual(JSON.parse(JSON.stringify(player)), JSON.parse(JSON.stringify(client!.playerRanking)));
+  assert.deepEqual(JSON.parse(JSON.stringify(coach)), JSON.parse(JSON.stringify(client!.coachRanking)));
+  assert.ok(h.reads.every(row => !row.table.match(/(?:card|coach)_ranking_active_snapshots/)));
+});
+
+test("publication advancing during SSR cannot mix the coach with the already loaded player", async () => {
+  const h = harness();
+  const player = await h.publicPlayer();
+  h.rows.touchline_live_presentation_snapshots.payload.coachRankingSnapshotId = "coach:newer";
+  h.rows.touchline_coach_ranking_snapshots.snapshot_id = "coach:newer";
+  const coach = await h.publicCoach();
+  assert.equal(player.snapshotId, P); assert.equal(coach.snapshotId, C);
+  assert.equal(h.reads.length, 5);
+});
+
+test("a later request can observe a legitimate rollback and never selects by newest timestamp", async () => {
+  const current = harness({ mutate(rows) {
+    rows.touchline_live_presentation_snapshots.id = id(100);
+    rows.touchline_live_presentation_active_snapshots.snapshot_id = id(100);
+    rows.touchline_live_presentation_snapshots.payload.playerRankingSnapshotId = "player:newer";
+    rows.touchline_card_ranking_snapshots.snapshot_id = "player:newer";
+    rows.touchline_card_ranking_snapshots.ranking_payload.snapshotId = "player:newer";
+    rows.touchline_card_ranking_snapshots.ranking_payload.cardGoals.snapshotId = "player:newer";
+  } });
+  assert.equal((await current.publicPlayer()).snapshotId, "player:newer");
+  const rollback = harness();
+  assert.equal((await rollback.publicPlayer()).snapshotId, P);
+  assert.equal((await rollback.publicCoach()).snapshotId, C);
+});
+
+for (const [label, options] of [
+  ["absent envelope", { absent: true }],
+  ["missing server client", { noAdmin: true }],
+  ["unreadable envelope", { errorTable: "touchline_live_presentation_snapshots" }],
+  ["stale player ID", { mutate(rows: ReturnType<typeof data>) { rows.touchline_card_ranking_snapshots.snapshot_id = "newer-mutable"; } }],
+  ["invalid coach alongside valid player", { mutate(rows: ReturnType<typeof data>) { rows.touchline_coach_ranking_snapshots.ranking_payload[0].touchlinePoints = 999; } }],
+  ["mixed seasons", { mutate(rows: ReturnType<typeof data>) { rows.touchline_coach_ranking_snapshots.season_id = id(51); } }],
+] as const) test(`both SSR loaders reject ${label} without a preseason/zero fallback`, async () => {
+  const h = harness(options);
+  await assert.rejects(h.publicPlayer());
+  await assert.rejects(h.publicCoach());
+  assert.ok(h.reads.every(row => !row.table.match(/(?:card|coach)_ranking_active_snapshots/)));
 });

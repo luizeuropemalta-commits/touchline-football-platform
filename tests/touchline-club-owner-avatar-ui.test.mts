@@ -1,3 +1,5 @@
+import * as avatarInvalidation from "../lib/touchlineArena/clubowner-avatar-invalidation.ts";
+import * as peopleContract from "../lib/touchlineArena/clubowner-public-contract.ts";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
@@ -38,6 +40,8 @@ function copyModule(_drafts = false) { return catalogue; }
 
 test("real header forwards separate dormant selection capabilities without changing recovery identity", () => {
   const header = compile("components/touchline/ClubOwnerMarketHeader.tsx", {
+    "./social/ClubOwnerSearchDialog": { default: () => assert.fail("Discovery stays OFF in avatar capability fixtures") },
+    "@/lib/touchlineArena/clubowner-public-contract": peopleContract,
     // This fixture inspects capability forwarding, not preview interaction.
     react: { useState: (initial: unknown) => [typeof initial === "function" ? initial() : initial, () => {}] },
     "react/jsx-runtime": jsx, "next/image": { default: "img" }, "next/link": { default: "a" },
@@ -113,6 +117,7 @@ function fixture(options: { context?: unknown; locale?: string; missingAuth?: bo
         clearTimer: handle => { identityTimers.delete(handle as number); },
       }),
     },
+    "@/lib/touchlineArena/clubowner-avatar-invalidation": { ...avatarInvalidation, clubOwnerAvatarInvalidation: { publish: () => calls.push("photo-invalidated") } },
     "@/lib/touchlineArena/club-owner-avatar-client": { ...client, createClubOwnerAvatarRecoveryClient: (input: Parameters<typeof client.createClubOwnerAvatarRecoveryClient>[0]) => client.createClubOwnerAvatarRecoveryClient({ ...input,
       now: () => now, scheduleTimeout: callback => { timers.add(callback); return () => { timers.delete(callback); }; } }) },
     "@/lib/touchlineArena/club-owner-avatar-ui-i18n": { ...copyModule(options.drafts), ...options.copy },
@@ -169,13 +174,42 @@ test("C3 real control opens locally, observes only by gesture and requires separ
   h.click("confirm-fence"); await tick();
   assert.deepEqual(JSON.parse(h.requests[1].init.body as string), { action: "fence", generation: "2", expectedActiveOperationId: operation, explicitRecoveryConsent: true });
   assert.equal(h.calls.filter(call => call === "refresh").length, 1); assert.match(text(h.render()), /No photo was uploaded/);
-  assert.equal(nodes(h.render(), "input").length, 0); assert.equal(nodes(h.render(), "dialog")[0].props["aria-modal"], true); h.click("close"); assert.equal(nodes(h.render(), "dialog")[0].props["aria-modal"], undefined); h.unmount();
+  assert.equal(nodes(h.render(), "input").length, 0); assert.equal(nodes(h.render(), "dialog").length, 0, "recovery is inline only after an interrupted operation"); h.unmount();
 });
 
-test("C3 Back only closes; lost fence keeps its exact pair across close and locale changes", async () => {
-  const h = fixture(); h.click("open"); h.click("observe"); await tick(); h.click("prepare-fence"); h.click("close"); assert.equal(h.requests.length, 1);
-  h.click("open"); h.click("prepare-fence"); h.respond(async () => { throw Error("PRIVATE_TRANSPORT"); }); h.click("confirm-fence"); await tick();
-  const original = h.requests[1].init.body; assert.match(text(h.render()), /unconfirmed/); h.click("close"); h.locale("pt-BR"); h.click("open");
+test("C3 recovered committed photo invalidates consumers once; noncommit recovery does not", async () => {
+  for (const status of ["committed", "barrier_applied", "conflict"] as const) {
+    const h = fixture(); h.click("open"); h.click("observe"); await tick(); h.click("prepare-fence");
+    h.respond(async () => Response.json({ ok: true, state: "observed", barrierStatus: status, context: context({
+      revision: status === "committed" ? "1" : "0", avatarUrl: status === "committed" ? `/api/account/avatar?version=${operation}` : null,
+      generation: "3", fencedThroughGeneration: "2", activeOperationId: null, operationId: null, operationState: null,
+    }) }));
+    h.click("confirm-fence"); await tick(); h.render(); h.render();
+    assert.equal(h.calls.filter(call => call === "refresh").length, 1);
+    assert.equal(h.calls.filter(call => call === "photo-invalidated").length, status === "committed" ? 1 : 0);
+    h.unmount();
+  }
+});
+
+test("C3 late recovered commit cannot invalidate photos after identity drift or unmount", async () => {
+  for (const mode of ["identity", "unmount"] as const) {
+    const h = fixture(); h.click("open"); h.click("observe"); await tick(); h.click("prepare-fence");
+    const held = deferred<Response>(); h.respond(() => held.promise); h.click("confirm-fence");
+    if (mode === "identity") h.identity(other); else h.unmount();
+    held.resolve(Response.json({ ok: true, state: "observed", barrierStatus: "committed", context: context({
+      revision: "1", avatarUrl: `/api/account/avatar?version=${operation}`, generation: "3",
+      activeOperationId: null, operationId: null, operationState: null,
+    }) }));
+    await tick();
+    assert.equal(h.calls.filter(call => call === "photo-invalidated" || call === "refresh").length, 0);
+    if (mode !== "unmount") h.unmount();
+  }
+});
+
+test("C3 inline recovery keeps a lost fence's exact pair across renders and locale changes", async () => {
+  const h = fixture(); h.click("open"); h.click("observe"); await tick(); h.click("prepare-fence"); assert.equal(h.requests.length, 1);
+  h.respond(async () => { throw Error("PRIVATE_TRANSPORT"); }); h.click("confirm-fence"); await tick();
+  const original = h.requests[1].init.body; assert.match(text(h.render()), /unconfirmed/); h.render(); h.locale("pt-BR"); h.click("open");
   assert.equal(h.calls.filter(call => call === "auth-client").length, 1); h.click("retry"); await tick();
   assert.equal(h.requests[2].init.body, original); assert.equal(h.calls.filter(call => call === "refresh").length, 0); assert.doesNotMatch(text(h.render()), /PRIVATE_TRANSPORT/); h.unmount();
 });
@@ -200,7 +234,7 @@ test("C3 a late fence acknowledgement after identity change or disposal never re
   for (const mode of ["identity", "dispose"] as const) {
     const h = fixture(); h.click("open"); h.click("observe"); await tick(); h.click("prepare-fence");
     const held = deferred<Response>(); h.respond(() => held.promise); h.click("confirm-fence");
-    h.click("close"); assert.equal(h.requests.length, 2); assert.equal(h.requests[1].init.signal?.aborted, false);
+    h.render(); assert.equal(h.requests.length, 2); assert.equal(h.requests[1].init.signal?.aborted, false);
     if (mode === "identity") h.identity(other); else h.unmount();
     assert.equal(h.requests[1].init.signal?.aborted, true);
     held.resolve(Response.json({ ok: true, state: "observed", barrierStatus: "barrier_applied", context: context({ generation: "3", fencedThroughGeneration: "2", activeOperationId: null, operationId: null, operationState: null }) }));
@@ -224,7 +258,7 @@ test("C3 a request deadline preserves uncertainty and late JSON cannot refresh o
 });
 
 test("C3 real handlers consume every copy key including progress, uncertainty, confirmation and blocked states", async () => {
-  const keys = ["open", "title", "noUpload", "observe", "observing", "fencing", "unobserved", "observed", "unknown", "refreshRequired", "blocked", "prepareFence", "confirmTitle", "confirmBody", "confirmFence", "retry", "close", "off"];
+  const keys = ["observe", "observing", "fencing", "unknown", "refreshRequired", "blocked", "prepareFence", "confirmBody", "confirmFence", "retry"];
   const calls: string[] = [], values = Object.fromEntries(keys.map(key => [key, `marker-${key}`]));
   const copy = { getTouchlineClubOwnerAvatarUiCopy: (locale: string) => { calls.push(locale); return values; } };
   let captured = ""; const capture = (h: ReturnType<typeof fixture>) => { captured += text(h.render()) + nodes(h.render(), "button").map(button => button.props["aria-label"] ?? "").join(" "); };
@@ -244,8 +278,8 @@ test("C3 all eight draft catalogues reach the real UI through an isolated seam; 
   const codes = localeModule.TOUCHLINE_APPROVED_LOCALES.map(item => item.code);
   assert.deepEqual(Object.keys(catalogues), codes); assert.equal(getter("en-GB").title, "Profile photo recovery"); assert.equal(getter("pt-BR").title, "Recuperação da foto do perfil");
   for (const locale of codes) {
-    const h = fixture({ locale, drafts: true }); h.click("open"); assert.ok(text(h.render()).includes(catalogues[locale].title));
-    assert.ok(text(h.render()).includes(catalogues[locale].noUpload)); assert.equal(h.button("observe").props.children, catalogues[locale].observe); h.unmount();
+    const h = fixture({ locale, drafts: true }); h.click("open");
+    assert.equal(nodes(h.render(), "dialog").length, 0); assert.equal(h.button("observe").props.children, catalogues[locale].observe); h.unmount();
     assert.deepEqual(Object.keys(catalogues[locale]), Object.keys(catalogues["en-GB"]));
     for (const value of Object.values(catalogues[locale])) assert.ok(value.trim());
     if (!["en-GB", "pt-BR"].includes(locale)) assert.equal(getter(locale), catalogues["en-GB"]);
@@ -266,11 +300,11 @@ test("C3 pending identity and later drift use neutral session copy without claim
   };
   for (const [locale, message] of Object.entries(expected)) {
     const h = fixture({ locale, drafts: true, delayedAuth: true });
-    assert.equal(text(h.render()).trim(), `EXISTING PORTRAIT ${message}`);
+    assert.equal(text(h.render()).replace(/\s+/g, " ").trim(), `EXISTING PORTRAIT ${message}`);
     assert.equal(h.button("open").props.disabled, true); assert.equal(h.requests.length, 0);
     h.identity(actor); assert.equal(h.button("open").props.disabled, false); assert.ok(!text(h.render()).includes(message));
     assert.equal(h.requests.length, 0);
-    h.identity(other); assert.equal(h.button("open").props.disabled, true); assert.equal(text(h.render()).trim(), `EXISTING PORTRAIT ${message}`);
+    h.identity(other); assert.equal(h.button("open").props.disabled, true); assert.equal(text(h.render()).replace(/\s+/g, " ").trim(), `EXISTING PORTRAIT ${message}`);
     assert.equal(h.requests.length, 0); h.unmount();
   }
 });

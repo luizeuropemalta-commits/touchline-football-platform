@@ -17,6 +17,39 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { hasTouchLineArenaAccess } from "@/lib/touchlineArena/auth-access";
 
+const MAX_REQUEST_BYTES = 260_000;
+
+async function requestBody(request: NextRequest) {
+  const length = request.headers.get("content-length");
+  if (length !== null && (!/^\d{1,12}$/.test(length) || Number(length) > MAX_REQUEST_BYTES)) return null;
+  const reader = request.body?.getReader();
+  if (!reader) return null;
+  let bytes = 0, bodyText = "", complete = false;
+  const decoder = new TextDecoder("utf-8", { fatal: true });
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => { reject(new Error("BODY_TIMEOUT")); void reader.cancel().catch(() => {}); }, 10_000);
+  });
+  try {
+    while (true) {
+      const { value, done } = await Promise.race([reader.read(), deadline]);
+      if (done) { complete = true; break; }
+      bytes += value.byteLength;
+      if (bytes > MAX_REQUEST_BYTES) return null;
+      bodyText += decoder.decode(value, { stream: true });
+    }
+    bodyText += decoder.decode();
+    if (length !== null && bytes !== Number(length)) return null;
+    const parsed: unknown = JSON.parse(bodyText);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed as Record<string, unknown> : null;
+  } catch { return null; }
+  finally {
+    clearTimeout(timer);
+    if (!complete) void reader.cancel().catch(() => {});
+    reader.releaseLock();
+  }
+}
+
 const JOB_KEYS = new Set([
   "annual_full_refresh",
   "final_delta_refresh",
@@ -55,7 +88,7 @@ function importRows(value: unknown): TouchlineMarketValueImportRow[] | null {
 
 function isSameOrigin(request: NextRequest) {
   const origin = request.headers.get("origin");
-  return !origin || origin === request.nextUrl.origin;
+  return origin === request.nextUrl.origin && request.headers.get("sec-fetch-site") !== "cross-site";
 }
 
 function cardEngineSourceType(source: TouchlineMarketValueBatchSource): TouchlineCardEngineBatchSourceType {
@@ -100,99 +133,120 @@ async function createMarketValueReviewBatch(input: Readonly<{
 }
 
 export async function POST(request: NextRequest) {
-  if (!isSameOrigin(request)) return NextResponse.json({ error: "Cross-origin Market Values write blocked." }, { status: 403 });
-  const supabase = await createClient();
-  const admin = createAdminClient();
-  if (!supabase || !admin) return NextResponse.json({ error: "Server market-value administration is not configured." }, { status: 503 });
-
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!hasTouchLineArenaAccess(user) || !isOwnerEmail(user?.email)) {
-    return NextResponse.json({ error: "Owner access required." }, { status: 403 });
-  }
-  const actorUserId = user?.id;
-  if (!actorUserId) return NextResponse.json({ error: "Owner session is unavailable." }, { status: 401 });
-
-  const body = await request.json().catch(() => null) as Record<string, unknown> | null;
-  const rows = importRows(body?.rows);
-  const scope = cleanText(body?.scope);
-  const verifiedSeason = cleanText(body?.verifiedSeason);
-  const jobKey = cleanText(body?.jobKey);
-  const source = cleanText(body?.source);
-  if (!body || !rows || !scope || !SCOPES.has(scope) || !verifiedSeason || !jobKey || !JOB_KEYS.has(jobKey)) {
-    return NextResponse.json({ error: "Invalid import request." }, { status: 400 });
-  }
-  if (source !== "licensed_import" && source !== "manual_approval") {
-    return NextResponse.json({ error: "Only an approved licensed import or manual approval is accepted." }, { status: 400 });
-  }
-
   try {
-    const result = await createMarketValueReviewBatch({
-      admin,
-      scope,
-      verifiedSeason,
-      source: source as TouchlineMarketValueBatchSource,
-      actorUserId,
-      rows,
-      jobKey,
-      competitionId: cleanText(body.competitionId),
-      clubId: cleanText(body.clubId),
-      sourceImportFile: cleanText(body.sourceImportFile),
-    });
-    return NextResponse.json({ ok: true, result, nextAction: "review_in_card_engine" });
-  } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Market Values batch creation failed." }, { status: 409 });
+    if (!isSameOrigin(request)) return NextResponse.json({ error: "Cross-origin Market Values write blocked." }, { status: 403 });
+    if (request.headers.get("content-type")?.split(";", 1)[0].trim().toLowerCase() !== "application/json") return NextResponse.json({ error: "JSON Market Values request required." }, { status: 415 });
+    const supabase = await createClient();
+    if (!supabase) return NextResponse.json({ error: "Server market-value administration is not configured." }, { status: 503 });
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !hasTouchLineArenaAccess(user) || !isOwnerEmail(user?.email)) {
+      return NextResponse.json({ error: "Owner access required." }, { status: 403 });
+    }
+    const actorUserId = user?.id;
+    if (!actorUserId) return NextResponse.json({ error: "Owner session is unavailable." }, { status: 401 });
+
+    const body = await requestBody(request);
+    if (!body) return NextResponse.json({ error: "Invalid or incomplete Market Values request." }, { status: 400 });
+    const admin = createAdminClient();
+    if (!admin) return NextResponse.json({ error: "Server market-value administration is not configured." }, { status: 503 });
+    const rows = importRows(body?.rows);
+    const scope = cleanText(body?.scope);
+    const verifiedSeason = cleanText(body?.verifiedSeason);
+    const jobKey = cleanText(body?.jobKey);
+    const source = cleanText(body?.source);
+    if (!body || !rows || !scope || !SCOPES.has(scope) || !verifiedSeason || !jobKey || !JOB_KEYS.has(jobKey)) {
+      return NextResponse.json({ error: "Invalid import request." }, { status: 400 });
+    }
+    if (source !== "licensed_import" && source !== "manual_approval") {
+      return NextResponse.json({ error: "Only an approved licensed import or manual approval is accepted." }, { status: 400 });
+    }
+
+    try {
+      const result = await createMarketValueReviewBatch({
+        admin,
+        scope,
+        verifiedSeason,
+        source: source as TouchlineMarketValueBatchSource,
+        actorUserId,
+        rows,
+        jobKey,
+        competitionId: cleanText(body.competitionId),
+        clubId: cleanText(body.clubId),
+        sourceImportFile: cleanText(body.sourceImportFile),
+      });
+      return NextResponse.json({ ok: true, result, nextAction: "review_in_card_engine" });
+    } catch {
+      return NextResponse.json({ error: "Market Values batch could not be confirmed. Check the review history before retrying." }, { status: 409 });
+    }
+  } catch {
+    return NextResponse.json({ error: "Market Values command could not be confirmed. Check the review history before retrying." }, { status: 503 });
   }
 }
 
 /** Owner-only queue actions. A queue approval creates a Card Engine review
  * batch; it does not publish or mutate a player Market Value directly. */
 export async function PATCH(request: NextRequest) {
-  if (!isSameOrigin(request)) return NextResponse.json({ error: "Cross-origin Market Values write blocked." }, { status: 403 });
-  const supabase = await createClient();
-  const admin = createAdminClient();
-  if (!supabase || !admin) return NextResponse.json({ error: "Server market-value administration is not configured." }, { status: 503 });
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!hasTouchLineArenaAccess(user) || !isOwnerEmail(user?.email)) return NextResponse.json({ error: "Owner access required." }, { status: 403 });
-  const actorUserId = user?.id;
-  if (!actorUserId) return NextResponse.json({ error: "Owner session is unavailable." }, { status: 401 });
-  const body = await request.json().catch(() => null) as Record<string, unknown> | null;
-  const action = cleanText(body?.action);
-  const itemId = cleanText(body?.itemId);
-  if (!body || !action || !itemId) return NextResponse.json({ error: "A queue action and itemId are required." }, { status: 400 });
+  try {
+    if (!isSameOrigin(request)) return NextResponse.json({ error: "Cross-origin Market Values write blocked." }, { status: 403 });
+    if (request.headers.get("content-type")?.split(";", 1)[0].trim().toLowerCase() !== "application/json") return NextResponse.json({ error: "JSON Market Values request required." }, { status: 415 });
+    const supabase = await createClient();
+    if (!supabase) return NextResponse.json({ error: "Server market-value administration is not configured." }, { status: 503 });
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !hasTouchLineArenaAccess(user) || !isOwnerEmail(user?.email)) return NextResponse.json({ error: "Owner access required." }, { status: 403 });
+    const actorUserId = user?.id;
+    if (!actorUserId) return NextResponse.json({ error: "Owner session is unavailable." }, { status: 401 });
+    const body = await requestBody(request);
+    if (!body) return NextResponse.json({ error: "Invalid or incomplete Market Values request." }, { status: 400 });
+    const admin = createAdminClient();
+    if (!admin) return NextResponse.json({ error: "Server market-value administration is not configured." }, { status: 503 });
+    const action = cleanText(body?.action);
+    const itemId = cleanText(body?.itemId)?.toLowerCase() ?? null;
+    if (!body || !action || !itemId) return NextResponse.json({ error: "A queue action and itemId are required." }, { status: 400 });
 
-  if (action === "reject") {
-    const reason = cleanText(body.reason) ?? "rejected-by-owner";
-    const { error } = await admin.from("football_market_value_import_items").update({ status: "rejected", failure_code: reason }).eq("id", itemId);
-    return error ? NextResponse.json({ error: error.message }, { status: 500 }) : NextResponse.json({ ok: true, status: "rejected" });
-  }
-
-  if (action === "map") {
-    const playerId = cleanText(body.playerId);
-    if (!playerId) return NextResponse.json({ error: "A canonical playerId is required for mapping." }, { status: 400 });
-    const { error } = await admin.from("football_market_value_import_items").update({ player_id: playerId, status: "pending", failure_code: null }).eq("id", itemId);
-    return error ? NextResponse.json({ error: error.message }, { status: 500 }) : NextResponse.json({ ok: true, status: "pending" });
-  }
-
-  if (action === "approve") {
-    const approvedRows = importRows([body.row]);
-    const row = approvedRows?.[0];
-    const verifiedSeason = cleanText(body.verifiedSeason);
-    if (!row || !verifiedSeason) return NextResponse.json({ error: "An approved row and verifiedSeason are required." }, { status: 400 });
-    try {
-      const result = await createMarketValueReviewBatch({
-        admin,
-        scope: "player",
-        verifiedSeason,
-        source: "manual_approval",
-        actorUserId,
-        rows: [row],
-        jobKey: "manual_emergency_player_import",
-        sourceImportFile: `market-value-queue-item-${itemId}`,
-      });
-      return NextResponse.json({ ok: true, status: "card_engine_review_required", result });
-    } catch (error) {
-      return NextResponse.json({ error: error instanceof Error ? error.message : "Market Values review batch creation failed." }, { status: 409 });
+    if (action === "reject") {
+      const reason = cleanText(body.reason) ?? "rejected-by-owner";
+      const { data, error } = await admin.from("football_market_value_import_items").update({ status: "rejected", failure_code: reason }).eq("id", itemId).select("id,status").maybeSingle();
+      if (error) return NextResponse.json({ error: "Market Values update could not be confirmed. Reload before retrying." }, { status: 500 });
+      if (!data) return NextResponse.json({ error: "Market Values queue item was not found. Reload the queue." }, { status: 404 });
+      if (data.id !== itemId || data.status !== "rejected") return NextResponse.json({ error: "Market Values update could not be confirmed. Reload before retrying." }, { status: 503 });
+      return NextResponse.json({ ok: true, status: "rejected" });
     }
+
+    if (action === "map") {
+      const playerId = cleanText(body.playerId)?.toLowerCase() ?? null;
+      if (!playerId) return NextResponse.json({ error: "A canonical playerId is required for mapping." }, { status: 400 });
+      const { data, error } = await admin.from("football_market_value_import_items").update({ player_id: playerId, status: "pending", failure_code: null }).eq("id", itemId).select("id,status,player_id").maybeSingle();
+      if (error) return NextResponse.json({ error: "Market Values update could not be confirmed. Reload before retrying." }, { status: 500 });
+      if (!data) return NextResponse.json({ error: "Market Values queue item was not found. Reload the queue." }, { status: 404 });
+      if (data.id !== itemId || data.status !== "pending" || data.player_id !== playerId) return NextResponse.json({ error: "Market Values update could not be confirmed. Reload before retrying." }, { status: 503 });
+      return NextResponse.json({ ok: true, status: "pending" });
+    }
+
+    if (action === "approve") {
+      const approvedRows = importRows([body.row]);
+      const row = approvedRows?.[0];
+      const verifiedSeason = cleanText(body.verifiedSeason);
+      if (!row || !verifiedSeason) return NextResponse.json({ error: "An approved row and verifiedSeason are required." }, { status: 400 });
+      try {
+        const result = await createMarketValueReviewBatch({
+          admin,
+          scope: "player",
+          verifiedSeason,
+          source: "manual_approval",
+          actorUserId,
+          rows: [row],
+          jobKey: "manual_emergency_player_import",
+          sourceImportFile: `market-value-queue-item-${itemId}`,
+        });
+        return NextResponse.json({ ok: true, status: "card_engine_review_required", result });
+      } catch {
+        return NextResponse.json({ error: "Market Values review batch could not be confirmed. Check the review history before retrying." }, { status: 409 });
+      }
+    }
+    return NextResponse.json({ error: "Unsupported market-value queue action." }, { status: 400 });
+  } catch {
+    return NextResponse.json({ error: "Market Values command could not be confirmed. Check the review history before retrying." }, { status: 503 });
   }
-  return NextResponse.json({ error: "Unsupported market-value queue action." }, { status: 400 });
+
 }

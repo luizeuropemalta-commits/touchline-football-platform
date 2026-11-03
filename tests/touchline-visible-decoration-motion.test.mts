@@ -11,9 +11,10 @@ for (const animationName of ['touchline-card-perimeter-trace', 'ClubOwnerPlanSho
     isConnected = true;
     state = 'paused';
     style = { setProperty: () => { throw new Error('React-owned markup must not be mutated'); }, removeProperty: () => { throw new Error('React-owned markup must not be mutated'); } };
+    closest() { return this; }
     getAnimations() { return [
-      { animationName, play: () => { this.state = 'running'; }, pause: () => { this.state = 'paused'; } },
-      { animationName: 'page-in', play: () => { throw new Error('Content animation must remain untouched'); }, pause: () => { throw new Error('Content animation must remain untouched'); } },
+      { animationName, effect: { target: this }, play: () => { this.state = 'running'; }, pause: () => { this.state = 'paused'; } },
+      { animationName: 'page-in', effect: { target: this }, play: () => { throw new Error('Content animation must remain untouched'); }, pause: () => { throw new Error('Content animation must remain untouched'); } },
     ]; }
     querySelectorAll() { return []; }
     matches() { return true; }

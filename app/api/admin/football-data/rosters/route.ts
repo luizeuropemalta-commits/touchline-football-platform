@@ -34,9 +34,16 @@ async function readRosterCommand(request: NextRequest) {
     if (!reader) throw new Error('INVALID_COMMAND');
     const decoder = new TextDecoder('utf-8', { fatal: true });
     let bytes = 0, text = '', complete = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const deadline = new Promise<never>((_, reject) => {
+        timer = setTimeout(() => {
+            reject(new Error('REQUEST_TIMEOUT'));
+            void reader.cancel().catch(() => {});
+        }, 10_000);
+    });
     try {
         while (true) {
-            const { value, done } = await reader.read();
+            const { value, done } = await Promise.race([reader.read(), deadline]);
             if (done) { complete = true; break; }
             bytes += value.byteLength;
             if (bytes > 4096) throw new Error('BODY_TOO_LARGE');
@@ -46,9 +53,10 @@ async function readRosterCommand(request: NextRequest) {
         if (length !== null && bytes !== Number(length)) throw new Error('INVALID_COMMAND');
         return parseRosterCommand(JSON.parse(text));
     } catch (error) {
-        if (error instanceof Error && error.message === 'BODY_TOO_LARGE') throw error;
+        if (error instanceof Error && ['BODY_TOO_LARGE', 'REQUEST_TIMEOUT'].includes(error.message)) throw error;
         throw new Error('INVALID_COMMAND');
     } finally {
+        clearTimeout(timer);
         if (!complete) void reader.cancel().catch(() => {});
         reader.releaseLock();
     }
@@ -64,7 +72,7 @@ export async function POST(request: NextRequest) {
         try { command = await readRosterCommand(request); }
         catch (error) {
             const code = error instanceof Error ? error.message : 'INVALID_COMMAND';
-            const status = code === 'BODY_TOO_LARGE' ? 413 : code === 'UNSUPPORTED_MEDIA_TYPE' ? 415 : 400;
+            const status = code === 'REQUEST_TIMEOUT' ? 408 : code === 'BODY_TOO_LARGE' ? 413 : code === 'UNSUPPORTED_MEDIA_TYPE' ? 415 : 400;
             return reply({ ok: false, error: status === 400 ? 'INVALID_COMMAND' : code }, status);
         }
         const admin = createAdminClient();

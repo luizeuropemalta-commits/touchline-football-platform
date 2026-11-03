@@ -193,7 +193,7 @@ function clientFixture(owned = false) {
     allocate: () => new Promise<boolean>(resolve => mutations.push({ kind: "allocation", resolve })),
     reload: () => calls.push(["reload", null]), revalidate: () => calls.push(["revalidate", null]),
   };
-  const snapshot = { config: { maxPlayersPerClub: 11 }, formationRegistry: formations, marketAccess: policy };
+  const snapshot = { entitlementActive: true, config: { maxPlayersPerClub: 11 }, formationRegistry: formations, marketAccess: policy };
   const primaryDetails = clubPrimaryPositionIndex([card, { id: "other-defender", primaryPositionDetail: "Centre Back" }]);
   const intentEpoch = { current: 0 };
   const context: Record<string, unknown> = {
@@ -204,7 +204,7 @@ function clientFixture(owned = false) {
     primaryDetails, primaryPositionFitsTacticalSlot,
     TOUCHLINE_ENGLAND_CLUBS_BY_RANK, findTouchLineClub, canBrowseMarketClub, initialSnapshot: snapshot, snapshot, marketPolicy: policy,
     collectionEnabled: true, collectionSlotsEditable: true, collection, marketPage: true,
-    editable: true, saving: false, marketOpen: true, geometry, formationCode: "4-3-3", selectedCoachId: "coach", selections: [],
+    live: null, preferCurrentSquad: false, editable: true, saving: false, marketOpen: true, geometry, formationCode: "4-3-3", selectedCoachId: "coach", selections: [],
     activeSlot: geometry.slots.find(slot => slot.id === "GK"), activeSlotId: "GK",
     eligiblePlayers: [{ playerId, clubId: "club", positionBucket: "goalkeeper", marketValueEur: 10_000_000 }],
     marketBudgetEur: 500_000_000, locale: "en-GB", draftLocalesEnabled: false,
@@ -457,4 +457,50 @@ test("late planned allocation preserves newer intent and uses only the authorita
   assert.equal(h.context.playerClubTeamId, "18");
   assert.equal(h.calls.some(([name]) => name === "setSelections"), false);
   assert.equal(h.mutations.length, 1);
+});
+
+test("closed rejected draft polls and later collection reads keep current placements without enabling mutations", () => {
+  const h = clientFixture(true);
+  h.context.marketOpen = false;
+  h.context.editable = false;
+  const rejected = { qaClubMarketOpen: false, activeGameweek: { id: "round", state: "LIVE" },
+    gameweekScoreStatus: "NO_VALID_LINEUP", userGameweek: { state: "DRAFT", selectedCoachId: "old-coach", formationCode: "4-3-3" },
+    selections: [{ playerId: h.playerId, slotId: "GK" }] };
+  const before = JSON.stringify(h.collection.state);
+  h.api.applyIncomingRound(rejected);
+  assert.equal((h.context.selections as unknown[]).length, 0, "outside player cannot appear in current XI through stale draft");
+  assert.equal(h.context.marketOpen, false);
+  assert.equal(h.context.editable, false);
+  h.collection.state = { ...h.collection.state, revision: h.collection.state.revision + 1,
+    players: h.collection.state.players.map(player => ({ ...player, area: "starters" as const, slot: 0 })) };
+  h.api.applyCollectionSnapshot(h.collection.state);
+  assert.equal((h.context.selections as Array<{ playerId: string }>)[0].playerId, h.playerId, "late confirmed collection read also projects readonly");
+  h.api.applyIncomingRound({ ...rejected, gameweekScoreStatus: "PENDING_SCORE", userGameweek: { ...rejected.userGameweek, state: "LOCKED" }, selections: [] });
+  h.api.applyCollectionSnapshot(h.collection.state);
+  assert.equal((h.context.selections as unknown[]).length, 0, "valid locked authority remains separate");
+  assert.equal(h.mutations.length, 0);
+  assert.equal(JSON.stringify(h.collection.state.players[0].valueEur), "10000000");
+  assert.ok(before.includes('"outside"'));
+});
+
+test("locked round and current collection remain distinct after a closed-window transfer", () => {
+  const h = clientFixture(true);
+  h.context.marketOpen = false; h.context.editable = false;
+  const round = { qaClubMarketOpen: false, activeGameweek: { id: "round", state: "LIVE" },
+    gameweekScoreStatus: "PENDING_SCORE", userGameweek: { state: "LOCKED", selectedCoachId: "historic-coach", formationCode: "4-3-3" },
+    selections: [{ playerId: "transferred-away", slotId: "GK" }] };
+  const original = JSON.stringify(round);
+  h.api.applyIncomingRound(round);
+  assert.equal((h.context.selections as Array<{ playerId: string }>)[0].playerId, "transferred-away");
+  h.context.preferCurrentSquad = true;
+  h.api.applyCollectionSnapshot(h.collection.state, true);
+  assert.equal((h.context.selections as unknown[]).length, 0, "current outside player stays outside, historical player is not reintroduced");
+  h.api.applyIncomingRound(round);
+  assert.equal((h.context.selections as unknown[]).length, 0, "poll preserves chosen current squad authority");
+  h.context.preferCurrentSquad = false;
+  h.api.applyIncomingRound(round);
+  assert.equal((h.context.selections as Array<{ playerId: string }>)[0].playerId, "transferred-away");
+  assert.equal(JSON.stringify(round), original);
+  assert.equal(h.context.editable, false);
+  assert.equal(h.mutations.length, 0);
 });

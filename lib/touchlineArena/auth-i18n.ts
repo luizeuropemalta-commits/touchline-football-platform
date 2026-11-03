@@ -369,3 +369,16 @@ export function touchLineAuthEntryHref(
   if (normalizedReturnTo) destination.searchParams.set("returnTo", normalizedReturnTo);
   return `${destination.pathname}${destination.search}${destination.hash}`;
 }
+
+/** Explicit signup disclosure, separate from experimental login locales. */
+export function getTouchLineDiscoveryRegistrationCopy(locale?: string | null) {
+  return locale === "pt-BR" ? {
+    label: "Nome público do ClubOwner",
+    notice: "Este nome aparecerá na busca de ClubOwners. Seu e-mail e saldo permanecem privados. A foto só será publicada com sua autorização. Você pode ocultar seu perfil nas configurações.",
+    invalid: "Escolha um nome público de 2 a 60 caracteres, sem e-mail.",
+  } : {
+    label: "ClubOwner public name",
+    notice: "This name will appear in ClubOwner search. Your email and balance stay private. Your photo is published only with your permission. You can hide your profile in settings.",
+    invalid: "Choose a public name of 2 to 60 characters, without an email address.",
+  };
+}

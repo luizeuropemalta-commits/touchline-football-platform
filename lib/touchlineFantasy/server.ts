@@ -1,4 +1,7 @@
 import "server-only";
+import { createClubCollectionStore } from "./club-collection-server";
+import { projectGameweekScoreStatus, type GameweekScoreStatus } from "./gameweek-score-status";
+import { readClubOwnerStandingViewsForSeason } from "@/lib/touchlineArena/club-owner-standings-server";
 import { readQaClubMarketOpening } from "./qa-club-market";
 import { resolvePrimaryPositionDetails } from "./club-primary-position-policy";
 import { readClubRelatedSnapshot, type ClubRelatedPlayer } from "./club-round-confirmation";
@@ -126,6 +129,8 @@ export type TouchlineFantasySnapshot = Readonly<{
   playerAvailabilityIndicators?: readonly GameweekPlayerAvailabilityIndicator[] | null;
   formationRegistry: TouchlineFormationGeometryRegistry;
   gameweekScore: number;
+  /** Missing score rows are distinct from a verified zero. Optional for older client snapshots. */
+  gameweekScoreStatus?: GameweekScoreStatus;
   seasonScore: number;
   matchHistory: readonly TouchlineFantasyMatchHistory[];
   gameweekRanking: readonly TouchlineFantasyManagerRank[];
@@ -256,48 +261,59 @@ async function loadCatalogue(admin: NonNullable<ReturnType<typeof createAdminCli
 
 async function loadRankings(
   admin: NonNullable<ReturnType<typeof createAdminClient>>,
-  gameweekId: string,
+  gameweekId: string | null,
   seasonId: string,
   viewerUserId: string,
 ) {
-  const { data: userGameweekData, error: userGameweekError } = await admin
-    .from("touchline_fantasy_user_gameweeks")
-    .select("id,user_id,gameweek_id,touchline_fantasy_gameweeks!inner(season_id)")
-    // Rank only points earned under a competitive plan. A later upgrade must
-    // not turn historical Beta practice points into title points.
-    .in("market_plan_key_snapshot", ["standard", "pro", "master", "vip"])
-    .eq("touchline_fantasy_gameweeks.season_id", seasonId);
-  if (userGameweekError) return { gameweek: [], season: [] };
-  const userGameweeks = rows(userGameweekData);
-  const ids = userGameweeks.map((row) => text(row.id)).filter((id): id is string => Boolean(id));
-  const userIds = [...new Set(userGameweeks.map((row) => text(row.user_id)).filter((id): id is string => Boolean(id)))];
-  if (!ids.length || !userIds.length) return { gameweek: [], season: [] };
-  const [scoresResponse, usersResponse] = await Promise.all([
-    admin.from("touchline_fantasy_user_gameweek_scores").select("user_gameweek_id,gameweek_score,settlement_status").in("user_gameweek_id", ids),
-    admin.from("users").select("id,full_name").in("id", userIds),
+  const [gameweek, season] = await Promise.all([
+    (async () => {
+      if (!gameweekId) return [];
+      // Restrict the round in PostgREST, then page the complete joined rows.
+      // Separate unpaged score/name reads can truncate even a complete ID list.
+      const userGameweeks: Row[] = [];
+      let expectedCount: number | null = null;
+      for (let offset = 0; ; offset += 500) {
+        const result = await admin.from("touchline_fantasy_user_gameweeks")
+          .select("id,user_id,gameweek_id,market_plan_key_snapshot,users(full_name),touchline_fantasy_gameweeks!inner(season_id),touchline_fantasy_user_gameweek_scores(gameweek_score,settlement_status)", { count: "exact" })
+          // A later upgrade never turns historical Beta practice into title points.
+          .in("market_plan_key_snapshot", ["standard", "pro", "master", "vip"])
+          .eq("touchline_fantasy_gameweeks.season_id", seasonId)
+          .eq("gameweek_id", gameweekId)
+          .order("id", { ascending: true }).range(offset, offset + 499);
+        if (result.error || !Array.isArray(result.data) || result.count === null
+          || !Number.isSafeInteger(result.count) || result.count < 0
+          || (expectedCount !== null && result.count !== expectedCount)) return [];
+        expectedCount = result.count;
+        const page = rows(result.data);
+        if (page.length !== result.data.length) return [];
+        userGameweeks.push(...page);
+        if (userGameweeks.length === expectedCount) break;
+        if (page.length !== 500 || userGameweeks.length > expectedCount) return [];
+      }
+      const gameweekValues: Array<{ userId: string; name: string; score: number }> = [];
+      const seenRounds = new Set<string>(), seenUsers = new Set<string>();
+      for (const row of userGameweeks) {
+        const id = text(row.id), userId = text(row.user_id);
+        if (!id || !userId || seenRounds.has(id) || seenUsers.has(userId)
+          || text(row.gameweek_id) !== gameweekId
+          || !["standard", "pro", "master", "vip"].includes(String(row.market_plan_key_snapshot))) return [];
+        seenRounds.add(id); seenUsers.add(userId);
+        const users = rows(Array.isArray(row.users) ? row.users : [row.users]);
+        if (users.length !== 1 || Array.isArray(users[0])) return [];
+        const scoreData = row.touchline_fantasy_user_gameweek_scores;
+        if (scoreData == null || (Array.isArray(scoreData) && scoreData.length === 0)) continue;
+        const scores = rows(Array.isArray(scoreData) ? scoreData : [scoreData]);
+        if (scores.length !== 1 || !["FINAL", "PROVISIONAL"].includes(String(scores[0].settlement_status))) return [];
+        const value = number(scores[0].gameweek_score);
+        if (value === null || value < 0 || !Number.isSafeInteger(Math.round(value * 100))
+          || Math.abs(value * 100 - Math.round(value * 100)) > 0.00001) return [];
+        gameweekValues.push({userId, name: text(users[0].full_name) ?? "TouchLine Manager", score: value});
+      }
+      return rankTouchlineFantasyManagers(gameweekValues, viewerUserId);
+    })(),
+    readClubOwnerStandingViewsForSeason(admin, seasonId, viewerUserId),
   ]);
-  if (scoresResponse.error || usersResponse.error) return { gameweek: [], season: [] };
-  const userByGameweek = new Map(userGameweeks.flatMap((row) => text(row.id) && text(row.user_id) ? [[text(row.id)!, row] as const] : []));
-  const nameByUser = new Map(rows(usersResponse.data).flatMap((row) => text(row.id) ? [[text(row.id)!, text(row.full_name) ?? "TouchLine Manager"] as const] : []));
-  const gameweekValues: Array<{ userId: string; name: string; score: number }> = [];
-  const seasonTotals = new Map<string, number>();
-  for (const score of rows(scoresResponse.data)) {
-    const userGameweek = userByGameweek.get(text(score.user_gameweek_id) ?? "");
-    const userId = text(userGameweek?.user_id);
-    const value = number(score.gameweek_score) ?? 0;
-    if (!userId) continue;
-    if (text(score.settlement_status) === "FINAL") {
-      seasonTotals.set(userId, (seasonTotals.get(userId) ?? 0) + value);
-    }
-    if (text(userGameweek?.gameweek_id) === gameweekId) gameweekValues.push({ userId, name: nameByUser.get(userId) ?? "TouchLine Manager", score: value });
-  }
-  return {
-    gameweek: rankTouchlineFantasyManagers(gameweekValues, viewerUserId),
-    season: rankTouchlineFantasyManagers(
-      [...seasonTotals].map(([userId, score]) => ({ userId, name: nameByUser.get(userId) ?? "TouchLine Manager", score })),
-      viewerUserId,
-    ),
-  };
+  return { gameweek, season: season.status === "ready" ? season.viewerRanking : [] };
 }
 
 async function loadCoaches(admin: NonNullable<ReturnType<typeof createAdminClient>>) {
@@ -474,7 +490,7 @@ async function loadFantasySnapshotCore(user: User, projection: "full" | "arena",
         gameweeks: [], activeGameweek: null, userGameweek: null,
         selections: [], catalogue: [], coaches: [], lineupAlerts: [],
         matchCardIndicators: [], playerAvailabilityIndicators: [], formationRegistry: await formationRegistryRead,
-        gameweekScore: 0, seasonScore: 0, matchHistory: [], gameweekRanking: [], seasonRanking: [],
+        gameweekScore: 0, gameweekScoreStatus: "NO_GAMEWEEK", seasonScore: 0, matchHistory: [], gameweekRanking: [], seasonRanking: [],
       };
     }
     const now = Date.now();
@@ -497,7 +513,7 @@ async function loadFantasySnapshotCore(user: User, projection: "full" | "arena",
       activeGameweek
         ? admin.from("touchline_fantasy_user_gameweeks")
           .select("id,formation_code,selected_coach_id,locked_coach_id,state,total_market_value_eur,carry_source_user_gameweek_id"
-            + (process.env.TOUCHLINE_CLUB_COLLECTION_ENABLED === "true" ? ",collection_related_snapshot" : ""))
+            + (process.env.TOUCHLINE_CLUB_COLLECTION_ENABLED === "true" ? ",collection_related_snapshot,automatic_lineup_version" : ""))
           .eq("user_id", user.id)
           .eq("gameweek_id", activeGameweek.id)
           .maybeSingle()
@@ -507,7 +523,7 @@ async function loadFantasySnapshotCore(user: User, projection: "full" | "arena",
       catalogueRead,
       coachesRead,
       userGameweekRead,
-      projection === "full" && activeGameweek ? loadRankings(admin, activeGameweek.id, seasonId, user.id) : Promise.resolve({ gameweek: [], season: [] }),
+      projection === "full" ? loadRankings(admin, activeGameweek?.id ?? null, seasonId, user.id) : Promise.resolve({ gameweek: [], season: [] }),
     ]);
     const readSquadDetails = async () => {
       const userGameweekResponse = await userGameweekRead;
@@ -522,16 +538,23 @@ async function loadFantasySnapshotCore(user: User, projection: "full" | "arena",
       timing?.mark("selections");
       const [{ selections, historyData }, scoreResponse, seasonScoresResponse, alertsResponse] = await Promise.all([
           userGameweekId ? (async () => {
-            const [draftResponse, lockedResponse] = await Promise.all([
+            const [draftResponse, lockedResponse, effectiveResponse] = await Promise.all([
               admin.from("touchline_fantasy_user_gameweek_selections").select("player_id,slot_id").eq("user_gameweek_id", userGameweekId),
               admin.from("touchline_fantasy_locked_selections").select("player_id,slot_id").eq("user_gameweek_id", userGameweekId),
+              userGameweekRow?.automatic_lineup_version === 1
+                ? admin.from("touchline_club_effective_selections").select("player_id,slot_id").eq("user_gameweek_id", userGameweekId)
+                : Promise.resolve({ data: [], error: null }),
             ]);
             // Never fall back to a draft when the locked XI could not be read.
-            if (draftResponse.error || lockedResponse.error
+            if (draftResponse.error || lockedResponse.error || effectiveResponse.error
               || !Array.isArray(draftResponse.data) || !Array.isArray(lockedResponse.data)) {
               throw new Error("TOUCHLINE_LINEUP_READ_UNAVAILABLE");
             }
-            const selectionRows = rows(lockedResponse.data).length ? rows(lockedResponse.data) : rows(draftResponse.data);
+            const effectiveRows = rows(effectiveResponse.data);
+            if (effectiveRows.length && (effectiveRows.length !== 11 || new Set(effectiveRows.map(row => row.player_id)).size !== 11)) {
+              throw new Error("TOUCHLINE_EFFECTIVE_LINEUP_READ_UNAVAILABLE");
+            }
+            const selectionRows = effectiveRows.length ? effectiveRows : rows(lockedResponse.data).length ? rows(lockedResponse.data) : rows(draftResponse.data);
             const selections = selectionRows.flatMap((row): TouchlineFantasySelectionView[] => {
               const playerId = text(row.player_id);
               const slotId = text(row.slot_id);
@@ -548,12 +571,15 @@ async function loadFantasySnapshotCore(user: User, projection: "full" | "arena",
               : { data: [] };
             return { selections, historyData };
           })() : Promise.resolve({ selections: [], historyData: [] }),
-          projection === "full" && userGameweekId ? admin.from("touchline_fantasy_user_gameweek_scores").select("gameweek_score").eq("user_gameweek_id", userGameweekId).maybeSingle() : Promise.resolve({ data: null, error: null }),
+          projection === "full" && userGameweekId ? admin.from("touchline_fantasy_user_gameweek_scores").select("gameweek_score,settlement_status").eq("user_gameweek_id", userGameweekId).maybeSingle() : Promise.resolve({ data: null, error: null }),
           // Season history belongs to the account, not to the existence of this
           // round's draft. A new round must never make earned points disappear.
           projection === "full" ? admin.from("touchline_fantasy_user_gameweek_scores").select("gameweek_score,settlement_status,touchline_fantasy_user_gameweeks!inner(user_id,touchline_fantasy_gameweeks!inner(season_id))")
             .eq("touchline_fantasy_user_gameweeks.user_id", user.id)
-            .eq("touchline_fantasy_user_gameweeks.touchline_fantasy_gameweeks.season_id", seasonId) : Promise.resolve({ data: [], error: null }),
+            .eq("touchline_fantasy_user_gameweeks.touchline_fantasy_gameweeks.season_id", seasonId)
+            // Match the competitive season ranking: upgrades never convert
+            // historical Beta practice into paid-plan season points.
+            .in("touchline_fantasy_user_gameweeks.market_plan_key_snapshot", ["standard", "pro", "master", "vip"]) : Promise.resolve({ data: [], error: null }),
           projection === "full" && userGameweekId ? admin.from("touchline_fantasy_lineup_alerts")
             .select("player_id,fixture_id,state,was_editable_at_detection,detected_at")
             .eq("user_gameweek_id", userGameweekId)
@@ -593,10 +619,22 @@ async function loadFantasySnapshotCore(user: User, projection: "full" | "arena",
     // These enrichments depend on the same confirmed XI/catalogue, not on each
     // other. All lifecycle writers and required reads above remain settled first.
     // Arena must not acquire the full page's match-card or QA-market dependencies.
+    const readOwnedAvailability = async () => {
+      if (!activeGameweek) return [];
+      let playerIds = selections.map(selection => selection.playerId);
+      if (process.env.TOUCHLINE_CLUB_COLLECTION_ENABLED === "true") {
+        try {
+          const collection = await createClubCollectionStore(admin).read(user.id, seasonId);
+          playerIds = [...new Set([...playerIds, ...(collection?.players.map(player => player.playerId) ?? [])])];
+        } catch {
+          // Unknown ownership cannot be presented as a healthy empty roster.
+          return null;
+        }
+      }
+      return readGameweekPlayerAvailability(admin, seasonId, activeGameweek.id, playerIds, catalogue);
+    };
     const [playerAvailabilityIndicators, matchCardIndicators, qaClubMarketOpen] = await Promise.all([
-      activeGameweek
-        ? readGameweekPlayerAvailability(admin, seasonId, activeGameweek.id,
-          selections.map(selection => selection.playerId), catalogue) : Promise.resolve([]),
+      readOwnedAvailability(),
       projection === "full" && activeGameweek && ["LOCKED", "LIVE", "FINAL", "SETTLED"].includes(activeGameweek.state)
         ? readGameweekMatchCardIndicators(admin, seasonId, activeGameweek.id,
           selections.map(selection => selection.playerId), catalogue) : Promise.resolve([]),
@@ -657,6 +695,11 @@ async function loadFantasySnapshotCore(user: User, projection: "full" | "arena",
       playerAvailabilityIndicators,
       formationRegistry: await formationRegistryRead,
       gameweekScore: number((scoreResponse.data as Row | null)?.gameweek_score) ?? 0,
+      gameweekScoreStatus: projectGameweekScoreStatus({
+        gameweekState: activeGameweek?.state ?? null,
+        userGameweekState: userGameweek?.state ?? null,
+        scoreRow: scoreResponse.data as Row | null,
+      }),
       seasonScore: rows(seasonScoresResponse.data)
         .filter((row) => text(row.settlement_status) === "FINAL")
         .reduce((sum, row) => sum + (number(row.gameweek_score) ?? 0), 0),

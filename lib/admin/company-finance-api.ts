@@ -42,7 +42,7 @@ export function companyReplayMatches(stored:Record<string,unknown>,proposed:Reco
 }
 
 export async function readCompanyJson(request:Request,timeoutMs=10000){
- if(!request.headers.get("content-type")?.toLowerCase().startsWith("application/json"))return null;
+ if(request.headers.get("content-type")?.split(";",1)[0].trim().toLowerCase()!=="application/json")return null;
  const size=Number(request.headers.get("content-length"));if(Number.isFinite(size)&&size>12000)return null;
  if(!request.body)return null;const reader=request.body.getReader(),chunks:Uint8Array[]=[];let length=0;
  let timer:ReturnType<typeof setTimeout>|undefined;

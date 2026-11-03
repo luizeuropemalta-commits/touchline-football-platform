@@ -10,7 +10,7 @@ test("Market Value Admin bounds auth and all protected reads without demo data",
   assert.match(source, /const MARKET_VALUE_ADMIN_READ_TIMEOUT_MS = 8_000/);
   assert.match(
     source,
-    /resolveServerReadWithin\(\s*supabase\.auth\.getUser\(\)\.then\(\(\{ data \}\) => data\.user\),\s*null,\s*MARKET_VALUE_ADMIN_READ_TIMEOUT_MS/,
+    /resolveServerReadWithin\(\s*supabase\.auth\.getUser\(\)\.then\(\(\{ data, error \}\) => error \? null : data\.user\),\s*null,\s*MARKET_VALUE_ADMIN_READ_TIMEOUT_MS/,
   );
   assert.equal(
     source.match(/resolveServerReadWithin\(/g)?.length,

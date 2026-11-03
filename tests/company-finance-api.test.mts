@@ -18,14 +18,14 @@ test("command injects actor and rejects invalid dates and future/unconfirmed pay
  assert.equal(core.companyReplayMatches({id,name:"x",created_at:"extra"},{id,name:"x"}),true);assert.equal(core.companyReplayMatches({id,name:"x"},{id,name:"y"}),false);
 });
 /* eslint-disable @typescript-eslint/no-explicit-any */
-function harness(options:{auth?:boolean;authError?:boolean;schemaError?:boolean;rows?:Record<string,unknown>[];existing?:Record<string,unknown>}={}){
- let reads=0,inserts=0,rpcs=0;const stored:Record<string,unknown>|undefined=options.existing;let proposed:Record<string,unknown>={};
- const builder:any={select:()=>builder,returns:()=>builder,eq:()=>builder,order:()=>builder,range:async()=>({data:options.rows??[],error:options.schemaError?{code:"42P01"}:null}),maybeSingle:async()=>{reads++;return{data:stored??null,error:options.schemaError?{code:"42P01"}:null};},insert:(row:Record<string,unknown>)=>{inserts++;proposed=row;return builder;},single:async()=>({data:proposed,error:null})};
+function harness(options:{auth?:boolean;authError?:boolean;schemaError?:boolean;receipt?:unknown;rows?:Record<string,unknown>[];existing?:Record<string,unknown>}={}){
+ let reads=0,inserts=0,rpcs=0;const orders:{column:string;options:Record<string,unknown>}[]=[];const stored:Record<string,unknown>|undefined=options.existing;let proposed:Record<string,unknown>={};
+ const builder:any={select:()=>builder,returns:()=>builder,eq:()=>builder,order:(column:string,options:Record<string,unknown>)=>{orders.push({column,options});return builder;},range:async()=>({data:options.rows??[],error:options.schemaError?{code:"42P01"}:null}),maybeSingle:async()=>{reads++;return{data:stored??null,error:options.schemaError?{code:"42P01"}:null};},insert:(row:Record<string,unknown>)=>{inserts++;proposed=row;return builder;},single:async()=>({data:Object.hasOwn(options,"receipt")?options.receipt:proposed,error:null})};
  class Response{body: any;init:any;constructor(body:any,init:any){this.body=body;this.init=init;}static json(body:any,init:any){return new Response(body,init);}}
- const deps:any={"next/server":{NextResponse:Response},"@/lib/admin/owner":{isOwnerEmail:()=>options.auth!==false},"@/lib/touchlineArena/auth-access":{hasTouchLineArenaAccess:()=>options.auth!==false},"@/lib/supabase/server":{createClient:async()=>({auth:{getUser:async()=>({data:{user:{id:actor,email:"owner@example.test"}},error:options.authError?{}:null})}})},"@/lib/supabase/admin":{createAdminClient:()=>({from:()=>builder,rpc:async()=>{rpcs++;return{data:{id},error:null};}})},"@/lib/admin/company-finance-api":core};
+ const deps:any={"next/server":{NextResponse:Response},"@/lib/admin/owner":{isOwnerEmail:()=>options.auth!==false},"@/lib/touchlineArena/auth-access":{hasTouchLineArenaAccess:()=>options.auth!==false},"@/lib/supabase/server":{createClient:async()=>({auth:{getUser:async()=>({data:{user:{id:actor,email:"owner@example.test"}},error:options.authError?{}:null})}})},"@/lib/supabase/admin":{createAdminClient:()=>({from:()=>builder,rpc:async()=>{rpcs++;return{data:Object.hasOwn(options,"receipt")?options.receipt:{id},error:null};}})},"@/lib/admin/company-finance-api":core};
  const exports:any={};vm.runInNewContext(ts.transpileModule(readFileSync(new URL("../app/api/admin/company-finance/route.ts",import.meta.url),"utf8"),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText,{exports,Date,TextEncoder,require:(name:string)=>{assert.ok(Object.hasOwn(deps,name),name);return deps[name];}});
- const req=(body=command,origin="https://qa.test",query="")=>({nextUrl:new URL(`https://qa.test/api${query}`),headers:new Headers({origin,"content-type":"application/json"}),body:new Request("https://qa.test",{method:"POST",body:JSON.stringify(body)}).body});
- return{...exports,req,counts:()=>({reads,inserts,rpcs}),proposed:()=>proposed};
+ const req=(body:unknown=command,origin="https://qa.test",query="")=>({nextUrl:new URL(`https://qa.test/api${query}`),headers:new Headers({origin,"content-type":"application/json"}),body:new Request("https://qa.test",{method:"POST",body:JSON.stringify(body)}).body});
+ return{...exports,req,counts:()=>({reads,inserts,rpcs}),proposed:()=>proposed,orders};
 }
 test("routes reject unauthorised or errored session before database and cross-origin before mutation",async()=>{
  for(const options of [{auth:false},{authError:true}]){const h=harness(options);assert.equal((await h.POST(h.req())).init.status,403);assert.equal((await h.GET(h.req())).init.status,403);assert.deepEqual(h.counts(),{reads:0,inserts:0,rpcs:0});}
@@ -50,4 +50,22 @@ test("settlement history projects correction object or array and rejects malform
  assert.equal(result.init.status,200);assert.equal(result.body.rows[0].correction_id,correction&&(!Array.isArray(correction)||correction.length)?id:null);assert.ok(!('correction' in result.body.rows[0]));
  }
  for(const correction of [[{id,reason:'one'},{id,reason:'two'}],{id,reason:123}]){const h=harness({rows:[{id,correction}]});assert.equal((await h.GET(h.req(command,'https://qa.test','?kind=settlements'))).init.status,503);}
+});
+
+test("company lists use financial dates and supplier names with deterministic ties",async()=>{
+ for(const [kind,column] of [["suppliers","name"],["contracts","starts_on"],["obligations","issued_on"],["settlements","paid_on"]]){
+  const h=harness(); assert.equal((await h.GET(h.req(command,"https://qa.test",`?kind=${kind}`))).init.status,200);
+  assert.deepEqual(JSON.parse(JSON.stringify(h.orders)),[{column,options:{ascending:kind==="suppliers",nullsFirst:false}},{column:"id",options:{ascending:true}}]);
+ }
+});
+
+test("company writes never confirm missing or mismatched persistence receipts",async()=>{
+ const settlement={kind:"settlements",requestId:id,fields:{obligation_id:id,amount:"1",unit_exponent:2,currency:"EUR",paid_on:"2026-01-01",source:"MANUAL",source_reference:"bank confirmed"}};
+ for(const input of [command,settlement]){
+  const expected=core.parseCompanyCommand(input,actor,"2026-11-02").row;
+  for(const receipt of [null,[],{}, {...expected,id:actor},{...expected,...(input.kind==="suppliers"?{name:"wrong"}:{amount_minor:101})}]){
+   const h=harness({receipt});const response=await h.POST(h.req(input));assert.equal(response.init.status,503);assert.deepEqual(JSON.parse(JSON.stringify(response.body)),{error:"RECORD_NOT_CONFIRMED"});
+  }
+  const h=harness({receipt:{...expected,created_at:"2026-11-02"}});const response=await h.POST(h.req(input));assert.equal(response.init.status,input.kind==="suppliers"?201:200);assert.equal(response.body.record.id,id);
+ }
 });

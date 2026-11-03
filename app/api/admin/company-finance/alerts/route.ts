@@ -13,7 +13,7 @@ export async function GET(request:NextRequest){try{
  const page=Number(raw),admin=createAdminClient();if(!admin)return reply({error:"UNAVAILABLE"},503);
  const query=admin.from("touchline_company_admin_alerts").select("*").order("created_at",{ascending:false}).order("id",{ascending:true});
  if(request.nextUrl.searchParams.get("unread")==="true")query.is("read_at",null);
- const result=await query.range(page*50,page*50+50);if(result.error)return reply({error:"UNAVAILABLE"},503);
+ const result=await query.range(page*50,page*50+50);if(result.error||!Array.isArray(result.data))return reply({error:"UNAVAILABLE"},503);
  return reply({alerts:result.data?.slice(0,50)??[],hasNext:(result.data?.length??0)>50});
 }catch{return reply({error:"UNAVAILABLE"},503);}}
 export async function POST(request:NextRequest){try{

@@ -1,6 +1,8 @@
+import { parsePublicOwnerProfile, publicOwnerId, type PublicOwnerPlanKey } from "./clubowner-public-contract.ts";
 /** Public projection: database account identifiers never cross this boundary. */
 export type ClubOwnerStanding = Readonly<{
   rank: number; name: string; touchlinePoints: number;
+  publicPhoto?: { publicId: string; displayName: string; planKey: PublicOwnerPlanKey | null };
 }>;
 export function clubOwnerStandingsNote(locale: string): string {
   const copy: Record<string, string> = {
@@ -15,6 +17,12 @@ export function clubOwnerStandingsNote(locale: string): string {
   };
   return copy[locale] ?? copy["en-GB"];
 }
+export type ClubOwnerPersonalStanding = Readonly<{
+  rank: number; name: string; score: number; isCurrentManager: boolean;
+}>;
+export type ClubOwnerStandingViews = Readonly<{
+  rows: ClubOwnerStanding[]; viewerRanking: ClubOwnerPersonalStanding[];
+}>;
 type RecordValue = Record<string, unknown>;
 function record(value: unknown): RecordValue | null {
   return value && typeof value === "object" && !Array.isArray(value) ? value as RecordValue : null;
@@ -25,7 +33,10 @@ function joined(value: unknown): RecordValue | null {
 /** Existing competitive enrollment is user_gameweeks with a paid plan snapshot.
  * Missing scores mean no settled points yet; provisional scores never count.
  * Corrupt or duplicate inputs fail closed instead of publishing partial ranks. */
-export function projectClubOwnerStandings(input: readonly unknown[], registrations: readonly unknown[] = [], now = Date.now()): ClubOwnerStanding[] | null {
+function rankClubOwnerEntries(
+  input: readonly unknown[], registrations: readonly unknown[] = [],
+  now = Date.now(),
+): Array<{ accountId: string; rank: number; name: string; touchlinePoints: number }> | null {
   const totals = new Map<string, { name: string; cents: number }>();
   for (const value of registrations) {
     const row = record(value);
@@ -74,8 +85,50 @@ export function projectClubOwnerStandings(input: readonly unknown[], registratio
   }
   const sorted = [...totals].sort(([a, x], [b, y]) => y.cents - x.cents || x.name.localeCompare(y.name) || a.localeCompare(b));
   let rank = 0;
-  return sorted.map(([, row], index) => {
+  return sorted.map(([userId, row], index) => {
     if (index === 0 || row.cents !== sorted[index - 1][1].cents) rank = index + 1;
-    return { rank, name: row.name, touchlinePoints: row.cents / 100 };
+    return { accountId: userId, rank, name: row.name, touchlinePoints: row.cents / 100 };
+  });
+}
+
+/** Internal identity index. Only server-side consumers may join this with opt-in profiles. */
+export function projectClubOwnerStandingIndex(input: readonly unknown[], registrations: readonly unknown[] = [], now = Date.now()) {
+  return rankClubOwnerEntries(input, registrations, now)?.map(({ accountId, rank }) => ({ accountId, rank })) ?? null;
+}
+export function projectClubOwnerStandingViews(
+  input: readonly unknown[], registrations: readonly unknown[] = [], now = Date.now(), viewerUserId: string | null = null,
+): ClubOwnerStandingViews | null {
+  const ranked = rankClubOwnerEntries(input, registrations, now);
+  if (!ranked) return null;
+  // Explicit projections prevent an internal account identifier from escaping.
+  return {
+    rows: ranked.map(({ rank, name, touchlinePoints }) => ({ rank, name, touchlinePoints })),
+    viewerRanking: ranked.map(({ rank, name, touchlinePoints, accountId }) =>
+      ({ rank, name, score: touchlinePoints, isCurrentManager: viewerUserId !== null && accountId === viewerUserId })),
+  };
+}
+
+/** Keep the existing public contract unchanged. */
+export function projectClubOwnerStandings(input: readonly unknown[], registrations: readonly unknown[] = [], now = Date.now()): ClubOwnerStanding[] | null {
+  return projectClubOwnerStandingViews(input, registrations, now)?.rows ?? null;
+}
+
+/** Join by private identity only in server memory; whitelist every serialized field. */
+export function projectClubOwnerPublicPhotos(rows: readonly ClubOwnerStanding[], index: readonly { accountId: string; rank: number }[], candidates: unknown): ClubOwnerStanding[] {
+  if (!Array.isArray(candidates) || candidates.length > 10_000 || rows.length !== index.length) throw Error("INVALID_PUBLIC_PHOTO_JOIN");
+  const profiles = new Map<string, NonNullable<ReturnType<typeof parsePublicOwnerProfile>>>();
+  const ids = new Set<string>();
+  for (const candidate of candidates) {
+    if (!candidate || !publicOwnerId(candidate.accountId)) throw Error("INVALID_PUBLIC_PHOTO_JOIN");
+    const profile = parsePublicOwnerProfile(candidate);
+    if (!profile || profiles.has(candidate.accountId.toLowerCase()) || ids.has(profile.publicId.toLowerCase())) throw Error("INVALID_PUBLIC_PHOTO_JOIN");
+    profiles.set(candidate.accountId.toLowerCase(), profile); ids.add(profile.publicId.toLowerCase());
+  }
+  return rows.map((row, position) => {
+    const identity = index[position];
+    if (identity.rank !== row.rank || !publicOwnerId(identity.accountId)) throw Error("INVALID_PUBLIC_PHOTO_JOIN");
+    const profile = profiles.get(identity.accountId.toLowerCase());
+    return { rank: row.rank, name: row.name, touchlinePoints: row.touchlinePoints,
+      ...(profile ? { publicPhoto: { publicId: profile.publicId, displayName: profile.displayName, planKey: profile.planKey ?? null } } : {}) };
   });
 }

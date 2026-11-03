@@ -1,3 +1,79 @@
+## 2026-11-03 — Candidata QA consolidada; publicação autorizada, ainda pendente
+
+- Verificação visual integrada concluída antes do commit: conta QA real pela composição local autorizada, foto carregada no perfil e no ranking; clique abre UUID público correto; `/clubowners` redireciona ao ClubOwner canônico; zero botões locais EN/PT; desktop 1280 e telefone landscape 844 sem overflow horizontal. Prioridades 1/2/3 observadas para os três CB fora da partida. Evidências em outputs do chat de continuidade. Não é prova de Safari/iPhone nativo nem da futura publicação.
+SUPERSEDE apenas os estados anteriores de foto bloqueada, retenção sem agendamento e escalação dependente de confirmação. Este checkpoint não afirma deploy nem encerra o backlog histórico de aparelhos/dados oficiais.
+
+- Missão RELEASE: foto do ClubOwner no ranking e navegação pelo retrato; seletor nativo com envio direto; remoção do portal redundante e dos seletores de idioma locais; XI persistente com inscrição automática no fechamento; substituição por banco da mesma posição, depois fora dos 20, segundo prioridade configurável da mesma posição. Preservados os ajustes de mercado, saldo e moldura de plano da candidata revisada.
+- Fonte: worktree Git registrada `/Users/luizlopez/Developer/touchline-qa-release-20261103`, base `47ebfffbbda98cbb89bcd3ad08fb19efd1e50694`; destino único `refs/heads/qa`. WIP original em `qa-stripe-release-20261029` preservado. A worktree de publicação foi movida de Documents para Developer para evitar materialização iCloud durante os gates.
+- Autoridade: usuário pediu resolver pendências, habilitar fotos e executar deploy; um build Git nativo QA autorizado. Orçamento 1 / consumido 0 neste checkpoint. Production/main, DNS, cobrança e credenciais de Production não alterados.
+- Exclusões: migração de handles rejeitada pela revisão automática por escopo; respectivas UI/RPC/validações removidas da candidata. Backfill de todos os perfis públicos, comando atômico extra de inventário e decimais de pós-temporada também fora desta publicação. Consentimento existente de publicação/foto preservado, inclusive ao editar perfil oculto. Identidade e links continuam por UUID público.
+- Gates locais: TypeScript e ESLint globais exit 0 (12 avisos, zero erros). Suíte release final: 7867 testes, 7769 PASS, zero FAIL/cancelados, 98 opt-ins não executados pela execução padrão; 13 suites, 431775.97425 ms. Logs `/private/tmp/touchline-release-{types,lint,suite}-20261103.log`. A suíte padrão exclui os replays documentais/privados que o runner canônico não publica; não é aceite de todo o backlog externo.
+- Provas adicionais: regressões de privacidade/primeiro acesso 53/53; pontuação/copy 47/47; matriz de perfil 4/4, incluindo 24 fluxos nos três motores Chromium/WebKit/Firefox e larguras 390/768/1280/1440; primeiro acesso 1/1. Testes isolados de upload direto em Chromium e WebKit passaram separadamente. Cenários sintéticos não representam conta remota ou Safari móvel nativo. Reserva de disco de 2 GiB foi selecionada somente na matriz local; CI mantém sua política original.
+- Build local: exit 0, Next 16.2.11, compilação 26.9 s, TypeScript 14.4 s, 136/136 páginas. Perfil local de 1 worker e heap configurado 1536 MiB; cache Webpack desativado somente nesse perfil local. Build/configuração hospedados preservados. Log `/private/tmp/touchline-release-build-20261103.log`.
+- Banco QA `xgxbwqxjssxxuihuwmgy`: migrations `club_automatic_lineup_and_position_reserves` (remote `20261103032458`) e `touchline_avatar_retention_scheduler_qa` (`20261103032641`) aplicadas e verificadas. Política automática somente para deadlines posteriores a `2026-11-03T03:24:58.592727Z`; nenhum replay retroativo de rodadas. SQL validado com seis cenários de inscrição offline, snapshot imutável, posições, aparições, correção e isolamento de elenco inválido.
+- Retenção: cron QA job 9 ativo a cada cinco minutos; últimas respostas HTTP 200 processadas às 06:00, 06:05 e 06:10 UTC. Adapter autenticado por segredo próprio no Vault, worker original conserva verify_jwt. Nenhum segredo em fonte/manifesto. Flags de foto conferidas exclusivamente em Preview/qa; habilitação explícita do usuário preservada.
+- Revisão independente: GO técnico, nenhum P0/P1 aberto após remover dependências de handles e restaurar consentimento. Manifesto explícito sem credenciais, caches, dependências ou `.env`. SHA final limpo, verificação visual integrada e smoke remoto ainda precisam ser registrados após conclusão.
+- Rollback web preparado: atribuir apenas o alias QA ao deployment READY `dpl_APvEmDEoWaThLWxw2N5M9k6a66fd` / `touchline-arena-official-9kdmfsh1l-fifa-agent-plataform.vercel.app` (base 47ebfff); sem novo build e sem alias Production. Banco é aditivo; interromper novas inscrições via política futura preservando snapshots e histórico se houver incidente. Não executar limpeza/remoção de dados como rollback.
+- Próximos gates: inspecionar UI real, congelar manifesto/commit limpo, confirmar ausência de build duplicado, um push normal HEAD:qa; aguardar CI e READY do SHA exato, conferir alias, smoke público/autenticado disponível e logs. Lacunas nativas/dispositivos e sincronização histórica permanecem separadas e explícitas.
+
+## 2026-11-02 — Recuperação material dos arquivos da candidata
+
+- Identificada causa concreta de leituras vazias: arquivos iCloud `dataless`, inclusive SQL QA 010/011 e imagens. Recuperação individual solicitada sem sobrescrever WIP; leitura integral de 1389 arquivos verificada com zero divergências de tamanho. Evidências: /private/tmp/touchline-materialization-verification.log e /private/tmp/touchline-materialization-failures.json.
+- Reexecução após recuperação: reconciliação de elenco + outbox social 25 PASS / 0 FAIL / 0 SKIP (/private/tmp/touchline-sql-materialized.log); entrega de artes 4 PASS / 0 FAIL (/private/tmp/touchline-assets-after-materialization.log). Não somar aos totais amplos.
+- Suíte ampla anterior encerrada: 7825 testes, 7609 PASS, 115 FAIL, 3 cancelados, 98 SKIP. Log /private/tmp/touchline-release-consolidated-20261102-final.log. A recuperação acima resolve casos comprovados, não converte toda a suíte em verde; demais falhas precisam revalidação.
+- Disco disponível após materialização: 2.7 GiB. Não executar cargas concorrentes pesadas nem apagar material de trabalho para contornar limitação.
+- Sem novo deploy. Validação visual, revisão de standings, agendamento da retenção e demais gates permanecem abertos.
+
+## 2026-11-02 — Foto real confirmada; consolidação atual
+
+Esta entrada supera apenas estados antigos de foto bloqueada e servidor local ativo; não aprova lançamento.
+
+- Foto QA: duas imagens fornecidas pelo usuário foram gravadas em sequência. Revisão 2 permanece ativa; objeto antigo respondeu HTTP 400 com código interno 404/NoSuchKey; imagem atual respondeu HTTP 200 image/webp, 59318 bytes. Execução manual de retenção comprovada; agendamento automático ainda NÃO ativado.
+- Corrigido tratamento de metadata pública: HTTP 200 com perfil ausente ou identidade divergente indica indisponibilidade, não ausência de foto. Revisão independente: 4 PASS; conjunto avatar/ranking/visibility/client: 12 PASS (sobreposto, não somar).
+- Ajustado texto do seletor de foto para seleção disponível; 19 testes UI PASS. Verificação visual deste ajuste e propagação entre perfil, busca e ranking continuam pendentes.
+- TypeScript global atual: exit 0 em /private/tmp/touchline-photo-consolidated-ts1536.log. Tentativa anterior com heap artificial de 1024 MiB falhou por OOM; não é um PASS nem defeito de tipos.
+- Candidata localhost:3100 PARADA pelo monitor após pressão crítica de memória. Build anterior não inclui os últimos ajustes. Não marcar servidor disponível sem nova comprovação.
+- Suíte oficial iniciada em /private/tmp/touchline-release-consolidated-20261102-final.log; resultado pendente. Perfil público ainda exige integração de rank/pontos, em execução separada.
+- Zero novos builds Vercel nesta etapa. Production e cobranças reais não tocadas. Permanecem gates de integração publicada, iPhone físico e demais itens do backlog integral.
+
+## 2026-11-02 — Build consolidado local aprovado; validação operacional ainda aberta
+
+Atualização documental do lote atual, **não é aprovação de release nem deploy**. Supersede somente as afirmações anteriores de build pendente e Arena ainda não observada na candidata recompilada; demais pendências e histórico permanecem.
+
+- **Build local consolidado: PASS, exit 0**, confirmado pelo coordenador. Log inspecionado: `/tmp/touchline-build-memory1536-20261102.log`; compilação em 58 s, TypeScript em 21,5 s e geração de 136/136 páginas com 1 worker. Next 16.2.11/webpack registrou `cpus: 1` e `webpackMemoryOptimizations`. Probe de inicialização: heap V8 1728 MiB e RSS 44 MiB para old-space configurado em 1536 MiB; não representam o pico ou teto de RSS do build. Perfil: `artifacts/local-build-memory-profile-20261102/receipt.json`.
+- **Candidata local servida em modo production do Next**, em `http://localhost:3100`, sessão `61689`, conforme coordenador. Esse modo de execução local não significa publicação em Production. Worktree `qa-stripe-release-20261029`, HEAD `47ebfffbbda98cbb89bcd3ad08fb19efd1e50694`, com WIP preservado; não é um SHA novo de release limpo.
+- **Arena observada no Safari nativo pelo coordenador:** campo ampliado, cards e coroa carregados. É evidência visual pontual desta candidata; estabilidade prolongada, gesto de pinça e aparelhos móveis reais continuam sem comprovação nesta etapa.
+- **Foto continua BLOQUEADA na QA:** ownership/permissões do schema `auth` impedem concluir o caminho real. Upload e substituição reais não foram comprovados; ponte local e testes não tornam esse item verde.
+- **Pendências mantidas:** aplicar/verificar migrations e gates somente no alvo autorizado, concluir validações integradas e delivery real de notificações, conferir telas/fluxos após eventual publicação e validar estabilidade em aparelhos. Resultado do build não substitui suíte ampla, testes opt-in pendentes, autorização ou revisão da versão publicada; não somar execuções focadas aos totais históricos.
+- **Nenhum novo deploy neste registro.** Production, pagamentos reais e configurações remotas não foram alterados. O monitor continua interrompendo pressão crítica de memória; o PASS do build não autoriza desativá-lo.
+- **Próximo passo:** continuar a verificação funcional da candidata local e consolidar pendências por evidência; publicar apenas após o gate de release aplicável. Não declarar “só falta deploy” enquanto bloqueios operacionais permanecem.
+
+## 2026-11-02 — Tres prioridades e auditoria de pre-lancamento
+
+Estado comprovado; nao e aprovacao de lancamento. Historico abaixo preservado.
+
+- Arena: 42 testes locais passaram; tamanho/estabilidade ainda requerem conferência nativa da versão recompilada e iPhone físico.
+- Premios: Ball e Boot independentes no componente canonico; teste de dupla lideranca e revogacao passou. Gros 60,65 e Haaland 60,16 sao lideres distintos no exemplo enviado.
+- Foto: BLOQUEADA na QA por permissoes do role touchline_avatar_writer no schema auth. Ponte privada preparada/testada localmente; aplicacao remota exige proprietario/autorizacao de role que postgres hospedado nao possui. Nao houve upload/substituicao real comprovados.
+- Admin editorial: 61 PASS; temporada normalizada, POST invalido rejeitado antes de auth, SSR auth.error/throw bloqueia admin. Recibo artifacts/admin-editorial-audit-20261102/receipt.json.
+- Mobile: corrigida reativacao de animacoes fora da tela por observadores concorrentes; RED/GREEN Chromium/WebKit. Nao comprova corrigir crash de pinch no iPhone.
+- Ultima suite ampla: 7699 total, 7596 PASS / 6 FAIL / 97 SKIP. Reexecucao focada das falhas: 9 PASS; nao substitui suite ampla nem somar totais.
+- Build anterior passou; recompilacao consolidada apos ultimos patches pendente. Safari local autenticado VIP recuperado; build servido ainda anterior a patches finais.
+- Nenhum novo build Vercel. Production e pagamentos reais intocados.
+- Proxima etapa: build consolidado e verificacao nativa, seguir auditoria por pagina. Pendencias bloqueadas ficam abertas, nunca verdes por inferencia.
+
+## 2026-11-01 — Fechamento da suíte serial e adaptação isolada do harness
+
+Atualização de evidência; preserva histórico e backlog integral. Não é aprovação de lançamento.
+
+- Suíte serial final: **7567 testes, 7474 PASS / 3 FAIL / 90 SKIP**; `artifacts/local-card-integrity-20261031/consolidated-suite-serial-20261101.log`. Não declarar suíte global verde e não somar testes focados a esse total.
+- As três falhas foram no harness `tests/touchline-read-snapshot-independent-formation.test.mts`: mock sem `.range()` e sem a nova dependência de standings. Ajuste exclusivo desse teste adiciona filtros/paginação esperados e dependências; nenhuma mudança de produto posterior à suíte. Os nove corpos de teste e as assertivas de ordenação, autorização e ausência de escrita permanecem intactos. Revisão independente sem achados.
+- Reexecução apenas desse arquivo: **9 PASS / 0 FAIL / 0 SKIP**; `artifacts/local-card-integrity-20261031/snapshot-formation-harness-20261101.log`. É comprovação focada da correção do harness, não substitui o resultado histórico da suíte completa.
+- TypeScript global: **exit 0**. ESLint global: **exit 0, 0 erros e 10 avisos**. Logs `consolidated-typecheck-20261101.log` e `consolidated-lint-20261101.log`, no mesmo diretório de artefatos.
+- Build local final **em execução** (sessão36128, conforme coordenador); `consolidated-build-20261101.log`. Resultado ainda não aprovado neste registro.
+- **Zero novos builds Vercel/deploys neste lote**. Production e cobranças reais não alteradas. QA operacional, opt-ins e aparelhos mantêm suas pendências próprias.
+- Plano dos opt-ins e executor serial permanecem preparados, sem execução nesta atualização: `artifacts/release-gap-validation-20261031/SKIP_EXECUTION_PLAN_20261101.json` e `run-skip-plan.mjs`. Snapshot foi amendado somente para o teste acima, com arquivo anterior e recibo preservados; não habilitar todos os opt-ins globalmente.
+
 ### 2026-10-27 — QA b5775031 failed CI; previous QA preserved
 
 Supersedes the pending-publication entry below. One authorized Git-native build was consumed: dpl_s3kj7PhNBZt9rwMkcq1LcfBcYsBs ERROR. CI 40491648878: 6939 total, 6873 PASS, 1 FAIL, 65 opt-in SKIP. Failure: isolated frame-density test extracted the real error handler but omitted its new setFailedFrameUrl closure dependency. Stable QA alias still resolves to dpl_6QdczpKTobSjdVHPHWbgtd1t5HEf (0b2ed346); no alias rollback needed, no Production changes.
@@ -6979,3 +7055,388 @@ Com autorizacao explicita do proprietario, enviada resposta em portugues pelo Gm
 - TypeScript, lint (zero erros, dez avisos), build de producao local, governanca, entradas Vercel, readiness estatico e diffcheck: exit 0.
 - Manifesto explicito: 176 arquivos. Revisao fiscal independente sem P0/P1 novo. QA remota permanece 41dd82154616f33f827ec1e4997164a2f90064f2; nenhum build ativo na verificacao previa.
 - Autorizado um push Git para qa; Production e Stripe real excluidos. Rollback web: dpl_D45QV9VzszxkdGCFrJpLHzXwyPTi. Depois do READY, comprovar alias, telas e operacoes; pendencias continuam externas ao produto.
+
+## 2026-10-31 — Retomada da integridade de cards, EM ANDAMENTO
+Candidata 47ebfffb em qa-stripe-release-20261029; WIP antigo qa-final-20261027 preservado. QA xgxbwqxjssxxuihuwmgy somente leitura: 658 publicações,118 com vínculo inativo/divergente;112 sem ativo,6 com único ativo compatível. Omar continua versão2 com vínculo antigo. Inbox ignorava divergência se editorial completo. Delta local inclui esses candidatos ativos e alerta; helper coberto por2 testes/6cenários. TypeScript global e lint focado passaram antes dos ajustes da revisão independente. Revisor identificou formulário sem chave por jogador; corrigido, ainda falta teste de alternância. Nenhuma escrita remota/deploy/Production. Fila sem vínculos ativos, reconciliação, renderização e demais frentes permanecem pendentes. Disco chegou a101MiB livres e falhou gravação: removido somente cache regenerável .next/cache/webpack desta candidata (3.4GiB); nenhum documento, dado ou fonte removido.
+
+## 2026-10-31 — Evidência incremental de integridade
+
+- VERDE LOCAL: classificador de vínculo antigo/ausente/ambíguo/divergente; 34 testes relacionados sem falhas/skips.
+- VERDE LOCAL (comportamento isolado Chromium): alerta de publicação renderizado e alternância entre dois jogadores não reutiliza campos do primeiro; envio interceptado confirma ID e nome do segundo. Um teste de navegador PASS. Não prova integração hospedada nem aprovação visual global.
+- Revisão independente levou à chave por jogador no formulário e mensagem sem afirmar vínculo único quando há ambiguidade.
+- PENDENTE: fila dos112 sem vínculo ativo; comando de reconciliação sem edição editorial; classificação/fonte dos6 candidatos ativos; QA/persistência/consumidores e demais frentes. Nenhum dado remoto alterado; nenhum deploy.
+- Arquivos: card-publication-integrity.ts, card-publication-integrity.test.mts, card-publication-inbox-browser.test.mts, manual-card-editorial/page.tsx e card-engine-inbox.tsx, na candidata qa-stripe-release-20261029 (base47ebfffb).
+
+## 2026-10-31 — Reconciliação de publicação, verificação local em andamento
+
+- Ação protegida `reconcile-publication` revalida somente publicação existente publicada. Reusa o RPC transacional; ignora todos os campos editoriais do cliente e envia patch vazio. Valor de mercado aprovado e overrides são preservados; tier/metadados derivados podem ser atualizados pela regra existente.
+- Inbox mostra divergência mesmo com campos completos; publicações sem associação ativa dentro do catálogo PL carregado ficam visíveis e sem edição liberada. Não equivale a classificar todos os112 registros históricos identificados no banco. Erro de consulta de vínculos mostra indisponibilidade, nunca falsa ausência.
+- Formulário reinicia ao trocar jogador. Seleção/filtro bloqueados durante gravação e resultado limpo ao trocar jogador, evitando mensagem de sucesso no atleta errado.
+- VERDE LOCAL:36 testes focados (incluindo2 de execução da rota com limites de auth/banco simulados);26 testes SSR da página, incluindo vínculo antigo/ausente/publicação não publicada/falha de leitura. Browser Chromium isolado passou antes do último ajuste de bloqueio da seleção; repetir esse caso. TypeScript/lint em consolidação.
+- Revisão independente:sem P0/P1 no comando; recomendações de nome do botão, publicação existente e seleção durante request incorporadas. Sem prova SQL nova de rollback/idempotência, sem correção de dados remotos e sem deploy.
+- Suíte ampla canônica em andamento; identificou dependência nova ausente no harness SSR (corrigida e26PASS) e falhas de navegador/ambiente ainda por separar. Nenhum PASS integral.
+- Safari retornou janela da QA sem conteúdo AX e captura vazia:inspeção visual hospedada não comprovada. Continuar tarefas independentes sem afirmar que a tela foi validada.
+
+## 2026-10-31 — Consolidacao local e bloqueio de rodada QA
+
+- VERDE LOCAL: TypeScript global e ESLint focado exit0; ultimo browser isolado de publicacao PASS1; SSR26PASS e testes focados36PASS. Revisao independente sem novo defeito concreto.
+- Suite ampla:7535 casos,7414PASS,31FAIL,90SKIP. Sete falhas eram harness SSR corrigido; demais falhas de navegador/recursos. Reexecucao dos arquivos afetados, serial com reserva local1GiB e excecao de memoria apenas local:82PASS,zeroFAIL/skip,exit0. Nao somar contagens nem declarar nova suite integral limpa;90 condicionais continuam sem cobertura nesta rodada. Logs em artifacts/local-card-integrity-20261031.
+- VERDE QA (servidor, nao tela): identificada abertura de mercado de teste enabled=true enquanto calendario LIVE. Desativada somente para season1e83121b-b778-459b-b9a0-7cf1eaff5729 em xgxbwqxjssxxuihuwmgy, com guard touchline_assert_qa_fixture_target e lock_timeout5s. Readback enabled=false/effective_open=false. Motivo e updated_at gravados no controle existente. Nao houve deploy.
+- Prova remota com rollback: duas colecoes das contas CUSTOMER QA; comando de formacao com revisao atual chama a funcao real touchline_club_commit_allocation. Ambas rejeitaram CLUB_MARKET_CLOSED; hashes dos estados permaneceram iguais (checked2,preservedtrue). Nenhum saldo/elenco/contrato alterado. Falta exercicio de mouse e cache da interface.
+- Reversao tecnica da configuracao: habilitar o mesmo controle somente se uma nova sessao de testes explicitamente exigir abertura artificial; nao reabrir para simular cliente. Calendario normal deve governar a QA.
+- PENDENTE: build atual, teste SQL de publicacao, validacao UI hospedada, demais frentes do backlog. Omar ainda nao foi republicado. Production NAO TOCADA.
+
+## 2026-10-31 — Provas finais deste lote (nao encerra backlog)
+
+- VERDE LOCAL: build Next16.2.11 webpack exit0 (executor direto do binario instalado; pnpm tentou auto-install sem TTY e foi descartado, sem reinstalar dependencias). ESLint global zero erros/10avisos existentes. Governanca, Vercel-input11docs, readiness estatico e diffcheck PASS. Readiness e checklist local, nao aprovacao de lancamento.
+- VERDE QA SQL: transacao de teste da revalidacao do Omar com rollback: primeira chamada sincroniza; segunda nao sincroniza nem incrementa auditoria; valor aprovado e todos overrides preservados; associacao resultante ativa/compativel. Apos rollback, leitura confirma publicacao original versao2/vinculo antigo. Nao houve republicacao persistente.
+- VERDE QA SQL: via real touchline_club_save_lineup para ambas as contas CUSTOMER, selecoes derivadas de seus titulares e geometria publicada: TL_FANTASY_GAMEWEEK_LOCKED em ambas; estados preservados; rollback. Complementa prova de alocacao. Revisao independente confirma que desligar bypass existente basta, sem nova trava de codigo.
+- Vercel: conector403 para equipe; fallback CLI autenticado funcionou. Metadata Preview/qa confirma TOUCHLINE_CLUB_RELEASE_ENABLED ja cadastrado (nao afirmar ausencia). Valores nao verificados; nao houve alteracao de env. Flags de avatar e coach lifecycle nao aparecem nessa listagem branch qa; verificar heranca Preview antes de afirmar configuracao efetiva.
+- Safari segue retornando janela ClubOwner privada sem conteudo acessivel; sem PASS visual hospedado. Gates de UI, iPhone, notificacoes/foto, pontuacao integral, Exchange e administracao permanecem abertos conforme backlog completo.
+- Build remoto consumido neste lote:0. Nenhum push/deploy. Production/Stripe real nao tocados.
+
+## Conferencia dos premios simultaneos — 2026-10-31
+
+- Codigo atual renderiza Bola de Ouro e Chuteira de Ouro independentemente, lado a lado quando ambas elegiveis. Nao ha exclusao mutua no componente compartilhado.
+- Reexecutados quatro arquivos focados: 17 PASS, 0 FAIL, 0 SKIP (apresentacao, lideranca, alinhamento e area segura do zoom). Nao e prova visual publicada.
+- SELECT na QA xgxbwqxjssxxuihuwmgy: snapshot ativo player-rating-v4:1e83121b-b778-459b-b9a0-7cf1eaff5729:8e46d087, gerado 2026-10-27 08:59:02.476Z; decisao unique-leader para Erling Haaland a1e3b920-4b73-4588-bd08-ff19e70a74fc, totalRating 60.16. Registro antigo, nao prova pontuacao atual.
+- Estado persistido da Chuteira: unavailable, CANONICAL_UNAVAILABLE, snapshot_id nulo. Investigar produtor, fonte canonica e consumidor antes de conceder premio; nao atribuir manualmente.
+- Causa da ausencia historica da Bola na tela ainda nao comprovada. Ambos os premios no site publicado continuam PENDENTES.
+- Neste lote: somente leituras QA e testes locais; sem alteracao de premios/pontos, sem deploy e Production intocada.
+
+## Atualizacao comprovada — 2026-10-31, sincronizacao e Omar
+
+- SUPERSEDED: a inferencia anterior sobre touchline_golden_boot_state. O card atual usa cardGoals da publicacao compartilhada; a tabela antiga nao comprova a causa da ausencia do premio.
+- QA: publicacao compartilhada aponta player-ranking c39d0ddc, gerado em 25/10, lider Pascal 60.65. Ponteiro ativo do ranking aponta 8e46d087 de 27/10, lider Haaland 60.16. A diferenca entre snapshots explica a divergencia dos premios; nao alterar lider manualmente.
+- Sincronizacao executa, mas fecha a publicacao por lineup-identity-pending e atribuicao de treinador pendente. Revisao independente confirma preservacao correta dos pontos: reserva sem playerId impede assumir ausencia de jogadores conhecidos.
+- Partida isolada: 499756e3-cedc-43cc-8131-5c2eac95ea69 / Sportmonks 19722185, Sunderland x Fulham, Full Time. Feed consultado 2026-10-31 15:07:05.773Z contem linha oficial 14674515841 sem playerId, teamId 11, reserva sem estatisticas. Nao associar por nome nem remover a linha para liberar pontos.
+- Omar: executada reconciliacao transacional QA pelo RPC existente touchline_apply_card_editorial_review, overrides vazios, identidade/admin/alvo QA verificados. Publicacao versao 3, published, membership 43956f66-ece6-4a1a-ba93-b3fe806465b0. Valor editorial e overrides comparados antes/depois e preservados. Substitui pendencia de versao 2; validacao dos consumidores visuais permanece PENDENTE.
+- Nenhum deploy novo, nenhum ponto/saldo alterado manualmente, Production intocada. Demais itens do backlog permanecem abertos conforme evidencias.
+
+### Diagnostico de identidade — candidata local
+
+- Acrescentado playerLineupIdentityIssues ao registro privado da sincronizacao: partida interna/fornecedor, jogador afetado, IDs da linha/clube do fornecedor e horario da fonte. Preserva bloqueios e nao altera pontuacao.
+- Admin agora consulta somente a projecao desse diagnostico, mostra explicacao em PT/EN e IDs numericos de partidas deduplicados. Nao expoe erro bruto nem jogador afetado.
+- Verificacoes: estatisticas 66 PASS; sincronizacao/pos-jogo/endpoint 87 PASS; admin SSR 8 PASS; checks admin 6 PASS (ha sobreposicao, nao somar). TypeScript e lint dos arquivos alterados exit0; diff check limpo. Revisor independente nao encontrou defeito concreto no delta.
+- Reserva sem ID pertence a jogo de 30/08/2026; ultima consulta em 31/10 15:07UTC corresponde ao intervalo diario previsto para partidas antigas. Ausencia de nova consulta nas seis horas seguintes nao prova falha de agendamento.
+- Matriz de navegadores em execucao; primeiro lancamento bloqueado pelo sandbox (MachPortRendezvousServer Permission denied), repeticao autorizada fora do sandbox. Sem PASS visual publicado.
+- Safari nativo ainda retorna imagem vazia e AX sem conteudo web. Nao inferir causa de pagina ou aprovar UI. Nenhum novo deploy.
+
+- Resultado da matriz local do diagnostico: 54 cenarios, Chromium/WebKit/Firefox, PT/EN, larguras 390/844/1280, estados vazio/populado/erro; 1 teste PASS, 0 FAIL, 0 SKIP. Detalhes abertos por clique e partida visivel. Captura WebKit 390 PT inspecionada visualmente; evidencias copiadas em artifacts/local-card-integrity-20261031/admin-diagnostics-visual. Nao representa iPhone fisico ou QA publicada.
+- Novo delta passou TypeScript, lint e revisao independente. Build/suite completa precisam ser repetidos para a candidata final; nao reutilizar o build anterior como aprovacao destas novas alteracoes.
+
+## Reconciliacao da fila anterior ao deploy — 31/10/2026
+
+Lista original de sexta-feira 30/10 localizada em outputs/qa-partial-20261030/PENDENCIAS.md e pending.json: 14 frentes. Todas mapeadas, sem declarar nenhuma concluida por inferencia. Detalhes recuperados: retencao de fotos503/OFF historico; lifecycle/atribuicao de treinadores e flagOFF historico; beneficio OpenAI API nao verificado/conectado; novoBeta na virada e isencao dos35 ainda por fechar. Mapa completo: /Users/luizlopez/Documents/Codex/2026-09-05/touchline-prompt-formalizer/worktrees/qa-stripe-release-20261029/docs/touchline/final-product-completion/RECONCILIACAO_PREDEPLOY_2026-10-30.md. Esse mapa complementa, nao substitui, o backlog integral.
+
+## 2026-10-31 — Auditoria da automacao de transferencias
+
+- Direcao autorizada: mudanca oficial de clube deve propagar automaticamente para cadastro, publicacao do card e consumidores, preservando identidade, historico, contratos e valores editoriais aprovados. Nao usar inferencia de IA como fonte de fatos esportivos.
+- Evidencia local: `roster-reconciliation-server.ts` permite ao ator cron somente capture; `touchline_roster_action` exige decisoes approve antes de apply; o instalador `supabase/qa/touchline_roster_reconciliation_scheduler.sql` instala pausado e captura apenas. Isso NAO constitui automacao completa de transferencia. Estado remoto do agendamento nao foi consultado neste lote.
+- O executor atomico atualiza vinculos e preserva os anteriores como inativos; nao chama a republicacao editorial do card. Portanto capturar, aplicar e republicar precisam de um fluxo integrado comprovado, nao apenas habilitar uma flag.
+- VERDE LOCAL delimitado: 30 testes PASS, 0 FAIL, 0 SKIP de orquestracao, completude, rotas e SQL atomico, com PGlite instalado. Evidencia: artifacts/local-card-integrity-20261031/roster-automation-audit-verified.log. Primeira chamada sem variavel do runtime teve 23 PASS/2 FAIL de configuracao; corrigida a execucao, sem alterar testes ou produto.
+- PENDENTE: politica automatica restrita a identidades oficiais inequivocas; aplicacao e republicacao com recibos duraveis/retentativas; novos jogadores sem valor aprovado continuam identificados como pendencia editorial, nunca recebem valor inventado; divergencias preservam ultima publicacao valida e exibem diagnostico no admin. Testar transferencia, repeticao, falha intermediaria, concorrencia editorial e todos consumidores na QA.
+- Escopo deste lote: auditoria e testes locais; nenhum codigo de produto alterado, nenhuma escrita remota, nenhum commit/deploy ou pagamento. Nao encerra a auditoria final nem o backlog integral.
+
+## 2026-10-31 — Consolidacao local e verificacoes operacionais (em andamento)
+
+- Cron de elenco: corrigido falso sucesso ao reusar recibo failed. Agora review retorna200, collecting202 com pending, e failed/resultado ausente503 ROSTER_NOT_CONFIRMED. Dez testes de rota/runtime PASS, semskip; revisao independente sem novo achado. Nao altera capture-only nem habilita aplicacao automatica.
+- Fotos/notificacoes: diagnostico aceita audiencia customers; falhas temporarias de preferencias nao simulam logout nem repetem gravacao incerta. 170testes focados e94outros de entrega/avatarpublico PASS (grupos distintos). Nova correcao de foco do dialogo nao rouba Tab/clique ocorrido antes do RAF;9testes de acessibilidade e navegador Chromium/WebKit passaram. Revisao independente final em andamento.
+- Transparencia: Chromium comprovou blur por pixels. WebKit local nao rasteriza backdrop blur nem no controle minimo; CSS experimental revertido. PASS de teclado/fluxo WebKit nao e PASS de fundo fume no Safari/iPhone.
+- Admin: ordenacao estavel por data+ID em documentos/financeiro; STALE nao aparece como loteprocessado. Busca/follow encerram leitura de corpo travado antes de qualquerRPC. 34SQL,10handler e30cenariosbrowser passaram; consulte AGENT_SOCIAL_ADMIN_2026-10-31.md.
+- Opt-ins antes nao executados: arquivos de rescisao, Exchange, contratacao/XI e journalChromium executados; seis adicionais XI tambemPASS. Dois casos journalWebKit barrados pela pressao de memoria seguem abertos. Nao somar execucoes/cenarios aninhados; recibos porarquivo/engine em artifacts/release-gap-validation-20261031. Inventario dos90SKIP:89browseropt-in+1Swift; nao considerar todos aprovados.
+- Vercel somenteleitura: listagens Previewgeral e Preview/qa nao contem flags deavatar. release=true configurado em Preview/qa; Exchange sensivel nao expoe valor. Isso NAO comprova valor efetivo da versao publicada nem operacao funcional.
+- QA somenteleitura: Edge retencaoACTIVEv5/verifyJWTtrue; nenhum jobavatar identificado noscron, nenhuma operacao/recibo/retencaoscan recente que prove fluxo. Avatarsegue nao habilitado. Rosterpolicyenabled=false/applyenabled=false; snapshots0, semcronroster. Automacao integral permanecependente.
+- SegurancaQA: cincofuncoes com grantsanon excessivos e triggersearch_pathmutavel documentados. Corpos usam auth.uid e triggernao e invocavelcomoRPC; nenhum bypass comprovado. Nao revogar cegamente: RLSusers chama current_agency_id. Relatorio AGENT_QA_FUNCTION_SECURITY_AUDIT_2026-10-31.md; nenhuma migracao aplicada.
+- Recurso local: havia429MiBdisco; removido SOMENTE .next/cache/webpack gerado desta candidata (semarquivosabertos identificados), recuperando1.8GiB. Fontes, sessoes e evidencias preservadas. Erro anterior do revisor automatico foi NoSpace/lock, nao rejeicao por risco; nova execucao autorizada de navegador funcionou.
+- Screenshot do proprietario mostra BadRequest dentro do Codex. Causa nao confirmada; nao e evidencia de defeito TouchLine nem de perda de dados. Ferramentas e agentes responderam nesta etapa.
+- Build anterior nao aprova fontes finais. TypeScript consolidado em execucao; suite completa/lint/build ainda por fechar. Zero novos buildsremotos, sempush/commit/deploy/Production/liveStripe neste lote de consolidacao.
+
+## 2026-11-01 — Continuidade, diagnóstico de fotos e prova de proposta QA
+
+- O aviso Bad Request foi capturado dentro do Codex. A imagem não estabelece causa nem perda de arquivos; ferramentas e fontes continuaram acessíveis.
+- Checkpoint WIP: artifacts/local-card-integrity-20261031/checkpoint-before-ranking-20261101, 53 arquivos selecionados, zip de conteúdo e hashes. Não é commit nem aprovação de release.
+- Suíte consolidada inicial: 7449 PASS / 9 FAIL / 90 SKIP. Reexecução ampla posterior: 7451 PASS / 7 FAIL / 90 SKIP. Não somar totais. O teste de troféus tinha baseline anterior à medição responsiva; corrigido e comprovado em Chromium/WebKit. A segunda execução expôs fixtures SQL usando current_date local contra regra de fechamento UTC; três testes corrigidos para data UTC e aprovados serialmente em Europe/Malta: calendar4, Beta2, QAopening3. Swap interrompido por reserva transitória de disco; reexecução serial1PASS. A suíte ampla não foi declarada verde por essas execuções focadas. Os90 condicionais continuam delimitados por SKIP_COVERAGE_CURRENT.md (23 arquivos com execução/hash correspondentes,1recibo semhash,66semprova exata; dependências não abrangidas por esse cruzamento).
+- TypeScript consolidado e lint global anteriores ao novo lote: exit0; lint0erros/10avisos. Build das fontes finais ainda pendente. Fonte de header/ranking agora liberada para corrigir divergência comprovada de posição, mantendo critérios de pontuação.
+- Safari nativo recuperou AX e comprovou conta CUSTOMER QA2 Standard,35jogadores+treinador. Mercado fechado impediu substituições e liberação; isso não prova rescisão funcional quando aberto. Listagem EthanPinnock e envio de proposta a VirgilvanDijk foram executados pela UI. Proposta94b7b46d-45f0-4456-b354-4346a5bc4c72 está PENDING, sem aceite/recibo e sem alteração dos saldos. Detalhes e baseline em QA_SAFARI_EXCHANGE_2026-11-01.md. Não reenviar proposta; retomar o aceite na VIP. Mac voltou a bloquear, impedindo continuar essa UI; demais tarefas seguiram.
+- Pontuação QA2:41,19PROVISIONAL da rodada e0,00na temporada correspondem ao critério existente FINAL-only. O header legado diverge da tabela de ranking em participantes comzero e empates; correção local em andamento, sem alterar dados. Social no banco QA permanece disabled, zero perfis; não confundir ausência de posição com problema na soma.
+- Edge fotos: publicado somente diagnóstico revisado de11arquivos idênticos aoHEAD47ebfff, QA touchline-avatar-retention v6, verify_jwt=true. GET com gateOFF503/logQA_RETENTION_FLAG_OFF; gate temporárioON503/logQA_RETENTION_KEY_FORMAT_INCOMPATIBLE, depois unset confirmado. NenhumPOST/upload/exclusão. Causa de ramo identificada; formato/conteúdo exatos não inferidos. Upload e retenção automatizada seguem pendentes. Ver AVATAR_EDGE_V6_DIAGNOSTIC_2026-11-01.md.
+- Zero novos builds Vercel. Production, pagamentos reais e conta ADMIN preservados. Backlog anterior e auditoria final integral permanecem abertos; nenhum verde local representa aprovação geral.
+
+## 2026-11-01 — Ranking consolidado, Exchange transacional e recursos locais
+
+- Header/ranking: correção local concluída e revisada. Projeção sazonal compartilhada, exclusão de contribuições Beta após upgrade e paginação da rodada sem truncamento de1000linhas. Evidências:102testes focados e19SQL, TypeScript/lint dos arquivos exit0; AGENT_HEADER_RANKING_2026-11-01.md. Não aplicado ao site publicado.
+- Exchange: proposta CUSTOMER94b7b46d-45f0-4456-b354-4346a5bc4c72 aceita e repetida dentro de BEGIN/ROLLBACK QA. Assertions verificaram estados integrais,35jogadores por conta, substituição apenas dos cards outside negociados, contratos de3M/15M, saldo final2.250.000/1.155.435.000TC, fee750.000, bônus375.000 e retirada375.000TC;1recibo/2operações, sem duplicação. Readback após rollback igual ao baseline: revisões38/81, propostaPENDING,0recibos/0operações e2reservas. Prova SQL não comprova autenticação/API/interface. A primeira execução falhou na precedência de uma assertion do artefato, sem persistência; corrigida e revalidada antes do PASS. Recibo: artifacts/local-card-integrity-20261031/exchange-accept-rollback-receipt-20261101.json.
+- Fotos: binding explícito local pronto,26testesPASS, sem publicação. Auto-review REJEITOU copiar a chave de serviço QA para o novo segredo persistente de retenção por faltar autorização específica da transferência; pergunta enviada e ainda pendente. Nenhuma alternativa usada para contornar a rejeição. Edgev6/gateOFF mantidos.
+- Notificações: leitura QA confirma0devices/0fixture_interests/0history/0outbox/0enrollments e3preferências. touchline_game_notification_deliveries e touchline_push_rehearsal_attempts ausentes; nenhum pg_cron encontrado para os dois endpoints de dispatch inspecionados. Isso não inventaria agendadores externos. Código/transporte não comprovam recebimento físico; falta configuração/migrações/registro/ensaio e cobertura dos canais conforme AGENT_NOTIFICATIONS_DELIVERY_AUDIT_2026-11-01.md.
+- Visual: quatro hover de Rankings limitados a (hover:hover) e (pointer:fine), preservando foco e desenho. Vinte checks de apresentação existentes PASS; revisão independente sem achado. Não é correção comprovada de crash por pinça. JournalWebKit:1casoPASS completo e1BLOCKED_RESOURCE. Safari novamente informou Macbloqueado; desbloqueio solicitado, sem apagar sessões.
+- Suíte ampla com2workers foi interrompida por disco livre257MiB. Swap observado4.493MiB/pressão1; não afirmar que o swap sozinho explica toda variação. Removidos somente quatro caches webpack/turbopack antigos, ignorados peloGit e sem uso observado:1691,66MiB. Disco após limpeza3482MiB. Fontes, evidências, dados de navegador e cache da candidata atual preservados. Recibo generated-cache-cleanup-20261101.json.
+- Suíte completa agora serial via adaptador de execução que preserva seleção/envSQL/timeouts do executor oficial e altera somente workers2→1. Código do executor não foi alterado. Resultado pendente em consolidated-suite-serial-20261101.log. Build final, commit imutável e gates completos ainda pendentes; zero novos buildsVercel, Production/liveStripe intocados.
+
+## 2026-11-01 — Retomada após reinício e build concluído
+
+- Build local final da sessão36128 concluiu exit0; log consolidated-build-20261101.log (SHA256 4f3c69f8d5d6ab30ef551972922bdb0b77b49e80e8057791fcad6ae78a94bc2c). TypeScript exit0 e lint0erros/10avisos preservados. Suíte serial7567:7474PASS/3FAIL/90SKIP; três falhas de fixture corrigidas em reexecução9PASS/0FAIL. Não somar resultados nem declarar suíte ampla integralmente verde.
+- Safari voltou a fornecer conteúdo. Janela normal restaurou CUSTOMER QA2 Standard, não VIP; sessão preservada. Janela privada aberta para VIP, preenchimento automático exige autorização do macOS; pedido assíncrono enviado. Proposta94b7b46d-45f0-4456-b354-4346a5bc4c72 não reenviada nem aceita pela UI neste lote.
+- Impedimento de repouso e tela confirmado por pmset: caffeinate PID2292, prazo72000segundos; não desativa senha/trava.
+- Browser opt-ins retomados serialmente por agente dedicado; recibos em artifacts/release-gap-validation-20261031/BROWSER_COMPLETION_REPORT_20261101.json. Alguns arquivos exigem5GiB livres e continuam BLOCKED_RESOURCE. Não houve redução desses limites.
+- Removido somente cache webpack gerado da candidata após build,1093404206bytes, ignorado peloGit e sem arquivos abertos observados. .next/server/static, fontes e evidências preservados. Recibo generated-current-cache-cleanup-after-build-20261101.json.
+- Vercel env run somenteleitura obteve variáveis protegidas vazias no processo local; isso não prova ausência na implantação. Nenhum GET Sportmonks ou extração de chave foi executado nessa tentativa.
+- Notificações: pré-checagem distingue match_push existente de sete tabelas ausentes de game_notification/lineup/rehearsal. Janela remota ainda tem margem de5min antes/depois; forward específico em preparação, sem alteração remota neste registro. Ver AGENT_NOTIFICATIONS_QA_PREFLIGHT_2026-11-01.md.
+- Auto-review da transferência da chaveQA de avatar continua pendente de autorização específica; não contornada. Zero novos builds Vercel, nenhum deploy, Production/liveStripe intocados.
+
+## 2026-11-01 — Exchange visual e persistência das duas contas
+
+- SUPERSEDED: proposta Standard→VIP pendente nos registros anteriores. Troca 94b7b46d-45f0-4456-b354-4346a5bc4c72 aceita; prova SQL e Safari em QA_SAFARI_EXCHANGE_2026-11-01.md. Standard recarregada mostra 2.250.000 TC e Van Dijk; VIP 1.155.435.000 TC e Pinnock. Não houve segunda troca nesta conferência.
+- VERDE LOCAL delimitado: TC com moeda/cor oficial, Card em PT, recibos expansíveis e contratações paginadas; 40 focados PASS, Chromium/WebKit 8 cenários PT/AR390/1280 PASS, lint/TS sem erro. Summary de recibo recebeu tabIndex=0 após revisão, rechecagem de teclado pendente. Build final e QA nova UI pendentes.
+- Histórico agora distingue carregamento de indisponibilidade (14 testes próprios, sobreposição não somada).
+- Mercado: correção futura de horário já aplicada na QA pelo registro QA_MARKET_TIMING_APPLIED_2026-11-01.md, sem recalcular rodadas passadas. Não reutilizar a margem antiga de 5 minutos como regra atual.
+- Pontos VIP: DRAFT por revisões posteriores à confirmação; zero não prova ausência de problema de apresentação. Patch local distingue escalação não confirmada, provisório, pendente, indisponível e zero real; 100 focados PASS. Browser desse patch bloqueado antes de iniciar por reserva de disco: ~2.2 GiB livres contra 5 GiB padrão.
+- Busca social solicitada: campo compacto no Exchange abre modal fumê com lista pública por ranking antes de digitar; busca nome/ID. Em implementação, não publicada. Gate DB ainda false; publicação de perfis exige sessão CUSTOMER real/consentimento.
+- Relatório do delta e evidências duráveis: docs/touchline/final-product-completion/EXCHANGE_PRESENTATION_2026-11-01.md e artifacts/exchange-presentation-20261101/. Nenhum novo build remoto, commit, push, Production ou Stripe real.
+
+## 2026-11-01 — Descoberta social: estado remoto confirmado e nova apresentação local
+
+- SUPERSEDED: registros anteriores que ainda descrevem social QA desabilitado/sem perfis. Em 2026-11-01T07:00:15.221781Z, o gate de descoberta QA foi ativado (uma configuração; nenhuma publicação de perfil por SQL). As sessões CUSTOMER reais publicaram Luiz VIP e Luiz Standard; a busca antiga Standard→VIP foi confirmada no Safari. Recibo: artifacts/social-discovery-activation-20261101/execution-receipt.json. Isso não habilita a foto nem comprova o novo modal publicado.
+- Decisão atual do proprietário: descoberta por nome apenas, sem ID visível ou pesquisável. Campo compacto abaixo de Encontrar amigos abre modal fumê preto translúcido com desfoque; lista pública ordenada por ranking antes de digitar. Configurações de publicação/privacidade ficam separadas; consentimento permanece exigido. Aro fino da foto segue o plano confirmado; plano não confirmado fica neutro. Seguir usa verde TouchLine em repouso, preenchimento em hover/foco; Seguindo tem marca de confirmação. No toque, não depende de hover.
+- Candidata local contém esses componentes e backend de diretório paginado; novo campo planKey vem apenas de entitlement ativo, não de nomes, capturas ou plano inventado. Migração nova do diretório ainda não aplicada à QA. Revisão independente/cobertura focada em andamento; browser, build final e publicação desse delta não aprovados neste registro.
+- Sem novo commit, push, build remoto ou deploy; Production e Stripe real intocados. O backlog integral e a auditoria final continuam abertos. Próximo passo desta frente: renderizar os componentes reais com dados sintéticos em navegador isolado, documentar evidência e depois validar migração/API/sessões na QA.
+
+### 2026-11-01 — Aro das fotos e ação Seguir: comprovação delimitada
+
+- Implementado localmente na busca/modal e no perfil público: aro fino Beta/vermelho, Standard/azul, Master/verde e VIP/roxo; sem plano confirmado, aro neutro. Plano vem da projeção mínima de entitlement ativo. Foto e consentimento continuam independentes. Seguir usa verde TouchLine em repouso e preenchimento em hover/foco; Seguindo traz check, nome acessível explica como desfazer. Hover residual no touch corrigido apenas nesse botão.
+- Testes focados atuais:53PASS/0FAIL/7SKIP; inclui contratos/runtime/SSR/compilação real dos componentes. Não somar com48 anteriores nem com29Node/6SQL do backend. Lint/diff-check sem erro. Revisor UI sem achado aberto: artifacts/social-ranked-search-20261101/avatar-follow-ui-independent-review.json.
+- Browser Chromium não iniciou: monitor registrou BLOCKED_PREFLIGHT,1500.12MiB livres contra1536MiB para lançamento, pressão1 e42% livres. Sem falha visual comprovada, mas sem PASS visual. Evidência: artifacts/clubowner-search-ui-20261101/monitored-chromium-receipt.json. Capturas antigas em pastas temporárias preservadas; não tratadas como lixo.
+- Ainda falta: renderização e inspeção dos screenshots do novo modal, demais engines, migração QA e fluxo autenticado publicado. Novo visual não publicado. Nenhum novo deploy, push ou commit neste delta.
+
+### 2026-11-01 — Compatibilidade do teste de fotos com o novo modal
+
+- Ajustado somente o harness antigo tests/clubowner-public-avatar-browser.test.mts: editor de consentimento separado, busca pelo modal real e Enter, DTO atual completo e validado pelo parser. Preservadas as verificações de consentimento, carregamento serial, revogação, cancelamento, identidade, 404/503 e repetição controlada.
+- Verificação de compilação: 1 PASS / 0 FAIL / 1 browser SKIP; lint e diff-check sem erro. Não somar ao lote anterior de 53 PASS. Recibo: artifacts/clubowner-search-ui-20261101/avatar-boundary-checkpoint.json. Nenhum navegador iniciado, nenhuma mudança de produto ou dado remoto nesta correção de teste. Revisão independente concluída sem defeito concreto por fonte: artifacts/clubowner-search-ui-20261101/avatar-boundary-independent-test-review.json. Prova visual permanece pendente.
+
+## Continuidade 2026-11-01 — sincronização, busca e projeção de mercado
+
+- QA read-only 09:00–09:03 UTC confirma cron executando, com identidade de jogador pendente no fixture `499756e3-cedc-43cc-8131-5c2eac95ea69`, ranking incompleto e diagnóstico genérico de treinador. Recibo: `artifacts/sync-read-followup-20261101/qa-0903.json`. Os sufixos de `lineup-identity-pending` são IDs de jogadores, não partidas. Nenhuma correção numérica foi inferida/aplicada.
+- Busca: auditoria de integração local encerrada; sem defeito novo no helper. Recibo `artifacts/social-ranked-search-20261101/integration-release-audit-20261101.json`. Migração/código/gates/consentimentos/prova publicada continuam pendentes. Próxima frente iniciada: perfil público com anúncios explícitos e proposta protegida, sem divulgar saldo ou coleção privada.
+- Preparada forward `20261101091500_touchline_market_projection_kickoff_alignment.sql`: somente substitui projeção; não reexecuta synchronizer nem altera dados. Teste `touchline-market-projection-forward.test.mts`: 1 PASS, 0 FAIL, 0 SKIP; reproduz os cinco minutos legados e comprova correção kickoff/último apito, ACL e preservação do synchronizer. Revisão independente solicitada. NÃO aplicada à QA.
+- Inventário de notificações reconfirmou pipeline match_push existente e game_notification ausente; não confundir os dois. Nenhuma ativação/envio realizado.
+- Revisão dos 90 condicionais em andamento com vínculo atômico teste/log/hash; não somar tentativas nem promover logs soltos.
+- Sem deploy, sem Production/pagamento real. Bloqueio de navegador por política preservado; não contornado. Disco disponível cerca de 1,3 GiB impede nova validação visual pelo runner existente.
+
+## Correção de continuidade — mercado QA já corrigido
+
+A entrada anterior que preparou 091500 usou preflight02:12 desatualizado. O recibo QA_MARKET_TIMING_APPLIED_2026-11-01.md comprova aplicação05:33 como versão remota20261101053339. Leitura direta neste turno confirmou projection_md5=e9776c6f9df37360660a3e56e4a827d8 e synchronizer_md5=a54aed23cad04215235eeef009a7072d. Não reaplicar. A duplicata local091500 foi retirada da pasta de migrations e preservada apenas como fixture de regressão em artifacts/sync-read-followup-20261101/market-projection-regression-fixture.sql; teste ajustado para essa referência. Histórico e migração realmente aplicada preservados. Nenhuma escrita remota.
+
+
+## Continuidade — 2026-11-01 09:30 UTC
+
+- SELECT QA atual (09:29:47 UTC) confirmou cinco tabelas game_notification/lineup e dez funções ausentes. Rehearsal permanece instalado com RLS forçada; histórico confirma rehearsal 20261101023725 e timing 20261101053339. Bruto: artifacts/avatar-notifications-20261031/notification-schema-reconciliation-qa-20261101.json. Preparação do lote lineup continua em revisão; nenhum envio/ativação nesta leitura.
+- Boundary público existente conferido: retry e retorno ClubOwner, sem expor erro privado. Dois arquivos de testes executados neste lote: 15 PASS, 0 FAIL, 0 SKIP. Isso não comprova visual físico nem a cadeia completa dos consumidores SSR.
+- Acrescentada âncora clubowner-exchange à section real de FantasyGameweekClient para retorno do perfil público. Projeção de anúncios/propostas continua com o agente; não publicada.
+- Revisão independente dos 90 condicionais confirmou 38 vínculos históricos exatos; 52 continuam sem prova equivalente. 54–55 fontes mudaram desde as execuções históricas, portanto não são aprovação da candidata atual. Recibo independent-review-exact-receipts-20261101.json.
+- Bloqueio material: df caiu para 205 MiB livres. .next 43 MiB, artifacts 69 MiB, tmp 36 MiB; browsers instalados 1.1 GiB preservados por serem necessários. Sem remover arquivos pessoais/cache de navegador. Browser/build e testes pesados não iniciados. ps negado pelo sandbox; sem contorno.
+- git diff --check passou. Sem commit/push/build remoto/deploy/Production ou pagamentos reais. Nenhuma frente integral declarada verde neste registro.
+
+
+## Recuperação de imagens locais — 2026-11-01
+
+Causa comprovada: arquivos public com flag macOS dataless (iCloud), causando ERR_CONTENT_LENGTH_MISMATCH no navegador. Recuperação por leitura integral dos arquivos; nenhuma arte substituída, nenhum dado esportivo alterado.
+
+Evidências finais: public contém 1472 arquivos; 0 permanecem dataless. Rankings em Chromium local: 77 imagens, zero imagens quebradas e zero requestfailed. Safari nativo: cards completos na Seleção da Temporada e no pódio, coroa visível e os 20 escudos visíveis no seletor de mercado. Coroa em public/touchlineArena/cards/leadership/touchline-player-leader-crown.png; escudos originais em public/touchlineArena/shared/club-logos/2026-27/ui-512.
+
+Escopo: candidata local qa-stripe-release-20261029 em localhost:3100. Nenhum deploy ou alteração em Production. Não representa aprovação das demais frentes.
+
+Pendência de prevenção: candidata ainda está em Documents; iCloud não foi desativado nem worktree relocado nesta recuperação. Garantir cópia operacional fora do iCloud preservando WIP, vínculo Git e dependências antes de declarar isolamento definitivo. O uso de componente compartilhado não elimina o carregamento de imagens por cada página/variante.
+
+## Compilação integral local — 2026-11-01
+MISSION: compilar a candidata atual, incluindo WIP presente. SCOPE: build local; sem deploy. QA COMMIT base: 47ebfffbbda98cbb89bcd3ad08fb19efd1e50694; alterações locais não commitadas.
+FILES CHANGED: tsconfig.json exclui artifacts (cópias históricas/evidências não são código do produto). Primeiro build falhou ao verificar preimage incompleto em artifacts/ssr-shared-ranking-20261101; após correção, npm run build terminou exit 0, compilação webpack, TypeScript e geração 136/136 concluídas. git diff --check -- tsconfig.json passou. Evidência: artifacts/local-build-20261101/build.log.
+FUNCTIONAL/VISUAL/RESPONSIVE/ACCESSIBILITY/BROWSER: não revalidados nesta missão de compilação; build não prova todos os fluxos. SECURITY: nenhum segredo salvo ou ambiente remoto alterado. REMOTE BUILD BUDGET/CONSUMED: 0/0. QA DEPLOYMENT: nenhum novo. PRODUCTION: NOT TOUCHED. OPEN FINDINGS: demais pendências do backlog preservadas. Ferramentas: shell/Next/TypeScript executados e resultados inspecionados; plugins remotos não relevantes ao build local.
+
+
+### 2026-11-01 — continuidade da auditoria por pagina
+Live: agrupamento de resultados corrigido localmente, 35 testes PASS; Safari confirmou rodadas separadas. Configuracao local de descoberta de ClubOwners explicitamente admitida, 11 testes PASS; candidata reiniciada com persona QA validada. Nenhum deploy. Build anterior nao cobre estas alteracoes. Evidencias e pendencias: docs/touchline/final-product-completion/TOUCHLINE_PAGE_AUDIT_2026-11-01.md. Auditoria global permanece aberta; nao declarar lancamento aprovado.
+
+
+## Continuidade — diretório de ClubOwners, 2026-11-01
+
+- Causa confirmada: QA xgxbwqxjssxxuihuwmgy sem RPC `touchline_people_directory_candidates(uuid)`; a nova UI retornava indisponível.
+- Migração existente `20261101065616_touchline_people_ranked_directory.sql` aplicada à QA com sucesso após revisão independente sem bloqueador. Production não alterada.
+- Antes/depois: 2 perfis, 0 seguidores; função restrita a service_role (anon=false, authenticated=false, service_role=true). Não publicou perfis nem mudou o gate existente.
+- API local retornou ambas as contas, plano e posição; sem accountId, e-mail ou saldo. Safari confirmou lista inicial e filtro Standard por nome.
+- Seguir AINDA PENDENTE: primeira tentativa exibiu falha de confirmação durante compilação da rota local; banco continuou com zero vínculos. Não tratar busca validada como follow validado.
+- Novo pedido: todo novo cadastro deve entrar na descoberta por nome; implementação atual exige perfil publicado explicitamente. Preparar onboarding com informação clara de visibilidade, preservar opções existentes e não expor e-mail/saldo/foto privada.
+- Evidência local prévia: 13 testes de diretório/search aprovados; revisão independente 6 SQL e 11 search/adapter aprovados (não somar sobreposições). TypeScript e lint anteriores aprovados. Nenhum novo build/deploy remoto neste lote.
+- Restante integral preservado no backlog. Sem aprovação geral de lançamento.
+
+## Rechecagem de continuidade — assets e consumidores (2026-11-01)
+
+- AUDIT local: 19 testes de entrega/catálogo/assets PASS, zero FAIL/SKIP.
+- 140 templates PNG: dimensões corretas, zero fundos verdes indevidos, zero duplicações inesperadas; 7 pares compartilhados intencionais preservados.
+- HTTP localhost: 305 arquivos (logos, frames compact/zoom, liderança/prêmios) responderam com SHA-256 idêntico ao arquivo local; zero falhas. Isso comprova entrega, não renderização integral nem cache entre telas.
+- 27 testes de prêmios e consumidores Live/ClubHub PASS, zero FAIL/SKIP. Não somar com reexecuções anteriores.
+- Evidências: artifacts/local-card-integrity-20261101/.
+- Safari: Mac bloqueado, desbloqueio automático falhou; seguir/renderização visual nativa continuam pendentes.
+- QA notifications SELECT: ensaio cooldowns/attempts presentes; enrollments, identities, deliveries, scan_state e admission_work ainda ausentes. Nenhuma migration de notificações aplicada neste lote.
+- Cadastro público: lacuna confirmada no provisionamento inicial; implementação local em andamento, não aprovada.
+- Deploy: zero novos builds remotos neste lote. Production não tocada.
+
+
+## 2026-11-01 — continuidade cadastro e lembretes
+
+- Cadastro por formulário: nome público explícito, intenção versionada e bootstrap insert-only preparados localmente; 4 testes, TypeScript, ESLint e diff-check passaram. Revisão independente sem bloqueador; casos adicionais de privacidade/retry incluídos. OAuth/primeiro acesso ainda em fechamento. Migração não aplicada QA neste lote.
+- Lembretes: 9 testes SQL locais PASS, 0 FAIL, 0 SKIP; log `artifacts/local-card-integrity-20261101/reminders-recheck.log`. Inclui reserva, nonce, repetição, paginação e falhas de transporte sintéticas. Não comprova push físico.
+- SELECT QA: projeção de janela de mercado, validador de geometria e set_game_locale(text,bigint) existem; read_lineup_reminder(uuid,uuid) ausente. Ledger/admission de escalação continuam ausentes; tabelas rehearsal existem. Não reaplicar projeção histórica que substitui sync_gameweeks.
+- Safari nativo continua indisponível: Mac bloqueado, desbloqueio automático falhou. Sem PASS visual novo. Trabalho local e leitura QA prosseguem.
+- Zero novos deploys; Production e pagamentos reais intocados.
+
+
+## 2026-11-01 — primeiro acesso e busca, validação adicional
+
+- Cadastro: prova Chromium nos oito idiomas PASS (1 teste agregado); fixture atualizada para nome público e helper real.
+- Diretório/perfis/seguir: 4 PASS / 0 FAIL / 0 SKIP, incluindo 24 fluxos em Chromium, WebKit e Firefox, com HTTP sintético. Não equivale a contas QA reais ou iPhone.
+- Primeiro acesso OAuth/sem perfil: 21 focados PASS e 1 Chromium PASS com três cenários de fechamento, gravação incerta e reconciliação, incluindo perfil privado preservado. TypeScript global e lint aprovados; revisão independente sem bloqueador concreto.
+- QA SELECT: faltam photo_published, save_profile_v2, bootstrap_signup e complete_first_access. Dependências avatar_revision, read_current(uuid), auth.users.deleted_at presentes. Ordem preparada: avatar-consent 20261030133824 → signup 20261101162000 → first-access 20261101171000. Nenhuma aplicada neste lote.
+- QA antes: 2 perfis; fingerprint das seis colunas existentes 2526d3822e9111b08f44947a60042bd9. Não publicar foto nem reativar perfil privado automaticamente.
+- Suíte consolidada iniciada via executor oficial; resultado pendente. Nenhum novo deploy ou alteração de Production.
+
+
+## 2026-11-01 — conciliação da suíte ampla
+
+- Primeira rodada consolidada: 7650 testes, 7469 PASS, 85 FAIL, 96 SKIP. Não representa aprovação. Falhas distribuídas entre harnesses desatualizados, manifesto de rotas incompleto e limites locais de navegador.
+- Reexecuções focadas corrigiram dependências reais ausentes de onboarding/diagnóstico, apresentação status+valor da pontuação e expectativa de WARN local já autorizada, sem retirar verificações de autorização, saldo e privacidade. Revisão independente do incremento root sem bloqueador.
+- Navegador: 8 PASS/0 FAIL/0 SKIP em canais oficiais, carrossel por rodada e diálogo de substituição. Execução sequencial com exceção local de memória autorizada; limites de disco mantidos. HTTP/dados isolados, não prova de contas reais ou iPhone.
+- Fixture Arena: 4 PASS, pontuação indisponível não inventa zero. Fixtures de calendário e runtime local: reexecução sem falhas.
+- Novo manifesto de rotas está sendo reconciliado. Nova rodada global ainda necessária após conclusão. Nenhum deploy, migração QA ou pagamento real neste incremento.
+
+
+## 2026-11-01 — gates locais consolidados e descoberta
+
+- Executor oficial: 7.695 testes, 7.599 PASS, 0 FAIL, 96 SKIP condicionais. Esta rodada substitui a rodada anterior; não somar contagens de reexecuções.
+- TypeScript global anterior exit 0 e TypeScript do build atual aprovado. ESLint global exit 0: zero erros, 13 avisos. Os seis explicit-any dos testes de primeiro acesso foram tipados; entrada CommonJS do bundler isolado recebeu exceção exata de import no lint, sem desligar regras da aplicação.
+- Build local otimizado: exit 0, 136 páginas geradas. Primeira compilação completou, mas wrapper configurado como servidor contínuo devolveu 1; executor corrigido para comando finito e build repetido com exit 0 comprovado. Não houve build remoto.
+- QA Development confirmada por inventário: xgxbwqxjssxxuihuwmgy. Somente SELECT neste lote: bootstrap_signup e complete_first_access ainda ausentes. Preimagem dos 2 perfis preservada para futura aplicação; nenhuma conta alterada neste lote.
+- Revisão independente: nenhum bloqueador novo nos fluxos signup/primeiro acesso; pacote SQL atômico em preparação. Instalação e cadastro real continuam pendentes.
+- Safari nativo indisponível: Mac bloqueado, desbloqueio automático falhou. Não há PASS visual desta rodada. Solicitação de desbloqueio pendente; trabalho independente continua.
+- Evidências: artifacts/local-card-integrity-20261101/{release-suite-consolidated,lint-consolidated,build-consolidated,first-access-types-browser}.log.
+- Deploy não executado; Production não tocada; 96 condicionais, provas publicadas, dispositivos e backlog integral continuam abertos.
+
+
+## 2026-11-01 — continuidade após desbloqueio, 19h Malta
+
+- Mac: caffeinate -di -t 36000 confirmado por pmset; repouso de tela/sistema inibido por 10 horas. Senha não desativada.
+- Safari voltou a responder. Candidata localhost3100 iniciou e entregou login HTTP200, depois monitor local encerrou seu próprio grupo por pressão crítica de RAM (pressure=4); sem prova de fluxo autenticado.
+- Modal foto: 1 teste browser PASS; notificações apresentação: 1 teste/12 cenários Chromium+WebKit PASS; neon: 1 matriz Chromium+WebKit PASS. Logs neste diretório; não equivalem a entrega real de notificações ou upload QA.
+- QA xgxbwqxjssxxuihuwmgy: envelope discovery-qa-atomic.sql aplicado UMA vez via CLI, exit0; versões 20261030133824,20261101162000,20261101171000. Payload MD5 respectivamente acd66026316862a535f86dc5cf95055e,c6450059146e2e40699817af78a71e17,9fbfd4f3448c751ff3fb27b868fb7809.
+- Pós-consulta independente confirmou 2 perfis existentes e fingerprint b99236a56a38458e60714aeb5d7922d5 preservados, zero fotos públicas; OID/ACL de own_profile/save_profile preservados; novos RPCs ACL restritas e search_path vazio.
+- Instalação QA comprovada; novo cadastro real, primeiro acesso e propagação na UI publicada permanecem pendentes. Nenhum deploy/build remoto ou mudança Production.
+
+
+### 2026-11-01 — verificação adicional de frames e galeria
+- Repouso: `pmset -g assertions` confirmou caffeinate PID 19843, tela e sistema, duração de 36.000 segundos; senha não desativada.
+- Renderizador dos cards: matriz WebKit completa passou, 84 casos, sete tiers, sem filtros parciais. Evidência local com arte real e identidade sintética; não comprova iPhone físico nem QA publicada.
+- Galeria: Chromium e WebKit passaram nas larguras 760, 844 e 1280, executados em série. Cada execução cobre seis frames reais e o estado pendente ruby-red; um caso alternativo permanece SKIP por seleção intencional da galeria.
+- Logs preservados em artifacts/local-card-integrity-20261101/touchline-frame-*-current.log e touchline-gallery-*.log. Não somar esses casos ao total da suíte ampla.
+- Nenhum deploy, alteração em Production ou mudança de dados neste lote. Validação autenticada e física continua pendente.
+
+
+## 2026-11-01 — ampliação de provas locais e preimagem de notificações
+
+- Admin futebol, mercado e documentos: 3 PASS/0 FAIL/0 SKIP. Interfaces reais com fronteiras HTTP sintéticas, PT/EN e três motores; não prova importação financeira completa nem sessão publicada.
+- Foto pública: 2 PASS/0 FAIL/0 SKIP, 12 cenários. Consentimento/substituição/cancelamento em fixtures; upload real na QA permanece pendente.
+- Treinadores e Arena: 2 PASS/0 FAIL/0 SKIP; 24 fluxos de catálogo e 8 casos de geometria/scroll. Não equivale a iPhone físico.
+- Reconciliação de elenco: teste de interface PASS nos três motores, PT/EN, captura/decisão/retry com API sintética. A primeira execução conjunta de checkout parou após 12 cenários por preflight de RAM; não houve falha funcional comprovada. Reexecução isolada autorizada: checkout 19 PASS/0 FAIL/0 SKIP (18 cenários e teste pai). Não somar sobreposições ao total da suíte consolidada.
+- QA somente leitura: preimagem 2026-11-01T18:39:13Z confirma 5 tabelas e 10 funções de lembrete ainda ausentes; zero dispositivos, 3 preferências, zero tentativas de ensaio. MD5 de sync_gameweeks e projeção de mercado coincidem com o envelope revisado. Não aplicado neste incremento.
+- Revisão independente do envelope: sem bloqueador novo, quatro fontes byte a byte preservadas; instalar exige gates OFF, precondições, DDL+histórico atômicos e postflight. Instalação não comprova entrega física.
+- Logs e preimagem em artifacts/local-card-integrity-20261101/*current*. Sem deploy, novo build remoto ou alteração em Production.
+- Permanecem abertos: validação autenticada de cadastro/follow/foto/notificações; pontuação/ranking, rescisão/Exchange completos; auditoria total admin/publicações; dispositivos; candidata limpa e deploy QA com smoke.
+
+### Busca de amigos — apresentação 2026-11-01
+Foto/nome/seguidores à esquerda, taça/posição à direita e remoção do retry visível implementados localmente. Chromium 3 PASS/0 FAIL; TypeScript passou. @ID único no cadastro e banco permanece pendente, não anunciado como disponível. Registro: docs/touchline/final-product-completion/SEARCH_RESULTS_PRESENTATION_2026-11-01.md. Sem deploy.
+
+
+## Neon do avatar — 2026-11-01
+Adicionado ao componente compartilhado ClubOwnerPublicAvatar: traço circular luminoso na cor do plano, volta a cada 2 segundos, isolado da foto e do botão de recuperação. Movimento desativado com prefers-reduced-motion. Plano não confirmado não recebe cor inventada.
+Validação local: ESLint e diff-check sem erros; teste Chromium da busca 3 PASS/0 FAIL, WebKit/Firefox 2 SKIP. Screenshot mobile inspecionado; fotos sintéticas, não contas reais. Log /tmp/avatar-neon-browser.log. Sem deploy; Safari/iPhone e QA publicados ainda não validados neste lote.
+
+
+## Continuidade comprovada — 2026-11-02
+- Prioridade permanece foto de perfil, prêmios simultâneos e Arena; auditoria administrativa segue em paralelo por autorização do usuário. Não declarar lançamento aprovado.
+- Build consolidado local passou: /tmp/touchline-consolidated-build-final-20261102.log; servidor de build em localhost:3100. Alterações posteriores Card Engine, formação/importação e próximos endpoints ainda exigem novo build consolidado.
+- TypeScript após Card Engine/formação/importação passou: /tmp/touchline-post-admin-ts-20261102.log; git diff --check passou.
+- Arena: nove reservas integradas ao mesmo catálogo/componentes. Dez casos Chromium/WebKit em cinco larguras passaram, incluindo estabilidade de dimensões. Safari nativo: campo ampliado, artes e nove reservas observados no build local. Isso não comprova pinch em iPhone físico nem QA publicada. Recibo AGENT_ARENA_RESERVES_RECEIPT_2026-11-02.md.
+- Prêmios: caso sintético com mesmo jogador líder comprovou dois ícones no card normal/ampliado. Os dados observados Groß 60.65 versus Haaland 60.16 têm líderes distintos; não alterar pontuação para forçar prêmios.
+- Foto permanece bloqueada na QA por permissões do schema auth sob função writer. Bridge preparada não aplicada; teste local superuser não prova permissão hospedada. Upload real e descarte da foto anterior ainda não aprovados.
+- Admin Card Engine: 17 testes focados e 7 de revisão independente passaram. Formação/importação: 24 testes passaram e 8 de revisão independente passaram; map/reject não retorna mais sucesso sem confirmar linha atualizada. Recibos artifacts/card-engine-admin-boundary-20261102 e artifacts/admin-formation-market-boundary-20261102.
+- Ciclo de confirmação do XI: 8 sequências/64 passos Chromium passaram; WebKit bloqueado por capacidade de memória, não aprovado. VIP sem snapshot válido no fechamento explica ausência de pontos da rodada; não criar pontos retroativos.
+- Nenhum deploy Vercel ou mudança em Production neste incremento. Backlog original, fotos/notificações reais, handles, integração completa, dispositivos e auditoria ampla permanecem abertos.
+
+
+## Auditoria continuada — 2026-11-02, disponibilidade e histórico
+- Autorização: continuar frentes e auditoria sem nova confirmação; somente candidata/QA, sem Production ou cobrança real.
+- Disponibilidade: corrigidas consulta restrita ao XI e ausência de badge nos rails. Coleção autenticada da temporada fornece os 35 IDs; reservas, fora e reservas Arena recebem indicador canônico. Fonte ausente e FT não geram informação inventada. 50 testes locais passaram; revisão independente 36 passou. Recibo artifacts/collection-availability-propagation-20261102/receipt.json. Sem validação física/publicada.
+- Histórico pós-temporada: removida rejeição de pontuação decimal como 48.28; migration forward numérica preparada, não aplicada. 18 testes locais passaram; revisão independente 9 passou. Recibo artifacts/season-contract-audit-20261102/receipt.json. Rollover real e integração do histórico ainda pendentes; não confundir helpers testados com temporada operacional.
+- Auditorias focadas adicionais: pós-jogo/rodada 28 PASS; revisão de feed/elenco 22 PASS; disponibilidade reader/badge 14 PASS; cinco endpoints administrativos 33 PASS. Totais sobrepostos não devem ser somados à suíte ampla. Evidências em artifacts/prelaunch-audit-20261102.
+- TypeScript global após alterações de disponibilidade: exit0. Novo build consolidado ainda necessário para os deltas posteriores ao último build aprovado.
+- Foto real continua bloqueada por propriedade/permissão da função de identidade no banco QA. Não houve upload/substituição comprovada. Não desativar validação de identidade para contornar.
+- Em andamento: identificador humano único da busca, recibos financeiros, inventário de rotas/offline. iPhone físico, todos consumidores publicados e deploy final continuam abertos.
+- Nenhuma alteração em Production e nenhum build remoto neste incremento.
+
+
+## Auditoria continuada — 2026-11-02, contratos e suíte consolidada
+- Correções locais confirmadas: recibos administrativos financeiros/documentais/alertas, autenticação analytics, callback de autenticação, composição histórica/current do XI, handles únicos e gesto multipointer do carrossel. Evidências por setor em artifacts/*-20261102; os testes focados se sobrepõem e não são somados.
+- Primeira suíte deste lote: 7773 testes, 7533 PASS, 142 FAIL, 98 SKIP. Parte falhou por sandbox de browsers/listeners; demais harness desatualizados foram corrigidos preservando assertions. Isso NÃO é suíte verde.
+- Reexecução completa autorizada fora do sandbox em andamento: /tmp/touchline-consolidated-release-audit-authorized-20261102.log. Nenhum resultado final inferido.
+- Harness admin SSR/tiles: 21 PASS na revisão independente; avatar/collection: 37 PASS; Arena/multipointer: 21 PASS. Controle operacional futebol: browser Chromium/WebKit PT/EN, 1 PASS após reexecução com permissão de browser.
+- Tradução social e página: revisão independente 7 PASS. Callback auth: revisão independente 11 PASS; falha do próprio signOut do provedor continua limite explícito.
+- Novo achado: editorial de treinador retornava sucesso com recibo incompleto. Correção local exige candidato e revisão confirmados; 14 PASS; revisão independente em andamento. Sem alteração de SQL remoto.
+- Inventário mobile não comprovou nova causa de crash. Blur/sombras/camadas são alvos de profiling, não diagnóstico. Arte e pinch nativo preservados. Evidência artifacts/mobile-render-inventory-20261102/receipt.json; iPhone real pendente.
+- Foto QA permanece EXTERNAL: propriedade/permissão do guard no schema auth. Runbook AVATAR_QA_OWNER_REPAIR_RUNBOOK_2026-11-02.md preparado; upload/replacement/retention reais não aprovados. Não retirar validação de identidade.
+- Último build local aprovado antecede deltas desta rodada. Novo build e gates finais pendentes. Zero novos builds remotos; Production não tocada.
+
+
+## Fechamento dos recibos e rechecagens — 2026-11-02
+
+- Suíte oficial serial: 7803 testes, 7697 PASS, 8 FAIL, 98 SKIP. Log `/tmp/touchline-consolidated-release-audit-authorized-20261102.log`. Os oito FAIL pararam por capacidade antes das assertions de produto.
+- Rechecagem local autorizada (reserva 2048 MiB, override de pressão, execução serial): sete casos passaram; o oitavo encontrou dependência next/image ausente no harness. Correção somente do harness: dois testes PASS incluindo o caso de navegador, três viewports. Evidência `artifacts/squad-swap-image-harness-20261102/receipt.json`. Não somar contagens sobrepostas nem converter os 98 SKIP em aprovação.
+- Administrador: recibos de rosters e editorial vazios/divergentes agora rejeitados; 16 testes PASS. Evidências separadas `artifacts/roster-receipt-confirmation-20261102/receipt.json` e `artifacts/editorial-receipt-confirmation-20261102/receipt.json`. Revisão independente em andamento.
+- Treinadores: revisão independente confirmou 14 PASS e contrato SQL de revisão/candidato; não é prova remota. `artifacts/coach-editorial-independent-20261102/receipt.json`.
+- TypeScript final exit 0 (`/tmp/touchline-final-ts-receipts-20261102.log`). ESLint global exit 0, 14 avisos (`/tmp/touchline-final-lint-recheck-20261102.log`). Exceção no-require-imports limitada à entrada CommonJS do harness de evidência; bundler exige CommonJS em .js, nenhuma proteção do produto removida. Preparação do harness passou, sem nova prova browser.
+- Build consolidado local iniciado, resultado PENDENTE: `/tmp/touchline-audit-consolidated-build-20261102.log`. Servidor local anterior encerrado para evitar disputa com build; reiniciar após resultado.
+- Safari bloqueado pelo Mac: inspeção visual nativa pendente. iPhone físico continua não comprovado. Avatar QA permanece EXTERNAL por permissão do proprietário da função; runbook preservado, sem contornar autorização.
+- Zero novos builds remotos; nenhuma alteração Production ou cobrança real. Trabalho completo e lançamento NÃO aprovados.
+
+
+## Consolidação de auditoria — 2026-11-02, continuidade verificada
+- Build consolidado `/tmp/touchline-audit-consolidated-build-20261102.log` terminou exit 0. Candidata reiniciada em localhost:3100, Next production Ready; preflight QA passou, credenciais não persistidas e releaseEnabled=false. Este build antecede os novos ajustes editorial/Card Engine/social abaixo; novo build continua necessário.
+- Revisão independente roster/editorial: 18 PASS; corrigido falso sucesso editorial com publicação inconsistente (RED 200 → GREEN 503). Evidência `artifacts/roster-editorial-independent-20261102/receipt.json`.
+- Card Engine: recibos de create/transition completos e compatíveis com SQL/replay; 22 PASS e revisão independente 22 PASS, sem somar resultados sobrepostos. Evidências `artifacts/card-batch-receipt-confirmation-20261102/receipt.json` e `artifacts/card-batch-independent-20261102/receipt.json`.
+- Os 98 SKIP da suíte ampla foram classificados em `artifacts/conditional-gates-audit-20261102/report.md`: 96 browser, 1 browser+SQL local e 1 toolchain Swift. Há evidências focadas por nome para 40 casos, mas não substituem execução no estado atual; 58 sem PASS exato localizado. Todos continuam SKIP na suíte original.
+- Auditoria adicional identificou confirmação incompleta em social, formação e promoções; correções em curso. Inventário de cards também tem contagem inexata de inserções e falha de histórico ignorada, em correção separada.
+- Safari nativo bloqueado pelo Mac; não há novo PASS visual. Foto QA continua EXTERNAL por permissão/propriedade do guard de identidade; iPhone físico, integração publicada e lançamento continuam pendentes.
+- Zero novos builds remotos; Production e cobranças reais não tocadas. Backlog original preservado.
+
+
+## Auditoria contínua — 2026-11-02, inventário atômico e Arena
+- Inventário administrativo: alteração do card, snapshot anterior, histórico e recibo agora usam uma transação SQL com revisão otimista e request ID idempotente. A API não recorre à gravação separada quando a RPC falta. Migration forward `20261102052950_touchline_inventory_admin_atomic_command.sql` criada, NÃO aplicada à QA. O novo admin depende dela antes da publicação.
+- Inventário: 23 testes focados + 27 adjacentes PASS, revisão independente 23 PASS (subconjunto repetido, não somar). Rollback de falha no histórico e replay após outra alteração comprovados localmente. Concorrência entre sessões reais PostgreSQL e navegador publicado ainda pendentes. Recibos `artifacts/admin-inventory-atomic-command-20261102/receipt.json` e `artifacts/admin-inventory-atomic-independent-20261102/receipt.json`.
+- Promoções: recibo integral inclui regras, audiência e datas, com igualdade semântica JSON; revisão independente 10 PASS. Correção de quitação: recibo confirma motivo, ator, IDs e horário persistido; autor e revisão independente 4 PASS cada, sobrepostos. Testes conjuntos de promoções/cards/social/quitação: 24 PASS antes do novo inventário atômico; não representam suíte ampla atual.
+- Arena: reexecução serial Chromium e WebKit passou cinco larguras por motor, redimensionamento e 30 frames de estabilidade. Exceção de pressão de memória limitada aos processos de teste autorizados, reserva de disco 2048 MiB mantida. Não equivale a pinch físico no iPhone nem QA publicada.
+- TypeScript anterior às mudanças atômicas passou (`/tmp/touchline-audit-ts-latest-20261102.log`). Nova consolidação iniciada em `/tmp/touchline-audit-ts-atomic-20261102.log`; resultado ainda não inferido nesta entrada.
+- Próximas frentes independentes: recibos e propagação da sincronização futebol; contribuições de pontos e ranking. Avatar continua EXTERNAL conforme runbook do proprietário; nenhuma validação de identidade removida. Safari/iPhone reais e integração publicada seguem abertos.
+- Zero novos builds remotos; Production e cobranças reais não tocadas. Não é aprovação de lançamento.
+
+
+## 2026-11-02 — Consolidacao apos recuperacao de arquivos
+- Suite oficial: 7889 testes, 7783 PASS, 8 FAIL, 98 SKIP, zero cancelados. As oito falhas interromperam na prechecagem de reserva de disco antes do comportamento de navegador. Log: /private/tmp/touchline-release-after-recovery-20261102.log.
+- Reexecucao serial dos tres arquivos afetados com a excecao local de capacidade ja existente: 9 PASS, zero FAIL/SKIP (inclui caso adicional do adaptador de imagem). Chromium/WebKit, canais, carrossel e troca isolada. Log: /private/tmp/touchline-capacity-focused-20261102.log. Nao somar resultados sobrepostos; 98 SKIP seguem sem aprovacao integral.
+- Build consolidado iniciou com persona QA confirmada, cpus=1 e webpackMemoryOptimizations. Interrompido pelo monitor com availableKiB=989008 e depois823304; exit1. Log: /private/tmp/touchline-build-final-20261102.log. Nao e build aprovado. Nenhum build remoto/deploy executado.
+- Atualizacao do estado de avatar: a antiga pendencia de permissao nao descreve todo o estado atual. Substituicao das duas fotos foi comprovada: revisao2 ativa; arquivo da revisao1 indisponivel (NoSuchKey), revisao2 HTTP200 image/webp. Log/script /private/tmp/touchline-avatar-read-proof.mjs. Propagacao visual completa e agendamento automatico de retencao ainda pendentes; nao declarar produto concluido.
+- Continuam abertos: build atual, 98 condicionais, integracao publicada, migracoes administrativas, agendamento de retencao, sincronizacao integral e validacao fisica mobile. Production e cobrancas reais preservadas.
+
+## Retomada apos reinicio — 2026-11-02: build consolidado
+- HEAD conferido: 47ebfffbbda98cbb89bcd3ad08fb19efd1e50694, com WIP preservado.
+- TypeScript global: exit 0; artifacts/post-restart-typecheck-20261102.log.
+- Build Next webpack consolidado: exit 0; artifacts/post-restart-build-20261102.log. Persona QA passou, credenciais somente em memoria, um worker, heap 1536 MiB, guardas de capacidade preservadas.
+- Disco antes do build: 8.4 GiB disponiveis. Nenhuma limpeza ou migracao de arquivos neste lote.
+- Este resultado comprova build local; nao comprova UI, QA publicada, iPhone ou lancamento. Zero builds remotos e Production intacta.
+- Proxima etapa: validar candidata renderizada e fluxos pendentes; retencao automatica de avatar e integracoes publicadas continuam pendentes.

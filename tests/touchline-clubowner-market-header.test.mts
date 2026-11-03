@@ -1,3 +1,4 @@
+import * as peopleContract from "../lib/touchlineArena/clubowner-public-contract.ts";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -48,16 +49,20 @@ test("the actual account owns the ClubOwner header, while the approved countdown
   assert.equal(getTouchlineFantasyMarketWorkflowCopy("pt-BR").market, "Mercado");
 });
 
-test("ClubOwner retains the authoritative clock above the squad after coach and formation selection", () => {
-  const start = stage.indexOf('{marketPage ? <section className={styles.myClubMarketStatus}');
-  const end = stage.indexOf('</section> : null}', start);
+test("ClubOwner places the authoritative clock under balance independently of coach and formation selection", () => {
+  const start = stage.indexOf('{marketPage ? <ClubOwnerBalanceClock><section className={styles.myClubMarketStatus}');
+  const end = stage.indexOf('</section></ClubOwnerBalanceClock> : null}', start);
   assert.ok(start > 0 && end > start);
   const clock = stage.slice(start, end);
   assert.match(clock, /data-market-status-compact="true"/);
   assert.match(clock, /<MarketWindowClock gameweeks=\{gameweeks\}/);
   assert.doesNotMatch(clock, /selectedCoach|formationCode|lineupWindow|windowRule/);
   assert.match(clock, /qaOverride=\{qaClubMarketOpen \? collectionBudgetCopy.qaMarketOpen : undefined\}/);
-  assert.ok(end < stage.indexOf('data-clubowner-live-position="above-reserves"'));
+  assert.match(stage, /return slot \? createPortal\(children, slot\) : null/);
+  assert.match(stage, /document\.getElementById\("clubowner-market-clock-slot"\)/);
+  assert.match(header, /id="clubowner-market-clock-slot" data-market-clock-placement="balance"/);
+  assert.ok(header.indexOf('data-account-market-power=') < header.indexOf('id="clubowner-market-clock-slot"'));
+  assert.equal((stage.match(/<ClubOwnerBalanceClock>/g) ?? []).length, 1);
 });
 
 test("the plan is explicit, uses entitlement state and has no invented payment or balance", () => {
@@ -250,7 +255,10 @@ test("membership exploration retains eight languages while account preview stays
 test("existing live account metrics and market clock remain attached to canonical state", () => {
   assert.match(stage, /data-market-owner-metrics="true"/);
   assert.doesNotMatch(stage, /marketMetricsCopy\.remainingBudget/);
-  assert.match(stage, /live\?\.gameweekScore \?\? snapshot.gameweekScore/);
+  assert.ok(stage.includes("presentGameweekScore((live ?? snapshot)?.gameweekScoreStatus, (live ?? snapshot)?.gameweekScore)"),
+    "Round status and value must come from the same canonical live or persisted receipt");
+  assert.ok(stage.includes('roundScore.value === null ? "—" : roundScore.value.toFixed(2)'),
+    "Unknown points remain unavailable instead of becoming a numeric zero");
   assert.match(stage, /live\?\.seasonScore \?\? snapshot.seasonScore/);
   assert.match(stage, /resolveTouchlineFantasyMarketClock\(gameweeks, nowMs\)/);
   assert.match(stage, /marketStatus=\{marketPage \? marketStatusLabel : undefined\}/);
@@ -277,6 +285,8 @@ function renderHeader(owner: Owner | null, locale: string, copyModule: Record<st
   const output = ts.transpileModule(header, { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true } }).outputText;
   const loaded = { exports: {} as { default?: unknown } };
   const requireView = (name: string) => {
+    if (name === "./social/ClubOwnerSearchDialog") return { __esModule: true, default: () => assert.fail("Discovery stays OFF in plan/header fixtures") };
+    if (name === "@/lib/touchlineArena/clubowner-public-contract") return peopleContract;
     if (name === "./market/TouchlineMarketMarks") {
       const source = readFileSync(new URL("../components/touchline/market/TouchlineMarketMarks.tsx", import.meta.url), "utf8");
       const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true } }).outputText;

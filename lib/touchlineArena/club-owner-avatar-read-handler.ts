@@ -1,3 +1,4 @@
+import { isClubOwnerAvatarLocalRequestOrigin } from "./club-owner-avatar-local-admission.ts";
 import { createHash } from "node:crypto";
 import {
   AVATAR_UPLOAD_TOTAL_TIMEOUT_MS, avatarUploadTimeout, awaitAvatarStep, isAvatarAccountId, isAvatarRevision,
@@ -39,7 +40,7 @@ export async function handleClubOwnerAvatarRead(request: Request, deps: ReadDepe
   if (config.enabled !== true) return reply(503, "AVATAR_READ_DISABLED");
   try {
     const origin = new URL(config.requestOrigin ?? "");
-    if ((origin.protocol !== "https:" && !(config.localAdmission === true && config.requestOrigin === "http://localhost:3319")) || origin.origin !== config.requestOrigin || origin.username || origin.password) return reply(503, "AVATAR_READ_UNCONFIGURED");
+    if ((origin.protocol !== "https:" && !(config.localAdmission === true && isClubOwnerAvatarLocalRequestOrigin(config.requestOrigin))) || origin.origin !== config.requestOrigin || origin.username || origin.password) return reply(503, "AVATAR_READ_UNCONFIGURED");
     const target = new URL(request.url), suppliedOrigin = request.headers.get("origin"), site = request.headers.get("sec-fetch-site");
     if (target.origin !== origin.origin || target.pathname !== "/api/account/avatar"
       || (suppliedOrigin !== null && suppliedOrigin !== origin.origin)

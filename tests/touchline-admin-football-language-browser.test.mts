@@ -25,7 +25,7 @@ test("real football Admin renders official data and safe synchronization control
     try {
       for (const locale of ["pt-BR", "en-GB"]) for (const width of [390, 844, 1280]) for (const state of ["empty", "populated", "error"]) {
         const failed = state === "error";
-        const f = footballDataFixture({ state: state as "empty" | "populated" | "error" });
+        const f = footballDataFixture({ state: state as "empty" | "populated" | "error", identityIssues: [{ providerFixtureId: "19722185" }] });
         const markup = await f.render(locale);
         const context = await browser.newContext({ viewport: { width, height: 900 }, serviceWorkers: "block", reducedMotion: "reduce" });
         const page = await context.newPage(), errors: string[] = [];
@@ -38,6 +38,10 @@ test("real football Admin renders official data and safe synchronization control
         if (failed) await expect(page.getByText(locale === "pt-BR" ? "Não foi possível consultar os clubes." : "Normalized clubs could not be read.", { exact: true })).toBeVisible();
         else if (state === "populated") await expect(page.getByText("Synthetic Player", { exact: true })).toBeVisible();
         else await expect(page.getByText(locale === "pt-BR" ? "Nenhuma competição foi importada ainda." : "No competitions normalized yet.", { exact: true })).toBeVisible();
+        if (state === "populated") {
+          await page.getByText(locale === "pt-BR" ? "Identificação pendente na escalação oficial" : "Identity pending in official line-up", { exact: true }).click();
+          await expect(page.getByText(/Sportmonks.*19722185/)).toBeVisible();
+        }
         const clipped = await page.locator("[data-football-layout]").evaluateAll(elements => elements.filter(el => {
           const rect = el.getBoundingClientRect(), panel = el.closest("section")!.getBoundingClientRect();
           return rect.right > panel.right + 1 || rect.left < panel.left - 1 || el.scrollWidth > el.clientWidth + 1;

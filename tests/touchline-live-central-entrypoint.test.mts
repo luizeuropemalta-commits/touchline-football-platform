@@ -115,7 +115,7 @@ async function scenario(ack: boolean, scoring = false) {
                 }
               }
             }
-            return Promise.resolve(resolve({ data: table === 'football_fixtures' && ack ? [{ provider_fixture_id: '19722203' }] : [], error: null }));
+            return Promise.resolve(resolve({ data: table === 'football_data_sync_runs' ? { id: 'run-db', status: (payload as Row).status } : table === 'football_fixtures' && ack ? [{ provider_fixture_id: '19722203' }] : [], error: null }));
           }
           if (table === 'football_data_sync_runs') return Promise.resolve(resolve({ data: columns === 'completed_at' ? { completed_at: at } : null, error: null }));
           // Deliberate downstream DB failure: this test proves a PARTIAL run,

@@ -22,6 +22,8 @@
 .outside { display:grid; gap:12px; padding:18px 0; }
 .outside h2 { margin:0; font:inherit; text-align:center; }
 .outside>p { margin:0; text-align:center; }
+.priority { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 11px; color: #dce8d5; }
+.priority select { color: inherit; background: #0a1711; border: 1px solid #83b72c; border-radius: 6px; padding: 3px 6px; }
 .exchange { flex:1; align-self:stretch; margin-inline:16px; padding:18px 0 0; min-width:0; }
 .exchange p { margin:0; text-align:center; font-size:.75rem; }
 .exchange .slots { gap:clamp(8px,1.2vw,18px); }
@@ -34,6 +36,7 @@
 .positionGroup .slots { justify-content:flex-start; }
 .slot > .positionLabel { padding:0 5px; border-radius:4px; background:rgba(0,8,5,.88); color:#f5ffe9; font-size:.7rem; line-height:18px; font-weight:700; opacity:1; }
 .slot { display:grid; grid-template-columns:minmax(0,1fr); grid-template-rows:120px 20px 44px; justify-items:center; align-items:center; gap:5px; width:max(44px,var(--collection-card-width,70px)); min-width:0; flex:0 0 max(44px,var(--collection-card-width,70px)); }
+.arenaReserves .slot { grid-template-rows:auto 20px 44px; align-content:start; }
 .slot>button { min-height:44px; }
 .slot>button:not(:first-child) { width:44px; }
 .slot small { color:inherit; opacity:.65; }

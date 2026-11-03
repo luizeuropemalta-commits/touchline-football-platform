@@ -66,6 +66,7 @@ function fixture(page: keyof typeof pages, mode: Mode) {
       if (name === "@/lib/admin/owner") return { isOwnerEmail: (email: string | null | undefined) => (ownerExports.isOwnerEmail as (email?: string | null) => boolean)(email) };
       if (name === "@/lib/supabase/server") return { createClient: async () => ({ auth: { getUser: async () => ({ data: { user: mode === "denied" ? { id: "member", email: "member@example.test" } : { id: "owner", email: ownerEmail } } }) } }) };
       if (name === "@/lib/supabase/admin") return { createAdminClient: () => ({ from: query, auth: { admin: { listUsers: async () => mode === "rejected" ? Promise.reject(new Error("PRIVATE_REVIEW_ERROR")) : ({ data: { users: mode === "filled" ? [{ id: "u1", email: "owner@example.test" }] : [] }, error: mode === "error" ? { message: "PRIVATE_REVIEW_ERROR" } : null }) } } }) };
+      if (name === "@/lib/touchlineArena/auth-access") return { hasTouchLineArenaAccess: () => mode !== "denied" };
       if (name === "@/lib/touchlineArena/auth-i18n") return auth;
       if (name === "@/lib/touchlineArena/card-publication-read-model") return { loadTouchlinePublishedCardPresentations: async () => new Map() };
       throw new Error(`Unmocked dependency ${name}`);

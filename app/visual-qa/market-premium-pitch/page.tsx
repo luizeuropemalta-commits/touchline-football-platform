@@ -131,11 +131,13 @@ export default async function MarketPremiumPitchVisualQaPage({ searchParams }: V
       </header> : <header>
         <p>GEOMETRY QA · LOCAL ONLY · NOT PUBLISHABLE</p>
         <span>
-          {catalogueRead.state === "ready"
+          {marketPage ? <div id="clubowner-market-clock-slot" /> : null}
+      {catalogueRead.state === "ready"
             ? `${totalCards} canonical player cards from a frozen QA catalogue. Closed-market test scenario; not current live data.`
             : `Canonical player catalogue unavailable (${catalogueRead.reason ?? "unknown"}). No partial catalogue is shown.`}
         </span>
       </header>}
+      {marketPage ? <div id="clubowner-market-clock-slot" /> : null}
       {catalogueRead.state === "ready"
         ? <FantasyGameweekClient
             embedded={embeddedMyClub}

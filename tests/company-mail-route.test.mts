@@ -8,20 +8,20 @@ import { documentUuid } from "../lib/admin/company-documents.ts";
 const source=readFileSync(new URL("../app/api/admin/company-finance/mail/route.ts",import.meta.url),"utf8");
 const compiled=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText;
 function harness(mode="ok"){
- let privileged=0,runs=0;const selections:string[]=[];const reviews:Record<string,unknown>[]=[];
+ let privileged=0,runs=0;const selections:string[]=[];const orders:{column:string;options:Record<string,unknown>}[]=[];const reviews:Record<string,unknown>[]=[];
  const exports={} as {GET(request:Request):Promise<{status:number;body:unknown;headers:Record<string,string>}>;POST(request:Request):Promise<{status:number;body:unknown;headers:Record<string,string>}>};
  const deps:Record<string,unknown>={
   "next/server":{NextResponse:{json:(body:unknown,init:object)=>({body,...init})}},
   "@/lib/admin/owner":{isOwnerEmail:()=>mode!=="customer"},
   "@/lib/touchlineArena/auth-access":{hasTouchLineArenaAccess:()=>mode!=="no-access"},
   "@/lib/supabase/server":{createClient:async()=>mode==="anonymous"?null:{auth:{getUser:async()=>({data:{user:{id:"11111111-1111-4111-8111-111111111111"}},error:mode==="auth-error"?{}:null})}}},
-  "@/lib/supabase/admin":{createAdminClient:()=>{privileged++;return {rpc:async(name:string,args:Record<string,unknown>)=>{assert.equal(name,"touchline_company_review_mail");reviews.push(args);return {data:{id:(args.p_command as Record<string,unknown>).requestId},error:mode==="review-error"?{message:"SECRET"}:null};},from:()=>{const query={select:(fields:string)=>{selections.push(fields);return query;},order:()=>query,limit:(n:number,options:unknown)=>{assert.equal(n,1);assert.equal(JSON.stringify(options),JSON.stringify({referencedTable:"reviews"}));return query;},range:async()=>({data:[],error:mode==="db-error"?{message:"PRIVATE"}:null})};return query;}};}},
+  "@/lib/supabase/admin":{createAdminClient:()=>{privileged++;return {rpc:async(name:string,args:Record<string,unknown>)=>{assert.equal(name,"touchline_company_review_mail");reviews.push(args);return {data:{id:(args.p_command as Record<string,unknown>).requestId},error:mode==="review-error"?{message:"SECRET"}:null};},from:()=>{const query={select:(fields:string)=>{selections.push(fields);return query;},order:(column:string,options:Record<string,unknown>)=>{orders.push({column,options});return query;},limit:(n:number,options:unknown)=>{assert.equal(n,1);assert.equal(JSON.stringify(options),JSON.stringify({referencedTable:"reviews"}));return query;},range:async()=>({data:[],error:mode==="db-error"?{message:"PRIVATE"}:null})};return query;}};}},
   "@/lib/admin/company-finance-api":{readCompanyJson},"@/lib/admin/company-documents":{documentUuid},
   "@/lib/admin/company-mail-store":{companyMailStore:()=>({}),connectCompanyMailbox:async()=>({})},
   "@/lib/admin/company-mail-intake":{ingestCompanyMailPage:async()=>{runs++;if(mode==="job-error")throw Error("SECRET");return {state:mode==="disabled"?"DISABLED":"IMPORTED",imported:0,pending:0};}},
  };
  vm.runInNewContext(compiled,{exports,require:(key:string)=>{assert.ok(key in deps,key);return deps[key];}});
- return {...exports,privileged:()=>privileged,runs:()=>runs,selections,reviews};
+ return {...exports,privileged:()=>privileged,runs:()=>runs,selections,reviews,orders};
 }
 function request(method="GET",body?:unknown,origin="https://example.test",query=""){
  const req=new Request(`https://example.test/api/admin/company-finance/mail${query}`,{method,headers:{origin,"content-type":"application/json"},...(body===undefined?{}:{body:JSON.stringify(body)})});
@@ -55,4 +55,22 @@ test("finance JSON reader rejects a stalled body within its deadline",async()=>{
  const stream=new ReadableStream<Uint8Array>({start(controller){controller.enqueue(new TextEncoder().encode('{"complete":true}'));}});
  const req=new Request("https://example.test",{method:"POST",headers:{"content-type":"application/json"},body:stream,duplex:"half"} as RequestInit);
  assert.equal(await readCompanyJson(req,5),null);
+});
+
+test("mail pages sort by received/update date before stable IDs, independently of review ordering",async()=>{
+ for(const kind of ["evidence","scans","retries"]){
+  const h=harness(); assert.equal((await h.GET(request("GET",undefined,undefined,`?kind=${kind}`))).status,200);
+  assert.deepEqual(JSON.parse(JSON.stringify(h.orders.filter(order=>!order.options.referencedTable))),[
+   {column:kind==="evidence"?"received_at":"updated_at",options:{ascending:false,nullsFirst:false}},
+   {column:kind==="retries"?"scan_id":"id",options:{ascending:true}},
+   ...(kind==="retries"?[{column:"message_id",options:{ascending:true}}]:[]),
+  ]);
+ }
+});
+
+test("mail list rejects inherited property names without constructing data queries",async()=>{
+ for(const kind of ["toString","constructor","__proto__","hasOwnProperty"]){const h=harness();assert.equal((await h.GET(request("GET",undefined,undefined,`?kind=${kind}`))).status,400);assert.equal(h.selections.length,0);}
+});
+test("company JSON reader requires the exact JSON media type, retaining charset support",async()=>{
+ for(const type of ["application/jsonp","application/json-extra","application/json; charset=utf-8","Application/JSON","text/plain"]){const req=new Request("https://example.test",{method:"POST",headers:{"content-type":type},body:'{"confirmed":true}'});const value=await readCompanyJson(req);if(type==="Application/JSON"||type==="application/json; charset=utf-8")assert.deepEqual(value,{confirmed:true});else assert.equal(value,null);}
 });

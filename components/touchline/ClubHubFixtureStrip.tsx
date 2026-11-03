@@ -144,13 +144,18 @@ export default function ClubHubFixtureStrip({ locale, draftLocalesEnabled = fals
       if (active && event.pointerType === "mouse") { interaction.current.hovered = true; notify(); }
     };
     const leave = () => { if (active) { interaction.current.hovered = false; notify(); } };
-    const down = () => { if (active) { interaction.current.touching = true; notify(); } };
-    const up = () => {
-      if (active && interaction.current.touching) {
-        interaction.current.touching = false;
-        interaction.current.resumeAfter = performance.now() + 2500;
-        notify();
-      }
+    const heldPointers = new Set<number>();
+    const down = (event: PointerEvent) => {
+      if (!active) return;
+      heldPointers.add(event.pointerId);
+      interaction.current.touching = true;
+      notify();
+    };
+    const up = (event: PointerEvent) => {
+      if (!active || !heldPointers.delete(event.pointerId)) return;
+      interaction.current.touching = heldPointers.size > 0;
+      if (!interaction.current.touching) interaction.current.resumeAfter = performance.now() + 2500;
+      notify();
     };
     const wheel = () => {
       if (active) { interaction.current.resumeAfter = performance.now() + 2500; notify(); }

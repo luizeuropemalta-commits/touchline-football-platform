@@ -1,3 +1,5 @@
+import { presentGameweekScore, needsLineupReconfirmation } from "../lib/touchlineFantasy/gameweek-score-status.ts";
+import { getGameweekScoreStatusCopy } from "../lib/touchlineFantasy/gameweek-score-status-i18n.ts";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
@@ -189,6 +191,8 @@ const source = readFileSync(new URL("../app/fantasy/FantasyGameweekClient.tsx", 
 const ast = ts.createSourceFile("Fantasy.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
 const declarations = new Map<string, string>(); let embedded = ""; let getter = ""; let lockedReasonGetter = ""; let browseInitializer = ""; let targetSlotGetter = "";
 let coachReleaseGetter = "";
+const scoreDeclarations: string[] = [];
+const squadAuthorityDeclarations: string[] = [];
 let standalone = "";
 function visit(node: ts.Node) {
   if (ts.isReturnStatement(node) && node.expression && node.expression.getText(ast).startsWith('<div className={styles.shell} data-canonical-step=')) standalone = node.expression.getText(ast);
@@ -199,6 +203,8 @@ function visit(node: ts.Node) {
   if (ts.isVariableDeclaration(node) && node.name.getText(ast) === "browseCards") browseInitializer = node.initializer!.getText(ast);
   if (ts.isVariableDeclaration(node) && node.name.getText(ast) === "marketTargetSlot") targetSlotGetter = `const ${node.getText(ast)};`;
   if (ts.isVariableDeclaration(node) && node.name.getText(ast) === "coachReleaseAction") coachReleaseGetter = `const ${node.getText(ast)};`;
+  if (ts.isVariableDeclaration(node) && ["persistedRoundScore", "reconfirmationRequired", "roundScore", "lineupNotice"].includes(node.name.getText(ast))) scoreDeclarations.push(`const ${node.getText(ast)};`);
+  if (ts.isVariableDeclaration(node) && ["hasLockedRound", "showLockedRound", "displayedReserves"].includes(node.name.getText(ast))) squadAuthorityDeclarations.push(`const ${node.getText(ast)};`);
   ts.forEachChild(node, visit);
 }
 visit(ast);
@@ -219,6 +225,7 @@ function actual(input: Record<string, unknown> = {}, getCopy: (locale: string, d
   assert.ok(embedded); const calls: Array<[string, unknown]> = [];
   const visualIntentEpoch = { current: 0 };
   const context: Record<string, unknown> = {
+    preferCurrentSquad: false,
     collectionEnabled: false, showCollectionStructure: false, collectionStructureVisible: false,
     collection: { state: null, ready: false, busy: false, hasPending: false, canInitialize: false },
     collectionSlotsEditable: false, collectionDestination: null,
@@ -233,13 +240,13 @@ function actual(input: Record<string, unknown> = {}, getCopy: (locale: string, d
     CalendarClock: icon, ShieldCheck: icon, WalletCards: icon, Crown: icon, Check: icon, ChevronRight: icon, BadgeCheck: icon, Trophy: icon, House: icon, PlaneTakeoff: icon, Send: icon, Save: icon, LockKeyhole: icon, CircleAlert: icon, Users: icon,
     builderRef: { current: null }, guidePanelRef: { current: null }, currentAlerts: [], filtered: [], persistedUserGameweek: null, RankingTable: icon,
     stepLabel: (step: string) => step, formatTouchlineFantasyMarketValue: () => "100", formatTouchlineFantasyDeadline: () => "deadline", formatTouchlineFantasyBudgetAmount: () => "100", getTouchlineFantasyMarketBudgetCopy: () => ({ rule: "{budget}" }),
-    React, ArenaView: child, ClubOwnerTechnicalRail: child, ClubHubFixtureStrip: fixtureStrip, resolveTouchlineCatalogueLocale, liveTimeZone: "UTC", initialLiveFixtures: [], initialLiveAdmissionScope: null, initialLiveMetadata: { state: "partial-persisted-schedule", degraded: true }, initialLiveNow: 0, arenaOpen: false, ...domain, locale: "en-GB", draftLocalesEnabled, pt: false, marketPage: true, editable: true, saving: false,
+    React, ArenaView: child, ClubOwnerBalanceClock: child, ClubOwnerTechnicalRail: child, ClubHubFixtureStrip: fixtureStrip, resolveTouchlineCatalogueLocale, liveTimeZone: "UTC", initialLiveFixtures: [], initialLiveAdmissionScope: null, initialLiveMetadata: { state: "partial-persisted-schedule", degraded: true }, initialLiveNow: 0, arenaOpen: false, ...domain, locale: "en-GB", draftLocalesEnabled, pt: false, marketPage: true, editable: true, saving: false,
     styles: new Proxy({}, { get: (_, key) => String(key) }), gameweeks: [], activeGameweek: { id: "round-7", number: 7, state: "MARKET_OPEN" },
     selectedCoach: coach, selectedCoachId: coach.id, formationCode: "4-3-3", geometry, selections: [], eligiblePlayers: [player],
     catalogueById: new Map([[card.id, card]]), browseCards: [card], filteredCoaches: [coach], selectedPlayerClub: { name: "Canonical Club", teamId: "club-1" }, selectedCoachClub: { teamId: "club-1" },
-    snapshot: { config: { budgetEur: 900, maxPlayersPerClub: 11 }, formationRegistry: { "4-3-3": geometry }, coaches: [coach], gameweekScore: 0, seasonScore: 0 },
+    snapshot: { config: { budgetEur: 900, maxPlayersPerClub: 11 }, formationRegistry: { "4-3-3": geometry }, coaches: [coach], gameweekScore: 0, gameweekScoreStatus: "PROVISIONAL", seasonScore: 0 },
     activeSlot: slot, browseSlot: slot, browsingPosition: "striker", squadView: "tactical", pitchCardWidth: 74, pitchViewportRef: { current: null }, query: "", feedback: null,
-    live: null, currentMatchCards: [], currentAvailability: [], TouchlineMatchCardBadge: icon, TouchlinePlayerAvailabilityBadge: icon, validation: { valid: true }, lineupConfirmed: false, hasUnsavedChanges: false,
+    live: null, presentGameweekScore, needsLineupReconfirmation, scoreStatusCopy:getGameweekScoreStatusCopy(String(input.locale ?? "en-GB"),draftLocalesEnabled), roundScoreStatusId:"round-score-state", lineupNoticeId:"lineup-notice", currentMatchCards: [], currentAvailability: [], TouchlineMatchCardBadge: icon, TouchlinePlayerAvailabilityBadge: icon, validation: { valid: true }, lineupConfirmed: false, hasUnsavedChanges: false,
     marketOpen: true, marketStatusLabel: "Market open", marketAccessLabel: "View only", marketAccessCopy: getTouchlineFantasyMarketAccessCopy(String(input.locale ?? "en-GB"), draftLocalesEnabled), marketMetricsCopy: getTouchlineFantasyMarketMetricsCopy(String(input.locale ?? "en-GB"), draftLocalesEnabled),
     getTouchlineFantasyMarketWorkflowCopy: getCopy, getTouchlineBetaEnrollmentCopy: () => ({ review: "Beta review" }), touchlineMarketPositionBucketLabel, localizedPositionLabel,
     statusCopy: touchlineFantasyStatusCopy,
@@ -265,7 +272,7 @@ function actual(input: Record<string, unknown> = {}, getCopy: (locale: string, d
   const functions = ["lineupFingerprint", "horizontalMyClubPitchPosition", "CompactClubSelector", "changeFormation", "addPlayer", "removePlayer", "save", "marketSlotAccepts", "slotAccepts", "canonicalRosterRole", "changeMarketQuery"].map(name => declarations.get(name)).join("\n");
   let js = compiledConsumers.get(standaloneMode);
   if (!js) {
-    js = ts.transpileModule(`(() => { ${getter} ${lockedReasonGetter} ${targetSlotGetter} ${coachReleaseGetter} ${functions} return { render: () => ${standaloneMode ? standalone : embedded}, save, addPlayer, removePlayer, changeFormation, CompactClubSelector, coachReleaseAction }; })()`, { compilerOptions: { target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.React } }).outputText;
+    js = ts.transpileModule(`(() => { ${getter} ${lockedReasonGetter} ${targetSlotGetter} ${coachReleaseGetter} ${scoreDeclarations.join("\n")} ${squadAuthorityDeclarations.join("\n")} ${functions} return { render: () => ${standaloneMode ? standalone : embedded}, save, addPlayer, removePlayer, changeFormation, CompactClubSelector, coachReleaseAction, lineupNotice, roundScore }; })()`, { compilerOptions: { target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.React } }).outputText;
     compiledConsumers.set(standaloneMode, js);
   }
   const api = runInNewContext(js, context);
@@ -367,7 +374,7 @@ test("Arena round points reuse the persisted live total, never draft or coach po
   const { getTouchlineFantasyMarketWorkflowCopy: getCopy } = await load();
   for (const locale of ["en-GB", "pt-BR", "es-ES", "it-IT", "fr-FR", "ar-SA", "tr-TR", "de-DE"]) {
     for (const score of [0, 12.5, 98.25]) {
-      const rendered = actual({ arenaOpen: true, locale, live: { gameweekScore: score, seasonScore: 999 }, hasUnsavedChanges: true, selectedCoach: { ...coach, points: 999 }, selections: [] }, getCopy, true);
+      const rendered = actual({ arenaOpen: true, locale, live: { gameweekScore: score, gameweekScoreStatus: "PROVISIONAL", seasonScore: 999 }, hasUnsavedChanges: true, selectedCoach: { ...coach, points: 999 }, selections: [] }, getCopy, true);
       const nodes = elements(rendered.api.render());
       const output = nodes.find(node => node.props["data-arena-round-points"] === "true");
       assert.ok(output);
@@ -410,7 +417,7 @@ test("Arena toolbar keeps coach outside the pitch and offers only canonical form
     for (const editable of [true, false]) {
       const rendered = actual({ locale, arenaOpen: true, editable, marketOpen: editable,
         marketStatusLabel: editable ? "Market open" : "Market closed",
-        snapshot: { config: { budgetEur: 900, maxPlayersPerClub: 11 }, formationRegistry: { "4-3-3": geometry, "3-5-2": alternate }, coaches: [coach], gameweekScore: 0, seasonScore: 0 },
+        snapshot: { config: { budgetEur: 900, maxPlayersPerClub: 11 }, formationRegistry: { "4-3-3": geometry, "3-5-2": alternate }, coaches: [coach], gameweekScore: 0, gameweekScoreStatus: "PROVISIONAL", seasonScore: 0 },
       }, getCopy, true);
       const pitch = elements(rendered.api.render()).find((node) => node.props.className === "myClubTacticalPitch");
       assert.ok(pitch);
@@ -894,5 +901,32 @@ test("all eight removal labels describe lineup removal, not a market refund", as
     "tr-TR": "İlk 11’den çıkar", "de-DE": "Aus der Aufstellung nehmen" };
   for (const [locale, label] of Object.entries(expected)) {
     assert.equal(catalogues[locale as keyof typeof catalogues].remove, label);
+  }
+});
+
+
+test("real confirmation action announces changed XI and distinguishes ineligibility from pending reads", async () => {
+  const { getTouchlineFantasyMarketWorkflowCopy: getCopy } = await load();
+  for (const standaloneMode of [false,true]) {
+    const viewFixture = standaloneMode ? {selectedCoach:null,filteredCoaches:[],squadView:"squad"} : {};
+    const changed = actual({...viewFixture,marketPage:!standaloneMode,persistedUserGameweek:{state:"CONFIRMED"},hasUnsavedChanges:true,
+      live:{gameweekScore:0,gameweekScoreStatus:"AWAITING_KICKOFF"},locale:"pt-BR"},getCopy,false,standaloneMode);
+    const nodes = elements(changed.api.render());
+    const notice = nodes.find(node=>node.props["data-lineup-confirmation-notice"] === "true");
+    assert.ok(notice); assert.equal(notice.props.role,"status");
+    assert.ok(renderToStaticMarkup(notice).includes("Confirme o XI novamente"));
+    const confirm = nodes.find(node=>node.type === "button" && node.props["aria-describedby"] === notice.props.id);
+    assert.ok(confirm); assert.equal(confirm.props.disabled,false);
+    for (const gameweekScoreStatus of ["NO_VALID_LINEUP","PENDING_SCORE","UNAVAILABLE"]) {
+      const view = actual({...viewFixture,marketPage:!standaloneMode,roundEditable:false,editable:false,visibleStep:"locked",locale:"pt-BR",
+        live:{gameweekScore:0,gameweekScoreStatus},hasUnsavedChanges:true},getCopy,false,standaloneMode);
+      const markup = view.html();
+      assert.equal(markup.includes("Nenhum XI válido foi registrado"),gameweekScoreStatus === "NO_VALID_LINEUP");
+      assert.ok(!markup.includes("Confirme o XI novamente"));
+      assert.ok(elements(view.api.render()).filter(node=>node.type === "button" && node.props.children === getCopy("pt-BR").confirmXI).every(node=>node.props.disabled));
+    }
+    const loading = actual({...viewFixture,marketPage:!standaloneMode,persistedUserGameweek:{state:"CONFIRMED"},hasUnsavedChanges:true,
+      collectionEnabled:true,collection:{ready:false,state:null},live:{gameweekScoreStatus:"AWAITING_KICKOFF",gameweekScore:0}},getCopy,false,standaloneMode);
+    assert.equal(loading.api.lineupNotice,null);
   }
 });

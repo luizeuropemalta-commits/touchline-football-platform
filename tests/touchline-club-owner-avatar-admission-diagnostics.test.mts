@@ -15,6 +15,12 @@ test("configuration never claims authentication, Storage or retention proof", ()
   assert.equal(JSON.stringify(environment), before);
   assert.ok(Object.isFrozen(result)); assert.ok(Object.isFrozen(result.codes));
 });
+test("both approved local candidate ports pass configuration checks", () => {
+  for (const requestOrigin of [origin, "http://localhost:3100"]) {
+    assert.equal(allowsClubOwnerAvatarLocalEnvironment(env(), requestOrigin), true);
+    assert.deepEqual(run(env(), requestOrigin).codes, []);
+  }
+});
 test("each capability requires exact true and emits only its reason", () => {
   for (const [key, code] of [["READ_ENABLED", "read_disabled"], ["UPLOAD_ENABLED", "upload_disabled"],
     ["SELECTION_ENABLED", "selection_disabled"], ["RETENTION_READY", "retention_unverified"]]) {
@@ -25,20 +31,38 @@ test("each capability requires exact true and emits only its reason", () => {
   }
 });
 test("diagnostic reuses existing gate without allowing other ports or environments", () => {
-  for (const [environment, requestOrigin] of [[env(), "http://localhost:3100"], [env(), "http://127.0.0.1:3319"],
+  for (const [environment, requestOrigin] of [[env(), "http://localhost:3101"], [env(), "http://127.0.0.1:3319"],
     [{ ...env(), VERCEL: "1" }, origin], [{ ...env(), NODE_ENV: "production" }, origin],
     [{ ...env(), TOUCHLINE_CLUB_OWNER_AVATAR_LOCAL_ENABLED: "false" }, origin],
     [{ ...env(), SUPABASE_URL: "https://other.supabase.co" }, origin]] as const) {
     assert.equal(allowsClubOwnerAvatarLocalEnvironment(environment, requestOrigin), false);
     assert.ok(run(environment, requestOrigin).codes.includes("local_environment_rejected"));
   }
-  assert.ok(run(env(), "http://localhost:3100").codes.includes("local_origin_rejected"));
+  assert.ok(run(env(), "http://localhost:3101").codes.includes("local_origin_rejected"));
   assert.deepEqual(inspect({ environment: env(), transport: "hosted", requestOrigin: "https://example.com", expectedActorId: actor }).codes, ["hosted_environment_unverified"]);
 });
 test("absent, invalid and mismatching actors remain distinct", () => {
   assert.deepEqual(run({ ...env(), TOUCHLINE_CLUB_OWNER_AVATAR_UPLOAD_ACCOUNT_ID: "invalid" }).codes, ["configured_actor_invalid"]);
   assert.deepEqual(run(env(), origin, "").codes, ["actor_unverified"]);
   assert.deepEqual(run(env(), origin, "10000000-0000-4000-8000-000000000002").codes, ["actor_mismatch"]);
+});
+test("customer rollout uses the same audience policy as the upload route without claiming runtime readiness", () => {
+  const customers = { ...env(), TOUCHLINE_CLUB_OWNER_AVATAR_AUDIENCE: "customers" };
+  for (const configuredActor of [undefined, actor, "10000000-0000-4000-8000-000000000003"]) {
+    const result = run({ ...customers, TOUCHLINE_CLUB_OWNER_AVATAR_UPLOAD_ACCOUNT_ID: configuredActor }, origin,
+      "10000000-0000-4000-8000-000000000002");
+    assert.deepEqual(result, { configuration: "checks_pending", codes: [], runtimeVerificationRequired: true });
+  }
+  assert.deepEqual(run(customers, origin, "").codes, ["actor_unverified"]);
+  assert.deepEqual(run({ ...customers, TOUCHLINE_CLUB_OWNER_AVATAR_UPLOAD_ACCOUNT_ID: "invalid" }).codes,
+    ["configured_actor_invalid"]);
+  assert.deepEqual(inspect({ environment: customers, transport: "hosted", requestOrigin: "https://example.com", expectedActorId: actor }).codes,
+    ["hosted_environment_unverified"]);
+});
+test("unrecognised audience cannot produce a clean admission diagnostic", () => {
+  for (const audience of ["", "customer", "CUSTOMERS", "all", "account"]) {
+    assert.deepEqual(run({ ...env(), TOUCHLINE_CLUB_OWNER_AVATAR_AUDIENCE: audience }).codes, ["configured_audience_invalid"]);
+  }
 });
 test("output never echoes keys, account, origin or arbitrary environment values", () => {
   const secret = "DO_NOT_EMIT_PRIVATE_VALUE";

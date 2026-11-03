@@ -134,6 +134,38 @@
   outline-offset: 3px;
 }
 
+/* The social action keeps the shared pill and TouchLine's brand green. */
+.link[data-action="follow"] {
+  border-color: var(--lime, #a3ff12);
+  color: var(--lime, #a3ff12);
+  background: rgba(8, 23, 12, .88);
+  min-width: 88px;
+}
+.link[data-action="follow"][aria-pressed="true"] {
+  border-color: rgba(185, 207, 187, .3);
+  color: #c5d1c7;
+  background: rgba(13, 25, 18, .7);
+}
+.link[data-action="follow"] svg { color: currentColor; }
+.link[data-action="follow"]:not(:disabled):focus-visible {
+  color: #102000;
+  background: var(--lime, #a3ff12);
+  border-color: var(--lime, #a3ff12);
+}
+@media (hover: hover) and (pointer: fine) {
+  .link[data-action="follow"]:not(:disabled):hover {
+    color: #102000;
+    background: var(--lime, #a3ff12);
+    border-color: var(--lime, #a3ff12);
+  }
+}
+@media (hover: none), (pointer: coarse) {
+  .link[data-action="follow"]:not(:focus-visible):hover { transform: none; box-shadow: none; }
+  .link[data-action="follow"]:not(:focus-visible):hover::after { opacity: 0; }
+}
+.link[data-action="follow"]:disabled { cursor: default; opacity: .65; transform: none; }
+.link[data-action="follow"]:disabled::after { opacity: 0; }
+
 .more {
   display: none;
   position: relative;

@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { coachReconciliationFailureReason, summarizeCoachReconciliation } from "@/lib/football-data/coach-reconciliation-diagnostic";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { readCompetitionCoachAssignments } from "@/lib/touchlineArena/coach-catalogue-server";
@@ -563,12 +564,14 @@ export async function persistCompetitionFixtureSchedule(
     });
   const coachReceiptConfirmed = !coachReconciliationError
     && Number.isSafeInteger(coachReconciliation?.reconciled) && coachReconciliation.reconciled >= 0;
+  const coachRankingDiagnostic = summarizeCoachReconciliation(coachReconciliation, coachReconciliationError);
   if (!coachReceiptConfirmed || coachReconciliation?.ok !== true) {
     return {
       stored: false as const,
-      reason: `coach-points-reconciliation-failed:${coachReconciliationError?.code ?? (coachReceiptConfirmed ? "attribution-pending" : "unconfirmed")}`,
+      reason: `coach-points-reconciliation-failed:${coachReconciliationError?.code ?? coachReconciliationFailureReason(coachRankingDiagnostic, coachReceiptConfirmed)}`,
       fixturesStored: rows.length,
       coachPointsReconciled: coachReceiptConfirmed ? coachReconciliation.reconciled : 0,
+      coachRankingDiagnostic,
     };
   }
   return {

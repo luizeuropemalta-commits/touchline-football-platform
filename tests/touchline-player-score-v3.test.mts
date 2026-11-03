@@ -100,7 +100,7 @@ test("dedicated QA rebuild still reaches scoring without Production activation",
 });
 
 test("V2 ranking history cannot become an active product read model", () => {
-  const reader = readFileSync(new URL("../lib/touchlineArena/card-ranking-server.ts", import.meta.url), "utf8");
+  const reader = readFileSync(new URL("../lib/touchlineArena/card-ranking-snapshot-server.ts", import.meta.url), "utf8");
   const catalog = readFileSync(new URL("../lib/touchlineArena/ranked-card-catalog-server.ts", import.meta.url), "utf8");
   assert.match(reader, /record\.scoring_version !== "player_scoring_v4"/);
   assert.doesNotMatch(reader, /record\.scoring_version !== "player_scoring_v2"/);

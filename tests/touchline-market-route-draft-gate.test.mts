@@ -59,6 +59,10 @@ function fixture(options: { user?: User | null; configured?: boolean; rejectAuth
     process: { env: { TOUCHLINE_OWNER_EMAILS: "owner@example.test, admin@example.test" } },
   });
   const modules: Record<string, unknown> = {
+    "@/components/touchline/social/ClubOwnerDiscoveryOnboarding": { default: () => assert.fail("Discovery onboarding must stay closed when its server flag is OFF") },
+    "@/components/touchline/social/ClubOwnerPublicDirectory": { default: () => assert.fail("Public settings render only for an explicit settings request") },
+    "@/lib/touchlineArena/clubowner-public-contract": { parseOwnPublicOwner: () => assert.fail("No unsolicited settings read"), peopleLocale: (locale: string) => locale },
+    "@/lib/touchlineArena/clubowner-public-avatar-server": { publicOwnerAvatarService: () => ({ enabled: false }) },
     "@supabase/supabase-js": { AuthSessionMissingError: class extends Error {} },
     "@/components/touchline/fantasy/ClubCollectionContext": { ClubCollectionProvider: React.Fragment },
     "@/lib/touchlineFantasy/club-collection-server": { clubCollectionEnabled: () => false },

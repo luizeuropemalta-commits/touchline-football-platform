@@ -1,3 +1,4 @@
+import { coachReconciliationFailureReason, summarizeCoachReconciliation } from "../lib/football-data/coach-reconciliation-diagnostic.ts";
 import { catalogueCoachAssignments, legacyCoachCatalogue } from "../lib/touchlineArena/coach-catalogue-contract.ts";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -39,6 +40,7 @@ const fixture: TouchlineFixture = {
 };
 
 type Input = {
+  completion?: "error" | "empty" | "wrong-id" | "wrong-status" | "throw";
   postMatchFixtureIds?: string[];
   historicalPersistence?: {
     lookupFailure?: "missing" | "throw" | "wrong-season" | "wrong-id" | "wrong-competition";
@@ -56,6 +58,7 @@ type Input = {
   coachError?: string;
   coachUnconfirmed?: boolean;
   coachAttributionPending?: boolean;
+  coachRankingReason?: string;
   liveError?: string;
   liveHttpStatus?: number;
   liveRequestDisposition?: unknown;
@@ -155,12 +158,23 @@ function scenario(input: Input = {}) {
           return { data: syncType === "live_scores" && input.cadenceNotDue ? { started_at: new Date(NOW - 1_000).toISOString() } : null, error: null };
         },
         update(value: Write) {
-          return { async eq(column: string, id: string) {
-            assert.equal(column, "id"); assert.equal(id, RUN_ID);
-            calls.push("complete-run"); writes.push(value);
-            input.history?.push({ started_at: new Date(now).toISOString(), status: value.status, cadenceExecuted: value.source_payload.cadenceExecuted });
-            return { error: null };
-          } };
+          const completion = {
+            eq(column: string, id: string) {
+              assert.ok((column === "id" && id === RUN_ID) || (column === "status" && id === "running"));
+              return completion;
+            },
+            select(columns: string) { assert.equal(columns, "id,status"); return completion; },
+            async maybeSingle() {
+              calls.push("complete-run"); writes.push(value);
+              if (input.completion === "throw") throw Error("PRIVATE_DB_DETAIL");
+              if (input.completion === "error") return { data: null, error: { message: "PRIVATE_DB_DETAIL" } };
+              if (input.completion === "empty") return { data: null, error: null };
+              input.history?.push({ started_at: new Date(now).toISOString(), status: value.status, cadenceExecuted: value.source_payload.cadenceExecuted });
+              return { data: { id: input.completion === "wrong-id" ? "other-run" : RUN_ID,
+                status: input.completion === "wrong-status" ? "running" : value.status }, error: null };
+            },
+          };
+          return completion;
         },
       };
       return query;
@@ -185,7 +199,8 @@ function scenario(input: Input = {}) {
       }
       assert.equal(name, "touchline_reconcile_verified_coach_fixture_points");
       calls.push("coaches");
-      return { data: input.coachUnconfirmed ? null : { ok: !input.coachAttributionPending, reconciled: 2,
+      return { data: input.coachUnconfirmed ? null : { ok: !input.coachAttributionPending && !input.coachRankingReason, reconciled: 2,
+        ranking: input.coachRankingReason ? { ok: false, reason: input.coachRankingReason, pendingCoachIds: ["99991"] } : undefined,
         pending: input.coachAttributionPending ? [{ fixtureProviderId: "19722168", reason: "PCC01" }] : [] }, error: input.coachError ? { code: input.coachError } : null };
     },
   };
@@ -193,7 +208,7 @@ function scenario(input: Input = {}) {
   const readFixtures = async () => input.historicalPersistence ? [displayFixture]
     : input.noIncomingFixtures ? [] : input.secondUnwrittenFixture ? [fixture, secondFixture] : [fixture];
   const sync = runInNewContext(`${syncSource}\nsyncSportmonksLiveState;`, {
-    decideLiveSyncCadence, mergeCanonicalLiveFixture, reconcilePendingTouchlineFantasyGameweeks, AbortController,
+    decideLiveSyncCadence, mergeCanonicalLiveFixture, reconcilePendingTouchlineFantasyGameweeks, AbortController, summarizeCoachReconciliation, coachReconciliationFailureReason,
     recoveryFixtureMatches, BACKLOG_MAX_PER_RUN, BACKLOG_DEADLINE_MS,
     recoveryFeedComplete: () => true,
     process: { env: input.environment ?? { VERCEL_ENV: "preview", TOUCHLINE_QA_SUPABASE_PROJECT_REF: "xgxbwqxjssxxuihuwmgy" } },
@@ -865,3 +880,30 @@ test("a fixture already in the canonical schedule needs no additional exact look
   for (const step of ["provider-feed", "persist-feed", "players", "fantasy-lifecycle", "publish-presentation"])
     assert.ok(check.calls.includes(step), step);
  });
+
+for (const reason of ["coach-editorial-identity-pending", "fixture-attribution-pending", "season-unavailable", "fixture-results-unavailable"]) {
+  test(`coach diagnostic preserves the ranking reason without relaxing the publication gate: ${reason}`, async () => {
+    const s = scenario({ coachRankingReason: reason }); const result = await s.run();
+    assert.equal(result.ok, false); assert.equal(result.status, "partial");
+    assert.equal(result.coachRankingDiagnostic?.reason, reason);
+    assert.equal(result.coachPointsReconciled, 2, "diagnostics do not alter confirmed counts");
+    assert.ok(result.errors.includes(`coach-points:${reason}`));
+    assert.equal(s.calls.includes("publish-presentation"), false);
+    assert.equal(JSON.stringify(result.coachRankingDiagnostic).includes("99991"), false);
+    assertCompletion(s, result);
+  });
+}
+
+for (const completion of ["error", "empty", "wrong-id", "wrong-status", "throw"] as const) {
+  test(`unconfirmed durable completion ${completion} preserves writes but never reports success`, async () => {
+    const s = scenario({ completion });
+    const result = await s.run();
+    assert.equal(result.ok, false);
+    assert.equal(result.status, "partial");
+    assert.ok(result.errors.includes("run-write:unconfirmed"));
+    assert.ok(result.updated > 0);
+    assert.ok(result.snapshotFixtures > 0);
+    assert.equal(s.calls.filter(value => value === "complete-run").length, 1);
+    assert.doesNotMatch(JSON.stringify([result, s.logs]), /PRIVATE_DB_DETAIL/);
+  });
+}

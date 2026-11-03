@@ -173,7 +173,9 @@
   transform: translate(-50%, -50%);
 }
 
-.pitchPlayer:hover { z-index: 8; }
+@media (hover: hover) and (pointer: fine) {
+  .pitchPlayer:hover { z-index: 8; }
+}
 
 .positionLabel {
   position: absolute;
@@ -194,7 +196,9 @@
 }
 
 .cardButton { display: block; width: 100%; padding: 0; border: 0; color: inherit; background: transparent; cursor: zoom-in; transition: filter 170ms ease, transform 170ms ease; }
-.cardButton:hover { filter: drop-shadow(0 13px 14px rgba(184, 255, 70, .22)); transform: translateY(-3px) scale(1.045); }
+@media (hover: hover) and (pointer: fine) {
+  .cardButton:hover { filter: drop-shadow(0 13px 14px rgba(184, 255, 70, .22)); transform: translateY(-3px) scale(1.045); }
+}
 .cardButton:focus-visible { border-radius: 12px; outline: 2px solid var(--lime); outline-offset: 3px; }
 
 .pitchRenderedCard,
@@ -282,7 +286,9 @@
   margin-top: 0 !important;
 }
 .awardCoachCardLink { transition: filter 180ms ease, transform 180ms ease; }
-.awardCoachCardLink:hover { filter: drop-shadow(0 14px 20px color-mix(in srgb, var(--tier-accent, #b8ff46) 22%, transparent)); transform: translateY(-3px) scale(1.025); }
+@media (hover: hover) and (pointer: fine) {
+  .awardCoachCardLink:hover { filter: drop-shadow(0 14px 20px color-mix(in srgb, var(--tier-accent, #b8ff46) 22%, transparent)); transform: translateY(-3px) scale(1.025); }
+}
 .awardCoachCardLink:focus-visible { border-radius: 12px; outline: 2px solid var(--gold); outline-offset: 4px; }
 .awardCoachCard { width: 100% !important; max-width: none !important; }
 .awardIdentity { display: grid; justify-items: center; min-width: 0; gap: 3px; margin-top: 4px; text-align: center; }
@@ -325,7 +331,9 @@
 /* The canonical coach card already reserves its complete crown envelope.
    Body padding supplies clearance from the header; do not reserve it twice. */
 .topCoachCardLink { display: block; width: min(245px, 82%); margin-top: 0; color: inherit; transition: filter 180ms ease, transform 180ms ease; }
-.topCoachCardLink:hover { filter: drop-shadow(0 18px 24px color-mix(in srgb, var(--tier-accent, #9eaaa5) 20%, transparent)); transform: translateY(-4px) scale(1.025); }
+@media (hover: hover) and (pointer: fine) {
+  .topCoachCardLink:hover { filter: drop-shadow(0 18px 24px color-mix(in srgb, var(--tier-accent, #9eaaa5) 20%, transparent)); transform: translateY(-4px) scale(1.025); }
+}
 .topCoachCardLink:focus-visible { border-radius: 18px; outline: 2px solid var(--gold); outline-offset: 5px; }
 .topCoachCard { width: 100% !important; max-width: none !important; }
 .topCoachIdentity { display: grid; justify-items: center; gap: 4px; margin-top: -4px; text-align: center; }
@@ -545,3 +553,10 @@
   .cardButton,
   .topCoachCardLink { transition: none; }
 }
+
+.ownerAvatar > span, .ownerAvatar > a { display: flex; width: 100%; height: 100%; min-width: 0; }
+.ownerAvatar > span > span, .ownerAvatar > a > span, .ownerAvatar > a > span > span { width: 100%; height: 100%; min-width: 0; }
+.ownerAvatar > a img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.ownerAvatar > a > span > span > span { width: 100%; height: 100%; min-width: 0; flex-basis: auto; }
+
+.ownerAvatar > span > span > span, .ownerAvatar > span > span > img { width: 100%; height: 100%; min-width: 0; flex-basis: auto; }

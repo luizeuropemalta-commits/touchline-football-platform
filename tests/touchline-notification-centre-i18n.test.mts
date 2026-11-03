@@ -195,7 +195,8 @@ test("real notification copy and active count reach the page in all eight opt-in
 test("domain defaults, API handlers and key order remain intact outside the explicitly admitted observation projection", () => {
   const source = read(path);
   assert.match(source, /body: JSON\.stringify\(\{ \.\.\.preferences, explicitConsent: true \}\)/);
-  assert.match(source, /disabled=\{saving \|\| loading \|\| !preferences\.accountId\}/);
+  assert.match(source, /const editingDisabled = saving \|\| loading \|\| consentState === "checking" \|\| !preferences\.accountId/);
+  assert.match(source, /disabled=\{editingDisabled\}/);
   assert.match(source, /return \(\) => \{/);
   assert.doesNotMatch(source, /requestPermission|serviceWorker|Notification\.permission|setInterval/);
   assert.deepEqual([...source.matchAll(/key: "(playerRumours|availability|confirmedLineup|goalsAndEvents|selectedLiveMatches|leagueLeadership|transfersAndOffers|creditsPromotionsRewards|accountSecurity|generalComms)"/g)].map(match => match[1]), categories);
@@ -292,4 +293,33 @@ test("preference transport and body timeouts unlock the centre without replaying
   f.resolve(1, { ok: true, data: data(timestamp) }); await tick();
   assert.match(f.render().html, /Registro não confirmado/, "late success cannot overwrite timeout uncertainty");
   assert.equal(f.pendingTimers(), 0); f.unmount();
+});
+
+test("preference editors cannot accept changes that a pending read or write would overwrite", async () => {
+  const f = fixture(await catalogue()); f.start();
+  const editors = () => f.render().nodes.filter(node => node.type === "input" || node.type === "select");
+  assert.ok(editors().length > 10);
+  assert.ok(editors().every(node => node.props.disabled === true), "initial read locks editors");
+  f.resolve(0, { ok: true, data: data(null) }); await tick();
+  assert.ok(editors().every(node => node.props.disabled === false));
+  const pending = f.save();
+  assert.ok(editors().every(node => node.props.disabled === true), "pending PUT locks all editors instead of dropping newer changes");
+  f.resolve(1, { ok: true, data: data(timestamp) }); await pending;
+  assert.ok(editors().every(node => node.props.disabled === false)); f.unmount();
+});
+
+test("malformed preference receipts never reach rendering or leave the account writable", async () => {
+  for (const patch of [{settings:null}, {settings:{...data(null).settings,scopes:null}}, {channels:null}, {quietHours:null}, {updatedAt:"not-a-date"}]) {
+    const f=fixture(await catalogue()); f.start(); f.resolve(0,{ok:true,data:{...data(null),...patch}}); await tick();
+    assert.doesNotThrow(()=>f.render()); assert.match(f.render().html,/Record unconfirmed/);
+    await f.save(); assert.equal(f.requests.length,1); f.unmount();
+  }
+});
+
+test("malformed save receipt preserves confirmed preferences and reports an uncertain outcome", async () => {
+  const f=fixture(await catalogue()); f.start(); const before=data(null); f.resolve(0,{ok:true,data:before}); await tick();
+  const pending=f.save(); f.resolve(1,{ok:true,data:{...data(timestamp),channels:null}}); await pending;
+  assert.doesNotThrow(()=>f.render()); assert.match(f.render().html,/Record unconfirmed/);
+  const retry=f.save(); assert.deepEqual(JSON.parse(f.requests[2].options.body as string),{...before,explicitConsent:true});
+  f.resolve(2,{ok:true,data:data(timestamp)}); await retry; f.unmount();
 });

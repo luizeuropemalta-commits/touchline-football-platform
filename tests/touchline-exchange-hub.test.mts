@@ -1,3 +1,4 @@
+import {creditAmountModule} from './helpers/touchline-credit-amount-fixture.mts';
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -18,13 +19,14 @@ function fixture(ready = true, locale = "en-GB", roster: readonly ClubRosterEntr
   let panel: unknown = null;
   const exports: { default?: (props: Record<string, unknown>) => React.ReactNode } = {};
   const modules: Record<string, unknown> = {
-    react: { ...React, useState: () => [panel, (value: unknown) => { panel = value; }], useRef: () => ({ current: null }) },
+    "./TouchlineCreditAmount": creditAmountModule,
+    react: { ...React, useId: () => "exchange-history-fixture", useState: (initial: unknown) => initial === null ? [panel, (value: unknown) => { panel = value; }] : [initial, () => {}], useRef: () => ({ current: null }) },
     "react/jsx-runtime": jsx,
     "@/lib/touchlineArena/clubowner-public-contract": people,
-    "../social/ClubOwnerPublicDirectory": { default: (props: { searchOnly: boolean }) => { assert.equal(props.searchOnly, true); return React.createElement("div", {"data-friend-search": true}); } },
+    "../social/ClubOwnerSearchDialog": { default: (props: { locale: string; compact?: boolean }) => { assert.equal(props.compact, undefined); assert.ok(["pt-BR", "en-GB"].includes(props.locale)); return React.createElement("div", {"data-friend-search": true}, React.createElement("h4", null, people.peopleCopy(props.locale as people.PeopleLocale).friends), React.createElement("button", {type: "button", "aria-haspopup": "dialog"}, people.peopleCopy(props.locale as people.PeopleLocale).query)); } },
     "../ClubOwnerPlanOnboarding": { default: () => null },
     "./ExchangeNegotiations": { default: () => React.createElement("div", {"data-connected-negotiations": true}) },
-    "./useExchangeHistory": { useExchangeHistory: () => null },
+    "./useExchangeHistory": { useExchangeHistory: () => receiptProps.historyReadOverride ?? ({ status: "unavailable", history: null }) },
     "@/lib/touchlineFantasy/exchange-eligibility": eligibility,
     "@/lib/touchlineFantasy/exchange-hub-i18n": hubCopy,
     "@/lib/touchlineFantasy/exchange-history-presentation": exchangeHistory,
@@ -70,9 +72,9 @@ const completeRoster = (["starters","reserves","outside"] as const).flatMap(area
 test("financial presentation safely handles explicit coach vacancy without changing the wallet or player values", () => {
   const h = fixture(true, "en-GB", [{ playerId: "one", area: "outside", slot: 0 }], "vip", false, true);
   const html = h.open(2);
-  assert.match(html, /<dd>100 TC<\/dd>/);
-  assert.match(html, /<dd>40 TC<\/dd>/);
-  assert.match(html, /<dd>0 TC<\/dd>/);
+  assert.match(html, /data-tc-amount="100"/);
+  assert.match(html, /data-tc-amount="40"/);
+  assert.match(html, /data-tc-amount="0"/);
 });
 test("Exchange Hub catalogue has eight gated key sets and unchanged count tokens", () => {
   const locales = ['en-GB', 'pt-BR', 'es-ES', 'it-IT', 'fr-FR', 'ar-SA', 'tr-TR', 'de-DE'];
@@ -163,9 +165,9 @@ test("three canonical buttons open one themed read-only zoom each", () => {
 });
 test("financial view distinguishes real cash, contracted players and coach", () => {
   const html = fixture().open(2);
-  assert.match(html, /Available balance<\/dt><dd>100 TC/);
-  assert.match(html, /Contracted squad value<\/dt><dd>40 TC/);
-  assert.match(html, /Coach signing value<\/dt><dd>10 TC/);
+  assert.match(html, /Available balance<\/dt><dd><span[^>]*data-tc-amount="100"/);
+  assert.match(html, /Contracted squad value<\/dt><dd><span[^>]*data-tc-amount="40"/);
+  assert.match(html, /Coach signing value<\/dt><dd><span[^>]*data-tc-amount="10"/);
   assert.doesNotMatch(html, /50 TC/);
 });
 test("history uses actual receipts and does not invent exchange records", () => {
@@ -265,4 +267,28 @@ test("friend search follows the explicit server feature gate and stays hidden by
     assert.equal(h.html().includes("data-friend-search"), enabled === true);
     assert.equal(h.html().includes("Encontrar amigos"), enabled === true);
   }
+});
+
+
+test("loading receipts never announce a failed history or an empty income", () => {
+  for (const locale of ["pt-BR", "en-GB", "ar-SA"]) {
+    const copy = hubCopy.getExchangeHubCopy(locale, true);
+    const h = fixture(true, locale, [], "vip", true, true, { historyReadOverride: { status: "loading", history: null } });
+    const history = h.open(1), finances = h.open(2);
+    assert.ok(history.includes(copy.historyLoading));
+    assert.ok(finances.includes(copy.statementLoading));
+    assert.ok(!history.includes(copy.historyUnavailable));
+    assert.ok(!finances.includes(copy.statementUnavailable));
+    assert.ok(!history.includes(copy.emptyExchanges));
+  }
+});
+
+test("Portuguese uses Card and all receipt amounts include the canonical TC coin", () => {
+  const html = fixture(true, "pt-BR", [], "vip", false, true, receiptPresentation()).open(1);
+  assert.match(html, /Card recebido/);
+  assert.match(html, /Card entregue/);
+  assert.doesNotMatch(html, /Carta recebida|Carta entregue|Carta atual/);
+  assert.equal((html.match(/data-tc-amount=/g) ?? []).length, 6);
+  assert.equal((html.match(/<bdi>/g) ?? []).length, 6);
+  assert.match(html, /<svg/);
 });

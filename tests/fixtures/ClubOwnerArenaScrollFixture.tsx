@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState, type ComponentType, type CSSProperties, type ReactNode } from "react";
 export { createPortal as createArenaPortal } from "react-dom";
+import { ClubOwnerCollectionSlots } from "../../components/touchline/fantasy/ClubOwnerCollectionSlots";
+import collectionLayout from "../../components/touchline/fantasy/ClubOwnerCollectionSlots.module.css";
+import { CLUB_RESERVE_POSITIONS } from "../../lib/touchlineFantasy/collection-slot-plan";
 import ClubHubFixtureStrip from "../../components/touchline/ClubHubFixtureStrip";
 import TouchlineCoachCardZoom from "../../components/touchline/cards/TouchlineCoachCardZoom";
 import TouchlineGameweekCard from "../../components/touchline/fantasy/TouchlineGameweekCard";
@@ -22,6 +25,8 @@ const cards: ClubOwnerSquadCard[] = geometry.slots.map((slot, index) => ({
   countryCode3: "ENG", marketValue: "", marketValueState: "verified", touchlinePoints: 0, seasonTotalRating: null,
   editorialCard: { tierKey: "radiant-gold", marketValueEur: 1_000_000, marketValueState: "verified", cardPrice: { amountMinor: 0, currency: "GBP" }, lastReviewedAt: "2026-10-24T00:00:00Z" },
 }));
+const reserveCards = cards.slice(0, 9).map((card, index) => ({ ...card, id: `synthetic-reserve-${index}`, canonicalPlayerId: `synthetic-reserve-${index}` }));
+const reserveState = { players: reserveCards.map((card, slot) => ({ playerId: card.id, area: "reserves" as const, slot, position: CLUB_RESERVE_POSITIONS[slot], valueEur: 1_000_000, clubId: "19" })) };
 const fixtures: TouchlinePublicFixture[] = Array.from({ length: 10 }, (_, index) => ({ id: `9900${index}`, providerId: `9900${index}`, competitionId: "8", seasonId: "26000", roundId: "8", roundName: "8", status: "FT", startsAt: "2026-10-23T15:00:00Z",
   homeTeam: { id: `${index * 2 + 1}`, providerId: `${index * 2 + 1}`, name: `Synthetic Home ${index}`, shortCode: "HOM" },
   awayTeam: { id: `${index * 2 + 2}`, providerId: `${index * 2 + 2}`, name: `Synthetic Away ${index}`, shortCode: "AWY" }, homeScore: 2, awayScore: 2 }));
@@ -74,6 +79,10 @@ export default function ClubOwnerArenaScrollFixture({ ArenaBoundary, position }:
               </div>)}
             </TouchlinePitchSurface>
           </div>
+          {expanded && <section className={`${collectionLayout.outside} ${collectionLayout.arenaReserves}`} data-arena-reserves="true" aria-label="Reserves">
+            <h2>Reserves</h2>
+            <ClubOwnerCollectionSlots state={reserveState} catalogue={reserveCards} area="reserves" count={9} slotPositions={CLUB_RESERVE_POSITIONS} locale="en-GB" displayWidth={width} enabled={false} onChoose={() => {}} />
+          </section>}
         </div>
       </section>
     </ArenaBoundary>

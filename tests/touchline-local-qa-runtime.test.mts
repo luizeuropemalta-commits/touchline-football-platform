@@ -16,14 +16,14 @@ test("local preview allows disk above 1 GiB but retains exact floor and critical
   assert.throws(() => assertCandidateCapacityReadings(4, 8 * floor, true), /pressure/);
 });
 
-test("capacity monitor starts normal, retains sustained warnings and stops critical pressure", () => {
+test("capacity monitor permits authorized warning startup and sustained warnings but stops critical pressure", () => {
   let pressure = 2;
   const check = (_cwd: string, allowWarning = false) => {
     if (pressure !== 1 && !(allowWarning && pressure === 2)) throw new Error("pressure");
     return pressure;
   };
   const monitor = createCapacityMonitor(check);
-  assert.throws(() => monitor("/synthetic"), /pressure/);
+  assert.doesNotThrow(() => monitor("/synthetic"));
   pressure = 1; monitor("/synthetic");
   pressure = 2; monitor("/synthetic");
   for (let tick = 0; tick < 1000; tick++) monitor("/synthetic");

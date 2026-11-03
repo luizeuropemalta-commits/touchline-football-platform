@@ -224,8 +224,8 @@ function fixtureRoundIdentity(
 }
 
 /**
- * Live has exactly two canonical rails: the active provider round and the ten
- * most recent verified results, including completed games from that round.
+ * Live keeps the active provider round separate from the previous closed round.
+ * Finished games stay in their round until that round closes.
  * Delayed games from other rounds are retained while they are in play.
  */
 export function selectTouchlineMatchCentreSchedule<T extends TouchlinePublicFixture>(
@@ -259,11 +259,27 @@ export function selectTouchlineMatchCentreSchedule<T extends TouchlinePublicFixt
   // Delayed fixtures from another round must remain visible while in play.
   const currentFixtures = [...new Map([...inPlay, ...roundFixtures]
     .map((fixture) => [touchlinePublicFixtureIdentity(fixture), fixture])).values()];
-  const recentResults = uniqueFixtures
-    .filter((fixture) => (
-      touchlineFixtureState(fixture, now) === "finished"
-    ))
-    .slice()
+  const currentIds = new Set(currentFixtures.map(touchlinePublicFixtureIdentity));
+  const previousRounds = new Map<string, T[]>();
+  for (const fixture of uniqueFixtures) {
+    const identity = fixtureRoundIdentity(fixture);
+    if (!identity || identity === roundIdentity) continue;
+    const rows = previousRounds.get(identity) ?? [];
+    rows.push(fixture);
+    previousRounds.set(identity, rows);
+  }
+  // Never fill a short round with results from another round. A round with an
+  // unfinished fixture is not eligible for the previous-results section.
+  const activeStart = roundFixtures.length
+    ? Math.min(...roundFixtures.map(fixtureStartMillis)) : Number.POSITIVE_INFINITY;
+  const previousRound = [...previousRounds.entries()]
+    .filter(([, rows]) => rows.every(row => touchlineFixtureState(row, now) === "finished"
+        && !currentIds.has(touchlinePublicFixtureIdentity(row)))
+      && Math.min(...rows.map(fixtureStartMillis)) < activeStart)
+    .sort(([leftId, left], [rightId, right]) =>
+      Math.min(...right.map(fixtureStartMillis)) - Math.min(...left.map(fixtureStartMillis))
+      || leftId.localeCompare(rightId))[0]?.[1] ?? [];
+  const recentResults = previousRound.slice()
     .sort((first, second) => fixtureStartMillis(second) - fixtureStartMillis(first))
     .slice(0, MATCH_CENTRE_SECTION_LIMIT);
 

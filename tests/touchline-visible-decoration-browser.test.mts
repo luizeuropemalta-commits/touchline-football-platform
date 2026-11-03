@@ -129,3 +129,29 @@ test('Chromium and WebKit preserve cards while pausing only offscreen decorative
     } finally { await browser.close(); }
   }
 });
+
+test('a visible pitch cannot restart an offscreen nested card trace', { timeout: 45_000 }, async () => {
+  for (const engine of [chromium, webkit]) {
+    const browser = await engine.launch();
+    try {
+      const page = await browser.newPage({ viewport: { width: 390, height: 600 } });
+      await page.setContent(`<style>${css}html{scroll-behavior:auto!important}body{margin:0}.pitch{height:2200px;position:relative}.nested{position:absolute;top:1600px;width:180px;height:280px}.tail{height:1000px}</style><div class="pitch" data-touchline-pitch-surface="presentation"><svg class="nested" data-touchline-card-neon-trace="true"><path data-touchline-card-neon-trace-run="true" d="M10 10H170V270H10Z"/></svg></div><div class="tail"></div><script>${script}observeVisibleDecorationMotion();new IntersectionObserver(entries=>{window.pitchVisible=entries[0].isIntersecting}).observe(document.querySelector(".pitch"));</script>`);
+      const run = page.locator('[data-touchline-card-neon-trace-run="true"]');
+      await expectMotion(run, 'paused');
+      await page.evaluate(() => window.scrollTo(0, 1500));
+      await expectMotion(run, 'running');
+      await page.evaluate(() => window.scrollTo(0, 2300));
+      await expect.poll(() => page.evaluate(() => (window as unknown as {pitchVisible:boolean}).pitchVisible)).toBe(false);
+      await expectMotion(run, 'paused');
+      // The pitch re-enters, but its nested card remains below the viewport.
+      // Only the pitch gets a new intersecting callback at this point.
+      await page.evaluate(() => window.scrollTo(0, 0));
+      await expect.poll(() => page.evaluate(() => (window as unknown as {pitchVisible:boolean}).pitchVisible)).toBe(true);
+      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      await expectMotion(run, 'paused');
+      await page.evaluate(() => window.scrollTo(0, 1500));
+      await expectMotion(run, 'running');
+      await page.close();
+    } finally { await browser.close(); }
+  }
+});

@@ -6,6 +6,10 @@ import { hasTouchLineArenaAccess } from "@/lib/touchlineArena/auth-access";
 import { companyKinds, parseCompanyCommand, companyReplayMatches, readCompanyJson } from "@/lib/admin/company-finance-api";
 export const dynamic="force-dynamic";
 const reply=(body:unknown,status=200)=>NextResponse.json(body,{status,headers:{"Cache-Control":"private, no-store","X-Content-Type-Options":"nosniff"}});
+function confirmedReceipt(value:unknown,proposed:Record<string,unknown>){
+ return Boolean(value&&typeof value==="object"&&!Array.isArray(value)
+  && companyReplayMatches(value as Record<string,unknown>,proposed));
+}
 async function authorize(){const session=await createClient();if(!session)return null;const {data:{user},error}=await session.auth.getUser();return !error&&hasTouchLineArenaAccess(user)&&isOwnerEmail(user?.email)?user:null;}
 export async function GET(request:NextRequest){
  try{
@@ -14,7 +18,9 @@ export async function GET(request:NextRequest){
   if(!companyKinds.includes(kind as typeof companyKinds[number])||!/^\d+$/.test(raw)||!Number.isSafeInteger(page)||page>10000)return reply({error:"INVALID_INPUT"},400);
   const admin=createAdminClient();if(!admin)return reply({error:"UNAVAILABLE"},503);
   const selection=kind==="settlements"?"*,correction:touchline_company_settlement_corrections(id,reason)":"*";
-  const {data,error}=await admin.from(`touchline_company_${kind}`).select(selection).returns<Record<string,unknown>[]>().order("id",{ascending:true}).range(page*50,page*50+50);
+  const sortColumn=kind==="suppliers"?"name":kind==="contracts"?"starts_on":kind==="obligations"?"issued_on":"paid_on";
+  const {data,error}=await admin.from(`touchline_company_${kind}`).select(selection).returns<Record<string,unknown>[]>()
+   .order(sortColumn,{ascending:kind==="suppliers",nullsFirst:false}).order("id",{ascending:true}).range(page*50,page*50+50);
   if(error)return reply({error:"UNAVAILABLE"},503);
   const rows=(data??[]).slice(0,50).map(entry=>{
    if(kind!=="settlements")return entry;
@@ -38,6 +44,7 @@ export async function POST(request:NextRequest){
    const row=command.row as Record<string,unknown>;
    const {data,error}=await admin.rpc("touchline_company_record_settlement",{p_request_id:row.id,p_obligation_id:row.obligation_id,p_currency:row.currency,p_unit_exponent:row.unit_exponent,p_amount_minor:row.amount_minor,p_paid_on:row.paid_on,p_source:row.source,p_source_reference:row.source_reference,p_actor_id:user.id});
    if(error)return reply({error:"RECORD_NOT_CONFIRMED"},["23505","23503","40001","22023","23514"].includes(error.code??"")?409:503);
+   if(!confirmedReceipt(data,row))return reply({error:"RECORD_NOT_CONFIRMED"},503);
    return reply({record:data});
   }
   const table=`touchline_company_${command.kind}`,row=command.row as Record<string,unknown>;
@@ -45,7 +52,7 @@ export async function POST(request:NextRequest){
   if(before.error)return reply({error:"UNAVAILABLE"},503);
   if(before.data)return companyReplayMatches(before.data,row)?reply({record:before.data}):reply({error:"REQUEST_CONFLICT"},409);
   const inserted=await admin.from(table).insert(row).select("*").single();
-  if(!inserted.error)return reply({record:inserted.data},201);
+  if(!inserted.error)return confirmedReceipt(inserted.data,row)?reply({record:inserted.data},201):reply({error:"RECORD_NOT_CONFIRMED"},503);
   if(inserted.error.code==="23505"){
    const retry=await admin.from(table).select("*").eq("id",row.id).maybeSingle();
    if(!retry.error&&retry.data&&companyReplayMatches(retry.data,row))return reply({record:retry.data});

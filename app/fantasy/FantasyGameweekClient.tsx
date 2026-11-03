@@ -7,7 +7,7 @@ import { getAllocationDialogCopy } from "@/lib/touchlineFantasy/allocation-dialo
 import { formatTouchlineFantasyStandaloneAlert, getTouchlineFantasyStandaloneBuilderCopy } from "@/lib/touchlineFantasy/standalone-builder-i18n";
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useEffectEvent, useMemo, useRef, useState, type ComponentProps, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useEffectEvent, useId, useMemo, useRef, useState, useSyncExternalStore, type ComponentProps, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { BadgeCheck, CalendarClock, Check, ChevronRight, CircleAlert, Crown, House, LockKeyhole, PlaneTakeoff, Save, Search, Send, ShieldCheck, TimerReset, Trophy, Users, WalletCards } from "lucide-react";
 
@@ -68,6 +68,8 @@ import { formatTouchlineFantasyClockUnit, getTouchlineFantasyMarketClockCopy } f
 import { getTouchlineFantasyMarketAccessCopy, getTouchlineFantasyMarketPlanLockCopy, getTouchlineFantasyMarketUnlockCopy } from "@/lib/touchlineFantasy/market-access-i18n";
 import { isTouchlineFantasyMarketAccess, isTouchlineFantasyMarketClubAllowed as canBrowseMarketClub, type TouchlineFantasyMarketAccess } from "@/lib/touchlineFantasy/market-plan-policy";
 import { getTouchlineFantasyMarketMetricsCopy } from "@/lib/touchlineFantasy/market-metrics-i18n";
+import { needsLineupReconfirmation, presentGameweekScore } from "@/lib/touchlineFantasy/gameweek-score-status";
+import { getGameweekScoreStatusCopy } from "@/lib/touchlineFantasy/gameweek-score-status-i18n";
 import { getTouchlineFantasyMarketWorkflowCopy } from "@/lib/touchlineFantasy/market-workflow-i18n";
 import { formatTouchlineFantasyBudgetAmount, getClubCollectionBudgetCopy, getTouchlineFantasyMarketBudgetCopy } from "@/lib/touchlineFantasy/market-budget-i18n";
 import { resolveTouchlineCatalogueLocale } from "@/lib/touchlineArena/catalogue-locale";
@@ -75,7 +77,7 @@ import controls from "@/components/touchline/TouchlineGlobalNavigation.module.cs
 import styles from "./fantasy.module.css";
 
 import { clubRelatedConfirmed, clubRelatedFingerprint } from "@/lib/touchlineFantasy/club-round-confirmation";
-type LiveState = Pick<NonNullable<TouchlineFantasySnapshot>, "gameweeks" | "qaClubMarketOpen" | "activeGameweek" | "userGameweek" | "selections" | "gameweekScore" | "seasonScore" | "matchHistory" | "gameweekRanking" | "seasonRanking" | "lineupAlerts" | "matchCardIndicators" | "playerAvailabilityIndicators">;
+type LiveState = Pick<NonNullable<TouchlineFantasySnapshot>, "gameweeks" | "qaClubMarketOpen" | "activeGameweek" | "userGameweek" | "selections" | "gameweekScore" | "gameweekScoreStatus" | "seasonScore" | "matchHistory" | "gameweekRanking" | "seasonRanking" | "lineupAlerts" | "matchCardIndicators" | "playerAvailabilityIndicators">;
 const STEPS: readonly TouchlineFantasyBuilderStep[] = ["coach", "formation", "players", "review", "locked"];
 
 function FantasyBudgetNotice({ editable, remainingBudget, selectedCount, attemptedOverBudget, locale, draftLocalesEnabled = false, collectionEnabled = false, collectionState = null, collectionReady = false, onReviewXI, onExplorePlans }: {
@@ -163,6 +165,19 @@ function stepLabel(step: TouchlineFantasyBuilderStep, locale: string, draftLocal
 function RankingTable({ title, entries, empty }: { title: string; entries: TouchlineFantasySnapshot["gameweekRanking"]; empty: string }) {
   return <section className={styles.rankingPanel}><h3><Trophy aria-hidden="true" />{title}</h3>{entries.length ? <ol>{entries.slice(0, 20).map((entry) => <li key={entry.rank} data-current-manager={entry.isCurrentManager ? "true" : undefined}><span>#{entry.rank}</span><b>{entry.name}</b><strong>{entry.score.toFixed(2)}</strong></li>)}</ol> : <p>{empty}</p>}</section>;
 }
+// Keep one live clock authority while presenting it inside the account balance.
+function subscribeBalanceClockSlot(onChange: () => void) {
+  const observer = new MutationObserver(onChange);
+  observer.observe(document.body, { childList: true, subtree: true });
+  return () => observer.disconnect();
+}
+function balanceClockSlot() { return document.getElementById("clubowner-market-clock-slot"); }
+function serverBalanceClockSlot() { return null; }
+function ClubOwnerBalanceClock({ children }: { children: ReactNode }) {
+  const slot = useSyncExternalStore(subscribeBalanceClockSlot, balanceClockSlot, serverBalanceClockSlot);
+  return slot ? createPortal(children, slot) : null;
+}
+
 function MarketWindowClock({ gameweeks, locale, marketStatus, qaOverride, draftLocalesEnabled = false, hideAwaitingFinalHeading = false }: { gameweeks: TouchlineFantasySnapshot["gameweeks"]; locale: string; marketStatus?: string; qaOverride?: string; draftLocalesEnabled?: boolean; hideAwaitingFinalHeading?: boolean }) {
   const countdownWindowMs = 24 * 60 * 60 * 1_000;
   const copy = getTouchlineFantasyMarketClockCopy(locale, draftLocalesEnabled);
@@ -186,10 +201,12 @@ function MarketWindowClock({ gameweeks, locale, marketStatus, qaOverride, draftL
     { value: Math.floor((totalSeconds % 3_600) / 60), unit: copy.minuteShort },
     { value: totalSeconds % 60, unit: copy.secondShort },
   ];
+  // The status is already rendered as the lead line in ClubOwner. Keep this
+  // heading focused on the next event, so "Mercado aberto" is never repeated.
   const heading = phase === "closing"
-    ? (timed ? copy.closesIn : copy.open)
+    ? copy.closesIn
     : phase === "opening"
-      ? (timed ? copy.reopensIn : copy.closed)
+      ? copy.reopensIn
       : phase === "awaiting-final"
         ? copy.lastWhistle
         : phase === "syncing"
@@ -214,7 +231,7 @@ function MarketWindowClock({ gameweeks, locale, marketStatus, qaOverride, draftL
   ].join(", ");
   return <aside className={styles.marketClock} data-market-clock-phase={phase} aria-label={`${awaitingFinalWithoutHeading ? (marketStatus ?? copy.closedStatus) : heading}. ${timed ? accessibleCountdown : detail}`}>
     {marketStatus ? <strong className={styles.clockRule}>{marketStatus}</strong> : null}
-    {awaitingFinalWithoutHeading ? null : <div className={styles.clockHeading}><i aria-hidden="true"><TimerReset /></i><span><small>TOUCHLINE · MARKET</small><b>{heading}</b></span>{clock?.gameweekNumber ? <em>GW {clock.gameweekNumber}</em> : null}</div>}
+    {awaitingFinalWithoutHeading ? null : <div className={styles.clockHeading}><i aria-hidden="true"><TimerReset /></i><span><small>TOUCHLINE · MARKET</small><b>{heading}</b></span>{clock?.gameweekNumber ? <em>{phase === "awaiting-final" ? `${copy.nextRound} · ${clock.gameweekNumber}` : `GW ${clock.gameweekNumber}`}</em> : null}</div>}
     {timed ? <><div className={styles.clockDigits} aria-hidden="true">{parts.map((part) => <span key={part.unit}><b>{String(part.value).padStart(2, "0")}</b><small>{part.unit}</small></span>)}</div><time className={styles.srOnly} dateTime={clock?.targetAt ?? undefined}>{accessibleCountdown}</time></> : !marketStatus ? <strong className={styles.clockRule}>{phase === "awaiting-final" || phase === "opening" ? copy.closedStatus : phase === "closing" ? copy.openStatus : phase === "syncing" ? copy.syncingStatus : copy.unconfirmedStatus}</strong> : null}
     <p><span aria-hidden="true" />{detail}</p>
     {qaOverride ? <p data-market-test-override="true">{qaOverride}</p> : null}
@@ -325,9 +342,12 @@ function initialClubOwnerLineup(snapshot: TouchlineFantasySnapshot | null, initi
     selections: [...(snapshot?.selections ?? [])],
   };
   // Use the same confirmed account/season and placement rules as the collection
-  // hook. A closed or unconfirmed market keeps the round's locked XI intact.
+  // hook. A rejected draft is not a locked round: display the current owned
+  // collection read-only in that case, without creating a scoring snapshot.
   if (!enabled || !snapshot?.entitlementActive
-    || !(snapshot.qaClubMarketOpen === true || snapshot.activeGameweek?.state === "MARKET_OPEN")) return round;
+    || !(snapshot.qaClubMarketOpen === true || snapshot.activeGameweek?.state === "MARKET_OPEN"
+      || (snapshot.gameweekScoreStatus === "NO_VALID_LINEUP"
+        && (!snapshot.userGameweek || snapshot.userGameweek.state === "DRAFT")))) return round;
   const authority = parseClubCommandAuthority({ expectedAccountId: snapshot.userId, expectedSeasonId: snapshot.config.seasonId });
   const owned = confirmedCollectionBootstrap(initialRead, authority?.authority ?? null)?.state;
   if (!owned) return round;
@@ -470,6 +490,7 @@ export default function FantasyGameweekClient({
   // A null row in a newer live round must not fall back to the previous round.
   const persistedUserGameweek = live ? live.userGameweek : snapshot?.userGameweek ?? null;
   const persistedSelections = live?.selections ?? snapshot?.selections ?? [];
+  const [preferCurrentSquad, setPreferCurrentSquad] = useState(false);
   const gameweeks = live?.gameweeks ?? snapshot?.gameweeks ?? [];
   const geometry = formationCode ? snapshot?.formationRegistry[formationCode] : null;
   // Empty ClubOwner still shows the original pitch. This geometry is only a
@@ -486,8 +507,21 @@ export default function FantasyGameweekClient({
   const qaClubMarketOpen = collectionEnabled && (live?.qaClubMarketOpen ?? snapshot?.qaClubMarketOpen) === true;
   const marketOpen = qaClubMarketOpen || (activeGameweek?.state === "MARKET_OPEN" && !deadlineReached);
   const editable = snapshot?.entitlementActive === true && marketOpen;
+  const hasLockedRound = marketPage && collectionEnabled && !marketOpen
+    && (persistedUserGameweek?.state === "LOCKED" || persistedUserGameweek?.state === "FINAL");
+  const showLockedRound = hasLockedRound && !preferCurrentSquad;
+  const displayedReserves = showLockedRound
+    ? (persistedUserGameweek?.collectionRelatedSnapshot ? { players: persistedUserGameweek.collectionRelatedSnapshot.filter(player => player.area !== "reserves" || !persistedSelections.some(selection => selection.playerId === player.playerId)) } : null)
+    : collection.state;
   function applyCollectionSnapshot(owned: ClubAcquisitionState | null, open = marketOpen) {
-    if(!collectionEnabled||!owned||!open)return;
+    if(!collectionEnabled||!owned)return;
+    const currentRound = live ?? snapshot;
+    const rejectedDraft = marketPage && snapshot?.entitlementActive === true
+      && currentRound?.gameweekScoreStatus === "NO_VALID_LINEUP"
+      && (!currentRound.userGameweek || currentRound.userGameweek.state === "DRAFT");
+    const currentSquadChosen = marketPage && snapshot?.entitlementActive === true && preferCurrentSquad
+      && (currentRound?.userGameweek?.state === "LOCKED" || currentRound?.userGameweek?.state === "FINAL");
+    if (!open && !rejectedDraft && !currentSquadChosen) return;
     const projectionError = getClubCollectionBudgetCopy(locale, draftLocalesEnabled).savedFormationUnverified;
     setSelectedCoachId(owned.coach?.id ?? null);
     const shape=owned.formationCode?snapshot?.formationRegistry[owned.formationCode]:null;
@@ -507,7 +541,12 @@ export default function FantasyGameweekClient({
   }
   function applyIncomingRound(state: LiveState) {
     setLive(state);
-    if (collectionEnabled && (state.qaClubMarketOpen === true || state.activeGameweek?.state === "MARKET_OPEN")) {
+    const rejectedDraft = marketPage && snapshot?.entitlementActive === true
+      && state.gameweekScoreStatus === "NO_VALID_LINEUP"
+      && (!state.userGameweek || state.userGameweek.state === "DRAFT");
+    if (collectionEnabled && (state.qaClubMarketOpen === true || state.activeGameweek?.state === "MARKET_OPEN" || rejectedDraft
+      || (marketPage && snapshot?.entitlementActive === true && preferCurrentSquad
+        && (state.userGameweek?.state === "LOCKED" || state.userGameweek?.state === "FINAL")))) {
       // A newly prepared round may be empty. It must never erase the owned XI.
       // A periodic read is not a new selection and must not reset the market
       // or briefly revoke a confirmed squad while the request is pending.
@@ -530,6 +569,10 @@ export default function FantasyGameweekClient({
   const marketPlanLockCopy = getTouchlineFantasyMarketPlanLockCopy(locale, draftLocalesEnabled);
   const marketUnlockCopy = getTouchlineFantasyMarketUnlockCopy(locale, draftLocalesEnabled);
   const marketMetricsCopy = getTouchlineFantasyMarketMetricsCopy(locale, draftLocalesEnabled);
+  const scoreStatusCopy = getGameweekScoreStatusCopy(locale, draftLocalesEnabled);
+  const persistedRoundScore = presentGameweekScore((live ?? snapshot)?.gameweekScoreStatus, (live ?? snapshot)?.gameweekScore);
+  const lineupNoticeId = useId();
+  const roundScoreStatusId = useId();
   const collectionBudgetCopy = getClubCollectionBudgetCopy(locale, draftLocalesEnabled);
   const workflowCopy = getTouchlineFantasyMarketWorkflowCopy(locale, draftLocalesEnabled);
   const marketStatusLabel = !activeGameweek?.state ? marketAccessCopy.unavailable : marketOpen ? marketAccessCopy.open : marketAccessCopy.closed;
@@ -543,6 +586,14 @@ export default function FantasyGameweekClient({
     || !clubRelatedConfirmed(collection.state.players, persistedUserGameweek?.collectionRelatedSnapshot));
   const hasUnsavedChanges = localFingerprint !== persistedFingerprint || collectionRelatedChanged;
   const lineupConfirmed = persistedUserGameweek?.state === "CONFIRMED" && !hasUnsavedChanges;
+  const reconfirmationRequired = !collectionEnabled && needsLineupReconfirmation({ roundEditable, userGameweekState: persistedUserGameweek?.state ?? null,
+    hasUnsavedChanges, collectionKnown: !collectionEnabled || (collection.ready && Boolean(collection.state)),
+    scoreStatus: persistedRoundScore.status });
+  const roundScore = reconfirmationRequired ? presentGameweekScore("AWAITING_CONFIRMATION", undefined)
+    : collectionEnabled && persistedRoundScore.status === "AWAITING_CONFIRMATION"
+      ? presentGameweekScore("AWAITING_KICKOFF", undefined) : persistedRoundScore;
+  const lineupNotice = roundScore.status === "NO_VALID_LINEUP" ? (collectionEnabled ? scoreStatusCopy.automaticLineupDetail : scoreStatusCopy.noValidLineupDetail)
+    : reconfirmationRequired ? scoreStatusCopy.reconfirm : null;
   const canonicalStep = resolveTouchlineFantasyBuilderStep({ editable, selectedCoachId, formationCode, selectedCount: selections.length, lineupValid: validation?.valid === true });
   const selectedCoach = snapshot?.coaches.find((entry) => entry.id === selectedCoachId) ?? null;
   // Review is bound to the confirmed collection contract, never a catalogue selection.
@@ -603,7 +654,7 @@ export default function FantasyGameweekClient({
     let pending: AbortController | null = null;
     let pendingDeadline: number | undefined;
     const invalidateIndicators = () => {
-      if (!disposed) setLive(previous => previous ? { ...previous, qaClubMarketOpen: false, matchCardIndicators: null, playerAvailabilityIndicators: null } : previous);
+      if (!disposed) setLive(previous => previous ? { ...previous, qaClubMarketOpen: false, gameweekScoreStatus: "UNAVAILABLE", matchCardIndicators: null, playerAvailabilityIndicators: null } : previous);
     };
     const poll = window.setInterval(async () => {
       if (pending || disposed) return;
@@ -1002,8 +1053,6 @@ export default function FantasyGameweekClient({
       {collectionEnabled && collection.error ? <div role="alert"><p>{collection.error}</p><button type="button" className={controls.link} disabled={collection.busy} onClick={collection.reload}>{collectionBudgetCopy.refreshSquad}</button></div> : null}
       {collectionEnabled && collection.hasPending ? <button type="button" className={controls.link} disabled={collection.busy || !collection.ready}
         onClick={collection.retryPending}>{collection.pendingRecoveryOnly ? collectionBudgetCopy.refreshSquad : collectionBudgetCopy.confirmPendingOperation}</button> : null}
-      {collectionEnabled && collection.state ? <output>{collectionBudgetCopy.squadBalance}: {new Intl.NumberFormat(locale).format(collection.state.balanceEur)} TC
-        {collection.state.balanceEur<=1_000_000?<span role="status"> · {collectionBudgetCopy.lowBalance}</span>:null}</output>:null}
       {coachReleaseAction && coachReleaseReview
         && coachReleaseReview.accountId === snapshot.userId
         && coachReleaseReview.seasonId === collection.state?.seasonId
@@ -1036,14 +1085,14 @@ export default function FantasyGameweekClient({
       {!snapshot.entitlementActive ? <p role="status">{getTouchlineBetaEnrollmentCopy(locale, draftLocalesEnabled).review}</p> : null}
       <FantasyBudgetNotice editable={editable} remainingBudget={validation?.budgetRemainingEur ?? null} selectedCount={selections.length} attemptedOverBudget={feedback === workflowCopy.budgetExceeded} locale={locale} draftLocalesEnabled={draftLocalesEnabled} collectionEnabled={collectionEnabled} collectionState={collection.state} collectionReady={collectionSlotsEditable} onReviewXI={reviewBudgetRecovery} onExplorePlans={explorePlanRecovery} />
       {marketPage ? <dl className={styles.ownerSummary} data-market-owner-metrics="true" aria-label={marketMetricsCopy.summaryAria}>
-        <div><dt>{marketMetricsCopy.roundPoints}</dt><dd><Link href={`/rankings?lang=${encodeURIComponent(locale)}`} aria-label={marketMetricsCopy.roundPointsAria}>{(live?.gameweekScore ?? snapshot.gameweekScore).toFixed(2)}</Link></dd></div>
+        <div data-gameweek-score-status={roundScore.status}><dt>{marketMetricsCopy.roundPoints}</dt><dd><Link href={`/rankings?lang=${encodeURIComponent(locale)}`} aria-label={marketMetricsCopy.roundPointsAria} aria-describedby={roundScoreStatusId}>{roundScore.value === null ? "—" : roundScore.value.toFixed(2)}</Link><small id={roundScoreStatusId} className={styles.roundScoreNote}>{scoreStatusCopy[roundScore.status]}</small></dd></div>
         <div><dt>{marketMetricsCopy.seasonPoints}</dt><dd><Link href={`/rankings?lang=${encodeURIComponent(locale)}`} aria-label={marketMetricsCopy.seasonPointsAria}>{(live?.seasonScore ?? snapshot.seasonScore).toFixed(2)}</Link></dd></div>
       </dl> : null}
-      {marketPage ? <section className={styles.myClubMarketStatus} data-market-status-compact="true" data-market-open={marketOpen ? "true" : "false"} aria-label={marketAccessCopy.statusAria}>
+      {marketPage ? <ClubOwnerBalanceClock><section className={styles.myClubMarketStatus} data-market-status-compact="true" data-market-open={marketOpen ? "true" : "false"} aria-label={marketAccessCopy.statusAria}>
         <MarketWindowClock gameweeks={gameweeks} locale={locale} draftLocalesEnabled={draftLocalesEnabled}
           marketStatus={qaClubMarketOpen ? undefined : marketStatusLabel}
           qaOverride={qaClubMarketOpen ? collectionBudgetCopy.qaMarketOpen : undefined} />
-      </section> : null}
+      </section></ClubOwnerBalanceClock> : null}
       {!marketPage ? <section className={styles.myClubMarketStatus} data-market-open={marketOpen ? "true" : "false"} aria-label={marketAccessCopy.statusAria}>
         <div><span>{marketAccessCopy.lineupWindow}</span>{!marketPage ? <strong>{marketStatusLabel}</strong> : null}<small>{editable ? marketAccessCopy.manageXI : marketAccessCopy.browseReadOnly}</small><p className={styles.myClubMarketRule}>{marketAccessCopy.windowRule}</p></div>
         {qaClubMarketOpen ? <aside className={styles.marketClock} role="status"><strong>{collectionBudgetCopy.qaMarketOpen}</strong><p>{collectionBudgetCopy.qaRulesNotice}</p></aside> : <MarketWindowClock gameweeks={gameweeks} locale={locale} draftLocalesEnabled={draftLocalesEnabled} marketStatus={marketPage ? marketStatusLabel : undefined} />}
@@ -1086,6 +1135,18 @@ export default function FantasyGameweekClient({
               {collectionBudgetCopy.cancelCoachSelection}
             </button>
           </section> : null}
+          {hasLockedRound ? <nav aria-label={locale.startsWith("pt") ? "Visão do elenco" : "Squad view"} data-squad-authority-toggle="true">
+            <button type="button" className={controls.link} aria-pressed={!showLockedRound} disabled={!collection.state}
+              onClick={() => { setPreferCurrentSquad(true); applyCollectionSnapshot(collection.state, true); }}>{locale.startsWith("pt") ? "Elenco atual" : "Current squad"}</button>
+            <button type="button" className={controls.link} aria-pressed={showLockedRound}
+              onClick={() => { setPreferCurrentSquad(false); visualIntentEpoch.appliedCollection = undefined;
+                setSelectedCoachId(persistedUserGameweek?.selectedCoachId ?? null); setFormationCode(persistedUserGameweek?.formationCode ?? null);
+                setSelections([...persistedSelections]); }}>{locale.startsWith("pt") ? "Escalação da rodada" : "Round line-up"}</button>
+            <p>{showLockedRound
+              ? (locale.startsWith("pt") ? "Escalação registrada no fechamento. Os pontos seguem esta rodada." : "Line-up recorded at closing. Points follow this round.")
+              : (locale.startsWith("pt") ? "Elenco atual em consulta. A escalação e os pontos da rodada permanecem preservados." : "Current squad, view only. The round line-up and points remain preserved.")}</p>
+            {showLockedRound && !displayedReserves ? <p role="status">{locale.startsWith("pt") ? "Reservas da rodada indisponíveis." : "Round substitutes unavailable."}</p> : null}
+          </nav> : null}
           {arenaOpen || marketPage ? null : squadHeader}
           {<>
             <div className={styles.arenaBody}>
@@ -1095,11 +1156,11 @@ export default function FantasyGameweekClient({
             <div className={styles.myClubPitchViewport} ref={pitchViewportRef}>
               {!arenaOpen && (selectedCoach || marketPage) ? <ClubOwnerTechnicalRail enabled={showCollectionStructure} cardWidth={pitchCardWidth} label={workflowCopy.technicalArea}>
               <div className={`${styles.myClubFieldCoach} ${showCollectionStructure ? collectionLayout.technicalRow : ""}`} aria-label={workflowCopy.technicalArea}>
-                {showCollectionStructure ? <ClubOwnerCollectionSlots liveSeasonRating state={collection.state} catalogue={snapshot.catalogue} draftLocalesEnabled={draftLocalesEnabled}
+                {showCollectionStructure && (!showLockedRound || displayedReserves) ? <ClubOwnerCollectionSlots playerAvailabilityIndicators={currentAvailability} liveSeasonRating state={displayedReserves} catalogue={snapshot.catalogue} draftLocalesEnabled={draftLocalesEnabled}
                   slotPositions={CLUB_RESERVE_POSITIONS}
                   area="reserves" start={0} count={4} locale={locale} displayWidth={pitchCardWidth} guidedSlot={guidedChoice?.area === "reserves" ? guidedChoice.slot : undefined} enabled={editable && collectionSlotsEditable} onChoose={chooseCollectionPlace} onFieldPlayer={playerId => setSquadSwap({ playerId, outsideOnly: false })} onOutsidePlayer={playerId => setSquadSwap({ playerId, outsideOnly: true })} onReleasePlayer={setReleasePlayerId} /> : null}
                 <div className={styles.technicalCoachCard} data-technical-coach="true" style={{ width: pitchCardWidth * 1.3 }}>{selectedCoach ? <FantasyCoachZoom frameDisplayWidth={pitchCardWidth * 1.3} entry={selectedCoach} locale={locale} draftLocalesEnabled={draftLocalesEnabled} releaseAction={coachReleaseAction} eager /> : <button type="button" className={styles.emptyPosition} data-collection-placeholder="true" data-guided-action={editable && !saving && (!collectionEnabled || collection.canInitialize || collection.canHireCoach) ? "true" : undefined} disabled={!editable || saving || (collectionEnabled && !collection.canInitialize && !collection.canHireCoach)} aria-label={workflowCopy.chooseCoach} aria-controls="my-club-player-selection" onClick={() => scrollToLineupSection("my-club-player-selection")}>+</button>}<span>{workflowCopy.coach}</span></div>
-                {showCollectionStructure ? <ClubOwnerCollectionSlots liveSeasonRating state={collection.state} catalogue={snapshot.catalogue} draftLocalesEnabled={draftLocalesEnabled}
+                {showCollectionStructure && (!showLockedRound || displayedReserves) ? <ClubOwnerCollectionSlots playerAvailabilityIndicators={currentAvailability} liveSeasonRating state={displayedReserves} catalogue={snapshot.catalogue} draftLocalesEnabled={draftLocalesEnabled}
                   slotPositions={CLUB_RESERVE_POSITIONS}
                   area="reserves" start={4} count={5} locale={locale} displayWidth={pitchCardWidth} guidedSlot={guidedChoice?.area === "reserves" ? guidedChoice.slot : undefined} enabled={editable && collectionSlotsEditable} onChoose={chooseCollectionPlace} onFieldPlayer={playerId => setSquadSwap({ playerId, outsideOnly: false })} onOutsidePlayer={playerId => setSquadSwap({ playerId, outsideOnly: true })} onReleasePlayer={setReleasePlayerId} /> : null}
                 {!marketPage && !showCollectionStructure ? formationPicker : null}
@@ -1118,7 +1179,8 @@ export default function FantasyGameweekClient({
                     <button type="button" className={styles.viewToggle} data-arena-close="true" aria-expanded="true" onClick={() => setArenaOpen(false)}>{workflowCopy.closeArena}</button>
                     <output className={styles.arenaRoundPoints} data-arena-round-points="true" aria-live="polite" aria-atomic="true" dir="auto">
                       <span>{marketMetricsCopy.roundPoints}</span>
-                      <strong>{(live?.gameweekScore ?? snapshot.gameweekScore).toLocaleString(resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled), { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                      <strong>{roundScore.value === null ? "—" : roundScore.value.toLocaleString(resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled), { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                      <span data-gameweek-score-status={roundScore.status}>{scoreStatusCopy[roundScore.status]}</span>
                     </output>
                   </div>
                   {selectedCoach ? <div className={styles.arenaCoach} data-arena-coach="true" aria-label={workflowCopy.technicalArea}>
@@ -1144,11 +1206,18 @@ export default function FantasyGameweekClient({
                   {!editable ? <small className={styles.marketClosedLabel}>{marketAccessLabel}</small> : null}
                 </div>;
               })}</TouchlinePitchSurface>
-              {showCollectionStructure && !arenaOpen ? <section className={`${collectionLayout.outside} ${collectionLayout.exchange}`} aria-label="ClubOwner Exchange">
+              {arenaOpen && showCollectionStructure && (!showLockedRound || displayedReserves) ? <section className={`${collectionLayout.outside} ${collectionLayout.arenaReserves}`} data-arena-reserves="true" aria-label={getAllocationDialogCopy(locale, draftLocalesEnabled).reserves}>
+                <h2>{getAllocationDialogCopy(locale, draftLocalesEnabled).reserves}</h2>
+                <ClubOwnerCollectionSlots playerAvailabilityIndicators={currentAvailability} liveSeasonRating state={displayedReserves} catalogue={snapshot.catalogue} draftLocalesEnabled={draftLocalesEnabled} slotPositions={CLUB_RESERVE_POSITIONS}
+                  area="reserves" count={9} locale={locale} displayWidth={pitchCardWidth} guidedSlot={guidedChoice?.area === "reserves" ? guidedChoice.slot : undefined}
+                  enabled={editable && collectionSlotsEditable} onChoose={chooseCollectionPlace} onFieldPlayer={playerId => setSquadSwap({ playerId, outsideOnly: false })} onReleasePlayer={setReleasePlayerId} />
+              </section> : null}
+              {showCollectionStructure && !arenaOpen && !showLockedRound ? <section id="clubowner-exchange" className={`${collectionLayout.outside} ${collectionLayout.exchange}`} aria-label="ClubOwner Exchange">
                 <ClubOwnerNegotiationRoom locale={locale} draftLocalesEnabled={draftLocalesEnabled} ownerName={clubOwner?.name} plan={collection.state?.plan} agentNotice={<ClubOwnerExchangeHub locale={locale} draftLocalesEnabled={draftLocalesEnabled} checkoutOffers={checkoutOffers} publicDiscoveryEnabled={publicDiscoveryEnabled} expectedAccountId={snapshot.userId} onCommitted={collection.reload} ownerName={clubOwner?.name} plan={collection.state?.plan} state={collection.state} ready={collection.ready && !collection.busy && !collection.hasPending} catalogue={snapshot.catalogue} />}>
                 {!collection.state ? <p role="status">{collectionBudgetCopy.fullSquadRecruitmentUnavailable}</p> : null}
-                <ClubOwnerCollectionSlots liveSeasonRating state={collection.state} catalogue={snapshot.catalogue} draftLocalesEnabled={draftLocalesEnabled} area="outside" count={15} grouped imageLoading="lazy"
+                <ClubOwnerCollectionSlots playerAvailabilityIndicators={currentAvailability} liveSeasonRating state={collection.state} catalogue={snapshot.catalogue} draftLocalesEnabled={draftLocalesEnabled} area="outside" count={15} grouped imageLoading="lazy"
                   slotPositions={collectionPlan?.outside}
+                  onPriorityChange={(playerId, slot) => { void allocatePlanned({ action: "move", playerId, area: "outside", slot }); }}
                   guidedSlot={guidedChoice?.area === "outside" ? guidedChoice.slot : undefined}
                   locale={locale} displayWidth={Math.max(70, pitchCardWidth)} enabled={editable && collectionSlotsEditable} onChoose={chooseCollectionPlace} onFieldPlayer={playerId => setSquadSwap({ playerId, outsideOnly: false })} onReleasePlayer={setReleasePlayerId} />
                 <p>{collectionBudgetCopy.outsideSlotsExchangeNotice}</p>
@@ -1276,7 +1345,8 @@ export default function FantasyGameweekClient({
           </>}
           {marketPage && feedback ? <p role="status">{feedback}</p> : null}
         </aside>
-<footer className={styles.myClubGameweekFooter}><div><span>{workflowCopy.round}</span><strong>{lineupConfirmed ? (workflowCopy.xiConfirmed) : !editable ? marketAccessLabel : !roundEditable ? marketAccessCopy.closed : validation?.valid ? (workflowCopy.readyConfirm) : `${selectedCount}/11`}</strong></div><div><small>{hasUnsavedChanges ? (workflowCopy.unsavedChanges) : (workflowCopy.squadSynced)}</small><button type="button" disabled={!roundEditable || saving || !selectedCoachId || !validation?.valid || lineupConfirmed} onClick={() => save("confirm")}>{workflowCopy.confirmXI}</button></div></footer>
+{lineupNotice ? <p id={lineupNoticeId} className={styles.feedback} role="status" data-lineup-confirmation-notice="true">{lineupNotice}</p> : null}
+{!collectionEnabled ? <footer className={styles.myClubGameweekFooter}><div><span>{workflowCopy.round}</span><strong>{roundScore.status === "NO_VALID_LINEUP" ? scoreStatusCopy.NO_VALID_LINEUP : lineupConfirmed ? (workflowCopy.xiConfirmed) : !editable ? marketAccessLabel : !roundEditable ? marketAccessCopy.closed : validation?.valid ? (workflowCopy.readyConfirm) : `${selectedCount}/11`}</strong></div><div><small>{!roundEditable ? scoreStatusCopy[roundScore.status] : hasUnsavedChanges ? (workflowCopy.unsavedChanges) : (workflowCopy.squadSynced)}</small><button type="button" aria-describedby={lineupNotice ? lineupNoticeId : undefined} disabled={!roundEditable || saving || !selectedCoachId || !validation?.valid || lineupConfirmed} onClick={() => save("confirm")}>{workflowCopy.confirmXI}</button></div></footer> : null}
       {feedback ? <p className={styles.feedback} role="status">{feedback}</p> : null}
       {marketPlanChooser}
     </section>;
@@ -1297,8 +1367,9 @@ export default function FantasyGameweekClient({
       {visibleStep === "formation" ? <><span>{builderCopy.step2}</span><h2>{builderCopy.chooseFormation}</h2><p>{builderCopy.formationInstruction}</p><div className={styles.formationGrid}>{Object.keys(snapshot.formationRegistry).map((code) => <button type="button" key={code} onClick={() => changeFormation(code)} disabled={!editable} data-selected={code === formationCode ? "true" : undefined}><b>{code}</b><small>11 {builderCopy.slots}</small></button>)}</div></> : null}
       {visibleStep === "players" ? <section className={styles.selectionStage}><header><span>{builderCopy.step3}</span><h2>{builderCopy.fillSlot}</h2><p>{activeSlot ? `${activeSlot.id} · ${activeSlot.allowedPositions.map(position => localizedPositionLabel(position === "midfield" ? "midfielder" : position, locale, draftLocalesEnabled)).join(" / ")}` : (builderCopy.selectPitchSlot)}</p><div className={styles.filters}><label><Search /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={builderCopy.searchPlayer} /></label></div><CompactClubSelector selectedTeamId={selectedPlayerClub?.teamId ?? ""} onSelect={(club) => setPlayerClubTeamId(club.teamId)} locale={locale} draftLocalesEnabled={draftLocalesEnabled} marketAccess={snapshot.entitlementActive === true ? marketPolicy : null} lockedLabel={marketPlanLockCopy} />{selectedPlayerClubLocked ? <p className={styles.marketPlanNotice} role="status"><LockKeyhole size={16} aria-hidden="true" />{marketPlanLockCopy}</p> : null}</header><div className={styles.playerViewport}><div className={styles.playerScroller} tabIndex={0} aria-label={builderCopy.scrollPlayerListAria} onPointerDown={(event) => { const target = event.target as HTMLElement; if (!target.closest("button, a, input, select")) event.currentTarget.focus({ preventScroll: true }); }} onKeyDown={(event) => { if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return; event.preventDefault(); event.currentTarget.scrollBy({ top: event.key === "ArrowDown" ? 96 : -96, behavior: "smooth" }); }}><div className={styles.playerGrid}>{filtered.map((card) => { const planLocked = cardPlanLocked(card); const overBudget = playerExceedsBudget(card); return <article data-player-choice-card="premium" data-market-plan-locked={planLocked || undefined} data-market-budget-locked={!planLocked && overBudget || undefined} key={card.canonicalPlayerId ?? card.id} data-choice-tier-frame={card.editorialCard?.tierKey ?? "unresolved"} style={{ "--tier-accent": card.editorialCard?.tierKey ? touchlineCardTierPalette(card.editorialCard.tierKey).accent : undefined } as CSSProperties}><TouchlineClubPerimeterTrace accent={card.editorialCard?.tierKey ? touchlineCardTierPalette(card.editorialCard.tierKey).accent : undefined} /><div className={styles.marketCard}><TouchlineGameweekCard liveSeasonRating card={card} locale={locale} draftLocalesEnabled={draftLocalesEnabled} displayWidth={132} fitContainer lockedReason={planLocked ? marketPlanLockCopy : undefined} signingActions={planLocked ? unlockSigningAction : undefined} />{planLocked ? <span className={styles.marketCardPlanLock} role="img" aria-label={marketPlanLockCopy} data-market-card-lock="true"><LockKeyhole size={16} aria-hidden="true" /></span> : null}</div><div className={styles.playerIdentity}><b>{card.name}</b><CompactClubIdentity clubName={card.clubName} clubLogoUrl={findTouchLineClub(card.clubName)?.logoUrl ?? null} detail={localizedPositionLabel(card.position, locale, draftLocalesEnabled) ?? undefined} /></div>{planLocked ? <button type="button" className={controls.link} data-market-plan-unlock="true" aria-haspopup="dialog" onClick={(event) => { event.currentTarget.focus({ preventScroll: true }); setMarketPlansOpen(true); }}><LockKeyhole size={16} aria-hidden="true" />{marketUnlockCopy}</button> : <button type="button" disabled={!editable || saving} aria-disabled={overBudget || undefined} title={overBudget ? getTouchlineFantasyMarketBudgetCopy(locale, draftLocalesEnabled).insufficient : undefined} onClick={() => addPlayer(card)}>{overBudget ? <><LockKeyhole size={16} aria-hidden="true" />{getTouchlineFantasyMarketBudgetCopy(locale, draftLocalesEnabled).insufficient}</> : builderCopy.chooseForSlot}</button>}</article>; })}</div>{filtered.length === 0 ? <p className={styles.emptyResults}>{builderCopy.noPlayersForPosition}</p> : null}</div></div></section> : null}
       {visibleStep === "review" ? <><span>{builderCopy.step4}</span><h2>{builderCopy.reviewTeam}</h2><div className={styles.editActions}><button type="button" disabled={!editable} onClick={() => setVisibleStep("coach")}>{builderCopy.changeCoach}</button><button type="button" disabled={!editable} onClick={() => setVisibleStep("players")}>{builderCopy.editPlayers}</button></div><div className={styles.reviewCoach}>{selectedCoach ? <><Crown /><div><b>{selectedCoach.coach.displayName}</b><span>{selectedCoach.clubName}</span></div></> : null}</div><ol className={styles.reviewList}>{geometry?.slots.map((slot) => { const selection = selections.find((entry) => entry.slotId === slot.id); const card = selection ? catalogueById.get(selection.playerId) : null; return <li key={slot.id}><span>{slot.id}</span><b>{card?.name ?? "—"}</b></li>; })}</ol><div className={styles.validation}>{validation?.issues.map((issue) => <span key={issue}>{issue.replaceAll("_", " ")}</span>)}{validation?.valid ? <span data-valid="true"><Check />{builderCopy.readyConfirm}</span> : null}</div></> : null}
-      {visibleStep === "locked" ? <><span>{editable ? builderCopy.step5 : builderCopy.lockedSnapshot}</span><h2>{editable ? (builderCopy.confirmedTeam) : (builderCopy.lockedTeam)}</h2>{editable ? <div className={styles.editActions}><button type="button" onClick={() => setVisibleStep("coach")}>{builderCopy.changeCoach}</button><button type="button" onClick={() => setVisibleStep("players")}>{builderCopy.editPlayers}</button></div> : null}<div className={styles.syncPanel}><Send /><p>{lineupConfirmed || !editable ? (builderCopy.marketReady) : (builderCopy.confirmToSync)}</p><a href={`/clubowner?lang=${encodeURIComponent(locale)}`} aria-disabled={!(lineupConfirmed || !editable)}>{builderCopy.openMarket}</a></div></> : null}</aside></main>
-    <section className={styles.actionRail}><div><b>{builderCopy.canonicalDeadline}</b><strong suppressHydrationWarning>{activeGameweek ? formatTouchlineFantasyDeadline(activeGameweek.locksAt, locale, draftLocalesEnabled) : "—"}</strong><span>{builderCopy.deadlineRule}</span><em data-save-state={hasUnsavedChanges ? "dirty" : persistedUserGameweek?.selectedCoachId ? "saved" : "empty"}>{hasUnsavedChanges ? (builderCopy.unsavedChanges) : persistedUserGameweek?.selectedCoachId ? (builderCopy.teamSaved) : (builderCopy.notSaved)}</em></div><div><button type="button" onClick={() => save("draft")} disabled={!editable || saving || !selectedCoachId || !formationCode || !hasUnsavedChanges}><Save />{builderCopy.saveDraft}</button><button className={styles.confirm} type="button" onClick={() => save("confirm")} disabled={!editable || saving || !selectedCoachId || !validation?.valid || lineupConfirmed}><LockKeyhole />{builderCopy.confirmXI}</button></div></section>
+      {visibleStep === "locked" ? <><span>{editable ? builderCopy.step5 : builderCopy.lockedSnapshot}</span><h2>{editable ? (builderCopy.confirmedTeam) : (builderCopy.lockedTeam)}</h2>{editable ? <div className={styles.editActions}><button type="button" onClick={() => setVisibleStep("coach")}>{builderCopy.changeCoach}</button><button type="button" onClick={() => setVisibleStep("players")}>{builderCopy.editPlayers}</button></div> : null}<div className={styles.syncPanel}><Send /><p>{roundScore.status === "NO_VALID_LINEUP" ? (collectionEnabled ? scoreStatusCopy.automaticLineupDetail : scoreStatusCopy.noValidLineupDetail) : lineupConfirmed || !editable ? (builderCopy.marketReady) : (builderCopy.confirmToSync)}</p><a href={`/clubowner?lang=${encodeURIComponent(locale)}`} aria-disabled={!(lineupConfirmed || !editable)}>{builderCopy.openMarket}</a></div></> : null}</aside></main>
+    {lineupNotice ? <p id={lineupNoticeId} className={styles.feedback} role="status" data-lineup-confirmation-notice="true">{lineupNotice}</p> : null}
+    <section className={styles.actionRail}><div><b>{builderCopy.canonicalDeadline}</b><strong suppressHydrationWarning>{activeGameweek ? formatTouchlineFantasyDeadline(activeGameweek.locksAt, locale, draftLocalesEnabled) : "—"}</strong><span>{builderCopy.deadlineRule}</span><em data-save-state={hasUnsavedChanges ? "dirty" : persistedUserGameweek?.selectedCoachId ? "saved" : "empty"}>{hasUnsavedChanges ? (builderCopy.unsavedChanges) : persistedUserGameweek?.selectedCoachId ? (builderCopy.teamSaved) : (builderCopy.notSaved)}</em></div><div><button type="button" onClick={() => save("draft")} disabled={!editable || saving || !selectedCoachId || !formationCode || !hasUnsavedChanges}><Save />{builderCopy.saveDraft}</button><button className={styles.confirm} type="button" aria-describedby={lineupNotice ? lineupNoticeId : undefined} onClick={() => save("confirm")} disabled={!roundEditable || saving || !selectedCoachId || !validation?.valid || lineupConfirmed}><LockKeyhole />{builderCopy.confirmXI}</button></div></section>
     {feedback ? <p className={styles.feedback} role="status">{feedback}</p> : null}
     {currentAlerts.length ? <section className={styles.alertPanel}><CircleAlert /><div><b>{builderCopy.lineupUpdate}</b><p>{formatTouchlineFantasyStandaloneAlert(builderCopy, currentAlerts.length, editable)}</p></div></section> : null}
     </section>

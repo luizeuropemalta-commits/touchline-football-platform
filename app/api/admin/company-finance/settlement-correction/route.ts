@@ -23,7 +23,12 @@ export async function POST(request: NextRequest) {
     if (!admin) return reply({ error: "UNAVAILABLE" }, 503);
     const result = await admin.rpc("touchline_company_cancel_settlement", { p_request_id: input.requestId, p_settlement_id: input.settlementId, p_reason: input.reason.trim(), p_actor_id: user.id });
     if (result.error) return reply({ error: "CORRECTION_NOT_CONFIRMED" }, ["40001", "23505", "22023"].includes(result.error.code ?? "") ? 409 : 503);
-    if (result.data?.id !== input.requestId.toLowerCase() || result.data?.settlement_id !== input.settlementId.toLowerCase()) return reply({ error: "CORRECTION_NOT_CONFIRMED" }, 503);
+    const receipt = result.data;
+    if (!receipt || typeof receipt !== "object" || Array.isArray(receipt)
+      || receipt.id !== input.requestId.toLowerCase() || receipt.settlement_id !== input.settlementId.toLowerCase()
+      || receipt.reason !== input.reason.trim() || receipt.created_by !== user.id
+      || typeof receipt.created_at !== "string" || !Number.isFinite(Date.parse(receipt.created_at)))
+      return reply({ error: "CORRECTION_NOT_CONFIRMED" }, 503);
     return reply({ record: result.data });
   } catch { return reply({ error: "UNAVAILABLE" }, 503); }
 }

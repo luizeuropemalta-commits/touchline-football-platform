@@ -1,6 +1,9 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
+import ClubOwnerPublicAvatar from "@/components/touchline/social/ClubOwnerPublicAvatar";
+import { peopleLocale } from "@/lib/touchlineArena/clubowner-public-contract";
 import { touchlineCoachRankingGem } from "@/lib/touchlineArena/coach-ranking-gems";
 import { useRef, useState, type CSSProperties, type RefObject } from "react";
 import {
@@ -89,7 +92,10 @@ type TouchLineTablesClientProps = {
   ownerTableUnavailable?: boolean;
 };
 
-function OwnerAvatar({ owner }: { owner: ClubOwnerStanding }) {
+function OwnerAvatar({ owner, locale }: { owner: ClubOwnerStanding; locale: string }) {
+  if (owner.publicPhoto) return <Link href={`/clubowners/${encodeURIComponent(owner.publicPhoto.publicId)}?lang=${encodeURIComponent(locale)}`} aria-label={`${locale.startsWith("pt") ? "Abrir ClubOwner" : "View ClubOwner"}: ${owner.publicPhoto.displayName}`}>
+    <ClubOwnerPublicAvatar {...owner.publicPhoto} avatarUrl={null} locale={peopleLocale(locale)} retryEnabled={false} />
+  </Link>;
   return <span aria-hidden="true">{owner.name.slice(0, 2)}</span>;
 }
 
@@ -582,7 +588,7 @@ export function TouchlineRankingEnding({ copy, locale, touchLineEnglandTable, ow
             {touchLineEnglandTable.map((owner, index) => (
               <li key={`${owner.rank}:${index}`}>
                 <b>{String(owner.rank).padStart(2, "0")}</b>
-                <div className={styles.ownerAvatar}><OwnerAvatar owner={owner} /></div>
+                <div className={styles.ownerAvatar}><OwnerAvatar owner={owner} locale={locale} /></div>
                 <div className={styles.rowIdentity}><strong>{owner.name}</strong><span>—</span></div>
                 <div className={styles.pointsValue}><strong>{owner.touchlinePoints}</strong><span>{touchlineRankingPointsLabel(owner.touchlinePoints, locale, copy.pointsShort, draftLocalesEnabled)}</span></div>
                 <span className={styles.rowEnd} />

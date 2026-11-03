@@ -35,3 +35,17 @@ test("authenticated state preserves the distinction between no cards and unavail
     assert.equal(response.options.headers?.["Cache-Control"], "private, no-store");
   }
 });
+
+
+test("authenticated state carries explicit score status and preserves season independently", async () => {
+  for (const gameweekScoreStatus of ["NO_VALID_LINEUP", "PENDING_SCORE", "FINAL"]) {
+    const snapshot = {gameweekScore:0, gameweekScoreStatus, seasonScore:82.5};
+    const response = await handler({id:"customer"},async()=>snapshot)();
+    const body = response.body as unknown as typeof snapshot;
+    assert.equal(body.gameweekScoreStatus,gameweekScoreStatus);
+    assert.equal(body.gameweekScore,0);
+    assert.equal(body.seasonScore,82.5);
+  }
+  const response = await handler({id:"customer"},async()=>({gameweekScore:0,seasonScore:0}))();
+  assert.equal((response.body as unknown as {gameweekScoreStatus:string}).gameweekScoreStatus,"UNAVAILABLE");
+});

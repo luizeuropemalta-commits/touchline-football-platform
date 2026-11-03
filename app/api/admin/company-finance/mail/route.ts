@@ -17,12 +17,14 @@ export async function GET(request:NextRequest){
   const admin=createAdminClient();if(!admin)return reply({error:"UNAVAILABLE"},503);
   const kind=request.nextUrl.searchParams.get("kind")??"evidence";
   const fields={evidence:"id,mailbox_id,message_id,received_at,subject,sender,plain_text,checksum,category,reviews:touchline_company_mail_reviews(action,created_at)",scans:"id,mailbox_id,query,revision,completed,updated_at",retries:"scan_id,message_id,code,attempts,resolved_at,updated_at"} as const;
-  if(!(kind in fields))return reply({error:"INVALID_INPUT"},400);
+  if(!Object.hasOwn(fields,kind))return reply({error:"INVALID_INPUT"},400);
   const raw=request.nextUrl.searchParams.get("page")??"0";
   if(!/^\d{1,5}$/.test(raw))return reply({error:"INVALID_INPUT"},400);
   const page=Number(raw),key=kind as keyof typeof fields;
   const table=key==="evidence"?"touchline_company_mail_evidence":`touchline_company_mail_${key}`;
-  const query=admin.from(table).select(fields[key]).order(key==="evidence"?"id":key==="scans"?"id":"scan_id",{ascending:true});
+  // Present business dates first; a unique tie-breaker keeps pagination deterministic.
+  const query=admin.from(table).select(fields[key]).order(key==="evidence"?"received_at":"updated_at",{ascending:false,nullsFirst:false})
+   .order(key==="retries"?"scan_id":"id",{ascending:true});
   if(key==="evidence")query.order("created_at",{ascending:false,referencedTable:"reviews"}).order("id",{ascending:false,referencedTable:"reviews"}).limit(1,{referencedTable:"reviews"});
   if(key==="retries")query.order("message_id",{ascending:true});
   const result=await query.range(page*20,page*20+20);

@@ -51,7 +51,15 @@ export async function GET(request: NextRequest) {
   const nextUrl = resolveTouchLineAuthCallbackDestination(requestedNext, origin, isTouchLineSiteLocalesEnabled());
   const requestsPasswordRecovery = nextUrl.pathname === "/reset-password";
   if (code) {
-    const supabase = await createClient();
+    let supabase: Awaited<ReturnType<typeof createClient>>;
+    try {
+      supabase = await createClient();
+    } catch {
+      return clearPasswordRecoveryState(
+        NextResponse.json({ error: "Authentication service unavailable." }, { status: 503 }),
+        request.url,
+      );
+    }
     if (!supabase) {
       return clearPasswordRecoveryState(
         NextResponse.json({ error: "Authentication service unavailable." }, { status: 503 }),
@@ -59,7 +67,19 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+    let exchanged: Awaited<ReturnType<typeof supabase.auth.exchangeCodeForSession>>;
+    try {
+      exchanged = await supabase.auth.exchangeCodeForSession(code);
+    } catch {
+      // A transport failure may follow a partially persisted session. Attempt
+      // local cleanup and never issue a recovery grant or navigate into the app.
+      await signOutFailedAuthentication(supabase);
+      return clearPasswordRecoveryState(
+        NextResponse.json({ error: "Authentication service unavailable." }, { status: 503 }),
+        request.url,
+      );
+    }
+    const { data, error } = exchanged;
     if (error || !data.user) {
       const failureUrl = requestsPasswordRecovery ? nextUrl : new URL("/login", origin);
       const locale = nextUrl.searchParams.get("lang");

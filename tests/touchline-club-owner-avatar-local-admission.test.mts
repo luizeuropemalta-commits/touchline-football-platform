@@ -16,7 +16,7 @@ const fixture = () => ({
 });
 
 test("local avatar admission requires explicit development opt-in and exact QA origins", () => {
-  for (const origin of [local]) {
+  for (const origin of [local, "http://localhost:3100"]) {
     assert.equal(allowsClubOwnerAvatarLocalEnvironment(fixture(), origin), true);
     assert.equal(allowsClubOwnerAvatarLocalEnvironment({ ...fixture(), TOUCHLINE_DEPLOYMENT_MODE: "qa-preview",
       NEXT_PUBLIC_TOUCHLINE_DEPLOYMENT_MODE: "qa-preview", TOUCHLINE_QA_SUPABASE_PROJECT_REF: "xgxbwqxjssxxuihuwmgy" }, origin), true);
@@ -35,7 +35,7 @@ test("local avatar admission requires explicit development opt-in and exact QA o
 });
 
 test("local origins reject normalization tricks, LAN, hosted domains and other ports", () => {
-  for (const value of [undefined, null, "", "http://localhost", "https://localhost:3319", "http://localhost:3320",
+  for (const value of [undefined, null, "", "http://localhost", "https://localhost:3319", "http://localhost:3320", "http://localhost:3100/", "http://LOCALHOST:3100", "http://127.0.0.1:3100", "https://touchline.com.br",
     "http://localhost:3319/", "http://LOCALHOST:3319", "http://localhost.:3319", "http://localhost.evil:3319",
     "http://127.0.0.1:3319", "http://127.1:3319", "http://[::1]:3319", "http://192.168.1.2:3319", "http://user@localhost:3319",
     "http://localhost:3319?x=1", "http://localhost:3319#x", " http://localhost:3319", "https://qa.touchline.com.br"]) {

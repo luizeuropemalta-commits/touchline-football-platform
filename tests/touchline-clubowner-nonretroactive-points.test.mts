@@ -31,7 +31,7 @@ test("real manager ranking does not credit a newly selected card's 100 historica
   assert.equal(displayedCard.seasonTotalRating, 100);
   const initial = await readProductionRankings(data, "now", "season", "new");
   assert.equal(initial.season.find(row => row.name === "Veteran")?.score, 70);
-  assert.equal(initial.season.find(row => row.isCurrentManager)?.score ?? 0, 0);
+  assert.equal(initial.season.find(row => row.isCurrentManager)?.score, 0);
 
   data.touchline_fantasy_user_gameweek_scores.push(
     { user_gameweek_id: "veteran-now", gameweek_score: "8", settlement_status: "FINAL" },
@@ -50,6 +50,16 @@ test("current provisional points remain visible but do not enter the finalized s
   data.touchline_fantasy_user_gameweek_scores.push({ user_gameweek_id: "new-now", gameweek_score: "8", settlement_status: "PROVISIONAL" });
   const actual = await readProductionRankings(data, "now", "season", "new");
   assert.equal(actual.gameweek.find(row => row.isCurrentManager)?.score, 8);
-  assert.equal(actual.season.find(row => row.isCurrentManager)?.score ?? 0, 0);
+  assert.equal(actual.season.find(row => row.isCurrentManager)?.score, 0);
   assert.equal(actual.season.find(row => row.name === "Veteran")?.score, 70);
+});
+
+
+test("no current round still reads canonical paid registration and preserves an explicit zero", async () => {
+  const data = tables();
+  data.touchline_club_collections = [{user_id:"registered",season_id:"season",plan:"standard",users:{full_name:"Registered",touchline_fantasy_entitlements:[{entitlement_key:"fantasy_access",status:"active",plan_key:"standard",current_period_start:null,current_period_end:null}]}}];
+  const result = await readProductionRankings(data, null, "season", "registered");
+  assert.equal(result.gameweek.length, 0);
+  assert.deepEqual(JSON.parse(JSON.stringify(result.season.find(row=>row.isCurrentManager))),{rank:2,name:"Registered",score:0,isCurrentManager:true});
+  assert.equal(result.season.find(row=>row.name === "New manager")?.rank,2, "both confirmed zero totals share position");
 });

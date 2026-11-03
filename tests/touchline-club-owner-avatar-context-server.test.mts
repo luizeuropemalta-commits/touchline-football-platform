@@ -162,7 +162,7 @@ test("unknown/error-bearing auth, admin, user_metadata-only and account mismatch
 });
 
 test("host and isolated-request metadata are denied, but absent GET-style Origin is normal", async () => {
-  for (const patch of [{ host: "foreign.invalid" }, { host: `${host}:443` }, { isolated: "true" }]) {
+  for (const patch of [{ host: null }, { host: "" }, { host: "foreign.invalid" }, { host: `${host}:443` }, { isolated: "true" }]) {
     const h = fixture(); Object.assign(h.state, patch); assert.equal(await h.create()(auth(), actor), null); assert.ok(!h.calls.includes("privileged"));
   }
 });
@@ -318,15 +318,17 @@ const localSettings = { NODE_ENV: "development", TOUCHLINE_CLUB_OWNER_AVATAR_LOC
  VERCEL_ENV: undefined, VERCEL_GIT_COMMIT_REF: undefined, VERCEL_BRANCH_URL: undefined, VERCEL_URL: undefined };
 
 test("local page avatar context preserves actor and exact QA destination admission", async () => {
- const f = fixture(localSettings); f.state.host = "localhost:3319";
+ for (const localHost of ["localhost:3319", "localhost:3100"]) {
+ const f = fixture(localSettings); f.state.host = localHost;
  assert.ok(await f.create()(auth(), actor));
  await f.page(); assert.ok(f.headerProps[0].avatarContext);
  for (const host of ["localhost:3320", "127.0.0.1:3319"]) {
   const g = fixture(localSettings); g.state.host = host;
   assert.equal(await g.create()(auth(), actor), null); assert.ok(!g.calls.includes("privileged"));
  }
- const g = fixture({ ...localSettings, SUPABASE_URL: "https://other.invalid" }); g.state.host = "localhost:3319";
+ const g = fixture({ ...localSettings, SUPABASE_URL: "https://other.invalid" }); g.state.host = localHost;
  assert.equal(await g.create()(auth(), actor), null);
- const h = fixture(localSettings); h.state.host = "localhost:3319";
+ const h = fixture(localSettings); h.state.host = localHost;
  assert.equal(await h.create()(auth(), "123e4567-e89b-42d3-a456-426614174099"), null);
+ }
 });

@@ -24,6 +24,10 @@ function fixture(environment: string, patch: Record<string, unknown> = {}) {
       assert.equal(accountId, user.id); return {};
     } },
     "@/components/touchline/ClubSeasonCheckoutReturn": { default: () => assert.fail("ordinary preview navigation must not render payment status") },
+    "@/components/touchline/social/ClubOwnerDiscoveryOnboarding": { default: () => assert.fail("Discovery onboarding must stay closed when its server flag is OFF") },
+    "@/components/touchline/social/ClubOwnerPublicDirectory": { default: () => assert.fail("Public settings render only for an explicit settings request") },
+    "@/lib/touchlineArena/clubowner-public-contract": { parseOwnPublicOwner: () => assert.fail("No unsolicited settings read"), peopleLocale: (locale: string) => locale },
+    "@/lib/touchlineArena/clubowner-public-avatar-server": { publicOwnerAvatarService: () => ({ enabled: false }) },
     "@supabase/supabase-js": { AuthSessionMissingError: class extends Error {} },
     "@/lib/touchlineFantasy/club-collection-server": { clubCollectionEnabled: () => false },
     "@/lib/touchlineFantasy/club-collection-read-server": { readClubCollectionServer: async (accountId: string) => {
@@ -68,7 +72,9 @@ function fixture(environment: string, patch: Record<string, unknown> = {}) {
   return { plan, async render(params: Params) {
     const root = await resolveClubOwnerShell(await exports.default!({ searchParams: Promise.resolve(params) }) as React.ReactElement) as React.ReactElement<Record<string, unknown>>;
     const [brand, content] = React.Children.toArray(root.props.children as React.ReactNode) as Element[];
-    const provider = content.props.children as Element;
+    const contentChildren = React.Children.toArray(content.props.children as React.ReactNode) as Element[];
+    assert.equal(contentChildren.length, 1, "Closed discovery adds no onboarding child");
+    const provider = contentChildren[0];
     const [header, fantasy] = provider.props.children as Element[];
     assert.equal(header.props.plan, plan, "Navigation must not replace the real subscription");
     assert.equal(fantasy.props.initialSnapshot, snapshot);

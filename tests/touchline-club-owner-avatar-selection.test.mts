@@ -1,3 +1,4 @@
+import * as avatarInvalidation from "../lib/touchlineArena/clubowner-avatar-invalidation.ts";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
@@ -60,6 +61,7 @@ function fixture(enabled = true, retentionReady = true) {
   };
   const dependencies: Record<string, unknown> = {
     react: hook, "react/jsx-runtime": jsx,
+    "@/lib/touchlineArena/clubowner-avatar-invalidation": avatarInvalidation,
     "@/lib/touchlineArena/club-owner-avatar-client": client,
     // Image pixels are covered by preparation + real browser tests; this suite isolates the existing account/recovery lifetime.
     "@/lib/touchlineArena/club-owner-avatar-preparation": { prepareClubOwnerAvatar: async () => ({ ok: true, bytes: Uint8Array.of(137,80,78,71,13,10,26,10), contentType: "image/png", width: 1, height: 1 }) },
@@ -98,6 +100,13 @@ test("real selection component is dormant by either gate and file choice alone s
   for (const gates of [[false, false], [true, false], [false, true]]) { const h = fixture(...gates as [boolean, boolean]); assert.equal(h.render(), null); assert.equal(h.requests.length, 0); h.dispose(); }
   const h = fixture(); h.choose(); await tick(); assert.equal(h.requests.length, 0); assert.equal(nodes(h.render(), "img")[0].props.src, "blob:local-preview"); h.dispose(); assert.ok(h.calls.includes("revoke"));
 });
+test("idle time and native file selection do not consume the selected-photo deadline", async () => {
+  const h = fixture(); h.expire();
+  assert.equal(nodes(h.render(), "input")[0].props.disabled, false);
+  h.choose(); await tick();
+  assert.equal(nodes(h.render(), "img")[0].props.src, "blob:local-preview");
+  h.confirm(); await tick(); assert.equal(h.requests.length, 1); h.dispose();
+});
 test("explicit confirm sends once; unknown including output cap blocks replacement and preserves old photo", async () => {
   const h = fixture(); h.choose(); await tick(); h.confirm(); await tick();
   assert.equal(h.requests.length, 1); assert.equal(nodes(h.render(), "input")[0].props.disabled, true);
@@ -107,7 +116,7 @@ test("explicit confirm sends once; unknown including output cap blocks replaceme
 test("committed result requests authoritative refresh, not preview publication; expiry and identity block confirm", async () => {
   const committed = fixture(); committed.committed(); committed.choose(); await tick(); committed.confirm(); await tick();
   assert.equal(committed.calls.filter(value => value === "refresh").length, 1); assert.equal(nodes(committed.render(), "img")[0].props.src, "blob:local-preview"); committed.dispose();
-  const expired = fixture(); expired.choose(); await tick(); expired.expire(); assert.equal(nodes(expired.render(), "button").filter(node => node.props.disabled !== true).length, 0); assert.equal(expired.requests.length, 0); expired.dispose();
+  const expired = fixture(); expired.choose(); await tick(); expired.expire(); assert.equal(nodes(expired.render(), "button").filter(node => node.props.disabled !== true).length, 1, "an unsent expired choice can be replaced"); assert.equal(expired.requests.length, 0); expired.choose(); await tick(); assert.equal(expired.requests.length, 0); expired.dispose();
   const drift = fixture(); drift.choose(); await tick(); drift.identity(); drift.confirm(); await tick(); assert.equal(drift.requests.length, 0); drift.dispose();
 });
 
@@ -139,6 +148,7 @@ function hostFixture() {
   };
   const dependencies: Record<string, unknown> = {
     react: hook, "react/jsx-runtime": jsx,
+    "@/lib/touchlineArena/clubowner-avatar-invalidation": avatarInvalidation,
     "@/lib/touchlineArena/club-owner-avatar-client": client,
     // Image pixels are covered by preparation + real browser tests; this suite isolates the existing account/recovery lifetime.
     "@/lib/touchlineArena/club-owner-avatar-preparation": { prepareClubOwnerAvatar: async () => ({ ok: true, bytes: Uint8Array.of(137,80,78,71,13,10,26,10), contentType: "image/png", width: 1, height: 1 }) },
@@ -204,7 +214,7 @@ function hostFixture() {
     },
     verifyIdentity: () => { for (const [callback, delay] of [...timers]) if (delay === 0) { timers.delete(callback); callback(); } },
     choose: () => { const input = nodes(settle(), "input")[0]; assert.ok(input); (input.props.onChange as (value: unknown) => void)({ currentTarget: { value: "", files: [{ size: 4, type: "image/jpeg", arrayBuffer: async () => Uint8Array.of(255,216,255,1).buffer }] } }); },
-    confirm: () => { const button = nodes(settle(), "button").find(node => node.props.children === "Confirm photo upload"); assert.ok(button); (button.props.onClick as () => void)(); settle(); },
+    confirm: () => { const button = nodes(settle(), "button").find(node => node.props.children === "Confirm photo upload"); if (button) (button.props.onClick as () => void)(); settle(); },
     expire: () => { now = 60_001; for (const [callback, ms] of [...timers]) if (ms === 60_000) callback(); return settle(); },
     dispose: () => { for (const scope of [child, parent]) for (const cleanup of scope.cleanup.values()) cleanup(); },
   };
@@ -213,8 +223,9 @@ test("real host observation during upload retires preview without losing committ
   for (const committed of [true, false]) {
     const h = hostFixture(); h.choose(); await tick(); h.confirm();
     assert.deepEqual(h.requests, ["/api/account/avatar"]);
-    h.clickAction("observe"); await tick();
-    assert.equal(nodes(h.settle(), "img").length, 0); assert.ok(h.calls.includes("revoke"));
+    // The picker sends after the ClubOwner selects a file; there is no
+    // separate recovery dialog or second confirmation action.
+    assert.equal(nodes(h.settle(), "img").length, 0);
     h.finishUpload(committed ? Response.json({ ok: true, state: "committed", requiresRefresh: true, accountId: actor, operationId: operation, revision: "1", avatarUrl: `/api/account/avatar?version=${operation}` })
       : Response.json({ ok: false, error: "OUTPUT_TOO_LARGE", state: "unknown" }, { status: 422 }));
     await tick(); const tree = h.settle();
@@ -227,7 +238,7 @@ test("real host observation during upload retires preview without losing committ
 });
 test("real host TTL releases pending-upload preview without cancelling uncertain server work", async () => {
   const h = hostFixture(); h.choose(); await tick(); h.confirm();
-  assert.equal(nodes(h.settle(), "img").length, 1);
+  assert.equal(nodes(h.settle(), "img").length, 0);
   assert.equal(nodes(h.expire(), "img").length, 0); assert.ok(h.calls.includes("revoke"));
   h.finishUpload(Response.json({ ok: false, error: "OUTPUT_TOO_LARGE", state: "unknown" }, { status: 422 })); await tick();
   assert.equal(nodes(h.settle(), "input")[0].props.disabled, true); assert.equal(h.requests.length, 1); assert.ok(!h.calls.includes("refresh")); h.dispose();

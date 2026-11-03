@@ -323,7 +323,7 @@ test("original market zoom signing mounted: staged confirmation only", {
   } finally { await browser.close(); }
 });
 type SaveRequest = { gameweekId: string; selectedCoachId: string; formationCode: string; selections: Array<{ playerId: string; slotId: string }>; action: string; idempotencyKey: string };
-async function openFixture(browser: Browser, bundle: Bundle, mode: Mode, options: { livePresentationState?: import("../lib/touchlineArena/live-presentation-state.ts").TouchlineLivePresentationState; marketVacancy?: "starters" | "reserves" | "outside"; emptyAccount?: boolean; unconfirmedBudget?: boolean; expiredDeadline?: boolean; structure?: boolean; collection?: boolean; filledBench?: boolean; holdCollection?: boolean; locked?: boolean; divergent?: boolean; indicators?: boolean; budgetExhausted?: boolean; viewport?: { width: number; height: number }; formationCode?: string } = {}) {
+async function openFixture(browser: Browser, bundle: Bundle, mode: Mode, options: { lockedTransfer?: boolean; livePresentationState?: import("../lib/touchlineArena/live-presentation-state.ts").TouchlineLivePresentationState; marketVacancy?: "starters" | "reserves" | "outside"; emptyAccount?: boolean; unconfirmedBudget?: boolean; expiredDeadline?: boolean; structure?: boolean; collection?: boolean; filledBench?: boolean; holdCollection?: boolean; locked?: boolean; divergent?: boolean; indicators?: boolean; budgetExhausted?: boolean; viewport?: { width: number; height: number }; formationCode?: string } = {}) {
   const snapshot = options.budgetExhausted ? exhaustedBetaSnapshot() : fixtureSnapshot(options.locked, options.formationCode);
   const { parseTouchlineLivePresentationState } = await import("../lib/touchlineArena/live-presentation-state.ts");
   // Every marketPage mount includes the real ClubHub strip/shared reader. These
@@ -364,7 +364,7 @@ async function openFixture(browser: Browser, bundle: Bundle, mode: Mode, options
       }).state;
     }
   }
-  if (options.marketVacancy) {
+  if (options.marketVacancy || options.lockedTransfer) {
     assert.ok(collection);
     const plan = collectionSlotPlan(geometry); assert.ok(plan);
     const details = { GK: "Goalkeeper", CB: "Centre Back", RB: "Right Back", LB: "Left Back", DM: "Defensive Midfield", MID: "Central Midfield", RW: "Right Wing", LW: "Left Wing", CF: "Centre Forward" };
@@ -380,6 +380,15 @@ async function openFixture(browser: Browser, bundle: Bundle, mode: Mode, options
       const { primaryDetail: omitted, ...legacy } = p; void omitted; return legacy;
     }) };
     snapshot.selections = collection.players.filter(p => p.area === "starters").map(p => ({ playerId: p.playerId, slotId: geometry.slots[p.slot].id }));
+  }
+  if (options.lockedTransfer) {
+    assert.ok(collection);
+    snapshot.userGameweek = { ...snapshot.userGameweek!, state: "LOCKED", collectionRelatedSnapshot: collection.players.filter(p => p.area !== "outside").map(({playerId,area,slot})=>({playerId,area,slot})) };
+    snapshot.gameweekScore = 48.28; snapshot.seasonScore = 96.56;
+    const starter = collection.players.find(p=>p.area === "starters")!;
+    const outside = collection.players.find(p=>p.area === "outside" && p.position === starter.position)!;
+    assert.ok(outside);
+    collection = {...collection,players:collection.players.map(p=>p===starter?{...p,area:outside.area,slot:outside.slot}:p===outside?{...p,area:starter.area,slot:starter.slot}:p)};
   }
   const initialSelections = JSON.stringify(snapshot.selections);
   if (options.indicators) {
@@ -1709,3 +1718,38 @@ test("compact market clock remains visible with completed setup and before squad
     } finally {await browser.close();}
   }
 });
+
+ test("locked round and current35 rendered authorities after closed allocation", {skip:process.env.TOUCHLINE_RUN_LOCKED_AUTHORITY_BROWSER !== "1",timeout:120_000},async()=>{
+ const bundle=bundleProduct();const engine=process.env.TOUCHLINE_MARKET_ENGINE === "webkit" ? webkit:chromium;
+ const browser=await engine.launch({headless:true});
+ try {const h=await openFixture(browser,bundle,modes[0],{collection:true,locked:true,lockedTransfer:true});
+ try {
+ const toggle=h.page.locator('[data-squad-authority-toggle="true"]');await expect(toggle).toBeVisible();
+ const cards=h.pitch.locator('[data-touchline-pitch-surface] [data-touchline-card-zoom="trigger"]');
+ const assertRoster = async (expected: number) => {
+   const texts = [...await cards.allTextContents(), ...await h.page.locator('[data-collection-area] [data-touchline-card-zoom="trigger"]').allTextContents()];
+   assert.equal(texts.length, expected);
+   assert.equal(new Set(texts).size, expected, "Each visible roster view contains each player once");
+   await expect(h.page.locator('[data-collection-slot] > button').filter({hasNot: h.page.locator('[data-touchline-card-zoom="trigger"]')})).not.toHaveCount(0);
+   assert.equal(await h.page.locator('[data-collection-slot] > button:not(:disabled)').count(), 0, "Closed roster placement remains read-only");
+ };
+ const roundText=await cards.allTextContents();
+ await assertRoster(20);
+ const scoreBefore=await h.page.locator('[data-gameweek-score-status]').allTextContents();
+ await expect(h.page.locator('#clubowner-exchange')).toHaveCount(0);
+ await toggle.getByRole('button',{name:'Current squad',exact:true}).click();
+ await expect(h.page.locator('#clubowner-exchange')).toBeVisible();await expect(cards).toHaveCount(11);
+ assert.notDeepEqual(await cards.allTextContents(),roundText);
+ await assertRoster(35);
+ assert.deepEqual(await h.page.locator('[data-gameweek-score-status]').allTextContents(),scoreBefore);
+ assert.equal(h.collection?.players.length,35);assert.equal(h.snapshot.gameweekScore,48.28);
+ assert.equal(h.collectionWrites.length,0);assert.equal(h.writes.length,0);
+ await toggle.getByRole('button',{name:'Round line-up',exact:true}).click();
+ await expect.poll(()=>cards.allTextContents()).toEqual(roundText);
+ await assertRoster(20);
+ assert.deepEqual(await h.page.locator('[data-gameweek-score-status]').allTextContents(),scoreBefore);
+ await expect(h.page.locator('#clubowner-exchange')).toHaveCount(0);
+ await h.assertClean();
+ } finally {await h.close();}
+ } finally {await browser.close();}
+ });

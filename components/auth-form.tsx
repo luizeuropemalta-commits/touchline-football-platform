@@ -7,6 +7,7 @@ import { ArrowRight, Check, Eye, EyeOff, Loader2, Mail } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import {
   getTouchLineAuthCopy,
+  getTouchLineDiscoveryRegistrationCopy,
   normalizeTouchLineAuthLocale,
   normalizeTouchLineLoginLocale,
   normalizeTouchLineAuthReturnTo,
@@ -17,6 +18,8 @@ import {
 import { resolveTouchLineAuthOrigin } from "@/lib/touchlineArena/public-origin";
 import { touchlineRegistrationEntryHref } from "@/lib/touchlineArena/arena-onboarding";
 import { Button, Input } from "./ui";
+
+import { discoveryRegistrationIntent } from "@/lib/touchlineArena/discovery-registration";
 
 type Mode = "login" | "register" | "forgot";
 type SocialAuthProvider = "google" | "apple" | "facebook";
@@ -126,6 +129,7 @@ export function AuthForm({
     },
   ];
   const enabledSocialProviders = socialProviders.filter(({ enabled }) => enabled);
+  const [publicName, setPublicName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
@@ -215,6 +219,10 @@ export function AuthForm({
     const effectiveLastName = typeof submittedLastName === "string"
       ? submittedLastName.trim()
       : lastName.trim();
+    const discoveryIntent = discoveryRegistrationIntent(submittedFields.get("public_name"));
+    if (mode === "register" && !discoveryIntent) {
+      setMessage(getTouchLineDiscoveryRegistrationCopy(normalizedLocale).invalid); setMessageTone("error"); return;
+    }
     const effectiveName = [effectiveFirstName, effectiveLastName].filter(Boolean).join(" ");
     setLoading(true); setMessage(""); setMessageTone(null);
     const supabase = createClient();
@@ -234,6 +242,7 @@ export function AuthForm({
             // ClubOwner records, while preserving the real registration
             // fields for onboarding and future profile editing.
             data: {
+              ...discoveryIntent,
               full_name: effectiveName,
               first_name: effectiveFirstName,
               last_name: effectiveLastName,
@@ -422,6 +431,11 @@ export function AuthForm({
           <label className="block"><span className="mb-2 block text-xs font-semibold">{copy.lastName}</span><Input required name="last_name" value={lastName} onChange={e => setLastName(e.target.value)} placeholder={copy.lastNamePlaceholder} autoComplete="family-name" /></label>
         </div>
       ) : null}
+      {mode === "register" ? <label className="block">
+        <span className="mb-2 block text-xs font-semibold">{getTouchLineDiscoveryRegistrationCopy(normalizedLocale).label}</span>
+        <Input required name="public_name" value={publicName} onChange={event => setPublicName(event.target.value)} minLength={2} maxLength={60} autoComplete="nickname" aria-describedby="discovery-registration-notice" />
+        <span id="discovery-registration-notice" className="mt-2 block text-xs text-slate-300">{getTouchLineDiscoveryRegistrationCopy(normalizedLocale).notice}</span>
+      </label> : null}
       <label className="block"><span className="mb-2 block text-xs font-semibold">{copy.email}</span><Input required name="email" type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder={copy.emailPlaceholder} autoComplete="email"/></label>
       {mode !== "forgot" && (
         <div className="block">

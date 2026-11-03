@@ -204,3 +204,14 @@ test('QA override stays separate from the official schedule and never invents a 
   }
   assert.doesNotMatch(renderClock({locale:'pt-BR',gameweeks:rounds('closing'),bindings}), /data-market-test-override/);
 });
+
+ test('awaiting final badge identifies the next opening round without relabelling the live round', async () => {
+ const bindings = await load();
+ for (const locale of ['pt-BR','en-GB']) {
+ const input=rounds('awaiting-final');
+ const html=renderClock({locale,gameweeks:input,bindings});
+ assert.ok(html.includes(`<em>${locale === 'pt-BR' ? 'Próxima rodada' : 'Next round'} · 6</em>`));
+ assert.equal(input[0].number,6);
+ for(const phase of ['closing','opening'] as const) assert.ok(renderClock({locale,gameweeks:rounds(phase),bindings}).includes('<em>GW 6</em>'));
+ }
+ });

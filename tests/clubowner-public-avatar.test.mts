@@ -65,7 +65,7 @@ function fixture(patch: Record<string, string | undefined> = {}) {
     return exports;
   }
   const route = load(resolve(root, "app/api/touchline/clubowners/[publicId]/avatar/route.ts")) as { GET: (request: Request, context: unknown) => Promise<Response> };
-  const service = (load(resolve(root, "lib/touchlineArena/clubowner-public-avatar-server.ts")).publicOwnerAvatarService as () => { enabled: boolean; urls: (ids: string[]) => Promise<Record<string, string>> })();
+  const service = (load(resolve(root, "lib/touchlineArena/clubowner-public-avatar-server.ts")).publicOwnerAvatarService as () => { enabled: boolean; allowsOrigin: (origin: string) => boolean; urls: (ids: string[]) => Promise<Record<string, string>> })();
   const request = (path = urlFor(), signal?: AbortSignal) => new Request(origin + path, { signal });
   return { route, service, state, calls, args, environment, request, serve: (request = new Request(origin + urlFor())) => route.GET(request, { params: Promise.resolve({ publicId: id }) }) };
 }
@@ -162,4 +162,47 @@ test("photo consent uses existing authenticated flow, exact QA origin and explic
     assert.equal((await invoke({ displayName: "Customer", published: true, ...extra })).status, 400);
   }
   assert.equal((await invoke({ displayName: "Customer", published: false, photoPublished: true })).status, 400); assert.deepEqual(calls, []);
+});
+
+const localPatch = () => ({ NODE_ENV: "development", TOUCHLINE_CLUB_OWNER_AVATAR_LOCAL_ENABLED: "true",
+  VERCEL_ENV: undefined, VERCEL_GIT_COMMIT_REF: undefined, VERCEL_BRANCH_URL: undefined, VERCEL_URL: undefined });
+test("explicit local QA photo admission projects and serves current public photos on admitted loopback origins", async () => {
+  for (const local of ["http://localhost:3100", "http://localhost:3319"]) {
+    const f = fixture(localPatch()); assert.equal(f.service.enabled, true);
+    assert.equal((await f.service.urls([id]))[id], urlFor());
+    const response = await f.serve(new Request(local + urlFor(), { headers: { origin: local, "sec-fetch-site": "same-origin" } }));
+    assert.equal(response.status, 200); assert.deepEqual(Buffer.from(await response.arrayBuffer()), bytes);
+  }
+});
+test("local photo admission preserves every capability and rejects hosted, foreign, mirror and wrong-project envelopes", async () => {
+  for (const patch of [{ NODE_ENV: "production" }, { TOUCHLINE_CLUB_OWNER_AVATAR_LOCAL_ENABLED: undefined },
+    { VERCEL_ENV: "preview" }, { VERCEL: "1" }, { NEXT_PUBLIC_VERCEL_URL: "" }, { TOUCHLINE_ISOLATED_PREVIEW_MODE: "" },
+    { SUPABASE_URL: "https://other.supabase.co" }, { NEXT_PUBLIC_SUPABASE_URL: "https://other.supabase.co" },
+    { TOUCHLINE_DATA_SOURCE: "qa-mirror" }, { TOUCHLINE_CLUB_OWNER_AVATAR_RETENTION_READY: "false" },
+    { TOUCHLINE_CLUB_OWNER_AVATAR_READ_ENABLED: "false" }, { TOUCHLINE_CLUBOWNER_PUBLIC_ENABLED: "false" },
+    { TOUCHLINE_CLUBOWNER_PUBLIC_AVATAR_ENABLED: "false" }, { TOUCHLINE_OWNER_EMAILS: "" }]) {
+    const f = fixture({ ...localPatch(), ...patch }); assert.equal(f.service.enabled, false, JSON.stringify(patch));
+    assert.equal((await f.serve(new Request("http://localhost:3100" + urlFor()))).status, 503); assert.deepEqual(f.calls, []);
+  }
+  for (const foreign of ["http://localhost:3101", "http://127.0.0.1:3100", "https://foreign.invalid", origin]) {
+    const f = fixture(localPatch()); assert.equal((await f.serve(new Request(foreign + urlFor()))).status, 403); assert.deepEqual(f.calls, []);
+  }
+  for (const headers of [{ origin: "https://foreign.invalid" }, { "sec-fetch-site": "cross-site" }, { "x-touchline-isolated-preview": "true" }]) {
+    const f = fixture(localPatch()); assert.equal((await f.serve(new Request("http://localhost:3100" + urlFor(), { headers }))).status, 403); assert.deepEqual(f.calls, []);
+  }
+  const hosted = fixture(); assert.equal((await hosted.serve(new Request("http://localhost:3100" + urlFor()))).status, 403);
+});
+
+test("local photo consent uses server admission and preserves exact same-origin validation", async () => {
+ const f = fixture(localPatch()); let calls = 0;
+ const invoke = (target: string, originHeader = target) => handlePublicOwners(new Request(target + "/api/account/public-profile", {
+  method: "PUT", headers: { origin: originHeader, "content-type": "application/json" }, body: JSON.stringify({ displayName: "Customer", published: true, photoPublished: true }),
+ }), "own", { enabled: true, photoEnabled: f.service.enabled, photoOriginAllowed: f.service.allowsOrigin,
+  currentActor: async () => ({ allowed: true, photoAllowed: true }), rpc: async name => {
+   calls++; assert.equal(name, "touchline_people_save_profile_v2");
+   return { publicId: id, displayName: "Customer", published: true, photoPublished: true, followerCount: 0 };
+  } });
+ assert.equal((await invoke("http://localhost:3100")).status, 200); assert.equal(calls, 1);
+ for (const target of ["http://localhost:3101", "https://foreign.invalid", origin]) assert.notEqual((await invoke(target)).status, 200);
+ assert.notEqual((await invoke("http://localhost:3100", "https://foreign.invalid")).status, 200); assert.equal(calls, 1);
 });

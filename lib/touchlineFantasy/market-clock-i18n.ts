@@ -5,7 +5,7 @@ type UnitForms = Readonly<Partial<Record<Intl.LDMLPluralRule, string>> & { one: 
 type ClockUnit = "hour" | "minute" | "second";
 const enGB = {
   closesIn: "Market closes in", reopensIn: "Market reopens in", open: "Market open", closed: "Market closed",
-  lastWhistle: "Last whistle of the round", updating: "Updating My Club", nextWindow: "Next window",
+  lastWhistle: "Last whistle of the round", updating: "Updating My Club", nextWindow: "Next window", nextRound: "Next round",
   awaitingFinal: "Reopens when the provider confirms the last match has ended. No estimated time.",
   syncingWindow: "Syncing the canonical window", london: "London",
   closesAt: "Closes {deadline}. The countdown starts 24 hours before.",
@@ -33,7 +33,7 @@ export const TOUCHLINE_FANTASY_MARKET_CLOCK_CATALOGUES = {
   "en-GB": enGB,
   "pt-BR": {
     closesIn: "Mercado fecha em", reopensIn: "Mercado reabre em", open: "Mercado aberto", closed: "Mercado fechado",
-    lastWhistle: "Último apito da rodada", updating: "Atualizando o Meu Clube", nextWindow: "Próxima janela",
+    lastWhistle: "Último apito da rodada", updating: "Atualizando o Meu Clube", nextWindow: "Próxima janela", nextRound: "Próxima rodada",
     awaitingFinal: "Reabre quando o provedor confirmar o fim do último jogo. Sem horário estimado.",
     syncingWindow: "Sincronizando a janela canônica", london: "Londres",
     closesAt: "Fecha em {deadline}. O cronômetro inicia 24h antes.",
@@ -48,7 +48,7 @@ export const TOUCHLINE_FANTASY_MARKET_CLOCK_CATALOGUES = {
   },
   "es-ES": {
     closesIn: "El mercado cierra en", reopensIn: "El mercado reabre en", open: "Mercado abierto", closed: "Mercado cerrado",
-    lastWhistle: "Último pitido de la jornada", updating: "Actualizando Mi Club", nextWindow: "Próxima ventana",
+    lastWhistle: "Último pitido de la jornada", updating: "Actualizando Mi Club", nextWindow: "Próxima ventana", nextRound: "Próxima jornada",
     awaitingFinal: "Reabre cuando el proveedor confirme el final del último partido. Sin hora estimada.",
     syncingWindow: "Sincronizando la ventana canónica", london: "Londres",
     closesAt: "Cierra el {deadline}. La cuenta atrás comienza 24 horas antes.",
@@ -63,7 +63,7 @@ export const TOUCHLINE_FANTASY_MARKET_CLOCK_CATALOGUES = {
   },
   "it-IT": {
     closesIn: "Il mercato chiude tra", reopensIn: "Il mercato riapre tra", open: "Mercato aperto", closed: "Mercato chiuso",
-    lastWhistle: "Ultimo fischio della giornata", updating: "Aggiornamento del mio club", nextWindow: "Prossima finestra",
+    lastWhistle: "Ultimo fischio della giornata", updating: "Aggiornamento del mio club", nextWindow: "Prossima finestra", nextRound: "Prossima giornata",
     awaitingFinal: "Riapre quando il fornitore conferma la fine dell’ultima partita. Nessun orario stimato.",
     syncingWindow: "Sincronizzazione della finestra canonica", london: "Londra",
     closesAt: "Chiude il {deadline}. Il conto alla rovescia inizia 24 ore prima.",
@@ -78,7 +78,7 @@ export const TOUCHLINE_FANTASY_MARKET_CLOCK_CATALOGUES = {
   },
   "fr-FR": {
     closesIn: "Le marché ferme dans", reopensIn: "Le marché rouvre dans", open: "Marché ouvert", closed: "Marché fermé",
-    lastWhistle: "Dernier coup de sifflet de la journée", updating: "Mise à jour de Mon Club", nextWindow: "Prochaine fenêtre",
+    lastWhistle: "Dernier coup de sifflet de la journée", updating: "Mise à jour de Mon Club", nextWindow: "Prochaine fenêtre", nextRound: "Prochaine journée",
     awaitingFinal: "Rouvre lorsque le fournisseur confirme la fin du dernier match. Aucun horaire estimé.",
     syncingWindow: "Synchronisation de la fenêtre canonique", london: "Londres",
     closesAt: "Ferme le {deadline}. Le compte à rebours commence 24 heures avant.",
@@ -93,7 +93,7 @@ export const TOUCHLINE_FANTASY_MARKET_CLOCK_CATALOGUES = {
   },
   "ar-SA": {
     closesIn: "يغلق السوق بعد", reopensIn: "يعاد فتح السوق بعد", open: "السوق مفتوح", closed: "السوق مغلق",
-    lastWhistle: "الصافرة الأخيرة للجولة", updating: "جارٍ تحديث ناديي", nextWindow: "الفترة التالية",
+    lastWhistle: "الصافرة الأخيرة للجولة", updating: "جارٍ تحديث ناديي", nextWindow: "الفترة التالية", nextRound: "الجولة التالية",
     awaitingFinal: "يعاد الفتح عندما يؤكد مزود البيانات انتهاء المباراة الأخيرة. لا يوجد وقت تقديري.",
     syncingWindow: "جارٍ مزامنة الفترة المعتمدة", london: "لندن",
     closesAt: "يغلق في {deadline}. يبدأ العد التنازلي قبل 24 ساعة.",
@@ -108,7 +108,7 @@ export const TOUCHLINE_FANTASY_MARKET_CLOCK_CATALOGUES = {
   },
   "tr-TR": {
     closesIn: "Pazarın kapanmasına", reopensIn: "Pazarın yeniden açılmasına", open: "Pazar açık", closed: "Pazar kapalı",
-    lastWhistle: "Haftanın son düdüğü", updating: "Kulübüm güncelleniyor", nextWindow: "Sonraki dönem",
+    lastWhistle: "Haftanın son düdüğü", updating: "Kulübüm güncelleniyor", nextWindow: "Sonraki dönem", nextRound: "Sonraki hafta",
     awaitingFinal: "Veri sağlayıcısı son maçın bittiğini doğruladığında yeniden açılır. Tahmini saat yoktur.",
     syncingWindow: "Kanonik dönem eşitleniyor", london: "Londra",
     closesAt: "Kapanış: {deadline}. Geri sayım 24 saat önce başlar.",
@@ -123,7 +123,7 @@ export const TOUCHLINE_FANTASY_MARKET_CLOCK_CATALOGUES = {
   },
   "de-DE": {
     closesIn: "Markt schließt in", reopensIn: "Markt öffnet wieder in", open: "Markt geöffnet", closed: "Markt geschlossen",
-    lastWhistle: "Letzter Abpfiff des Spieltags", updating: "Mein Verein wird aktualisiert", nextWindow: "Nächstes Zeitfenster",
+    lastWhistle: "Letzter Abpfiff des Spieltags", updating: "Mein Verein wird aktualisiert", nextWindow: "Nächstes Zeitfenster", nextRound: "Nächster Spieltag",
     awaitingFinal: "Öffnet wieder, sobald der Anbieter das Ende des letzten Spiels bestätigt. Keine geschätzte Uhrzeit.",
     syncingWindow: "Kanonisches Zeitfenster wird synchronisiert", london: "London",
     closesAt: "Schließt am {deadline}. Der Countdown beginnt 24 Stunden vorher.",

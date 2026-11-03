@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Check, Eye, Search, X } from "lucide-react";
 
 import TouchlineEliteExactCard, {
@@ -102,6 +102,8 @@ export function ManualCardEditorialEditor({ players, locale = "en-GB", initialPl
   const [status, setStatus] = useState<string>(copy.choose);
   const [busy, setBusy] = useState(false);
   const [preview, setPreview] = useState<ManualCardPreview | null>(null);
+  const [previewRequest, setPreviewRequest] = useState<ReturnType<typeof requestBody> | null>(null);
+  const operationPending = useRef(false);
 
   const filteredPlayers = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -114,7 +116,7 @@ export function ManualCardEditorialEditor({ players, locale = "en-GB", initialPl
     return {
       playerId,
       marketValueEur: parsedValue,
-      effectiveSeason,
+      effectiveSeason: effectiveSeason.trim().slice(0, 32),
       internalNote,
       internalSource,
     };
@@ -134,47 +136,66 @@ export function ManualCardEditorialEditor({ players, locale = "en-GB", initialPl
   }
 
   async function preparePreview() {
+    if (operationPending.current) return;
     const parsedValue = validatedValue();
     if (parsedValue === null) return;
+    const draft = requestBody(parsedValue);
+    operationPending.current = true;
+    setPreview(null); setPreviewRequest(null);
     setBusy(true);
     setStatus(copy.preparingLong);
     try {
       const response = await fetch("/api/admin/manual-card-editorial?action=preview", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(requestBody(parsedValue)),
+        body: JSON.stringify(draft),
       });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error ?? "Editorial preview failed.");
+      if (payload?.ok !== true || payload.previewOnly !== true || payload.authority !== "TouchLine"
+        || payload.player?.canonicalPlayerId !== draft.playerId || payload.marketValueEur !== draft.marketValueEur
+        || payload.effectiveSeason !== draft.effectiveSeason || !Array.isArray(payload.cardReview?.missingFields)) {
+        throw new Error(locale === "pt-BR" ? "A prévia não corresponde à decisão solicitada. Prepare uma nova prévia." : "The preview does not match the requested decision. Prepare a new preview.");
+      }
+      setPreviewRequest(draft);
       setPreview(payload as ManualCardPreview);
       setStatus(copy.previewIntro);
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Editorial preview failed.");
     } finally {
+      operationPending.current = false;
       setBusy(false);
     }
   }
 
   async function save() {
+    if (operationPending.current) return;
     const parsedValue = validatedValue();
-    if (parsedValue === null || !preview) return;
+    if (parsedValue === null || !preview || !previewRequest) return;
+    // A late preview can arrive after the draft changed. Never submit that
+    // newer draft behind an older card: confirmation owns the inspected body.
+    if (JSON.stringify(requestBody(parsedValue)) !== JSON.stringify(previewRequest)) {
+      setPreview(null); setPreviewRequest(null); setStatus(copy.choose); return;
+    }
+    operationPending.current = true;
     setBusy(true);
     setStatus(copy.saving);
     try {
       const response = await fetch("/api/admin/manual-card-editorial", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(requestBody(parsedValue)),
+        body: JSON.stringify(previewRequest),
       });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error ?? "Editorial save failed.");
       setStatus(payload.cardReview?.state === "COMPLETE"
         ? `${payload.publicationStatus}: ${payload.calculatedTier} / £${payload.nominalPriceGbp}. ${locale === "pt-BR" ? "Card completo e publicado automaticamente." : "Card complete and published automatically."}`
         : `${payload.cardReview?.missingFields?.length ?? 0} ${locale === "pt-BR" ? "campo(s) ainda requer(em) revisão; o card continua em grayscale." : "field(s) still require review; the card stays grayscale."}`);
-      setPreview(null);
+      setPreview(null); setPreviewRequest(null);
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Editorial save failed.");
     } finally {
+      operationPending.current = false;
       setBusy(false);
     }
   }
@@ -223,22 +244,22 @@ export function ManualCardEditorialEditor({ players, locale = "en-GB", initialPl
       </div>
       <label className="grid gap-2 text-[10px] font-black text-slate-300">
         {copy.findPlayer}
-        <span className="flex h-10 items-center gap-2 rounded-xl border border-white/[.08] bg-black/30 px-3"><Search size={14} className="text-slate-500" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={copy.searchPlaceholder} className="min-w-0 flex-1 bg-transparent text-xs font-semibold text-white outline-none" /></span>
+        <span className="flex h-10 items-center gap-2 rounded-xl border border-white/[.08] bg-black/30 px-3"><Search size={14} className="text-slate-500" /><input disabled={busy} value={query} onChange={(event) => setQuery(event.target.value)} placeholder={copy.searchPlaceholder} className="min-w-0 flex-1 bg-transparent text-xs font-semibold text-white outline-none" /></span>
       </label>
       <div className="max-h-44 overflow-y-auto rounded-2xl border border-white/[.06] bg-black/20 p-2">
         {filteredPlayers.map((player) => (
-          <button key={player.id} type="button" onClick={() => { setPlayerId(player.id); setPreview(null); }} className={`flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2 text-left ${player.id === playerId ? "bg-[#a3ff12]/15 text-[#d9ff96]" : "text-slate-300 hover:bg-white/[.04]"}`}>
+          <button key={player.id} disabled={busy} type="button" onClick={() => { setPlayerId(player.id); setPreview(null); }} className={`flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2 text-left ${player.id === playerId ? "bg-[#a3ff12]/15 text-[#d9ff96]" : "text-slate-300 hover:bg-white/[.04]"}`}>
             <span className="text-xs font-bold">{player.name}</span><span className="text-[9px] font-bold text-slate-500">{player.clubName}</span>
           </button>
         ))}
       </div>
       {selectedPlayer ? <p className="text-[10px] font-bold text-[#caff6d]">{copy.selected}: {selectedPlayer.name} · {selectedPlayer.clubName}</p> : null}
       <div className="grid gap-3 sm:grid-cols-2">
-        <label className="grid gap-2 text-[10px] font-black text-slate-300">{copy.value}<input inputMode="numeric" value={marketValueEur} onChange={(event) => { setMarketValueEur(event.target.value.replace(/[^0-9]/g, "")); setPreview(null); }} placeholder="42000000" className="h-10 rounded-xl border border-white/[.08] bg-black/30 px-3 text-xs text-white outline-none" /></label>
-        <label className="grid gap-2 text-[10px] font-black text-slate-300">{copy.season}<input value={effectiveSeason} onChange={(event) => { setEffectiveSeason(event.target.value); setPreview(null); }} className="h-10 rounded-xl border border-white/[.08] bg-black/30 px-3 text-xs text-white outline-none" /></label>
+        <label className="grid gap-2 text-[10px] font-black text-slate-300">{copy.value}<input disabled={busy} inputMode="numeric" value={marketValueEur} onChange={(event) => { setMarketValueEur(event.target.value.replace(/[^0-9]/g, "")); setPreview(null); }} placeholder="42000000" className="h-10 rounded-xl border border-white/[.08] bg-black/30 px-3 text-xs text-white outline-none" /></label>
+        <label className="grid gap-2 text-[10px] font-black text-slate-300">{copy.season}<input disabled={busy} value={effectiveSeason} onChange={(event) => { setEffectiveSeason(event.target.value); setPreview(null); }} className="h-10 rounded-xl border border-white/[.08] bg-black/30 px-3 text-xs text-white outline-none" /></label>
       </div>
-      <label className="grid gap-2 text-[10px] font-black text-slate-300">{copy.note}<textarea value={internalNote} onChange={(event) => { setInternalNote(event.target.value); setPreview(null); }} rows={2} className="rounded-xl border border-white/[.08] bg-black/30 p-3 text-xs text-white outline-none" /></label>
-      <label className="grid gap-2 text-[10px] font-black text-slate-300">{copy.source}<input value={internalSource} onChange={(event) => { setInternalSource(event.target.value); setPreview(null); }} className="h-10 rounded-xl border border-white/[.08] bg-black/30 px-3 text-xs text-white outline-none" /></label>
+      <label className="grid gap-2 text-[10px] font-black text-slate-300">{copy.note}<textarea disabled={busy} value={internalNote} onChange={(event) => { setInternalNote(event.target.value); setPreview(null); }} rows={2} className="rounded-xl border border-white/[.08] bg-black/30 p-3 text-xs text-white outline-none" /></label>
+      <label className="grid gap-2 text-[10px] font-black text-slate-300">{copy.source}<input disabled={busy} value={internalSource} onChange={(event) => { setInternalSource(event.target.value); setPreview(null); }} className="h-10 rounded-xl border border-white/[.08] bg-black/30 px-3 text-xs text-white outline-none" /></label>
       <div className="flex flex-wrap items-center gap-3"><button type="button" onClick={preparePreview} disabled={busy} className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#a3ff12] px-4 text-[10px] font-black text-black disabled:opacity-50"><Eye size={14} />{busy ? copy.preparing : copy.preview}</button><p aria-live="polite" className="text-[10px] font-bold text-slate-500">{status}</p></div>
       {preview && previewPlayer ? <div role="dialog" aria-modal="true" aria-labelledby="manual-card-preview-title" className="fixed inset-0 z-[200] grid place-items-center overflow-y-auto bg-black/85 p-4 backdrop-blur-md">
         <section className="relative grid w-full max-w-4xl gap-5 rounded-[2rem] border border-[#a3ff12]/35 bg-[#050b09] p-5 shadow-[0_0_80px_rgba(163,255,18,.16)] md:grid-cols-[minmax(260px,360px)_1fr] md:p-8">

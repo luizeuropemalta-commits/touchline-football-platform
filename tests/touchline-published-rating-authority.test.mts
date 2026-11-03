@@ -36,7 +36,7 @@ test("a published null total never becomes a newer mutable total in the ranked c
   const source = readFileSync(new URL("../lib/touchlineArena/ranked-card-catalog-server.ts", import.meta.url), "utf8");
   assert.doesNotMatch(source, /seasonTotalRating: ranking\.totalRating \?\?/);
   assert.match(source, /publishedRanking:/);
-  const server = readFileSync(new URL("../lib/touchlineArena/card-ranking-server.ts", import.meta.url), "utf8");
+  const server = readFileSync(new URL("../lib/touchlineArena/card-ranking-snapshot-server.ts", import.meta.url), "utf8");
   assert.match(server, /minutesPlayed: player\.minutesPlayed/);
   assert.match(server, /appearances: player\.appearances/);
 });

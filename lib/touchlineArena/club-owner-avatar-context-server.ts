@@ -70,8 +70,8 @@ export function createClubOwnerAvatarContextReader() {
       const requestHeaders = await awaitAvatarStep(() => pool.track(scope!, () => headers()), signal);
       guard();
       const hostname = requestHeaders.get("host");
-      const local = hostname === "localhost:3319"
-        && allowsClubOwnerAvatarLocalEnvironment(environment, "http://localhost:3319");
+      if (!hostname) return null;
+      const local = allowsClubOwnerAvatarLocalEnvironment(environment, `http://${hostname}`);
       if ((!local && hostname !== new URL(TOUCHLINE_QA_ORIGIN).hostname) || requestHeaders.get("x-touchline-isolated-preview") !== null
         || (!local && inspectTouchlineQaVercelEnvironment({ environment, requestHostname: hostname }).status !== "PASS")) return null;
       guard();

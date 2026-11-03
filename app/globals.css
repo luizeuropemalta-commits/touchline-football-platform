@@ -1,7 +1,9 @@
-@import "tailwindcss";
-/* Next watches PostCSS directory dependencies recursively, including ancestors. */
-@source not "../artifacts";
-@source not "../work";
+@import "tailwindcss" source(none);
+/* Scan product sources only; archives, tests and reports are not UI inputs. */
+@source "./";
+@source "../components";
+@source "../lib";
+@source "../data";
 
 :root {
   /* Approved card-zoom backdrop: shared by every modal surface. */

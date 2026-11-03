@@ -12,6 +12,7 @@ const APPROVED_SOURCE_CONFIGURATION = [
   "TOUCHLINE_SITE_LOCALES_ENABLED",
   "TOUCHLINE_CARD_PUBLICATION_GATE",
   "TOUCHLINE_CURRENT_SEASON",
+  "TOUCHLINE_CLUBOWNER_PUBLIC_ENABLED",
 ] as const;
 
 function ownValue(environment: Environment, key: string) {
@@ -32,8 +33,9 @@ function sourceCredential(source: Environment, key: string) {
 export function buildQaCandidateEnvironments(
   source: Environment,
   hostEnvironment: Environment,
-  options: Readonly<{ qaMarketContext: boolean; clubCollection?: boolean; clubRelease?: boolean }>,
+  options: Readonly<{ qaMarketContext: boolean; localBuild?: boolean; clubCollection?: boolean; clubRelease?: boolean }>,
 ): { preview: Record<string, string>; preflight: Record<string, string> } {
+  if (options.localBuild !== undefined && typeof options.localBuild !== "boolean") throw new Error("Local QA requires a boolean localBuild choice");
   if (typeof options.qaMarketContext !== "boolean") {
     throw new Error("Local QA requires an explicit qaMarketContext choice");
   }
@@ -67,8 +69,9 @@ export function buildQaCandidateEnvironments(
   }
   const preview: Record<string, string> = {
     ...host,
-    NODE_ENV: "development",
-    NODE_OPTIONS: "--max-old-space-size=4096",
+    NODE_ENV: options.localBuild ? "production" : "development",
+    NODE_OPTIONS: options.localBuild ? "--max-old-space-size=1536" : "--max-old-space-size=4096",
+    ...(options.localBuild ? { TOUCHLINE_LOCAL_QA_BUILD: "1" } : {}),
     // Bound concurrent module work in local Webpack (supported by installed Next).
     // This limits compilation concurrency, not total process memory.
     NEXT_WEBPACK_PARALLELISM: "1",
@@ -87,7 +90,7 @@ export function buildQaCandidateEnvironments(
     const value = ownValue(source, key);
     if (value !== undefined) preview[key] = value;
   }
-  if (options.qaMarketContext) preview.VERCEL_GIT_COMMIT_REF = "qa";
+  if (options.qaMarketContext || options.localBuild) preview.VERCEL_GIT_COMMIT_REF = "qa";
   // Collection review alone never enables release. Release is a separate owner opt-in.
   if (options.clubCollection === true) preview.TOUCHLINE_CLUB_COLLECTION_ENABLED = "true";
   if (options.clubRelease === true) preview.TOUCHLINE_CLUB_RELEASE_ENABLED = "true";

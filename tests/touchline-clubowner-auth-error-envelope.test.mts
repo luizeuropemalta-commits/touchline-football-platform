@@ -55,6 +55,10 @@ function fixture(getUser: () => Promise<unknown>, clientFailure = false, clientW
     clearTimeout: (id: number) => timers.delete(id),
   });
   const modules: Record<string, unknown> = {
+    "@/components/touchline/social/ClubOwnerDiscoveryOnboarding": { default: () => assert.fail("Discovery stays OFF in auth-envelope fixtures") },
+    "@/components/touchline/social/ClubOwnerPublicDirectory": { default: () => assert.fail("Public settings render only for an explicit settings request") },
+    "@/lib/touchlineArena/clubowner-public-contract": { parseOwnPublicOwner: () => assert.fail("No unsolicited settings read"), peopleLocale: (locale: string) => locale },
+    "@/lib/touchlineArena/clubowner-public-avatar-server": { publicOwnerAvatarService: () => ({ enabled: false }) },
     "@/lib/stripe/club-season-offers.server": { readClubSeasonCheckoutOffers: async (accountId: string) => {
       assert.equal(accountId, user("customer@example.test").id);
       calls.push("checkout-offers"); return {};

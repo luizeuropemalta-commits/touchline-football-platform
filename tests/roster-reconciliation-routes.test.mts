@@ -15,6 +15,8 @@ function harness(kind: 'owner' | 'cron', options: {
     access?: boolean;
     authError?: boolean;
     error?: string;
+    receiptStatus?: string;
+    fastDeadline?: boolean;
 } = {}) {
     let clients = 0;
     const actions: unknown[] = [];
@@ -31,11 +33,11 @@ function harness(kind: 'owner' | 'cron', options: {
         '@/lib/football-data/roster-reconciliation-contract': { parseRosterCommand },
         '@/lib/football-data/roster-reconciliation-server': { readRosterStatus: async () => { if (options.error)
                 throw new Error(options.error); return { enabled: false, applyEnabled: false, snapshots: [], jobs: [] }; }, runRosterCommand: async (...args: unknown[]) => { actions.push(args); if (options.error)
-                throw new Error(options.error); return { status: 'review', requestId: 'synthetic' }; }, rosterCronCommand: () => ({ action: 'capture', requestId: 'server-slot' }) },
+                throw new Error(options.error); return { status: options.receiptStatus ?? 'review', requestId: 'synthetic' }; }, rosterCronCommand: () => ({ action: 'capture', requestId: 'server-slot' }) },
         'node:crypto': { timingSafeEqual },
     };
     const source = readFileSync(new URL(`../app/api/${kind === 'owner' ? 'admin/football-data/rosters' : 'football-data/roster-sync'}/route.ts`, import.meta.url), 'utf8');
-    vm.runInNewContext(ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText, { exports, require: (name: string) => { assert.ok(name in dependencies, name); return dependencies[name]; }, process: { env: { TOUCHLINE_ROSTER_CRON_SECRET: 's'.repeat(32) } }, Buffer, Error, TextDecoder });
+    vm.runInNewContext(ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText, { exports, require: (name: string) => { assert.ok(name in dependencies, name); return dependencies[name]; }, process: { env: { TOUCHLINE_ROSTER_CRON_SECRET: 's'.repeat(32) } }, Buffer, Error, TextDecoder, setTimeout: (fn: () => void, ms: number) => setTimeout(fn, options.fastDeadline ? 5 : ms), clearTimeout });
     const request = (body: unknown = { action: 'capture', requestId: '00000000-0000-4000-8000-000000000002' }, headers: Record<string, string> = {}) => Object.assign(new Request('https://qa.invalid/api/ignored',{method:'POST',headers:{origin:'https://qa.invalid','sec-fetch-site':'same-origin','content-type':'application/json',...headers},body:JSON.stringify(body)}),{nextUrl:new URL('https://qa.invalid/api/ignored')});
     return { ...exports, request, counts: () => ({ clients, actions }) };
 }
@@ -80,6 +82,22 @@ test('actual cron route is POST secret protected and only derives server capture
     assert.deepEqual(action[2], { action: 'capture', requestId: 'server-slot' });
 });
 
+test('cron replay never reports a failed or unfinished capture as completed', async () => {
+    for (const receiptStatus of ['failed', 'unexpected']) {
+        const h = harness('cron', { receiptStatus });
+        const response = await h.POST(h.request({}, { authorization: `Bearer ${'s'.repeat(32)}` }));
+        assert.equal(response.status, 503);
+        assert.equal(response.body.ok, false);
+        assert.equal(response.body.error, 'ROSTER_NOT_CONFIRMED');
+        assert.equal(response.body.result, undefined);
+        assert.match(response.headers['Cache-Control'], /no-store/);
+    }
+    const h = harness('cron', { receiptStatus: 'collecting' });
+    const response = await h.POST(h.request({}, { authorization: `Bearer ${'s'.repeat(32)}` }));
+    assert.equal(response.status, 202);
+    assert.equal(response.body.pending, true);
+});
+
 test('POST validates content type and declared size before reading body or constructing privileged client',async()=>{
  for(const headers of [{'content-type':'text/plain'},{'content-type':'application/jsonp'},{'content-type':'application/json; charset=iso-8859-1'},{'content-type':''},{'content-length':'4097'},{'content-length':'not-a-number'}]){
   const h=harness('owner');let read=false;
@@ -107,4 +125,18 @@ test('POST accepts bounded chunked JSON at exact byte cap and rejects invalid UT
   assert.equal(response.status,data.length===4096?200:400);assert.equal(h.counts().actions.length,data.length===4096?1:0);
  }
  const h=harness('owner');assert.equal((await h.POST(h.request(command,{'content-length':'1'}))).status,400);assert.equal(h.counts().clients,0);
+});
+
+
+test('owner command body deadline cancels stalled and partial streams before privileged work',async()=>{
+ for(const partial of [false,true]){
+  const h=harness('owner',{fastDeadline:true});let cancelled=false;let control:ReadableStreamDefaultController<Uint8Array>|undefined;
+  const body=new ReadableStream<Uint8Array>({start(controller){control=controller;if(partial)controller.enqueue(new TextEncoder().encode('{"action":"capture"'));},cancel(){cancelled=true;}});
+  const pending=h.POST({headers:new Headers({origin:'https://qa.invalid','content-type':'application/json'}),nextUrl:new URL('https://qa.invalid/api/ignored'),body});
+  let timer:ReturnType<typeof setTimeout>|undefined;
+  const result=await Promise.race([pending,new Promise<null>(resolve=>{timer=setTimeout(()=>resolve(null),100);})]);clearTimeout(timer);
+  if(result===null){control!.close();await pending;}
+  assert.notEqual(result,null,'stalled body must finish within server read deadline');
+  assert.equal(result!.status,408);assert.equal(result!.body.error,'REQUEST_TIMEOUT');assert.equal(cancelled,true);assert.deepEqual(h.counts(),{clients:0,actions:[]});assert.equal(body.locked,false);
+ }
 });

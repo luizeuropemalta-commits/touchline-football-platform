@@ -96,7 +96,11 @@ test("snapshot queries plan_key server-side and fails closed when that read or p
 test("competitive rankings exclude Beta and unknown snapshots before loading scores", () => {
   const rankingSource = server.slice(server.indexOf("async function loadRankings("),server.indexOf("async function loadCoaches("));
   assert.match(rankingSource, /\.in\("market_plan_key_snapshot", \["standard", "pro", "master", "vip"\]\)/);
-  assert.ok(rankingSource.indexOf('"market_plan_key_snapshot"') < rankingSource.indexOf('"touchline_fantasy_user_gameweek_scores"'));
+  // Scores now arrive in the same paginated relational query; plan and round
+  // restrictions must be applied before that query is executed.
+  assert.match(rankingSource, /\.eq\("gameweek_id", gameweekId\)/);
+  assert.ok(rankingSource.indexOf('.in("market_plan_key_snapshot"') < rankingSource.indexOf(".range("));
+  assert.doesNotMatch(rankingSource, /from\("touchline_fantasy_user_gameweek_scores"\)/);
 });
 
 // Current owner confirmation uses the shared 100M collection model.

@@ -1,3 +1,4 @@
+import * as catalogueLocale from "../lib/touchlineArena/catalogue-locale.ts";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -44,6 +45,9 @@ function render(overrides: Props = {}) {
     react: React, "react/jsx-runtime": { ...runtime, jsx: capture("jsx"), jsxs: capture("jsxs") }, "react-dom": { createPortal: unused },
     "lucide-react": { ArrowLeftRight: () => React.createElement("svg", { "aria-hidden": "true" }) },
     "@/lib/touchlineFantasy/collection-position-display": positionDisplay,
+    "@/lib/touchlineArena/catalogue-locale": catalogueLocale,
+    // No availability evidence is supplied by this position-only fixture.
+    "@/components/touchline/cards/TouchlinePlayerAvailabilityBadge": { __esModule: true, default: unused },
     "@/lib/touchlineFantasy/allocation-dialog-i18n": allocationCopy,
     "@/lib/touchlineFantasy/club-position": position,
     "@/lib/touchlineFantasy/club-allocation": allocation,

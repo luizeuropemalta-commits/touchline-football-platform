@@ -46,10 +46,10 @@ test("market tile forwards only the opt-in presentation gate to card and positio
   }
 });
 
-test("the three mounted collection callers pass the gate; the picker retains its deliberately closed locale surface", () => {
+test("the four mounted collection callers pass the gate; the picker retains its deliberately closed locale surface", () => {
   const parent = readFileSync(new URL("../app/fantasy/FantasyGameweekClient.tsx", import.meta.url), "utf8");
   const callers = [...parent.matchAll(/<ClubOwnerCollectionSlots\b[\s\S]*?\/>/g)];
-  assert.equal(callers.length, 3);
+  assert.equal(callers.length, 4);
   for (const [caller] of callers) assert.match(caller, /draftLocalesEnabled=\{draftLocalesEnabled\}/);
   const slots = readFileSync(new URL("../components/touchline/fantasy/ClubOwnerCollectionSlots.tsx", import.meta.url), "utf8");
   const swap = slots.slice(slots.indexOf("export function ClubOwnerSquadSwapDialog"), slots.indexOf("export function ClubOwnerCollectionSlots"));

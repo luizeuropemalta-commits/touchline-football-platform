@@ -421,6 +421,12 @@ export default function TouchlineCardZoom({
   }
 
   function rememberPointerOrigin(event: PointerEvent<HTMLDivElement>) {
+    // A second finger belongs to the same native gesture, including when its
+    // primary finger started outside this card. Never re-arm a click for it.
+    if (event.isPrimary === false) {
+      pointerMovedRef.current = true;
+      return;
+    }
     pointerOriginRef.current = { x: event.clientX, y: event.clientY };
     pointerMovedRef.current = false;
   }
@@ -431,6 +437,17 @@ export default function TouchlineCardZoom({
     if (Math.hypot(event.clientX - origin.x, event.clientY - origin.y) >= 8) {
       pointerMovedRef.current = true;
     }
+  }
+
+  function finishPointer() {
+    pointerOriginRef.current = null;
+  }
+
+  function cancelPointer() {
+    pointerOriginRef.current = null;
+    // Preserve suppression until a trailing click is consumed or a fresh
+    // primary pointer starts. Do not prevent the browser's native pinch/pan.
+    pointerMovedRef.current = true;
   }
 
   function openFromKeyboard(event: KeyboardEvent<HTMLDivElement>) {
@@ -483,10 +500,8 @@ export default function TouchlineCardZoom({
           aria-expanded={requestedOpen}
           onPointerDown={rememberPointerOrigin}
           onPointerMove={trackPointerMovement}
-          onPointerCancel={() => {
-            pointerOriginRef.current = null;
-            pointerMovedRef.current = false;
-          }}
+          onPointerUp={finishPointer}
+          onPointerCancel={cancelPointer}
           onClick={openFromCard}
           onKeyDown={openFromKeyboard}
         >

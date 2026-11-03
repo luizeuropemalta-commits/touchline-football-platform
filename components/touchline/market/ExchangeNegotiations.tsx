@@ -12,13 +12,15 @@ import type {ClubOwnerSquadCard} from '@/lib/touchlineArena/demo-data';
 import TouchlineGameweekCard from '@/components/touchline/fantasy/TouchlineGameweekCard';
 import controls from '../TouchlineGlobalNavigation.module.css';
 import styles from './ClubOwnerExchangeHub.module.css';
+import TouchlineCreditAmount from './TouchlineCreditAmount';
+import {getExchangeHubCopy} from '@/lib/touchlineFantasy/exchange-hub-i18n';
 // The session journal restores uncertain commands after reload without resubmission.
 const uncertain=new Map<string,ExchangeCommandEnvelope>();
 
-type Props={locale:string;state:ClubAcquisitionState|null;ready:boolean;accountId?:string;catalogue:readonly ClubOwnerSquadCard[];onCommitted?:()=>void;onExplorePlans?:()=>void};
+type Props={locale:string;draftLocalesEnabled?:boolean;state:ClubAcquisitionState|null;ready:boolean;accountId?:string;catalogue:readonly ClubOwnerSquadCard[];onCommitted?:()=>void;onExplorePlans?:()=>void};
 function clearJournal(accountId:string,seasonId:string){try{clearExchangeCommandJournal(window.sessionStorage,accountId,seasonId);}catch{/* Keep persisted identity if storage becomes unavailable. */}}
 type Confirmation={command:ExchangeCommand;incoming:ExchangeOffer;outgoing:ExchangeOffer;fee:number;bonus:number;difference:number};
-export default function ExchangeNegotiations({locale,state,ready,accountId,catalogue,onCommitted,onExplorePlans}:Props){
+export default function ExchangeNegotiations({locale,draftLocalesEnabled=false,state,ready,accountId,catalogue,onCommitted,onExplorePlans}:Props){
  const text=getExchangeNegotiationCopy(locale);
  const lockActions=getExchangePlanLockActions(locale);
  const key=JSON.stringify([accountId,state?.seasonId]);
@@ -33,7 +35,8 @@ export default function ExchangeNegotiations({locale,state,ready,accountId,catal
  const locked=busy||uncertain.has(key)||!data||!allowed;
  const preview=confirmation&&state&&Number.isSafeInteger(state.balanceEur)&&state.balanceEur>=0?BigInt(state.balanceEur)+BigInt(confirmation.difference)-(confirmation.command.action==='propose'?BigInt(confirmation.fee):-BigInt(confirmation.bonus)):null;
  const previewBalance=preview!==null&&preview>=BigInt(0)&&preview<=BigInt(Number.MAX_SAFE_INTEGER)?Number(preview):null;
- const amount=(n:number)=>`${n.toLocaleString(locale)} TC`;
+ const amount=(n:number)=><TouchlineCreditAmount value={n} locale={locale} signed/>;
+ const hubCopy=getExchangeHubCopy(locale,draftLocalesEnabled);
  useEffect(()=>{const requests=controllers.current;alive.current=true;return()=>{alive.current=false;for(const c of requests)c.abort();};},[]);
  useEffect(()=>{
   if(!allowed)return;
@@ -81,23 +84,45 @@ export default function ExchangeNegotiations({locale,state,ready,accountId,catal
    : <button type="button" className={controls.link} title={getExchangePlanLockLabel(locale)} disabled><LockKeyhole size={16} aria-hidden="true"/>{lockActions.restricted}</button>
   : <button type="button" className={controls.link} disabled>{lockActions.unavailable}</button>;
  if(!allowed)return <p role="status">{text.error}</p>;
- return <>
-  <div role="status">{message|| (remote===null?text.loading:!data?text.error:'')}</div>
-  {uncertain.has(key)?<><p role="status">{text.unknown}</p><button type="button" className={controls.link} disabled={busy||!data} onClick={()=>{const pending=uncertain.get(key);if(pending)void send(pending.command,true);}}>{getExchangeRecoveryLabel(locale)}</button></>:null}
-  <button type="button" className={controls.link} disabled={busy} onClick={()=>setLoad(v=>v+1)}>{text.refresh}</button>
-  {confirmation?<section className={styles.section}><div className={styles.cardPair}>{card(confirmation.incoming,text.incoming)}{card(confirmation.outgoing,text.outgoing)}</div>
-   <dl className={styles.amounts}><dt>{text.difference}</dt><dd>{amount(confirmation.difference)}</dd><dt>{text.fee}</dt><dd>{amount(confirmation.fee)}</dd><dt>{text.bonus}</dt><dd>{amount(confirmation.bonus)}</dd><dt>{getExchangeBalancePreviewLabel(locale)}</dt><dd>{previewBalance===null?"—":amount(previewBalance)}</dd></dl>
-   <button type="button" className={controls.link} disabled={locked||previewBalance===null} onClick={()=>void send(confirmation.command)}>{text.confirm}</button><button type="button" className={controls.link} disabled={busy} onClick={()=>setConfirmation(null)}>{text.back}</button>
+ return <div className={styles.negotiations}>
+  <div className={styles.toolbar}>
+   <div className={styles.wallet}><span>{hubCopy.availableBalance}</span><strong>{amount(state!.balanceEur)}</strong></div>
+   <button type="button" className={controls.link} disabled={busy} onClick={()=>setLoad(v=>v+1)}>{text.refresh}</button>
+  </div>
+  <div role="status" className={styles.status}>{message|| (remote===null?text.loading:!data?text.error:'')}</div>
+  {uncertain.has(key)?<div className={styles.recovery}><p>{text.unknown}</p><button type="button" className={controls.link} disabled={busy||!data} onClick={()=>{const pending=uncertain.get(key);if(pending)void send(pending.command,true);}}>{getExchangeRecoveryLabel(locale)}</button></div>:null}
+  {confirmation?<section className={styles.review} aria-label={confirmation.command.action==='accept'?text.accept:text.propose}>
+   <div className={styles.cardPair}>{card(confirmation.incoming,text.incoming)}{card(confirmation.outgoing,text.outgoing)}</div>
+   <div className={styles.settlement}>
+    <h3>{confirmation.command.action==='accept'?text.accept:text.propose}</h3>
+    <dl className={styles.amounts}>
+     <div><dt>{text.difference}</dt><dd>{amount(confirmation.difference)}</dd></div>
+     <div><dt>{text.fee}</dt><dd>{amount(confirmation.fee)}</dd></div>
+     <div><dt>{text.bonus}</dt><dd>{amount(confirmation.bonus)}</dd></div>
+     <div className={styles.balanceTotal}><dt>{getExchangeBalancePreviewLabel(locale)}</dt><dd>{previewBalance===null?"—":amount(previewBalance)}</dd></div>
+    </dl>
+    <div className={styles.confirmActions}><button type="button" className={controls.link} disabled={locked||previewBalance===null} onClick={()=>void send(confirmation.command)}>{text.confirm}</button><button type="button" className={controls.link} disabled={busy} onClick={()=>setConfirmation(null)}>{text.back}</button></div>
+   </div>
   </section>:data?<>
-   <section className={styles.section}><h3>{text.mine}</h3><ul className={styles.history}>{state!.players.filter(p=>p.area==='outside').map(p=>{
-    const label=catalogue.find(c=>c.canonicalPlayerId===p.playerId)?.name??data.listings.find(l=>l.player.playerId===p.playerId)?.player.name;
-    const listed=data.ownListedIds.includes(p.playerId),reserved=data.reservations.some(r=>r.playerId===p.playerId);
-    return <li key={p.playerId}><span>{label??'—'}{reserved?` · ${text.reserved}`:''}</span><button type="button" className={controls.link} disabled={locked||reserved||!label} onClick={()=>void send({action:listed?'unlist':'list',playerId:p.playerId})}>{listed?text.unlist:text.list}</button></li>;
-   })}</ul></section>
-   <section className={styles.section}><h3>{text.market}</h3><label>{text.choose}<select className={styles.negotiationSelect} value={selected} disabled={locked} onChange={e=>setSelected(e.target.value)}><option value="">—</option>{data.listings.filter(l=>l.owner.accountId===accountId&&!data.reservations.some(r=>r.playerId===l.player.playerId)).map(l=><option key={l.player.playerId} value={l.player.playerId}>{l.player.name}</option>)}</select></label>
-    <ul className={styles.history}>{data.listings.filter(l=>l.owner.accountId!==accountId).map(l=><li key={`${l.owner.accountId}:${l.player.playerId}`}><span>{l.player.name} · {l.owner.name} · {amount(l.player.valueTc)}</span>{l.negotiationAllowed?<button type="button" className={controls.link} disabled={locked||!selected} onClick={()=>propose(l.owner.accountId,l.collectionRevision,l.player)}>{text.propose}</button>:restrictedAction(l.restrictionReason)}</li>)}</ul>{!data.listings.some(l=>l.owner.accountId!==accountId)?<p>{text.empty}</p>:null}
-   </section>
-   <section className={styles.section}><h3>{text.inbox}</h3><ul className={styles.history}>{data.proposals.map(p=><li key={p.proposalId}><span>{p.proposer.accountId===accountId?text.sent:text.received} · {p.outgoing.name} ↔ {p.incoming.name} · {getExchangeProposalStatus(locale,p.status)}</span>{p.status==='pending'?(p.accepter.accountId===accountId?<>{p.negotiationAllowed?<button type="button" className={controls.link} disabled={locked} onClick={()=>review(p)}>{text.accept}</button>:restrictedAction(p.restrictionReason)}<button className={controls.link} disabled={locked} onClick={()=>void send({action:'decline',proposalId:p.proposalId})}>{text.decline}</button></>:<button className={controls.link} disabled={locked} onClick={()=>void send({action:'cancel',proposalId:p.proposalId})}>{text.cancel}</button>):null}</li>)}</ul>{!data.proposals.length?<p>{text.none}</p>:null}</section>
+   <div className={styles.marketColumns}>
+    <section className={`${styles.section} ${styles.ownListings}`}><header className={styles.sectionHeading}><h3>{text.mine}</h3><span>{data.ownListedIds.length}</span></header><ul className={styles.history}>{state!.players.filter(p=>p.area==='outside').map(p=>{
+     const label=catalogue.find(c=>c.canonicalPlayerId===p.playerId)?.name??data.listings.find(l=>l.player.playerId===p.playerId)?.player.name;
+     const listed=data.ownListedIds.includes(p.playerId),reserved=data.reservations.some(r=>r.playerId===p.playerId);
+     return <li key={p.playerId}><div className={styles.listingIdentity}><strong>{label??'—'}</strong>{reserved?<small className={styles.badge}>{text.reserved}</small>:null}</div><button type="button" className={controls.link} disabled={locked||reserved||!label} onClick={()=>void send({action:listed?'unlist':'list',playerId:p.playerId})}>{listed?text.unlist:text.list}</button></li>;
+    })}</ul></section>
+    <section className={styles.section}><header className={styles.sectionHeading}><h3>{text.market}</h3><span>{data.listings.filter(l=>l.owner.accountId!==accountId).length}</span></header>
+     <label className={styles.selectionLabel}>{text.choose}<select className={styles.negotiationSelect} value={selected} disabled={locked} onChange={e=>setSelected(e.target.value)}><option value="">—</option>{data.listings.filter(l=>l.owner.accountId===accountId&&!data.reservations.some(r=>r.playerId===l.player.playerId)).map(l=><option key={l.player.playerId} value={l.player.playerId}>{l.player.name}</option>)}</select></label>
+     <ul className={styles.listingGrid}>{data.listings.filter(l=>l.owner.accountId!==accountId).map(l=><li key={`${l.owner.accountId}:${l.player.playerId}`}>
+      <div className={styles.listingIdentity}><strong>{l.player.name}</strong><small>{l.owner.name}</small></div><div className={styles.listingValue}>{amount(l.player.valueTc)}</div>
+      <div className={styles.listingAction}>{l.negotiationAllowed?<button type="button" className={controls.link} disabled={locked||!selected} onClick={()=>propose(l.owner.accountId,l.collectionRevision,l.player)}>{text.propose}</button>:restrictedAction(l.restrictionReason)}</div>
+     </li>)}</ul>{!data.listings.some(l=>l.owner.accountId!==accountId)?<p className={styles.empty}>{text.empty}</p>:null}
+    </section>
+   </div>
+   <section className={styles.section}><header className={styles.sectionHeading}><h3>{text.inbox}</h3><span>{data.proposals.length}</span></header><ul className={styles.proposalList}>{data.proposals.map(p=><li key={p.proposalId}>
+    <div className={styles.proposalHeading}><span>{p.proposer.accountId===accountId?text.sent:text.received}</span><span className={styles.badge} data-proposal-status={p.status}>{getExchangeProposalStatus(locale,p.status)}</span></div>
+    <div className={styles.proposalPlayers}><strong>{p.outgoing.name}</strong><span aria-hidden="true">↔</span><strong>{p.incoming.name}</strong></div>
+    {p.status==='pending'?<div className={styles.actions}>{p.accepter.accountId===accountId?<>{p.negotiationAllowed?<button type="button" className={controls.link} disabled={locked} onClick={()=>review(p)}>{text.accept}</button>:restrictedAction(p.restrictionReason)}<button type="button" className={controls.link} disabled={locked} onClick={()=>void send({action:'decline',proposalId:p.proposalId})}>{text.decline}</button></>:<button type="button" className={controls.link} disabled={locked} onClick={()=>void send({action:'cancel',proposalId:p.proposalId})}>{text.cancel}</button>}</div>:null}
+   </li>)}</ul>{!data.proposals.length?<p className={styles.empty}>{text.none}</p>:null}</section>
   </>:null}
- </>;
+ </div>;
 }

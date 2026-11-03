@@ -85,6 +85,8 @@ export function createArenaMobileReviewHtml({ baseUrl = "http://127.0.0.1:3348/"
     sizes: addLocal("lib/touchlineFantasy/market-browser.ts"),
     copy: addLocal("lib/touchlineFantasy/market-workflow-i18n.ts"),
     metrics: addLocal("lib/touchlineFantasy/market-metrics-i18n.ts"),
+    score: addLocal("lib/touchlineFantasy/gameweek-score-status.ts"),
+    scoreCopy: addLocal("lib/touchlineFantasy/gameweek-score-status-i18n.ts"),
   };
   const client = ts.createSourceFile("client.tsx", readFileSync(resolve(root, "app/fantasy/FantasyGameweekClient.tsx"), "utf8"), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
   let toolbar;
@@ -106,7 +108,8 @@ export function createArenaMobileReviewHtml({ baseUrl = "http://127.0.0.1:3348/"
     const selectedCoach={coach:fakeCoach};
     // Extracted toolbar receives no real contract action in this layout-only fixture.
     const coachReleaseAction=null;
-    const live=null,snapshot={gameweekScore:0};
+    const roundScore=require(${JSON.stringify(ids.score)}).presentGameweekScore('UNAVAILABLE',undefined);
+    const scoreStatusCopy=require(${JSON.stringify(ids.scoreCopy)}).getGameweekScoreStatusCopy(locale,true);
     const resolveTouchlineCatalogueLocale=()=>locale;
     function FantasyCoachZoom({releaseAction=null}){if(releaseAction!==null)throw new Error('Isolated Arena cannot expose contract actions');return <Coach coach={fakeCoach} slot={coachSlot} clubName="Arsenal FC" clubLogoUrl="/touchlineArena/shared/club-logos/2026-27/live-160/arsenal.webp" countryCode3="ENG" locale={locale} draftLocalesEnabled layoutOverride={layout} showLeadershipCrown assetLoading="eager" frameLoading="eager" enableInteractiveNeon={false}/>;}
     ${position.getText(client)}

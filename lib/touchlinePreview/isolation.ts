@@ -336,6 +336,12 @@ export function inspectTouchlineIsolatedPreviewEnvironment(
         && environment.VERCEL_GIT_COMMIT_REF === "qa"
         && environment.TOUCHLINE_QA_SUPABASE_PROJECT_REF === "xgxbwqxjssxxuihuwmgy"
         && environment[name] === "1"))
+      // Explicit bounded local production compilation only; never hosted QA.
+      .filter((name) => !(name === "TOUCHLINE_LOCAL_QA_BUILD"
+        && environment.NODE_ENV === "production" && environment.VERCEL === undefined
+        && environment.VERCEL_GIT_COMMIT_REF === "qa"
+        && environment.TOUCHLINE_QA_SUPABASE_PROJECT_REF === "xgxbwqxjssxxuihuwmgy"
+        && environment[name] === "1"))
       .filter((name) => !allowedQaPlatformRuntimeEnvironmentKeys.has(name))
       .filter((name) => !name.startsWith("VERCEL_") && !name.startsWith("NEXT_PUBLIC_VERCEL_"))
       .sort()

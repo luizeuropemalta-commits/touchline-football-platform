@@ -152,17 +152,41 @@ function canonicalAge(dateOfBirth: string | null, fallbackAge: number | null) {
   return age >= 0 && age <= 120 ? age : null;
 }
 
+function editorialWriteBoundary(request: NextRequest) {
+  // Cookie authentication alone does not establish that this command came
+  // from the owner UI. Reject simple cross-origin form/text requests before
+  // parsing a body or opening either privileged client.
+  try {
+    if (request.headers.get("origin") !== new URL(request.url).origin
+      || request.headers.get("sec-fetch-site") === "cross-site") {
+      return NextResponse.json({ error: "Same-origin editorial request required." }, { status: 403 });
+    }
+  } catch {
+    return NextResponse.json({ error: "Same-origin editorial request required." }, { status: 403 });
+  }
+  if (request.headers.get("content-type")?.split(";", 1)[0].trim().toLowerCase() !== "application/json") {
+    return NextResponse.json({ error: "JSON editorial request required." }, { status: 415 });
+  }
+  return null;
+}
+
 async function ownerContext() {
-  const supabase = await createClient();
-  const admin = createAdminClient();
-  if (!supabase || !admin) {
-    return { error: NextResponse.json({ error: "Protected editorial administration is not configured." }, { status: 503 }) };
+  try {
+    const supabase = await createClient();
+    if (!supabase) {
+      return { error: NextResponse.json({ error: "Protected editorial administration is not configured." }, { status: 503 }) };
+    }
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (error) return { error: NextResponse.json({ error: "Owner authentication could not be confirmed." }, { status: 503 }) };
+    if (!hasTouchLineArenaAccess(user) || !isOwnerEmail(user?.email) || !user?.id) {
+      return { error: NextResponse.json({ error: "Owner access required." }, { status: 403 }) };
+    }
+    const admin = createAdminClient();
+    if (!admin) return { error: NextResponse.json({ error: "Protected editorial administration is not configured." }, { status: 503 }) };
+    return { admin, user };
+  } catch {
+    return { error: NextResponse.json({ error: "Owner authentication could not be confirmed." }, { status: 503 }) };
   }
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!hasTouchLineArenaAccess(user) || !isOwnerEmail(user?.email) || !user?.id) {
-    return { error: NextResponse.json({ error: "Owner access required." }, { status: 403 }) };
-  }
-  return { admin, user };
 }
 
 /** Resolves the exact current player → club → active PL membership chain.
@@ -285,17 +309,30 @@ async function previewBulk(request: NextRequest) {
 
 /** Saves protected editorial overrides and, once input completeness is real,
  * derives the canonical publication inside the same database transaction. */
-async function saveReviewOverrides(request: NextRequest) {
+async function saveReviewOverrides(request: NextRequest, reconcileOnly = false) {
   const context = await ownerContext();
   if ("error" in context) return context.error;
   const body = await request.json().catch(() => null) as Record<string, unknown> | null;
   const playerId = text(body?.playerId, 64).toLowerCase();
-  const requested = reviewFieldValues(body?.fields);
-  if (!validUuid(playerId) || !requested || !Object.values(requested).some((value) => value !== undefined)) {
+  // Reconciliation deliberately ignores client editorial fields.
+  const requested = reviewFieldValues(reconcileOnly ? {} : body?.fields);
+  if (!validUuid(playerId) || !requested || (!reconcileOnly && !Object.values(requested).some((value) => value !== undefined))) {
     return NextResponse.json({ error: "A canonical player and one valid editorial field are required." }, { status: 400 });
   }
   const canonical = await canonicalPlayerReady(context.admin, playerId);
   if (!canonical) return NextResponse.json({ error: "The player is not uniquely bound to an active canonical Premier League membership." }, { status: 409 });
+
+  if (reconcileOnly) {
+    const { data: publication, error } = await context.admin
+      .from("touchline_card_publications")
+      .select("publication_status")
+      .eq("player_id", playerId)
+      .maybeSingle<{ publication_status: string }>();
+    if (error) return NextResponse.json({ error: "Publication lookup failed." }, { status: 503 });
+    if (publication?.publication_status !== "published") {
+      return NextResponse.json({ error: "Only an existing published card can be reconciled here." }, { status: 409 });
+    }
+  }
 
   const { data: provider, error: providerError } = await context.admin
     .from("football_players")
@@ -324,6 +361,21 @@ async function saveReviewOverrides(request: NextRequest) {
     return NextResponse.json({ error: migrationMissing ? "The Card Engine auto-publication migration is not applied yet." : commandError?.message ?? "The Card Engine command returned no result." }, { status: migrationMissing ? 503 : 500 });
   }
   const result = commandResult[0];
+  if (!Array.isArray(commandResult) || commandResult.length !== 1
+    || !["COMPLETE", "REVIEW_REQUIRED"].includes(result.card_state)
+    || !Array.isArray(result.missing_fields) || !result.missing_fields.every(field => typeof field === "string")
+    || typeof result.overrides_changed !== "boolean" || typeof result.publication_synced !== "boolean"
+    || (result.card_state === "COMPLETE") !== (result.missing_fields.length === 0)
+    || (result.publication_id === null
+      ? result.publication_status !== null
+      : !validUuid(result.publication_id) || ![
+        "detected", "market_value_required", "ready_for_review", "ready_to_publish",
+        "published", "inactive_in_competition", "archived",
+      ].includes(result.publication_status ?? ""))
+    || (result.card_state === "COMPLETE" && (result.publication_id === null || result.publication_status !== "published"))
+    || (result.publication_synced && result.card_state !== "COMPLETE")) {
+    return NextResponse.json({ error: "The editorial result could not be confirmed. Reload its history before retrying." }, { status: 503 });
+  }
   return NextResponse.json({
     ok: true,
     cardReview: { state: result.card_state, missingFields: result.missing_fields },
@@ -338,8 +390,16 @@ async function saveReviewOverrides(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const boundary = editorialWriteBoundary(request);
+  if (boundary) return boundary;
+  const actions = request.nextUrl.searchParams.getAll("action");
+  const action = actions[0] ?? null;
+  if (actions.length > 1 || (action !== null && !["preview", "bulk-preview", "reconcile-publication", "save-review"].includes(action))) {
+    return NextResponse.json({ error: "Invalid editorial action." }, { status: 400 });
+  }
   if (request.nextUrl.searchParams.get("action") === "bulk-preview") return previewBulk(request);
-  if (request.nextUrl.searchParams.get("action") === "save-review") return saveReviewOverrides(request);
+  if (action === "reconcile-publication") return saveReviewOverrides(request, true);
+  if (action === "save-review") return saveReviewOverrides(request);
   const context = await ownerContext();
   if ("error" in context) return context.error;
   const body = await request.json().catch(() => null) as Record<string, unknown> | null;
@@ -498,6 +558,8 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
+  const boundary = editorialWriteBoundary(request);
+  if (boundary) return boundary;
   const context = await ownerContext();
   if ("error" in context) return context.error;
   const body = await request.json().catch(() => null) as Record<string, unknown> | null;

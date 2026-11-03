@@ -17,7 +17,7 @@ const [store, liveSync, authoritativeRoster, rankingRebuild, rankingPage, rankin
   read("components/touchline/TouchlinePlayerCardRankingsPublication.tsx"),
   read("app/rankings/page.tsx"),
   read("app/rankings/touchline-tables-client.tsx"),
-  read("lib/touchlineArena/coach-ranking-server.ts"),
+  read("lib/touchlineArena/coach-ranking-snapshot-server.ts"),
   read("supabase/qa/016_touchline_qa_score_points_engine_v2_backup.sql"),
 ]);
 

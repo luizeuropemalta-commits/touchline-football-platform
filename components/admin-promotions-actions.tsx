@@ -105,9 +105,11 @@ export function GrantCreditForm({ locale = "en-GB" }: { locale?: "en-GB" | "pt-B
 export function PromotionStatusActions({ promotionId, locale = "en-GB" }: { promotionId: string; locale?: "en-GB" | "pt-BR" }) {
   const pt = locale === "pt-BR";
   const [busyStatus, setBusyStatus] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
 
   async function updateStatus(status: string) {
     setBusyStatus(status);
+    setFailed(false);
     try {
       const response = await fetch("/api/admin/promotions", {
         method: "PATCH",
@@ -117,6 +119,8 @@ export function PromotionStatusActions({ promotionId, locale = "en-GB" }: { prom
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error ?? "Update failed");
       window.location.reload();
+    } catch {
+      setFailed(true);
     } finally {
       setBusyStatus(null);
     }
@@ -129,6 +133,7 @@ export function PromotionStatusActions({ promotionId, locale = "en-GB" }: { prom
           {busyStatus === status ? (pt ? "Salvando" : "Saving") : (pt ? ({ active: "Ativa", paused: "Pausada", ended: "Encerrada" }[status] ?? status) : status)}
         </button>
       ))}
+      {failed ? <p role="alert" className="w-full text-xs text-rose-200">{pt ? "Não foi possível confirmar a alteração. Recarregue para conferir o estado atual e tente novamente se necessário." : "The change could not be confirmed. Reload to check the current status and retry if needed."}</p> : null}
     </div>
   );
 }

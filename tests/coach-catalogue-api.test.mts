@@ -4,12 +4,12 @@ import { handleCoachEditorial, type CoachEditorialDependencies } from "../lib/to
 const actor = "11111111-1111-4111-8111-111111111111", candidate = "22222222-2222-4222-8222-222222222222", requestId = "33333333-3333-4333-8333-333333333333";
 const input = { requestId, catalogueRevision: 1, candidateId: candidate, revision: 1, action: "approve", reason: "Current appointment checked against the official record", confirmed: true };
 const request = (body: unknown = input, headers: Record<string,string> = {}, method = "POST") => new Request("https://example.test/api/admin/coaches", { method, ...(method === "GET" ? {} : { body: JSON.stringify(body) }), headers: { "Content-Type": "application/json", Origin: "https://example.test", ...headers } });
-function fixture(options: { enabled?: boolean; owner?: boolean; allowed?: boolean; user?: boolean; authError?: boolean; rpcError?: { code:string }; unconfirmed?: boolean }={}) {
+function fixture(options: { enabled?: boolean; owner?: boolean; allowed?: boolean; user?: boolean; authError?: boolean; rpcError?: { code:string }; unconfirmed?: boolean; receipt?: unknown }={}) {
   const calls: Array<{ name:string; args?:Record<string,unknown> }> = [];
   const dependencies: CoachEditorialDependencies = { enabled: options.enabled !== false,
     actor: async () => { if(options.authError) throw new Error("private auth detail");return options.user === false ? null : { id:actor,owner:options.owner !== false,allowed:options.allowed !== false }; },
     rpc: async (name,args) => { calls.push({name,args});if(options.rpcError)throw options.rpcError;
-      return name === "touchline_read_coach_editorial" ? { revision:0,publicEnabled:false,currentCount:0,candidates:[] } : options.unconfirmed ? {} : {requestId:args?.p_request_id,action:args?.p_action}; } };
+      return name === "touchline_read_coach_editorial" ? { revision:0,publicEnabled:false,currentCount:0,candidates:[] } : Object.hasOwn(options,"receipt") ? options.receipt : options.unconfirmed ? {} : {requestId:args?.p_request_id,action:args?.p_action,candidateId:args?.p_candidate_id,revision:Number(args?.p_catalogue_revision)+1}; } };
   return { calls, run: (req:Request) => handleCoachEditorial(req,dependencies) };
 }
 test("coach editorial: feature gate, owner, session and same-origin are required before mutation",async()=>{
@@ -33,4 +33,26 @@ test("coach editorial: command returns only confirmed receipt, conflicts require
   for(const code of ["40001","23505","22023"]){const e=fixture({rpcError:{code}});assert.equal((await e.run(request())).status,409);assert.equal(e.calls.length,1);}
   assert.equal((await fixture({unconfirmed:true}).run(request())).status,503);
   const read=fixture(),r=await read.run(request(null,{},"GET"));assert.equal(r.status,200);assert.equal(r.headers.get("Cache-Control"),"private, no-store");assert.equal(read.calls[0].name,"touchline_read_coach_editorial");
+});
+
+test("coach editorial rejects incomplete, stale or mismatched command receipts and preserves replay",async()=>{
+  const confirmed={requestId,action:input.action,candidateId:candidate,revision:2};
+  for(const receipt of [null,[],{requestId,action:input.action},{...confirmed,candidateId:actor},{...confirmed,candidateId:null},{...confirmed,revision:1},{...confirmed,revision:3},{...confirmed,revision:"2"},{...confirmed,revision:null}]) {
+    const f=fixture({receipt}), result=await f.run(request());
+    assert.equal(result.status,503,JSON.stringify(receipt));
+    assert.equal((await result.json()).error,"COACH_RESULT_UNCONFIRMED");
+    assert.equal(f.calls.length,1,"uncertain commands must not be retried automatically");
+  }
+  const f=fixture({receipt:confirmed});
+  for(let attempt=0;attempt<2;attempt++) assert.deepEqual(await (await f.run(request())).json(),{receipt:confirmed});
+});
+
+test("coach editorial accepts the SQL receipt shape for every supported action",async()=>{
+  for(const action of ["bootstrap","approve","ignore","reopen","publish"]) {
+    const command={...input,action,...(action==="bootstrap"?{candidateId:null,revision:null}:{})};
+    const receipt={requestId,action,candidateId:command.candidateId,revision:2};
+    const result=await fixture({receipt}).run(request(command));
+    assert.equal(result.status,200,action);
+    assert.deepEqual(await result.json(),{receipt});
+  }
 });

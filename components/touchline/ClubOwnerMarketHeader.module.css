@@ -32,10 +32,12 @@
 .portrait > small { max-width: 132px; color: #9eafa3; text-align: center; font-size: 10px; line-height: 1.45; }
 .portrait > .photoStatus { color: #bed5b2; font-weight: 700; }
 .visuallyHidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
-.photoButton { position: relative; width: 116px; height: 116px; padding: 0; border-radius: 50%; }
+.photoButton { position: relative; isolation: isolate; width: 116px; height: 116px; padding: 0; border-radius: 50%; --photo-neon-rgb: 163,255,18; --photo-neon-ink: #d4ff9b; }
 .photoButton:disabled { opacity: 1; cursor: not-allowed; }
-.photoButton img { display: block; width: 112px; height: 112px; border-radius: 50%; object-fit: cover; }
-.camera { position: absolute; right: -2px; bottom: 2px; display: grid; place-items: center; width: 30px; height: 30px; border: 1px solid #647e56; border-radius: 50%; color: #d6eac7; background: #162019; }
+.photoButton::before { position: absolute; z-index: 2; inset: 0; padding: 2px; border-radius: inherit; background: linear-gradient(118deg,rgba(var(--photo-neon-rgb),.18) 0%,var(--photo-neon-ink) 24%,rgba(255,255,255,.96) 38%,var(--photo-neon-ink) 50%,rgba(var(--photo-neon-rgb),.24) 72%,var(--photo-neon-ink) 100%); background-size: 280% 100%; box-shadow: 0 0 8px rgba(var(--photo-neon-rgb),.72),0 0 18px rgba(var(--photo-neon-rgb),.42); animation: clubOwnerPhotoNeonSweep 4.5s linear infinite; content: ""; pointer-events: none; -webkit-mask: linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask: linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0); mask-composite: exclude; }
+.photoButton img { position: relative; z-index: 1; display: block; width: 112px; height: 112px; border-radius: 50%; object-fit: cover; }
+.camera { position: absolute; z-index: 3; right: -2px; bottom: 2px; display: grid; place-items: center; width: 30px; height: 30px; border: 1px solid rgba(var(--photo-neon-rgb),.82); border-radius: 50%; color: var(--photo-neon-ink); background: #162019; box-shadow: 0 0 9px rgba(var(--photo-neon-rgb),.42); }
+@keyframes clubOwnerPhotoNeonSweep { to { background-position: 280% 0; } }
 .details { min-width: 0; }
 .details h2 { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 7px 0 16px; color: #f2f9ec; font-size: clamp(22px,2.2vw,30px); line-height: 1.15; overflow-wrap: anywhere; }
 .facts { display: flex; flex-wrap: wrap; gap: 14px 25px; margin: 0 0 20px; }
@@ -95,7 +97,8 @@
 .header[data-plan-preview] :is(.profile,.bank)::before { inset: 6px; border: 1px solid rgba(145,213,111,.48); box-shadow: none; }
 .header[data-plan-preview] :is(.profile,.bank)::after { inset: 0; background: linear-gradient(112deg,rgba(var(--clubowner-rgb),.3),var(--clubowner-ink),rgba(var(--clubowner-rgb),.4)); background-size: 260% 100%; }
 .header[data-plan-preview] .profile { --cover-rgb: var(--clubowner-rgb); --cover-accent: var(--clubowner-ink); }
-.currentBudget { margin: 0; padding-top: 14px; border-top: 1px solid rgba(201,219,184,.18); }
+.header[data-plan-preview] .photoButton { --photo-neon-rgb: var(--clubowner-rgb); --photo-neon-ink: var(--clubowner-ink); }
+.currentBudget { margin: 0; padding-bottom: 14px; border-bottom: 1px solid rgba(201,219,184,.18); }
 .currentBudget > div { display: flex; justify-content: space-between; align-items: center; gap: 14px; }
 .currentBudget dt { color: #b8c8b5; font-size: 11px; line-height: 1.5; }
 .currentBudget dd { margin: 0; }
@@ -112,4 +115,4 @@
 .planBrowse:dir(rtl) svg { transform: scaleX(-1); }
 @media (max-width: 1000px) { .header { grid-template-columns: minmax(0,1.4fr) minmax(260px,1fr); gap: 12px; } .identity { grid-template-columns: 112px minmax(0,1fr); gap: 16px; } .photoButton { width: 104px; height: 104px; } .photoButton img { width: 100px; height: 100px; } }
 @media (max-width: 720px) { .header { grid-template-columns: minmax(0,1fr); } .identity { gap: 15px; } .profile,.bank { border-radius: 18px; padding: 18px; } }
-@media (prefers-reduced-motion: reduce) { .profile::after, .bank::after, .planAction, .header[data-plan-preview] :is(.profile,.bank) { animation: none; background-position: 44% 0; } }
+@media (prefers-reduced-motion: reduce) { .profile::after, .bank::after, .planAction, .photoButton::before, .header[data-plan-preview] :is(.profile,.bank) { animation: none; background-position: 44% 0; } }

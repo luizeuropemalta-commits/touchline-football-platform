@@ -279,6 +279,7 @@ test("Fantasy raw-rating transition executes atomically against real SQL", {skip
     });
     await scenario("ClubOwner never inherits a card's historical points; locked-round settlement is idempotent", async previousGameweek => {
       await install(db);
+      await db.exec(await sql("20261026121254_football_feed_revision_history"));
       const newcomer = ids.draftOwner, late = id(13);
       await db.exec(`
         insert into public.users values ('${ids.owner}'), ('${newcomer}'), ('${late}');
@@ -341,13 +342,13 @@ test("Fantasy raw-rating transition executes atomically against real SQL", {skip
         status='FT',finalized_at=clock_timestamp()-interval '1 minute',source_updated_at=$2 where id=$1`, [ids.nextFixture,SOURCE_TIME]);
       await db.query(`insert into public.football_fantasy_fixture_feeds
         (provider,provider_fixture_id,fixture_payload,lineups_payload,formations_payload,sidelined_payload,events_payload,last_synced_at)
-        values ('sportmonks','99002','{"status":"FT"}','[{"playerId":"9001","teamId":"900"}]','[]','[]','[]',$1)`, [SOURCE_TIME]);
+        values ('sportmonks','99002','{"status":"FT"}','[{"playerId":"9001","teamId":"900","rating":7.19}]','[]','[]','[]',$1)`, [SOURCE_TIME]);
       await db.query(`insert into public.touchline_player_fixture_score_settlements
         (football_player_id,fixture_id,competition_id,season_id,club_id,scoring_version,appearance_status,
          minutes_played,rating,touchline_points,statistics_payload,scoring_coverage_status,ranking_coverage_status,settlement_status,source_synced_at)
         select ('10000000-0000-4000-8000-'||lpad((100+n)::text,12,'0'))::uuid,$1,$2,$3,$4,'player_scoring_v4',
           case when n=1 then 'started' else 'unused' end,case when n=1 then 90 else 0 end,
-          case when n=1 then 8 else null end,case when n=1 then 8 else null end,'{}',
+          case when n=1 then 7.19 else null end,case when n=1 then 7.19 else null end,'{}',
           case when n=1 then 'complete' else 'unavailable' end,
           case when n=1 then 'complete' else 'complete_for_scoring' end,'final',$5
         from generate_series(1,11) n`, [ids.nextFixture,ids.competition,ids.season,ids.home,SOURCE_TIME]);
@@ -357,17 +358,45 @@ test("Fantasy raw-rating transition executes atomically against real SQL", {skip
       assert.equal(first.userScoresChanged,2);
       const locked = (await db.query("select to_jsonb(s) as row from public.touchline_fantasy_locked_selections s order by user_gameweek_id,slot_index")).rows;
       assert.equal(locked.length,22);
-      const settled = (await db.query("select to_jsonb(s) as row from public.touchline_fantasy_user_gameweek_scores s order by user_gameweek_id")).rows;
+      let settled = (await db.query("select to_jsonb(s) as row from public.touchline_fantasy_user_gameweek_scores s order by user_gameweek_id")).rows;
       for (const round of managerRounds) assert.equal(Number((await db.query(
         "select gameweek_score from public.touchline_fantasy_user_gameweek_scores where user_gameweek_id=$1",[round],
-      )).rows[0].gameweek_score),8);
+      )).rows[0].gameweek_score),7.19);
       const result = await ranking();
-      assert.equal(result.season.find(row=>row.name==="Veteran")?.score,78);
-      assert.equal(result.season.find(row=>row.isCurrentManager)?.score,8);
-      assert.equal(result.gameweek.find(row=>row.isCurrentManager)?.score,8);
+      assert.equal(result.season.find(row=>row.name==="Veteran")?.score,77.19);
+      assert.equal(result.season.find(row=>row.isCurrentManager)?.score,7.19);
+      assert.equal(result.gameweek.find(row=>row.isCurrentManager)?.score,7.19);
+      // The already-FINAL manager round must follow a late provider revision,
+      // not inherit old card totals or add the corrected rating a second time.
+      assert.equal((await db.query("select state from public.touchline_fantasy_user_gameweeks where id=$1",[managerRounds[0]])).rows[0].state,"FINAL");
+      await db.query(`update public.football_fantasy_fixture_feeds set lineups_payload=$1::jsonb
+        where provider_fixture_id='99002'`, [JSON.stringify([{playerId:"9001",teamId:"900",rating:7.02}])]);
+      await db.query(`update public.touchline_player_fixture_score_settlements set rating=7.02,touchline_points=7.02
+        where football_player_id=$1 and fixture_id=$2 and scoring_version='player_scoring_v4'`,[PLAYER,ids.nextFixture]);
+      assert.ok((await discover(db)).some(row=>row.id===currentGameweek));
+      const correction=await reconcile(db,currentGameweek);
+      assert.equal(correction.ok,true);
+      assert.equal(correction.userScoresChanged,2);
+      for (const round of managerRounds) {
+        const score=(await db.query("select gameweek_score,settlement_status from public.touchline_fantasy_user_gameweek_scores where user_gameweek_id=$1",[round])).rows;
+        assert.equal(score.length,1);
+        assert.equal(Number(score[0].gameweek_score),7.02);
+        assert.equal(score[0].settlement_status,"FINAL");
+      }
+      const correctedRanking=await ranking();
+      assert.equal(correctedRanking.season.find(row=>row.name==="Veteran")?.score,77.02);
+      assert.equal(correctedRanking.season.find(row=>row.isCurrentManager)?.score,7.02);
+      assert.equal(correctedRanking.gameweek.find(row=>row.isCurrentManager)?.score,7.02);
+      settled=(await db.query("select to_jsonb(s) as row from public.touchline_fantasy_user_gameweek_scores s order by user_gameweek_id")).rows;
+      const revisions=(await db.query("select payload->'lineups'->0->>'rating' as rating from public.football_feed_revisions where provider_fixture_id='99002' order by id")).rows;
+      assert.deepEqual(revisions.map(row=>row.rating),["7.19","7.02"]);
+      await db.query(`update public.football_fantasy_fixture_feeds set lineups_payload=$1::jsonb
+        where provider_fixture_id='99002'`, [JSON.stringify([{playerId:"9001",teamId:"900",rating:7.02}])]);
       const replay = await reconcile(db,currentGameweek);
       assert.equal(replay.userScoresChanged,0);
       assert.equal(replay.playerFixtureRowsChanged,0);
+      assert.deepEqual(await ranking(),correctedRanking);
+      assert.equal((await db.query("select count(*)::int as n from public.football_feed_revisions where provider_fixture_id='99002'")).rows[0].n,2);
       assert.deepEqual((await db.query("select to_jsonb(s) as row from public.touchline_fantasy_user_gameweek_scores s order by user_gameweek_id")).rows,settled);
       assert.deepEqual((await db.query("select to_jsonb(s) as row from public.touchline_fantasy_locked_selections s order by user_gameweek_id,slot_index")).rows,locked);
       assert.deepEqual((await db.query("select to_jsonb(s) as row from public.touchline_card_ranking_snapshots s")).rows,historicalCard);

@@ -64,13 +64,13 @@ test('the shared deadline covers a hanging JSON body as well as fetch', async ()
   } finally { globalThis.fetch = original; }
 });
 
-test('mounted history hides the previous account immediately and ignores late/unmounted responses', async () => {
+function mountedHistory() {
   const source = readFileSync(new URL('../components/touchline/market/useExchangeHistory.ts', import.meta.url), 'utf8');
   const js = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
   let state: unknown = null;
   let effect: (() => (() => void) | undefined) | undefined;
   const requests: { signal: AbortSignal; resolve: (value: unknown) => void }[] = [];
-  const exports: { useExchangeHistory?: (enabled: boolean, value: typeof scope) => unknown } = {};
+  const exports: { useExchangeHistory?: (enabled: boolean, value: typeof scope) => { status: string; history: unknown } } = {};
   runInNewContext(js, { exports, AbortController, require: (name: string) => {
     if (name === 'react') return {
       useState: () => [state, (next: unknown) => { state = next; }],
@@ -81,17 +81,48 @@ test('mounted history hides the previous account immediately and ignores late/un
     };
     throw new Error(name);
   } });
-  const render = exports.useExchangeHistory!;
-  assert.equal(render(true, scope), null);
-  const cleanup = effect!()!;
+  return { render: exports.useExchangeHistory!, requests, start: () => effect!()! };
+}
+
+test('mounted history distinguishes a pending request, confirmed empty history and actual unavailability', async () => {
+  const { render, requests, start } = mountedHistory();
+  assert.equal(render(false, scope).status, 'idle');
+  assert.equal(render(true, { ...scope, ready: false }).status, 'idle');
+  assert.equal(requests.length, 0);
+  let current = render(true, scope);
+  assert.equal(current.status, 'loading'); assert.equal(current.history, null);
+  const cleanup = start();
+  current = render(true, scope);
+  assert.equal(current.status, 'loading'); assert.equal(current.history, null);
+  // The known complete, empty ledger is different from both pending and failed reads.
   requests[0].resolve(history); await Promise.resolve();
-  assert.equal(render(true, scope), history);
-  const next = { ...scope, accountId: seasonId };
-  assert.equal(render(true, next), null, 'old account must not render while effect cleanup waits');
+  current = render(true, scope);
+  assert.equal(current.status, 'ready'); assert.equal(current.history, history);
   cleanup();
-  const cleanupNext = effect!()!;
+  const revised = { ...scope, collectionRevision: 8 };
+  assert.equal(render(true, revised).status, 'loading');
+  const cleanupRevised = start();
+  requests[1].resolve(null); await Promise.resolve();
+  current = render(true, revised);
+  assert.equal(current.status, 'unavailable'); assert.equal(current.history, null);
+  assert.equal(requests.length, 2, 'a failed read must not silently retry');
+  cleanupRevised();
+});
+
+test('mounted history hides the previous account immediately and ignores late/unmounted responses', async () => {
+  const { render, requests, start } = mountedHistory();
+  assert.equal(render(true, scope).status, 'loading');
+  const cleanup = start();
+  requests[0].resolve(history); await Promise.resolve();
+  assert.equal(render(true, scope).history, history);
+  const next = { ...scope, accountId: seasonId };
+  assert.equal(render(true, next).history, null, 'old account must not render while effect cleanup waits');
+  assert.equal(render(true, next).status, 'loading');
+  cleanup();
+  const cleanupNext = start();
   assert.equal(requests[0].signal.aborted, true);
   cleanupNext(); requests[1].resolve({ ...history, accountId: seasonId }); await Promise.resolve();
-  assert.equal(render(true, next), null);
-  assert.equal(render(false, scope), null);
+  assert.equal(render(true, next).history, null);
+  assert.equal(render(true, next).status, 'loading', 'aborted reads cannot become unavailable');
+  assert.equal(render(false, scope).status, 'idle');
 });

@@ -7,7 +7,7 @@ const QA_ORIGIN = `https://${TOUCHLINE_QA_SUPABASE_PROJECT_REF}.supabase.co`;
 /** Exact origin strings only: no URL normalization, arbitrary loopback ports,
  * credentials, paths or forwarded-host interpretation. */
 export function isClubOwnerAvatarLocalRequestOrigin(value: unknown): value is string {
-  return value === "http://localhost:3319";
+  return value === "http://localhost:3319" || value === "http://localhost:3100";
 }
 
 /** Pure transport exception for an already-admitted local composition. This

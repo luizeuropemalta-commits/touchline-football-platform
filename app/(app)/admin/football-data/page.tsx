@@ -13,6 +13,7 @@ import {
 import { GamePanel, LivePill, StatTile } from "@/components/arena-admin-ui";
 import { FootballRosterControls } from "@/components/admin-football-roster-controls";
 import { FootballDataSyncControls } from "@/components/admin-football-data-sync-controls";
+import { CoachSyncDiagnostic } from "@/components/admin-coach-sync-diagnostic";
 import { isOwnerEmail } from "@/lib/admin/owner";
 import { getConfiguredFootballDataProviderName } from "@/lib/football-data/provider-factory";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -84,6 +85,8 @@ type SyncRunRow = {
   started_at: string | null;
   completed_at: string | null;
   error_message: string | null;
+  lineup_identity_issues?: unknown;
+  coach_ranking_diagnostic?: unknown;
 };
 
 function formatDate(value: string | null | undefined, locale: "en-GB" | "pt-BR") {
@@ -179,7 +182,7 @@ export default async function FootballDataAdminPage({
       .returns<ClubRow[]>()),
     readFootballRows(admin
       .from("football_data_sync_runs")
-      .select("id, provider, sync_type, status, records_updated, records_skipped, started_at, completed_at, error_message")
+      .select("id, provider, sync_type, status, records_updated, records_skipped, started_at, completed_at, error_message, lineup_identity_issues:source_payload->playerLineupIdentityIssues, coach_ranking_diagnostic:source_payload->coachRankingDiagnostic")
       .order("started_at", { ascending: false })
       .limit(8)
       .returns<SyncRunRow[]>()),
@@ -472,6 +475,21 @@ export default async function FootballDataAdminPage({
                 {run.error_message ? (
                   <p className="mt-3 text-xs text-rose-200">
                     {t("Esta sincronização registrou um diagnóstico. Consulte os registros protegidos antes de tentar novamente.", "This sync recorded diagnostic detail. Review protected server logs before retrying.")}</p>
+                ) : null}
+                <CoachSyncDiagnostic value={run.coach_ranking_diagnostic} locale={locale} />
+                {Array.isArray(run.lineup_identity_issues) && run.lineup_identity_issues.some((issue) =>
+                  issue && typeof issue.providerFixtureId === "string" && /^[0-9]+$/.test(issue.providerFixtureId)) ? (
+                  <details className="mt-3 border-t border-white/10 pt-3 text-xs text-amber-100">
+                    <summary className="cursor-pointer py-2 font-bold">{t("Identificação pendente na escalação oficial", "Identity pending in official line-up")}</summary>
+                    <p className="mt-2 leading-5">{t("O fornecedor enviou um reserva sem identificação. Os pontos afetados estão preservados; uma nova consulta precisa confirmar a identidade antes da publicação.", "The provider returned a reserve without an identity. Affected points are preserved; a new check must confirm the identity before publication.")}</p>
+                    <ul className="mt-3 space-y-2">
+                      {[...new Set(run.lineup_identity_issues.flatMap((issue) =>
+                        issue && typeof issue.providerFixtureId === "string" && /^[0-9]+$/.test(issue.providerFixtureId)
+                          ? [issue.providerFixtureId] : []))].map((fixtureId) => (
+                        <li key={fixtureId}>{t("Partida Sportmonks", "Sportmonks fixture")}: {fixtureId}</li>
+                      ))}
+                    </ul>
+                  </details>
                 ) : null}
               </div>
             ))}

@@ -1,9 +1,10 @@
 import "server-only";
+import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { readPublishedTouchlineLivePresentationInput } from "./live-presentation-read-model";
-import { readTouchlinePlayerRankingSnapshot } from "./card-ranking-server";
-import { readTouchlineCoachRankingSnapshot } from "./coach-ranking-server";
+import { readTouchlinePlayerRankingSnapshot } from "./card-ranking-snapshot-server";
+import { readTouchlineCoachRankingSnapshot } from "./coach-ranking-snapshot-server";
 import { parseLiveScoreSnapshot } from "../football-data/live-score-snapshot-contract";
 import { toPublicTouchlineFixtures } from "../football-data/public-fixture";
 import { parseTouchlineSportsPublication, type TouchlineSportsPublication } from "./sports-publication";
@@ -45,3 +46,7 @@ export async function loadTouchlineSportsPublication() {
   if (!admin) throw new Error("TOUCHLINE_SPORTS_PUBLICATION_UNAVAILABLE");
   return readTouchlineSportsPublication(admin);
 }
+
+// Share one immutable envelope across public SSR consumers in this request.
+// A later request re-reads the pointer, including a legitimate rollback.
+export const loadRequestTouchlineSportsPublication = cache(loadTouchlineSportsPublication);

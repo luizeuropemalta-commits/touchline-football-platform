@@ -1,3 +1,4 @@
+import { publicationBindingIssue } from "@/lib/touchlineArena/card-publication-integrity";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BadgeCheck, ClipboardCheck, FileLock2, Layers3 } from "lucide-react";
@@ -34,6 +35,7 @@ type EditorialPlayerRow = {
 
 type EditorialClubRow = { id: string; name: string; competition_id: string; provider: string };
 type EditorialMembershipRow = {
+  id: string;
   player_id: string;
   club_id: string;
   competition_id: string;
@@ -41,6 +43,7 @@ type EditorialMembershipRow = {
   position: string | null;
 };
 type EditorialPublicationRow = {
+  current_membership_id: string | null;
   player_id: string;
   publication_status: string;
 };
@@ -62,14 +65,23 @@ export default async function ManualCardEditorialPage({
   const params = (await searchParams) ?? {};
   const locale = normalizeTouchLineAuthLocale(typeof params.lang === "string" ? params.lang : null);
   const requestedPlayerId = typeof params.playerId === "string" ? params.playerId.trim().toLowerCase() : "";
-  const supabase = await createClient();
-  const admin = createAdminClient();
-  const { data: { user } } = supabase ? await supabase.auth.getUser() : { data: { user: null } };
+  let user: { id: string; email?: string } | null = null;
+  try {
+    const supabase = await createClient();
+    if (supabase) {
+      const auth = await supabase.auth.getUser();
+      if (auth.error) throw new Error("Authentication unavailable");
+      user = auth.data.user;
+    }
+  } catch {
+    return <GamePanel className="p-8"><LivePill>{locale === "pt-BR" ? "Acesso indisponível" : "Access unavailable"}</LivePill><p className="mt-3 text-sm text-slate-400">{locale === "pt-BR" ? "Sua autenticação não pôde ser confirmada. Tente novamente." : "Your authentication could not be confirmed. Please try again."}</p></GamePanel>;
+  }
 
   if (!user) {
     return <GamePanel className="p-8"><LivePill>{locale === "pt-BR" ? "Área do proprietário" : "Owner area"}</LivePill><h1 className="mt-5 text-4xl font-black italic text-white">{locale === "pt-BR" ? "Editorial manual de cards" : "Manual Card Editorial"}</h1><p className="mt-3 text-sm text-slate-400">{locale === "pt-BR" ? "Entre como proprietário da TouchLine para preparar uma decisão protegida de card por jogador." : "Sign in as the TouchLine owner to prepare one protected player-card decision at a time."}</p><Link href={touchLineAuthEntryHref("/login", locale, touchLineAuthHref("/admin/manual-card-editorial", locale))} className="mt-6 inline-flex rounded-2xl bg-[#a3ff12] px-5 py-3 text-xs font-black text-black">{locale === "pt-BR" ? "Entrar" : "Sign in"}</Link></GamePanel>;
   }
   if (!isOwnerEmail(user.email)) notFound();
+  const admin = createAdminClient();
   if (!admin) return <GamePanel className="p-8"><LivePill>{locale === "pt-BR" ? "Configuração necessária" : "Configuration required"}</LivePill><h1 className="mt-5 text-4xl font-black italic text-white">{locale === "pt-BR" ? "Editorial manual de cards" : "Manual Card Editorial"}</h1><p className="mt-3 text-sm text-slate-400">{locale === "pt-BR" ? "É necessário um cliente de administração protegido no servidor." : "A protected server administration client is required."}</p></GamePanel>;
 
   const { data: players, error: playerError } = await admin
@@ -98,26 +110,28 @@ export default async function ManualCardEditorialPage({
 
   const { data: profiles, error: profileError } = await admin
     .from("touchline_card_publications")
-    .select("player_id,publication_status")
+    .select("player_id,publication_status,current_membership_id")
     .limit(1_000);
   const migrationPending = Boolean(profileError && migrationMissing(profileError.message));
   if (profileError && !migrationPending) return <GamePanel className="p-8"><LivePill>{locale === "pt-BR" ? "Armazenamento editorial indisponível" : "Editorial store unavailable"}</LivePill><h1 className="mt-5 text-4xl font-black italic text-white">{locale === "pt-BR" ? "Editorial manual de cards" : "Manual Card Editorial"}</h1><p className="mt-3 text-sm text-slate-400">{locale === "pt-BR" ? "O armazenamento editorial está temporariamente indisponível. Nenhuma alteração foi feita." : "Editorial storage is temporarily unavailable. No changes were made."}</p></GamePanel>;
 
   const publicationRows = (profiles ?? []) as EditorialPublicationRow[];
+  const publicationDetailsByPlayerId = new Map(publicationRows.map((row) => [row.player_id, row]));
   const published = publicationRows.filter((profile) => profile.publication_status === "published").length;
   const review = publicationRows.filter((profile) => profile.publication_status === "ready_for_review" || profile.publication_status === "ready_to_publish").length;
   const premierClubIds = new Set(clubOptions.map((club) => club.id));
   const canonicalPlayers = (players ?? []).filter((player) => Boolean(player.current_club_id && premierClubIds.has(player.current_club_id)));
   const canonicalPlayerIds = canonicalPlayers.map((player) => player.id);
-  const { data: activeMembershipRows } = !migrationPending && canonicalPlayerIds.length
+  const { data: activeMembershipRows, error: membershipError } = !migrationPending && canonicalPlayerIds.length
     ? await admin
       .from("football_squad_members")
-      .select("player_id,club_id,competition_id,jersey_number,position")
+      .select("id,player_id,club_id,competition_id,jersey_number,position")
       .eq("provider", "sportmonks")
       .eq("status", "active")
       .in("player_id", canonicalPlayerIds)
       .returns<EditorialMembershipRow[]>()
-    : { data: [] as EditorialMembershipRow[] };
+    : { data: [] as EditorialMembershipRow[], error: null };
+  if (membershipError) return <GamePanel className="p-8"><h1 className="text-2xl font-bold">{locale === "pt-BR" ? "Vínculos indisponíveis" : "Memberships unavailable"}</h1><p>{locale === "pt-BR" ? "Não foi possível verificar os vínculos dos jogadores. Tente novamente; nenhuma alteração foi feita." : "Player memberships could not be verified. Try again; no changes were made."}</p></GamePanel>;
   const membershipsByPlayerId = new Map<string, EditorialMembershipRow[]>();
   for (const membership of activeMembershipRows ?? []) {
     membershipsByPlayerId.set(membership.player_id, [...(membershipsByPlayerId.get(membership.player_id) ?? []), membership]);
@@ -130,13 +144,21 @@ export default async function ManualCardEditorialPage({
   const editorialOverrides = await loadTouchlineCardEditorialOverrides(canonicalPlayerIds, admin);
   const cardEngineRows: CardEngineInboxRow[] = canonicalPlayers.flatMap((player) => {
     const membership = (membershipsByPlayerId.get(player.id) ?? []).find((entry) => entry.club_id === player.current_club_id) ?? null;
-    if (!membership) return [];
+    const publication = publicationDetailsByPlayerId.get(player.id);
+    // Keep published cards with unresolved membership visible for investigation.
+    // Inactive historical players without a published card need no editorial action.
+    if (!membership && publication?.publication_status !== "published") return [];
+    const publicationIssue = publication?.publication_status === "published" ? publicationBindingIssue({
+      publicationMembershipId: publication.current_membership_id,
+      currentClubId: player.current_club_id,
+      activeMemberships: membershipsByPlayerId.get(player.id) ?? [],
+    }) : null;
     const override = editorialOverrides.get(player.id.toLowerCase());
     const provider = {
       displayName: player.display_name?.trim() || player.name?.trim() || null,
-      shirtNumber: membership.jersey_number,
+      shirtNumber: membership?.jersey_number ?? null,
       countryCode3: touchlineCountryCode3FromName(player.nationality) ?? null,
-      position: membership.position || player.position,
+      position: membership?.position || player.position,
     };
     const effective = {
       displayName: override?.displayName ?? provider.displayName,
@@ -158,7 +180,7 @@ export default async function ManualCardEditorialPage({
       hasVerifiedMarketValue: marketValue?.status === "verified" && marketValue.confidence === "verified",
       hasClubAsset: Boolean(findTouchLineClub(clubName(player))?.logoUrl),
     });
-    return cardReview.state === "REVIEW_REQUIRED" || positionConflict ? [{
+    return cardReview.state === "REVIEW_REQUIRED" || positionConflict || publicationIssue ? [{
       playerId: player.id,
       playerName: effective.displayName ?? "Canonical player",
       clubName: clubName(player),
@@ -166,6 +188,7 @@ export default async function ManualCardEditorialPage({
       override: { displayName: override?.displayName ?? null, shirtNumber: override?.shirtNumber ?? null, countryCode3: override?.countryCode3 ?? null, position: override?.position ?? null },
       effective,
       cardReview,
+      publicationIssue,
       positionConflict,
     }] : [];
   });

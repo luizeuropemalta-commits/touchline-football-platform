@@ -84,9 +84,10 @@ function normalizeQuietHours(value: unknown) {
 
 async function currentUser() {
   const supabase = await createClient();
-  if (!supabase) return { supabase: null, user: null };
+  if (!supabase) return { supabase: null, user: null, unavailable: true };
   const { data: { user }, error } = await supabase.auth.getUser();
-  return { supabase, user: !error && hasTouchLineArenaAccess(user) ? user : null };
+  return { supabase, user: !error && hasTouchLineArenaAccess(user) ? user : null,
+    unavailable: Boolean(error && error.name !== "AuthSessionMissingError") };
 }
 
 async function userHasRegisteredPushDevice(supabase: NonNullable<Awaited<ReturnType<typeof createClient>>>, userId: string) {
@@ -175,12 +176,19 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
+  const unavailable = () => NextResponse.json({ ok: false, error: "Notification preferences could not be confirmed." }, {
+    status: 503, headers: { "Cache-Control": "private, no-store", "CDN-Cache-Control": "no-store", "Vercel-CDN-Cache-Control": "no-store" },
+  });
+  try {
   if (request.headers.get("origin") !== new URL(request.url).origin
     || request.headers.get("sec-fetch-site") === "cross-site") {
     return NextResponse.json({ ok: false, error: "Invalid request origin." }, { status: 403 });
   }
 
-  const { supabase, user } = await currentUser();
+  const { supabase, user, unavailable: authUnavailable } = await currentUser();
+  // A service/configuration failure is not evidence that the account signed
+  // out. Keep the same distinction as GET and never proceed to a write.
+  if (authUnavailable) return unavailable();
   if (!supabase || !user) return NextResponse.json({ ok: false, error: "Authentication required." }, { status: 401 });
 
   // A client condition, never identity authority: the verified session remains
@@ -328,4 +336,9 @@ export async function PUT(request: NextRequest) {
       updatedAt: data.updated_at,
     },
   });
+  } catch {
+    // A network rejection can happen after the write reached the server.
+    // Report an unconfirmed outcome, not a rollback or a reason to retry it.
+    return unavailable();
+  }
 }

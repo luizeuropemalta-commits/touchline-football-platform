@@ -1,8 +1,10 @@
+import { projectGameweekScoreStatus } from "../lib/touchlineFantasy/gameweek-score-status.ts";
 import assert from "node:assert/strict";
 import test from "node:test";
 import vm from "node:vm";
 import { readFileSync } from "node:fs";
 import ts from "typescript";
+import { rankTouchlineFantasyManagers } from "../lib/touchlineFantasy/domain.ts";
 
 type Row = Record<string, unknown>;
 type Result = { data: unknown; error: unknown };
@@ -52,8 +54,19 @@ function fixture(options: { configuration?: Promise<Result>; entitlement?: Promi
       const query = {
         select: () => query,
         eq: (key: string, value: unknown) => { filters.push([key, value]); return query; },
-        in: (key: string, value: unknown) => { filters.push([key, value]); return query; },
+        in: (key: string, value: unknown) => { filters.push([key, Array.isArray(value) ? Array.from(value) : value]); return query; },
         order: () => query,
+        range: (start: number, end: number) => {
+          assert.equal(table, "touchline_fantasy_user_gameweeks");
+          assert.equal(start, 0);
+          assert.equal(end, 499);
+          assert.deepEqual(filters, [
+            ["market_plan_key_snapshot", ["standard", "pro", "master", "vip"]],
+            ["touchline_fantasy_gameweeks.season_id", "season"],
+            ["gameweek_id", "week"],
+          ]);
+          return Promise.resolve(result()).then(value => ({ ...value, count: 0 }));
+        },
         maybeSingle: () => query,
         then: (yes: (value: Result) => unknown, no: (error: unknown) => unknown) => Promise.resolve().then(result).then(yes, no),
       };
@@ -61,6 +74,17 @@ function fixture(options: { configuration?: Promise<Result>; entitlement?: Promi
     },
   };
   const modules: Record<string, unknown> = {
+    "./domain": { rankTouchlineFantasyManagers },
+    "./gameweek-score-status": { projectGameweekScoreStatus },
+    "@/lib/touchlineArena/club-owner-standings-server": {
+      readClubOwnerStandingViewsForSeason: async (client: unknown, season: string, owner: string) => {
+        assert.equal(client, admin);
+        assert.equal(season, "season");
+        assert.equal(owner, "owner");
+        events.push("season-ranking");
+        return { status: "ready", rows: [], viewerRanking: [] };
+      },
+    },
     "@/lib/supabase/admin": { createAdminClient: () => admin },
     "@/lib/touchlineArena/formation-geometry-server": { readTouchlineFormationGeometryRegistry: () => { events.push("formation"); return formation.promise; } },
     "./gameweek-lifecycle": { reconcileTouchlineFantasyGameweeks: async () => { events.push("lifecycle"); return { error: null, reconciled: 0 }; } },

@@ -1,3 +1,5 @@
+import {creditAmountModule} from './helpers/touchline-credit-amount-fixture.mts';
+import {getExchangeHubCopy} from '../lib/touchlineFantasy/exchange-hub-i18n.ts';
 import test from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';import {runInNewContext} from 'node:vm';import React from 'react';import * as jsx from 'react/jsx-runtime';import {renderToStaticMarkup} from 'react-dom/server';import ts from 'typescript';
 import {getExchangeNegotiationCopy,getExchangeProposalStatus,getExchangeBalancePreviewLabel,getExchangeRecoveryLabel,getExchangePlanLockLabel,getExchangePlanLockActions,EXCHANGE_NEGOTIATION_ROWS} from '../lib/touchlineFantasy/exchange-negotiations-i18n.ts';
 import {projectExchangeReadiness} from '../lib/touchlineFantasy/exchange-eligibility.ts';
@@ -8,12 +10,12 @@ const id=(n:number)=>`00000000-0000-4000-8000-${String(n).padStart(12,'0')}`;
 const own={playerId:id(5),clubId:id(9),name:'Own athlete',valueTc:80_000_000,position:'MID',primaryDetail:'CM'};
 const other={...own,playerId:id(6),name:'Other athlete',valueTc:100_000_000};
 const data={version:1,accountId:id(1),seasonId:id(2),collectionRevision:7,ownListedIds:[id(5)],reservations:[],proposals:[],listings:[{negotiationAllowed:true,owner:{accountId:id(1),name:'Me'},collectionRevision:7,player:own},{negotiationAllowed:true,owner:{accountId:id(4),name:'Other club'},collectionRevision:8,player:other}]};
-function harness(discovery:unknown=data,outcome='confirmed',plan='standard'){
+function harness(discovery:unknown=data,outcome='confirmed',plan='standard',locale='en-GB',draftLocalesEnabled=false){
  const values:unknown[]=[],effects:{deps:unknown[];cleanup?:()=>void}[]=[];let cursor=0,effectCursor=0,reads=0,reloads=0,explores=0;const queued:(()=>void)[]=[];const commands:unknown[]=[];
  const exports:{default?:(props:Record<string,unknown>)=>React.ReactNode}={};
  const source=readFileSync(new URL('../components/touchline/market/ExchangeNegotiations.tsx',import.meta.url),'utf8');
  const js=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText;
- const modules:Record<string,unknown>={'lucide-react':{LockKeyhole},'@/lib/touchlineFantasy/exchange-eligibility':{projectExchangeReadiness},'@/lib/touchlineFantasy/exchange-command-journal':journal,'@/lib/touchlineFantasy/exchange-negotiations-i18n':{getExchangeNegotiationCopy,getExchangeProposalStatus,getExchangeBalancePreviewLabel,getExchangeRecoveryLabel,getExchangePlanLockLabel,getExchangePlanLockActions},react:{useState:(initial:unknown)=>{const n=cursor++;if(!(n in values))values[n]=typeof initial==='function'?initial():initial;return [values[n],(next:unknown)=>{values[n]=typeof next==='function'?next(values[n]):next;}];},useRef:(initial:unknown)=>{const n=cursor++;if(!(n in values))values[n]={current:initial};return values[n];},useEffect:(fn:()=>void|(()=>void),deps:unknown[])=>{const n=effectCursor++,old=effects[n];if(!old||deps.some((v,i)=>v!==old.deps[i])){queued.push(()=>{old?.cleanup?.();effects[n]={deps,cleanup:fn()||undefined};});}}},'react/jsx-runtime':jsx,
+ const modules:Record<string,unknown>={'./TouchlineCreditAmount':creditAmountModule,'@/lib/touchlineFantasy/exchange-hub-i18n':{getExchangeHubCopy},'lucide-react':{LockKeyhole},'@/lib/touchlineFantasy/exchange-eligibility':{projectExchangeReadiness},'@/lib/touchlineFantasy/exchange-command-journal':journal,'@/lib/touchlineFantasy/exchange-negotiations-i18n':{getExchangeNegotiationCopy,getExchangeProposalStatus,getExchangeBalancePreviewLabel,getExchangeRecoveryLabel,getExchangePlanLockLabel,getExchangePlanLockActions},react:{useState:(initial:unknown)=>{const n=cursor++;if(!(n in values))values[n]=typeof initial==='function'?initial():initial;return [values[n],(next:unknown)=>{values[n]=typeof next==='function'?next(values[n]):next;}];},useRef:(initial:unknown)=>{const n=cursor++;if(!(n in values))values[n]={current:initial};return values[n];},useEffect:(fn:()=>void|(()=>void),deps:unknown[])=>{const n=effectCursor++,old=effects[n];if(!old||deps.some((v,i)=>v!==old.deps[i])){queued.push(()=>{old?.cleanup?.();effects[n]={deps,cleanup:fn()||undefined};});}}},'react/jsx-runtime':jsx,
  '@/lib/touchlineFantasy/exchange-discovery':{readExchangeDiscovery:async()=>{reads++;return discovery;}},
  '@/lib/touchlineFantasy/exchange-command-client':{prepareExchangeCommand,submitExchangeCommand:async(command:unknown)=>{commands.push(command);return {status:outcome};}},
  '@/lib/touchlineFantasy/club-market-rules':{quoteClubExchange},
@@ -21,13 +23,23 @@ function harness(discovery:unknown=data,outcome='confirmed',plan='standard'){
  const storage=new Map<string,string>();
  runInNewContext(js,{exports,window:{sessionStorage:{getItem:(k:string)=>storage.get(k)??null,setItem:(k:string,v:string)=>storage.set(k,v),removeItem:(k:string)=>storage.delete(k)}},AbortController,crypto:{randomUUID:()=>id(20)},require:(name:string)=>name.endsWith('.css')?{default:new Proxy({},{get:(_,k)=>String(k)})}:modules[name]??(()=>{throw Error(name);})()});
  const state={seasonId:id(2),revision:7,plan,balanceEur:200_000_000,players:Array.from({length:35},(_,i)=>({playerId:i===20?id(5):id(100+i),area:i<11?'starters':i<20?'reserves':'outside',slot:i<11?i:i<20?i-11:i-20,valueEur:80}))};
- const props={locale:'en-GB',ready:true,state,accountId:id(1),catalogue:[{canonicalPlayerId:id(5),name:own.name,editorialCard:{}},{canonicalPlayerId:id(6),name:other.name,editorialCard:{}}],onCommitted:()=>{reloads++;},onExplorePlans:()=>{explores++;}};
+ const props={locale,draftLocalesEnabled,ready:true,state,accountId:id(1),catalogue:[{canonicalPlayerId:id(5),name:own.name,editorialCard:{}},{canonicalPlayerId:id(6),name:other.name,editorialCard:{}}],onCommitted:()=>{reloads++;},onExplorePlans:()=>{explores++;}};
  let tree:React.ReactNode;
  function render(){cursor=0;effectCursor=0;tree=exports.default!(props);return renderToStaticMarkup(tree);}
  async function flush(){for(const fn of queued.splice(0))fn();await Promise.resolve();await Promise.resolve();return render();}
  function nodes(type:string){const found:React.ReactElement<Record<string,unknown>>[]=[];function walk(node:React.ReactNode){if(!React.isValidElement<Record<string,unknown>>(node))return;if(node.type===type)found.push(node);React.Children.forEach(node.props.children as React.ReactNode,walk);}walk(tree);return found;}
  return {render,flush,commands,setOutcome:(next:string)=>{outcome=next;},reads:()=>reads,reloads:()=>reloads,explores:()=>explores,nodes,close:()=>effects.forEach(e=>e.cleanup?.())};
 }
+test('real negotiation balance label respects enabled catalogue locales and the English fallback',()=>{
+ for(const draftLocalesEnabled of [false,true]){
+  const h=harness(data,'confirmed','standard','ar-SA',draftLocalesEnabled);
+  const html=h.render(),copy=getExchangeHubCopy('ar-SA',draftLocalesEnabled);
+  assert.ok(html.includes(copy.availableBalance));
+  if(draftLocalesEnabled) assert.ok(!html.includes(getExchangeHubCopy('en-GB').availableBalance));
+  assert.match(html,/data-tc-amount="200000000"/);
+  assert.equal(h.commands.length,0);assert.equal(h.reads(),0);h.close();
+ }
+});
 test('gate unavailable never reads as empty; approved Beta may query scoped discovery',async()=>{
  const closed=harness(null);assert.match(closed.render(),/Loading negotiations/);assert.match(await closed.flush(),/currently unavailable/);assert.equal(closed.commands.length,0);closed.close();
  const beta=harness(data,'confirmed','beta');beta.render();await beta.flush();assert.equal(beta.reads(),1);assert.ok(beta.nodes('button').length>0);beta.close();

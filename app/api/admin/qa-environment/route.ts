@@ -34,17 +34,17 @@ export async function GET(request: NextRequest) {
   });
   if (environment.status === "FAIL") return response(environment, 404);
 
-  const supabase = await createClient();
-  if (!supabase) return response({ status: "FAIL", reason: "OWNER_ACCESS_REQUIRED" }, 401);
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!hasTouchLineArenaAccess(user) || !isOwnerEmail(user?.email)) {
-    return response({ status: "FAIL", reason: "OWNER_ACCESS_REQUIRED" }, 403);
-  }
-
-  const admin = createAdminClient();
-  if (!admin) return response({ status: "FAIL", reason: "QA_CREDENTIAL_VERIFICATION_FAILED" }, 503);
-
   try {
+    const supabase = await createClient();
+    if (!supabase) return response({ status: "FAIL", reason: "OWNER_ACCESS_REQUIRED" }, 401);
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user || !hasTouchLineArenaAccess(user) || !isOwnerEmail(user.email)) {
+      return response({ status: "FAIL", reason: "OWNER_ACCESS_REQUIRED" }, 403);
+    }
+
+    const admin = createAdminClient();
+    if (!admin) return response({ status: "FAIL", reason: "QA_CREDENTIAL_VERIFICATION_FAILED" }, 503);
+
     const { error } = await admin.rpc("touchline_assert_qa_fixture_target", {
       p_project_ref: TOUCHLINE_QA_SUPABASE_PROJECT_REF,
     });

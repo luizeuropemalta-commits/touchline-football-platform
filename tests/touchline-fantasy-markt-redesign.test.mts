@@ -133,9 +133,9 @@ test("the My Club presentation keeps the guided coach-first Gameweek flow", asyn
   assert.deepEqual([getTouchlineFantasyMarketClockCopy("pt-BR").closesIn, getTouchlineFantasyMarketClockCopy("en-GB").closesIn], ["Mercado fecha em", "Market closes in"]);
   assert.match(client, /import \{[^}]*getTouchlineFantasyMarketClockCopy[^}]*\} from "@\/lib\/touchlineFantasy\/market-clock-i18n"/);
   assert.match(client, /const copy = getTouchlineFantasyMarketClockCopy\(locale, draftLocalesEnabled\)/);
-  assert.match(client, /timed \? copy\.closesIn : copy\.open/);
+  assert.match(client, /phase === "closing"\s*\? copy\.closesIn/);
   assert.deepEqual([getTouchlineFantasyMarketClockCopy("pt-BR").reopensIn, getTouchlineFantasyMarketClockCopy("en-GB").reopensIn], ["Mercado reabre em", "Market reopens in"]);
-  assert.match(client, /timed \? copy\.reopensIn : copy\.closed/);
+  assert.match(client, /phase === "opening"\s*\? copy\.reopensIn/);
   assert.match(client, /const countdownWindowMs = 24 \* 60 \* 60 \* 1_000/);
   for (const key of ["closesAt", "reopensAt"] as const) {
     assert.match(getTouchlineFantasyMarketClockCopy("pt-BR")[key], /O cronômetro inicia 24h antes/);

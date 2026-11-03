@@ -7,6 +7,7 @@ import * as jsx from 'react/jsx-runtime';
 import { renderToStaticMarkup } from 'react-dom/server';
 import ts from 'typescript';
 import * as copy from '../lib/touchlineArena/auth-i18n.ts';
+import * as discoveryRegistration from '../lib/touchlineArena/discovery-registration.ts';
 
 const locales = ['en-GB','pt-BR','es-ES','it-IT','fr-FR','ar-SA','tr-TR','de-DE'];
 const empty = () => null;
@@ -35,7 +36,8 @@ for (const [route, renderer, section] of [['register','renderRegister','register
     const page = load(`app/(auth)/${route}/page.tsx`, {
       'next/link':{default:link}, 'lucide-react':{ArrowLeft:empty,FlaskConical:empty},
       '@/components/auth-layout':{AuthLayout:layout}, '@/components/auth-form':{AuthForm:form},
-      '@/components/reset-password-form':{ResetPasswordForm:form}, '@/lib/touchlineArena/auth-i18n':copy,
+      '@/components/reset-password-form':{ResetPasswordForm:form}, '@/lib/touchlineArena/discovery-registration':discoveryRegistration,
+    '@/lib/touchlineArena/auth-i18n':copy,
       '@/lib/touchlineArena/site-locales-release':load('lib/touchlineArena/site-locales-release.ts',{}),
       '@/lib/touchlineArena/account-locale-context-server':{loadAccountLocaleContext:async()=>{reads++; return context;}},
     }, `\nexport { ${renderer} as isolatedRender };`);
@@ -79,6 +81,7 @@ test('real AuthForm register/forgot and ResetPasswordForm checking state consume
   const ui = {Button:({children,...props}:React.ComponentProps<'button'>)=>React.createElement('button',props,children),Input:(props:React.ComponentProps<'input'>)=>React.createElement('input',props)};
   const modules = {
     react:React,'next/link':{default:link},'lucide-react':{ArrowRight:empty,Check:empty,Eye:empty,EyeOff:empty,Loader2:empty,Mail:empty},
+    '@/lib/touchlineArena/discovery-registration':discoveryRegistration,
     '@/lib/touchlineArena/auth-i18n':copy,'./ui':ui,
     '@/lib/touchlineArena/auth-email-rate-limit':load('lib/touchlineArena/auth-email-rate-limit.ts',{}),
     '@/lib/supabase/client':{createClient:()=>{throw Error('SSR must not authenticate');}},

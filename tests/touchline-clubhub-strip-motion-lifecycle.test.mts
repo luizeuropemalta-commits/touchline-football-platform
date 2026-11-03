@@ -20,7 +20,7 @@ function visit(node: ts.Node) {
 visit(ast);
 assert.ok(geometryEffect && motionEffect && interactionEffect, "exercise actual geometry, interaction and animation effects, not a reimplementation");
 
-type Listener = (event?: { pointerType?: string }) => void;
+type Listener = (event?: { pointerType?: string; pointerId?: number }) => void;
 function eventTarget() {
   const listeners = new Map<string, Set<Listener>>();
   return {
@@ -28,7 +28,7 @@ function eventTarget() {
       if (!listeners.has(type)) listeners.set(type, new Set()); listeners.get(type)!.add(callback);
     },
     removeEventListener(type: string, callback: Listener) { listeners.get(type)?.delete(callback); },
-    emit(type: string, event?: { pointerType?: string }) { for (const callback of listeners.get(type) ?? []) callback(event); },
+    emit(type: string, event?: { pointerType?: string; pointerId?: number }) { for (const callback of listeners.get(type) ?? []) callback(event); },
     count: () => [...listeners.values()].reduce((sum, set) => sum + set.size, 0),
   };
 }
@@ -104,7 +104,8 @@ function setup(options: { width?: number; reduced?: boolean; intersectionObserve
     blur: () => { stripEvents.emit("focusout"); document.activeElement = null; },
     flushMicrotasks: () => { microtasks.splice(0).forEach(callback => callback()); },
     hover: (value: boolean) => stripEvents.emit(value ? "pointerenter" : "pointerleave", { pointerType: "mouse" }),
-    touch: (value: boolean) => value ? stripEvents.emit("pointerdown") : windowEvents.emit("pointerup"),
+    touch: (value: boolean, pointerId = 1) => value ? stripEvents.emit("pointerdown", { pointerId }) : windowEvents.emit("pointerup", { pointerId }),
+    cancelTouch: (pointerId: number) => windowEvents.emit("pointercancel", { pointerId }),
     wheel: () => nodeEvents.emit("wheel"),
     scroll: (value: number) => { node.scrollLeft = value; if (!options.quantize) nodeEvents.emit("scroll"); },
     flushScroll: () => {
@@ -284,3 +285,25 @@ for (const [rounding, quantize] of [["floor", Math.floor], ["round", Math.round]
     });
   }
 }
+
+test("multiple held pointers retain the pause through unrelated release and last cancellation", () => {
+  const h = setup(); h.intersect(true);
+  h.touch(true, 11); h.touch(true, 22);
+  assert.equal(h.frames.size, 0);
+  h.touch(false, 99);
+  assert.equal(h.interaction.current.touching, true);
+  assert.equal(h.timers.size, 0);
+  h.touch(false, 11);
+  assert.equal(h.interaction.current.touching, true);
+  h.advance(5000);
+  assert.equal(h.frames.size, 0, "elapsed quiet time cannot resume with another finger held");
+  h.cancelTouch(22);
+  assert.equal(h.interaction.current.touching, false);
+  assert.equal(h.timers.size, 1);
+  h.advance(7499); assert.equal(h.frames.size, 0);
+  h.advance(7500); assert.equal(h.frames.size, 1);
+  h.cleanup();
+  assert.equal(h.listeners(), 0);
+  assert.equal(h.frames.size, 0);
+  assert.equal(h.timers.size, 0);
+});

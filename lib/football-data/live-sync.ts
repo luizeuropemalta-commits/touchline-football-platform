@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { coachReconciliationFailureReason, summarizeCoachReconciliation, type CoachRankingDiagnostic } from "@/lib/football-data/coach-reconciliation-diagnostic";
 
 import { persistFantasyFixtureFeed } from "@/lib/football-data/fantasy-store";
 import { syncSportmonksFixtureSchedule } from "@/lib/football-data/fixture-schedule-sync";
@@ -7,7 +8,7 @@ import { persistLiveFixtureStates, mergeCanonicalLiveFixture } from "@/lib/footb
 import { persistLiveScoreSnapshot } from "@/lib/football-data/live-score-persistence";
 import { observePersistedConfirmedEvents, type ConfirmedEventObservationResult } from "@/lib/football-data/confirmed-event-observer";
 import { runMatchPushProducer } from "@/lib/football-data/match-push-producer";
-import { syncTouchLinePlayerSeasonStatistics } from "@/lib/football-data/player-season-statistics-store";
+import { syncTouchLinePlayerSeasonStatistics, type LineupIdentityIssue } from "@/lib/football-data/player-season-statistics-store";
 import { decideLiveSyncCadence, selectPostMatchRechecks } from "@/lib/football-data/live-sync-cadence";
 import { acquireTouchlineLiveSyncRun } from "@/lib/football-data/live-sync-lease";
 import { createGuardedFixtureProvider } from "@/lib/football-data/fixture-provider-server";
@@ -60,8 +61,10 @@ export type LiveSyncResult = {
   playerFixtureRowsWritten: number;
   coachPointsReconciled: number;
   coachPendingFixtures?: Array<{ fixtureProviderId: string; reason: string }>;
+  coachRankingDiagnostic?: CoachRankingDiagnostic | null;
   playerScoringFixtureIds: string[];
   playerFailedFixtureIds: string[];
+  playerLineupIdentityIssues?: LineupIdentityIssue[];
   playerMissingSettlementFixtureIds: string[];
   errors: string[];
   syncRunId?: string;
@@ -137,33 +140,48 @@ function errorCategories(errors: string[]) {
 
 async function completeRun(admin: SupabaseClient, result: LiveSyncResult) {
   if (!result.syncRunId) return;
-  const { error } = await admin.from("football_data_sync_runs").update({
-    status: result.status === "skipped" ? "success" : result.status,
-    completed_at: new Date().toISOString(),
-    records_updated: result.updated,
-    records_skipped: Math.max(0, result.fetched - result.updated),
-    error_message: result.errors.join("\n") || null,
-    source_payload: {
-      competitionProviderId: COMPETITION_ID,
-      cadence: result.cadence,
-      fetched: result.fetched,
-      updated: result.updated,
-      snapshotFixtures: result.snapshotFixtures,
-      fantasyFeedsStored: result.fantasyFeedsStored,
-      lineupObservationsInserted: result.lineupObservationsInserted,
-      lineupObservationsExisting: result.lineupObservationsExisting,
-      playerFixtureRowsWritten: result.playerFixtureRowsWritten,
-      coachPointsReconciled: result.coachPointsReconciled,
-      coachPendingFixtures: result.coachPendingFixtures ?? [],
-      playerScoringFixtureIds: result.playerScoringFixtureIds,
-      playerFailedFixtureIds: result.playerFailedFixtureIds,
-      playerMissingSettlementFixtureIds: result.playerMissingSettlementFixtureIds,
-      confirmedEventObservation: result.confirmedEventObservation ?? null,
-      matchPushProduction: result.matchPushProduction ?? null,
-      cadenceExecuted: result.status !== "skipped" && result.skippedReason !== "cadence_not_due",
-      skippedReason: result.skippedReason ?? null,
-    },
-  }).eq("id", result.syncRunId);
+  const expectedStatus = result.status === "skipped" ? "success" : result.status;
+  let confirmed = false;
+  try {
+    const { data, error } = await admin.from("football_data_sync_runs").update({
+      status: result.status === "skipped" ? "success" : result.status,
+      completed_at: new Date().toISOString(),
+      records_updated: result.updated,
+      records_skipped: Math.max(0, result.fetched - result.updated),
+      error_message: result.errors.join("\n") || null,
+      source_payload: {
+        competitionProviderId: COMPETITION_ID,
+        cadence: result.cadence,
+        fetched: result.fetched,
+        updated: result.updated,
+        snapshotFixtures: result.snapshotFixtures,
+        fantasyFeedsStored: result.fantasyFeedsStored,
+        lineupObservationsInserted: result.lineupObservationsInserted,
+        lineupObservationsExisting: result.lineupObservationsExisting,
+        playerFixtureRowsWritten: result.playerFixtureRowsWritten,
+        coachPointsReconciled: result.coachPointsReconciled,
+        coachPendingFixtures: result.coachPendingFixtures ?? [],
+        coachRankingDiagnostic: result.coachRankingDiagnostic ?? null,
+        playerScoringFixtureIds: result.playerScoringFixtureIds,
+        playerFailedFixtureIds: result.playerFailedFixtureIds,
+        playerLineupIdentityIssues: result.playerLineupIdentityIssues ?? [],
+        playerMissingSettlementFixtureIds: result.playerMissingSettlementFixtureIds,
+        confirmedEventObservation: result.confirmedEventObservation ?? null,
+        matchPushProduction: result.matchPushProduction ?? null,
+        cadenceExecuted: result.status !== "skipped" && result.skippedReason !== "cadence_not_due",
+        skippedReason: result.skippedReason ?? null,
+      },
+    }).eq("id", result.syncRunId).eq("status", "running").select("id,status").maybeSingle();
+    confirmed = !error && data?.id === result.syncRunId && data?.status === expectedStatus;
+  } catch {
+    // The football writes may already be committed. Never retry the provider
+    // or expose transport details when only the durable run receipt failed.
+  }
+  if (!confirmed) {
+    result.ok = false;
+    if (result.status !== "error") result.status = "partial";
+    result.errors.push("run-write:unconfirmed");
+  }
   const observationFailed = result.confirmedEventObservation && result.confirmedEventObservation.status !== "completed";
   const productionFailed = result.matchPushProduction && result.matchPushProduction.status !== "completed";
   console[result.status === "success" && !observationFailed && !productionFailed ? "info" : "warn"](JSON.stringify({
@@ -180,10 +198,11 @@ async function completeRun(admin: SupabaseClient, result: LiveSyncResult) {
     playerFixtureRowsWritten: result.playerFixtureRowsWritten,
     coachPointsReconciled: result.coachPointsReconciled,
     coachPendingFixtures: result.coachPendingFixtures ?? [],
+    coachRankingDiagnostic: result.coachRankingDiagnostic ?? null,
     confirmedEventObservation: result.confirmedEventObservation ?? null,
     matchPushProduction: result.matchPushProduction ?? null,
-    errorCount: result.errors.length + (error ? 1 : 0),
-    errorCategories: [...errorCategories(result.errors), ...(error ? ["run_write"] : [])],
+    errorCount: result.errors.length,
+    errorCategories: errorCategories(result.errors),
   }));
 }
 
@@ -506,6 +525,7 @@ export async function syncSportmonksLiveState(
     result.playerFixtureRowsWritten = playerReconciliation.v4FixtureRowsWritten;
     result.playerScoringFixtureIds = playerReconciliation.scoringFixtureIds;
     result.playerFailedFixtureIds = playerReconciliation.failedFixtureIds;
+    result.playerLineupIdentityIssues = playerReconciliation.lineupIdentityIssues ?? [];
     result.playerMissingSettlementFixtureIds = playerReconciliation.missingSettlementFixtureIds;
     result.errors.push(...playerReconciliation.errors.map((error) => `player-points:${error}`));
     // Valid settlements survive deferred publication, but a pending or failed
@@ -523,6 +543,7 @@ export async function syncSportmonksLiveState(
     // other fixtures or the public ranking pending. Retain its confirmed count.
     const coachReceiptConfirmed = !coachReconciliationError
       && Number.isSafeInteger(coachReconciliation?.reconciled) && coachReconciliation.reconciled >= 0;
+    result.coachRankingDiagnostic = summarizeCoachReconciliation(coachReconciliation, coachReconciliationError);
     if (coachReceiptConfirmed) result.coachPointsReconciled = coachReconciliation.reconciled;
     if (coachReceiptConfirmed && Array.isArray(coachReconciliation.pending)) {
       result.coachPendingFixtures = coachReconciliation.pending.flatMap((entry: unknown) => {
@@ -534,7 +555,8 @@ export async function syncSportmonksLiveState(
       });
     }
     if (!coachReceiptConfirmed || coachReconciliation?.ok !== true) {
-      result.errors.push(`coach-points:${coachReconciliationError?.code ?? (coachReceiptConfirmed ? "attribution-pending" : "unconfirmed")}`);
+      const diagnosticReason = coachReconciliationFailureReason(result.coachRankingDiagnostic, coachReceiptConfirmed);
+      result.errors.push(`coach-points:${coachReconciliationError?.code ?? diagnosticReason}`);
     }
 
     // Distribution follows acknowledged canonical writes, not provider input.

@@ -29,8 +29,7 @@ test("collection readiness delays preparation and readiness churn never repeats 
   const h=fixture();assert.equal(h.render(false),null);h.render(false);assert.deepEqual(h.requests,[]);
   h.render(true);assert.deepEqual(h.requests,[true]);h.render(false);h.render(true);assert.deepEqual(h.requests,[true]);
   h.reject();await new Promise(resolve=>setImmediate(resolve));
-  const tree=h.render(true) as {props:{children:unknown[]}};
-  const button=tree.props.children[2] as {props:{onClick:()=>void}};button.props.onClick();assert.deepEqual(h.requests,[true,false]);
+  assert.equal(h.render(true),null);assert.deepEqual(h.requests,[true]);
 });
 
 test("nonmarket default preserves automatic preparation and caller gates only collection market",()=>{

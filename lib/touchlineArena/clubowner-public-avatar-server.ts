@@ -9,6 +9,7 @@ import { createAvatarEnvironmentGuard, awaitAvatarStep } from "./club-owner-avat
 import { createClubOwnerAvatarReader } from "./club-owner-avatar-storage";
 import { getClubOwnerAvatarResourceAdmission, type ClubOwnerAvatarResourceScope } from "./club-owner-avatar-resource-admission";
 import { publicOwnerId } from "./clubowner-public-contract";
+import { allowsClubOwnerAvatarLocalEnvironment } from "./club-owner-avatar-local-admission";
 import { handlePublicOwnerAvatar, parsePublicOwnerAvatars, publicOwnerAvatarUrls } from "./clubowner-public-avatar-handler";
 
 type Environment = Readonly<Record<string, string | undefined>>;
@@ -22,13 +23,19 @@ type Dependencies = { createAdminClient: () => Pick<SupabaseClient, "rpc"> | nul
 export function createPublicOwnerAvatarService(input: Environment, dependencies: Dependencies) {
   const environment = Object.freeze({ ...input }), deps = { ...dependencies };
   const assertCurrent = createAvatarEnvironmentGuard(deps.assertEnvironment);
+  // Same explicit development/QA-only admission as the private photo flow.
+  // This permits URL projection locally; serving still validates the actual
+  // request origin below. Never synthesize Vercel variables for a local host.
+  const local = allowsClubOwnerAvatarLocalEnvironment(environment, "http://localhost:3100");
   const enabled = environment.TOUCHLINE_CLUBOWNER_PUBLIC_ENABLED === "true"
     && environment.TOUCHLINE_CLUBOWNER_PUBLIC_AVATAR_ENABLED === "true"
     && environment.TOUCHLINE_CLUB_OWNER_AVATAR_READ_ENABLED === "true"
     && environment.TOUCHLINE_CLUB_OWNER_AVATAR_RETENTION_READY === "true"
     && deps.ownersConfigured && resolveTouchlineDataSource(environment) === "direct"
-    && inspectTouchlineQaVercelEnvironment({ environment, requestHostname: new URL(TOUCHLINE_QA_ORIGIN).hostname }).status === "PASS";
+    && (local || inspectTouchlineQaVercelEnvironment({ environment, requestHostname: new URL(TOUCHLINE_QA_ORIGIN).hostname }).status === "PASS");
   let client: Pick<SupabaseClient, "rpc"> | null | undefined;
+  const allowsOrigin = (origin: string) => local
+    ? allowsClubOwnerAvatarLocalEnvironment(environment, origin) : origin === TOUCHLINE_QA_ORIGIN;
   async function read(ids: readonly string[], outerSignal: AbortSignal) {
     assertCurrent(); outerSignal.throwIfAborted();
     if (!enabled || !ids.length || ids.length > 20 || ids.some(id => !publicOwnerId(id) || id !== id.toLowerCase())
@@ -42,7 +49,7 @@ export function createPublicOwnerAvatarService(input: Environment, dependencies:
     const rows = parsePublicOwnerAvatars(response.data, ids, email => { assertCurrent(); return deps.isOwnerEmail(email); });
     assertCurrent(); return rows;
   }
-  return Object.freeze({ enabled, assertCurrent,
+  return Object.freeze({ enabled, assertCurrent, allowsOrigin,
     async urls(ids: readonly string[]) {
       if (!enabled || ids.length === 0) return {};
       return publicOwnerAvatarUrls(await read(ids.map(id => id.toLowerCase()), AbortSignal.timeout(10_000)));
@@ -50,7 +57,10 @@ export function createPublicOwnerAvatarService(input: Environment, dependencies:
     async serve(request: Request, publicId: string) {
       const resources = getClubOwnerAvatarResourceAdmission(); let scope: ClubOwnerAvatarResourceScope | null = null;
       try {
-        return await handlePublicOwnerAvatar(request, publicId, { enabled, origin: TOUCHLINE_QA_ORIGIN }, {
+        const requestOrigin = new URL(request.url).origin;
+        const origin = local && allowsClubOwnerAvatarLocalEnvironment(environment, requestOrigin)
+          ? requestOrigin : local ? "http://localhost:3100" : TOUCHLINE_QA_ORIGIN;
+        return await handlePublicOwnerAvatar(request, publicId, { enabled, origin }, {
           assertEnvironment: assertCurrent,
           async read(id, signal) {
             scope ??= resources.tryAcquire(); if (!scope) throw Error("PUBLIC_AVATAR_BUSY");

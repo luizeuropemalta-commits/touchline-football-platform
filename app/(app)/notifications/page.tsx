@@ -189,6 +189,30 @@ function observedNotificationConsent(value: unknown): ConsentObservation {
   return value === null ? "not_recorded" : validNotificationConsentTimestamp(value) ? "recorded" : "unconfirmed";
 }
 
+// Validate receipts before committing them to React state: malformed success
+// bodies must not crash the page or establish permission to save defaults.
+function validPreferencesReceipt(value: unknown): value is PreferencesPayload & { accountId: string } {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const row = value as PreferencesPayload;
+  if (typeof row.accountId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(row.accountId)
+    || !row.settings || typeof row.settings !== "object" || Array.isArray(row.settings)
+    || !row.settings.scopes || typeof row.settings.scopes !== "object" || Array.isArray(row.settings.scopes)
+    || !row.channels || typeof row.channels !== "object" || Array.isArray(row.channels)
+    || !row.quietHours || typeof row.quietHours !== "object" || Array.isArray(row.quietHours)
+    || !["realtime", "hourly_digest", "daily_digest", "paused"].includes(row.frequency)
+    || (row.updatedAt !== null && !validNotificationConsentTimestamp(row.updatedAt))) return false;
+  for (const key of Object.keys(DEFAULT_PREFERENCES.settings).filter(key => key !== "scopes") as CategoryKey[]) {
+    if (typeof row.settings[key] !== "boolean") return false;
+  }
+  for (const key of ["clubs", "players", "competitions", "fixtures"] as const) {
+    const list = row.settings.scopes[key];
+    if (!Array.isArray(list) || list.length > 50 || list.some(item => typeof item !== "string")) return false;
+  }
+  if (["in_app", "push", "email"].some(key => typeof row.channels[key as keyof NotificationChannels] !== "boolean")) return false;
+  return typeof row.quietHours.enabled === "boolean" && typeof row.quietHours.timezone === "string"
+    && /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(row.quietHours.start) && /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(row.quietHours.end);
+}
+
 function preferenceDate(value: string | null, locale: TouchLineLocale, notSaved: string) {
   if (!value) return notSaved;
   return new Intl.DateTimeFormat(locale, {
@@ -233,6 +257,7 @@ function NotificationsContent({ draftLocalesEnabled = false }: { draftLocalesEna
   const confirmedAccount = useRef<string | null>(null);
   const saveController = useRef<AbortController | null>(null);
   const consentState = consentObservation.locale === locale ? consentObservation.state : "checking";
+  const editingDisabled = saving || loading || consentState === "checking" || !preferences.accountId;
   const consentLabel = consentState === "checking" ? copy.consentChecking
     : consentState === "recorded" ? copy.consentRecorded
       : consentState === "not_recorded" ? copy.consentNotRecorded : copy.consentUnconfirmed;
@@ -270,12 +295,12 @@ function NotificationsContent({ draftLocalesEnabled = false }: { draftLocalesEna
           signal: controller.signal,
         });
 
-        if (!response.ok || payload.ok === false) {
+        if (!response.ok || payload.ok !== true) {
           throw new Error(payload.ok === false ? payload.error ?? "Preferences unavailable" : "Preferences unavailable");
         }
 
         if (controller.signal.aborted || !consentRef.live || consentRef.sequence !== observation) return;
-        if (typeof payload.data.accountId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(payload.data.accountId)) throw Error("account-unconfirmed");
+        if (!validPreferencesReceipt(payload.data)) throw Error("preferences-unconfirmed");
         confirmedAccount.current = payload.data.accountId;
         setPreferences(payload.data);
         setMessage(
@@ -352,7 +377,7 @@ function NotificationsContent({ draftLocalesEnabled = false }: { draftLocalesEna
       });
 
       if (controller.signal.aborted || !consentOperation.current.live || consentOperation.current.sequence !== observation) return;
-      if (!response.ok || payload.ok === false || payload.data.accountId !== expectedAccountId) {
+      if (!response.ok || payload.ok !== true || !validPreferencesReceipt(payload.data) || payload.data.accountId !== expectedAccountId) {
         throw new Error(copy.saveFailed);
       }
 
@@ -421,6 +446,7 @@ function NotificationsContent({ draftLocalesEnabled = false }: { draftLocalesEna
                 className="flex min-h-[116px] cursor-pointer items-start gap-3 rounded-2xl border border-white/[.07] bg-white/[.025] p-4 transition hover:border-cyan-300/25 hover:bg-cyan-300/[.04]"
               >
                 <input
+                  disabled={editingDisabled}
                   type="checkbox"
                   checked={preferences.settings[category.key]}
                   onChange={(event) => updateCategory(category.key, event.target.checked)}
@@ -452,6 +478,7 @@ function NotificationsContent({ draftLocalesEnabled = false }: { draftLocalesEna
                     <span className="mt-1 block text-xs leading-5 text-slate-500">{body}</span>
                   </span>
                   <input
+                  disabled={editingDisabled}
                     type="checkbox"
                     checked={preferences.channels[key]}
                     onChange={(event) => updateChannel(key, event.target.checked)}
@@ -471,6 +498,7 @@ function NotificationsContent({ draftLocalesEnabled = false }: { draftLocalesEna
               <label className="grid gap-2 text-xs font-black uppercase tracking-[.12em] text-slate-500">
                 {copy.deliveryFrequency}
                 <select
+                  disabled={editingDisabled}
                   value={preferences.frequency}
                   onChange={(event) => setPreferences((current) => ({
                     ...current,
@@ -487,6 +515,7 @@ function NotificationsContent({ draftLocalesEnabled = false }: { draftLocalesEna
 
               <label className="flex items-center gap-3 rounded-2xl border border-white/[.07] bg-black/20 p-4 text-xs font-black text-white">
                 <input
+                  disabled={editingDisabled}
                   type="checkbox"
                   checked={preferences.quietHours.enabled}
                   onChange={(event) => setPreferences((current) => ({
@@ -500,6 +529,7 @@ function NotificationsContent({ draftLocalesEnabled = false }: { draftLocalesEna
 
               <div className={`grid gap-3 ${styles.quietHours}`}>
                 <input
+                  disabled={editingDisabled}
                   aria-label={copy.quietStart}
                   type="time"
                   value={preferences.quietHours.start}
@@ -510,6 +540,7 @@ function NotificationsContent({ draftLocalesEnabled = false }: { draftLocalesEna
                   className="h-11 rounded-2xl border border-white/[.08] bg-black/30 px-3 text-xs font-bold text-white"
                 />
                 <input
+                  disabled={editingDisabled}
                   aria-label={copy.quietEnd}
                   type="time"
                   value={preferences.quietHours.end}
@@ -520,6 +551,7 @@ function NotificationsContent({ draftLocalesEnabled = false }: { draftLocalesEna
                   className="h-11 rounded-2xl border border-white/[.08] bg-black/30 px-3 text-xs font-bold text-white"
                 />
                 <input
+                  disabled={editingDisabled}
                   aria-label={copy.quietTimezone}
                   value={preferences.quietHours.timezone}
                   onChange={(event) => setPreferences((current) => ({
@@ -538,6 +570,7 @@ function NotificationsContent({ draftLocalesEnabled = false }: { draftLocalesEna
           <div className="p-5">
             <div className={`grid gap-3 ${styles.scopes}`}>
               <input
+                  disabled={editingDisabled}
                 aria-label={copy.clubs}
                 value={joinScope(preferences.settings.scopes.clubs)}
                 onChange={(event) => updateScope("clubs", event.target.value)}
@@ -545,6 +578,7 @@ function NotificationsContent({ draftLocalesEnabled = false }: { draftLocalesEna
                 className="h-11 rounded-2xl border border-white/[.08] bg-black/30 px-3 text-xs font-bold text-white placeholder:text-slate-700"
               />
               <input
+                  disabled={editingDisabled}
                 aria-label={copy.players}
                 value={joinScope(preferences.settings.scopes.players)}
                 onChange={(event) => updateScope("players", event.target.value)}
@@ -552,6 +586,7 @@ function NotificationsContent({ draftLocalesEnabled = false }: { draftLocalesEna
                 className="h-11 rounded-2xl border border-white/[.08] bg-black/30 px-3 text-xs font-bold text-white placeholder:text-slate-700"
               />
               <input
+                  disabled={editingDisabled}
                 aria-label={copy.competitions}
                 value={joinScope(preferences.settings.scopes.competitions)}
                 onChange={(event) => updateScope("competitions", event.target.value)}
@@ -559,6 +594,7 @@ function NotificationsContent({ draftLocalesEnabled = false }: { draftLocalesEna
                 className="h-11 rounded-2xl border border-white/[.08] bg-black/30 px-3 text-xs font-bold text-white placeholder:text-slate-700"
               />
               <input
+                  disabled={editingDisabled}
                 aria-label={copy.fixtures}
                 value={joinScope(preferences.settings.scopes.fixtures)}
                 onChange={(event) => updateScope("fixtures", event.target.value)}
@@ -577,7 +613,7 @@ function NotificationsContent({ draftLocalesEnabled = false }: { draftLocalesEna
               <button
                 type="button"
                 onClick={savePreferences}
-                disabled={saving || loading || !preferences.accountId}
+                disabled={editingDisabled}
                 className={`${navigationStyles.link} disabled:cursor-not-allowed disabled:opacity-50`}
               >
                 {consentState === "recorded" ? <CheckCircle2 size={14} /> : <Save size={14} />}

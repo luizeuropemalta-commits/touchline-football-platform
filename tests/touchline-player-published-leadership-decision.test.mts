@@ -4,7 +4,7 @@ import test from "node:test";
 
 test("published player leadership is immutable, snapshot-bound and fails closed for ties", () => {
   const migration = readFileSync(new URL("../supabase/migrations/20260910170851_touchline_player_published_leadership_decision.sql", import.meta.url), "utf8");
-  const server = readFileSync(new URL("../lib/touchlineArena/card-ranking-server.ts", import.meta.url), "utf8");
+  const server = readFileSync(new URL("../lib/touchlineArena/card-ranking-snapshot-server.ts", import.meta.url), "utf8");
   assert.match(migration, /touchline_player_ranking_leadership_decisions/);
   assert.match(migration, /status in \('unique-leader', 'tied', 'unavailable'\)/);
   assert.match(migration, /Published TouchLine player leadership decisions are immutable/);

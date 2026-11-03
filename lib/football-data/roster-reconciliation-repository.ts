@@ -15,6 +15,21 @@ export type RosterRepository = {
     status(): Promise<RosterStatus>;
 };
 const publicCodes = ['ROSTER_PAUSED', 'ROSTER_APPLICATION_PAUSED', 'ROSTER_REQUEST_CONFLICT', 'ROSTER_REVISION_CONFLICT', 'ROSTER_SOURCE_EXPIRED', 'ROSTER_CAPTURE_BUSY', 'ROSTER_BASELINE_CHANGED', 'ROSTER_NO_APPROVED_CHANGES', 'ROSTER_OPERATION_NOT_ACTIONABLE', 'ROSTER_QA_EXECUTOR_UNAVAILABLE', 'ROSTER_CAPTURE_LEASE_LOST'];
+/** Validate the durable SQL command result, not merely an echoed request ID. */
+function confirmedRosterReceipt(value: unknown, command: RosterCommand): value is RosterReceipt {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+    const row = value as Record<string, unknown>;
+    if (row.requestId !== command.requestId.toLowerCase()) return false;
+    if (command.action === 'capture') {
+        if (row.status === 'failed') return typeof row.error === 'string' && row.error.length > 0;
+        if (row.status === 'collecting') return row.capture === undefined
+            || row.capture === true && typeof row.seasonId === 'string' && /^[1-9][0-9]{0,19}$/.test(row.seasonId);
+        return row.status === 'review' && row.snapshotId === command.requestId.toLowerCase() && row.revision === 0;
+    }
+    return row.status === (command.action === 'apply' ? 'applied' : 'decided')
+        && row.snapshotId === command.snapshotId.toLowerCase()
+        && Number.isSafeInteger(row.revision) && row.revision === command.revision + 1;
+}
 export function rosterRepository(admin: SupabaseClient): RosterRepository {
     return {
         async action(actor, command, phase, source = null) {
@@ -25,7 +40,7 @@ export function rosterRepository(admin: SupabaseClient): RosterRepository {
             }
             if (result.data === null && phase === 'lookup')
                 return null;
-            if (!result.data || typeof result.data.status !== 'string' || result.data.requestId !== command.requestId)
+            if (!confirmedRosterReceipt(result.data, command))
                 throw new Error('ROSTER_NOT_CONFIRMED');
             return result.data as RosterReceipt;
         },

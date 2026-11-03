@@ -1,3 +1,5 @@
+import { presentGameweekScore } from "../lib/touchlineFantasy/gameweek-score-status.ts";
+import { getGameweekScoreStatusCopy } from "../lib/touchlineFantasy/gameweek-score-status-i18n.ts";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
@@ -77,7 +79,7 @@ function consumer() {
   let metrics: ts.JsxElement | undefined;
   const declarations: string[] = [];
   function visit(node: ts.Node) {
-    if (ts.isVariableDeclaration(node) && node.name.getText(ast) === "marketMetricsCopy") declarations.push(`const ${node.getText(ast)};`);
+    if (ts.isVariableDeclaration(node) && ["marketMetricsCopy", "scoreStatusCopy", "persistedRoundScore", "roundScore"].includes(node.name.getText(ast))) declarations.push(`const ${node.getText(ast)};`);
     if (ts.isJsxElement(node) && node.openingElement.tagName.getText(ast) === "dl" && node.openingElement.attributes.properties.some(attribute => ts.isJsxAttribute(attribute) && attribute.name.getText(ast) === "data-market-owner-metrics")) metrics = node;
     ts.forEachChild(node, visit);
   }
@@ -90,8 +92,9 @@ function consumer() {
     render(input: Record<string, unknown>, getCopy: (locale: string) => unknown) {
       const element = runInNewContext(javascript, {
         React, styles: { ownerSummary: "ownerSummary" }, formatTouchlineFantasyMarketValue,
-        marketPage: true, locale: "en-GB", draftLocalesEnabled: false, pt: false, live: null, validation: null,
-        snapshot: { config: { budgetEur: 500_000_000 }, gameweekScore: 12.34, seasonScore: 98.76 },
+        presentGameweekScore, getGameweekScoreStatusCopy, reconfirmationRequired:false, roundScoreStatusId:"round-score-state",
+        marketPage: true, collectionEnabled: false, locale: "en-GB", draftLocalesEnabled: false, pt: false, live: null, validation: null,
+        snapshot: { config: { budgetEur: 500_000_000 }, gameweekScore: 12.34, gameweekScoreStatus: "PROVISIONAL", seasonScore: 98.76 },
         getTouchlineFantasyMarketMetricsCopy: getCopy,
         Link: function LinkBoundary(props: React.ComponentProps<"a">) { return React.createElement("a", props); },
         ...input,
@@ -118,10 +121,10 @@ test("actual metrics JSX preserves EN/PT labels, two point values, two encoded r
     const expected = baseline[locale];
     const html = actual.render({ locale, pt: locale === "pt-BR" }, mod.getTouchlineFantasyMarketMetricsCopy);
     assert.ok(html.startsWith(`<dl class="ownerSummary" data-market-owner-metrics="true" aria-label="${expected.summaryAria}">`));
-    assert.equal((html.match(/<div>/g) ?? []).length, 2);
+    assert.equal((html.match(/<div(?: [^>]*)?>/g) ?? []).length, 2);
     assert.ok(!html.includes(expected.remainingBudget), "budget is not duplicated below the plan");
     assert.ok(html.includes(`<dt>${expected.roundPoints}</dt>`)); assert.ok(html.includes(`<dt>${expected.seasonPoints}</dt>`));
-    assert.ok(html.includes(`<a href="/rankings?lang=${locale}" aria-label="${expected.roundPointsAria}">12.34</a>`));
+    assert.ok(html.includes(`<a href="/rankings?lang=${locale}" aria-label="${expected.roundPointsAria}" aria-describedby="round-score-state">12.34</a>`));
     assert.ok(html.includes(`<a href="/rankings?lang=${locale}" aria-label="${expected.seasonPointsAria}">98.76</a>`));
     assert.equal((html.match(/<a /g) ?? []).length, 2);
     assert.doesNotMatch(html, /<button|<input|<form|data-bank/);
@@ -129,24 +132,24 @@ test("actual metrics JSX preserves EN/PT labels, two point values, two encoded r
   }
 });
 
-test("real points metrics preserve live zero, nullish snapshot fallback and ignore budget without mutating data", async () => {
+test("real points metrics preserve verified zero and season fallback, while missing round evidence stays unavailable", async () => {
   const mod = await load(); const actual = consumer();
   const scenarios = [
-    { live: { gameweekScore: 0, seasonScore: 0 }, validation: { budgetRemainingEur: 0 }, expected: [0, 0, 0] },
-    { live: { gameweekScore: null, seasonScore: undefined }, validation: { budgetRemainingEur: null }, expected: [500_000_000, 12.34, 98.76] },
-    { live: { gameweekScore: -1.25, seasonScore: 234.567 }, validation: { budgetRemainingEur: 123_000_000 }, expected: [123_000_000, -1.25, 234.57] },
+    { live: { gameweekScore: 0, gameweekScoreStatus: "PROVISIONAL", seasonScore: 0 }, validation: { budgetRemainingEur: 0 }, expected: [0, 0, 0] },
+    { live: { gameweekScore: null, seasonScore: undefined }, validation: { budgetRemainingEur: null }, expected: [500_000_000, null, 98.76] },
+    { live: { gameweekScore: -1.25, seasonScore: 234.567 }, validation: { budgetRemainingEur: 123_000_000 }, expected: [123_000_000, null, 234.57] },
     { live: null, validation: null, expected: [500_000_000, 12.34, 98.76] },
   ];
   for (const locale of ["en-GB", "pt-BR"] as const) {
     for (const scenario of scenarios) {
       const input = { locale, pt: locale === "pt-BR", live: scenario.live, validation: scenario.validation };
       const before = JSON.stringify(input); const html = actual.render(input, mod.getTouchlineFantasyMarketMetricsCopy);
-      assert.ok(!html.includes(`<dd>${formatTouchlineFantasyMarketValue(scenario.expected[0], locale)}</dd>`), "no duplicate budget metric");
+      assert.ok(!html.includes(`<dd>${formatTouchlineFantasyMarketValue(scenario.expected[0]!, locale)}</dd>`), "no duplicate budget metric");
       const scores = [...html.matchAll(/<a [^>]+>([^<]+)<\/a>/g)].map(match => match[1]);
-      assert.deepEqual(scores, scenario.expected.slice(1).map(value => value.toFixed(2)));
+      assert.deepEqual(scores, scenario.expected.slice(1).map(value => value === null ? "—" : value.toFixed(2)));
       assert.equal(JSON.stringify(input), before);
     }
-    const zeroSnapshot = actual.render({ locale, pt: locale === "pt-BR", snapshot: { config: { budgetEur: 0 }, gameweekScore: 0, seasonScore: 0 } }, mod.getTouchlineFantasyMarketMetricsCopy);
+    const zeroSnapshot = actual.render({ locale, pt: locale === "pt-BR", snapshot: { config: { budgetEur: 0 }, gameweekScore: 0, gameweekScoreStatus: "FINAL", seasonScore: 0 } }, mod.getTouchlineFantasyMarketMetricsCopy);
     assert.ok(!zeroSnapshot.includes(`<dd>${formatTouchlineFantasyMarketValue(0, locale)}</dd>`));
     assert.equal((zeroSnapshot.match(/>0\.00<\/a>/g) ?? []).length, 2);
   }
@@ -161,4 +164,27 @@ test("actual metrics keep six draft locales gated and encode locale handoff with
     assert.deepEqual(links, Array(2).fill(`/rankings?lang=${encodeURIComponent(locale)}`));
     assert.doesNotMatch(html, /href="https?:|redirect="|onclick=/i);
   }
+});
+
+
+test("real points markup labels absent XI and unavailable reads while preserving season points", async () => {
+  const mod = await load(); const actual = consumer();
+  for (const gameweekScoreStatus of ["NO_VALID_LINEUP", "PENDING_SCORE", "UNAVAILABLE", "AWAITING_CONFIRMATION"]) {
+    const html = actual.render({locale:"pt-BR",live:{gameweekScore:0,gameweekScoreStatus,seasonScore:82.5}},mod.getTouchlineFantasyMarketMetricsCopy);
+    assert.match(html,/>—<\/a>/);
+    assert.match(html,/>82\.50<\/a>/);
+    assert.match(html,new RegExp(`data-gameweek-score-status="${gameweekScoreStatus}"`));
+    assert.match(html,/aria-describedby="round-score-state"/);
+    assert.match(html,/id="round-score-state"/);
+    assert.doesNotMatch(html,/>0\.00<\/a>/);
+  }
+});
+
+test("automatic collection waits for kickoff without asking the owner to confirm again", async () => {
+  const mod = await load();
+  const html = consumer().render({ collectionEnabled: true, locale: "pt-BR",
+    live: { gameweekScore: 0, gameweekScoreStatus: "AWAITING_CONFIRMATION", seasonScore: 82.5 } }, mod.getTouchlineFantasyMarketMetricsCopy);
+  assert.match(html, /data-gameweek-score-status="AWAITING_KICKOFF"/);
+  assert.match(html, />82\.50<\/a>/);
+  assert.doesNotMatch(html, /Confirme seu XI|AWAITING_CONFIRMATION/);
 });

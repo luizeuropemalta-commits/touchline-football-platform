@@ -16,10 +16,10 @@ test("real Arena portal scrolls a full-width pitch without trapping controls bel
   const requestedWidth = process.env.TOUCHLINE_ARENA_SCROLL_VIEWPORT_WIDTH;
   assert.ok(requestedEngine === undefined || requestedEngine === "chromium" || requestedEngine === "webkit",
     "TOUCHLINE_ARENA_SCROLL_ENGINE must be chromium or webkit when supplied");
-  assert.ok(requestedWidth === undefined || ["844", "667", "1024", "1280"].includes(requestedWidth),
-    "TOUCHLINE_ARENA_SCROLL_VIEWPORT_WIDTH must be 844, 667, 1024 or 1280 when supplied");
+  assert.ok(requestedWidth === undefined || ["844", "667", "1024", "1280", "1920"].includes(requestedWidth),
+    "TOUCHLINE_ARENA_SCROLL_VIEWPORT_WIDTH must be 844, 667, 1024 1280 or 1920 when supplied");
   const engines = [chromium, webkit].filter(engine => requestedEngine === undefined || engine.name() === requestedEngine);
-  const viewports = ([[844, 390], [667, 375], [1024, 768], [1280, 900]] as const)
+  const viewports = ([[844, 390], [667, 375], [1024, 768], [1280, 900], [1920, 1080]] as const)
     .filter(([width]) => requestedWidth === undefined || String(width) === requestedWidth);
   assert.ok(engines.length > 0 && viewports.length > 0, "selection cannot silently execute an empty matrix");
   t.diagnostic(JSON.stringify({ scope: "Arena selected matrix", completeMatrix: requestedEngine === undefined && requestedWidth === undefined,
@@ -119,10 +119,26 @@ test("real Arena portal scrolls a full-width pitch without trapping controls bel
             assert.ok(a.right <= b.left + 1 || b.right <= a.left + 1 || a.bottom <= b.top + 1 || b.bottom <= a.top + 1,
               `real zoom targets ${first}/${second} must not overlap`);
           }
+          const reserveSlots = overlay.locator('[data-arena-reserves] [data-collection-slot]');
+          await expect(reserveSlots).toHaveCount(9);
+          const reserveSizes = await reserveSlots.evaluateAll(nodes => nodes.map(node => ({
+            slot: node.getBoundingClientRect().toJSON(),
+            artwork: node.querySelector('img[data-live-card-asset="frame"]')!.getBoundingClientRect().toJSON(),
+          })));
+          for (const { slot, artwork } of reserveSizes) {
+            assert.ok(Math.abs(artwork.width - cardSizes[0].artwork.width) <= 1, "reserves use the same canonical card width as XI");
+            assert.ok(artwork.top >= slot.top - 1 && artwork.bottom <= slot.bottom + 1, "full reserve card remains inside its slot");
+          }
+          for (let i = 0; i < reserveSizes.length; i++) for (let j = i + 1; j < reserveSizes.length; j++) {
+            const a = reserveSizes[i].slot, b = reserveSizes[j].slot;
+            assert.ok(a.right <= b.left + 1 || b.right <= a.left + 1 || a.bottom <= b.top + 1 || b.bottom <= a.top + 1, "reserve slots do not overlap when wrapping");
+          }
           const measure = await overlay.evaluate(node => ({ height: node.clientHeight, scroll: node.scrollHeight, overflow: getComputedStyle(node).overflowY, viewport: innerHeight }));
           assert.equal(measure.overflow, "auto"); assert.ok(measure.height <= height);
           if (height <= 390) assert.ok(measure.scroll > measure.height + 1, "landscape requires a real vertical scroll range, not a miniaturized field");
           await overlay.evaluate(node => { node.scrollTop = node.scrollHeight; });
+          const reserveBottom = await overlay.locator('[data-arena-reserves]').evaluate(node => node.getBoundingClientRect().bottom);
+          assert.ok(reserveBottom <= height + 1, "last reserve row is reachable by overlay scroll");
           const bottom = await overlay.evaluate(node => {
             const surface = node.querySelector('[aria-label="Arena fixture pitch"]')!;
             const pitch = surface.getBoundingClientRect(), outer = node.getBoundingClientRect();
@@ -130,11 +146,24 @@ test("real Arena portal scrolls a full-width pitch without trapping controls bel
             return { pitchLeft: pitch.left, pitchRight: pitch.right, hostLeft: host.getBoundingClientRect().left, hostRight: host.getBoundingClientRect().right, pitchHeight: pitch.height, pitchBottom: pitch.bottom, outerBottom: outer.bottom, scrollTop: node.scrollTop, width: node.scrollWidth, clientWidth: node.clientWidth,
               pitchWidth: pitch.width, availableHostWidth: host.clientWidth - parseFloat(hostStyle.paddingLeft) - parseFloat(hostStyle.paddingRight) };
           });
-          if (width <= 1180) assert.ok(Math.abs(bottom.pitchWidth - Math.min(bottom.availableHostWidth, 1400)) <= 1, "pitch occupies the full available host width up to the 1400px cap");
-          else {
-            assert.ok(bottom.pitchWidth > 0 && bottom.pitchWidth <= Math.min(bottom.availableHostWidth, 1400) + 1, "desktop field fits width while height can be the limiting axis");
-            assert.ok(bottom.pitchLeft >= bottom.hostLeft - 1 && bottom.pitchRight <= bottom.hostRight + 1, "desktop grid cannot push the pitch past either host edge");
-          }
+          assert.ok(Math.abs(bottom.pitchWidth - bottom.availableHostWidth) <= 1, "Arena pitch uses full host width at every breakpoint, including desktop");
+          // A height-constrained field used to feed card width into coach height
+          // and back into the field on each ResizeObserver delivery.
+          await page.setViewportSize({ width: width - 40, height });
+          await expect.poll(async () => overlay.locator('[aria-label="Arena fixture pitch"]').evaluate(node => node.getBoundingClientRect().width)).toBeLessThan(bottom.pitchWidth - 20);
+          await page.setViewportSize({ width, height });
+          await expect.poll(async () => overlay.locator('[aria-label="Arena fixture pitch"]').evaluate((node, expected) => Math.abs(node.getBoundingClientRect().width - expected), bottom.pitchWidth)).toBeLessThanOrEqual(1);
+          const samples = await overlay.evaluate(async node => {
+            const field = node.querySelector('[aria-label="Arena fixture pitch"]')!;
+            const coach = node.querySelector('[data-arena-coach]')!;
+            const result: number[][] = [];
+            for (let frame = 0; frame < 30; frame++) {
+              await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+              result.push([field.getBoundingClientRect().width, field.getBoundingClientRect().height, coach.getBoundingClientRect().height, node.querySelector('[data-arena-reserves]')!.getBoundingClientRect().height]);
+            }
+            return result;
+          });
+          for (let axis = 0; axis < 4; axis++) assert.ok(Math.max(...samples.map(row => row[axis])) - Math.min(...samples.map(row => row[axis])) <= 1, "pitch and coach remain stable without resize oscillation");
           assert.ok(Math.abs(bottom.pitchWidth / bottom.pitchHeight - 105 / 68) < .003, "field retains regulation ratio at every breakpoint");
           if (height <= 390) assert.ok(bottom.scrollTop > 0, "landscape field bottom is reached through actual overlay scrolling");
           assert.ok(bottom.pitchBottom <= bottom.outerBottom + 1, "pitch bottom remains reachable by overlay scroll");

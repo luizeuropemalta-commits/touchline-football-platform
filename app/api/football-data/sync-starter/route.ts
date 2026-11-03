@@ -54,29 +54,29 @@ async function authorize(request: NextRequest): Promise<SyncAuthResult> {
 }
 
 async function runFootballDataSync(request: NextRequest) {
-  const auth = await authorize(request);
-  if (!auth.ok) {
-    return NextResponse.json({ ok: false, status: "unauthorized", error: auth.reason }, { status: 401 });
-  }
-
-  const admin = createAdminClient();
-  if (!admin) {
-    return NextResponse.json(
-      {
-        ok: false,
-        status: "not_configured",
-        error: "Supabase admin client is not configured. Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.",
-      },
-      { status: 200 },
-    );
-  }
-
-  const competitionId = request.nextUrl.searchParams.get("competitionId") ?? undefined;
-  const clubId = request.nextUrl.searchParams.get("clubId") ?? undefined;
-  const scope = request.nextUrl.searchParams.get("scope") ?? "foundation";
-  const qaOnlyScopeAllowed = allowsQaOnlySyncScopes();
-
   try {
+    const auth = await authorize(request);
+    if (!auth.ok) {
+      return NextResponse.json({ ok: false, status: "unauthorized", error: auth.reason }, { status: 401 });
+    }
+
+    const admin = createAdminClient();
+    if (!admin) {
+      return NextResponse.json(
+        {
+          ok: false,
+          status: "not_configured",
+          error: "Supabase admin client is not configured. Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.",
+        },
+        { status: 200 },
+      );
+    }
+
+    const competitionId = request.nextUrl.searchParams.get("competitionId") ?? undefined;
+    const clubId = request.nextUrl.searchParams.get("clubId") ?? undefined;
+    const scope = request.nextUrl.searchParams.get("scope") ?? "foundation";
+    const qaOnlyScopeAllowed = allowsQaOnlySyncScopes();
+
     const result = qaOnlyScopeAllowed && scope === "capabilities"
       ? await syncSportmonksProviderCapabilities()
       : scope === "fixture_schedule"
@@ -125,15 +125,14 @@ async function runFootballDataSync(request: NextRequest) {
           ? "QA-only current rosters were applied as one atomic database operation across twenty clubs; players and card history were not deleted."
         : "TouchLine Data feeds the normalized TouchLine database. Public modules read only dedicated TouchLine allowlisted DTOs.",
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       {
         ok: false,
         status: "error",
-        error: error instanceof Error ? error.message.replace(/SportMonks/gi, "TouchLine Data") : "Unknown TouchLine Data sync error.",
-        hint: "If this mentions a missing relation, run supabase/migrations/013_football_data_foundation.sql in Supabase first.",
+        error: "Synchronization could not be confirmed. Check the protected run history before retrying.",
       },
-      { status: 500 },
+      { status: 500, headers: { "Cache-Control": "private, no-store" } },
     );
   }
 }

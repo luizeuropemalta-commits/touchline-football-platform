@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import { runInNewContext } from "node:vm";
 import ts from "typescript";
+import * as coachDiagnostic from "../lib/football-data/coach-reconciliation-diagnostic.ts";
 
 type Result = { data: unknown; error: unknown };
 const source = readFileSync(new URL("../lib/football-data/fixture-schedule-store.ts", import.meta.url), "utf8");
@@ -10,6 +11,7 @@ const moduleExports: Record<string, unknown> = {};
 runInNewContext(ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText, {
   exports: moduleExports,
   require(name: string) {
+    if (name === "@/lib/football-data/coach-reconciliation-diagnostic") return coachDiagnostic;
     if (name === "@/lib/supabase/admin") return { createAdminClient: () => null };
     if (name === "@/lib/touchlineArena/coach-catalogue-server") return { readCompetitionCoachAssignments: async () => assert.fail("Read-only fixture queries must not reconcile coach assignments") };
     throw new Error(`Unexpected dependency: ${name}`);

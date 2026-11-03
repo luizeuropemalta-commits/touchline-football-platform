@@ -133,7 +133,7 @@ const localSettings = { NODE_ENV: "development", TOUCHLINE_CLUB_OWNER_AVATAR_LOC
  VERCEL_ENV: undefined, VERCEL_GIT_COMMIT_REF: undefined, VERCEL_BRANCH_URL: undefined, VERCEL_URL: undefined };
 
 test("local real GET/POST wiring preserves exact origin, account and QA destination", async () => {
- const url = "http://localhost:3319";
+ for (const url of ["http://localhost:3319", "http://localhost:3100"]) {
  const f = fixture({ ...uploadSettings, ...localSettings });
  assert.equal((await post(f, uploadRequest({}, url).request)).status, 200);
  assert.ok(f.receipt());
@@ -150,6 +150,7 @@ test("local real GET/POST wiring preserves exact origin, account and QA destinat
  assert.equal((await post(g, uploadRequest({ "x-touchline-expected-account": other }, url).request)).status, 403);
  assert.equal((await post(g, uploadRequest({ origin: "http://localhost:3320" }, url).request)).status, 403);
  assert.deepEqual(g.calls, []);
+ }
 });
 test("real factories receive checked config and asynchronous cookies; GET without Origin reaches own zero revision only", async () => {
   const f = fixture(); const response = await f.route.GET(f.request());

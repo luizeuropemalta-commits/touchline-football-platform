@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Activity, Clock3, MonitorSmartphone, Radio, Trophy, Users } from "lucide-react";
 import { GamePanel, LivePill, StatTile } from "@/components/arena-admin-ui";
+import { hasTouchLineArenaAccess } from "@/lib/touchlineArena/auth-access";
 import { isOwnerEmail } from "@/lib/admin/owner";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -23,11 +24,17 @@ export default async function AdminAnalyticsPage({
   const locale = normalizeTouchLineAuthLocale(typeof params.lang === "string" ? params.lang : null);
   const pt = locale === "pt-BR";
   const t = { pill: pt ? "Telemetria própria" : "First-party telemetry", title: pt ? "Atividade dos ClubOwners" : "ClubOwner Activity", intro: pt ? "Tempo de jogo ativo e áreas de recurso. A TouchLine não registra senhas, mensagens, texto digitado ou conteúdo da tela." : "Active gameplay time and feature areas only. TouchLine does not record passwords, messages, typed text or screen contents.", admin: pt ? "Admin do proprietário" : "Owner Admin", active: pt ? "Ativos agora" : "Active now", daily: pt ? "Ativos no dia" : "Daily active", activeTime: pt ? "Tempo ativo" : "Active time", sessions: pt ? "Sessões" : "Sessions", grants: pt ? "Concessões antigas" : "Legacy grants", devices: pt ? "Dispositivos" : "Devices", engagement: pt ? "Ranking de envolvimento" : "Engagement ranking", mostActive: pt ? "ClubOwners mais ativos" : "Most active ClubOwners", authOnly: pt ? "Somente jogo autenticado" : "Authenticated gameplay only", noLeaders: pt ? "A atividade aparecerá após jogadores autenticados usarem a Beta." : "Activity will appear after authenticated players use the Beta.", interest: pt ? "Interesse por recurso" : "Feature interest", areas: pt ? "Onde os jogadores passam tempo" : "Where players spend time", noAreas: pt ? "Nenhuma atividade coletada ainda." : "No activity collected yet.", retired: pt ? "Campanha de acesso encerrada" : "Retired access campaign", retiredCopy: pt ? "Concessões históricas ficam visíveis apenas para auditoria. Novos ClubOwners recebem acesso à Arena com 0 TC automático." : "Historical grants remain visible for audit only. New ClubOwners receive Arena access with 0 automatic TC." };
-  const supabase = await createClient();
+  const sessionAuth = await (async () => {
+    try {
+      const supabase = await createClient();
+      return supabase ? await supabase.auth.getUser() : null;
+    } catch { return null; }
+  })();
+  if (!sessionAuth) return <GamePanel className="p-8 text-white">{pt ? "A análise está temporariamente indisponível." : "Analytics is temporarily unavailable."}</GamePanel>;
+  const { data: { user }, error: authError } = sessionAuth;
+  if (authError || !user || !hasTouchLineArenaAccess(user) || !isOwnerEmail(user.email)) notFound();
   const admin = createAdminClient();
-  if (!supabase || !admin) return <GamePanel className="p-8 text-white">{locale === "pt-BR" ? "A análise exige configuração do Supabase." : "Analytics requires Supabase configuration."}</GamePanel>;
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user || !isOwnerEmail(user.email)) notFound();
+  if (!admin) return <GamePanel className="p-8 text-white">{pt ? "A análise exige configuração do Supabase." : "Analytics requires Supabase configuration."}</GamePanel>;
 
   // Server dashboard timestamps intentionally represent the request instant.
   // eslint-disable-next-line react-hooks/purity
@@ -55,8 +62,8 @@ export default async function AdminAnalyticsPage({
   const grants = (grantsData ?? []) as GrantRow[];
   const emails = new Map((authResult.data.users ?? []).map((item) => [item.id, item.email ?? "ClubOwner"]));
   const now = requestTime;
-  const online = new Set(sessions.filter((item) => now - new Date(item.last_seen_at).getTime() <= 120_000).map((item) => item.user_id)).size;
-  const daily = new Set(sessions.filter((item) => now - new Date(item.last_seen_at).getTime() <= 86400_000).map((item) => item.user_id)).size;
+  const online = new Set(sessions.filter((item) => now - new Date(item.last_seen_at).getTime() >= 0 && now - new Date(item.last_seen_at).getTime() <= 120_000).map((item) => item.user_id)).size;
+  const daily = new Set(sessions.filter((item) => now - new Date(item.last_seen_at).getTime() >= 0 && now - new Date(item.last_seen_at).getTime() <= 86400_000).map((item) => item.user_id)).size;
   const totalSeconds = sessions.reduce((sum, item) => sum + Number(item.active_seconds || 0), 0);
   const userTotals = new Map<string, number>();
   const areaTotals = new Map<string, { seconds: number; visits: number }>();
@@ -76,11 +83,20 @@ export default async function AdminAnalyticsPage({
         <div><LivePill>{t.pill}</LivePill><h1 className="font-display mt-3 text-4xl italic text-white sm:text-5xl">{t.title}</h1><p className="mt-2 max-w-3xl text-xs leading-6 text-slate-500">{t.intro}</p></div>
         <Link href={touchLineAuthHref("/admin", locale)} className="rounded-2xl border border-cyan-300/20 bg-cyan-300/[.07] px-4 py-3 text-[9px] font-black text-cyan-100">{t.admin}</Link>
       </div>
+      <GamePanel className="p-5 text-sm text-slate-300">
+        <h2 className="font-bold text-white">{pt ? "Indicadores dos registros carregados" : "Indicators for loaded records"}</h2>
+        <p className="mt-2">{pt
+          ? "Esta consulta carrega até 10.000 sessões vistas nos últimos 30 dias, sujeita ao limite de resposta do banco. Os números e o ranking abaixo não representam necessariamente toda a atividade. A presença corresponde ao instante em que esta página foi aberta; recarregue para atualizar."
+          : "This query loads up to 10,000 sessions seen in the last 30 days, subject to the database response limit. The figures and ranking below may not represent all activity. Presence reflects when this page was opened; reload to update."}</p>
+        <p className="mt-2">{pt
+          ? "Tempo ativo soma a duração completa das sessões carregadas, inclusive tempo anterior à janela. A divisão por recurso usa a última área informada da sessão, não um histórico de tempo em cada tela. A identificação consulta até 1.000 contas; nomes não encontrados aparecem como ClubOwner. As concessões antigas mostram até 20 registros."
+          : "Active time sums the full duration of loaded sessions, including time before the window. Feature grouping uses each session's last reported area, not a history of time on each screen. Identity lookup covers up to 1,000 accounts; missing names appear as ClubOwner. Legacy grants show up to 20 records."}</p>
+      </GamePanel>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
-        <StatTile icon={Radio} label={t.active} value={String(online)} delta={pt ? "últimos 2 min" : "last 2 min"} accent="lime" />
-        <StatTile icon={Users} label={t.daily} value={String(daily)} delta={pt ? "últimas 24h" : "last 24h"} accent="cyan" />
-        <StatTile icon={Clock3} label={t.activeTime} value={`${Math.round(totalSeconds / 3600)}h`} delta={pt ? "últimos 30 dias" : "last 30 days"} accent="gold" />
-        <StatTile icon={Activity} label={t.sessions} value={String(sessions.length)} delta={pt ? "últimos 30 dias" : "last 30 days"} accent="cyan" />
+        <StatTile icon={Radio} label={t.active} value={String(online)} delta={pt ? "na amostra · últimos 2 min" : "in sample · last 2 min"} accent="lime" />
+        <StatTile icon={Users} label={t.daily} value={String(daily)} delta={pt ? "na amostra · últimas 24h" : "in sample · last 24h"} accent="cyan" />
+        <StatTile icon={Clock3} label={t.activeTime} value={`${Math.round(totalSeconds / 3600)}h`} delta={pt ? "registros carregados" : "loaded records"} accent="gold" />
+        <StatTile icon={Activity} label={t.sessions} value={String(sessions.length)} delta={pt ? "registros carregados" : "loaded records"} accent="cyan" />
         <StatTile icon={Trophy} label={t.grants} value={String(grants.length)} delta={pt ? "somente histórico" : "historical only"} accent="gold" />
         <StatTile icon={MonitorSmartphone} label={t.devices} value={String(deviceTotals.size)} delta={pt ? "classes detectadas" : "classes detected"} accent="lime" />
       </div>

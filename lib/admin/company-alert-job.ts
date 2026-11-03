@@ -26,5 +26,14 @@ export async function readAlertJson(request:Request,limit=4096) {
 /** Database gate is OFF by default; this adapter never sends messages. */
 export async function runCompanyAdminAlertJob(admin:SupabaseClient,input:{runId:string;today:string;horizonDays?:number}) {
  const parsed=parseCompanyAlertRun(input);
- return admin.rpc("touchline_company_generate_admin_alerts",{p_run_id:parsed.runId,p_today:parsed.today,p_horizon_days:parsed.horizonDays});
+ const result=await admin.rpc("touchline_company_generate_admin_alerts",{p_run_id:parsed.runId,p_today:parsed.today,p_horizon_days:parsed.horizonDays});
+ if(result.error)return result;
+ const receipt=result.data;
+ if(!receipt||typeof receipt!=="object"||Array.isArray(receipt)
+  ||!Number.isSafeInteger(receipt.inserted)||receipt.inserted<0
+  ||!((receipt.state==="DISABLED"&&receipt.ok===false&&receipt.inserted===0)
+    ||(receipt.state==="COMPLETED"&&receipt.ok===true))) {
+  return {data:null,error:{message:"INVALID_ALERT_JOB_RECEIPT"}};
+ }
+ return result;
 }

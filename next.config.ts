@@ -13,7 +13,17 @@ const configuredDevOrigins = (process.env.TOUCHLINE_DEV_ORIGINS ?? "")
   .filter(Boolean);
 const localTurbopackRoot = process.env.TOUCHLINE_LOCAL_TURBOPACK_ROOT?.trim();
 
+const localQaBuild = process.env.TOUCHLINE_LOCAL_QA_BUILD === "1"
+  && process.env.NODE_ENV === "production" && process.env.VERCEL === undefined && process.env.VERCEL_GIT_COMMIT_REF === "qa"
+  && process.env.VERCEL_ENV === "preview"
+  && process.env.TOUCHLINE_DEPLOYMENT_MODE === "qa-preview"
+  && process.env.TOUCHLINE_QA_SUPABASE_PROJECT_REF === "xgxbwqxjssxxuihuwmgy";
+
 const nextConfig: NextConfig = {
+  ...(localQaBuild ? { experimental: { cpus: 1, webpackMemoryOptimizations: true },
+    // Bound local disk usage; the production compiler and remote cache stay unchanged.
+    webpack: ((config) => { config.cache = false; return config; }) satisfies NonNullable<NextConfig["webpack"]>,
+  } : {}),
   // Next 16.2's separate dev debug channel can mistake an unfinished streamed
   // document for a cache restore and reload before hydration (upstream #94128).
   // Keep debug data in the RSC response for local development. This does not

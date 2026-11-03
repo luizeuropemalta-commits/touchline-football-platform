@@ -7,6 +7,7 @@ import * as jsx from 'react/jsx-runtime';
 import { renderToStaticMarkup } from 'react-dom/server';
 import ts from 'typescript';
 import * as copy from '../lib/touchlineArena/auth-i18n.ts';
+import * as discoveryRegistration from '../lib/touchlineArena/discovery-registration.ts';
 import * as i18n from '../lib/touchlineArena/i18n.ts';
 
 type Props = Record<string, unknown> & { children?: React.ReactNode };
@@ -36,6 +37,7 @@ function harness(flag?: string) {
     './SiteLocaleReleaseContext': { useSiteLocaleRelease: () => false },
     'next/link': { default: link },
     'lucide-react': new Proxy({}, { get: () => empty }),
+    '@/lib/touchlineArena/discovery-registration':discoveryRegistration,
     '@/lib/touchlineArena/auth-i18n': copy,
     '@/lib/touchlineArena/auth-email-rate-limit': load('lib/touchlineArena/auth-email-rate-limit.ts', {}),
     '@/lib/touchlineArena/i18n': i18n,

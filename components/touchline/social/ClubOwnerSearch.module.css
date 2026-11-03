@@ -1,0 +1,43 @@
+.triggerArea { min-width:0; padding-block:18px; }
+.triggerArea h4 { margin:0 0 12px; color:#edf7ed; font-size:1rem; text-align:start; }
+.searchTrigger { width:min(100%,620px); justify-content:flex-start; gap:12px; text-align:start; }
+.searchTrigger span { white-space:normal; overflow-wrap:anywhere; }
+.overlay { position:fixed; inset:0; z-index:135; overflow:auto; overscroll-behavior:contain; background:var(--touchline-modal-backdrop,rgba(0,5,6,.72)); -webkit-backdrop-filter:var(--touchline-modal-blur,blur(8px)); backdrop-filter:var(--touchline-modal-blur,blur(8px)); color:#edf7ed; }
+.dialog { width:min(100%,820px); min-height:100dvh; margin-inline:auto; padding:max(28px,env(safe-area-inset-top)) max(24px,env(safe-area-inset-right)) max(28px,env(safe-area-inset-bottom)) max(24px,env(safe-area-inset-left)); outline:none; box-sizing:border-box; }
+.heading { display:flex; align-items:center; justify-content:space-between; gap:20px; padding-block:12px 28px; }
+.heading small { font-size:.7rem; letter-spacing:.18em; color:var(--lime,#a3ff12); }
+.heading h2 { margin:9px 0 0; font-size:clamp(1.65rem,4vw,2.5rem); font-weight:500; line-height:1.2; }
+.heading > button { flex-shrink:0; }
+.search,.searchForm { min-width:0; }
+.inputShell { display:flex; align-items:center; gap:12px; min-height:60px; padding:6px 14px; background:rgba(26,37,33,.85); border:1px solid rgba(180,205,188,.25); border-radius:18px; color:#a9baad; }
+.inputShell:focus-within { border-color:var(--lime,#a3ff12); box-shadow:0 0 0 1px var(--lime,#a3ff12); }
+.inputShell input { width:100%; min-width:0; font:inherit; color:#f3f8ee; border:0; outline:none; padding:12px 0; background:transparent; border-radius:0; }
+/* The shell owns the visible keyboard focus; avoid a second cyan rectangle. */
+.inputShell input:focus-visible { outline:none; box-shadow:none; }
+.inputShell input::-webkit-search-cancel-button { -webkit-appearance:none; }
+.inputShell > svg,.inputShell > button { flex-shrink:0; }
+.listHeading { display:flex; align-items:center; justify-content:space-between; padding-block:24px 6px; }
+.listHeading h3 { margin:0; font-size:.8rem; letter-spacing:.08em; text-transform:uppercase; color:#bbccb9; }
+.results { list-style:none; padding:0; margin:0; }
+.result { display:grid; grid-template-columns:58px minmax(0,1fr) auto; align-items:center; gap:16px; padding:19px 0; border-bottom:1px solid rgba(185,207,187,.12); }
+.portrait { min-width:0; align-self:start; }
+.portrait > span { display:grid; }
+.resultIdentity { min-width:0; display:grid; gap:6px; }
+.profileLink { color:#f0f5ed; font-size:1.03rem; font-weight:600; text-decoration:none; overflow-wrap:anywhere; }
+.profileLink:hover { color:var(--lime,#a3ff12); }
+.profileLink:focus-visible { outline:2px solid var(--lime,#a3ff12); outline-offset:4px; border-radius:4px; }
+.resultMeta { display:flex; flex-wrap:wrap; gap:5px; color:#acb9b0; font-size:.8rem; line-height:1.45; }
+.resultAside { display:grid; justify-items:end; gap:10px; min-width:0; }
+.rank { display:flex; align-items:center; gap:8px; color:var(--gold,#f3d568); }
+.rank > span { display:grid; gap:2px; text-align:end; }
+.rank small { font-size:.65rem; color:#acb9b0; }
+.rank strong { font-size:1rem; font-variant-numeric:tabular-nums; }
+.followAction { min-width:0; max-width:180px; }
+.followAction button,.followAction a { max-width:100%; white-space:normal; text-align:center; }
+.self { color:#a6b69f; font-size:.75rem; line-height:1.5; }
+.state { padding:22px 0; font-size:.9rem; line-height:1.6; color:#c2cec3; }
+.rowNotice { grid-column:2/-1; font-size:.8rem; color:#dfcfb6; }
+.rowNotice p { line-height:1.6; }
+.more { margin-block:24px; }
+@media(max-width:520px) { .dialog { padding-inline:max(18px,env(safe-area-inset-left)) max(18px,env(safe-area-inset-right)); } .result { grid-template-columns:48px minmax(0,1fr) auto; gap:10px; } .portrait img,.portrait [role="img"] { width:46px; height:46px; flex-basis:46px; } .profileLink { font-size:.9rem; } .followAction { max-width:108px; } }
+@media(max-width:350px) { .followAction { grid-column:2/-1; max-width:none; } }

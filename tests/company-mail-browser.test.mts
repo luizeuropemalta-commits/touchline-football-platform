@@ -20,12 +20,12 @@ test("mail review PT/EN recovers errors, paginates and renders untrusted text sa
  for(const engine of [chromium,firefox,webkit]){
   const browser=await engine.launch({headless:true});
   try{for(const portuguese of [true,false])for(const width of [390,768,844,1280,1440]){
-   const context=await browser.newContext({viewport:{width,height:width===844?390:900},hasTouch:width===768||width===844,serviceWorkers:"block"});const page=await context.newPage();let fail=true;let reviewFail=true;const reviews:Record<string,unknown>[]=[];const errors:string[]=[];page.on("pageerror",error=>errors.push(error.message));
+   const context=await browser.newContext({viewport:{width,height:width===844?390:900},hasTouch:width===768||width===844,serviceWorkers:"block"});const page=await context.newPage();let fail=true;let reviewFail=true;let importState="DISABLED";const reviews:Record<string,unknown>[]=[];const errors:string[]=[];page.on("pageerror",error=>errors.push(error.message));
    await context.route("**/*",async route=>{const url=new URL(route.request().url());if(url.origin!==origin)return route.abort();
     if(url.pathname==="/fixture")return route.fulfill({contentType:"text/html",body:`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{box-sizing:border-box}body{background:#10251c;color:white;font:16px Arial;margin:0;padding:16px}nav{display:flex;flex-wrap:wrap;gap:8px}pre{white-space:pre-wrap;overflow-wrap:anywhere}${appCss}</style><div id="root" data-touchline-orientation-root></div><script>window.fixtureProps={portuguese:${portuguese}}</script><script>${bundle.script.replace(/<\/script/gi,"<\\/script")}</script>`});
     if(url.pathname==="/api/admin/company-finance")return route.fulfill({json:{rows:[{id:"22222222-2222-4222-8222-222222222222",source_reference:"Invoice record 42"}],hasNext:false}});
     if(url.pathname==="/api/admin/company-finance/mail"){
-     if(route.request().method()==="POST"){const body=route.request().postDataJSON();if(body.action==="run")return route.fulfill({json:{result:{state:"DISABLED",imported:0,pending:0}}});reviews.push(body.command);return route.fulfill({status:reviewFail?503:200,json:reviewFail?{error:"UNAVAILABLE"}:{review:{id:body.command.requestId,evidence_id:body.command.evidenceId}}});}
+     if(route.request().method()==="POST"){const body=route.request().postDataJSON();if(body.action==="run")return route.fulfill({json:{result:{state:importState,imported:0,pending:0}}});reviews.push(body.command);return route.fulfill({status:reviewFail?503:200,json:reviewFail?{error:"UNAVAILABLE"}:{review:{id:body.command.requestId,evidence_id:body.command.evidenceId}}});}
      if(fail)return route.fulfill({status:503,json:{error:"UNAVAILABLE"}});
      if(url.searchParams.get("kind")==="scans")return route.fulfill({json:{rows:[{id:"33333333-3333-4333-8333-333333333333",query:"from:billing@example.test",completed:false,updated_at:"2026-10-27T12:00:00Z"}],hasNext:false}});
      if(url.searchParams.get("kind")==="retries")return route.fulfill({json:{rows:[{scan_id:"scan",message_id:"message",code:"MAIL_CONTENT_LIMIT",attempts:2,resolved_at:null}],hasNext:false}});
@@ -52,6 +52,9 @@ test("mail review PT/EN recovers errors, paginates and renders untrusted text sa
    await page.getByText(portuguese?"Detalhes da importação":"Import details",{exact:true}).click();
    await expect(page.getByText("from:billing@example.test",{exact:true})).toBeVisible();
    await page.getByRole("button",{name:portuguese?"Importar próximo lote":"Import next batch",exact:true}).click();await expect(page.getByText(portuguese?"Esta caixa ainda não está habilitada para importação.":"This mailbox is not enabled for import yet.",{exact:true})).toBeVisible();
+   importState="STALE";await page.getByRole("button",{name:portuguese?"Importar próximo lote":"Import next batch",exact:true}).click();
+   await expect(page.getByRole("status").filter({hasText:portuguese?"Este lote não foi aplicado":"This batch was not applied"})).toBeVisible();
+   await expect(page.getByText(portuguese?/^Lote processado\./:/^Batch processed\./)).toHaveCount(0);
    assert.deepEqual(errors,[]);await page.screenshot({path:`/private/tmp/touchline-mail-browser/${engine.name()}-${portuguese?"pt":"en"}-${width}.png`,fullPage:true});await context.close();
   }}finally{await browser.close();}
  }

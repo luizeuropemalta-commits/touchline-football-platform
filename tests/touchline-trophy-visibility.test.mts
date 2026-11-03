@@ -129,7 +129,10 @@ test('mounted trophy component stops offscreen, resumes autoplay, and keeps redu
       await page.setContent(mountedHarness());
       const labels = page.locator('article small');
       const region = page.getByRole('region', { name: 'Trophies' });
-      await expect(labels.first()).toHaveText('Trophy 0');
+      // The initial render uses six slots before the responsive effect measures
+      // this 340px row. Wait for its two-slot page before capturing the baseline;
+      // Trophy 0 and autoplay=false are also true during that initial render.
+      await expect(labels).toHaveText(['Trophy 0', 'Trophy 1']);
       await expect(region).toHaveAttribute('data-auto-advance-enabled', 'false');
       const firstPage = await labels.allTextContents();
       await page.clock.runFor(6500); assert.deepEqual(await labels.allTextContents(), firstPage);

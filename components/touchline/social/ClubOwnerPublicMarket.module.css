@@ -1,0 +1,17 @@
+.market { margin-block-start: 2rem; padding-block-start: 1.5rem; border-top: 1px solid #37604b; }
+.market h2, .market h3 { overflow-wrap: anywhere; }
+.market p { color: #c2d5c9; line-height: 1.6; }
+.actions { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; }
+.offers { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr)); gap: 1rem; margin-block: 1.5rem; }
+.offers li { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 1rem; border: 1px solid #37604b; border-radius: 1rem; background: #07110b; padding: 1rem; }
+.offers h3 { font-size: 1.15rem; margin-block: .5rem; }
+.offers li > button { margin-block-start: auto; }
+.position { color: #b5ff38; font-size: .8rem; letter-spacing: .1em; }
+.confirmation { margin-block-start: 1.5rem; border-block: 1px solid #37604b; padding-block: 1.5rem; display: grid; gap: 1rem; }
+.confirmation > button { justify-self: start; }
+.confirmation label { display: grid; gap: .5rem; }
+.confirmation select { width: min(100%, 28rem); min-height: 44px; padding: .75rem; border: 1px solid #567663; border-radius: .5rem; background: #07110b; color: inherit; font: inherit; }
+.confirmation select:focus-visible { outline: 2px solid #b5ff38; outline-offset: 3px; }
+.terms { margin: 0; display: grid; gap: .75rem; }
+.terms > div { display: flex; justify-content: space-between; flex-wrap: wrap; gap: .5rem; }
+.terms dd { margin: 0; }

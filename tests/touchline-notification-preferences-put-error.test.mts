@@ -16,12 +16,15 @@ const sentinel = "PRIVATE_DIAGNOSTIC_SENTINEL schema=private_preferences path=/s
 const publicError = "Notification preferences could not be saved.";
 const plain = (value: unknown) => JSON.parse(JSON.stringify(value));
 
-function harness(options: { error?: boolean; authenticated?: boolean; arenaAccess?: boolean; clientAvailable?: boolean; authError?: boolean } = {}) {
+function harness(options: { error?: boolean; authenticated?: boolean; arenaAccess?: boolean; clientAvailable?: boolean; authError?: boolean;
+  signedOut?: boolean; throwsAt?: "client" | "auth" | "write" } = {}) {
   const calls = { clients: 0, auth: 0, writes: 0, singles: 0 };
   let written: Record<string, unknown> | undefined;
   const user = options.authenticated === false ? null : { id: accountId };
   const client = {
-    auth: { getUser: async () => { calls.auth++; return { data: { user }, error: options.authError ? { message: sentinel } : null }; } },
+    auth: { getUser: async () => { calls.auth++; if (options.throwsAt === "auth") throw Error(sentinel);
+      return { data: { user }, error: options.signedOut ? { name: "AuthSessionMissingError", message: sentinel }
+        : options.authError ? { name: "AuthRetryableFetchError", message: sentinel, status: 503 } : null }; } },
     from: (table: string) => {
       assert.equal(table, "notification_preferences", "unexpected table/device access");
       return {
@@ -33,6 +36,7 @@ function harness(options: { error?: boolean; authenticated?: boolean; arenaAcces
             assert.equal(columns, "settings, channels, frequency, quiet_hours, explicit_consent_at, updated_at");
             return { single: async () => {
               calls.singles++;
+              if (options.throwsAt === "write") throw Error(sentinel);
               return options.error
                 ? { data: null, error: { message: sentinel, details: sentinel, hint: sentinel, code: "SYNTHETIC_PRIVATE_CODE" } }
                 : { data: { ...row, updated_at: "2026-10-21T00:00:00Z", internal_diagnostic: sentinel }, error: null };
@@ -44,7 +48,8 @@ function harness(options: { error?: boolean; authenticated?: boolean; arenaAcces
   };
   const modules: Record<string, unknown> = {
     "next/server": { NextResponse: { json: (body: unknown, init?: ResponseInit) => new Response(JSON.stringify(body), init) } },
-    "@/lib/supabase/server": { createClient: async () => { calls.clients++; return options.clientAvailable === false ? null : client; } },
+    "@/lib/supabase/server": { createClient: async () => { calls.clients++; if (options.throwsAt === "client") throw Error(sentinel);
+      return options.clientAvailable === false ? null : client; } },
     "@/lib/touchlineArena/auth-access": { hasTouchLineArenaAccess: (value: unknown) => Boolean(value) && options.arenaAccess !== false },
     "@/lib/touchlineArena/push-device-contract": { parseTouchlineDeviceRegistration: () => { throw new Error("Unexpected device access"); } },
     "@/lib/touchlineArena/notification-quiet-hours": { parseNotificationQuietHours: (value: unknown) => {
@@ -112,7 +117,7 @@ test("preferences PUT preserves successful preference data without internal fiel
 });
 
 test("preferences PUT rejects unauthenticated or inaccessible accounts before writes", async () => {
-  for (const options of [{ authenticated: false }, { arenaAccess: false }, { clientAvailable: false }]) {
+  for (const options of [{ authenticated: false }, { arenaAccess: false }, { signedOut: true }]) {
     const h = harness(options);
     const response = await h.put(request());
     assert.equal(response.status, 401);
@@ -150,8 +155,22 @@ test("matching expected account remains a condition; malformed context or auth e
     assert.equal(h.calls.writes, 0);
   }
   const failed = harness({ authError: true });
-  assert.equal((await failed.put(request({ "X-Touchline-Expected-Account": accountId }))).status, 401);
+  assert.equal((await failed.put(request({ "X-Touchline-Expected-Account": accountId }))).status, 503);
   assert.equal(failed.calls.writes, 0);
+});
+
+test("service failures are not sign-outs and thrown requests remain private unconfirmed outcomes without retry", async () => {
+  for (const options of [{ clientAvailable: false }, { authError: true },
+    ...(["client", "auth", "write"] as const).map(throwsAt => ({ throwsAt }))]) {
+    const h = harness(options), response = await h.put(request());
+    assert.equal(response.status, 503);
+    assert.deepEqual(await response.json(), { ok: false, error: "Notification preferences could not be confirmed." });
+    for (const header of ["Cache-Control", "CDN-Cache-Control", "Vercel-CDN-Cache-Control"]) {
+      assert.match(response.headers.get(header) ?? "", /no-store/);
+    }
+    assert.equal(h.calls.writes, "throwsAt" in options && options.throwsAt === "write" ? 1 : 0);
+    assert.ok(h.calls.clients <= 1 && h.calls.auth <= 1 && h.calls.singles <= 1);
+  }
 });
 
 test("account condition applies before both consent and presentation actions", async () => {

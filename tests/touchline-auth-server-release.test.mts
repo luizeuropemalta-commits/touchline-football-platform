@@ -10,7 +10,7 @@ import * as cookieSecurity from '../lib/server/login-cookie-security.ts';
 
 const origin='https://candidate.example.test';
 const languages=['en-GB','pt-BR','es-ES','it-IT','fr-FR','ar-SA','tr-TR','de-DE'];
-function harness(flag?:string, failed=false, accessFails=false) {
+function harness(flag?:string, failed=false, accessFails=false, transportFailure?: "client" | "exchange") {
   let providerCalls=0;
   let signOuts=0;
   const env={TOUCHLINE_SITE_LOCALES_ENABLED:flag,NEXT_PUBLIC_SUPABASE_URL:'https://synthetic.invalid',NEXT_PUBLIC_SUPABASE_ANON_KEY:'synthetic'};
@@ -33,7 +33,7 @@ function harness(flag?:string, failed=false, accessFails=false) {
   modules['@/lib/server/auth-callback-destination']=load('lib/server/auth-callback-destination.ts');
   modules['@/lib/server/login-request-security']=load('lib/server/login-request-security.ts');
   const result=()=>{providerCalls++;return {data:{user:failed?null:{id:'synthetic-user',email:'synthetic@example.test'},session:{access_token:'synthetic',refresh_token:'synthetic'}},error:failed?{code:'invalid_credentials'}:null};};
-  modules['@/lib/supabase/server']={createClient:async()=>({auth:{exchangeCodeForSession:async()=>result(),signOut:async()=>{signOuts++;return {error:null};}}})};
+  modules['@/lib/supabase/server']={createClient:async()=>{if(transportFailure==='client')throw Error('PRIVATE_PROVIDER_DETAIL');return {auth:{exchangeCodeForSession:async()=>{if(transportFailure==='exchange')throw Error('PRIVATE_PROVIDER_DETAIL');return result();},signOut:async()=>{signOuts++;return {error:null};}}};}};
   modules['@supabase/ssr']={createServerClient:(_url:string,_key:string,options:{cookies:{setAll:(items:unknown[])=>void}})=>({auth:{signInWithPassword:async()=>{
     options.cookies.setAll([{name:'synthetic-session',value:'synthetic',options:{httpOnly:true,domain:'untrusted.example',path:'/wrong'}}]);
     return result();
@@ -118,5 +118,18 @@ test('recovery callback retains accepted query and dedicated destination and cle
     assert.equal(target.searchParams.get('lang'),'ar-SA');
     assert.equal(target.searchParams.get('error'),'auth_callback');
     assert.match(response.headers.get('set-cookie')??'',/Max-Age=0/);
+  }
+});
+
+test('callback transport failures fail closed, clear recovery state and attempt local session cleanup',async()=>{
+  for(const failure of ['client','exchange'] as const){
+    const h=harness('true',false,false,failure);
+    const response=await h.GET(new NextRequest(origin+'/auth/callback?'+new URLSearchParams({code:'synthetic',next:'/reset-password?lang=pt-BR'})));
+    assert.equal(response.status,503);
+    assert.equal(response.headers.get('location'),null);
+    assert.equal(response.cookies.get(recovery.TOUCHLINE_PASSWORD_RECOVERY_COOKIE)?.value,'');
+    assert.equal(response.cookies.get(recovery.TOUCHLINE_PASSWORD_RECOVERY_INTENT_COOKIE)?.value,'');
+    assert.doesNotMatch(await response.text(),/PRIVATE_PROVIDER_DETAIL/);
+    assert.equal(h.signOuts(),failure==='exchange'?1:0);
   }
 });

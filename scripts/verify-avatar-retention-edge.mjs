@@ -11,10 +11,13 @@ const nativeEnvGet = nativeDeno.env.get;
 const origin = 'https://xgxbwqxjssxxuihuwmgy.supabase.co';
 const key = `${Buffer.from('{"alg":"HS256"}').toString('base64url')}.${Buffer.from(JSON.stringify({ ref: 'xgxbwqxjssxxuihuwmgy', role: 'service_role' })).toString('base64url')}.synthetic_signature`;
 let index = 0;
-for (const mode of ['missing', 'off', 'foreign', 'invalid-key', 'enabled']) {
+for (const mode of ['missing', 'off', 'foreign', 'invalid-key', 'enabled', 'explicit-enabled', 'explicit-empty']) {
+  const enabled = mode === 'enabled' || mode === 'explicit-enabled';
   const env = mode === 'missing' ? {} : {
     SUPABASE_URL: mode === 'foreign' ? 'https://foreign.supabase.co' : origin,
-    SUPABASE_SERVICE_ROLE_KEY: mode === 'invalid-key' ? 'invalid' : key,
+    SUPABASE_SERVICE_ROLE_KEY: mode === 'invalid-key' || mode === 'explicit-enabled' ? 'invalid' : key,
+    ...(mode === 'explicit-enabled' ? { TOUCHLINE_QA_AVATAR_RETENTION_SERVICE_ROLE_KEY: key } : {}),
+    ...(mode === 'explicit-empty' ? { TOUCHLINE_QA_AVATAR_RETENTION_SERVICE_ROLE_KEY: '' } : {}),
     TOUCHLINE_QA_AVATAR_RETENTION_ENABLED: mode === 'off' ? 'false' : 'true',
   };
   let server, outbound = 0;
@@ -41,14 +44,14 @@ for (const mode of ['missing', 'off', 'foreign', 'invalid-key', 'enabled']) {
     const url = `http://127.0.0.1:${server.addr.port}/functions/v1/touchline-avatar-retention`;
     const send = headers => nativeFetch(url, { method: 'POST', headers, signal: AbortSignal.timeout(3000) });
     const unauthorized = await send({});
-    assert.equal(unauthorized.status, mode === 'enabled' ? 401 : 503);
+    assert.equal(unauthorized.status, enabled ? 401 : 503);
     await unauthorized.text();
     assert.equal(outbound, 0);
     const response = await send({ authorization: `Bearer ${key}` });
-    assert.equal(response.status, mode === 'enabled' ? 200 : 503);
+    assert.equal(response.status, enabled ? 200 : 503);
     const body = await response.json();
     assert.equal(JSON.stringify(body).includes(key), false);
-    if (mode === 'enabled') {
+    if (enabled) {
       assert.deepEqual(body, { status: 'processed', discovery: { listed: 0, registered: 0, denied: 0, skipped: 0 }, cleanup: { inspected: 0, accepted: 0, denied: 0, unknown: 0 } });
       assert.deepEqual(methods, ['touchline_claim_qa_avatar_retention_discovery', 'touchline_list_due_qa_avatar_retention_candidates']);
       env.TOUCHLINE_QA_AVATAR_RETENTION_ENABLED = 'false';

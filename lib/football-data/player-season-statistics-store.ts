@@ -112,6 +112,14 @@ function appearanceStatus(member: TouchlineFantasyLineupMember | undefined) {
   return "unused" as const;
 }
 
+export type LineupIdentityIssue = {
+  fixtureId: string;
+  providerFixtureId: string;
+  affectedPlayerId: string;
+  sourceSyncedAt: string | null;
+  unresolvedRows: Array<{ providerLineupId: string; providerTeamId: string }>;
+};
+
 export type PlayerSeasonStatisticsSyncResult = {
   ok: boolean;
   membershipsRead: number;
@@ -133,6 +141,7 @@ export type PlayerSeasonStatisticsSyncResult = {
   rankingError: string | null;
   scoringFixtureIds: string[];
   failedFixtureIds: string[];
+  lineupIdentityIssues: LineupIdentityIssue[];
   missingSettlementFixtureIds: string[];
 };
 
@@ -218,6 +227,7 @@ export async function syncTouchLinePlayerSeasonStatistics(admin: SupabaseClient,
     rankingError: null,
     scoringFixtureIds: [],
     failedFixtureIds: [],
+    lineupIdentityIssues: [],
     missingSettlementFixtureIds: [],
   };
   const { data: fixtures, error: fixturesError } = await readCompleteStatisticsInput(admin,"football_fixtures",
@@ -577,6 +587,19 @@ export async function syncTouchLinePlayerSeasonStatistics(admin: SupabaseClient,
       // an inferred absence or a season total missing the unresolved fixture.
       result.failedFixtureIds.push(...ambiguousAbsences.map((fixture) => fixture.id));
       result.errors.push(`lineup-identity-pending:${membership.football_player_id}`);
+      for (const fixture of ambiguousAbsences) {
+        const feed = feedByKey.get(`${fixture.provider}:${fixture.provider_fixture_id}`);
+        result.lineupIdentityIssues.push({
+          fixtureId: fixture.id,
+          providerFixtureId: fixture.provider_fixture_id,
+          affectedPlayerId: membership.football_player_id,
+          sourceSyncedAt: feed?.last_synced_at ?? null,
+          unresolvedRows: (lineupMembers(feed?.lineups_payload) ?? [])
+            .filter((row) => row.playerId == null && historicalMemberships.some((candidate) =>
+              candidate.club_id === clubIdByProviderId.get(String(row.teamId))))
+            .map((row) => ({ providerLineupId: String(row.providerId ?? ""), providerTeamId: String(row.teamId ?? "") })),
+        });
+      }
       continue;
     }
     const fixtureSettlements = eligibleFixtures.map((fixture) => {

@@ -38,7 +38,8 @@ export async function POST(request: NextRequest) {
    if(check.sha256!==meta.sha256 || check.byte_size!==meta.byte_size) return reply({error:"STORAGE_CONFLICT"},409);
   }
   const saved=await admin.from("touchline_company_documents").insert(row).select("*").single();
-  if(!saved.error) return reply({record:saved.data},201);
+  if(!saved.error) return saved.data && typeof saved.data === "object" && !Array.isArray(saved.data) && exactDocument(saved.data,row)
+    ? reply({record:saved.data},201) : reply({error:"LINK_NOT_CONFIRMED"},503);
   if(saved.error.code==="23505") { const retry=await admin.from("touchline_company_documents").select("*").eq("id",id).maybeSingle(); if(!retry.error&&retry.data&&exactDocument(retry.data,row)) return reply({record:retry.data}); return reply({error:"REQUEST_CONFLICT"},409); }
   // Preserve a possible private orphan for reconciliation; do not risk deleting a concurrent committed link.
   return reply({error:"LINK_NOT_CONFIRMED"},503);
@@ -54,7 +55,7 @@ export async function GET(request: NextRequest) {
    const pageRaw=request.nextUrl.searchParams.get("page")??"0",page=Number(pageRaw);
    if(!/^\d+$/.test(pageRaw)||!Number.isSafeInteger(page)||page>10000) return reply({error:"INVALID_INPUT"},400);
    const rows=await admin.from("touchline_company_documents").select("id,contract_id,filename,byte_size,created_at").eq("contract_id",contractId).order("id").range(page*50,page*50+50);
-   return rows.error?reply({error:"UNAVAILABLE"},503):reply({rows:(rows.data??[]).slice(0,50),hasNext:(rows.data?.length??0)>50,page});
+   return rows.error||!Array.isArray(rows.data)?reply({error:"UNAVAILABLE"},503):reply({rows:(rows.data??[]).slice(0,50),hasNext:(rows.data?.length??0)>50,page});
   }
   let id; try{id=documentUuid(raw);}catch{return reply({error:"INVALID_INPUT"},400);}
   const record=await admin.from("touchline_company_documents").select("*").eq("id",id).maybeSingle();

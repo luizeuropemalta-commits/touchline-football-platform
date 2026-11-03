@@ -4,6 +4,7 @@ import { runInNewContext } from "node:vm";
 import test from "node:test";
 import ts from "typescript";
 import { handlePublicOwners, type PeopleDependencies } from "../lib/touchlineArena/clubowner-public-handler.ts";
+import { publicOwnerId } from "../lib/touchlineArena/clubowner-public-contract.ts";
 import { hasTouchLineArenaAccess } from "../lib/touchlineArena/auth-access.ts";
 import { resolveServerReadWithin } from "../lib/touchlineArena/server-read-deadline.ts";
 
@@ -23,6 +24,12 @@ function fixture(options: { enabled?: boolean; photoEnabled?: boolean; error?: {
     require(name: string) {
       if (name === "server-only") return {};
       if (name === "@/lib/supabase/server") return { createClient: async () => { clients++; return options.missingClient ? null : client; } };
+      if (name === "./clubowner-public-contract") return { publicOwnerId };
+      if (name === "./clubowner-public-search-server") return {readPublicOwnerSearchPage: async (query: string, cursor: string | null, viewer: string | null) => {
+        calls.push({name:"directory",args:{query,cursor,viewer}});
+        if (options.rpcError) throw new Error("PRIVATE_DB_DETAIL");
+        return {profiles:[],nextCursor:null};
+      }};
       if (name === "./auth-access") return { hasTouchLineArenaAccess };
       if (name === "./server-read-deadline") return { resolveServerReadWithin };
       if (name === "@/lib/admin/owner") return { isOwnerEmail: (email: string) => email === "admin@example.invalid" };
@@ -64,4 +71,15 @@ test("application gate bypasses actual adapter setup and RPC errors remain sanit
   assert.equal(response.status, 503); assert.deepEqual(off.counts(), { clients: 0, authenticated: 0 });
   const failed = await handlePublicOwners(new Request("https://touchline.test/api?q=Alice"), "directory", fixture({ rpcError: true }).deps);
   assert.equal(failed.status, 503); assert.doesNotMatch(await failed.text(), /PRIVATE_DB_DETAIL/);
+});
+
+test("directory service identity comes only from verified session; guests have no actor",async()=>{
+ const user={id:"11111111-1111-4111-8111-111111111111",is_anonymous:false,app_metadata:{touchline_arena_access_v1:true}};
+ const own=fixture({user}); await own.deps.searchDirectory!("",null);
+ assert.deepEqual(JSON.parse(JSON.stringify(own.calls[0])),{name:"directory",args:{query:"",cursor:null,viewer:user.id}});
+ for(const candidate of [null,{...user,is_anonymous:true},{...user,app_metadata:{},user_metadata:user.app_metadata}]){
+  const f=fixture({user:candidate});await f.deps.searchDirectory!("Alice",null);
+  assert.equal((f.calls[0].args as {viewer:unknown}).viewer,null);
+ }
+ const invalid=fixture(); await assert.rejects(invalid.deps.searchDirectory!("",null),/AUTH_UNAVAILABLE/);assert.equal(invalid.calls.length,0);
 });

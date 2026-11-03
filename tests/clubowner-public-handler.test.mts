@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { handlePublicOwners, type PeopleDependencies, type PeopleEndpoint } from "../lib/touchlineArena/clubowner-public-handler.ts";
+import { projectPublicOwnerSearchPage } from "../lib/touchlineArena/clubowner-public-search.ts";
 import { normalizeTouchLineAuthReturnTo } from "../lib/touchlineArena/auth-i18n.ts";
 
 const id = "11111111-2222-4333-8444-555555555555";
@@ -9,10 +10,11 @@ function fixture(overrides: Partial<PeopleDependencies> = {}) {
   const calls: { name: string; args?: Record<string, unknown> }[] = [];
   const deps: PeopleDependencies = {
     enabled: true, currentActor: async () => ({ allowed: true }),
-    rpc: async (name, args) => { calls.push({ name, args }); return name.endsWith("search") ? [{ ...publicProfile, email: "PRIVATE_EMAIL", accountId: "PRIVATE_ID" }] : name.includes("own_profile") || name.includes("save_profile") ? { publicId: id, displayName: "Synthetic Person", published: true, followerCount: 2, email: "PRIVATE_EMAIL" } : { ...publicProfile, accountId: "PRIVATE_ID" }; },
+    searchDirectory: async () => ({ profiles: [{ ...publicProfile, rank: 3, accountId: "PRIVATE_ID", email: "PRIVATE_EMAIL" }], nextCursor: null }),
+    rpc: async (name, args) => { calls.push({ name, args }); return name.endsWith("search") ? [{ ...publicProfile, email: "PRIVATE_EMAIL", accountId: "PRIVATE_ID" }] : name.includes("own_profile") || name.includes("save_profile") ? { publicId: id, displayName: "Synthetic Person", published: true, followerCount: 2, email: "PRIVATE_EMAIL" } : { ...publicProfile, following: name === "touchline_people_set_follow" ? args?.p_active : publicProfile.following, accountId: "PRIVATE_ID" }; },
     ...overrides,
   };
-  const invoke = (endpoint: PeopleEndpoint, body?: unknown, headers: Record<string, string> = {}) => handlePublicOwners(new Request("https://touchline.test/api?q=Synthetic", {
+  const invoke = (endpoint: PeopleEndpoint, body?: unknown, headers: Record<string, string> = {}) => handlePublicOwners(new Request("https://touchline.test/api?q=Synthetic&include=standing", {
     method: body === undefined ? "GET" : "PUT", headers: { origin: "https://touchline.test", "content-type": "application/json", ...headers }, ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   }), endpoint, deps, id);
   return { calls, deps, invoke };
@@ -36,7 +38,7 @@ test("session, access and exact origin are required before writes", async () => 
   for (const [overrides, status] of [[{ currentActor: async () => null }, 401], [{ currentActor: async () => ({ allowed: false }) }, 403], [{ currentActor: async () => { throw new Error("AUTH_DOWN"); } }, 503]] as const) {
     const f = fixture(overrides); assert.equal((await f.invoke("follow", { active: true })).status, status); assert.equal(f.calls.length, 0);
   }
-  for (const headers of [{ origin: "https://evil.test" }, { origin: "" }, { "sec-fetch-site": "cross-site" }, { origin: "https://touchline.test.evil.test" }]) {
+  for (const headers of [{ origin: "https://evil.test" }, { origin: "" }, { "sec-fetch-site": "cross-site" }, { origin: "https://touchline.test.evil.test" }] as Record<string,string>[]) {
     const f = fixture(); assert.equal((await f.invoke("follow", { active: true }, headers)).status, 403); assert.equal(f.calls.length, 0);
   }
 });
@@ -47,6 +49,8 @@ test("publication and follow payloads cannot choose an actor or assign the publi
   assert.equal(f.calls.length, 0);
   assert.equal((await f.invoke("own", { displayName: "Name", published: false })).status, 200);
   assert.deepEqual(f.calls.pop(), { name: "touchline_people_save_profile", args: { p_display_name: "Name", p_published: false } });
+  assert.equal((await f.invoke("own", { displayName: "Name", published: true })).status, 200);
+  assert.deepEqual(f.calls.pop(), { name: "touchline_people_save_profile", args: { p_display_name: "Name", p_published: true } });
   assert.equal((await f.invoke("follow", { active: true })).status, 200);
   assert.deepEqual(f.calls.pop(), { name: "touchline_people_set_follow", args: { p_public_id: id, p_active: true } });
 });
@@ -58,6 +62,20 @@ test("body is byte-bounded while streaming, cancels overflow and rejects non-JSO
   assert.equal(cancelled, true); assert.ok(pulled <= 2); assert.equal(f.calls.length, 0);
   assert.equal((await f.invoke("follow", { active: true }, { "content-type": "text/plain" })).status, 400);
   assert.equal((await f.invoke("own", { displayName: "😀".repeat(60), published: true })).status, 200);
+});
+test("a stalled social write body expires without changing a profile or follow", { timeout: 1000 }, async t => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  for (const endpoint of ["own", "follow"] as const) {
+    let cancelled = false;
+    const stream = new ReadableStream({ cancel() { cancelled = true; } });
+    const request = new Request("https://touchline.test/api", { method: "PUT", headers: { origin: "https://touchline.test", "content-type": "application/json" }, body: stream, duplex: "half" } as RequestInit);
+    const f = fixture(); const pending = handlePublicOwners(request, endpoint, f.deps, id);
+    await new Promise(resolve => setImmediate(resolve));
+    t.mock.timers.tick(10_000);
+    const response = await pending;
+    assert.equal(response.status, 400); assert.equal(cancelled, true); assert.equal(f.calls.length, 0);
+    assert.doesNotMatch(await response.text(), /TIMEOUT|PEOPLE_/);
+  }
 });
 test("hidden/unknown IDs have the same public response; mutation failures are sanitized", async () => {
   assert.equal((await fixture({ rpc: async () => null }).invoke("profile")).status, 404);
@@ -97,7 +115,71 @@ test("photo read failing after follow mutation returns uncertain 503 and fresh G
   assert.doesNotMatch(await unknown.text(), /PRIVATE_PHOTO_READ|following|followerCount/);
   failPhoto = false;
   const refreshed = await f.invoke("profile"); assert.equal(refreshed.status, 200);
-  assert.deepEqual(await refreshed.json(), { profile: { ...publicProfile, following: true, followerCount: 3, avatarUrl: null } });
+  assert.deepEqual(await refreshed.json(), { profile: { ...publicProfile, following: true, followerCount: 3, avatarUrl: null, planKey: null, standing: null } });
   assert.equal(mutations, 1);
   assert.equal((await f.invoke("follow", { active: true })).status, 200); assert.equal(following, true);
+});
+
+ test("directory browse accepts empty query, validates cursors and fails closed without ranked service", async () => {
+  const calls: unknown[] = [];
+  const f = fixture({searchDirectory: async (...args) => {calls.push(args); return {profiles:[],nextCursor:null};}});
+  const response = await handlePublicOwners(new Request("https://touchline.test/api"), "directory", f.deps);
+  assert.equal(response.status, 200); assert.deepEqual(await response.json(), {profiles:[],nextCursor:null}); assert.deepEqual(calls,[ ["",null] ]);
+  for (const suffix of ["?q=a", "?cursor=not!valid", "?cursor="+"a".repeat(1025)]) {
+    assert.equal((await handlePublicOwners(new Request("https://touchline.test/api"+suffix),"directory",f.deps)).status,400);
+  }
+  assert.equal(calls.length,1);
+  assert.equal((await fixture({searchDirectory:undefined}).invoke("directory")).status,503);
+  assert.equal((await fixture({searchDirectory:async()=>{throw new Error("PEOPLE_INVALID_CURSOR");}}).invoke("directory")).status,400);
+});
+
+test("directory HTTP searches public names only and keeps identifiers limited to routes and DTO identity",async()=>{
+ const candidate={...publicProfile,accountId:"66666666-7777-4888-8999-aaaaaaaaaaaa"};
+ const f=fixture({searchDirectory:async(query,cursor)=>projectPublicOwnerSearchPage([candidate],[{accountId:candidate.accountId,rank:40}],query,cursor)});
+ for(const query of ["person syn",id,candidate.accountId]){
+  const response=await handlePublicOwners(new Request("https://touchline.test/api?q="+encodeURIComponent(query)),"directory",f.deps);
+  assert.equal(response.status,200);const body=await response.json();assert.equal(body.profiles.length,query==="person syn"?1:0);
+  assert.doesNotMatch(JSON.stringify(body),/accountId|email/);
+ }
+});
+
+test("HTTP profile and follow retain only confirmed plan enum; callers cannot assign it",async()=>{
+ const f=fixture({rpc:async()=>({...publicProfile,following:true,planKey:"vip",balance:999,provider_customer_reference:"SECRET"})});
+ for(const [endpoint,body] of [["profile",undefined],["follow",{active:true}]] as const){
+  const response=await f.invoke(endpoint,body);assert.equal(response.status,200);const data=await response.json();assert.equal(data.profile.planKey,"vip");assert.doesNotMatch(JSON.stringify(data),/balance|provider|SECRET/);
+ }
+ assert.equal((await f.invoke("follow",{active:true,planKey:"vip"})).status,400);
+ assert.equal((await f.invoke("own",{displayName:"Person",published:true,planKey:"vip"})).status,400);
+ assert.equal((await fixture({rpc:async()=>({...publicProfile,planKey:"invalid"})}).invoke("profile")).status,503);
+});
+
+test('profile and follow receipts must identify the requested owner and confirm requested relationship', async () => {
+  const other='22222222-2222-4333-8444-555555555555';
+  for (const endpoint of ['profile','follow'] as const) {
+    const f=fixture({rpc:async()=>({...publicProfile,publicId:other,following:true})});
+    assert.equal((await f.invoke(endpoint,endpoint==='follow'?{active:true}:undefined)).status,503);
+  }
+  for (const active of [true,false]) {
+    assert.equal((await fixture({rpc:async()=>({...publicProfile,following:!active})}).invoke('follow',{active})).status,503);
+    assert.equal((await fixture({rpc:async()=>({...publicProfile,following:active})}).invoke('follow',{active})).status,200);
+  }
+});
+
+test("profile and follow attach only confirmed sporting standings, never failure-as-zero", async () => {
+ const confirmed = fixture({profileStanding: async received => { assert.equal(received,id); return {rank:2,points:48.28,email:"PRIVATE"} as {rank:number;points:number}; }});
+ for (const [endpoint,body] of [["profile",undefined],["follow",{active:true}]] as const) {
+  const response = await confirmed.invoke(endpoint,body); assert.equal(response.status,200);
+  const payload=await response.json(); assert.deepEqual(payload.profile.standing,{rank:2,points:48.28}); assert.doesNotMatch(JSON.stringify(payload),/PRIVATE/);
+ }
+ for(const profileStanding of [async()=>null,async()=>{throw Error("PRIVATE_DB");}]) {
+  const response=await fixture({profileStanding}).invoke("profile"); assert.equal(response.status,200); assert.equal((await response.json()).profile.standing,null);
+ }
+ const zero=await fixture({profileStanding:async()=>({rank:1,points:0})}).invoke("profile"); assert.equal((await zero.json()).profile.standing.points,0);
+ const invalid=await fixture({profileStanding:async()=>({rank:0,points:NaN})}).invoke("profile"); assert.equal(invalid.status,503);
+});
+
+test("avatar metadata GET does not read season standings",async()=>{
+ const f=fixture({profileStanding:async()=>assert.fail("metadata must stay lightweight")});
+ const response=await handlePublicOwners(new Request("https://touchline.test/api"),"profile",f.deps,id);
+ assert.equal(response.status,200); assert.equal((await response.json()).profile.standing,undefined);
 });

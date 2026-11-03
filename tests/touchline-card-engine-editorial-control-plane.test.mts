@@ -26,11 +26,12 @@ const candidates = [{
 
 test("published or reverted batches expire the public projection only after a successful transaction", () => {
   const transition = batchServer.slice(batchServer.indexOf("export async function transitionTouchlineCardEngineBatch"));
-  assert.ok(transition.indexOf("if (error || !data?.[0]) throw") < transition.indexOf("revalidateTag("));
+  const validation = transition.indexOf("if (error || !result");
+  assert.ok(validation >= 0 && validation < transition.indexOf("revalidateTag("));
   assert.match(transition, /input\.action === "publish" \|\| input\.action === "rollback"/);
   assert.match(transition, /touchline-public-projection:\$\{TOUCHLINE_ENGLAND_COMPETITION_PROVIDER_ID\}:\$\{TOUCHLINE_ENGLAND_EFFECTIVE_SEASON\}/);
   assert.match(transition, /\{ expire: 0 \}/);
-  assert.match(transition, /catch \{[\s\S]*console\.error\([\s\S]*return data\[0\]/);
+  assert.match(transition, /catch \{[\s\S]*console\.error\([\s\S]*return result/);
 });
 
 test("Card Engine resolves provider id first and makes name plus club manual-review-only", () => {

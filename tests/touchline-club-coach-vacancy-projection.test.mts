@@ -24,7 +24,7 @@ function harness() {
   const visualIntentEpoch: { appliedCollection?: unknown } = {};
   let projected: unknown;
   const apply = runInNewContext(compiled, {
-    collectionEnabled: true, marketOpen: true,
+    collectionEnabled: true, marketOpen: true, marketPage: false, live: null, preferCurrentSquad: false,
     locale: "pt-BR", draftLocalesEnabled: false,
     snapshot: { formationRegistry: { "4-3-3": shape } },
     primaryDetails: {}, formationCode: "4-3-3", selectedCoachId: "old-coach",

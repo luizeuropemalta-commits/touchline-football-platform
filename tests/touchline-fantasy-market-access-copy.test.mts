@@ -1,3 +1,5 @@
+import { presentGameweekScore } from "../lib/touchlineFantasy/gameweek-score-status.ts";
+import { getGameweekScoreStatusCopy } from "../lib/touchlineFantasy/gameweek-score-status-i18n.ts";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
@@ -65,6 +67,8 @@ function renderMarkup(node: ts.JsxElement, input: Record<string, unknown>) {
     React, styles: new Proxy({}, { get: (_target, key) => String(key) }),
     locale: input.pt ? "pt-BR" : "en-GB", draftLocalesEnabled: false, gameweeks: [], marketPage: false,
     collectionEnabled: false, live: null,
+    roundScore: presentGameweekScore(undefined, undefined),
+    scoreStatusCopy: getGameweekScoreStatusCopy(typeof input.locale === "string" ? input.locale : input.pt ? "pt-BR" : "en-GB"),
     getTouchlineFantasyMarketAccessCopy: catalogueResult.value?.getTouchlineFantasyMarketAccessCopy,
     workflowCopy: getTouchlineFantasyMarketWorkflowCopy(typeof input.locale === "string" ? input.locale : input.pt ? "pt-BR" : "en-GB"),
     // The clock has its own real-render tests. Here only its status prop is a seam.
@@ -192,5 +196,17 @@ test("draft/invalid locales keep actual window and access labels in English unti
   for (const locale of [...codes.slice(2), "", "invalid"]) {
     assert.equal(renderMarkup(section, { ...base, locale }), english);
     for (const label of accessLabels) assert.equal(render(label, { ...base, locale }), "View only");
+  }
+});
+
+test("footer shows missing valid XI explicitly without replacing it with readiness copy", () => {
+  for (const pt of [true, false]) {
+    const locale = pt ? "pt-BR" : "en-GB";
+    const output = render(firstStrongIn("myClubGameweekFooter"), { pt,
+      snapshot: { entitlementActive: true }, activeGameweek: { state: "FINAL" }, deadlineReached: true,
+      validation: { valid: true }, lineupConfirmed: false, selectedCount: 11,
+      roundScore: presentGameweekScore("NO_VALID_LINEUP", undefined) });
+    assert.equal(output, getGameweekScoreStatusCopy(locale).NO_VALID_LINEUP);
+    assert.doesNotMatch(output, /0\.00|0,00/);
   }
 });

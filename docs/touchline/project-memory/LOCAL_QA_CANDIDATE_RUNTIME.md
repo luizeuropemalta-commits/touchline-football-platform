@@ -43,3 +43,7 @@ The optional final argument `--qa-market-context` restores the previously owner-
 ## Still required
 
 Validate compilation with the owner-approved 4 GiB limit; verify current source flags without changing them; run persona preflight and actual candidate; review existing customer Safari session, login cookies, lineup navigation, locale/roster loading and coach review. Do not confirm financial transactions or send notifications. Full product acceptance and all release gates remain pending.
+
+## 2026-11-01 — owner-authorized WARN startup
+
+Owner explicitly requested removal of the memory startup blocker and restart. The local launcher now admits macOS warning level 2 at startup and during monitoring. Critical/unknown pressure and the 1 GiB disk floor remain enforced. Focused assertions passed for WARN admission, critical/unknown rejection, low-disk rejection and repeated monitoring. QA persona preflight passed and Next restarted on localhost:3100. This is not a full UI/data acceptance or a deployment.

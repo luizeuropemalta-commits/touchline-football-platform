@@ -7,13 +7,14 @@ import { renderToStaticMarkup } from "react-dom/server";
 import * as icons from "lucide-react";
 import ts from "typescript";
 import * as auth from "../../lib/touchlineArena/auth-i18n.ts";
+import * as access from "../../lib/touchlineArena/auth-access.ts";
 import * as deadline from "../../lib/touchlineArena/server-read-deadline.ts";
 import { cn } from "../../lib/utils.ts";
 const compile = (file: string) => ts.transpileModule(readFileSync(new URL(file, import.meta.url), "utf8"), {
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true },
 }).outputText;
 const pageCode = compile("../../app/(app)/admin/market-values/page.tsx"), uiCode = compile("../../components/arena-admin-ui.tsx"), ownerCode = compile("../../lib/admin/owner.ts");
-export function marketValueFixture(options: { user?: { email: string } | null; state?: "empty" | "populated" | "error" | "rejected"; admin?: boolean } = {}) {
+export function marketValueFixture(options: { user?: { email: string; app_metadata?: Record<string, unknown> } | null; authError?: boolean; state?: "empty" | "populated" | "error" | "rejected"; admin?: boolean } = {}) {
   const calls: string[] = [], filters: string[] = [], exports: Record<string, unknown> = {}, ui: Record<string, unknown> = {}, owner: Record<string, unknown> = {};
   runInNewContext(ownerCode, { exports: owner, process: { env: { TOUCHLINE_OWNER_EMAILS: "owner@example.test" } } });
   const common = (name: string): unknown => {
@@ -45,8 +46,9 @@ export function marketValueFixture(options: { user?: { email: string } | null; s
       if (name === "@/components/arena-admin-ui") return ui;
       if (name === "@/lib/admin/owner") return owner;
       if (name === "@/lib/touchlineArena/auth-i18n") return auth;
+      if (name === "@/lib/touchlineArena/auth-access") return access;
       if (name === "@/lib/touchlineArena/server-read-deadline") return deadline;
-      if (name === "@/lib/supabase/server") return { createClient: async () => ({ auth: { getUser: async () => ({ data: { user: options.user === undefined ? { email: "owner@example.test" } : options.user } }) } }) };
+      if (name === "@/lib/supabase/server") return { createClient: async () => ({ auth: { getUser: async () => ({ data: { user: options.user === undefined ? { email: "owner@example.test", app_metadata: { touchline_arena_access_v1: true } } : options.user }, error: options.authError ? { message: "PRIVATE_AUTH_ERROR" } : null }) } }) };
       if (name === "@/lib/supabase/admin") return { createAdminClient: () => options.admin === false ? null : { from: query } };
       return common(name);
     },

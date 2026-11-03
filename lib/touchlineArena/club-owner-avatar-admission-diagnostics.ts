@@ -1,10 +1,11 @@
 import { allowsClubOwnerAvatarLocalEnvironment, isClubOwnerAvatarLocalRequestOrigin } from "./club-owner-avatar-local-admission.ts";
+import { allowsClubOwnerAvatarAudience, parseClubOwnerAvatarAudience } from "./club-owner-avatar-audience.ts";
 import { isAvatarAccountId } from "./club-owner-avatar-upload-contract.ts";
 
 type Environment = Readonly<Record<string, string | undefined>>;
 export type AvatarAdmissionDiagnosticCode = "local_origin_rejected" | "local_environment_rejected" | "hosted_environment_unverified"
   | "read_disabled" | "upload_disabled" | "selection_disabled" | "retention_unverified"
-  | "configured_actor_invalid" | "actor_unverified" | "actor_mismatch";
+  | "configured_audience_invalid" | "configured_actor_invalid" | "actor_unverified" | "actor_mismatch";
 
 /** Internal configuration diagnostic only, never request authorization.
  * No I/O or input values are returned. Auth, RPC, Storage and retention execution
@@ -24,9 +25,14 @@ export function inspectClubOwnerAvatarAdmissionConfiguration(input: Readonly<{
   if (environment.TOUCHLINE_CLUB_OWNER_AVATAR_SELECTION_ENABLED !== "true") codes.push("selection_disabled");
   if (environment.TOUCHLINE_CLUB_OWNER_AVATAR_RETENTION_READY !== "true") codes.push("retention_unverified");
   const configuredActor = environment.TOUCHLINE_CLUB_OWNER_AVATAR_UPLOAD_ACCOUNT_ID;
-  if (!isAvatarAccountId(configuredActor)) codes.push("configured_actor_invalid");
+  const configuredAudience = environment.TOUCHLINE_CLUB_OWNER_AVATAR_AUDIENCE;
+  const audience = parseClubOwnerAvatarAudience({ audience: configuredAudience, accountId: configuredActor });
+  if (!audience) {
+    codes.push(configuredAudience !== undefined && configuredAudience !== "customers"
+      ? "configured_audience_invalid" : "configured_actor_invalid");
+  }
   if (!isAvatarAccountId(expectedActorId)) codes.push("actor_unverified");
-  else if (isAvatarAccountId(configuredActor) && configuredActor.toLowerCase() !== expectedActorId.toLowerCase()) codes.push("actor_mismatch");
+  else if (audience && !allowsClubOwnerAvatarAudience(audience, expectedActorId)) codes.push("actor_mismatch");
   return Object.freeze({ configuration: codes.length ? "blocked" as const : "checks_pending" as const,
     codes: Object.freeze(codes), runtimeVerificationRequired: true as const });
 }

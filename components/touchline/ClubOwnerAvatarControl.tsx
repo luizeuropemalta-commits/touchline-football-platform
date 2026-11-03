@@ -1,21 +1,18 @@
 "use client";
+import { clubOwnerAvatarInvalidation } from "@/lib/touchlineArena/clubowner-avatar-invalidation";
 
-import { useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { createPortal } from "react-dom";
-import { X } from "lucide-react";
+import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { startAccountLocaleIdentityObserver } from "@/lib/touchlineArena/account-locale-identity-observer";
 import { createClubOwnerAvatarRecoveryClient } from "@/lib/touchlineArena/club-owner-avatar-client";
-import { getTouchlineClubOwnerAvatarUiCopy, getTouchlineClubOwnerAvatarSelectionCopy } from "@/lib/touchlineArena/club-owner-avatar-ui-i18n";
+import { getTouchlineClubOwnerAvatarSelectionCopy, getTouchlineClubOwnerAvatarUiCopy } from "@/lib/touchlineArena/club-owner-avatar-ui-i18n";
 import type { projectAvatarRecoveryContext } from "@/lib/touchlineArena/club-owner-avatar-upload-contract";
 import type { createClubOwnerAvatarClient } from "@/lib/touchlineArena/club-owner-avatar-client";
 import { projectClubOwnerAvatarSelectionContext } from "@/lib/touchlineArena/club-owner-avatar-selection-contract";
 import ClubOwnerAvatarUploadSelection from "./ClubOwnerAvatarUploadSelection";
-import { useTouchlineDialog, useTouchlineDialogScrollLock } from "./a11y/TouchlineDialog";
 import controls from "./TouchlineGlobalNavigation.module.css";
 import styles from "./ClubOwnerMarketHeader.module.css";
-import modal from "./ClubOwnerAvatarControl.module.css";
 
 export type ClubOwnerAvatarUiContext = ReturnType<typeof projectAvatarRecoveryContext>;
 type Props = { accountId: string; context: ClubOwnerAvatarUiContext | null; locale: string; children: ReactNode; draftLocalesEnabled?: boolean; avatarSelectionEnabled?: boolean; retentionReady?: boolean };
@@ -26,33 +23,24 @@ type Lifetime = { accountId: string; live: boolean; valid: boolean; observed: bo
 /** Recovery remains the default. Selection additionally requires both explicit
  * dormant capabilities; no automatic status/fence/retry or photo update. */
 export default function ClubOwnerAvatarControl({ accountId, context, locale, children, draftLocalesEnabled = false, avatarSelectionEnabled = false, retentionReady = false }: Props) {
-  const copy = getTouchlineClubOwnerAvatarUiCopy(locale, draftLocalesEnabled), router = useRouter(), id = useId();
+  const router = useRouter();
   const enabled = context?.accountId === accountId && context.uploadAllowed === true
     && context.canUpload === false && context.readyForSelection === false;
   const current = useRef<Lifetime | null>(null);
   const upload = useRef<ReturnType<typeof createClubOwnerAvatarClient> | null>(null);
   const selection = projectClubOwnerAvatarSelectionContext(context, avatarSelectionEnabled, retentionReady);
-  const portrait = useRef<HTMLButtonElement | null>(null), heading = useRef<HTMLHeadingElement | null>(null);
-  const [portal, setPortal] = useState<HTMLElement | null>(null);
+  const portrait = useRef<HTMLButtonElement | null>(null);
+  const picker = useRef<(() => void) | null>(null);
+  const [recoveryNeeded, setRecoveryNeeded] = useState(Boolean(context?.activeOperationId));
+  const [confirming, setConfirming] = useState(false);
   const [view, setView] = useState<{ accountId: string; available: boolean; snapshot: Snapshot | null }>({ accountId, available: false, snapshot: null });
-  const [opened, setOpened] = useState(false), [confirming, setConfirming] = useState(false);
   const available = enabled && view.accountId === accountId && view.available;
-  const snapshot = view.accountId === accountId ? view.snapshot : null;
-  const busy = snapshot?.phase === "checking" || snapshot?.phase === "fencing";
   const isCurrent = (life: Lifetime) => current.current === life && life.live && life.valid && life.observed;
   const photoCopy = getTouchlineClubOwnerAvatarSelectionCopy(locale, draftLocalesEnabled);
-  const modalOpen = opened && available && portal !== null;
-  const title = selection ? photoCopy.profileTitle : copy.title;
-  const { dialogRef, dialogProps } = useTouchlineDialog<HTMLDialogElement>({ open: modalOpen, label: title,
-    onDismiss: close, initialFocusRef: heading, returnFocusRef: portrait, containEveryTab: true });
-  useTouchlineDialogScrollLock(modalOpen);
-  useLayoutEffect(() => {
-    const node = dialogRef.current;
-    if (!node) return;
-    if (modalOpen && !node.open) node.showModal();
-    if (!modalOpen && node.open) node.close();
-    return () => { if (node.open) node.close(); };
-  }, [modalOpen, portal, dialogRef]);
+  const copy = getTouchlineClubOwnerAvatarUiCopy(locale, draftLocalesEnabled);
+  const snapshot = view.accountId === accountId ? view.snapshot : null;
+  const phase = snapshot?.phase;
+  const busy = phase === "checking" || phase === "fencing";
 
   useLayoutEffect(() => {
     if (!enabled) return;
@@ -69,7 +57,7 @@ export default function ClubOwnerAvatarControl({ accountId, context, locale, chi
     current.current = life;
     const retire = () => {
       life.valid = false; life.recovery.dispose(); upload.current?.dispose(); upload.current = null;
-      if (life.live && current.current === life) { setView({ accountId, available: false, snapshot: null }); setConfirming(false); setOpened(false); }
+      if (life.live && current.current === life) setView({ accountId, available: false, snapshot: null });
     };
     const invalidate = () => { terminal = true; retire(); };
     let unsubscribe: (() => void) | undefined;
@@ -98,6 +86,8 @@ export default function ClubOwnerAvatarControl({ accountId, context, locale, chi
           }
           if (!life.valid || life.observed) return;
           life.observed = true;
+          setRecoveryNeeded(Boolean(context?.activeOperationId));
+          setConfirming(false);
           setView({ accountId, available: true, snapshot: life.recovery.snapshot() });
         },
       });
@@ -107,14 +97,11 @@ export default function ClubOwnerAvatarControl({ accountId, context, locale, chi
       invalidate(); life.live = false; unsubscribe?.();
       if (current.current === life) current.current = null;
     };
-  }, [accountId, enabled]);
+  }, [accountId, enabled, context?.revision, context?.generation, context?.activeOperationId]);
 
-  // Closing hides the persistent dialog. It never disposes a dispatched upload
-  // or its recovery controller; a lost acknowledgement remains recoverable.
-  function close() { setOpened(false); setConfirming(false); }
   async function perform(action: "observe" | "fence" | "retry") {
     const life = current.current;
-    if (!life || life.accountId !== accountId || !enabled || !isCurrent(life) || life.busy || action === "fence" && !confirming) return;
+    if (!life || !enabled || !isCurrent(life) || life.busy || action === "fence" && !confirming) return;
     life.engaged = true; life.busy = true; setConfirming(false);
     try {
       const pending = action === "observe" ? life.recovery.observe() : action === "fence" ? life.recovery.fence(true) : life.recovery.retryFence(true);
@@ -122,56 +109,42 @@ export default function ClubOwnerAvatarControl({ accountId, context, locale, chi
       setView({ accountId, available: true, snapshot: life.recovery.snapshot() });
       const result = await pending;
       if (!isCurrent(life)) return;
-      setView({ accountId, available: true, snapshot: life.recovery.snapshot() });
-      if (result === "refresh_required" && isCurrent(life)) router.refresh();
+      const next = life.recovery.snapshot();
+      setView({ accountId, available: true, snapshot: next });
+      if (result === "refresh_required") {
+        if (next.barrierStatus === "committed") clubOwnerAvatarInvalidation.publish();
+        router.refresh();
+      }
     } finally { if (isCurrent(life)) life.busy = false; }
   }
-  const phase = snapshot?.phase;
-  const message = selection && phase === "refresh_required" ? getTouchlineClubOwnerAvatarSelectionCopy(locale, draftLocalesEnabled).recovery : !enabled ? copy.off : !available ? copy.blocked : phase === "checking" ? copy.observing
-    : phase === "fencing" ? copy.fencing : phase === "unknown" ? copy.unknown : phase === "refresh_required" ? copy.refreshRequired
-    : phase === "observed" ? copy.observed : copy.unobserved;
+
   return <>
     <button ref={portrait} type="button" data-avatar-action="open" className={`${controls.link} ${styles.photoButton}`}
-      disabled={!available} aria-label={selection ? photoCopy.choose : copy.open} aria-haspopup="dialog" aria-expanded={modalOpen} aria-controls={`${id}-panel`} aria-describedby={`${id}-status`}
-      onClick={() => { const life = current.current; if (available && life && isCurrent(life)) { life.engaged = true; setPortal(document.body); setOpened(true); } }}>{children}</button>
-    <small id={`${id}-status`} role="status" aria-live="polite">{message}</small>
-    {portal ? createPortal(<dialog {...dialogProps} id={`${id}-panel`} className={modal.dialog} aria-modal={modalOpen ? true : undefined}
-      aria-labelledby={`${id}-title`} data-avatar-dialog="true" dir={locale === "ar-SA" && draftLocalesEnabled ? "rtl" : "ltr"}
-      onCancel={event => { event.preventDefault(); close(); }}>
-      <div className={modal.shell}>
-        <header className={modal.header}><div><span className={modal.eyebrow}>TouchLine / ClubOwner</span>
-          <h2 ref={heading} tabIndex={-1} id={`${id}-title`}>{title}</h2></div>
-          <button type="button" className={`${controls.link} ${modal.close}`} data-avatar-action="close" aria-label={copy.close} onClick={close}><X size={20} aria-hidden="true" /></button>
-        </header>
-        {selection ? <p className={modal.hint}>{photoCopy.profileHint}</p> : null}
-        <div className={modal.content}>
+      disabled={!available || !selection && !recoveryNeeded} aria-label={photoCopy.choose}
+      onClick={() => { const life = current.current; if (available && life && isCurrent(life)) { life.engaged = true; if (!recoveryNeeded) picker.current?.(); } }}>{children}</button>
     {available && selection ? <ClubOwnerAvatarUploadSelection
       key={`${selection.accountId}:${selection.revision}:${selection.generation}`}
-      context={selection} enabled={avatarSelectionEnabled} retentionReady={retentionReady} visible={modalOpen}
+      context={selection} enabled={avatarSelectionEnabled} retentionReady={retentionReady} visible
       locale={locale} draftLocalesEnabled={draftLocalesEnabled}
       isCurrent={() => { const life = current.current; return !!life && life.accountId === accountId && isCurrent(life); }}
       canSelect={() => { const life = current.current; return !!life && !life.busy && life.recovery.snapshot().phase === "unobserved"; }}
-      recoveryActive={busy || phase !== "unobserved"}
+      onPickerReady={open => { picker.current = open; }} direct
+      recoveryActive={recoveryNeeded}
+      onRecoveryRequired={() => setRecoveryNeeded(true)}
       registerUpload={value => {
         const life = current.current;
         if (value && (!life || !isCurrent(life))) { value.dispose(); return; }
         if (value && life) life.engaged = true;
         upload.current = value;
-      }} onRefreshRequired={() => router.refresh()} /> : null}
-    {available ? <section className={modal.recovery} aria-labelledby={`${id}-recovery-title`} aria-busy={busy}>
-      <h3 id={`${id}-recovery-title`}>{copy.title}</h3>{!selection ? <p>{copy.noUpload}</p> : null}
-      <p role="status">{message}</p>
-      <div className={modal.actions}>
-        <button type="button" className={controls.link} data-avatar-action="observe" disabled={busy} onClick={() => void perform("observe")}>{copy.observe}</button>
-        {phase === "observed" && !snapshot?.pendingFence && !confirming ? <button type="button" className={controls.link} data-avatar-action="prepare-fence"
-          disabled={busy || !snapshot?.context?.uploadAllowed} onClick={() => setConfirming(true)}>{copy.prepareFence}</button> : null}
+      }} onRefreshRequired={() => { clubOwnerAvatarInvalidation.publish(); router.refresh(); }} /> : null}
+    {recoveryNeeded ? <section aria-busy={busy} data-avatar-recovery="true">
+      <p role="status">{!available ? copy.blocked : busy ? phase === "checking" ? copy.observing : copy.fencing : phase === "unknown" ? copy.unknown : phase === "refresh_required" ? copy.refreshRequired : photoCopy.recovery}</p>
+      {available ? <>
+        <button type="button" className={controls.link} data-avatar-action="observe" disabled={busy || Boolean(snapshot?.pendingFence)} onClick={() => void perform("observe")}>{copy.observe}</button>
+        {phase === "observed" && !snapshot?.pendingFence && !confirming ? <button type="button" className={controls.link} data-avatar-action="prepare-fence" disabled={busy || !snapshot?.context?.uploadAllowed} onClick={() => setConfirming(true)}>{copy.prepareFence}</button> : null}
         {snapshot?.pendingFence && !busy ? <button type="button" className={controls.link} data-avatar-action="retry" onClick={() => void perform("retry")}>{copy.retry}</button> : null}
-      </div>
-      {confirming ? <div className={modal.confirmation}><h4>{copy.confirmTitle}</h4><p>{copy.confirmBody}</p>
-        <button type="button" className={controls.link} data-avatar-action="confirm-fence" disabled={busy} onClick={() => void perform("fence")}>{copy.confirmFence}</button></div> : null}
+        {confirming ? <div><p>{copy.confirmBody}</p><button type="button" className={controls.link} data-avatar-action="confirm-fence" disabled={busy} onClick={() => void perform("fence")}>{copy.confirmFence}</button></div> : null}
+      </> : null}
     </section> : null}
-        </div>
-      </div>
-    </dialog>, portal) : null}
   </>;
 }

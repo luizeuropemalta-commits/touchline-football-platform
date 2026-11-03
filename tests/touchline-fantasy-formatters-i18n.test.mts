@@ -1,3 +1,5 @@
+import { presentGameweekScore, type GameweekScoreStatus } from "../lib/touchlineFantasy/gameweek-score-status.ts";
+import { getGameweekScoreStatusCopy } from "../lib/touchlineFantasy/gameweek-score-status-i18n.ts";
 import assert from "node:assert/strict";
 import { resolveTouchlineCatalogueLocale } from "../lib/touchlineArena/catalogue-locale.ts";
 import { readFileSync } from "node:fs";
@@ -153,15 +155,17 @@ function visit(node: ts.Node) {
 visit(clientSource); assert.ok(metricsNode);
 const clockJavaScript = ts.transpileModule(`${clockNode.getText(clientSource)}\nexport { MarketWindowClock };`, { compilerOptions: options }).outputText;
 const metricsJavaScript = ts.transpileModule(`export const metrics = (${metricsNode.getText(clientSource)});`, { compilerOptions: options }).outputText;
-function renderConsumers(api: typeof domain, locale: string, remaining: number | null) {
+function renderConsumers(api: typeof domain, locale: string, remaining: number | null, status: GameweekScoreStatus | undefined = "FINAL", score: number | undefined = 0) {
   const exports: Record<string, unknown> = {};
-  const snapshot = { config: { budgetEur: 500_000_000 }, gameweekScore: 0, seasonScore: 12.34 };
+  const snapshot = { config: { budgetEur: 500_000_000 }, gameweekScore: score, gameweekScoreStatus: status, seasonScore: 12.34 };
   const validation = { budgetRemainingEur: remaining };
   const before = JSON.stringify({ snapshot, validation });
   const clock = { number: 1, state: "MARKET_OPEN", marketOpensAt: "2026-08-01T00:00:00Z", locksAt: "2026-08-21T19:55:00Z" };
   const context = {
     exports, require: (name: string) => { assert.equal(name, "react/jsx-runtime"); return jsxRuntime; },
     ...api, locale, snapshot, validation, live: null, draftLocalesEnabled: false,
+    roundScore: presentGameweekScore(snapshot.gameweekScoreStatus, snapshot.gameweekScore),
+    roundScoreStatusId: "fixture-round-score-status", scoreStatusCopy: getGameweekScoreStatusCopy(locale),
     marketMetricsCopy: getTouchlineFantasyMarketMetricsCopy(locale), getTouchlineFantasyMarketClockCopy, formatTouchlineFantasyClockUnit,
     useState: () => [Date.parse("2026-08-21T19:00:00Z"), () => {}], useMemo: (callback: () => unknown) => callback(), useEffect: () => {},
     TimerReset: () => null, styles: new Proxy({}, { get: (_, key) => String(key) }),
@@ -186,5 +190,20 @@ test("actual clock and points JSX preserve timestamp, links and public gates wit
     assert.ok(html.includes(`href="/rankings?lang=${locale}"`));
     assert.ok(html.includes('>0.00</a>')); assert.ok(html.includes('>12.34</a>'));
     assert.ok(html.includes(actual.api.formatTouchlineFantasyDeadline("2026-08-21T19:55:00Z", locale)));
+  }
+});
+
+test("actual points JSX distinguishes confirmed zero from absent or pending scoring evidence", () => {
+  for (const locale of ["en-GB", "pt-BR"]) {
+    for (const status of ["UNAVAILABLE", "PENDING_SCORE", "NO_VALID_LINEUP", "AWAITING_CONFIRMATION"] as const) {
+      const html = renderConsumers(domain, locale, null, status, 0);
+      assert.match(html, />—<\/a>/);
+      assert.doesNotMatch(html, />0\.00<\/a>/);
+      assert.ok(html.includes(getGameweekScoreStatusCopy(locale)[status]));
+      assert.match(html, /aria-describedby="fixture-round-score-status"/);
+      assert.match(html, />12\.34<\/a>/, "Unconfirmed round points do not erase confirmed season points");
+    }
+    const invalid = renderConsumers(domain, locale, null, "FINAL", NaN);
+    assert.match(invalid, />—<\/a>/); assert.doesNotMatch(invalid, />0\.00<\/a>/);
   }
 });

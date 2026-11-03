@@ -199,7 +199,8 @@ for (const scope of ["foundation", "qa_twenty_club_roster_sync"]) {
     assert.equal(response.status, 500);
     assert.equal(body.ok, false);
     assert.equal(body.status, "error");
-    assert.equal(body.error, "Synthetic TouchLine Data failure");
+    assert.equal(body.error, "Synchronization could not be confirmed. Check the protected run history before retrying.");
+    assert.ok(!JSON.stringify(body).includes("Synthetic SportMonks failure"));
     assert.deepEqual(route.calls, [scope]);
   });
 }

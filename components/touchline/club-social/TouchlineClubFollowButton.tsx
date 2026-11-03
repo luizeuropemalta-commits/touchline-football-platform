@@ -1,7 +1,7 @@
 "use client";
 
 import { Bell, BellOff, BellRing } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { setTouchlineClubFollow } from "@/lib/touchlineArena/club-follow-preferences";
 import type { TouchLineLocale } from "@/lib/touchlineArena/i18n";
@@ -10,12 +10,21 @@ import { registerTouchlinePushDevice, touchlinePushIsConfigured } from "@/lib/to
 import styles from "./TouchlineClubSocialFeed.module.css";
 
 type NotificationPayload = Readonly<{
+  accountId: string;
   settings?: Readonly<{ scopes?: Readonly<{ clubs?: unknown }> }>;
   channels?: Readonly<{ in_app?: boolean; push?: boolean; email?: boolean }>;
   frequency?: string;
   quietHours?: unknown;
   explicitConsentAt?: string | null;
 }>;
+
+function hasAccountIdentity(value: unknown, expected?: string): value is NotificationPayload {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const accountId = (value as { accountId?: unknown }).accountId;
+  return typeof accountId === "string"
+    && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(accountId)
+    && (expected === undefined || accountId === expected);
+}
 
 type State = "loading" | "ready" | "saving" | "signed-out" | "error";
 
@@ -34,7 +43,14 @@ export default function TouchlineClubFollowButton({
   const [following, setFollowing] = useState(false);
   const [message, setMessage] = useState("");
 
+  const lifecycle = useRef<AbortController | null>(null);
+  const account = useRef<string | null>(null);
+  const pushBusy = useRef(false);
+
   useEffect(() => {
+    const controller = new AbortController();
+    lifecycle.current = controller;
+    account.current = null;
     let cancelled = false;
     void fetch("/api/notifications/preferences", { cache: "no-store" })
       .then(async (response) => ({ response, body: await response.json().catch(() => null) }))
@@ -45,8 +61,9 @@ export default function TouchlineClubFollowButton({
           setMessage(pt ? "Entre na sua conta para receber alertas deste clube." : "Sign in to receive this club's alerts.");
           return;
         }
-        if (!response.ok || !body?.ok) throw new Error("notification-preferences-unavailable");
+        if (!response.ok || !body?.ok || !hasAccountIdentity(body.data)) throw new Error("notification-preferences-unavailable");
         const nextPayload = body.data as NotificationPayload;
+        account.current = nextPayload.accountId;
         setPayload(nextPayload);
         setFollowing(Array.isArray(nextPayload.settings?.scopes?.clubs) && nextPayload.settings.scopes.clubs.includes(clubId));
         setState("ready");
@@ -56,7 +73,7 @@ export default function TouchlineClubFollowButton({
         setState("error");
         setMessage(pt ? "Os alertas não puderam ser carregados agora." : "Alerts could not be loaded right now.");
       });
-    return () => { cancelled = true; };
+    return () => { cancelled = true; controller.abort(); account.current = null; };
   }, [clubId, pt]);
 
   async function toggleFollow() {
@@ -68,7 +85,7 @@ export default function TouchlineClubFollowButton({
     try {
       const response = await fetch("/api/notifications/preferences", {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-Touchline-Expected-Account": payload.accountId },
         body: JSON.stringify({
           settings: {
             ...payload.settings,
@@ -83,7 +100,7 @@ export default function TouchlineClubFollowButton({
         }),
       });
       const body = await response.json().catch(() => null);
-      if (!response.ok || !body?.ok) throw new Error("notification-preferences-save-failed");
+      if (!response.ok || !body?.ok || !hasAccountIdentity(body.data, payload.accountId)) throw new Error("notification-preferences-save-failed");
       setPayload(body.data as NotificationPayload);
       setFollowing(nextFollowing);
       setState("ready");
@@ -92,31 +109,39 @@ export default function TouchlineClubFollowButton({
         : (pt ? `${clubName}: preferência removida.` : `${clubName}: preference removed.`));
     } catch {
       setState("error");
-      setMessage(pt ? "A alteração não foi salva. Tente novamente." : "The change was not saved. Try again.");
+      setMessage(pt ? "Não foi possível confirmar a alteração. Recarregue antes de tentar novamente." : "The change could not be confirmed. Reload before trying again.");
     }
   }
 
   async function requestPushPermission() {
-    if (!hasBrowserNotifications() || !payload || state !== "ready") return;
+    if (!hasBrowserNotifications() || !payload || state !== "ready" || pushBusy.current) return;
+    const controller = lifecycle.current;
+    const expectedAccountId = payload.accountId;
+    const isCurrentAccount = () => lifecycle.current === controller && account.current === expectedAccountId;
+    if (!controller || controller.signal.aborted || !isCurrentAccount()) return;
     if (!touchlinePushIsConfigured()) {
       setMessage(pt ? "O envio ao celular ainda não está configurado. Sua preferência está preservada." : "Phone delivery is not configured yet. Your preference is preserved.");
       return;
     }
+    pushBusy.current = true;
     setState("saving");
     try {
       const permission = Notification.permission === "granted" ? "granted" : await Notification.requestPermission();
+      if (controller.signal.aborted || !isCurrentAccount()) return;
       if (permission !== "granted") {
         setMessage(pt ? "Notificações não permitidas. Sua preferência está preservada." : "Notifications were not permitted. Your preference is preserved.");
         return;
       }
-      const registration = await registerTouchlinePushDevice();
+      const registration = await registerTouchlinePushDevice({ expectedAccountId, signal: controller.signal, isCurrentAccount });
+      if (controller.signal.aborted || !isCurrentAccount()) return;
       if (registration !== "registered") {
         setMessage(pt ? "O cadastro de notificações não está disponível neste dispositivo." : "Notification registration is unavailable on this device.");
         return;
       }
       const response = await fetch("/api/notifications/preferences", {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
+        headers: { "Content-Type": "application/json", "X-Touchline-Expected-Account": payload.accountId },
         body: JSON.stringify({
           settings: payload?.settings,
           channels: { ...payload?.channels, in_app: true, push: true },
@@ -126,17 +151,20 @@ export default function TouchlineClubFollowButton({
         }),
       });
       const body = await response.json().catch(() => null);
-      if (!response.ok || body?.ok !== true || typeof body.data?.channels?.push !== "boolean") throw new Error("notification-push-preference-save-failed");
+      if (controller.signal.aborted || !isCurrentAccount()) return;
+      if (!response.ok || body?.ok !== true || !hasAccountIdentity(body.data, payload.accountId) || typeof body.data?.channels?.push !== "boolean") throw new Error("notification-push-preference-save-failed");
       setPayload(body.data as NotificationPayload);
       setMessage(body.data.channels.push
         ? (pt ? "Dispositivo cadastrado e preferência de push salva. Nenhum alerta foi enviado; a entrega ainda não foi verificada." : "Device registered and push preference saved. No alert was sent; delivery has not been verified.")
         : (pt ? "Dispositivo cadastrado, mas o envio ao celular continua indisponível." : "Device registered, but phone delivery remains unavailable."));
     } catch (error) {
+      if (controller.signal.aborted || !isCurrentAccount()) return;
       setMessage(error instanceof Error && error.message === "touchline-push-re-registration-required"
         ? (pt ? "O vínculo de notificações deste navegador não corresponde à configuração atual. Revise as notificações deste site nas configurações do navegador e cadastre novamente. Nada foi cancelado automaticamente." : "This browser's notification registration does not match the current configuration. Review this site's notifications in your browser settings and register again. Nothing was cancelled automatically.")
         : (pt ? "Não foi possível confirmar o cadastro e a preferência de notificações. Tente novamente." : "Notification registration and preferences could not be confirmed. Try again."));
     } finally {
-      setState("ready");
+      pushBusy.current = false;
+      if (!controller.signal.aborted && isCurrentAccount()) setState("ready");
     }
   }
 

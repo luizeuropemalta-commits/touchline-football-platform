@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { parseCoachRankingDiagnostic, type CoachRankingDiagnostic } from "@/lib/football-data/coach-reconciliation-diagnostic";
 
 import { persistCompetitionFixtureSchedule } from "@/lib/football-data/fixture-schedule-store";
 import { createGuardedFixtureProvider } from "@/lib/football-data/fixture-provider-server";
@@ -20,6 +21,7 @@ export type FixtureScheduleSyncResult = {
   daysChecked: number;
   errors: string[];
   syncRunId?: string;
+  coachRankingDiagnostic?: CoachRankingDiagnostic | null;
 };
 
 type FixtureScheduleSyncDependencies = {
@@ -80,6 +82,7 @@ async function completeRun(admin: SupabaseClient, result: FixtureScheduleSyncRes
         daysChecked: result.daysChecked,
         fixturesFetched: result.fixturesFetched,
         fixturesStored: result.fixturesStored,
+        coachRankingDiagnostic: result.coachRankingDiagnostic ?? null,
       },
     })
     .eq("id", result.syncRunId);
@@ -164,6 +167,7 @@ export async function syncSportmonksFixtureSchedule(
       syncedAt: new Date().toISOString(),
     });
     result.fixturesStored = persisted.fixturesStored;
+    result.coachRankingDiagnostic = parseCoachRankingDiagnostic(persisted.coachRankingDiagnostic);
     if (!persisted.stored) result.errors.push(persisted.reason ?? "Could not persist fixture schedule.");
     result.ok = persisted.stored && result.errors.length === 0;
     result.status = result.ok ? "success" : persisted.stored ? "partial" : "error";

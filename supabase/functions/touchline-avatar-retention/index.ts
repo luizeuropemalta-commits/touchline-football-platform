@@ -28,14 +28,23 @@ function compose(): (request: Request) => Promise<Response> {
   let failureCode: BootstrapFailure = "QA_RETENTION_CONFIGURATION_READ_FAILED";
   try {
     if (!runtime) return failedComposition("QA_RETENTION_RUNTIME_MISSING");
+    const readCredential = () => {
+      // A present but invalid explicit binding must fail closed, never fall
+      // back to a different authority. Both sources retain the same QA JWT gate.
+      const explicit = runtime.env.get("TOUCHLINE_QA_AVATAR_RETENTION_SERVICE_ROLE_KEY");
+      return explicit === undefined
+        ? { keySource: "SUPABASE_SERVICE_ROLE_KEY", key: runtime.env.get("SUPABASE_SERVICE_ROLE_KEY") }
+        : { keySource: "TOUCHLINE_QA_AVATAR_RETENTION_SERVICE_ROLE_KEY", key: explicit };
+    };
     const captured = Object.freeze({
       origin: runtime.env.get("SUPABASE_URL"),
-      key: runtime.env.get("SUPABASE_SERVICE_ROLE_KEY"),
+      ...readCredential(),
       flag: runtime.env.get("TOUCHLINE_QA_AVATAR_RETENTION_ENABLED"),
     });
     const assertEnvironment = () => {
+      const credential = readCredential();
       if (runtime.env.get("SUPABASE_URL") !== captured.origin
-        || runtime.env.get("SUPABASE_SERVICE_ROLE_KEY") !== captured.key
+        || credential.keySource !== captured.keySource || credential.key !== captured.key
         || runtime.env.get("TOUCHLINE_QA_AVATAR_RETENTION_ENABLED") !== captured.flag) {
         throw Error("QA_RETENTION_ENVIRONMENT_CHANGED");
       }

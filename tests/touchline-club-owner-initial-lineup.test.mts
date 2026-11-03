@@ -117,3 +117,23 @@ test("invalid formation or current position authority never fabricates an empty 
   assert.deepEqual(firstRender(lockedSnapshot, { ...confirmed, state: { ...owned, revision: -1 } }).lineup, locked);
   assert.deepEqual(firstRender(null).lineup, { selectedCoachId: null, formationCode: null, selections: [] });
 });
+
+test("closed rejected draft displays current starters without duplicating a reserve into the XI", () => {
+  const reserve = players.find(player => player.area === "reserves")!;
+  for (const userGameweek of [null, { state: "DRAFT", selectedCoachId: "old-coach", formationCode: "4-3-3" }]) {
+    const rejected = { ...snapshot, qaClubMarketOpen: false, gameweekScoreStatus: "NO_VALID_LINEUP", userGameweek,
+      selections: [{ playerId: reserve.playerId, slotId: geometry.slots[0].id }] };
+    const before = JSON.stringify({ rejected, confirmed });
+    const result = firstRender(rejected).lineup;
+    assert.equal(result.selections.length, 11);
+    assert.ok(result.selections.every(selection => players.find(player => player.playerId === selection.playerId)?.area === "starters"));
+    assert.equal(result.selectedCoachId, "owned-coach");
+    assert.equal(JSON.stringify({ rejected, confirmed }), before);
+    assert.deepEqual(firstRender(rejected, null).lineup.selections, rejected.selections, "unconfirmed collection must not fabricate placements");
+    assert.deepEqual(firstRender(rejected, confirmed, { marketPage: false }).lineup.selections, rejected.selections);
+  }
+  for (const state of ["CONFIRMED", "LOCKED", "FINAL"]) {
+    assert.deepEqual(firstRender({ ...lockedSnapshot, qaClubMarketOpen: false, gameweekScoreStatus: "NO_VALID_LINEUP",
+      userGameweek: { ...lockedSnapshot.userGameweek, state } }).lineup, locked);
+  }
+});

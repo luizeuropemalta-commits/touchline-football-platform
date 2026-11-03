@@ -26,22 +26,26 @@ async function isAuthorized(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  // Runtime admission precedes authentication/client construction. Production
-  // is default OFF and bound to the explicitly retained data project.
-  if (!isDedicatedQaRuntime() && !inspectTouchlineProductionSyncRuntime(process.env).allowed) {
-    return NextResponse.json({ ok: false, error: "Score Engine V3 rebuild requires a verified QA or explicitly enabled Production runtime." }, { status: 403 });
+  try {
+    // Runtime admission precedes authentication/client construction. Production
+    // is default OFF and bound to the explicitly retained data project.
+    if (!isDedicatedQaRuntime() && !inspectTouchlineProductionSyncRuntime(process.env).allowed) {
+      return NextResponse.json({ ok: false, error: "Score Engine V3 rebuild requires a verified QA or explicitly enabled Production runtime." }, { status: 403 });
+    }
+    if (!await isAuthorized(request)) {
+      return NextResponse.json({ ok: false, error: "Owner session or TouchLine Data sync credential required." }, { status: 401 });
+    }
+    const admin = createAdminClient();
+    if (!admin) {
+      return NextResponse.json({ ok: false, status: "not_configured", error: "TouchLine Data administration is not configured." }, { status: 200 });
+    }
+    const result = await syncTouchLinePlayerSeasonStatistics(admin);
+    return NextResponse.json({
+      ...result,
+      source: "touchline_verified",
+      syncedAt: new Date().toISOString(),
+    }, { status: result.ok ? 200 : 500 });
+  } catch {
+    return NextResponse.json({ ok: false, status: "error", error: "Score recalculation could not be confirmed. Check the protected run history before retrying." }, { status: 503, headers: { "Cache-Control": "private, no-store" } });
   }
-  if (!await isAuthorized(request)) {
-    return NextResponse.json({ ok: false, error: "Owner session or TouchLine Data sync credential required." }, { status: 401 });
-  }
-  const admin = createAdminClient();
-  if (!admin) {
-    return NextResponse.json({ ok: false, status: "not_configured", error: "TouchLine Data administration is not configured." }, { status: 200 });
-  }
-  const result = await syncTouchLinePlayerSeasonStatistics(admin);
-  return NextResponse.json({
-    ...result,
-    source: "touchline_verified",
-    syncedAt: new Date().toISOString(),
-  }, { status: result.ok ? 200 : 500 });
 }

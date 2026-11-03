@@ -82,6 +82,11 @@ export async function ensureTouchlineArenaAccess(
   }
 
   await ensureArenaUserProfile(user, admin);
+  // The RPC rechecks persisted intent and never updates an existing privacy choice.
+  if (isRecord(user.user_metadata?.touchline_discovery_signup_v1)) {
+    const { error } = await admin.rpc("touchline_people_bootstrap_signup", { p_user_id: user.id });
+    if (error) throw new Error("TouchLine public profile could not be initialized.");
+  }
   await markTouchLineArenaAccess(user, admin);
   return { arenaAccessGranted: true, amountTc: 0 };
 }

@@ -1,3 +1,7 @@
+import ClubOwnerDiscoveryOnboarding from "@/components/touchline/social/ClubOwnerDiscoveryOnboarding";
+import ClubOwnerPublicDirectory from "@/components/touchline/social/ClubOwnerPublicDirectory";
+import { parseOwnPublicOwner, peopleLocale } from "@/lib/touchlineArena/clubowner-public-contract";
+import { publicOwnerAvatarService } from "@/lib/touchlineArena/clubowner-public-avatar-server";
 import { Suspense, type ReactNode } from "react";
 import TouchlineAccountLoading from "@/components/touchline/TouchlineAccountLoading";
 import TouchlineCardLeadershipLayout from "@/components/touchline/cards/TouchlineCardLeadershipLayout";
@@ -42,6 +46,7 @@ type MarketTransferSearchParams = Promise<{
   planPreview?: string | string[];
   checkout?: string | string[];
   session_id?: string | string[];
+  settings?: string | string[];
 }>;
 
 type ClubOwnerPageProps = { searchParams: MarketTransferSearchParams };
@@ -157,6 +162,13 @@ async function renderClubOwnerPageContent({ searchParams }: ClubOwnerPageProps, 
       host: (await headers()).get("host"), plan: activePlanKey,
     });
     return <div className={styles.content}>
+        {publicDiscoveryEnabled && params.settings === "profile" ? <ClubOwnerPublicDirectory
+          locale={peopleLocale(locale)} enabled settingsOnly
+          photoSharingEnabled={publicOwnerAvatarService().enabled && avatarContext?.uploadAllowed === true}
+          initialOwn={{ status: publicProfile && !publicProfile.error ? 200 : 503,
+            profile: publicProfile && !publicProfile.error ? parseOwnPublicOwner(publicProfile.data) : null }} /> : null}
+        {publicDiscoveryEnabled && publicProfile && !publicProfile.error && publicProfile.data === null
+          ? <ClubOwnerDiscoveryOnboarding key={user.id} locale={locale === "pt-BR" ? "pt-BR" : "en-GB"} /> : null}
         <ClubCollectionProvider key={`${user.id}:${snapshot?.config.seasonId ?? "unavailable"}`} initialRead={collectionAvailable ? collectionRead : null}
           authority={snapshot?.config.seasonId ? {expectedAccountId:user.id, expectedSeasonId:snapshot.config.seasonId} : null}>
         <ClubOwnerMarketHeader checkoutOffers={checkoutOffers} owner={clubOwner?.isAuthenticatedClubOwner ? clubOwner : null} locale={locale} rankingPosition={clubOwnerRankingPosition(snapshot?.seasonRanking)} followerCount={confirmedFollowers} publicDiscoveryEnabled={publicDiscoveryEnabled} remainingMarketPower={remainingMarketPower} plan={snapshot?.plan ?? null} activePlanKey={activePlanKey} activePlanBudget={activePlanKey ? marketAccess?.budgetEur : undefined} planPreview={planPreview} draftLocalesEnabled={draftLocalesEnabled} accountId={user.id} avatarContext={avatarContext} avatarSelectionEnabled={avatarSelectionEnabled} retentionReady={retentionReady} collectionEnabled={collectionAvailable} />

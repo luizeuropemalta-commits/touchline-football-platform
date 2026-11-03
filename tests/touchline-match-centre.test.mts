@@ -109,8 +109,7 @@ test("Match Centre keeps all ten matches in the current round after early fixtur
   const schedule = selectTouchlineMatchCentreSchedule(currentRound, now);
 
   assert.equal(schedule.currentFixtures.length, 10);
-  assert.equal(schedule.recentResults.length, 4);
-  assert.deepEqual(schedule.recentResults.map((candidate) => candidate.id), currentRound.slice(0, 4).reverse().map((candidate) => candidate.id));
+  assert.deepEqual(schedule.recentResults, []);
   assert.deepEqual(new Set(schedule.currentFixtures.map((candidate) => candidate.roundId)), new Set(["round-2"]));
 });
 
@@ -658,7 +657,7 @@ test("Match Centre keeps the preferred football-field proportion only when the p
 });
 
 
-test("Latest ten results include finished games of the active round and exclude in-play games", () => {
+test("Previous results contain only the closed previous round, never finished games of the active round", () => {
   const now = Date.parse("2026-08-30T15:00:00Z");
   const old = Array.from({ length: 10 }, (_, index) => roundFixture({ id: index, round: 1,
     startsAt: `2026-08-22T${String(10 + index).padStart(2, "0")}:00:00Z`, status: "Full Time" }));
@@ -667,7 +666,7 @@ test("Latest ten results include finished games of the active round and exclude 
   const live = roundFixture({ id: 5, round: 2, startsAt: "2026-08-30T14:00:00Z", status: "In Play" });
   const result = selectTouchlineMatchCentreSchedule([...old, ...latest, live, latest[0]], now);
   assert.equal(result.recentResults.length, 10);
-  assert.deepEqual(result.recentResults.slice(0, 5).map(row => row.id), latest.toReversed().map(row => row.id));
+  assert.deepEqual(result.recentResults.map(row => row.id), old.toReversed().map(row => row.id));
   assert.ok(result.currentFixtures.some(row => row.id === live.id));
   assert.ok(!result.recentResults.some(row => row.id === live.id));
   assert.equal(new Set(result.recentResults.map(row => row.id)).size, 10);
@@ -703,5 +702,30 @@ test("A complete old round with one delayed live game cannot hide the current ro
     assert.equal(result.currentFixtures.length, 11);
     assert.ok(current.every(game => result.currentFixtures.some(row => row.id === game.id)));
     assert.ok(result.currentFixtures.some(row => row.id === old[0].id));
+    assert.deepEqual(result.recentResults, [], "an unfinished old round must not leak partial results");
   }
+});
+
+
+test("Closing the last game moves the entire round to previous results", () => {
+  const now = Date.parse("2026-08-30T18:00:00Z");
+  const current = Array.from({ length: 10 }, (_, id) => roundFixture({ id, round: 2,
+    startsAt: "2026-08-30T14:00:00Z", status: "Full Time" }));
+  const next = Array.from({ length: 10 }, (_, id) => roundFixture({ id, round: 3,
+    startsAt: "2026-09-06T14:00:00Z", status: "Not Started" }));
+  const result = selectTouchlineMatchCentreSchedule([...next, ...current], now);
+  assert.ok(result.currentFixtures.every(row => row.roundId === "round-3"));
+  assert.equal(result.currentFixtures.length, 10);
+  assert.equal(result.recentResults.length, 10);
+  assert.ok(result.recentResults.every(row => row.roundId === "round-2"));
+});
+
+test("A short previous round is not padded with older results", () => {
+  const games = [
+    roundFixture({ id: 0, round: 1, startsAt: "2026-08-20T14:00:00Z", status: "Full Time" }),
+    roundFixture({ id: 0, round: 2, startsAt: "2026-08-27T14:00:00Z", status: "Full Time" }),
+    roundFixture({ id: 0, round: 3, startsAt: "2026-09-03T14:00:00Z", status: "Not Started" }),
+  ];
+  const result = selectTouchlineMatchCentreSchedule(games, Date.parse("2026-09-01T12:00:00Z"));
+  assert.deepEqual(result.recentResults.map(row => row.roundId), ["round-2"]);
 });

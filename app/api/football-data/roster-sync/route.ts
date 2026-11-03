@@ -14,6 +14,12 @@ export async function POST(request: NextRequest) {
         if (!admin)
             return reply({ ok: false, error: 'UNAVAILABLE' }, 503);
         const result = await runRosterCommand(admin, 'cron:roster-v1', rosterCronCommand());
+        // A durable failed receipt is returned on replay, rather than thrown.
+        // Do not turn that replay into a successful scheduler health signal.
+        if (!result || !['review', 'collecting'].includes(result.status))
+            return reply({ ok: false, error: 'ROSTER_NOT_CONFIRMED' }, 503);
+        if (result.status === 'collecting')
+            return reply({ ok: true, pending: true, result }, 202);
         return reply({ ok: true, result }, 200);
     }
     catch (error) {

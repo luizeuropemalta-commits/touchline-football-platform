@@ -5,7 +5,7 @@ import { createRequire } from 'node:module';
 import { dirname, resolve, join } from 'node:path';
 import ts from 'typescript';
 import { chromium, expect } from '@playwright/test';
-import { getTouchLineAuthCopy } from '../lib/touchlineArena/auth-i18n.ts';
+import { getTouchLineAuthCopy, getTouchLineDiscoveryRegistrationCopy } from '../lib/touchlineArena/auth-i18n.ts';
 
 const enabled = process.env.TOUCHLINE_RUN_LOCALE_BROWSER_TESTS === '1';
 const require = createRequire(import.meta.url);
@@ -27,9 +27,15 @@ function fixtureHtml(locale: string) {
     signUp(){window.__signupCalls++;return new Promise(resolve=>{window.__finishSignup=resolve})},
     resend(){window.__resendCalls++;return new Promise(resolve=>{window.__finishResend=resolve})}
   }});`;
+  modules['@/lib/touchlineArena/discovery-registration'] = ts.transpileModule(
+    readFileSync(resolve(root, 'lib/touchlineArena/discovery-registration.ts'), 'utf8'),
+    { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } },
+  ).outputText;
+  const discoveryCopies = Object.fromEntries(locales.map(language => [language, getTouchLineDiscoveryRegistrationCopy(language)]));
   const dictionaries = Object.fromEntries(locales.map(language => [language,getTouchLineAuthCopy(language,true)]));
   modules['@/lib/touchlineArena/auth-i18n'] = `const copies=${JSON.stringify(dictionaries)};
     exports.getTouchLineAuthCopy=(locale)=>copies[locale];
+    exports.getTouchLineDiscoveryRegistrationCopy=(locale)=>(${JSON.stringify(discoveryCopies)})[locale];
     exports.normalizeTouchLineAuthLocale=(locale)=>locale==='pt-BR'?'pt-BR':'en-GB';
     exports.normalizeTouchLineLoginLocale=(locale)=>copies[locale]?locale:'en-GB';
     exports.normalizeTouchLineAuthReturnTo=()=>'/clubowner';
@@ -38,6 +44,10 @@ function fixtureHtml(locale: string) {
     exports.touchLinePostAuthHref=()=>'/clubowner';`;
   modules['@/lib/touchlineArena/public-origin'] = 'exports.resolveTouchLineAuthOrigin=({currentOrigin})=>currentOrigin;';
   modules['@/lib/touchlineArena/arena-onboarding'] = 'exports.touchlineRegistrationEntryHref=()=>"/intro";';
+  modules['@/lib/touchlineArena/auth-email-rate-limit'] = ts.transpileModule(
+    readFileSync(resolve(root, 'lib/touchlineArena/auth-email-rate-limit.ts'), 'utf8'),
+    { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } },
+  ).outputText;
   modules[resolve(root,'components/ui.tsx')] = `const React=require('react');
     exports.Button=({children,...props})=>React.createElement('button',props,children);
     exports.Input=(props)=>React.createElement('input',props);`;
@@ -76,6 +86,7 @@ test('register eight-language pending/error states stay named and announced with
         assert.equal(await page.evaluate(()=>window.__signupCalls),0,`${locale} native required validation`);
         await page.locator('[name=first_name]').fill('Test');
         await page.locator('[name=last_name]').fill('User');
+        await page.locator('[name=public_name]').fill('Test ClubOwner');
         await page.locator('[name=email]').fill('invalid-address');
         await page.locator('[name=password]').fill('local-pass-123');
         await page.locator('[type=checkbox]').check();

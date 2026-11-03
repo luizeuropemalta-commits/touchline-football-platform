@@ -48,8 +48,14 @@ export async function handleCoachEditorial(request: Request, dependencies: Coach
       countryCode3: entry.countryCode3, observedAt: entry.fetchedAt, classification: entry.classification })) : null;
     const receipt = await dependencies.rpc("touchline_coach_editorial_command", { p_request_id: input.requestId, p_actor_id: actor.id,
       p_action: input.action, p_catalogue_revision: input.catalogueRevision, p_candidate_id: input.candidateId ?? null, p_revision: input.revision ?? null, p_reason: input.reason.trim(), p_bootstrap: seeds });
-    if (!receipt || typeof receipt !== "object" || (receipt as Record<string, unknown>).requestId !== input.requestId.toLowerCase()
-      || (receipt as Record<string, unknown>).action !== input.action) return response({ error: "COACH_RESULT_UNCONFIRMED" }, 503);
+    // The atomic command records the selected candidate and increments exactly
+    // one catalogue revision. Echoed request/action alone cannot prove a result.
+    const result = receipt && typeof receipt === "object" && !Array.isArray(receipt)
+      ? receipt as Record<string, unknown> : null;
+    if (!result || result.requestId !== input.requestId.toLowerCase() || result.action !== input.action
+      || result.candidateId !== (bootstrap ? null : String(input.candidateId).toLowerCase())
+      || !Number.isSafeInteger(result.revision) || result.revision !== Number(input.catalogueRevision) + 1)
+      return response({ error: "COACH_RESULT_UNCONFIRMED" }, 503);
     return response({ receipt });
   } catch (error) {
     const code = error && typeof error === "object" && "code" in error ? String(error.code) : "";

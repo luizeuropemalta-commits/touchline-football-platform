@@ -26,6 +26,7 @@ export async function GET() {
     matchCardIndicators: snapshot.matchCardIndicators ?? null,
     playerAvailabilityIndicators: snapshot.playerAvailabilityIndicators ?? null,
     gameweekScore: snapshot.gameweekScore,
+    gameweekScoreStatus: snapshot.gameweekScoreStatus ?? "UNAVAILABLE",
     seasonScore: snapshot.seasonScore,
     matchHistory: snapshot.matchHistory,
     gameweekRanking: snapshot.gameweekRanking,

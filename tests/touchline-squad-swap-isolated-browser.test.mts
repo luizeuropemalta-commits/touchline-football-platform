@@ -17,6 +17,20 @@ const postcss=createRequire(native.resolve("next"))("postcss") as {parse:(css:st
 const originalCards=process.env.SQUAD_SWAP_ORIGINAL_CARDS==="1";
 const fullSquad=process.env.SQUAD_SWAP_FULL_SQUAD==="1";
 const copy=getAllocationDialogCopy("en-GB");
+// Next's image optimizer is unavailable in the isolated fixture. Preserve the
+// native image contract; request interception below still prevents network IO.
+const isolatedNextImageModule=`exports.default=({unoptimized,priority,fill,loader,quality,placeholder,blurDataURL,onLoadingComplete,src,style,...props})=>require("react").createElement("img",{...props,src:typeof src==="string"?src:src?.src,style:fill?{position:"absolute",height:"100%",width:"100%",inset:0,...style}:style});`;
+test("isolated NextImage adapter preserves availability badge image props",()=>{
+  const imageModule={exports:{} as {default?:(props:Record<string,unknown>)=>{type:string;props:Record<string,unknown>}}};
+  new Function("module","exports","require",isolatedNextImageModule)(imageModule,imageModule.exports,native);
+  const render=imageModule.exports.default!;
+  const onError=()=>{};
+  const image=render({src:"/badge.svg",alt:"",width:24,height:24,draggable:false,unoptimized:true,onError});
+  assert.equal(image.type,"img");
+  assert.deepEqual(image.props,{src:"/badge.svg",alt:"",width:24,height:24,draggable:false,onError,style:undefined});
+  assert.equal(render({src:{src:"/static.png"},alt:"Static",fill:true}).props.src,"/static.png");
+});
+
 function requireCapacity() {
   requireBrowserCapacity(root, { allowModerateDarwinPressure: process.env.TOUCHLINE_LOCAL_ALLOW_MODERATE_PRESSURE === "1" && !process.env.CI,
     allowLowDarwinDisk: process.env.TOUCHLINE_LOCAL_ALLOW_500MIB_RESERVE === "1" && !process.env.CI });
@@ -30,6 +44,7 @@ function fixture() {
   }
   // Real arrows in both modes; a null icon stub cannot prove their direction.
   modules["lucide-react"]=readFileSync(native.resolve("lucide-react"),"utf8");
+  modules["next/image"]=isolatedNextImageModule;
   modules["next/navigation"]='exports.usePathname=()=>"/isolated-fixture";';
   function add(path:string):string {
     if(Object.hasOwn(modules,path))return path;

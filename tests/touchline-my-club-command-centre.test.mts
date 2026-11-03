@@ -72,7 +72,12 @@ test("Market preserves its ClubOwner photo, name and finite market power", () =>
   assert.match(header, /copy\.marketPower/);
   assert.doesNotMatch(client, /data-market-club-owner-area/);
   assert.doesNotMatch(area, /marketMetricsCopy\.remainingBudget/);
-  assert.match(area, /\(live\?\.gameweekScore \?\? snapshot\.gameweekScore\)\.toFixed\(2\)/);
+  assert.ok(client.includes("presentGameweekScore((live ?? snapshot)?.gameweekScoreStatus, (live ?? snapshot)?.gameweekScore)"),
+    "Round status and points must share the same confirmed receipt");
+  assert.ok(area.includes('roundScore.value === null ? "—" : roundScore.value.toFixed(2)'),
+    "Absent round points remain unavailable, while confirmed zero keeps its precision");
+  assert.match(area, /aria-describedby=\{roundScoreStatusId\}/);
+  assert.match(area, /scoreStatusCopy\[roundScore.status\]/);
   assert.match(area, /\(live\?\.seasonScore \?\? snapshot\.seasonScore\)\.toFixed\(2\)/);
   assert.equal((area.match(/href=\{`\/rankings\?lang=/g) ?? []).length, 2);
 });

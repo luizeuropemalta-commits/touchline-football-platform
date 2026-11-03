@@ -4,7 +4,7 @@ import { useMemo, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { ArrowLeft, ArrowLeftRight, ArrowRight } from "lucide-react";
 import type { ClubOwnerSquadCard } from "@/lib/touchlineArena/demo-data";
-import type { ClubAcquisitionState } from "@/lib/touchlineFantasy/club-acquisition";
+import type { ClubAcquisitionState, ClubOwnedPlayer } from "@/lib/touchlineFantasy/club-acquisition";
 import { getAllocationDialogCopy, getAllocationSwapLabels } from "@/lib/touchlineFantasy/allocation-dialog-i18n";
 import type { ClubRosterArea } from "@/lib/touchlineFantasy/club-roster";
 import { clubPlayerPosition } from "@/lib/touchlineFantasy/club-position";
@@ -17,6 +17,9 @@ import { primaryPositionFitsTacticalSlot } from "@/lib/touchlineFantasy/club-pri
 import { squadSwapComparisonPlayers } from "@/lib/touchlineFantasy/squad-swap-presentation";
 import type { TouchlineFormationGeometry } from "@/lib/touchlineArena/formation-geometry";
 import { useTouchlineDialog, useTouchlineDialogScrollLock } from "@/components/touchline/a11y/TouchlineDialog";
+import TouchlinePlayerAvailabilityBadge from "@/components/touchline/cards/TouchlinePlayerAvailabilityBadge";
+import type { GameweekPlayerAvailabilityIndicator } from "@/lib/touchlineArena/player-availability-reader";
+import { resolveTouchlineCatalogueLocale } from "@/lib/touchlineArena/catalogue-locale";
 import TouchlineGameweekCard from "./TouchlineGameweekCard";
 import TouchlineMarketPlayerTile from "@/components/touchline/market/TouchlineMarketPlayerTile";
 import styles from "@/app/fantasy/fantasy.module.css";
@@ -111,14 +114,16 @@ export function ClubOwnerSquadSwapDialog({ state, playerId, outsideOnly = false,
 }
 
 /** Placement only. Card artwork, points, zoom and empty-slot button are canonical. */
-export function ClubOwnerCollectionSlots({ state, catalogue, area, start = 0, count, locale, liveSeasonRating = false, draftLocalesEnabled = false, enabled, displayWidth = 70, imageLoading = "eager", guidedSlot, onChoose, onFieldPlayer, onReleasePlayer, grouped = false, slotPositions }: {
-  state: Pick<ClubAcquisitionState, "players"> | null; catalogue: readonly ClubOwnerSquadCard[]; area: ClubRosterArea;
+export function ClubOwnerCollectionSlots({ state, catalogue, area, start = 0, count, locale, liveSeasonRating = false, draftLocalesEnabled = false, enabled, displayWidth = 70, imageLoading = "eager", guidedSlot, onChoose, onFieldPlayer, onReleasePlayer, onPriorityChange, grouped = false, slotPositions, playerAvailabilityIndicators = [] }: {
+  state: { players: readonly (Pick<ClubOwnedPlayer, "playerId" | "area" | "slot"> & Partial<Pick<ClubOwnedPlayer, "position">>)[] } | null; catalogue: readonly ClubOwnerSquadCard[]; area: ClubRosterArea;
   start?: number; count: number; locale: string; liveSeasonRating?: boolean; draftLocalesEnabled?: boolean; enabled: boolean; displayWidth?: number; guidedSlot?: number;
   imageLoading?: "eager" | "lazy";
   onChoose: (destination: CollectionDestination) => void;
   onFieldPlayer?: (playerId: string) => void;
   onReleasePlayer?: (playerId: string) => void;
   onOutsidePlayer?: (playerId: string) => void;
+  onPriorityChange?: (playerId: string, slot: number) => void;
+  playerAvailabilityIndicators?: readonly GameweekPlayerAvailabilityIndicator[];
   grouped?: boolean;
   slotPositions?: readonly (ExchangePosition | null)[];
 }) {
@@ -133,8 +138,11 @@ export function ClubOwnerCollectionSlots({ state, catalogue, area, start = 0, co
   });
   const renderSlot = ({ slot, owned, position }: typeof slots[number]) => {
       const card = owned ? cards.get(owned.playerId) : null;
+      const availability = owned ? playerAvailabilityIndicators.filter(entry => entry.playerId === owned.playerId) : [];
       const positionName = position ? collectionPositionName(position, locale, draftLocalesEnabled) : null;
-      return <div className={layout.slot} key={slot} data-collection-slot={slot} data-position={position ?? undefined} data-owned={owned ? "true" : undefined}>
+      const prioritySlots = area === "outside" && owned && position
+        ? slots.filter(entry => entry.owned && entry.position === position).sort((a, b) => a.slot - b.slot) : [];
+      return <div className={layout.slot} style={{ position: "relative" }} key={slot} data-collection-slot={slot} data-position={position ?? undefined} data-owned={owned ? "true" : undefined}>
         {card ? <TouchlineGameweekCard liveSeasonRating={liveSeasonRating} card={card} locale={locale} draftLocalesEnabled={draftLocalesEnabled} compact displayWidth={displayWidth} imageLoading={imageLoading}
           replacementAction={owned && onFieldPlayer ? { label: copy.replacePlayer, disabled: !enabled || !state,
             onSelect: () => { if (enabled && state) onFieldPlayer(owned.playerId); } } : undefined}
@@ -144,12 +152,23 @@ export function ClubOwnerCollectionSlots({ state, catalogue, area, start = 0, co
             : <button type="button" className={styles.emptyPosition} data-collection-placeholder="true" data-guided-action={enabled && Boolean(state) && guidedSlot === slot ? "true" : undefined} disabled={!enabled || !state || guidedSlot !== slot}
               aria-label={`${copy.signPlayer} · ${positionName ?? title} · ${slot + 1}`}
               onClick={() => { if (enabled && state && guidedSlot === slot) onChoose({ area, slot }); }}>+</button>}
+        {card && availability.length === 1 ? <div className={styles.myClubAvailabilityBadge}>
+          <TouchlinePlayerAvailabilityBadge badge={availability[0].badge} locale={resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled)} />
+        </div> : null}
         {position ? <b className={layout.positionLabel} title={positionName!} aria-label={`${position} · ${positionName}`}>{position}</b>
           : <small className={layout.positionLabel} aria-label={`${copy.slot} ${slot + 1}`}>{slot + 1}</small>}
         {owned ? <button type="button" className={controls.link} disabled={!enabled || !state}
           aria-label={`${copy.change} · ${title} ${slot + 1}`}
           title={copy.changePlayer}
           onClick={() => onChoose({ area, slot })}><ArrowLeftRight aria-hidden="true" /></button> : null}
+        {owned && onPriorityChange && prioritySlots.length ? <label className={layout.priority}>
+          {pt ? "Prioridade" : "Priority"}
+          <select aria-label={`${pt ? "Prioridade de substituição" : "Substitution priority"} · ${card?.name ?? positionName}`}
+            disabled={!enabled || prioritySlots.length < 2} value={slot}
+            onChange={event => { const target = Number(event.currentTarget.value); if (enabled && prioritySlots.some(entry => entry.slot === target)) onPriorityChange(owned.playerId, target); }}>
+            {prioritySlots.map((entry, index) => <option key={entry.slot} value={entry.slot}>{index + 1}</option>)}
+          </select>
+        </label> : null}
       </div>;
   };
   const groupedSlots = groupCollectionSlots(slots);

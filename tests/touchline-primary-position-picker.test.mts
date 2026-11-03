@@ -13,6 +13,7 @@ import * as allocation from "../lib/touchlineFantasy/club-allocation.ts";
 import * as slotPlan from "../lib/touchlineFantasy/collection-slot-plan.ts";
 import * as primaryIndex from "../lib/touchlineFantasy/club-primary-position-index.ts";
 import * as primaryPolicy from "../lib/touchlineFantasy/club-primary-position-policy.ts";
+import * as catalogueLocale from "../lib/touchlineArena/catalogue-locale.ts";
 import * as swapPresentation from "../lib/touchlineFantasy/squad-swap-presentation.ts";
 import { CLUB_POSITION_LIMITS, type ClubAcquisitionState, type ClubOwnedPlayer } from "../lib/touchlineFantasy/club-acquisition.ts";
 import { TOUCHLINE_DEFAULT_FORMATION_GEOMETRY_REGISTRY as formations } from "../lib/touchlineArena/formation-geometry.ts";
@@ -35,6 +36,8 @@ function render(props:Props, component="ClubOwnerCollectionPicker", buttons: Pro
     "@/lib/touchlineFantasy/club-allocation":allocation,"@/lib/touchlineFantasy/collection-slot-plan":slotPlan,
     "@/lib/touchlineFantasy/club-primary-position-index":primaryIndex,"@/lib/touchlineFantasy/club-primary-position-policy":primaryPolicy,
     "@/components/touchline/a11y/TouchlineDialog":{useTouchlineDialog:()=>({dialogProps:{role:"dialog"}}),useTouchlineDialogScrollLock:()=>{}},
+    "@/lib/touchlineArena/catalogue-locale":catalogueLocale,
+    "@/components/touchline/cards/TouchlinePlayerAvailabilityBadge":{__esModule:true,default:()=>assert.fail("Picker fixtures do not supply availability indicators")},
     "./TouchlineGameweekCard":{__esModule:true,default:()=>null},
     "@/components/touchline/market/TouchlineMarketPlayerTile":{__esModule:true,default:({card,children}: {card:{id:string};children:React.ReactNode})=>React.createElement("div",{"data-card":card.id},children)},
   };

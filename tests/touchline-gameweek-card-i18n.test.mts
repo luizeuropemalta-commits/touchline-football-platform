@@ -141,7 +141,9 @@ test("only outside collection and market results opt into lazy thumbnails; reser
   const outside = slots.filter(slot => slot.get("area") === '"outside"');
   const reserves = slots.filter(slot => slot.get("area") === '"reserves"');
   assert.equal(outside.length, 1); assert.equal(outside[0].get("imageLoading"), '"lazy"');
-  assert.equal(reserves.length, 2); assert.ok(reserves.every(slot => !slot.has("imageLoading")));
+  assert.equal(reserves.length, 3, "two technical rails and the Arena reserve rail share eager delivery");
+  assert.deepEqual(reserves.map(slot => slot.get("count")), ["{4}", "{5}", "{9}"]);
+  assert.ok(reserves.every(slot => !slot.has("imageLoading")));
   const cards = openings(fantasyClient, "TouchlineGameweekCard");
   assert.equal(cards.filter(card => card.get("imageLoading") === '"lazy"').length, 1);
   assert.ok(cards.filter(card => card.has("compact")).every(card => !card.has("imageLoading")), "XI thumbnails remain eager by default");

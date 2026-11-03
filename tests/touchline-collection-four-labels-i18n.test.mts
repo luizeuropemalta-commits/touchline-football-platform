@@ -43,7 +43,8 @@ test('four-label source wiring retains actions, conditions and currency formatti
   const end = source.indexOf('{collectionEnabled && releasePlayerId', begin);
   assert.ok(begin >= 0 && end > begin);
   const block = source.slice(begin, end);
-  for (const key of labels) assert.match(block, new RegExp(`\\bcollectionBudgetCopy\\.${key}\\b`));
+  for (const key of ["refreshSquad", "confirmPendingOperation"]) assert.match(block, new RegExp(`\\bcollectionBudgetCopy\\.${key}\\b`));
+  assert.doesNotMatch(block, /collectionBudgetCopy\.squadBalance/, "the redundant squad balance was removed");
   // Read-only recovery offers refresh; only an actual pending command offers
   // confirmation. Both retain the same explicit user action and busy gates.
   assert.match(block, /onClick=\{collection\.retryPending\}>\{collection\.pendingRecoveryOnly \? collectionBudgetCopy\.refreshSquad : collectionBudgetCopy\.confirmPendingOperation\}/);
@@ -52,7 +53,5 @@ test('four-label source wiring retains actions, conditions and currency formatti
   assert.ok(block.includes('collectionEnabled && collection.hasPending'));
   assert.ok(block.includes('disabled={collection.busy || !collection.ready}'));
   assert.ok(block.includes('onClick={collection.retryPending}'));
-  assert.ok(block.includes('collectionEnabled && collection.state'));
-  assert.ok(block.includes('{new Intl.NumberFormat(locale).format(collection.state.balanceEur)} TC'));
-  assert.ok(block.includes('collection.state.balanceEur<=1_000_000'));
+  assert.doesNotMatch(block, /collection\.state\.balanceEur/, "the removed balance banner has no duplicate value");
 });

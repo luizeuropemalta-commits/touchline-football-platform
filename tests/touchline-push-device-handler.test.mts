@@ -161,3 +161,58 @@ test("malformed Web Push keys are rejected before storage, not acknowledged as d
     assert.deepEqual(writes, []);
   }
 });
+
+test("device body rejects oversized JSON before save even when schema is otherwise valid", async () => {
+  const { deps, writes } = harness();
+  const response = await handlePushDeviceRegistration(new Request(request(), {
+    body: ' '.repeat(17000) + JSON.stringify(registration),
+  }), deps);
+  assert.equal(response.status, 400); assert.equal(writes.length, 0);
+});
+
+test("device body has a total read deadline and cancels a stalled stream", async t => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  let cancelled = false;
+  const { deps, writes } = harness();
+  const stream = new ReadableStream({ start(controller) { controller.enqueue(new TextEncoder().encode('{')); },
+    cancel() { cancelled = true; } });
+  const input = new Request("https://qa.example/api/notifications/devices", {
+    method: "PUT", headers: { origin: "https://qa.example", "content-type": "application/json" },
+    body: stream, duplex: "half",
+  } as RequestInit);
+  const pending = handlePushDeviceRegistration(input, deps);
+  await new Promise(resolve => setImmediate(resolve));
+  t.mock.timers.tick(10001);
+  const outcome = await Promise.race([pending, new Promise<null>(resolve => setImmediate(() => resolve(null)))]);
+  if (!outcome) await input.body?.cancel().catch(() => undefined);
+  assert.ok(outcome, "handler must finish without waiting indefinitely for request body");
+  assert.equal(outcome.status, 400); assert.equal(cancelled, true); assert.equal(writes.length, 0);
+});
+
+test("device deadline is not renewed by partial chunks", async t => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  let writer!: ReadableStreamDefaultController<Uint8Array>;
+  const { deps, writes } = harness();
+  const pending = handlePushDeviceRegistration(new Request("https://qa.example/api/notifications/devices", {
+    method: "PUT", headers: { origin: "https://qa.example" }, duplex: "half",
+    body: new ReadableStream({ start(controller) { writer = controller; controller.enqueue(new TextEncoder().encode('{')); } }),
+  } as RequestInit), deps);
+  await new Promise(resolve => setImmediate(resolve));
+  t.mock.timers.tick(6000);
+  writer.enqueue(new TextEncoder().encode('"installationId":'));
+  await new Promise(resolve => setImmediate(resolve));
+  t.mock.timers.tick(4001);
+  assert.equal((await pending).status, 400); assert.equal(writes.length, 0);
+});
+
+test("device size limit counts streamed bytes regardless of declared length", async () => {
+  let cancelled = false;
+  const { deps, writes } = harness();
+  const input = new Request("https://qa.example/api/notifications/devices", {
+    method: "PUT", headers: { origin: "https://qa.example", "content-length": "1" }, duplex: "half",
+    body: new ReadableStream({ start(controller) { controller.enqueue(new Uint8Array(16385)); },
+      cancel() { cancelled = true; return new Promise(() => {}); } }),
+  } as RequestInit);
+  const response = await handlePushDeviceRegistration(input, deps);
+  assert.equal(response.status, 400); assert.equal(cancelled, true); assert.equal(writes.length, 0);
+});

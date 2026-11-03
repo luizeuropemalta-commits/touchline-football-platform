@@ -19,7 +19,7 @@ test("inventories every page, API method, proxy, metadata route, and error bound
   assert.equal(rows.filter((item) => item.kind === "PAGE").length, 79);
   assert.equal(row("/account").data, "VERIFIED_AUTH_ROLE_REDIRECT_ONLY_NO_TEAM_WRITES");
   assert.equal(rows.some((item) => item.route === "/visual-qa/arena-main-field"), false);
-  assert.equal(rows.filter((item) => item.kind === "API").length, 144);
+  assert.equal(rows.filter((item) => item.kind === "API").length, 147);
   assert.equal(rows.filter((item) => item.kind === "BOUNDARY").length, 7);
   assert.equal(rows.filter((item) => item.kind === "METADATA").length, 3);
   assert.equal(rows.filter((item) => item.kind === "PROXY").length, 1);
@@ -45,6 +45,30 @@ test("public ClubOwner discovery separates opt-in reads from authenticated self-
   assert.equal(row("PUT /api/account/public-profile").auth, "AUTHENTICATED_ARENA_ACCESS_SAME_ORIGIN");
   assert.equal(row("GET /api/touchline/clubowners").auth, "PUBLIC");
   assert.equal(row("/clubowner").auth, "AUTHENTICATED");
+});
+
+test("first-access discovery inventories insert-only explicit intent without photo publication", () => {
+  const onboarding = row("PUT /api/account/public-profile/onboarding");
+  assert.equal(onboarding.auth, "AUTHENTICATED_ARENA_ACCESS_SAME_ORIGIN");
+  assert.equal(onboarding.role, "ARENA_USER");
+  assert.equal(onboarding.data, "DEFAULT_OFF_AUTH_UID_CONFIRMED_USER_VERSIONED_NAME_INTENT_INSERT_ONLY_PRESERVE_EXISTING_PROFILE_NO_PHOTO_PUBLICATION");
+  assert.equal(onboarding.status, "PENDING_SCHEMA_AND_AUTHENTICATED_QA");
+  assert.equal(onboarding.sourceFile, "app/api/account/public-profile/onboarding/route.ts");
+  assert.equal(rows.some(item => item.route === "GET /api/account/public-profile/onboarding"), false);
+});
+
+test("public market is an authenticated customer projection and atomic proposal, not anonymous access", () => {
+  const read = row("GET /api/touchline/clubowners/[publicId]/market");
+  const write = row("POST /api/touchline/clubowners/[publicId]/market");
+  assert.equal(read.auth, "AUTHENTICATED_CUSTOMER_ARENA_ACCESS_ORIGIN_CHECKED");
+  assert.equal(write.auth, "AUTHENTICATED_CUSTOMER_ARENA_ACCESS_SAME_ORIGIN");
+  assert.equal(read.data, "DEFAULT_OFF_DISCOVERY_AND_EXCHANGE_FRESH_TARGET_OPT_IN_LISTED_OFFERS_NO_PRIVATE_WALLET");
+  assert.equal(write.data, "DEFAULT_OFF_DISCOVERY_AND_EXCHANGE_FRESH_TARGET_OPT_IN_REVISION_CHECKED_IDEMPOTENT_ATOMIC_PROPOSAL");
+  for (const endpoint of [read, write]) {
+    assert.equal(endpoint.role, "ARENA_CUSTOMER");
+    assert.equal(endpoint.status, "PENDING_SCHEMA_AND_AUTHENTICATED_QA");
+    assert.equal(endpoint.sourceFile, "app/api/touchline/clubowners/[publicId]/market/route.ts");
+  }
 });
 
 test("public avatar inventory is a separately gated consented current-only read, never public bucket or activation approval", () => {
