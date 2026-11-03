@@ -115,6 +115,43 @@ test("QA collection activation and locales coexist without admitting release or 
   }
 });
 
+test("coach editorial and catalogue flags require exact private names, booleans and canonical QA", () => {
+  const canonical = {
+    VERCEL: "1", VERCEL_GIT_COMMIT_REF: "qa",
+    TOUCHLINE_QA_SUPABASE_PROJECT_REF: "xgxbwqxjssxxuihuwmgy",
+    SUPABASE_URL: "https://xgxbwqxjssxxuihuwmgy.supabase.co",
+    NEXT_PUBLIC_SUPABASE_URL: "https://xgxbwqxjssxxuihuwmgy.supabase.co",
+  };
+  const keys = ["TOUCHLINE_COACH_CATALOGUE_ENABLED", "TOUCHLINE_COACH_EDITORIAL_ENABLED"];
+  for (const catalogue of ["true", "false"]) {
+    for (const editorial of ["true", "false"]) {
+      const environment = qaEnvironment({ ...canonical,
+        TOUCHLINE_COACH_CATALOGUE_ENABLED: catalogue, TOUCHLINE_COACH_EDITORIAL_ENABLED: editorial });
+      assert.deepEqual(inspectTouchlineIsolatedPreviewEnvironment(environment), { status: "qa", reasons: [] });
+      assert.deepEqual(resolveTouchlineIsolatedPreviewRoutePolicy("/api/admin/coach-catalogue", environment), { status: "inactive" });
+    }
+  }
+  for (const key of keys) {
+    for (const value of ["true", "false"]) {
+      assert.equal(inspectTouchlineIsolatedPreviewEnvironment(qaEnvironment({ ...canonical, [key]: value })).status, "qa");
+      assert.equal(inspectTouchlineIsolatedPreviewEnvironment(isolatedEnvironment({ [key]: value })).status, "invalid");
+      for (const patch of [
+        { VERCEL_GIT_COMMIT_REF: "main" }, { VERCEL_GIT_COMMIT_REF: undefined }, { VERCEL_ENV: "production" },
+        { TOUCHLINE_QA_SUPABASE_PROJECT_REF: "other-project", SUPABASE_URL: "https://other-project.supabase.co",
+          NEXT_PUBLIC_SUPABASE_URL: "https://other-project.supabase.co" },
+        { SUPABASE_URL: "https://other-project.supabase.co" },
+        { NEXT_PUBLIC_SUPABASE_URL: "https://other-project.supabase.co" },
+        { [key]: "" }, { [key]: "TRUE" }, { [key]: "1" }, { [key]: "synthetic-forbidden-value" },
+        { [`NEXT_PUBLIC_${key}`]: "true" }, { [`${key}_OTHER`]: "true" },
+      ]) {
+        const result = inspectTouchlineIsolatedPreviewEnvironment(qaEnvironment({ ...canonical, [key]: value, ...patch }));
+        assert.equal(result.status, "invalid", JSON.stringify(Object.keys(patch)));
+        assert.ok(result.reasons.every(reason => !reason.includes("synthetic-forbidden-value")));
+      }
+    }
+  }
+});
+
 test("hosted lifecycle switches require canonical QA and collection activation", () => {
   const canonical = {
     VERCEL: "1", VERCEL_GIT_COMMIT_REF: "qa",

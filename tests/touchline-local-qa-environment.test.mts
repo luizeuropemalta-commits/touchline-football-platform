@@ -168,3 +168,41 @@ test("public discovery is explicit source configuration, never inherited or coup
   }
   assert.throws(() => buildQaCandidateEnvironments({ ...source, [flag]: "true", NEXT_PUBLIC_SUPABASE_URL: "https://foreign.invalid" }, host, { qaMarketContext: true }), /canonical project/);
 });
+
+test("local builds reproduce explicit coach flags without inheriting or enabling them", () => {
+  const keys = ["TOUCHLINE_COACH_CATALOGUE_ENABLED", "TOUCHLINE_COACH_EDITORIAL_ENABLED"];
+  const host = Object.fromEntries(keys.map(key => [key, "true"]));
+  const options = { qaMarketContext: true, localBuild: true };
+  const absent = buildQaCandidateEnvironments(source, host, options);
+  for (const key of keys) assert.equal(absent.preview[key], undefined);
+  const inherited = Object.assign(Object.create(host), source);
+  for (const key of keys) {
+    assert.equal(buildQaCandidateEnvironments(inherited, host, options).preview[key], undefined);
+  }
+  for (const catalogue of ["true", "false"]) {
+    for (const editorial of ["true", "false"]) {
+      const flags = { TOUCHLINE_COACH_CATALOGUE_ENABLED: catalogue, TOUCHLINE_COACH_EDITORIAL_ENABLED: editorial };
+      const { preview, preflight } = buildQaCandidateEnvironments({ ...source, ...flags }, host, options);
+      for (const [key, value] of Object.entries(flags)) {
+        assert.equal(preview[key], value);
+        assert.equal(preflight[key], undefined);
+      }
+      assert.equal(inspectTouchlineIsolatedPreviewEnvironment(preview).status, "qa");
+      // Hosting the same application configuration must not introduce a new rejection.
+      const { TOUCHLINE_LOCAL_QA_BUILD: localOnly, ...hosted } = preview;
+      assert.equal(localOnly, "1");
+      assert.equal(inspectTouchlineIsolatedPreviewEnvironment({ ...hosted, VERCEL: "1" }).status, "qa");
+    }
+  }
+  for (const key of keys) {
+    for (const value of ["", "TRUE", "1", "synthetic-forbidden-value"]) {
+      assert.throws(() => buildQaCandidateEnvironments({ ...source, [key]: value }, host, options),
+        error => error instanceof Error && !error.message.includes("synthetic-forbidden-value") && /preview contract/.test(error.message));
+    }
+    assert.throws(() => buildQaCandidateEnvironments({ ...source, [key]: "true" }, host, { qaMarketContext: false }), /preview contract/);
+    assert.throws(() => buildQaCandidateEnvironments({ ...source, [key]: "true", NEXT_PUBLIC_SUPABASE_URL: "https://foreign.invalid" }, host, options), /canonical project/);
+    for (const forbidden of [`NEXT_PUBLIC_${key}`, `${key}_OTHER`]) {
+      assert.equal(buildQaCandidateEnvironments({ ...source, [forbidden]: "true" }, host, options).preview[forbidden], undefined);
+    }
+  }
+});

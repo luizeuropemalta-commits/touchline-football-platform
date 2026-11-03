@@ -13,6 +13,9 @@ const APPROVED_SOURCE_CONFIGURATION = [
   "TOUCHLINE_CARD_PUBLICATION_GATE",
   "TOUCHLINE_CURRENT_SEASON",
   "TOUCHLINE_CLUBOWNER_PUBLIC_ENABLED",
+  // Explicit source flags reproduce hosted QA; host flags never pass through.
+  "TOUCHLINE_COACH_CATALOGUE_ENABLED",
+  "TOUCHLINE_COACH_EDITORIAL_ENABLED",
 ] as const;
 
 function ownValue(environment: Environment, key: string) {

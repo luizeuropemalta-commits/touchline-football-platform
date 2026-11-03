@@ -329,6 +329,13 @@ export function inspectTouchlineIsolatedPreviewEnvironment(
         && environment.TOUCHLINE_QA_SUPABASE_PROJECT_REF === "xgxbwqxjssxxuihuwmgy"
         && (environment[name] === "false"
           || (environment[name] === "true" && environment.TOUCHLINE_CLUB_COLLECTION_ENABLED === "true"))))
+      // Coach runtime/editorial configuration is private and scoped to the
+      // canonical QA branch/database. Database activation and admin permission
+      // remain independent; admitting either name never enables the catalogue.
+      .filter((name) => !(["TOUCHLINE_COACH_CATALOGUE_ENABLED", "TOUCHLINE_COACH_EDITORIAL_ENABLED"].includes(name)
+        && environment.VERCEL_GIT_COMMIT_REF === "qa"
+        && environment.TOUCHLINE_QA_SUPABASE_PROJECT_REF === "xgxbwqxjssxxuihuwmgy"
+        && ["true", "false"].includes(environment[name] ?? "")))
       // Request timing is diagnostic only and must never be admitted to hosted
       // QA/Production or an isolated Preview. It logs no payload or identity.
       .filter((name) => !(name === "TOUCHLINE_LOCAL_READ_TIMING"
