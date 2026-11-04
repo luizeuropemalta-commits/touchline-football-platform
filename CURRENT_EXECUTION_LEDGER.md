@@ -1,3 +1,19 @@
+## 2026-11-04 — QA publicada e P2 de nome corrigido localmente; novo deploy não autorizado
+
+QA READY:7ca7dff84d1694b91b7468a041a6a7065dee7802 / dpl_46oUpDxtMqzmt2e5jex2k3fDK7cS, alias confirmado. Build remoto autorizado1/1 consumido; não há autorização adicional até este registro. OFF HTTP13PASS/3FAIL preservado, complementado por renderização real de404/avatar512/ranking→perfil. IAB autenticado não equivale a iPhone físico ou navegador anônimo. ON HTTP14PASS/2limitaçõesSSR; nenhum recibo antigo reclassificado.
+
+Catálogo QA publicON/editorialON/rev3 por CAS autorizado, xmin observado4692332;20 atuais/21 históricos e hashes integral/current/history preservados. Current523911/club20 mantido;30314 apenas histórico, labels corretos. RollbackOFF somente com nova leitura/CAS, preservando publicações/revisão. Recibo `outputs/coach-qa-reactivation-7ca7dff8-20261104.json`.
+
+P2 real observado no QA: nome Matthias Jaissle cortado no card. Único delta local contra7ca é CSS367833f76901d7c5067a528a88af74a05574f315e2c9ccc8a47537948e678422, quatro adições para aplicar a largura lateral existente de medium também a short. Sem mudar fonte/arte/identidades/âncoras/API/SQL/regras. A correção ainda não está publicada; o P2 não é declarado encerrado remotamente.
+
+Focal432/432,2defsPASS,0FAIL/SKIP/cancel:21nomes aprovados+3controles (23nomes distintos),3modos×3viewports×2engines;Matthias primeiro/18casos.68fontes atuais,864capturas únicas; hashing integral das imagens não coletado, sem alegação contrária. Guardas geométricas preservadas,0corte por ancestrais e1CSSpx de arredondamento explicitamente autorizado; browsers fechados. Addendum de metadados preserva manifesto/execução originais. Memória local dispensada a pedido do proprietário; disco>3GiB/timeouts/asserts intactos.
+
+Build local corrigidoPASS: `outputs/coach-short-name-postqa-build.json`. Compilado30314 móvel844×390 e desktop1440×900 PASS: texto completo/fonte26,1px, documentos839≤844 e1435≤1440,0imagensquebradas/0logs. Capturas móvel/desktop inspecionadas; buildIdNY3j-qeD8iV2VZ_JDfnCz. TypeScript/ESLint exit0,0erros/13avisosbaseline,diff0; recibos `outputs/coach-short-name-postqa-gates.json` e `outputs/coach-name-corrected-compiled-visual.json`. Full8020/106reconciliados/60excluídos permanecem evidências anteriores qualificadas; nenhum falso fullrerun nem obrigação de repetir matrizes alheias ao CSS.
+
+Safari BetaFree após refresh preservou Sergej Jakirović/Fraser Forster1de35/formação4-3-3/saldo89,6M TC, sem pagamento. Recibo `outputs/qa-publicacao-7ca7dff8-20261104.json`; prova parcial, não elenco35/35 nem todas as jornadas autenticadas.
+
+Próximo: CAS somente2checkpoints/gatesleves/diff/SHA limpo e pedir autorização concreta para outro build GitQA; não publicar antes dela. Continuam abertos QAfuncional autenticada prevista, iPhone físico/pinch/tela branca e identidade oficial faltante da fixture19722185. Sem GO de inauguração; Production/.com.br/DNS/StripeLive intocados.
+
 ## 2026-11-04 — Fechamento local 282t e preparação do único build Git QA autorizado
 
 SUPERSEDES apenas o estado operacional abaixo. Candidata 282t: 282 caminhos, SHA do manifesto `55bb154ecc85175f4c7909268f75c13caa6913444b4f684e15fd7b0e4ca897db`, `work/mobile-282t-frozen-manifest-20261104.json` da conversa. Delta após 282q: somente CSS dos nomes do card de treinador; nenhuma alteração de dados/API/SQL/regras/arte. HEAD/QA ainda d9259edcddb8045e450c1d4f3cce8d0898acbc53; main remoto437b318e08c04c1e11f8e290cf652482a4f6a98d. Um build Git QA adicional já autorizado, zero consumidos; sem novo commit/push/deploy até este registro.

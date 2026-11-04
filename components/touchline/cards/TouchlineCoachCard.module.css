@@ -250,11 +250,15 @@
   white-space: nowrap;
 }
 
+.nameplate[data-coach-name-fit="short"] strong,
 .nameplate[data-coach-name-fit="medium"] strong {
   /* Use the clear space beside the plaque while keeping its centre and
      vertical anchors fixed. The full name remains inside the card artwork. */
   width: max-content;
   max-width: calc(100% + 12cqw);
+}
+
+.nameplate[data-coach-name-fit="medium"] strong {
   font-size: clamp(12px, calc(var(--coach-name-size, 5.2cqw) * 1.24), 37px);
   letter-spacing: -.025em;
 }
