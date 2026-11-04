@@ -3,7 +3,7 @@ import test from "node:test";
 import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import ts from "typescript";
-import { parseTouchlineActiveRankingState, touchlinePlayerCrownEligibility } from "../lib/touchlineArena/card-ranking-live.ts";
+import { parseTouchlineRankingPresentation, touchlinePlayerCrownEligibility } from "../lib/touchlineArena/card-ranking-live.ts";
 import { allowsInheritedCardLeadership } from "../lib/touchlineArena/card-leadership-authority.ts";
 
 const cardSource = readFileSync(new URL("../components/touchline/cards/TouchlineEliteExactCard.tsx", import.meta.url), "utf8");
@@ -13,8 +13,8 @@ function resolve(pathname: string | null, payload: unknown, editable = false) {
   assert.ok(fn, "real card must expose its narrow QA ranking resolver");
   const exports: Record<string, (...args: unknown[]) => unknown> = {};
   runInNewContext(ts.transpileModule(fn.getText(ast), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText,
-    { exports, parseTouchlineActiveRankingState });
-  return exports.resolveExplicitQaPlayerRanking(pathname, payload, editable) as ReturnType<typeof parseTouchlineActiveRankingState>;
+    { exports, parseTouchlineRankingPresentation });
+  return exports.resolveExplicitQaPlayerRanking(pathname, payload, editable) as ReturnType<typeof parseTouchlineRankingPresentation>;
 }
 function payload(status: "unique-leader" | "tied") {
   const source = readFileSync(new URL("./browser/touchline-player-leader-crown.spec.ts", import.meta.url), "utf8");

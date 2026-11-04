@@ -12,7 +12,7 @@ export function observeVisibleDecorationMotion(root: Document = document) {
       // nearest observed decoration owns each animation's visibility state.
       const target = (animation.effect as KeyframeEffect | null)?.target;
       if (!(target instanceof Element) || target.closest(selector) !== node) continue;
-      if (!('animationName' in animation) || !/planIconSweep|touchlineClubEdgeTravel|touchlinePitchBoundaryTrace|touchlineLedMarquee|touchline-card-perimeter-trace|club-owner-portrait-perimeter-trace|club-hub-stadium-breathe|club-hub-border-sweep/.test(String(animation.animationName))) continue;
+      if (!('animationName' in animation) || !/planIconSweep|touchlineClubEdgeTravel|touchlinePitchBoundaryTrace|touchlineLedMarquee|touchline-card-perimeter-trace|club-owner-portrait-perimeter-trace|club-hub-stadium-breathe|club-hub-border-sweep|clubOwnerGreenSweep|clubOwnerPhotoNeonSweep|clubOwnerGoldSweep|portraitNeonOrbit/.test(String(animation.animationName))) continue;
       if (visible && !root.hidden) animation.play();
       else animation.pause();
     }
@@ -38,9 +38,17 @@ export function observeVisibleDecorationMotion(root: Document = document) {
   };
   const mutations = new MutationObserver((records) => {
     if (disposed) return;
+    const changedOwners = new Set<Decoration>();
     for (const record of records) {
-      for (const node of record.addedNodes) if (node instanceof Element) discover(node);
+      for (const node of record.addedNodes) if (node instanceof Element) {
+        discover(node);
+        // React can replace an animated descendant without replacing the
+        // observed panel. Apply its existing visibility to the new animation.
+        const owner = node.parentElement?.closest<Decoration>(selector);
+        if (owner && nodes.has(owner)) changedOwners.add(owner);
+      }
     }
+    for (const owner of changedOwners) paint(owner, nodes.get(owner) ?? false);
     for (const node of nodes.keys()) {
       if (node.isConnected) continue;
       observer.unobserve(node);

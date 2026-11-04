@@ -125,6 +125,23 @@ if (process.argv[2] === "--compile-fixture") {
     await page.evaluate(() => document.fonts.ready);
     const crest = page.locator('[data-calibration-card] img[data-touchline-card-crest="true"]');
     await expect(crest).toHaveCount(1); await expect(crest).toBeVisible();
+    const awaitCrestPaint = async (stage: string) => {
+      await crest.evaluate(async node => {
+        const image = node as HTMLImageElement;
+        await image.decode();
+        await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+      });
+      const state = await crest.evaluate(node => {
+        const image = node as HTMLImageElement;
+        return { connected: image.isConnected, src: image.src, currentSrc: image.currentSrc,
+          complete: image.complete, naturalWidth: image.naturalWidth, naturalHeight: image.naturalHeight,
+          filter: getComputedStyle(image).filter };
+      });
+      t.diagnostic(JSON.stringify({ engineName, stage, state }));
+      assert.ok(state.connected && state.complete && state.naturalWidth > 0 && state.naturalHeight > 0 && state.currentSrc.length > 0);
+      return state;
+    };
+    const originalImageState = await awaitCrestPaint("original-ready");
     const fingerprint = () => crest.evaluate(image => {
       const chain = []; let node: Element | null = image;
       while (node) { const s = getComputedStyle(node), r = node.getBoundingClientRect(); chain.push({ tag: node.tagName,
@@ -194,12 +211,24 @@ if (process.argv[2] === "--compile-fixture") {
         delete (window as unknown as { crestCalibration?: unknown }).crestCalibration;
       });
     }
+    const restoredImageState = await awaitCrestPaint("restored-ready");
+    assert.deepEqual(restoredImageState, originalImageState, "restoration keeps the original image source, decode and active target filter");
     assert.equal(await page.locator(`#${filterId}`).evaluate(node => node.outerHTML), actualFilter);
     assert.deepEqual(await fingerprint(), originalFingerprint);
     const restored = await page.screenshot({ clip, animations: "disabled" });
     writeFileSync(path.join(output, `${engineName}-restored.png`), restored);
     const decode = (png: Buffer) => sharp(png).removeAlpha().raw().toBuffer({ resolveWithObject: true });
     const first = await decode(original), last = await decode(restored);
+    let changedChannels = 0, maximumChannelDelta = 0;
+    for (let index = 0; index < first.data.length; index++) {
+      const delta = Math.abs(first.data[index] - last.data[index]);
+      if (delta !== 0) changedChannels++;
+      maximumChannelDelta = Math.max(maximumChannelDelta, delta);
+    }
+    writeFileSync(path.join(output, `${engineName}-restoration-readback.json`), JSON.stringify({
+      status: "diagnostic-only-exact-assert-follows", originalImageState, restoredImageState,
+      originalRaster: first.info, restoredRaster: last.info, changedChannels, maximumChannelDelta,
+    }, null, 2));
     assert.deepEqual(last.data, first.data, "original product pixels must be restored exactly");
     const frames = new Map<string, Awaited<ReturnType<typeof decode>>>();
     for (const [name, png] of screenshots) frames.set(name, await decode(png));

@@ -108,9 +108,9 @@ test("automatic substitutions: bench then ordered outside, same position, no dup
     const read=async()=>(await db.query<{slot_id:string;source_player_id:string;player_id:string;source_area:string}>("select * from touchline_club_resolve_effective_xi($1)",[ug])).rows;
     assert.ok((await read()).every(p=>p.source_player_id===p.player_id),"never substitute a participant");
     await db.query("update touchline_fantasy_player_fixture_scores set appearance_status='absent',participation_status='did_not_play',rating=null,reason_code='DID_NOT_PLAY',fantasy_contribution=0 where player_id=$1",[cbs[0].playerId]);
+    await db.query("update touchline_fantasy_player_fixture_scores set rating=10,fantasy_contribution=10 where player_id=$1",[id(203)]);
     assert.equal((await read()).find(p=>p.source_player_id===cbs[0].playerId)?.player_id,id(200),"bench precedes higher-scoring outside");
     await db.query("update touchline_fantasy_player_fixture_scores set appearance_status='absent',participation_status='did_not_play',rating=null,reason_code='DID_NOT_PLAY',fantasy_contribution=0 where player_id=$1",[id(200)]);
-    await db.query("update touchline_fantasy_player_fixture_scores set rating=10,fantasy_contribution=10 where player_id=$1",[id(203)]);
     assert.equal((await read()).find(p=>p.source_player_id===cbs[0].playerId)?.player_id,id(201),"first outside even when third scores more");
     await db.query("update touchline_fantasy_player_fixture_scores set appearance_status='absent',participation_status='did_not_play',rating=null,reason_code='DID_NOT_PLAY',fantasy_contribution=0 where player_id=$1",[cbs[1].playerId]);
     const two=await read();assert.equal(new Set(two.map(p=>p.player_id)).size,11);
@@ -146,6 +146,24 @@ test("real reconcile waits for reserve coverage, scores the chosen XI once and h
     assert.equal(effective.player_id,id(201));
     assert.equal(Number((await db.query<{gameweek_score:string}>("select gameweek_score from touchline_fantasy_user_gameweek_scores where user_gameweek_id=$1",[ug])).rows[0].gameweek_score),66);
     assert.equal((await reconcile()).userScoresChanged,0,"idempotent replay");
+    // A final zero-minute absence exhausts both earlier same-position choices.
+    await db.query("update touchline_player_fixture_score_settlements set appearance_status='absent',minutes_played=0,rating=null where football_player_id=$1",[id(201)]);
+    await db.query("update touchline_player_fixture_score_settlements set appearance_status='unused',minutes_played=0,rating=null where football_player_id=$1",[id(202)]);
+    assert.equal((await reconcile()).ok,true);
+    const thirdOutside=(await db.query<{player_id:string;source_area:string}>("select player_id,source_area from touchline_club_effective_selections where source_player_id=$1",[cb.playerId])).rows[0];
+    assert.deepEqual(thirdOutside,{player_id:id(203),source_area:"outside"},"bench, outside 1 and outside 2 did not play: outside 3 enters");
+    assert.equal(Number((await db.query<{gameweek_score:string}>("select gameweek_score from touchline_fantasy_user_gameweek_scores where user_gameweek_id=$1",[ug])).rows[0].gameweek_score),70);
+    assert.equal((await reconcile()).userScoresChanged,0,"later outside choice also replays without changes");
+    // A participating goalkeeper is never used when every eligible CB is absent.
+    await db.query("update touchline_player_fixture_score_settlements set appearance_status='absent',minutes_played=0,rating=null where football_player_id=$1",[id(203)]);
+    assert.equal((await reconcile()).ok,true);
+    const noEligible=(await db.query<{player_id:string;source_area:string}>("select player_id,source_area from touchline_club_effective_selections where source_player_id=$1",[cb.playerId])).rows[0];
+    assert.deepEqual(noEligible,{player_id:cb.playerId,source_area:"starters"},"no same-position participant: keep the original CB, never the available GK");
+    const effectiveXi=(await db.query<{player_id:string}>("select player_id from touchline_club_effective_selections where user_gameweek_id=$1",[ug])).rows;
+    assert.equal(effectiveXi.length,11);assert.equal(new Set(effectiveXi.map(p=>p.player_id)).size,11);
+    assert.ok(!effectiveXi.some(p=>p.player_id===id(204)),"wrong-position outside player is excluded");
+    assert.equal(Number((await db.query<{gameweek_score:string}>("select gameweek_score from touchline_fantasy_user_gameweek_scores where user_gameweek_id=$1",[ug])).rows[0].gameweek_score),60);
+    for(const n of [201,202,203])await db.query("update touchline_player_fixture_score_settlements set appearance_status='started',minutes_played=90,rating=$2 where football_player_id=$1",[id(n),n===203?10:6]);
     await db.query("update touchline_player_fixture_score_settlements set appearance_status='substitute',minutes_played=1,rating=2 where football_player_id=$1",[cb.playerId]);
     await reconcile();
     assert.equal((await db.query<{player_id:string}>("select player_id from touchline_club_effective_selections where source_player_id=$1",[cb.playerId])).rows[0].player_id,cb.playerId);

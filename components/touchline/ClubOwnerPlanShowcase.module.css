@@ -168,3 +168,12 @@
 }
 @media (max-width: 720px) { .planShowcase { padding: 18px; border-radius: 18px; } }
 @media (prefers-reduced-motion: reduce) { .planShowcase * { animation: none !important; transition: none !important; } .tierIconGlint { animation: none !important; -webkit-mask-image: none; mask-image: none; opacity: .25; } }
+
+/* The dialog surface keeps its artwork and borders without a touch blur layer. */
+@media (hover: none), (pointer: coarse) {
+  .planShowcase[data-embedded] .planDialog,
+  .planShowcase .planDialog {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}

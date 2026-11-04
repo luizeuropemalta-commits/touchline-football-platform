@@ -108,7 +108,7 @@ test("two real official tables and ClubHub score share goal/correction publicati
       "lib/touchlineArena/sports-publication-official-table-client.ts", "lib/touchlineArena/sports-publication-official-table.ts",
       "lib/touchlineArena/live-presentation-client-store.ts", "lib/touchlineArena/sports-publication-reader.ts"],
     mountScript: `window.fixtureRefreshCount=0;window.onFixtureRouteRefresh=()=>{window.fixtureRefreshCount++;};
-      window.unmountFixture=()=>flushSync(()=>root.unmount());window.transportDigest=()=>loadEntry().transportDigest();window.transportEpoch=()=>loadEntry().transportEpoch();
+      window.unmountFixture=()=>flushSync(()=>root.unmount());window.transportDigest=()=>loadEntry().transportDigest();window.transportEpoch=()=>loadEntry().transportEpoch();window.transportRequestEpoch=()=>loadEntry().transportRequestEpoch();
       window.rerenderFixture=patch=>{window.fixtureProps={...window.fixtureProps,...patch};flushSync(()=>root.render(React.createElement(loadEntry().default,window.fixtureProps)));};
       flushSync(()=>root.render(React.createElement(loadEntry().default,window.fixtureProps)));`,
   });
@@ -130,6 +130,14 @@ test("two real official tables and ClubHub score share goal/correction publicati
       let current = seed;
       let transportDegraded = false;
       const requests: string[] = [], refused: string[] = [], errors: string[] = [];
+      const transportRequests: Array<{ kind: "state" | "payload"; digest: string; requestEpoch: number }> = [];
+      const recordTransportRequest = async (kind: "state" | "payload") => {
+        // Observe the real shared store only; this neither subscribes nor starts a read.
+        const requestEpoch = await page.evaluate("window.transportRequestEpoch()") as number;
+        const digest = current.publication.contentDigest;
+        requests.push(`${kind}:${digest}`);
+        transportRequests.push({ kind, digest, requestEpoch });
+      };
       page.on("pageerror", error => errors.push(error.message));
       page.on("console", message => { if (message.type() === "error") errors.push(message.text()); });
       await context.route("**/*", async route => {
@@ -139,7 +147,7 @@ test("two real official tables and ClubHub score share goal/correction publicati
         }
         if (url.pathname === fixturePath) { await route.fulfill({ contentType: "text/html", body: html }); return; }
         if (url.pathname === "/api/touchline-arena/live-presentation-state") {
-          requests.push(`state:${current.publication.contentDigest}`);
+          await recordTransportRequest("state");
           // Idle scheduling keeps this event-driven proof deterministic; it is
           // not a test of production polling cadence or provider latency.
           const statePayload = { version: 1, available: true, mode: "idle", pollAfterMs: null, resumeAt: null,
@@ -149,7 +157,7 @@ test("two real official tables and ClubHub score share goal/correction publicati
           await route.fulfill({ json: statePayload }); return;
         }
         if (url.pathname === "/api/touchline-arena/sports-publication") {
-          requests.push(`payload:${current.publication.contentDigest}`);
+          await recordTransportRequest("payload");
           await route.fulfill({ json: { ok: true, data: current } }); return;
         }
         const file = path.resolve(publicRoot, `.${decodeURIComponent(url.pathname)}`);
@@ -172,7 +180,35 @@ test("two real official tables and ClubHub score share goal/correction publicati
         await rerender({ enabled: true });
         await expect.poll(() => page.evaluate("window.transportDigest()")).toBe(seed.publication.contentDigest);
         const payloads = () => requests.filter(value => value.startsWith("payload:"));
-        await expect.poll(() => payloads().length).toBe(1);
+        const cadenceChecks: Array<{ stage: string; acceptedEpoch: number; stateReads: number; payloadReads: number }> = [];
+        const assertSharedCadence = async (stage: string, afterEpoch = 0) => {
+          // Let visibility observers settle, then wait for the actual in-flight
+          // shared read to be accepted. No fixed sleep or digest-based allowance.
+          await settleFrames(page);
+          await expect.poll(async () => {
+            const epochs = await page.evaluate(() => ({
+              requested: (window as unknown as { transportRequestEpoch: () => number }).transportRequestEpoch(),
+              accepted: (window as unknown as { transportEpoch: () => number }).transportEpoch(),
+            }));
+            return epochs.requested > afterEpoch && epochs.accepted === epochs.requested
+              && transportRequests.length === epochs.requested * 2;
+          }, { message: `${stage}: finish the shared state/payload read` }).toBe(true);
+          const acceptedEpoch = await page.evaluate("window.transportEpoch()") as number;
+          assert.equal(await page.evaluate("window.transportRequestEpoch()"), acceptedEpoch);
+          assert.equal(transportRequests.length, acceptedEpoch * 2);
+          for (let index = 0; index < acceptedEpoch; index++) {
+            const stateRequest = transportRequests[index * 2], payloadRequest = transportRequests[index * 2 + 1];
+            assert.deepEqual([stateRequest.kind, payloadRequest.kind], ["state", "payload"], `${stage}: one alternating pair per shared read`);
+            assert.deepEqual([stateRequest.requestEpoch, payloadRequest.requestEpoch], [index + 1, index + 1],
+              `${stage}: the two tables and score cannot create per-component payloads`);
+            assert.equal(payloadRequest.digest, stateRequest.digest, `${stage}: signal and payload belong to the same publication`);
+          }
+          assert.equal(payloads().length, acceptedEpoch, `${stage}: exactly one payload per actual shared state read`);
+          assert.equal(transportRequests.at(-1)?.digest, await page.evaluate("window.transportDigest()"));
+          cadenceChecks.push({ stage, acceptedEpoch, stateReads: requests.length - payloads().length, payloadReads: payloads().length });
+          return acceptedEpoch;
+        };
+        await assertSharedCadence("initial three-consumer subscription");
         const profile = page.locator("#table-profile");
         const profileHandle = await profile.elementHandle();
         const movingLink = profile.locator(`a[href="${clubHref(1)}"]`);
@@ -220,6 +256,7 @@ test("two real official tables and ClubHub score share goal/correction publicati
           { revision: 5, home: 0, away: 1, status: "FT", points: [3, 6] },
         ] as const;
         for (const step of sequence) {
+          const beforeEpoch = await assertSharedCadence(`before revision ${step.revision}`);
           const next = { ...publicFixture(stamp, step.home, step.away, step.status),
             ...(step.status === "FT" ? { liveMinute: 90 } : {}) };
           current = publication(step.revision, stamp, [next]);
@@ -227,36 +264,41 @@ test("two real official tables and ClubHub score share goal/correction publicati
           await expect.poll(() => page.evaluate("window.transportDigest()")).toBe(current.publication.contentDigest);
           await check(next, step.points);
           if (step.status === "FT") await expect(score).not.toContainText("90′");
-          assert.equal(payloads().filter(value => value === `payload:${current.publication.contentDigest}`).length, 1,
-            "both tables and score consume one payload per accepted publication, not per component");
+          await assertSharedCadence(`revision ${step.revision}`, beforeEpoch);
         }
         const finalFixture = publicFixture(stamp, 0, 1, "FT");
         // Keep the same mounted season and reconcile stale SSR history. The
         // callback above observes refresh intent only; this is not real RSC.
         await rerender({ table: JSON.parse(JSON.stringify(baseline)) });
         await check(finalFixture, [3, 6]);
+        const epochBeforeRepeat = await assertSharedCadence("late SSR reconciliation");
         const payloadCountBeforeRepeat = payloads().length;
         const stateCountBeforeRepeat = requests.filter(value => value.startsWith("state:")).length;
-        const epochBeforeRepeat = await page.evaluate("window.transportEpoch()") as number;
         await page.evaluate(() => window.dispatchEvent(new Event("online")));
         await expect.poll(() => requests.filter(value => value.startsWith("state:")).length).toBeGreaterThan(stateCountBeforeRepeat);
         await expect.poll(() => page.evaluate("window.transportEpoch()")).toBeGreaterThan(epochBeforeRepeat);
-        await settleFrames(page);
-        assert.equal(payloads().length, payloadCountBeforeRepeat, "same-digest signal does not reload the publication");
+        const epochAfterRepeat = await assertSharedCadence("same historical digest, fresh current-membership read", epochBeforeRepeat);
+        assert.equal(epochAfterRepeat, epochBeforeRepeat + 1, "one online signal after settled consumers starts exactly one shared read");
+        assert.equal(payloads().length - payloadCountBeforeRepeat, epochAfterRepeat - epochBeforeRepeat,
+          "same-digest cadence re-reads exactly one shared payload per new state read");
+        assert.equal(requests.filter(value => value.startsWith("state:")).length - stateCountBeforeRepeat,
+          epochAfterRepeat - epochBeforeRepeat);
+        assert.ok(transportRequests.slice(epochBeforeRepeat * 2).every(read => read.digest === current.publication.contentDigest),
+          "same-digest verification must not substitute a different publication");
         await check(finalFixture, [3, 6]);
+        const beforeOmission = await assertSharedCadence("before omitted fixture");
         current = publication(6, stamp, []);
         await page.evaluate(() => window.dispatchEvent(new Event("online")));
         await expect.poll(() => page.evaluate("window.transportDigest()")).toBe(current.publication.contentDigest);
         await check(finalFixture, [3, 6]);
-        assert.equal(payloads().filter(value => value === `payload:${current.publication.contentDigest}`).length, 1);
+        const beforeReturn = await assertSharedCadence("omitted fixture retains last known facts", beforeOmission);
         // The earlier A publication can be accepted again after B. The store
         // orders accepted reads, never opaque digest strings or score values.
         current = seed;
         await page.evaluate(() => window.dispatchEvent(new Event("online")));
         await expect.poll(() => page.evaluate("window.transportDigest()")).toBe(seed.publication.contentDigest);
         await check(initialFixture, [4, 4]);
-        assert.equal(payloads().filter(value => value === `payload:${seed.publication.contentDigest}`).length, 2,
-          "A is downloaded once on initial acceptance and once after the intervening publication");
+        await assertSharedCadence("A is freshly downloaded after the intervening B publication", beforeReturn);
 
         const dimensions = await page.evaluate(() => ({
           viewport: window.innerWidth, document: document.documentElement.scrollWidth,
@@ -276,6 +318,7 @@ test("two real official tables and ClubHub score share goal/correction publicati
           assert.ok(surface.scrollHeight > surface.clientHeight, `${surface.key}: scroll is exercised on real content`);
         }
         if (capturePrefix) await page.screenshot({ path: `${capturePrefix}-${viewport.width}x${viewport.height}.png` });
+        await assertSharedCadence("before hiding all consumers");
         await rerender({ hidden: true });
         await expect(page.locator("[data-table-fixture-visibility]")).toBeHidden();
         await settleFrames(page);
@@ -290,17 +333,19 @@ test("two real official tables and ClubHub score share goal/correction publicati
         await settleFrames(page);
         assert.equal(requests.length, disabledRequests, "explicit static opt-out makes no shared transport requests");
         for (const tableId of tableIds) assert.deepEqual(await tableRows(page, tableId), expectedRows(baseline), "opt-out renders its own SSR baseline");
+        const beforeResume = await page.evaluate("window.transportEpoch()") as number;
         const resumed = publicFixture(stamp, 2, 1);
         current = publication(7, stamp, [resumed]);
         await rerender({ enabled: true });
         await expect.poll(() => page.evaluate("window.transportDigest()")).toBe(current.publication.contentDigest);
         await check(resumed, [6, 3], false);
-        assert.equal(payloads().filter(value => value === `payload:${current.publication.contentDigest}`).length, 1);
+        await assertSharedCadence("resume all consumers", beforeResume);
         // Actual shared transport/reader: source freshness, not response arrival, controls LIVE.
         for (const state of [
           { revision: 8, fetchedAt: new Date(Date.now() - 6 * 60_000).toISOString(), degraded: true },
           { revision: 9, fetchedAt: stamp, degraded: true },
         ]) {
+          const beforeEpoch = await assertSharedCadence(`before freshness revision ${state.revision}`);
           transportDegraded = state.degraded;
           // A new publication can contain an older source receipt; do not backdate the publication itself.
           current = publication(state.revision, state.fetchedAt, [publicFixture(state.fetchedAt, 2, 1)], new Date().toISOString());
@@ -309,9 +354,9 @@ test("two real official tables and ClubHub score share goal/correction publicati
           await expect(score.locator("[data-clubhub-fixture-score]")).toHaveText("2 — 1");
           await expect(score.locator("[data-clubhub-fixture-status]")).toHaveText("Live data updating");
           await expect(score).not.toContainText("35′");
-          assert.equal(payloads().filter(value => value === `payload:${current.publication.contentDigest}`).length, 1,
-            "freshness handling must not add a second payload reader");
+          await assertSharedCadence(`freshness revision ${state.revision}`, beforeEpoch);
         }
+        const beforeRecovery = await assertSharedCadence("before fresh recovery");
         transportDegraded = false;
         const recoveredStamp = stamp;
         const recovered = publicFixture(recoveredStamp, 2, 1);
@@ -319,7 +364,7 @@ test("two real official tables and ClubHub score share goal/correction publicati
         await page.evaluate(() => window.dispatchEvent(new Event("online")));
         await expect.poll(() => page.evaluate("window.transportDigest()")).toBe(current.publication.contentDigest);
         await check(recovered, [6, 3], false);
-        assert.equal(payloads().filter(value => value === `payload:${current.publication.contentDigest}`).length, 1);
+        await assertSharedCadence("fresh recovery", beforeRecovery);
         const routeRefreshRequests = await page.evaluate("window.fixtureRefreshCount") as number;
         assert.ok(routeRefreshRequests > 0, "real refresh boundary still requests server reconciliation");
         await page.evaluate("window.unmountFixture()");
@@ -330,7 +375,7 @@ test("two real official tables and ClubHub score share goal/correction publicati
         assert.equal(requests.length, unmountedRequests, "unmount removes subscriptions and online listeners");
         assert.deepEqual(refused, []); assert.deepEqual(errors, []);
         reports.push({ viewport, dimensions, scrollBefore, payloads: payloads().length, stateReads: requests.length - payloads().length,
-          routeRefreshRequests, scenarios: ["goal", "equaliser", "downward-correction", "FT-no-double-count", "late-SSR", "omission-LKG",
+          routeRefreshRequests, transportRequests, cadenceChecks, sharedConsumers: ["table-profile", "table-rail", "ClubHub score"], scenarios: ["goal", "equaliser", "downward-correction", "FT-no-double-count", "late-SSR", "omission-LKG",
             "A-B-A", "same-digest", "seed-without-metadata", "FT-residual-minute", "expired-receipt", "degraded-receipt", "fresh-recovery", "hidden", "disabled", "resume", "unmount"], focusScrollAndInputPreserved: true });
       } finally { await page.evaluate("window.unmountFixture?.()").catch(() => undefined); await context.close(); }
     }

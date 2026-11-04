@@ -1,3 +1,6 @@
+import { createHash } from "node:crypto";
+import { currentRankingCandidateIds, projectTouchlineCurrentPlayerRanking } from "../lib/touchlineArena/current-player-ranking.ts";
+import type { TouchlineActiveRankingState } from "../lib/touchlineArena/card-ranking-live.ts";
 import assert from "node:assert/strict";
 import { existsSync, realpathSync, statSync } from "node:fs";
 import path from "node:path";
@@ -16,6 +19,24 @@ const routePath = "/touchline-player-card-rankings";
 const now = "2026-10-23T12:00:00.000Z";
 const id = (n: number) => `10000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 const targetId = id(6);
+
+// Synthetic canonical scope/admissions, passed through the REAL projector.
+// Scope is fixed independently from the received historical season.
+function currentPlayerView(raw: TouchlineActiveRankingState | null, currentSeasonId = id(50)) {
+  const scope = { competitionId: id(60), seasonId: currentSeasonId, providerSeasonId: currentSeasonId === id(50) ? "70001" : "70002",
+    effectiveSeason: currentSeasonId === id(50) ? "2026-27" : "2027-28" };
+  const source = new Map(raw?.players.map(row => [row.playerId, row]) ?? []);
+  const admissions = currentRankingCandidateIds(raw).map(playerId => {
+    const index = Number(playerId.slice(-12));
+    return { playerId, providerPlayerId: String(source.get(playerId)?.providerPlayerId ?? 100 + index),
+      clubId: id(70), membershipId: id(1000 + index), status: "eligible" as const };
+  });
+  const revision = createHash("sha256").update(JSON.stringify([raw?.snapshotId ?? null, scope, admissions])).digest("hex");
+  const view = projectTouchlineCurrentPlayerRanking({ raw, scope, admissions, revision });
+  assert.notEqual(view.phase, "unavailable", "synthetic canonical admissions must pass the real current projector");
+  return view;
+}
+
 function publication(rev: number, total: number | null, extra = false, withdrawn = false) {
   const built = buildTouchlineRankingSnapshot({ snapshotId: `ranking:${rev}`, roundId: "synthetic-round", generatedAt: now,
     source: "simulation", status: "published", players: Array.from({ length: extra ? 31 : 30 }, (_, index) => ({
@@ -32,6 +53,7 @@ function publication(rev: number, total: number | null, extra = false, withdrawn
   const value = parseTouchlineSportsPublication({ version: 1, scopeKey: "touchline-england",
     publication: { snapshotId: id(100 + rev), contentDigest: rev.toString(16).padStart(32, "0"), publishedAt: now,
       playerRankingSnapshotId: withdrawn ? null : built.snapshotId, coachRankingSnapshotId: null, liveScoreSnapshotDigest: "e".repeat(32) },
+    currentPlayerRanking: currentPlayerView(withdrawn ? null : ranking), currentCoachRanking: null,
     playerRanking: withdrawn ? null : ranking, coachRanking: null, live: { fetchedAt: now, fixtures: [] } });
   assert.ok(value); return value;
 }

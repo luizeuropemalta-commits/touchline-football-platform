@@ -59,7 +59,7 @@ function reader(input: Input = {}) {
   };
   const read = runInNewContext(`${readerCode}\nreadPublicSeasonPlayerPoints;`, {
     createAdminClient: () => admin,
-    loadTouchLineActiveRanking: async () => {
+    loadTouchLinePublishedPlayerRanking: async () => {
       activeRankingReads++;
       return {
       phase: input.phase ?? "ranked",

@@ -1,3 +1,4 @@
+import { resolveTouchlineSeasonPlayer } from "@/lib/touchlineArena/player-season-presentation";
 /* eslint-disable @next/next/no-img-element */
 import { isTouchLineSiteLocalesEnabled } from "@/lib/touchlineArena/site-locales-release";
 import type { CSSProperties, ReactNode } from "react";
@@ -927,9 +928,12 @@ async function renderPlayerProfilePage({
       kind: "history" as const,
     };
   });
-  // One immutable published authority for the profile, card, zoom and ranking.
-  // A null publication stays unavailable even if the mutable season is newer.
-  const totalRatingText = competition.totalRating;
+  // A departed player retains this UUID's audited season total, but never a
+  // current rank/crown. A new season has no historical carry-over.
+  const totalRatingText = resolveTouchlineSeasonPlayer({
+    authority: { playerRanking: profileRanking, coachLeader: null }, enabled: true,
+    playerId: canonicalPlayerId, providerPlayerId: canonicalProviderPlayerId, seasonId: profileSeasonId,
+  })?.totalRating ?? null;
   const cumulativeRatingText = totalRatingText === null
     ? text.unavailable
     : String(totalRatingText);

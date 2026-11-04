@@ -1252,3 +1252,16 @@
     line-height: 1.15;
   }
 }
+
+/* The identity panel is large; retain its gradients/borders on touch landscape
+   without sampling the whole backdrop. The card's own art/halo remains intact. */
+@media (orientation: landscape) and (hover: none), (orientation: landscape) and (pointer: coarse) {
+  .identityBand {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .identityBand::before {
+    filter: none;
+  }
+}

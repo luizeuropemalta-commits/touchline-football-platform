@@ -63,7 +63,7 @@ export function projectTouchlinePublishedRankingCatalog(
     || ranking.scoringVersion !== "player_scoring_v4"
     || !ranking.snapshotId?.trim() || !ranking.seasonId?.trim()
     || (ranking.coverageStatus !== "complete" && ranking.coverageStatus !== "complete_for_scoring")
-    || !Array.isArray(ranking.players) || !ranking.players.length) return incomplete("invalid-ranking");
+    || !Array.isArray(ranking.players) || (!ranking.players.length && !ranking.currentProjection)) return incomplete("invalid-ranking");
   const snapshotId = ranking.snapshotId;
   const seasonId = ranking.seasonId;
 
@@ -105,6 +105,7 @@ export function projectTouchlinePublishedRankingCatalog(
     // would leave ordering and tiebreaks pinned to the previous publication.
     publishedRanking: {
       snapshotId,
+      ...(ranking.currentProjection ? { officialRank: row.officialRank ?? null, currentRevision: ranking.currentProjection.revision } : {}),
       providerPlayerId: row.providerPlayerId ?? null,
       totalRating: row.totalRating,
       minutesPlayed: row.minutesPlayed ?? null,

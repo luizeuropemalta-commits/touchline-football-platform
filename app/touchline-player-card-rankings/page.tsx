@@ -403,6 +403,16 @@ async function renderPlayerCardRankings({
           color: white;
         }
 
+        /* Preserve the board artwork without filtering the entire touch surface. */
+        @media (hover: none), (pointer: coarse) {
+          .tl-card-rankings-hero,
+          .tl-card-rankings-featured article,
+          .tl-card-rankings-board {
+            -webkit-backdrop-filter: none;
+            backdrop-filter: none;
+          }
+        }
+
         @media (max-width: 1100px) {
           .tl-card-rankings-content h1 {
             font-size: 52px;
@@ -447,6 +457,24 @@ async function renderPlayerCardRankings({
         @media (max-height: 500px) and (orientation: landscape) {
           .tl-card-rankings-content h1 {
             font-size: 40px;
+          }
+        }
+
+        /* Keep navigation and metadata legible without resizing card artwork. */
+        @media (orientation: landscape) and (hover: none), (orientation: landscape) and (pointer: coarse) {
+          .tl-card-rankings-featured-copy a,
+          .tl-card-rankings-actions a,
+          .tl-card-rankings-featured-copy small,
+          .tl-card-rankings-row-main small,
+          .tl-card-rankings-featured-copy > span,
+          .tl-card-rankings-hero > div > span,
+          .tl-card-rankings-metrics article > span,
+          .tl-card-rankings-board-head > div > span,
+          .tl-card-rankings-board-head small,
+          .tl-card-rankings-club > span,
+          .tl-card-rankings-rank {
+            font-size: 12px;
+            line-height: 1.4;
           }
         }
       `}</style>

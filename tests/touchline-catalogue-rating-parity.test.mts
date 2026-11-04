@@ -62,7 +62,7 @@ function catalogue(options: { statsError?: boolean; noStats?: boolean; otherSeas
   } };
   const shared = {
     createAdminClient: () => admin,
-    loadTouchLineActiveRanking: async () => state,
+    loadTouchLinePublishedPlayerRanking: async () => state,
     projectTouchlineCardStatsByPosition,
   };
   const readPublicSeasonPlayerPoints = runInNewContext(`${code("lib/touchlineArena/public-season-player-points-server.ts")}\nreadPublicSeasonPlayerPoints;`, shared);

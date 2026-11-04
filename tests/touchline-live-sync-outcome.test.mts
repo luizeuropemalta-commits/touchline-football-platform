@@ -1,3 +1,4 @@
+import { syntheticProductionEnvironment, syntheticProjectCredential } from "./helpers/touchline-production-runtime-fixture.mts";
 import { coachReconciliationFailureReason, summarizeCoachReconciliation } from "../lib/football-data/coach-reconciliation-diagnostic.ts";
 import { catalogueCoachAssignments, legacyCoachCatalogue } from "../lib/touchlineArena/coach-catalogue-contract.ts";
 import assert from "node:assert/strict";
@@ -447,13 +448,7 @@ test("event observation failure stays separately visible without invalidating su
   }
 });
 
-const boundProductionEnvironment = {
-  VERCEL_ENV: "production", VERCEL_PROJECT_ID: "prj_GtCzQlIE8AJdm0hSf7GB5yOWejmM",
-  VERCEL_ORG_ID: "team_P1d7YNrmUObvbJJTJRlGcXoz", TOUCHLINE_PRODUCTION_DATA_SYNC_ENABLED: "true",
-  SUPABASE_URL: "https://xgxbwqxjssxxuihuwmgy.supabase.co",
-  NEXT_PUBLIC_SUPABASE_URL: "https://xgxbwqxjssxxuihuwmgy.supabase.co",
-  NEXT_PUBLIC_TOUCHLINE_AUTH_ORIGIN: "https://touchline.com.br",
-};
+const boundProductionEnvironment = syntheticProductionEnvironment();
 test("explicit Production runtime admission reaches the unchanged live orchestrator", async () => {
   const s = scenario({ environment: boundProductionEnvironment });
   assert.equal((await s.run()).ok, true);
@@ -462,6 +457,11 @@ test("explicit Production runtime admission reaches the unchanged live orchestra
 });
 for (const change of [
   { TOUCHLINE_PRODUCTION_DATA_SYNC_ENABLED: undefined },
+  { TOUCHLINE_PRODUCTION_SUPABASE_PROJECT_REF: undefined },
+  { TOUCHLINE_PRODUCTION_SUPABASE_PROJECT_REF: "xgxbwqxjssxxuihuwmgy",
+    SUPABASE_URL: "https://xgxbwqxjssxxuihuwmgy.supabase.co", NEXT_PUBLIC_SUPABASE_URL: "https://xgxbwqxjssxxuihuwmgy.supabase.co" },
+  { NEXT_PUBLIC_SUPABASE_ANON_KEY: undefined },
+  { SUPABASE_SERVICE_ROLE_KEY: syntheticProjectCredential("service_role", "xgxbwqxjssxxuihuwmgy") },
   { NEXT_PUBLIC_SUPABASE_URL: "https://wrong.supabase.co" },
   { VERCEL_ENV: undefined },
   { TOUCHLINE_DEPLOYMENT_MODE: "isolated-preview" },

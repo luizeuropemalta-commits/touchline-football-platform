@@ -9,6 +9,26 @@ import { runInNewContext } from "node:vm";
 import * as jsxRuntime from "react/jsx-runtime";
 import ts from "typescript";
 import * as marketPolicy from "../lib/touchlineFantasy/market-plan-policy.ts";
+import * as paymentContract from "../lib/stripe/club-season-payment-contract.ts";
+import * as testCatalogue from "../lib/stripe/club-season-test-catalogue.ts";
+
+// Load the real server configuration with a closed, synthetic environment.
+// Only the server-only marker is inert; every functional dependency is real.
+const paymentConfiguration: Record<string, unknown> = {};
+const paymentDependencies: Record<string, unknown> = {
+  "server-only": {},
+  "./club-season-payment-contract.ts": paymentContract,
+  "./club-season-test-catalogue.ts": testCatalogue,
+};
+runInNewContext(ts.transpileModule(readFileSync(new URL("../lib/stripe/club-season-configuration.server.ts", import.meta.url), "utf8"), {
+  compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+}).outputText, {
+  exports: paymentConfiguration, process: { env: {} }, URL,
+  require(name: string) {
+    assert.ok(Object.hasOwn(paymentDependencies, name), `Unexpected payment dependency: ${name}`);
+    return paymentDependencies[name];
+  },
+});
 
 const source = readFileSync(new URL("../app/clubowner/page.tsx", import.meta.url), "utf8");
 type Params = { lang?: string; club?: string; planPreview?: string | string[] };
@@ -20,6 +40,7 @@ function fixture(environment: string, patch: Record<string, unknown> = {}) {
   const snapshot = Object.freeze({ entitlementActive: true, marketAccess: marketPolicy.resolveTouchlineFantasyMarketAccess("standard"),
     config: { budgetEur: 500_000_000 }, userGameweek: { totalMarketValueEur: 379_000_000 }, plan, ...patch });
   const dependencies: Record<string, unknown> = {
+    "@/lib/stripe/club-season-configuration.server": paymentConfiguration,
     "@/lib/stripe/club-season-offers.server": { readClubSeasonCheckoutOffers: async (accountId: string) => {
       assert.equal(accountId, user.id); return {};
     } },

@@ -11,6 +11,7 @@ import { normalizeTouchlineMatchCentreTimeZone } from "@/lib/touchlineArena/matc
 import { isTouchLineSiteLocalesEnabled } from "@/lib/touchlineArena/site-locales-release";
 import { redirect } from "next/navigation";
 import { AuthSessionMissingError } from "@supabase/supabase-js";
+import { resolveClubSeasonPaymentConfiguration } from "@/lib/stripe/club-season-configuration.server";
 import { readClubSeasonCheckoutOffers } from "@/lib/stripe/club-season-offers.server";
 import ClubOwnerMarketHeader from "@/components/touchline/ClubOwnerMarketHeader";
 import ClubSeasonCheckoutReturn from "@/components/touchline/ClubSeasonCheckoutReturn";
@@ -95,6 +96,10 @@ async function renderClubOwnerPageContent({ searchParams }: ClubOwnerPageProps, 
   const params = await searchParams;
   const checkout = params.checkout === "processing" || params.checkout === "cancelled" ? params.checkout : null;
   const checkoutSessionId = typeof params.session_id === "string" ? params.session_id : null;
+  // Only this nonsecret mode crosses the server/client boundary. An incomplete
+  // configuration cannot turn a URL session prefix into payment authority.
+  const checkoutConfiguration = checkout ? resolveClubSeasonPaymentConfiguration("status") : null;
+  const checkoutPaymentMode = checkoutConfiguration?.ok ? checkoutConfiguration.config.mode : null;
   const clubSlug = Array.isArray(params.club) ? params.club[0] : params.club;
   const planPreviewValue = Array.isArray(params.planPreview) ? params.planPreview[0] : params.planPreview;
   const planPreview = process.env.NODE_ENV === "development" && (planPreviewValue === "pro" || planPreviewValue === "standard")
@@ -187,7 +192,7 @@ async function renderClubOwnerPageContent({ searchParams }: ClubOwnerPageProps, 
   void content.then(complete, fail);
   return <main className={styles.page} dir={draftLocalesEnabled ? "ltr" : undefined}>
     <TouchlineBrandHeader href={destination} locale={locale} accountLocaleContext={{ mode: "account", accountId: user.id }} draftLocalesEnabled={draftLocalesEnabled} navigationAccessory={<TouchlineSignOutButton compact locale={locale} draftLocalesEnabled={draftLocalesEnabled} />} navigation={<TouchlineGlobalNavigation locale={locale} draftLocalesEnabled={draftLocalesEnabled} currentRoute="market" surface="authenticated" showAudioControl={false} />} />
-    {checkout ? <ClubSeasonCheckoutReturn checkout={checkout} sessionId={checkoutSessionId} locale={locale} /> : null}
+    {checkout ? <ClubSeasonCheckoutReturn checkout={checkout} sessionId={checkoutSessionId} locale={locale} paymentMode={checkoutPaymentMode} /> : null}
     <Suspense fallback={<TouchlineAccountLoading contentOnly />}>
       <TouchlineCardLeadershipLayout>
         <ClubOwnerDeferredContent content={content} />

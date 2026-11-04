@@ -423,9 +423,6 @@ export default async function TouchlineSocialPublicationsAdmin({
 
   return <div lang={locale} className="mx-auto max-w-[1300px] space-y-6">
     <GamePanel className="p-6 sm:p-8">
-      <nav aria-label={t("Idioma")} className="mb-4 flex gap-3 text-sm font-bold">
-        {(["pt-BR", "en-GB"] as const).map((language) => <Link key={language} href={`/admin/social-publications?lang=${language}&draftPage=${draftPage}&reviewPage=${reviewPage}`} aria-current={locale === language ? "page" : undefined} hrefLang={language} className="text-[#b7ff45] underline underline-offset-4">{language === "pt-BR" ? "Português" : "English"}</Link>)}
-      </nav>
       <LivePill>{t("QA · aprovação humana obrigatória")}</LivePill>
       <h1 className="mt-5 text-4xl font-black italic text-white sm:text-6xl">{t("Publicações sociais")}</h1>
       <Link href={`/admin/social-publications/studio?lang=${locale}`} className="mt-5 inline-flex text-sm font-bold text-[#b7ff45] underline underline-offset-4">{t("Abrir Studio · artes PNG e download")}</Link>

@@ -157,7 +157,7 @@ function loadRankedCatalogue({
   };
   const readRealSeasonPoints = runInNewContext(`${seasonReaderSource}\nreadPublicSeasonPlayerPoints;`, {
     createAdminClient: () => { assert.fail("the season reader must use the supplied admin"); },
-    loadTouchLineActiveRanking: () => { assert.fail("the catalogue must not resolve a newer active publication"); },
+    loadTouchLinePublishedPlayerRanking: () => { assert.fail("the catalogue must not resolve a newer active publication"); },
     projectTouchlineCardStatsByPosition,
   }) as (ids: string[], options: unknown) => Promise<unknown[]>;
   const execute = runInNewContext(`${source}\nloadTouchLineRankedCardCatalog;`, {

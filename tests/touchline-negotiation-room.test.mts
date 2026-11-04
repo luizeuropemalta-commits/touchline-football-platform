@@ -7,6 +7,8 @@ import * as jsxRuntime from "react/jsx-runtime";
 import { renderToStaticMarkup } from "react-dom/server";
 import ts from "typescript";
 import * as roomCopy from "../lib/touchlineFantasy/exchange-room-i18n.ts";
+import { isTouchlineFantasyMarketAccess, resolveTouchlineFantasyMarketAccess } from "../lib/touchlineFantasy/market-plan-policy.ts";
+import { confirmedCollectionBootstrap } from "../lib/touchlineFantasy/club-collection-bootstrap.ts";
 
 const read = (file: string) => readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
 type SceneProps = { plan?: "beta" | "standard" | "master" | "vip"; counterpartyPlan?: "beta" | "standard" | "master" | "vip"; locale?: string; draftLocalesEnabled?: boolean; ownerName?: string; agentNotice?: React.ReactNode };
@@ -168,4 +170,93 @@ test("compact copy retains decision amounts and withdrawal warning without a tut
   assert.match(showcase, /\{CLUBOWNER_SHOWCASE_LIMIT\} na vitrine/);
   assert.doesNotMatch(screen, /Sem surpresas\.|Você escolhe de zero a/);
   assert.doesNotMatch(thread, /O aceite confere os dois elencos/);
+});
+
+// Exercise the owning client expression and real representative, not a second
+// implementation of fallback rules. Nothing here creates a collection/account.
+function ownerExchangePlan(collection: unknown, snapshot: unknown, initialCollectionRead: unknown = null): SceneProps["plan"] {
+  const source = read("app/fantasy/FantasyGameweekClient.tsx");
+  const file = ts.createSourceFile("FantasyGameweekClient.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const declarations: ts.VariableDeclaration[] = [];
+  const visit = (node: ts.Node) => {
+    if (ts.isVariableDeclaration(node) && node.name.getText(file) === "exchangePlan") declarations.push(node);
+    ts.forEachChild(node, visit);
+  };
+  visit(file);
+  assert.equal(declarations.length, 1, "one real owner-plan projection must feed both Exchange surfaces");
+  assert.ok(declarations[0].initializer);
+  const current = snapshot as { marketAccess?: unknown } | null;
+  const value: unknown = runInNewContext(declarations[0].initializer.getText(file), {
+    collection, snapshot, initialCollectionRead, marketPolicy: current?.marketAccess, isTouchlineFantasyMarketAccess,
+    confirmedCollectionBootstrap, useMemo: (compute: () => unknown) => compute(),
+  });
+  switch (value) {
+    case "beta": case "standard": case "master": case "vip": case undefined: return value;
+    default: throw new Error("Exchange invented an unsupported account plan");
+  }
+}
+
+const syntheticOwner = "00000000-0000-4000-8000-000000000001";
+const syntheticSeason = "00000000-0000-4000-8000-000000000002";
+function confirmedOwnerPlan(plan: "beta" | "standard" | "master" | "vip") {
+  return { userId: syntheticOwner, config: { seasonId: syntheticSeason }, entitlementActive: true,
+    plan: { active: true }, marketAccess: resolveTouchlineFantasyMarketAccess(plan) };
+}
+function syntheticCollection(plan: "beta" | "standard" | "master" | "vip", revision: number) {
+  return { seasonId: syntheticSeason, plan, revision, balanceEur: 0, coach: null, players: [], receipts: [] };
+}
+function serverCollection(state: ReturnType<typeof syntheticCollection>) {
+  return { status: "confirmed", accountId: syntheticOwner, seasonId: syntheticSeason,
+    state, initialBudget: null, releaseAvailable: false };
+}
+function assertRepresentativePlan(plan: SceneProps["plan"], expected: Exclude<SceneProps["plan"], undefined>) {
+  assert.equal(plan, expected);
+  const html = renderComponent("ClubOwnerRepresentative", { plan });
+  assert.match(html, new RegExp(`class="representative" data-plan="${expected}"`));
+  assert.match(html, new RegExp(`class="planIdentity soloIdentity" data-plan="${expected}"`));
+  assert.match(html, new RegExp(`<strong>${expected === "vip" ? "VIP" : expected[0].toUpperCase() + expected.slice(1)}<\/strong>`));
+  assert.doesNotMatch(html, /Plano a confirmar|Plan to be confirmed/);
+}
+
+test("Exchange plan name and outline follow confirmed activation and newer collection revisions together", () => {
+  for (const plan of ["beta", "standard", "master", "vip"] as const) {
+    const collection = { state: null, ready: false }, snapshot = confirmedOwnerPlan(plan);
+    const before = structuredClone({ collection, snapshot });
+    assertRepresentativePlan(ownerExchangePlan(collection, snapshot), plan);
+    assert.deepEqual({ collection, snapshot }, before, "presentation cannot initialize a collection or change an entitlement");
+  }
+  const beta = syntheticCollection("beta", 0), standard = syntheticCollection("standard", 1), master = syntheticCollection("master", 2);
+  const stages = [
+    { collection: { state: beta }, snapshot: confirmedOwnerPlan("beta"), read: serverCollection(beta), expected: "beta" },
+    // paid -> router.refresh(): new SSR, previous hook state retained until GET.
+    { collection: { state: beta }, snapshot: confirmedOwnerPlan("standard"), read: serverCollection(standard), expected: "standard" },
+    // The confirmed GET then catches up without changing name/outline again.
+    { collection: { state: standard }, snapshot: confirmedOwnerPlan("standard"), read: serverCollection(standard), expected: "standard" },
+    // A later authenticated GET must not be reverted by the older SSR props.
+    { collection: { state: master }, snapshot: confirmedOwnerPlan("standard"), read: serverCollection(standard), expected: "master" },
+  ] as const;
+  const before = structuredClone(stages);
+  for (const stage of stages) assertRepresentativePlan(ownerExchangePlan(stage.collection, stage.snapshot, stage.read), stage.expected);
+  assert.deepEqual(stages, before);
+});
+
+test("missing inactive invalid and legacy unsupported entitlements stay neutral while collection is absent", () => {
+  const valid = confirmedOwnerPlan("beta");
+  for (const snapshot of [null, {}, { ...valid, entitlementActive: false }, { ...valid, plan: null },
+    { ...valid, plan: { active: false } }, { ...valid, marketAccess: null },
+    { ...valid, marketAccess: { ...valid.marketAccess, budgetEur: 1 } },
+    { ...valid, marketAccess: resolveTouchlineFantasyMarketAccess("pro") }]) {
+    const displayed = ownerExchangePlan({ state: null, ready: false }, snapshot);
+    assert.equal(displayed, undefined);
+    const html = renderComponent("ClubOwnerRepresentative", { plan: displayed });
+    assert.doesNotMatch(html, /data-plan=/);
+    assert.match(html, /Plano a confirmar/);
+  }
+  const beta = syntheticCollection("beta", 0), vip = syntheticCollection("vip", 5);
+  for (const read of [null, { status: "unavailable" }, serverCollection({ ...vip, revision: beta.revision }),
+    { ...serverCollection(beta), state: null, initialBudget: { plan: "beta", balanceEur: 100_000_000 } },
+    { ...serverCollection(vip), accountId: "other-owner" },
+    { ...serverCollection(vip), seasonId: "other-season" }, serverCollection({ ...vip, revision: -1 })]) {
+    assertRepresentativePlan(ownerExchangePlan({ state: beta }, valid, read), "beta");
+  }
 });

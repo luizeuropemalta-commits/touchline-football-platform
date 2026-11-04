@@ -70,11 +70,12 @@ test("the central configuration has seven contiguous, non-overlapping bands", ()
   }
 });
 
-test("admin dates and values use the selected locale and British English has no host-locale fallback", () => {
+test("admin values and football dates use the selected locale without a host-locale fallback", () => {
   const adminHistorySource = readFileSync(new URL("../components/admin-manual-card-editorial-actions.tsx", import.meta.url), "utf8");
   const footballDataSource = readFileSync(new URL("../app/(app)/admin/football-data/page.tsx", import.meta.url), "utf8");
 
-  assert.match(adminHistorySource, /toLocaleString\(locale\)/);
+  // Deterministic history dates across host zones are exercised by admin-history-timestamp-ssr.
+  assert.match(adminHistorySource, /new Intl\.NumberFormat\(locale,/);
   assert.doesNotMatch(adminHistorySource, /toLocaleString\(\)/);
   assert.match(footballDataSource, /function formatDate\(value: string \| null \| undefined, locale: "en-GB" \| "pt-BR"\)/);
   assert.match(footballDataSource, /Intl\.DateTimeFormat\(locale,/);

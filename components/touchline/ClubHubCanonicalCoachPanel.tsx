@@ -7,6 +7,8 @@ import { loadTouchLineCoachRanking } from "@/lib/touchlineArena/coach-ranking-se
 import { loadCoachCatalogue } from "@/lib/touchlineArena/coach-catalogue-server";
 import { catalogueCoachForTeam } from "@/lib/touchlineArena/coach-catalogue-contract";
 
+import { coachCompetitionFromRanking } from "@/lib/touchlineArena/coach-competition-projection";
+
 import styles from "./ClubHubCanonicalCoachPanel.module.css";
 
 type ClubHubCanonicalCoachPanelProps = {
@@ -47,23 +49,9 @@ export default async function ClubHubCanonicalCoachPanel({
   const coachContract = contracts.find((candidate) => (
     candidate.coachProviderId === canonicalCoach.coach.providerId && candidate.status === "active"
   )) ?? contracts.find((candidate) => candidate.coachProviderId === canonicalCoach.coach.providerId) ?? null;
-  const coachRankingRow = coachRanking.phase === "ranked"
-    ? coachRanking.rows.find((candidate) => candidate.coachProviderId === canonicalCoach.coach.providerId) ?? null
-    : null;
-  const competition = coachRankingRow && coachRanking.snapshotId && coachRanking.seasonId && coachRanking.scoringVersion
-    ? {
-      snapshotId: coachRanking.snapshotId,
-      seasonId: coachRanking.seasonId,
-      seasonLabel: "2026-27",
-      rank: coachRankingRow.rank,
-      scoringVersion: coachRanking.scoringVersion,
-      home: coachRankingRow.home,
-      away: coachRankingRow.away,
-      totalTouchlinePoints: coachRankingRow.touchlinePoints,
-    }
-    : null;
+  const competition = coachCompetitionFromRanking(coachRanking, canonicalCoach.coach.providerId, "2026-27");
   const baseSlot = createTouchlineArenaCoachSlot(canonicalCoach.coach, null, classification.tierKey);
-  const slot = competition ? {
+  const slot = competition?.snapshotId ? {
     ...baseSlot,
     touchlinePoints: competition.totalTouchlinePoints,
     status: "audited" as const,

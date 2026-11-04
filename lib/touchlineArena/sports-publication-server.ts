@@ -1,3 +1,6 @@
+import { readSharedTouchlineCurrentRankings } from "./current-ranking-cache-server";
+import { loadCoachCatalogue } from "./coach-catalogue-server";
+import { readTouchlineCurrentLeagueScope } from './current-player-eligibility-server';
 import "server-only";
 import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -15,7 +18,7 @@ function sameIds(left: readonly string[], right: readonly string[]) {
     && left.length === right.length && [...left].sort().every((id, index) => id === sortedRight[index]);
 }
 
-/** Five bounded ID reads maximum. No mutable fallback, provider request or database write. */
+/** Immutable publication plus an explicitly separate, bounded SELECT-only current projection. */
 export async function readTouchlineSportsPublication(admin: SupabaseClient): Promise<TouchlineSportsPublication | null> {
   const input = await readPublishedTouchlineLivePresentationInput(admin);
   if (!input) return null;
@@ -38,7 +41,12 @@ export async function readTouchlineSportsPublication(admin: SupabaseClient): Pro
     live: { fetchedAt: snapshot.fetchedAt, fixtures: toPublicTouchlineFixtures(snapshot.fixtures) },
   });
   if (!parsed) throw new Error("TOUCHLINE_SPORTS_PUBLICATION_INVALID");
-  return parsed;
+  const currentScope = await readTouchlineCurrentLeagueScope(admin);
+  const catalogue = parsed.coachRanking?.catalogue ?? await loadCoachCatalogue();
+  const { currentPlayerRanking, currentCoachRanking } = await readSharedTouchlineCurrentRankings({
+    admin, player: parsed.playerRanking, coach: parsed.coachRanking, catalogue, scope: currentScope,
+  });
+  return { ...parsed, currentPlayerRanking, currentCoachRanking };
 }
 
 export async function loadTouchlineSportsPublication() {

@@ -315,6 +315,8 @@ function canonicalPresentationLocaleRedirect(request: NextRequest, draftLocalesE
  */
 function nextResponseWithPresentationLocale(request: NextRequest, draftLocalesEnabled = false) {
   const requestHeaders = new Headers(request.headers);
+  // Only the verified isolated-preview branch may introduce this internal marker.
+  requestHeaders.delete(TOUCHLINE_ISOLATED_PREVIEW_HEADER);
   const locale = requestLocale(request, draftLocalesEnabled);
   requestHeaders.set(TOUCHLINE_PRESENTATION_LOCALE_HEADER, locale);
   requestHeaders.delete(TOUCHLINE_LOGIN_PRESENTATION_LOCALE_HEADER);

@@ -32,7 +32,7 @@ test("legacy professional billing is absent while the generic Stripe boundary re
   assert.match(client, /export function getStripe\(\)/);
   assert.match(client, /process\.env\.STRIPE_SECRET_KEY/);
   assert.match(client, /appInfo: \{ name: "Touchline", version: "1\.0\.0" \}/);
-  assert.match(webhook, /import \{ getStripe \} from "@\/lib\/stripe\/client"/);
+  assert.match(webhook, /import \{ getStripe(?:, configuredStripeMode)? \} from "@\/lib\/stripe\/client"/);
   assert.match(financePage, /import \{ getStripe \} from "@\/lib\/stripe\/client"/);
   assert.doesNotMatch(financePage, /@\/lib\/billing\/stripe/);
   assert.doesNotMatch(financeExport, /@\/lib\/billing\/stripe/);
@@ -63,7 +63,7 @@ test("Arena finance and export remain read-only without professional-plan semant
 test("neutral webhook verifies, deduplicates, syncs invoices and audits every acknowledged event", async () => {
   const webhook = await source("app/api/stripe/webhook/route.ts");
 
-  assert.match(webhook, /import \{ getStripe \} from "@\/lib\/stripe\/client"/);
+  assert.match(webhook, /import \{ getStripe(?:, configuredStripeMode)? \} from "@\/lib\/stripe\/client"/);
   assert.doesNotMatch(webhook, /@\/lib\/billing|PlanKey|BillingInterval|resolvePlanFromPrice|isPlanKey/);
   assert.doesNotMatch(webhook, /billing_subscriptions|founder_plan_slots|syncSubscription/);
   assert.doesNotMatch(webhook, /customer\.subscription|checkout\.session\.completed|trial_will_end|stripe\.subscriptions/);

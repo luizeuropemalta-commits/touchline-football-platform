@@ -1,17 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, readFileSync, realpathSync, statSync, statfsSync, mkdirSync, writeFileSync } from "node:fs";
+import { spawn } from "node:child_process";
+import { createHash } from "node:crypto";
+import { existsSync, mkdtempSync, readFileSync, realpathSync, statSync, statfsSync, mkdirSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { requireBrowserCapacity } from "./helpers/touchline-browser-capacity.mts";
-import { runInNewContext } from "node:vm";
-import { renderToStaticMarkup } from "react-dom/server";
-import type { ReactElement } from "react";
-import * as jsx from "react/jsx-runtime";
-import ts from "typescript";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { webkit, chromium, expect } from "@playwright/test";
 import sharp from "sharp";
-import { bundleIsolatedBrowserFixture } from "./helpers/touchline-isolated-browser-bundle.mts";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const origin = "https://crest-outline.invalid";
@@ -61,22 +58,69 @@ function assertFilterContract(definition: ReturnType<typeof readFilterDefinition
   assert.equal(definition.floodComputedOpacity, "1");
 }
 
-function realFilterMarkup() {
-  const layout = readFileSync(path.join(root, "app/layout.tsx"), "utf8");
-  const fragment = layout.match(/<filter id="touchline-proportional-crest-outline"[\s\S]*?<\/filter>/)?.[0];
-  assert.ok(fragment, "Actual root filter required");
-  const source = ts.transpileModule(`export default function Filter(){return <svg><defs>${fragment}</defs></svg>;}`, {
-    compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX },
-  }).outputText;
-  const exports = {} as { default: () => ReactElement };
-  runInNewContext(source, { exports, require(name: string) {
-    assert.equal(name, "react/jsx-runtime"); return jsx;
-  } });
-  return renderToStaticMarkup(exports.default());
+type CrestCompilerReceipt = {
+  version: number; mode: string; compilerPid: number; sources: string[];
+  sha256: Record<string, string>; artifacts: Record<string, string>; bundleSources: string[];
+};
+
+// The browser parent never imports TypeScript, the bundler or React SSR.
+async function compileCrestFixture(mode: "filter" | "fixture", signal: AbortSignal, evidenceDirectory?: string) {
+  signal.throwIfAborted();
+  if (evidenceDirectory) mkdirSync(evidenceDirectory, { recursive: true });
+  const directory = mkdtempSync(path.join(evidenceDirectory ?? tmpdir(), `touchline-crest-${mode}-`));
+  const compilerPid = await new Promise<number>((resolve, reject) => {
+    const child = spawn(process.execPath, ["--max-old-space-size=1536", "--experimental-strip-types",
+      path.join(root, "tests/helpers/touchline-crest-outline-compile-worker.mts"), mode, directory], {
+      cwd: root, stdio: ["ignore", "ignore", "pipe"],
+    });
+    let failure: Error | undefined, diagnostic = "";
+    child.stderr.on("data", chunk => { diagnostic = (diagnostic + String(chunk)).slice(-4000); });
+    const abort = () => { failure = new Error("Crest compilation aborted"); child.kill("SIGKILL"); };
+    const timeout = setTimeout(() => { failure = new Error("Crest compiler exceeded 60s"); child.kill("SIGKILL"); }, 60_000);
+    signal.addEventListener("abort", abort, { once: true });
+    child.once("error", error => { failure = error; });
+    child.once("close", (code, exitSignal) => {
+      clearTimeout(timeout); signal.removeEventListener("abort", abort);
+      if (failure) reject(failure);
+      else if (code !== 0 || exitSignal !== null || !child.pid) reject(new Error(`Crest compiler failed ${code}/${exitSignal}: ${diagnostic}`));
+      else resolve(child.pid);
+    });
+    if (signal.aborted) abort();
+  });
+  signal.throwIfAborted();
+  const receiptPath = path.join(directory, "compiler-receipt.json");
+  const encodedReceipt = readFileSync(receiptPath, "utf8");
+  const receipt = JSON.parse(encodedReceipt) as CrestCompilerReceipt;
+  const digest = (data: string | Buffer) => createHash("sha256").update(data).digest("hex");
+  assert.equal(receipt.version, 1); assert.equal(receipt.mode, mode); assert.equal(receipt.compilerPid, compilerPid);
+  assert.ok(Array.isArray(receipt.sources) && receipt.sources.length > 0 && Array.isArray(receipt.bundleSources));
+  for (const source of receipt.sources) {
+    assert.ok(typeof source === "string" && !path.isAbsolute(source) && !source.split(/[\\/]/).includes(".."), "Compiler source escaped repository");
+    assert.match(receipt.sha256[source], /^[a-f0-9]{64}$/);
+    assert.equal(digest(readFileSync(path.join(root, source))), receipt.sha256[source], `Compiler source changed: ${source}`);
+  }
+  const names = mode === "fixture" ? ["filter.svg", "fixture.css", "fixture.js"] : ["filter.svg"];
+  assert.deepEqual(Object.keys(receipt.artifacts).sort(), names);
+  const readArtifact = (name: string) => {
+    const contents = readFileSync(path.join(directory, name), "utf8");
+    assert.ok(contents.length > 0, `Empty compiler artifact: ${name}`);
+    assert.equal(digest(contents), receipt.artifacts[name], `Compiler artifact changed: ${name}`);
+    return contents;
+  };
+  assert.ok(receipt.bundleSources.every(source => receipt.sources.includes(source)));
+  if (mode === "fixture") for (const required of ["components/touchline/cards/TouchlineCoachCard.tsx", "components/touchline/cards/TouchlineEliteExactCard.tsx"]) {
+    assert.ok(receipt.bundleSources.includes(required), required);
+  }
+  return {
+    filterMarkup: readArtifact("filter.svg"),
+    bundle: { script: mode === "fixture" ? readArtifact("fixture.js") : "",
+      css: mode === "fixture" ? readArtifact("fixture.css") : "", sources: receipt.bundleSources },
+    compiler: { directory, pid: compilerPid, exitCode: 0, receiptSha256: digest(encodedReceipt), closedBeforeBrowser: true },
+  };
 }
 
-test("root crest SVG fragment is serialized by React with actual SVG attribute names", () => {
-  const markup = realFilterMarkup();
+test("root crest SVG fragment is serialized by React with actual SVG attribute names", async t => {
+  const { filterMarkup: markup } = await compileCrestFixture("filter", t.signal);
   assert.match(markup, /flood-color="#ffffff"/);
   assert.match(markup, /flood-opacity="1"/);
   assert.match(markup, /color-interpolation-filters="sRGB"/);
@@ -93,7 +137,8 @@ test("real card crests have visible solid white contour at small and enlarged sc
   assert.ok(selectedCases.length > 0 && selectedCases.every(value => allCases.includes(value)), "explicit valid crest cases required");
   assert.equal(new Set(selectedCases).size, selectedCases.length, "duplicate crest cases rejected");
   const capacity = () => {
-    requireBrowserCapacity(root, { darwinFreePercent: true });
+    requireBrowserCapacity(root, { darwinFreePercent: true,
+      allowModerateDarwinPressure: process.env.TOUCHLINE_LOCAL_ALLOW_MODERATE_PRESSURE === "1" && !process.env.CI });
     const disk = statfsSync(root), freeBytes = disk.bavail * disk.bsize;
     return { freeBytes, policy: "shared-browser-capacity" };
   };
@@ -104,10 +149,8 @@ test("real card crests have visible solid white contour at small and enlarged sc
   assert.ok(existsSync(engine.executablePath()), "Installed browser required; never download implicitly");
   const output = process.env.TOUCHLINE_CREST_OUTLINE_EVIDENCE_DIR;
   assert.ok(output && path.isAbsolute(output), "Explicit absolute evidence directory required");
-  const bundle = bundleIsolatedBrowserFixture({ entryPath: "tests/fixtures/CrestOutlineBrowserFixture.tsx", cssPrefix: "crest",
-    requiredSources: ["components/touchline/cards/TouchlineCoachCard.tsx", "components/touchline/cards/TouchlineEliteExactCard.tsx"],
-    mountScript: "flushSync(()=>root.render(React.createElement(loadEntry().default)));" });
-  const svg = realFilterMarkup().replace('<svg>', '<svg width="0" height="0" aria-hidden="true">');
+  const { bundle, filterMarkup, compiler } = await compileCrestFixture("fixture", t.signal, output);
+  const svg = filterMarkup.replace('<svg>', '<svg width="0" height="0" aria-hidden="true">');
   const globals = readFileSync(path.join(root, "app/globals.css"), "utf8").replace(/^@(import|source)[^;]*;\s*/gm, "");
   const css = readFileSync(path.join(root, "app/touchline-crest-visibility.css"), "utf8");
   const preflight = readFileSync(path.join(root, "node_modules/tailwindcss/preflight.css"), "utf8");
@@ -293,7 +336,7 @@ test("real card crests have visible solid white contour at small and enlarged sc
         controlFilter: "none", definition, negativeContracts, quantization, noiseMax, noisePixels, noiseAlphaEquivalent,
         whiteGain, visibleFilterChanges, farEdgeChanges, causalPixels, causalOnOffPixels, causalFarEdgeChanges,
         nonNeutralChanges, alphaEquivalentArea, causalComponents, largestCausalComponent });
-      writeFileSync(path.join(output, `${engineName}-evidence.json`), JSON.stringify({ selectedCases, evidence, denied, errors, sources: bundle.sources, initialCapacity, status: "in-progress" }, null, 2));
+      writeFileSync(path.join(output, `${engineName}-evidence.json`), JSON.stringify({ selectedCases, evidence, denied, errors, sources: bundle.sources, compiler, initialCapacity, status: "in-progress" }, null, 2));
       assert.equal(noiseMax, 0, `${club}/${size}: identical ON captures moved; inspect noise before changing any tolerance`);
       assert.ok(visibleFilterChanges > 0, `${club}/${size}: real ON/OFF control has no visible effect at the retained 20-level threshold`);
       assert.ok(causalPixels > 0 && causalOnOffPixels > 0 && alphaEquivalentArea > noiseAlphaEquivalent,
@@ -302,7 +345,7 @@ test("real card crests have visible solid white contour at small and enlarged sc
       assert.equal(causalFarEdgeChanges, 0, `${club}/${size}: causal white silhouette reaches crop border`);
     }
     await page.screenshot({ path: path.join(output, `${engineName}-cards.png`), fullPage: true, animations: "disabled" });
-    writeFileSync(path.join(output, `${engineName}-evidence.json`), JSON.stringify({ selectedCases, evidence, denied, errors, sources: bundle.sources, initialCapacity, finalCapacity: capacity() }, null, 2));
+    writeFileSync(path.join(output, `${engineName}-evidence.json`), JSON.stringify({ selectedCases, evidence, denied, errors, sources: bundle.sources, compiler, initialCapacity, finalCapacity: capacity() }, null, 2));
     assert.deepEqual(errors, []); assert.deepEqual(denied, []);
   } finally { await browser.close(); }
 });

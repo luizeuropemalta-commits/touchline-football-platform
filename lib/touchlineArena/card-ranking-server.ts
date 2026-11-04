@@ -9,7 +9,14 @@ export { readTouchlinePlayerRankingSnapshot } from "./card-ranking-snapshot-serv
 export async function loadTouchLineActiveRanking(): Promise<TouchlineActiveRankingState> {
   const publication = await loadRequestTouchlineSportsPublication();
   if (!publication) throw new Error("TOUCHLINE_SPORTS_PUBLICATION_UNAVAILABLE");
-  // Only an explicit null ranking in a valid envelope is a preseason state.
+  if (!publication.currentPlayerRanking?.state) throw new Error("TOUCHLINE_CURRENT_PLAYER_RANKING_UNAVAILABLE");
+  return publication.currentPlayerRanking.state;
+}
+
+/** Explicit historical facts for scoped season/profile readers; never a current ranking fallback. */
+export async function loadTouchLinePublishedPlayerRanking(): Promise<TouchlineActiveRankingState> {
+  const publication = await loadRequestTouchlineSportsPublication();
+  if (!publication) throw new Error("TOUCHLINE_SPORTS_PUBLICATION_UNAVAILABLE");
   return publication.playerRanking ?? TOUCHLINE_PRESEASON_RANKING_STATE;
 }
 
@@ -32,10 +39,15 @@ export async function loadTouchLinePublishedTopEleven(ranking: TouchlineActiveRa
     || record.scoring_version !== ranking.scoringVersion
     || (record.coverage_status !== "complete" && record.coverage_status !== "complete_for_scoring")
     || record.actual_player_count !== record.expected_player_count) return null;
-  return parseTouchlinePublishedTopEleven({
+  const selection = parseTouchlinePublishedTopEleven({
     snapshotId: record.snapshot_id,
     roundId: record.round_id,
     publishedAt: record.published_at,
     selectionPayload: record.selection_payload,
   });
+  if (selection && ranking.currentProjection) {
+    // A historical published XI is not relabelled or filled with invented current selections.
+    if (selection.slots.some(slot => !ranking.players.some(row => slot.playerIds.every(id => id === String(row.playerId) || id === String(row.providerPlayerId))))) return null;
+  }
+  return selection;
 }

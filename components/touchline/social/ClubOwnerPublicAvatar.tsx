@@ -63,7 +63,7 @@ function PublicAvatarView({ publicId, avatarUrl, displayName, locale, planKey, r
   const current = result?.publicId === publicId && result.source === liveUrl && result.attempt === attempt ? result : null;
   const status = metadataFailed ? "unavailable" : !liveUrl ? "not-found" : current?.status ?? "loading";
   return <span ref={element} className={styles.avatar} data-plan={planKey ?? "unconfirmed"} aria-busy={status === "loading"}>
-    <span className={styles.avatarPortrait}>
+    <span className={styles.avatarPortrait} data-touchline-decoration-motion="true">
     {status === "ready" && current?.blobUrl ? <img src={current.blobUrl} width={56} height={56} alt={`${copy.photoAlt}: ${displayName}`} />
       : <span className={styles.avatarFallback} role="img" aria-label={status === "not-found" ? copy.photoMissing : status === "loading" ? copy.photoLoading : copy.photoUnavailable}>
         {([...displayName.trim()][0] ?? "").toLocaleUpperCase(locale)}

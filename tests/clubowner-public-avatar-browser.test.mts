@@ -81,6 +81,8 @@ test("public photo consent, visible serial loading, replacement and cancellation
           await context.route("**/*", async route => {
             const request = route.request(), url = new URL(request.url());
             if (url.origin !== origin) return route.abort();
+            // WebKit routes local object URLs too; leave native blob decoding intact.
+            if (url.protocol === "blob:") return route.continue();
             if (url.pathname.endsWith("/avatar")) {
               imageRequests.push(url.pathname + url.search); active++; maxActive = Math.max(maxActive, active);
               const status = imageStatus;
@@ -114,12 +116,17 @@ test("public photo consent, visible serial loading, replacement and cancellation
           const page = await context.newPage(); page.on("pageerror", error => errors.push(error.message));
           await page.goto(`${origin}/clubowners`);
           const photo = page.getByRole("checkbox", { name: copy.photoConsent, exact: true });
-          await expect(page.getByRole("checkbox", { name: copy.consent, exact: true })).toHaveCount(0);
-          await expect(photo).not.toBeChecked(); await expect(photo).toBeEnabled();
+          const publication = page.getByRole("checkbox", { name: copy.consent, exact: true });
+          await expect(publication).not.toBeChecked();
+          await expect(photo).not.toBeChecked(); await expect(photo).toBeDisabled();
+          assert.deepEqual(writes, [], "Opening settings never publishes the name or photo");
+          await publication.focus(); await page.keyboard.press("Space");
+          await expect(publication).toBeChecked(); await expect(photo).toBeEnabled();
+          assert.deepEqual(writes, [], "Consent selection stays local until save");
           await photo.focus(); await page.keyboard.press("Space"); await page.getByRole("button", { name: copy.save, exact: true }).click();
           await expect(page.getByText(copy.saved, { exact: true })).toBeVisible();
           assert.deepEqual(writes, [{ displayName: own.displayName, published: true, photoPublished: true }]);
-          await page.reload(); await expect(photo).toBeChecked(); await expect(page.getByText(copy.published, { exact: true })).toBeVisible();
+          await page.reload(); await expect(publication).toBeChecked(); await expect(photo).toBeChecked(); await expect(page.getByText(copy.published, { exact: true })).toBeVisible();
           await page.screenshot({ path: `${output}/${engine.name()}-${locale}-${viewport.width}-consent.png`, fullPage: true });
           await expect(page.getByRole("searchbox")).toHaveCount(0); assert.equal(imageRequests.length, 0, "Settings-only consent must not load discovery photos");
           const render = (kind: string, props: unknown) => page.evaluate(({ kind, props }) => {
@@ -132,6 +139,7 @@ test("public photo consent, visible serial loading, replacement and cancellation
           const results = dialog.getByRole("listitem"); await expect(results).toHaveCount(20);
           for (let index = 0; index < 20; index++) {
             await results.nth(index).scrollIntoViewIfNeeded(); await expect(results.nth(index).locator("img")).toBeVisible();
+            await expect.poll(() => results.nth(index).locator("img").evaluate(node => (node as HTMLImageElement).naturalWidth)).toBe(8);
           }
           assert.equal(imageRequests.length, 20); assert.equal(new Set(imageRequests).size, 20); assert.equal(maxActive, 1);
           const beforeQuery = imageRequests.length;
@@ -141,12 +149,14 @@ test("public photo consent, visible serial loading, replacement and cancellation
           await expect.poll(() => imageRequests.length).toBeGreaterThan(beforeQuery);
           for (let index = 0; index < 20; index++) {
             await results.nth(index).scrollIntoViewIfNeeded(); await expect(results.nth(index).locator("img")).toBeVisible();
+            await expect.poll(() => results.nth(index).locator("img").evaluate(node => (node as HTMLImageElement).naturalWidth)).toBe(8);
           }
           assert.equal(imageRequests.length - beforeQuery, 20); assert.equal(new Set(imageRequests.slice(beforeQuery)).size, 20); assert.equal(maxActive, 1);
           assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
           await dialog.getByRole("button", { name: copy.close, exact: true }).click(); await expect(dialog).toHaveCount(0);
           await render("profile", { locale, publicId: id, enabled: true, initial: { status: 200, profile: { publicId: id, displayName: own.displayName, followerCount: 3, following: false, viewer: "guest", avatarUrl: publicOwnerAvatarHref(id, version) } } });
           await page.evaluate(() => scrollTo(0, 0)); await expect(page.locator("img")).toBeVisible();
+          await expect.poll(() => page.locator("img").evaluate(node => (node as HTMLImageElement).naturalWidth)).toBe(8);
           await expect(page.locator("img")).toHaveCSS("border-top-color", neutralRingRgb); await expect(page.locator("img")).toHaveCSS("border-top-width", "1px");
           await expect(page.getByRole("heading", { name: own.displayName })).toBeVisible(); await expect(page.getByText(copy.login, { exact: true })).toBeVisible();
           await page.screenshot({ path: `${output}/${engine.name()}-${locale}-${viewport.width}-profile.png`, fullPage: true });

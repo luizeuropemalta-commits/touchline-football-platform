@@ -20,7 +20,11 @@ export type TouchLineCoachRankingRow = Readonly<{
 }>;
 
 export type TouchLineCoachRankingState = Readonly<{
-  phase: "unavailable" | "ranked";
+  phase: "unavailable" | "ranked" | "preseason";
+  /** Explicit current view; absent on immutable historical publication. */
+  currentProjection?: import("./current-coach-ranking").CurrentCoachProjection;
+  currentRevision?: string;
+  seasonRows?: readonly TouchLineCoachRankingRow[];
   catalogue?: CoachCatalogue;
   snapshotId: string | null;
   seasonId: string | null;

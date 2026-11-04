@@ -1,8 +1,9 @@
+import { avatarRetentionTarget, avatarRetentionRpcName, avatarRetentionRpcContext, type AvatarRetentionTarget } from "./club-owner-avatar-retention-target.ts";
 import { randomUUID } from "node:crypto";
 import type { AvatarRetentionRpc } from "./club-owner-avatar-retention-worker.ts";
 import { awaitAvatarStep, createAvatarEnvironmentGuard, isAvatarAccountId } from "./club-owner-avatar-upload-contract.ts";
 
-type Config = Readonly<{
+type Config = Readonly<{ target?: AvatarRetentionTarget;
   supabaseOrigin: string;
   assertEnvironment: () => void;
   rpc: AvatarRetentionRpc;
@@ -10,7 +11,6 @@ type Config = Readonly<{
    * No recursive listing, request-controlled URL or credentials at this seam. */
   listPage: (prefix: string, offset: number, limit: 25, signal: AbortSignal) => PromiseLike<unknown>;
 }>;
-const project = "xgxbwqxjssxxuihuwmgy";
 const record = (value: unknown): Record<string, unknown> | null => value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
 const canonicalId = (value: unknown): value is string => isAvatarAccountId(value) && value === value.toLowerCase();
 
@@ -19,7 +19,9 @@ const canonicalId = (value: unknown): value is string => isAvatarAccountId(value
  * leaves the durable offset untouched; the next lease safely repeats the page.
  */
 export async function runAvatarRetentionDiscoveryPage(config: Config, outerSignal: AbortSignal) {
+  config = { ...config };
   const result = { status: "processed" as "processed" | "incomplete", listed: 0, registered: 0, denied: 0, skipped: 0, acknowledged: false };
+  const target = avatarRetentionTarget(config.target);
   const assertEnvironment = createAvatarEnvironmentGuard(config.assertEnvironment);
   const deadline = new AbortController(), timer = setTimeout(() => deadline.abort(), 25_000);
   const signal = AbortSignal.any([outerSignal, deadline.signal]);
@@ -30,16 +32,16 @@ export async function runAvatarRetentionDiscoveryPage(config: Config, outerSigna
   };
   const rpc = async (name: string, args: Record<string, unknown>) => {
     guard();
-    const response = await awaitAvatarStep(() => config.rpc(name, { p_project_ref: project, ...args }, signal), signal);
+    const response = await awaitAvatarStep(() => config.rpc(name, { ...avatarRetentionRpcContext(target), ...args }, signal), signal);
     guard();
     if (response.error) throw Error("AVATAR_DISCOVERY_RPC");
     return record(response.data);
   };
   try {
     guard();
-    if (config.supabaseOrigin !== `https://${project}.supabase.co`) throw Error("AVATAR_DISCOVERY_TARGET");
+    if (config.supabaseOrigin !== target.supabaseOrigin) throw Error("AVATAR_DISCOVERY_TARGET");
     const attemptId = randomUUID();
-    const claimed = await rpc("touchline_claim_qa_avatar_retention_discovery", { p_attempt: attemptId, p_limit: 1 });
+    const claimed = await rpc(avatarRetentionRpcName(target, "claim"), { p_attempt: attemptId, p_limit: 1 });
     if (claimed?.version !== 1 || claimed.allowed !== true || !Array.isArray(claimed.scans) || claimed.scans.length > 1) throw Error("AVATAR_DISCOVERY_CLAIM");
     if (claimed.scans.length === 0) return result;
     const scan = record(claimed.scans[0]);
@@ -65,7 +67,7 @@ export async function runAvatarRetentionDiscoveryPage(config: Config, outerSigna
         result.skipped++; continue;
       }
       const digest = file.name.slice(0, 64);
-      const registered = await rpc("touchline_register_qa_avatar_retention_candidate", {
+      const registered = await rpc(avatarRetentionRpcName(target, "register"), {
         p_actor: actorId, p_operation: operationId, p_digest: digest, p_object_key: `${prefix}${file.name}`,
       });
       if (registered?.version !== 1) throw Error("AVATAR_DISCOVERY_REGISTRATION");
@@ -74,7 +76,7 @@ export async function runAvatarRetentionDiscoveryPage(config: Config, outerSigna
       else throw Error("AVATAR_DISCOVERY_REGISTRATION");
     }
     const complete = page.length < 25;
-    const ack = await rpc("touchline_ack_qa_avatar_retention_discovery", {
+    const ack = await rpc(avatarRetentionRpcName(target, "ack"), {
       p_actor: actorId, p_operation: operationId, p_attempt: attemptId,
       p_expected_offset: offset, p_next_offset: complete ? 0 : offset + 25, p_complete: complete,
     });

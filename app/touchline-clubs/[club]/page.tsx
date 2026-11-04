@@ -1396,7 +1396,6 @@ async function renderClubHubPage({ params, searchParams }: ClubHubPageProps, dra
           transform: scale(1.012);
           animation: club-hub-stadium-breathe 18s ease-in-out infinite alternate;
           animation-play-state: var(--touchline-decoration-motion, paused);
-          will-change: transform;
         }
         .club-hub-hero-shade {
           position: absolute;
@@ -1432,6 +1431,11 @@ async function renderClubHubPage({ params, searchParams }: ClubHubPageProps, dra
             drop-shadow(0 0 7px rgba(163,255,18,.72));
           animation: club-hub-border-sweep 8s linear infinite;
           animation-play-state: var(--touchline-decoration-motion, paused);
+        }
+        @media (hover: none), (pointer: coarse) {
+          .club-hub-board, .club-hub-touchline { backdrop-filter: none; -webkit-backdrop-filter: none; }
+          .club-hub-neon-trace { filter: none; }
+          .club-hub-hero-image { animation: none; transform: none; }
         }
         .club-hub-identity {
           grid-area: identity;

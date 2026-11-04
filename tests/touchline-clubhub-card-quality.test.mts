@@ -15,7 +15,7 @@ const nativeRequire = createRequire(import.meta.url);
 const tiers = ["diamond-gold", "clear-diamond", "emerald-green", "radiant-gold", "amethyst-purple", "sapphire-blue", "ruby-red"];
 
 // Render the real gallery and real ExactCard. Replace only the gallery's data
-// selection and browser/network integrations; no frame rendering is mocked.
+// derived ranking input and browser/network integrations; no frame rendering is mocked.
 function renderGallery() {
   const cache = new Map<string, unknown>();
   const replacements: Record<string, unknown> = {
@@ -25,10 +25,7 @@ function renderGallery() {
     "@/lib/touchlineArena/card-ranking-client": { useTouchlineActiveRanking: () => null },
     "./TouchlineCardLeadershipProvider": { useTouchlineCardLeadershipAuthority: () => null },
     "@/lib/touchlineArena/golden-boot-client": { useTouchlineGoldenBootPlayers: () => [] },
-    "@/lib/touchlineArena/clubhub-tier-showcase": {
-      selectTouchlinePlayerTierRepresentatives: (cards: Array<{ editorialCard: { tierKey: string } }>) => cards.map(card => ({ tierKey: card.editorialCard.tierKey, card })),
-      selectTouchlineCoachTierRepresentativesFromRanking: () => [],
-    },
+
   };
   function load(specifier: string, parent: string): unknown {
     if (Object.hasOwn(replacements, specifier)) return replacements[specifier];
@@ -49,12 +46,13 @@ function renderGallery() {
   const Gallery = (load("@/components/touchline/TouchlineCoachCategoryShowcase", path.join(root, "test.ts")) as { default: React.ComponentType<Record<string, unknown>> }).default;
   const playerCards = tiers.map((tierKey, index) => ({
     id: `fixture-${index}`, canonicalPlayerId: `00000000-0000-4000-8000-00000000000${index}`,
+    publishedRanking: { snapshotId: "synthetic-gallery", providerPlayerId: String(index + 1), totalRating: 7 - index, minutesPlayed: 90, appearances: 1 },
     name: `Gallery Player ${index}`, shortName: `Player ${index}`, role: "forward", position: "ST",
     clubName: "Manchester City", shirtNumber: index + 1, countryCode3: "ENG", touchlinePoints: 0,
     marketValue: "€1000000", marketValueSource: "verified-cache", marketValueState: "verified",
     editorialCard: { tierKey, cardPrice: { amountMinor: 1500, currency: "GBP" }, marketValueEur: 1000000, lastReviewedAt: "2026-10-23T00:00:00Z" },
   }));
-  return renderToStaticMarkup(React.createElement(Gallery, { locale: "en-GB", playerCards, coachRanking: {} }));
+  return renderToStaticMarkup(React.createElement(Gallery, { locale: "en-GB", playerEntries: playerCards.map((card, index) => ({ card, officialRank: index + 1 })), coachRanking: {} }));
 }
 
 test("all seven real gallery cards use full-size templates instead of enlarged live thumbnails", () => {

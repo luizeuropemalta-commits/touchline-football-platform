@@ -85,7 +85,7 @@ export default function TouchlineCoachPerformance({
     ? [...contractHistory].sort((left, right) => Date.parse(right.startedAt) - Date.parse(left.startedAt))
     : contract ? [contract] : [];
   const status = competition
-    ? copy.rank.replace("{rank}", () => String(competition.rank))
+    ? competition.rank === null ? copy.seasonEyebrow : copy.rank.replace("{rank}", () => String(competition.rank))
     : contract
     ? (contract.status === "active" ? (portuguese ? "Contrato ativo" : "Active contract") : (portuguese ? "Contrato encerrado" : "Ended contract"))
     : copy.noContract;

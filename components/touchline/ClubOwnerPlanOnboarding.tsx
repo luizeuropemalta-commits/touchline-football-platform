@@ -3,7 +3,7 @@
 import { useId, useLayoutEffect, useRef, useState } from "react";
 import { useTouchlineDialog } from "./a11y/TouchlineDialog";
 import { ArrowLeft, ChevronRight, X } from "lucide-react";
-import { checkoutDisplayAmount, requestClubSeasonCheckout, type ClubSeasonCheckoutOffers, type ClubSeasonCheckoutPlan } from "@/lib/stripe/club-season-checkout-client";
+import { checkoutDisplayAmount, checkoutDisplayMode, requestClubSeasonPaymentCheckout, type ClubSeasonCheckoutOffers, type ClubSeasonCheckoutPlan } from "@/lib/stripe/club-season-checkout-client";
 import { resolveTouchlineCatalogueLocale } from "@/lib/touchlineArena/catalogue-locale";
 import { getTouchlineClubOwnerMarketCopy } from "@/lib/touchlineArena/club-owner-market-i18n";
 import { CLUB_OWNER_PLAN_PREVIEWS, getClubOwnerPlanBenefits, getClubOwnerPlanBenefitTerms, getClubOwnerPlanShowcaseCopy, getClubOwnerPlanDisclosure } from "@/lib/touchlineArena/club-owner-plan-showcase";
@@ -22,7 +22,7 @@ export type ClubOwnerPlanOnboardingProps = Readonly<{
   activePlanKey?: ClubOwnerOnboardingPlan | "pro" | null;
   /** Legacy intent callback; deliberately not invoked without a connected checkout. */
   onSelect?: (plan: ClubOwnerOnboardingPlan) => void;
-  /** Server-confirmed QA checkout capability; never a NEXT_PUBLIC feature flag. */
+  /** Server-confirmed checkout capability; never a NEXT_PUBLIC feature flag. */
   checkoutEnabled?: boolean;
   /** Current same-season amounts computed from confirmed paid orders by server. */
   checkoutOffers?: ClubSeasonCheckoutOffers;
@@ -63,6 +63,19 @@ const checkoutCopy = {
   "de-DE": { action: "Weiter zur Testzahlung", pending: "Testzahlung wird vorbereitet…", due: "Jetzt fällig · Test", note: "Die Aktivierung erfolgt nach Zahlungsbestätigung. Das Vereinsguthaben wird hier nicht geändert.", error: "Die Zahlung konnte nicht geöffnet werden. Prüfe deinen Plan, bevor du es erneut versuchst." },
 } as const;
 
+// Live copy is selected only from an explicit server-confirmed offer mode.
+// TEST copy above remains unchanged for QA and legacy callers.
+const liveCheckoutCopy = {
+  "en-GB": { action: "Continue to payment", pending: "Preparing payment…", due: "Due now" },
+  "pt-BR": { action: "Continuar para pagamento", pending: "Preparando pagamento…", due: "A pagar agora" },
+  "es-ES": { action: "Continuar al pago", pending: "Preparando el pago…", due: "A pagar ahora" },
+  "it-IT": { action: "Continua al pagamento", pending: "Preparazione del pagamento…", due: "Da pagare ora" },
+  "fr-FR": { action: "Continuer au paiement", pending: "Préparation du paiement…", due: "À payer maintenant" },
+  "ar-SA": { action: "المتابعة إلى الدفع", pending: "جارٍ تجهيز الدفع…", due: "المبلغ المستحق الآن" },
+  "tr-TR": { action: "Ödemeye devam et", pending: "Ödeme hazırlanıyor…", due: "Şimdi ödenecek" },
+  "de-DE": { action: "Weiter zur Zahlung", pending: "Zahlung wird vorbereitet…", due: "Jetzt fällig" },
+} as const;
+
 /** Checkout navigation only. Payment confirmation and activation belong to the server. */
 export default function ClubOwnerPlanOnboarding(props: ClubOwnerPlanOnboardingProps) {
   // Unmounting the session resets navigation. Reopening never selects Beta or
@@ -83,7 +96,6 @@ function PlanOnboardingSession({ open, locale, draftLocalesEnabled = false, onDi
   const language = resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled);
   const local = copy[language];
   const hiring = hiringCopy[language];
-  const payment = checkoutCopy[language];
   const labels = getClubOwnerPlanShowcaseCopy(locale, draftLocalesEnabled);
   const disclosure = getClubOwnerPlanDisclosure(locale, draftLocalesEnabled);
   const market = getTouchlineClubOwnerMarketCopy(locale, draftLocalesEnabled);
@@ -95,14 +107,15 @@ function PlanOnboardingSession({ open, locale, draftLocalesEnabled = false, onDi
   });
   const startCheckout = async (key: ClubSeasonCheckoutPlan) => {
     const expectedAmountMinor = checkoutDisplayAmount(checkoutOffers, key);
-    if (!checkoutEnabled || expectedAmountMinor === null || request.current) return;
+    const paymentMode = checkoutDisplayMode(checkoutOffers, key);
+    if (!checkoutEnabled || expectedAmountMinor === null || paymentMode === null || request.current) return;
     const controller = new AbortController();
     request.current = controller;
     setCheckoutError(null);
     setPendingPlan(key);
     const timeout = window.setTimeout(() => controller.abort(), 30_000);
     try {
-      const url = await requestClubSeasonCheckout(key, expectedAmountMinor, controller.signal);
+      const url = await requestClubSeasonPaymentCheckout(key, expectedAmountMinor, controller.signal, paymentMode);
       if (request.current === controller && !controller.signal.aborted) window.location.assign(url);
     } catch {
       if (request.current === controller) setCheckoutError(key);
@@ -114,7 +127,9 @@ function PlanOnboardingSession({ open, locale, draftLocalesEnabled = false, onDi
   const hiringAction = (key: ClubOwnerOnboardingPlan) => {
     if (activePlanKey === key) return <p className={styles.note} data-current-plan-badge={key}>{hiring[1]}</p>;
     const amount = checkoutDisplayAmount(checkoutOffers, key);
-    const available = checkoutEnabled && key !== "beta" && amount !== null;
+    const paymentMode = checkoutDisplayMode(checkoutOffers, key);
+    const payment = paymentMode === "live" ? { ...checkoutCopy[language], ...liveCheckoutCopy[language] } : checkoutCopy[language];
+    const available = checkoutEnabled && key !== "beta" && amount !== null && paymentMode !== null;
     return <div className={styles.selection}>
       {available ? <p className={styles.note} data-checkout-quote={key}>{payment.due}: <strong>{new Intl.NumberFormat(language, { style: "currency", currency: "EUR" }).format(amount / 100)}</strong></p> : null}
       <button type="button" className={controls.arena} disabled={!available || pendingPlan !== null}

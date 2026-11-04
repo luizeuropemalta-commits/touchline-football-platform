@@ -1,19 +1,21 @@
 import type Stripe from "stripe";
-import { CLUB_SEASON_TEST_CATALOGUE, clubSeasonChargeMinor, validClubSeasonTestOrder, type ClubSeasonTestOrder } from "./club-season-test-catalogue.ts";
+import { clubSeasonTestPayment, type ClubSeasonTestOrder } from "./club-season-test-catalogue.ts";
+import { clubSeasonChargeMinor, isClubSeasonPaidPlan, sameClubSeasonOrderPayment, validClubSeasonPaymentOrder, type ClubSeasonOrderPayment } from "./club-season-payment-contract.ts";
 
-const QA_ORIGIN = "https://touchline-arena-official-git-qa-fifa-agent-plataform.vercel.app";
 /** These fields must be persisted by the server before contacting Stripe.
  * Retries must reuse the same order and timestamps, not create another order. */
 export type ClubSeasonCheckoutOrder = Omit<ClubSeasonTestOrder, "sessionId"> & {
   createdAt: string; checkoutExpiresAt: string;
   /** Server-persisted before the first provider call, never browser input. */
   firstAttemptAt?: string;
+  /** Present on generic orders; absent only for historical TEST callers. */
+  payment?: ClubSeasonOrderPayment;
 };
 
-export function buildClubSeasonCheckoutRequest(order: ClubSeasonCheckoutOrder, now = Date.now()): {
+export function buildClubSeasonPaymentCheckoutRequest(order: ClubSeasonCheckoutOrder & { payment: ClubSeasonOrderPayment }, now = Date.now()): {
   params: Stripe.Checkout.SessionCreateParams; idempotencyKey: string;
 } {
-  if (!validClubSeasonTestOrder({ ...order, sessionId: "cs_test_pending" }, now)) {
+  if (!validClubSeasonPaymentOrder({ ...order, sessionId: `cs_${order.payment.mode}_pending` }, now)) {
     throw new Error("INVALID_SEASON_ORDER");
   }
   const created = Date.parse(order.createdAt), expires = Date.parse(order.checkoutExpiresAt);
@@ -29,22 +31,31 @@ export function buildClubSeasonCheckoutRequest(order: ClubSeasonCheckoutOrder, n
     throw new Error("INVALID_CHECKOUT_WINDOW");
   }
   const metadata = { touchlineOrderId: order.id, touchlineSeasonId: order.seasonId, touchlinePlan: order.plan,
-    ...(order.previousPaidPlan === undefined ? {} : { touchlinePreviousPaidPlan: order.previousPaidPlan }) };
+    ...(order.previousPaidPlan === undefined ? {} : { touchlinePreviousPaidPlan: order.previousPaidPlan }),
+    ...(order.payment.mode === "test" ? {} : { touchlinePaymentMode: "live", touchlinePaymentAccountId: order.payment.accountId, touchlinePaymentProfileId: order.payment.profileId,
+      touchlineCatalogueVersion: order.payment.catalogueVersion }) };
   return {
-    idempotencyKey: `club-season-test:${order.id}`,
+    idempotencyKey: order.payment.mode === "test" ? `club-season-test:${order.id}`
+      : `club-season-live:${order.payment.accountId}:${order.id}`,
     params: {
       mode: "payment", payment_method_types: ["card"],
       line_items: [order.previousPaidPlan === undefined
-        ? { price: CLUB_SEASON_TEST_CATALOGUE[order.plan].priceId, quantity: 1 }
-        : { price_data: { currency: "eur", product: CLUB_SEASON_TEST_CATALOGUE[order.plan].productId,
+        ? { price: order.payment.priceId, quantity: 1 }
+        : { price_data: { currency: "eur", product: order.payment.productId,
           unit_amount: clubSeasonChargeMinor(order) }, quantity: 1 }],
       client_reference_id: order.userId, metadata,
       payment_intent_data: { metadata },
       expires_at: expires / 1000,
       allow_promotion_codes: false, automatic_tax: { enabled: false },
       adaptive_pricing: { enabled: false },
-      success_url: `${QA_ORIGIN}/clubowner?checkout=processing&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${QA_ORIGIN}/clubowner?checkout=cancelled`,
+      success_url: `${order.payment.returnOrigin}/clubowner?checkout=processing&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${order.payment.returnOrigin}/clubowner?checkout=cancelled`,
     },
   };
+}
+
+/** Stable TEST entrypoint, including original metadata, URLs and retry key. */
+export function buildClubSeasonCheckoutRequest(order: ClubSeasonCheckoutOrder, now = Date.now()) {
+  if (!isClubSeasonPaidPlan(order.plan) || (order.payment && !sameClubSeasonOrderPayment(order.payment, clubSeasonTestPayment(order.plan)))) throw new Error("INVALID_SEASON_ORDER");
+  return buildClubSeasonPaymentCheckoutRequest({ ...order, payment: clubSeasonTestPayment(order.plan) }, now);
 }

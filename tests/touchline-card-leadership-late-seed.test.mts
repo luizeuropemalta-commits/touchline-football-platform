@@ -28,6 +28,8 @@ function authority(snapshot: string, seasonId = "season-1", totalRating = 42) {
 }
 function initial(value: TouchlineCardLeadershipAuthority | null = authority("A")): CardLeadershipSeedState {
   return { seedKey: "A", scopeKey: scope, hasAcceptedRead: false,
+    serverSeasonId: value?.playerRanking?.seasonId ?? value?.coachRanking?.seasonId ?? value?.coachLeader?.seasonId ?? null,
+    serverLeagueKey: value?.playerRanking?.leagueKey ?? null,
     state: resetCardLeadershipSeed(value ?? buildTouchlineCardLeadershipValue(null, null), 1, 1) };
 }
 function completed(value: TouchlineCardLeadershipAuthority, revision: number, requestEpoch = revision) {
@@ -203,4 +205,69 @@ test("the real provider uses reconciliation without keying or adding a transport
   assert.match(source, /read\.state\.seasonId !== expectedSeasonId/);
   assert.match(source, /read\.coachRanking\.seasonId !== expectedSeasonId/);
   assert.doesNotMatch(source, /fetch\(|setInterval|setTimeout|localStorage|<[^>]+\bkey=/);
+});
+
+
+test("canonical season turnover survives unchanged, late and empty old SSR without resetting its floor", () => {
+  const old = authority("old-final", "season-1", 51);
+  const current = buildTouchlineCardLeadershipValue({ ...TOUCHLINE_PRESEASON_RANKING_STATE,
+    seasonId: "season-2", currentProjection: { version: 1, revision: "a".repeat(64), competitionId: "competition",
+      currentSeasonId: "season-2", sourceSnapshotId: "old-final", sourcePlayerCount: 1, eligiblePlayerCount: 0,
+      effectiveSeason: "2027-28", bindings: [] } }, null);
+  const read = completed(current, 3, 3);
+  const accepted = step(initial(old), { value: old, read });
+  assert.equal(accepted.state.current.playerRanking?.phase, "preseason");
+  assert.equal(accepted.state.seasonId, "season-2");
+  assert.equal(accepted.serverSeasonId, "season-1", "live read does not rewrite the server anchor");
+  assert.equal(step(accepted, { value: old, read }), accepted, "stable old props do not reset or loop");
+  const late = step(accepted, { value: authority("late-old", "season-1", 50), seedKey: "late-old", read });
+  assert.equal(late.state.current, accepted.state.current);
+  const empty = step(late, { value: buildTouchlineCardLeadershipValue(null, null), seedKey: "late-empty", read });
+  assert.equal(empty.state.current, accepted.state.current);
+  assert.equal(empty.serverSeasonId, "season-1", "an empty seed cannot erase the last explicit server anchor");
+  assert.equal(empty.state.requestFloor, 1);
+  const foreign = step(empty, { value: old, read: completed(authority("foreign", "season-3", 999), 4, 4) });
+  assert.equal(foreign.state.current, accepted.state.current, "unconfirmed foreign facts remain rejected");
+});
+
+test("server season catch-up cannot replace an already accepted newer same-season live publication", () => {
+  const old = authority("old-final", "season-1", 51);
+  const next = authority("new-live", "season-2", 5);
+  const live = { ...next, playerRanking: { ...next.playerRanking!, currentProjection: { version: 1 as const,
+    revision: "b".repeat(64), competitionId: "competition", currentSeasonId: "season-2", sourceSnapshotId: "new-live",
+    sourcePlayerCount: 1, eligiblePlayerCount: 1, effectiveSeason: "2027-28", bindings: [] } } };
+  const accepted = step(initial(old), { value: old, read: completed(live, 3, 3) });
+  const staleNew = authority("new-stale-SSR", "season-2", 1);
+  const caughtUp = step(accepted, { value: staleNew, seedKey: "new-stale-SSR", read: completed(live, 3, 3) });
+  assert.equal(caughtUp.serverSeasonId, "season-1", "catch-up must not rewrite the scope-reset anchor");
+  assert.equal(caughtUp.state.current, accepted.state.current);
+  assert.equal(caughtUp.state.current.playerRanking?.players[0]?.totalRating, 5);
+  assert.equal(caughtUp.state.requestFloor, 1);
+  assert.equal(step(caughtUp, { value: staleNew }), caughtUp);
+  const lateOld = step(caughtUp, { value: old, seedKey: "late-old-after-catch-up", read: completed(live, 3, 3) });
+  assert.equal(lateOld.state.current, accepted.state.current, "old SSR remains stale even after server catch-up");
+  assert.equal(lateOld.state.requestFloor, 1);
+  assert.equal(step(lateOld, { value: old }), lateOld);
+});
+
+
+test("seedless catch-up establishes the missing server anchor once and does not undo a subsequent canonical rollover", () => {
+  const liveS1 = authority("live-S1", "season-1", 51);
+  const accepted = step(initial(null), { value: buildTouchlineCardLeadershipValue(null, null), read: completed(liveS1, 2, 2) });
+  assert.equal(accepted.serverSeasonId, null);
+  const lateS1 = authority("late-S1", "season-1", 40);
+  const anchored = step(accepted, { value: lateS1, seedKey: "late-S1", read: completed(liveS1, 2, 2) });
+  assert.equal(anchored.serverSeasonId, "season-1");
+  assert.equal(anchored.state.current, accepted.state.current);
+  assert.equal(anchored.state.requestFloor, 1);
+  const next = buildTouchlineCardLeadershipValue({ ...TOUCHLINE_PRESEASON_RANKING_STATE,
+    seasonId: "season-2", currentProjection: { version: 1, revision: "c".repeat(64), competitionId: "competition",
+      currentSeasonId: "season-2", sourceSnapshotId: "live-S1", sourcePlayerCount: 1, eligiblePlayerCount: 0,
+      effectiveSeason: "2027-28", bindings: [] } }, null);
+  const read = completed(next, 3, 3);
+  const rolled = step(anchored, { value: lateS1, read });
+  assert.equal(rolled.state.current.playerRanking?.phase, "preseason");
+  assert.equal(rolled.state.seasonId, "season-2");
+  assert.equal(step(rolled, { value: lateS1, read }), rolled);
+  assert.equal(rolled.state.requestFloor, 1);
 });

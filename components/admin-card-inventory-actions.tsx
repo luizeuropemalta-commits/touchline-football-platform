@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { RefreshCw, Save } from "lucide-react";
 
 const CARD_STATUSES = ["pending", "ready", "published", "reserved", "sold", "retired"];
@@ -53,6 +53,7 @@ export function CardInventoryQuickEdit({
   locale?: "en-GB" | "pt-BR";
 }) {
   const pt = locale === "pt-BR";
+  const fieldId = useId();
   const [draft, setDraft] = useState({ cardStatus, saleStatus, artStatus, frameColor });
   const [status, setStatus] = useState<"idle" | "busy" | "success" | "error">("idle");
   const [busy, setBusy] = useState(false);
@@ -78,18 +79,30 @@ export function CardInventoryQuickEdit({
   }
 
   return (
-    <div className="grid gap-2 lg:grid-cols-[1fr_1fr_1fr_1fr_auto]">
-      <select value={draft.cardStatus} onChange={(event) => setDraft((current) => ({ ...current, cardStatus: event.target.value }))} className="h-9 rounded-xl border border-white/[.08] bg-black/30 px-2 text-[9px] font-bold  text-white">
-        {CARD_STATUSES.map((value) => <option key={value} value={value}>{label(value, pt)}</option>)}
-      </select>
-      <select value={draft.saleStatus} onChange={(event) => setDraft((current) => ({ ...current, saleStatus: event.target.value }))} className="h-9 rounded-xl border border-white/[.08] bg-black/30 px-2 text-[9px] font-bold  text-white">
-        {SALE_STATUSES.map((value) => <option key={value} value={value}>{label(value, pt)}</option>)}
-      </select>
-      <select value={draft.artStatus} onChange={(event) => setDraft((current) => ({ ...current, artStatus: event.target.value }))} className="h-9 rounded-xl border border-white/[.08] bg-black/30 px-2 text-[9px] font-bold  text-white">
-        {ART_STATUSES.map((value) => <option key={value} value={value}>{label(value, pt)}</option>)}
-      </select>
-      <input value={draft.frameColor} onChange={(event) => setDraft((current) => ({ ...current, frameColor: event.target.value }))} className="h-9 rounded-xl border border-white/[.08] bg-black/30 px-2 text-[9px] font-bold  text-white" />
-      <button type="button" onClick={save} disabled={busy} className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-[#a3ff12]/25 bg-[#a3ff12]/10 px-3 text-[8px] font-black  text-[#caff6d] disabled:opacity-50">
+    <div className="grid items-end gap-3 lg:grid-cols-[1fr_1fr_1fr_1fr_auto]">
+      <div className="grid min-w-0 gap-1.5 font-bold text-slate-300">
+        <label htmlFor={`${fieldId}-cardStatus`} className="text-sm">{pt ? "Estado do card" : "Card status"}</label>
+        <select id={`${fieldId}-cardStatus`} value={draft.cardStatus} onChange={(event) => setDraft((current) => ({ ...current, cardStatus: event.target.value }))} className="h-11 min-w-0 rounded-xl border border-white/[.08] bg-black/30 px-2 text-base font-bold text-white">
+          {CARD_STATUSES.map((value) => <option key={value} value={value}>{label(value, pt)}</option>)}
+        </select>
+      </div>
+      <div className="grid min-w-0 gap-1.5 font-bold text-slate-300">
+        <label htmlFor={`${fieldId}-saleStatus`} className="text-sm">{pt ? "Disponibilidade" : "Availability"}</label>
+        <select id={`${fieldId}-saleStatus`} value={draft.saleStatus} onChange={(event) => setDraft((current) => ({ ...current, saleStatus: event.target.value }))} className="h-11 min-w-0 rounded-xl border border-white/[.08] bg-black/30 px-2 text-base font-bold text-white">
+          {SALE_STATUSES.map((value) => <option key={value} value={value}>{label(value, pt)}</option>)}
+        </select>
+      </div>
+      <div className="grid min-w-0 gap-1.5 font-bold text-slate-300">
+        <label htmlFor={`${fieldId}-artStatus`} className="text-sm">{pt ? "Estado da arte" : "Artwork status"}</label>
+        <select id={`${fieldId}-artStatus`} value={draft.artStatus} onChange={(event) => setDraft((current) => ({ ...current, artStatus: event.target.value }))} className="h-11 min-w-0 rounded-xl border border-white/[.08] bg-black/30 px-2 text-base font-bold text-white">
+          {ART_STATUSES.map((value) => <option key={value} value={value}>{label(value, pt)}</option>)}
+        </select>
+      </div>
+      <div className="grid min-w-0 gap-1.5 font-bold text-slate-300">
+        <label htmlFor={`${fieldId}-frameColor`} className="text-sm">{pt ? "Cor da moldura" : "Frame colour"}</label>
+        <input id={`${fieldId}-frameColor`} value={draft.frameColor} onChange={(event) => setDraft((current) => ({ ...current, frameColor: event.target.value }))} className="h-11 min-w-0 rounded-xl border border-white/[.08] bg-black/30 px-2 text-base font-bold text-white" />
+      </div>
+      <button type="button" onClick={save} disabled={busy} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-[#a3ff12]/25 bg-[#a3ff12]/10 px-3 text-sm font-black text-[#caff6d] disabled:opacity-50">
         <Save size={12} />
         {{ idle: pt ? "Salvar" : "Save", busy: pt ? "Salvando" : "Saving", success: pt ? "Salvo" : "Saved", error: pt ? "Falha ao salvar" : "Save failed" }[status]}
       </button>

@@ -22,7 +22,7 @@ function nodes(value: unknown): Element[] {
   return [element, ...nodes(element.props.children)];
 }
 
-function fixture(initial: Partial<ClubOwnerPlanOnboardingProps> = {}, checkoutRequest: typeof checkoutClient.requestClubSeasonCheckout = async () => { throw new Error("unavailable"); }) {
+function fixture(initial: Partial<ClubOwnerPlanOnboardingProps> = {}, checkoutRequest: typeof checkoutClient.requestClubSeasonPaymentCheckout = async () => { throw new Error("unavailable"); }) {
   let props: ClubOwnerPlanOnboardingProps, cursor = 0, tree: React.ReactNode, focused = "", modal = false, shows = 0, dismissals = 0;
   const redirects: string[] = [];
   const selections: string[] = [], slots: unknown[] = [], effects: (() => void)[] = [];
@@ -41,7 +41,7 @@ function fixture(initial: Partial<ClubOwnerPlanOnboardingProps> = {}, checkoutRe
     if (name === "react/jsx-runtime") return runtime;
     if (name === "./a11y/TouchlineDialog") return { useTouchlineDialog: () => { const ref=react.useRef(null); return {dialogRef:ref,dialogProps:{ref,"data-touchline-dialog-root":"true"}}; } };
     if (name === "lucide-react") return new Proxy({}, { get: () => "svg" });
-    if (name.includes("club-season-checkout-client")) return { ...checkoutClient, requestClubSeasonCheckout: checkoutRequest };
+    if (name.includes("club-season-checkout-client")) return { ...checkoutClient, requestClubSeasonPaymentCheckout: checkoutRequest };
     if (name.includes("catalogue-locale")) return catalogue;
     if (name.includes("club-owner-market-i18n")) return market;
     if (name.includes("club-owner-plan-showcase")) return plans;
@@ -213,4 +213,56 @@ test("checkout failure is accessible and dismissal cancels a pending redirect",a
   dismissed.click("Ver benefícios: Standard");dismissed.click("Continuar para pagamento de teste");dismissed.click("Fechar");
   assert.equal(signal.aborted,true);resolve("https://checkout.stripe.com/c/pay/cs_test_one");await dismissed.settle();
   assert.deepEqual(dismissed.redirects,[]);
+});
+
+
+test("explicit server Live offer uses payment copy and mode-aware navigation without activating a plan", async () => {
+  let calls = 0; let resolve!: (url: string) => void;
+  const view = fixture({ checkoutEnabled: true, activePlanKey: "standard", checkoutOffers: { master: { amountMinor: 4000, paymentMode: "live" } } },
+    (plan, amount, _signal, mode) => {
+      calls++; assert.equal(plan, "master"); assert.equal(amount, 4000); assert.equal(mode, "live");
+      return new Promise<string>(done => { resolve = done; });
+    });
+  view.click("Ver benefícios: Master"); assert.match(view.html(), /A pagar agora:.*40,00/);
+  assert.doesNotMatch(view.html(), /teste|test checkout/i);
+  view.click("Continuar para pagamento"); view.click("Preparando pagamento…");
+  assert.equal(calls, 1); assert.equal(view.button("Preparando pagamento…").props.disabled, true);
+  resolve("https://checkout.stripe.com/c/pay/cs_live_one"); await view.settle();
+  assert.deepEqual(view.redirects, ["https://checkout.stripe.com/c/pay/cs_live_one"]);
+  assert.deepEqual(view.selections, []); assert.doesNotMatch(view.html(), /data-current-plan-badge="master"/);
+});
+
+test("Live offers retain all eight locales and do not turn Beta or disabled capability into a payment", () => {
+  const actions = {
+    "en-GB": "Continue to payment", "pt-BR": "Continuar para pagamento", "es-ES": "Continuar al pago",
+    "it-IT": "Continua al pagamento", "fr-FR": "Continuer au paiement", "ar-SA": "المتابعة إلى الدفع",
+    "tr-TR": "Ödemeye devam et", "de-DE": "Weiter zur Zahlung",
+  };
+  for (const [locale, action] of Object.entries(actions)) {
+    const view = fixture({ locale, draftLocalesEnabled: true, checkoutEnabled: true,
+      checkoutOffers: { standard: { amountMinor: 4990, paymentMode: "live" } } });
+    assert.equal(view.button(action).props.disabled, false); assert.doesNotMatch(view.html(), /undefined/);
+    view.unmount();
+  }
+  let calls = 0;
+  const view = fixture({ checkoutEnabled: true, checkoutOffers: { master: { amountMinor: 8990, paymentMode: "live" } } },
+    async () => { calls++; throw new Error("must not request"); });
+  view.click("Ver benefícios: Beta"); view.click("Contratar plano");
+  assert.equal(view.button("Contratar plano").props.disabled, true); assert.equal(calls, 0);
+  assert.match(view.html(), /100M TC compartilhados/); assert.doesNotMatch(view.html(), /data-checkout-quote/);
+  view.click("Todos os planos"); view.click("Ver benefícios: Master"); view.update({ checkoutEnabled: false });
+  view.click("Contratar plano"); assert.equal(calls, 0); assert.equal(view.button("Contratar plano").props.disabled, true);
+});
+
+test("Live checkout dismissal aborts pending navigation and preserves existing accessible failure", async () => {
+  let signal!: AbortSignal, resolve!: (url: string) => void;
+  const view = fixture({ checkoutEnabled: true, checkoutOffers: { standard: { amountMinor: 4990, paymentMode: "live" } } },
+    (_plan, _amount, s, mode) => { assert.equal(mode, "live"); signal = s; return new Promise<string>(done => { resolve = done; }); });
+  view.click("Ver benefícios: Standard"); view.click("Continuar para pagamento"); view.click("Fechar");
+  assert.equal(signal.aborted, true); resolve("https://checkout.stripe.com/c/pay/cs_live_one"); await view.settle();
+  assert.deepEqual(view.redirects, []);
+  const failed = fixture({ checkoutEnabled: true, checkoutOffers: { standard: { amountMinor: 4990, paymentMode: "live" } } });
+  failed.click("Ver benefícios: Standard"); failed.click("Continuar para pagamento"); await failed.settle();
+  assert.match(failed.html(), /role="alert"/); assert.match(failed.html(), /Confira seu plano antes/);
+  assert.equal(failed.button("Continuar para pagamento").props.disabled, false);
 });

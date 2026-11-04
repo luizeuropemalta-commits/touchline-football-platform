@@ -137,7 +137,7 @@ test("social Admin real render and actions preserve PT/EN payloads, denied/error
           const markup = await socialAdminFixture({ invalidDates: true }).render({ lang: locale, draftPage: "1", reviewPage: "1" });
           await page.setContent(`<html lang="${locale}"><meta charset="utf-8"><style>${css}body{margin:0;padding:16px;background:#07110e}</style>${markup}</html>`);
           await expect(page.getByRole("heading", { level: 1 })).toHaveText(pt ? "Publicações sociais" : "Social publications");
-          await expect(page.getByRole("navigation", { name: pt ? "Idioma" : "Language", exact: true }).getByRole("link", { name: pt ? "Português" : "English" })).toHaveAttribute("aria-current", "page");
+          await expect(page.getByRole("link", { name: /^(Português|English)$/ })).toHaveCount(0);
           assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `${engine.name()}/${locale}/${width}: overflow`);
           const screenshot = await page.screenshot({ ...(out && width !== 844 ? { path: `${out}/${engine.name()}-${locale}-${width}.png` } : {}), fullPage: false });
           assert.ok(screenshot.byteLength > 0); renders++;

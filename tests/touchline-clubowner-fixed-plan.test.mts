@@ -21,7 +21,8 @@ const Header = vm.runInNewContext(ts.transpileModule(
 ).outputText, {
   React, useState: () => [opened, (value: boolean) => { opened = value; }],
   styles: css, controls: css, planStyles: css,
-  CalendarDays: icon, Camera: icon, ChevronRight: icon, TouchlineCoinMark: icon,
+  CalendarDays: icon, Camera: icon, ChevronRight: icon, Trophy: icon, TouchlineCoinMark: icon,
+  Link: ({ children, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement>) => React.createElement("a", props, children),
   Image: () => React.createElement("img", { alt: "" }),
   useConfirmedClubCollection: () => ({ verificationStatus: "confirmed" }),
   CLUB_ACQUISITION_BUDGETS: {},

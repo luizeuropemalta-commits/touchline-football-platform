@@ -5,6 +5,8 @@ import test from "node:test";
 import React from "react";
 import * as jsx from "react/jsx-runtime";
 import ts from "typescript";
+import * as paymentContract from "../lib/stripe/club-season-payment-contract.ts";
+import * as testCatalogue from "../lib/stripe/club-season-test-catalogue.ts";
 import { selectCarouselFixtureRound } from "../lib/touchlineArena/carousel-fixture-round.ts";
 import { toTouchlineLiveFixtures } from "../lib/touchlineArena/stadium-catalog.ts";
 import { resolveServerReadWithin } from "../lib/touchlineArena/server-read-deadline.ts";
@@ -32,6 +34,13 @@ function load(source: string, modules: Record<string, unknown>, globals: Record<
   });
   return exports;
 }
+// Load the real configuration under load()'s closed synthetic environment.
+// Only the server-only marker is inert; functional dependencies stay real.
+const paymentConfiguration = load(readSource("../lib/stripe/club-season-configuration.server.ts"), {
+  "server-only": {},
+  "./club-season-payment-contract.ts": paymentContract,
+  "./club-season-test-catalogue.ts": testCatalogue,
+}, { URL });
 function fixture(id: string, pair = 1, status = "Not Started"): TouchlineFixture {
   return { id: `sportmonks:${id}`, providerId: id, provider: "sportmonks", name: id,
     competitionId: "8", seasonId: "26000", roundId: "8", roundName: "8",
@@ -113,6 +122,7 @@ async function ownerProps(read: typeof readPersistedLiveRail, params: Record<str
     "@/lib/touchlineArena/server-read-deadline": { resolveServerReadWithin },
     "@/lib/touchlineArena/match-centre": { normalizeTouchlineMatchCentreTimeZone: () => "UTC" },
     "@/lib/touchlineArena/site-locales-release": { isTouchLineSiteLocalesEnabled: () => false },
+    "@/lib/stripe/club-season-configuration.server": paymentConfiguration,
     "@/lib/stripe/club-season-offers.server": { readClubSeasonCheckoutOffers: async (accountId: string) => {
       assert.equal(accountId, "customer", "Checkout read must use the same verified customer");
       return {};

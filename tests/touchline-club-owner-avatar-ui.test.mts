@@ -45,7 +45,7 @@ test("real header forwards separate dormant selection capabilities without chang
     // This fixture inspects capability forwarding, not preview interaction.
     react: { useState: (initial: unknown) => [typeof initial === "function" ? initial() : initial, () => {}] },
     "react/jsx-runtime": jsx, "next/image": { default: "img" }, "next/link": { default: "a" },
-    "lucide-react": { CalendarDays: "calendar", Camera: "camera", ChevronRight: "chevron-right", Crown: "crown", Diamond: "diamond", LockKeyhole: "lock", Shield: "shield" },
+    "lucide-react": { Trophy: "trophy", CalendarDays: "calendar", Camera: "camera", ChevronRight: "chevron-right", Crown: "crown", Diamond: "diamond", LockKeyhole: "lock", Shield: "shield" },
     "@/lib/touchlineArena/club-owner-market-i18n": { getTouchlineClubOwnerMarketCopy: () => ({ nameUnavailable: "Unavailable" }) },
     "@/lib/touchlineArena/club-owner-profile-metrics": profileMetrics,
     "@/lib/touchlineArena/club-owner-plan-showcase": planShowcase,

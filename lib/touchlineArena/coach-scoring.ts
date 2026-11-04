@@ -22,10 +22,11 @@ export type TouchlineCoachRecord = Readonly<{
  * same audited season record on Card, Zoom, Profile and Ranking surfaces.
  */
 export type TouchlineCoachCompetitionSnapshot = Readonly<{
-  snapshotId: string;
+  snapshotId: string | null;
   seasonId: string;
   seasonLabel: string;
-  rank: number;
+  /** No current rank for historical participants or a new season. */
+  rank: number | null;
   scoringVersion: typeof TOUCHLINE_COACH_SCORING_VERSION;
   home: TouchlineCoachRecord;
   away: TouchlineCoachRecord;

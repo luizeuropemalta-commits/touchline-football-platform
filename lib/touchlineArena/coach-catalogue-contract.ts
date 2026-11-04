@@ -17,8 +17,21 @@ export type CoachCatalogue = Readonly<{
   history: readonly CoachCatalogueEntry[];
 }>;
 export const UNAVAILABLE_COACH_CATALOGUE: CoachCatalogue = Object.freeze({ phase: "unavailable", revision: null, current: [], history: [] });
+function withCatalogueAssociation(entry: CoachCatalogueEntry, kind: "current" | "historical"): CoachCatalogueEntry {
+  return { ...entry, coach: { ...entry.coach, catalogueAssociation: {
+    kind, providerId: entry.coach.providerId, teamId: entry.coach.teamId!, publicationId: entry.publicationId,
+  } } };
+}
+// Keep the legacy coach reference stable without annotating or mutating the
+// frozen seed. Catalogue envelopes and arrays remain fresh for every caller.
+const LEGACY_COACHES_WITH_ASSOCIATION = new Map(TOUCHLINE_LIVE_COACHES.map(({ coach }) => [coach, Object.freeze({
+  ...coach, catalogueAssociation: Object.freeze({
+    kind: "current" as const, providerId: coach.providerId, teamId: coach.teamId!, publicationId: null,
+  }),
+})]));
 export function legacyCoachCatalogue(): CoachCatalogue {
-  const entries = TOUCHLINE_LIVE_COACHES.map(snapshot => ({ ...snapshot, internalId: null, publicationId: null,
+  const entries = TOUCHLINE_LIVE_COACHES.map(snapshot => ({ ...snapshot, coach: LEGACY_COACHES_WITH_ASSOCIATION.get(snapshot.coach)!,
+    internalId: null, publicationId: null,
     classification: touchlineCoachClassificationForProviderId(snapshot.coach.providerId)!, sourceKind: "legacy_seed_bootstrap" as const }));
   return { phase: "legacy", revision: null, current: entries, history: entries };
 }
@@ -79,7 +92,14 @@ export function parseCoachCatalogue(value: unknown): CoachCatalogue {
   if (new Set(entries.map(entry => entry.coach.providerId)).size !== 20 || new Set(entries.map(entry => entry.coach.teamId)).size !== 20
     || new Set(versions.map(entry => entry.publicationId)).size !== versions.length
     || entries.some(entry => !versions.some(version => version.publicationId === entry.publicationId && JSON.stringify(version) === JSON.stringify(entry)))) return UNAVAILABLE_COACH_CATALOGUE;
-  return { phase: "ready", revision: Number(row.revision), current: entries, history: versions };
+  // A verified historical identity is not a current appointment. Compare the
+  // exact publication and both identities; providerId alone is insufficient.
+  return { phase: "ready", revision: Number(row.revision),
+    current: entries.map(entry => withCatalogueAssociation(entry, "current")),
+    history: versions.map(version => withCatalogueAssociation(version, entries.some(entry =>
+      entry.publicationId === version.publicationId && entry.coach.providerId === version.coach.providerId
+      && entry.coach.teamId === version.coach.teamId) ? "current" : "historical")),
+  };
 }
 
 /** Validate the public transport projection as rigorously as the SQL projection. */
@@ -88,7 +108,16 @@ export function parseCoachCatalogueTransport(value: unknown): CoachCatalogue | n
   if (!row || !Array.isArray(row.current) || !Array.isArray(row.history)) return null;
   if (row.phase === "legacy") {
     const expected = legacyCoachCatalogue();
-    return JSON.stringify(row) === JSON.stringify(expected) ? expected : null;
+    // Earlier immutable legacy DTOs predate derived association context. Admit
+    // that exact canonical projection only, then return the current derivation.
+    // Never strip arbitrary caller metadata before comparison.
+    const previousEntry = (entry: CoachCatalogueEntry) => {
+      const coach = { ...entry.coach }; delete coach.catalogueAssociation;
+      return { ...entry, coach };
+    };
+    const previous = { ...expected, current: expected.current.map(previousEntry), history: expected.history.map(previousEntry) };
+    const encoded = JSON.stringify(row);
+    return encoded === JSON.stringify(expected) || encoded === JSON.stringify(previous) ? expected : null;
   }
   if (row.phase === "unavailable") return row.current.length === 0 && row.history.length === 0 && row.revision === null ? UNAVAILABLE_COACH_CATALOGUE : null;
   if (row.phase !== "ready") return null;

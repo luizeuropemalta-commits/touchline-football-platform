@@ -1,5 +1,7 @@
 import { type TouchLineLocale } from "./i18n.ts";
 import { resolveTouchlineCatalogueLocale } from "./catalogue-locale.ts";
+import type { TouchlineCoach } from "../football-data/types";
+import { coachAssociationPresentation } from "./coach-association-presentation.ts";
 
 const enGB = {
   awaitingCoach: "Awaiting coach", coachPending: "Coach pending", coachCardAria: "{coachName} TouchLine coach card",
@@ -53,6 +55,9 @@ export const TOUCHLINE_COACH_CARD_CATALOGUES = {
   },
 } as const satisfies Readonly<Record<TouchLineLocale, TouchlineCoachCardCopy>>;
 
-export function getTouchlineCoachCardCopy(locale?: string | null, draftLocalesEnabled = false): TouchlineCoachCardCopy {
-  return TOUCHLINE_COACH_CARD_CATALOGUES[resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled)];
+export function getTouchlineCoachCardCopy(locale?: string | null, draftLocalesEnabled = false, coach?: TouchlineCoach | null): TouchlineCoachCardCopy {
+  const copy = TOUCHLINE_COACH_CARD_CATALOGUES[resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled)];
+  if (coach === undefined) return copy;
+  const association = coachAssociationPresentation(coach, locale, draftLocalesEnabled);
+  return association.kind === "current" ? copy : { ...copy, currentClub: association.club, firstTeamManager: association.role };
 }

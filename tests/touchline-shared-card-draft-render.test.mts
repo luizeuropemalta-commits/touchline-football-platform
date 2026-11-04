@@ -10,6 +10,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import ts from "typescript";
 import { createTouchlineArenaCoachSlot } from "../lib/touchlineArena/coach-card.ts";
 import type { TouchlineCoach } from "../lib/football-data/types.ts";
+import { legacyCoachCatalogue } from "../lib/touchlineArena/coach-catalogue-contract.ts";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const nativeRequire = createRequire(import.meta.url);
@@ -21,8 +22,7 @@ const player = {
   editorialCard: { tierKey: "radiant-gold", marketValueEur: 1000000, marketValueState: "verified", cardPrice: { amountMinor: 1500, currency: "GBP" }, lastReviewedAt: "2026-10-03" },
 };
 const coach: TouchlineCoach = {
-  id: "sportmonks:coach:1", providerId: "1", provider: "sportmonks", name: "Coach <&> $&", displayName: "Coach <&> $&",
-  teamId: "42", source: { provider: "sportmonks", providerId: "1", raw: { id: 1 } },
+  ...legacyCoachCatalogue().current[0].coach, name: "Coach <&> $&", displayName: "Coach <&> $&",
 };
 const slot = createTouchlineArenaCoachSlot(coach, 1);
 

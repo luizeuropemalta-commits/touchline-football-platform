@@ -1,5 +1,7 @@
-import { buildClubSeasonCheckoutRequest, type ClubSeasonCheckoutOrder } from "./club-season-checkout-request.ts";
-import { isClubSeasonPaidPlan, type ClubSeasonPaidPlan } from "./club-season-test-catalogue.ts";
+import { buildClubSeasonPaymentCheckoutRequest, type ClubSeasonCheckoutOrder } from "./club-season-checkout-request.ts";
+import { CLUB_SEASON_TEST_PROFILE } from "./club-season-test-catalogue.ts";
+import { isClubSeasonPaidPlan, paymentForClubSeasonPlan, sameClubSeasonOrderPayment, validClubSeasonSession,
+  type ClubSeasonPaidPlan, type ClubSeasonPaymentProfile } from "./club-season-payment-contract.ts";
 import { readClubCommand } from "../touchlineFantasy/club-request.ts";
 import { hasTouchLineArenaAccess } from "../touchlineArena/auth-access.ts";
 
@@ -29,7 +31,8 @@ export type ClubSeasonOrderStore = {
   prepare(ownerId: string, plan: ClubSeasonPaidPlan): Promise<ClubSeasonStoredOrder>;
   attach(ownerId: string, orderId: string, sessionId: string): Promise<ClubSeasonStoredOrder>;
 };
-export type ClubSeasonCheckoutResult = { orderId: string; sessionId: string; url: string; testMode: true };
+export type ClubSeasonCheckoutResult = { orderId: string; sessionId: string; url: string }
+  & ({ testMode: true } | { testMode: false; mode: "live" });
 
 export function parseClubSeasonCheckoutInput(value: unknown): { plan: ClubSeasonPaidPlan; expectedAmountMinor: number } | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
@@ -45,30 +48,37 @@ export function parseClubSeasonCheckoutInput(value: unknown): { plan: ClubSeason
  * is accepted. A failed/unknown provider call keeps the persisted order pending. */
 export async function beginClubSeasonCheckout(input: { ownerId: string; plan: ClubSeasonPaidPlan; expectedAmountMinor: number }, dependencies: {
   store: ClubSeasonOrderStore;
+  profile?: ClubSeasonPaymentProfile;
   createCheckout(order: ClubSeasonCheckoutOrder): Promise<{ sessionId: string; url: string }>;
 }, now = Date.now()): Promise<ClubSeasonCheckoutResult> {
+  const profile = dependencies.profile ?? CLUB_SEASON_TEST_PROFILE;
   const order = await dependencies.store.prepare(input.ownerId, input.plan);
+  const expectedPayment = paymentForClubSeasonPlan(profile, input.plan);
+  const payment = order.payment ?? (profile.mode === "test" ? expectedPayment : null);
+  if (!payment || !sameClubSeasonOrderPayment(payment, expectedPayment)) throw new Error("SEASON_ORDER_CONTEXT_CHANGED");
   if (order.userId !== input.ownerId || order.plan !== input.plan) throw new Error("SEASON_ORDER_CONTEXT_CHANGED");
   if (order.amountMinor !== input.expectedAmountMinor) throw new Error("SEASON_QUOTE_CHANGED");
   if (order.state !== "pending") throw new Error("SEASON_ORDER_REQUIRES_REVIEW");
   // Validate the persisted request before contacting the provider. Never replace
   // an expired or uncertain order automatically with another purchase.
-  buildClubSeasonCheckoutRequest(order, now);
+  buildClubSeasonPaymentCheckoutRequest({ ...order, payment }, now);
   const checkout = await dependencies.createCheckout(order);
   let url: URL;
   try { url = new URL(checkout.url); } catch { throw new Error("SEASON_CHECKOUT_UNAVAILABLE"); }
-  if (!/^cs_test_[A-Za-z0-9]+$/.test(checkout.sessionId) || url.origin !== "https://checkout.stripe.com"
+  if (!validClubSeasonSession(checkout.sessionId, profile.mode) || url.origin !== "https://checkout.stripe.com"
     || url.username || url.password || (order.sessionId !== null && checkout.sessionId !== order.sessionId)) {
     throw new Error("SEASON_CHECKOUT_UNAVAILABLE");
   }
   const attached = await dependencies.store.attach(input.ownerId, order.id, checkout.sessionId);
   if (attached.id !== order.id || attached.userId !== input.ownerId || attached.seasonId !== order.seasonId
     || attached.plan !== order.plan || attached.previousPaidPlan !== order.previousPaidPlan
+    || (attached.payment ? !sameClubSeasonOrderPayment(attached.payment, payment) : profile.mode !== "test")
     || attached.amountMinor !== order.amountMinor || attached.sessionId !== checkout.sessionId
     || (attached.state !== "pending" && attached.state !== "paid")) {
     throw new Error("SEASON_ORDER_CONTEXT_CHANGED");
   }
-  return { orderId: order.id, sessionId: checkout.sessionId, url: checkout.url, testMode: true };
+  const result = { orderId: order.id, sessionId: checkout.sessionId, url: checkout.url };
+  return profile.mode === "test" ? { ...result, testMode: true } : { ...result, testMode: false, mode: "live" };
 }
 
 const headers = { "Cache-Control": "private, no-store" };

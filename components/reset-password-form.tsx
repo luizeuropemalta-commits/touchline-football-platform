@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Eye, EyeOff, Loader2 } from "lucide-react";
 import {
   getTouchLineAuthCopy,
@@ -12,6 +12,28 @@ import {
 import { Button, Input } from "./ui";
 
 type RecoveryStatus = "checking" | "ready" | "invalid" | "complete";
+
+// One deadline covers headers and body; cancellation never retries a POST.
+async function requestRecovery(init: RequestInit, controller: AbortController) {
+  const signal = controller.signal;
+  if (signal.aborted) throw new Error("RECOVERY_REQUEST_UNAVAILABLE");
+  let rejectAbort!: () => void;
+  const aborted = new Promise<never>((_, reject) => {
+    rejectAbort = () => reject(new Error("RECOVERY_REQUEST_UNAVAILABLE"));
+    signal.addEventListener("abort", rejectAbort, { once: true });
+  });
+  const timer = setTimeout(() => controller.abort(), 10_000);
+  try {
+    return await Promise.race([(async () => {
+      const response = await fetch("/api/auth/recovery", { ...init, signal });
+      const payload = await response.json().catch(() => null) as { ok?: boolean; error?: string } | null;
+      return { response, payload };
+    })(), aborted]);
+  } finally {
+    clearTimeout(timer);
+    signal.removeEventListener("abort", rejectAbort);
+  }
+}
 
 export function ResetPasswordForm({ locale = "en-GB", draftLocaleEnabled = false, siteLocalesEnabled = false }: { locale?: string; draftLocaleEnabled?: boolean; siteLocalesEnabled?: boolean }) {
   const normalizedLocale = normalizeTouchLineAuthLocale(locale, siteLocalesEnabled);
@@ -26,49 +48,71 @@ export function ResetPasswordForm({ locale = "en-GB", draftLocaleEnabled = false
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
+  const pendingRequest = useRef<AbortController | null>(null);
+
   useEffect(() => {
     let active = true;
+    const controller = new AbortController();
+    pendingRequest.current = controller;
 
     async function verifyRecoverySession() {
-      const response = await fetch("/api/auth/recovery", {
-        cache: "no-store",
-        headers: { Accept: "application/json" },
-      }).catch(() => null);
-      const payload = await response?.json().catch(() => null) as { ok?: boolean; error?: string } | null;
-      if (!active) return;
-      if (!response?.ok || payload?.ok !== true) {
-        setMessage(response?.status === 503 ? copy.authenticationUnavailable : copy.recoveryInvalid);
+      try {
+        const { response, payload } = await requestRecovery({
+          cache: "no-store",
+          headers: { Accept: "application/json" },
+        }, controller);
+        if (!active || pendingRequest.current !== controller) return;
+        if (!response.ok || payload?.ok !== true) {
+          const invalid = response.status === 401 || (response.ok && payload?.error === "invalid");
+          setMessage(invalid ? copy.recoveryInvalid : copy.authenticationUnavailable);
+          setStatus("invalid");
+          return;
+        }
+        setMessage("");
+        setStatus("ready");
+      } catch {
+        if (!active || pendingRequest.current !== controller) return;
+        setMessage(copy.authenticationUnavailable);
         setStatus("invalid");
-        return;
+      } finally {
+        if (pendingRequest.current === controller) {
+          pendingRequest.current = null;
+          setLoading(false);
+        }
       }
-      setStatus("ready");
     }
 
     void verifyRecoverySession();
     return () => {
       active = false;
+      controller.abort();
+      pendingRequest.current?.abort();
+      pendingRequest.current = null;
     };
   }, [copy.authenticationUnavailable, copy.recoveryInvalid]);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
+    if (status !== "ready" || pendingRequest.current) return;
     setMessage("");
     if (password !== confirmation) {
       setMessage(copy.recoveryMismatch);
       return;
     }
 
+    const controller = new AbortController();
+    pendingRequest.current = controller;
     setLoading(true);
     try {
-      const response = await fetch("/api/auth/recovery", {
+      const { response, payload } = await requestRecovery({
         method: "POST",
         headers: {
           Accept: "application/json",
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ password }),
-      });
-      const payload = await response.json().catch(() => null) as { error?: string } | null;
+      }, controller);
+      if (pendingRequest.current !== controller) return;
       if (!response.ok) {
         if (response.status === 401) {
           setMessage(copy.recoveryInvalid);
@@ -80,17 +124,29 @@ export function ResetPasswordForm({ locale = "en-GB", draftLocaleEnabled = false
           setStatus("invalid");
           return;
         }
-        throw new Error(payload?.error || copy.genericError);
+        setMessage(typeof payload?.error === "string" ? payload.error : copy.genericError);
+        return;
+      }
+      if (payload?.ok !== true) {
+        setMessage(copy.authenticationUnavailable);
+        setStatus("invalid");
+        return;
       }
 
       setPassword("");
       setConfirmation("");
       setMessage(copy.recoveryUpdated);
       setStatus("complete");
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : copy.genericError);
+    } catch {
+      if (pendingRequest.current !== controller) return;
+      // A lost/aborted POST may already have committed. Never claim rollback.
+      setMessage(copy.authenticationUnavailable);
+      setStatus("invalid");
     } finally {
-      setLoading(false);
+      if (pendingRequest.current === controller) {
+        pendingRequest.current = null;
+        setLoading(false);
+      }
     }
   }
 

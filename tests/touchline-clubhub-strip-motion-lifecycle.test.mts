@@ -266,7 +266,7 @@ for (const [rounding, quantize] of [["floor", Math.floor], ["round", Math.round]
       assert.equal(crossings, 1, "the real animation crosses the upper seam once");
       // Less than one pixel can remain in the fractional frame accumulator,
       // and the single seam can lose/gain less than one native pixel.
-      assert.ok(Math.abs(distance - 60) < 2, `fractional frame accumulation preserves 30px/s: ${distance}`);
+      assert.ok(Math.abs(distance - 90) < 2, `fractional frame accumulation preserves 45px/s: ${distance}`);
       assert.equal(h.stats().reads, reads, "animation performs no geometry reads");
 
       h.reduce(true);

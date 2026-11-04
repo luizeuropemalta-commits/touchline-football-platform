@@ -34,7 +34,7 @@ import { usePathname } from "next/navigation";
 import { allowsInheritedCardLeadership } from "@/lib/touchlineArena/card-leadership-authority";
 import { useTouchlineGoldenBootPlayers } from "@/lib/touchlineArena/golden-boot-client";
 import { TouchlineGoldenBootHead } from "./TouchlineGoldenBootPresentation";
-import { parseTouchlineActiveRankingState, touchlinePlayerCrownEligibility } from "@/lib/touchlineArena/card-ranking-live";
+import { parseTouchlineRankingPresentation, touchlinePlayerCrownEligibility } from "@/lib/touchlineArena/card-ranking-live";
 import {
   resolveTouchlineCardTierComponentCalibration,
   touchlineCardTierComponentScale,
@@ -355,7 +355,7 @@ type Props = {
 
 export function resolveExplicitQaPlayerRanking(pathname: string | null, value: unknown, editable: boolean) {
   if (editable || pathname !== "/visual-qa/player-leader-crown") return null;
-  return parseTouchlineActiveRankingState(value);
+  return parseTouchlineRankingPresentation(value);
 }
 
 function compactSocialCount(value: number, locale: string | null) {
@@ -1439,6 +1439,14 @@ export function TouchlineEliteExactCard({
         maxWidth: "100%",
         overflow: "visible",
         contain: shellExtraHeight ? undefined : "layout size",
+        // The outer shell may be wider than a static card or include controls.
+        // Match the exact same canvas scale used by the inner artwork below.
+        "--touchline-card-neon-frame-width": hasStaticRenderScale
+          ? `calc(${CARD_W}px * var(--touchline-card-static-scale, ${scale}))`
+          : `${CARD_W * scale}px`,
+        "--touchline-card-neon-frame-height": hasStaticRenderScale
+          ? `calc(${CARD_H}px * var(--touchline-card-static-scale, ${scale}))`
+          : `${CARD_H * scale}px`,
         "--touchline-card-frame-color": cardTraceColor,
         "--touchline-card-neon-art": versionedCardTemplateUrl
           ? `url("${optimizeForLiveCompact ? touchlineLiveCompactFrameUrl(versionedCardTemplateUrl) : touchlineZoomFrameUrl(versionedCardTemplateUrl)}")`

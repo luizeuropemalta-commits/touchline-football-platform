@@ -1,3 +1,4 @@
+import { reader as currentReaders, createCachedRankingReader } from "./helpers/touchline-current-ranking-readers.mts";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
@@ -7,7 +8,7 @@ import { buildTouchlineRankingSnapshot } from "../lib/touchlineArena/card-rankin
 import { TOUCHLINE_CARD_PRICE_TABLE_VERSION } from "../lib/touchlineArena/card-rules.ts";
 import { TOUCHLINE_ENGLAND_LEAGUE_KEY, TOUCHLINE_PRESEASON_RANKING_STATE, parseTouchlineActiveRankingState } from "../lib/touchlineArena/card-ranking-live.ts";
 import { parsePersistedTouchlinePlayerLeadership } from "../lib/touchlineArena/player-ranking-leadership.ts";
-import { legacyCoachCatalogue, catalogueCoachForId } from "../lib/touchlineArena/coach-catalogue-contract.ts";
+import { legacyCoachCatalogue, parseCoachCatalogue, parseCoachCatalogueTransport, catalogueCoachForId } from "../lib/touchlineArena/coach-catalogue-contract.ts";
 import { parseTouchlineSportsPublication, touchlinePublishedPlayerFacts } from "../lib/touchlineArena/sports-publication.ts";
 import { readPublishedTouchlineLivePresentationInput } from "../lib/touchlineArena/live-presentation-read-model.ts";
 import { toPublicTouchlineFixtures } from "../lib/football-data/public-fixture.ts";
@@ -21,6 +22,14 @@ const scope = "touchline-england";
 const code = (path: string) => stripTypeScriptTypes(readFileSync(new URL(`../${path}`, import.meta.url), "utf8"))
   .replace(/^export\s+\{[^}]*\}\s+from[^;]*;\s*$/gm, "")
   .replace(/^import\s+[\s\S]*?;\s*$/gm, "").replace(/^export /gm, "");
+
+function readyCatalogue() {
+  const entries=legacyCoachCatalogue().current.map((entry,index)=>({id:id(600+index),publicationId:id(700+index),
+    providerId:entry.coach.providerId,teamId:entry.coach.teamId,name:entry.coach.name,observedAt:NOW,
+    countryCode3:entry.countryCode3,classification:entry.classification,sourceKind:"sportmonks.fixture.coaches"}));
+  const catalogue=parseCoachCatalogue({revision:1,current:entries,history:entries});
+  assert.equal(catalogue.phase,"ready");return catalogue;
+}
 
 function data() {
   const ranking = buildTouchlineRankingSnapshot({ snapshotId: P, roundId: "round-1", generatedAt: NOW,
@@ -37,6 +46,14 @@ function data() {
     fixtures: [{ fixtureId: F, startsAt: NOW, status: "1H" }], liveScoreSnapshotDigest: "b".repeat(32),
     liveScorePayload: { fixtures: [fixture], fetchedAt: NOW, storedAt: Date.parse(NOW) } };
   return {
+    football_competitions: [{id:id(200),provider:"sportmonks",provider_competition_id:"8"}],
+    football_seasons: [{id:id(50),provider:"sportmonks",provider_season_id:"70001",competition_id:id(200),is_current:true,name:"2026/2027"}],
+    football_players: Array.from({length:7},(_,index)=>({id:id(index+1),provider:"sportmonks",provider_player_id:String(index+1),current_club_id:id(300)})),
+    football_clubs: readyCatalogue().current.map((entry,index)=>({id:id(300+index),provider:"sportmonks",provider_team_id:entry.coach.teamId,competition_id:id(200),name:`Club ${entry.coach.teamId}`})),
+    football_squad_members: Array.from({length:7},(_,index)=>({id:id(index+400),provider:"sportmonks",player_id:id(index+1),club_id:id(300),competition_id:id(200),status:"active",jersey_number:1})),
+    touchline_card_publications: Array.from({length:7},(_,index)=>({player_id:id(index+1),current_membership_id:id(index+400),competition_id:id(200),effective_season:"2026-27",publication_status:"published",calculated_tier:"ruby-red",calculated_nominal_price_gbp:10,last_reviewed_at:NOW,internal_source:"editorial"})),
+    football_player_market_values: Array.from({length:7},(_,index)=>({player_id:id(index+1),market_value_eur:2500000,verified_season:"2026-27",status:"verified",confidence:"verified",source:"editorial"})),
+    touchline_card_editorial_overrides: [],
     touchline_live_presentation_active_snapshots: { scope_key: scope, snapshot_id: id(99) },
     touchline_live_presentation_snapshots: { id: id(99), scope_key: scope, content_digest: "a".repeat(32), payload: shared, created_at: NOW },
     touchline_card_ranking_snapshots: { snapshot_id: P, league_key: scope, season_id: id(50), round_id: "round-1",
@@ -60,7 +77,18 @@ function harness(options: { mutate?: (rows: ReturnType<typeof data>) => void; er
   const admin = { from(table: string) {
     assert.ok(Object.hasOwn(rows, table), `forbidden unpinned/provider table ${table}`);
     const filters: Array<[string, unknown]> = [];
-    const query = { select(columns: string) { assert.equal(columns.includes("*"), false); return query; },
+    let columns: string[] = [], exact=false, from=0, to=Infinity;
+    const query = { select(value: string, options?:{count?:string}) { assert.equal(value.includes("*"), false);columns=value.split(",");exact=options?.count==="exact";return query; },
+      in(key:string, values:unknown[]) { filters.push([key,values]);return query; },
+      limit(value:number) {to=value-1;return query;},range(start:number,end:number){from=start;to=end;return query;},order(){return query;},abortSignal(){return query;},
+      then(resolve:(value:unknown)=>unknown,reject:(reason:unknown)=>unknown) {
+        return Promise.resolve().then(()=>{
+          reads.push({table,filters});
+          const all=(rows as Record<string,unknown>)[table];assert.ok(Array.isArray(all),`Expected SELECT rows ${table}`);
+          const matched=(all as Record<string,unknown>[]).filter(row=>filters.every(([key,value])=>Array.isArray(value)?value.includes(row[key]):row[key]===value));
+          return {data:matched.slice(from,to+1).map(row=>Object.fromEntries(columns.map(key=>[key,row[key]]))),error:options.errorTable===table?{message:"PRIVATE FAILURE"}:null,count:exact?matched.length:null};
+        }).then(resolve,reject);
+      },
       eq(key: string, value: unknown) { filters.push([key, value]); return query; },
       async maybeSingle() {
         reads.push({ table, filters });
@@ -77,14 +105,14 @@ function harness(options: { mutate?: (rows: ReturnType<typeof data>) => void; er
   };
   const globals = { createAdminClient: () => options.noAdmin ? null : admin, cache: requestCache,
     TOUCHLINE_ENGLAND_LEAGUE_KEY, TOUCHLINE_PRESEASON_RANKING_STATE, parseTouchlineActiveRankingState,
-    parsePersistedTouchlinePlayerLeadership, legacyCoachCatalogue, catalogueCoachForId, loadCoachCatalogue: async () => legacyCoachCatalogue() };
+    parsePersistedTouchlinePlayerLeadership, legacyCoachCatalogue, parseCoachCatalogue, catalogueCoachForId, loadCoachCatalogue: async () => readyCatalogue() };
   const player = runInNewContext(`${code("lib/touchlineArena/card-ranking-snapshot-server.ts")}\nreadTouchlinePlayerRankingSnapshot;`, globals);
   const coach = runInNewContext(`${code("lib/touchlineArena/coach-ranking-snapshot-server.ts")}\nreadTouchlineCoachRankingSnapshot;`, globals);
   const parseLiveScoreSnapshot = runInNewContext(`${code("lib/football-data/live-score-snapshot-contract.ts")}\nparseLiveScoreSnapshot;`, {
     isOfficialSportmonksFixtureId: (value: unknown) => typeof value === "string" && /^[1-9]\d{0,19}$/.test(value),
   });
   const server = runInNewContext(`${code("lib/touchlineArena/sports-publication-server.ts")}\n({ read: readTouchlineSportsPublication, request: loadRequestTouchlineSportsPublication });`, {
-    ...globals, readPublishedTouchlineLivePresentationInput, readTouchlinePlayerRankingSnapshot: player,
+    ...globals, ...currentReaders, ...createCachedRankingReader(), readPublishedTouchlineLivePresentationInput, readTouchlinePlayerRankingSnapshot: player,
     readTouchlineCoachRankingSnapshot: coach, parseLiveScoreSnapshot, toPublicTouchlineFixtures, parseTouchlineSportsPublication,
   }) as { read: typeof import("../lib/touchlineArena/sports-publication-server.ts").readTouchlineSportsPublication;
     request: typeof import("../lib/touchlineArena/sports-publication-server.ts").loadRequestTouchlineSportsPublication };
@@ -92,19 +120,43 @@ function harness(options: { mutate?: (rows: ReturnType<typeof data>) => void; er
     EMPTY_COACH_RANKING: { phase: "unavailable", snapshotId: null, seasonId: null, scoringVersion: null, fixtureIds: [], generatedAt: null, rows: [] } };
   const publicPlayer = runInNewContext(`${code("lib/touchlineArena/card-ranking-server.ts")}\nloadTouchLineActiveRanking;`, publicGlobals);
   const publicCoach = runInNewContext(`${code("lib/touchlineArena/coach-ranking-server.ts")}\nloadTouchLineCoachRanking;`, publicGlobals);
-  return { rows, reads, publicPlayer, publicCoach, read: () => server.read(admin as never), player: () => player(admin, P), coach: () => coach(admin, C) };
+  const snapshotReads=()=>reads.filter(row=>["touchline_live_presentation_active_snapshots","touchline_live_presentation_snapshots","touchline_card_ranking_snapshots","touchline_player_ranking_leadership_decisions","touchline_coach_ranking_snapshots"].includes(row.table));
+  return { rows, reads, snapshotReads, publicPlayer, publicCoach, read: () => server.read(admin as never), player: () => player(admin, P), coach: () => coach(admin, C) };
 }
 
 test("one published pointer pins all five reads and exposes no raw/private fields", async () => {
   const h = harness(); const result = await h.read();
   assert.ok(result);
-  assert.equal(h.reads.length, 5);
+  assert.equal(h.snapshotReads().length, 5);
   assert.equal(result.publication.snapshotId, id(99));
   assert.equal(result.playerRanking?.snapshotId, P);
   assert.equal(result.coachRanking?.snapshotId, C);
   assert.equal(result.coachRanking?.rows[0].coachName, "Mikel Arteta");
   assert.equal(result.live.fixtures[0].homeScore, 1);
-  assert.doesNotMatch(JSON.stringify(result), /private|userId|contractId|Untrusted|"raw"|"source":\{/);
+  assert.doesNotMatch(JSON.stringify(result), /private|userId|contractId|Untrusted|"raw"/);
+  assert.doesNotMatch(JSON.stringify(result.live), /"source":\{/,
+    "Live fixtures and teams must not expose provider source objects");
+  const publicCatalogues = [result.coachRanking?.catalogue, result.currentCoachRanking?.catalogue];
+  for (const catalogue of publicCatalogues) {
+    assert.ok(catalogue && catalogue.phase === "ready");
+    assert.equal(catalogue.current.length, 20);
+    assert.equal(catalogue.history.length, 20);
+    for (const entry of [...catalogue.current, ...catalogue.history]) {
+      assert.deepEqual(entry.coach.source, {
+        provider: "sportmonks", providerId: entry.coach.providerId, lastSyncedAt: entry.fetchedAt,
+      }, "Coach source contains exactly the public provenance tuple");
+    }
+  }
+  const poisonedCatalogue = structuredClone(readyCatalogue());
+  for (const entry of [...poisonedCatalogue.current, ...poisonedCatalogue.history]) {
+    assert.ok(entry.coach.source);
+    Object.assign(entry.coach.source, { raw: "private:coach-raw", private: "private:coach-source", userId: "private:coach-user" });
+  }
+  assert.match(JSON.stringify(poisonedCatalogue), /private:coach-raw/);
+  const sanitizedCatalogue = parseCoachCatalogueTransport(poisonedCatalogue);
+  assert.ok(sanitizedCatalogue);
+  assert.deepEqual(sanitizedCatalogue, readyCatalogue(), "The public parser reconstructs rather than forwarding provider metadata");
+  assert.doesNotMatch(JSON.stringify(sanitizedCatalogue), /private|userId|contractId|"raw"/);
   for (const read of h.reads.filter(read => read.table.includes("ranking"))) {
     assert.ok(read.filters.some(([key, value]) => key === "league_key" && value === scope));
     assert.ok(read.filters.some(([key, value]) => key === "snapshot_id" && value === (read.table.includes("coach") ? C : P)));
@@ -123,7 +175,7 @@ test("null ranking pointers do not fall back to newer active rankings", async ()
     });
   } });
   const result = await h.read(); assert.ok(result);
-  assert.equal(result.playerRanking, null); assert.equal(result.coachRanking, null); assert.equal(h.reads.length, 2);
+  assert.equal(result.playerRanking, null); assert.equal(result.coachRanking, null); assert.equal(h.snapshotReads().length, 2);
 });
 
 for (const table of ["touchline_card_ranking_snapshots", "touchline_player_ranking_leadership_decisions", "touchline_coach_ranking_snapshots"]) {
@@ -183,10 +235,10 @@ test("SSR player, coach and client publication pin the same envelope instead of 
   const h = harness();
   const [player, coach] = await Promise.all([h.publicPlayer(), h.publicCoach()]);
   assert.equal(player.snapshotId, P); assert.equal(coach.snapshotId, C);
-  assert.equal(h.reads.length, 5, "both SSR consumers share one request-local envelope");
+  assert.equal(h.snapshotReads().length, 5, "both SSR consumers share one request-local envelope");
   const client = await h.read();
-  assert.deepEqual(JSON.parse(JSON.stringify(player)), JSON.parse(JSON.stringify(client!.playerRanking)));
-  assert.deepEqual(JSON.parse(JSON.stringify(coach)), JSON.parse(JSON.stringify(client!.coachRanking)));
+  assert.deepEqual(JSON.parse(JSON.stringify(player)), JSON.parse(JSON.stringify(client!.currentPlayerRanking!.state)));
+  assert.deepEqual(JSON.parse(JSON.stringify(coach)), JSON.parse(JSON.stringify(client!.currentCoachRanking)));
   assert.ok(h.reads.every(row => !row.table.match(/(?:card|coach)_ranking_active_snapshots/)));
 });
 
@@ -197,7 +249,7 @@ test("publication advancing during SSR cannot mix the coach with the already loa
   h.rows.touchline_coach_ranking_snapshots.snapshot_id = "coach:newer";
   const coach = await h.publicCoach();
   assert.equal(player.snapshotId, P); assert.equal(coach.snapshotId, C);
-  assert.equal(h.reads.length, 5);
+  assert.equal(h.snapshotReads().length, 5);
 });
 
 test("a later request can observe a legitimate rollback and never selects by newest timestamp", async () => {
@@ -227,4 +279,17 @@ for (const [label, options] of [
   await assert.rejects(h.publicPlayer());
   await assert.rejects(h.publicCoach());
   assert.ok(h.reads.every(row => !row.table.match(/(?:card|coach)_ranking_active_snapshots/)));
+});
+
+
+test("canonical eligibility failure withdraws current ranking without changing the audited publication", async () => {
+  const h=harness({errorTable:"football_players"}); const result=await h.read();assert.ok(result);
+  assert.equal(result.playerRanking!.players.length,6);assert.equal(result.currentPlayerRanking!.phase,"unavailable");
+  await assert.rejects(h.publicPlayer(),/CURRENT_PLAYER_RANKING_UNAVAILABLE/);
+});
+
+
+test("derived coach rows cannot masquerade as the immutable audited coach publication", async () => {
+  const result=await harness().read();assert.ok(result?.currentCoachRanking);
+  assert.equal(parseTouchlineSportsPublication({...result,coachRanking:result.currentCoachRanking}),null);
 });

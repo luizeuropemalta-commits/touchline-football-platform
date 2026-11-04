@@ -14,7 +14,7 @@ assert.ok(["all", "chromium", "webkit", "firefox"].includes(requestedEngine),
   "TOUCHLINE_ZOOM_LANDSCAPE_BROWSER_ENGINE must be all, chromium, webkit or firefox");
 const engines = [chromium, webkit, firefox].filter(engine => requestedEngine === "all" || engine.name() === requestedEngine);
 
-test(`canonical player/coach zoom (${requestedEngine}): two landscape notch sides, crowns, dismissal and focus`, { skip: !enabled, timeout: 120_000 }, async t => {
+test(`canonical player/coach zoom (${requestedEngine}): two landscape notch sides, crowns, dismissal and focus`, { skip: !enabled, timeout: 240_000 }, async t => {
   const bundle = bundleIsolatedBrowserFixture({ entryPath: "tests/fixtures/CardZoomLandscapeBrowserFixture.tsx", cssPrefix: "landscapezoom",
     requiredSources: ["components/touchline/fantasy/TouchlineGameweekCard.tsx", "components/touchline/cards/TouchlineCoachCardZoom.tsx",
       "components/touchline/cards/TouchlineCardZoom.tsx", "components/touchline/cards/TouchlineCardZoom.module.css",
@@ -45,9 +45,9 @@ test(`canonical player/coach zoom (${requestedEngine}): two landscape notch side
     try {
       // Cancellation during launch must also close the newly created browser.
       t.signal.throwIfAborted();
-      for (const viewport of [{ width: 844, height: 390 }, { width: 812, height: 375 }]) for (const notch of ["left", "right"] as const) {
+      for (const viewport of [{ width: 844, height: 390 }, { width: 812, height: 375 }]) for (const notch of ["left", "right"] as const) for (const reducedMotion of ["reduce", "no-preference"] as const) {
         t.signal.throwIfAborted();
-        const context = await browser.newContext({ viewport, reducedMotion: "reduce", serviceWorkers: "block" });
+        const context = await browser.newContext({ viewport, reducedMotion, hasTouch: true, isMobile: engine !== firefox, deviceScaleFactor: 3, serviceWorkers: "block" });
         try {
           const page = await context.newPage(); page.setDefaultTimeout(8000);
           const errors: string[] = [], assetReads: string[] = [], external: string[] = [];
@@ -78,6 +78,10 @@ test(`canonical player/coach zoom (${requestedEngine}): two landscape notch side
           await page.evaluate(() => scrollTo({ top: 420, behavior: "instant" }));
           const before = await page.evaluate(() => ({ x: scrollX, y: scrollY }));
           assert.ok(before.y > 0, "document starts genuinely scrolled");
+          const restingNeon = page.locator('main [data-touchline-card-neon-trace="true"]').first();
+          assert.equal(await restingNeon.evaluate(node => getComputedStyle(node).opacity), "1", "tier neon is visible without hover on touch");
+          assert.equal(await restingNeon.evaluate(node => getComputedStyle(node).filter), "none", "touch neon does not allocate a filtered card surface");
+          if (reducedMotion === "no-preference") await expect.poll(() => restingNeon.evaluate(node => node.getAnimations({ subtree: true }).some(animation => animation.playState === "running"))).toBe(true);
           for (const subject of ["player", "coach"]) {
             const trigger = page.locator(`[data-landscape-subject="${subject}"] [data-touchline-card-zoom="trigger"] > [role="button"]`);
             assert.equal(await trigger.evaluate(node => getComputedStyle(node).touchAction), "auto",
@@ -86,6 +90,8 @@ test(`canonical player/coach zoom (${requestedEngine}): two landscape notch side
             await page.keyboard.press("Enter");
             const dialog = page.locator('[data-touchline-card-zoom="dialog"]'), close = dialog.getByRole("button", { name: getTouchlineCardZoomCopy("en-GB").close, exact: true });
             await expect(dialog).toBeVisible(); await expect(close).toBeFocused();
+            assert.equal(await dialog.locator(":scope > div").first().evaluate(node => getComputedStyle(node).filter), "none",
+              "the complete player/coach zoom panel has no outer filtered surface on touch");
             const expanded = dialog.locator('[data-card-zoom="expanded"]');
             const crown = expanded.locator(subject === "player" ? '[data-touchline-player-golden-ball="true"]' : '[data-touchline-coach-leader-crown="true"]');
             await expect(crown).toHaveCount(1);
@@ -180,7 +186,7 @@ test(`canonical player/coach zoom (${requestedEngine}): two landscape notch side
             await dialog.evaluate(node => { node.scrollTop = node.scrollHeight; });
             await close.click(); await expect(dialog).toHaveCount(0); await expect(trigger).toBeFocused();
             assert.deepEqual(await page.evaluate(() => ({ x: scrollX, y: scrollY })), before);
-            reports.push({ engine: engine.name(), viewport, notch, subject, scrollRange });
+            reports.push({ engine: engine.name(), viewport, notch, reducedMotion, subject, scrollRange });
           }
           assert.deepEqual(errors, []); assert.deepEqual(external, []);
           assert.ok(assetReads.some(value => /\.png|\.webp/.test(value)), "original local artwork actually loaded");
@@ -191,6 +197,6 @@ test(`canonical player/coach zoom (${requestedEngine}): two landscape notch side
       await closeBrowser();
     }
   }
-  assert.equal(reports.length, engines.length * 8, "every selected engine must complete both viewports, notch sides and subjects");
+  assert.equal(reports.length, engines.length * 16, "every selected engine must complete both viewports, notch sides, motion preferences and subjects");
   console.log(JSON.stringify({ syntheticNotchOnly: true, requestedEngine, reports }));
 });

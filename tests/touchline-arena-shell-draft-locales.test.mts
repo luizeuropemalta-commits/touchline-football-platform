@@ -12,14 +12,26 @@ import { getTouchlineArenaShellCopy, TOUCHLINE_ARENA_SHELL_CATALOGUES } from "..
 
 const locales = ["en-GB", "pt-BR", "es-ES", "it-IT", "fr-FR", "ar-SA", "tr-TR", "de-DE"] as const;
 const source = readFileSync(new URL("../components/arena-admin-shell.tsx", import.meta.url), "utf8");
-function render(locale: string, draftLocalesEnabled = false, isOwner = false, pathname = "/notifications") {
+// SSR uses the real shared dialog hooks; effects intentionally do not run on
+// the server. The browser fixture separately proves focus and inert cleanup.
+const dialogExports: Record<string, unknown> = {};
+runInNewContext(ts.transpileModule(readFileSync(new URL("../components/touchline/a11y/TouchlineDialog.tsx", import.meta.url), "utf8"), {
+  compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX },
+}).outputText, { exports: dialogExports, require: (name: string) => { assert.equal(name, "react"); return React; } });
+function render(locale: string, draftLocalesEnabled = false, isOwner = false, pathname = "/notifications", options: { accountId?: string; menuOpen?: boolean; selectorProps?: Record<string, unknown>[] } = {}) {
+  let stateSlot = 0;
   const empty = () => null;
   const modules: Record<string, unknown> = {
-    react: React, "react/jsx-runtime": jsx,
+    // Only the initial menu state is varied for SSR composition; real browser
+    // tests cover the menu event handlers and canonical selector lifecycle.
+    react: { ...React, useState: (initial: unknown) => { const state = React.useState(initial); return stateSlot++ === 0 && options.menuOpen ? [true, state[1]] : state; } }, "react/jsx-runtime": jsx,
     "next/link": { __esModule: true, default: ({ children, ...props }: React.ComponentProps<"a">) => React.createElement("a", props, children) },
     "next/navigation": { usePathname: () => pathname, useSearchParams: () => new URLSearchParams({ lang: locale }) },
     "lucide-react": Object.fromEntries(["Activity", "Bell", "CircleDollarSign", "Database", "Inbox", "Loader2", "LogOut", "Menu", "Search", "ShieldCheck", "Sparkles", "Trophy", "WalletCards", "X"].map(name => [name, empty])),
     "@/components/logo": { Logo: empty },
+    "@/components/auth-language-switcher": { AuthLanguageSwitcher: (props: Record<string, unknown>) => { options.selectorProps?.push(props); return React.createElement("div", { "data-canonical-language-selector": true }); } },
+    "@/components/touchline/a11y/TouchlineDialog": dialogExports,
+    "./arena-admin-shell.module.css": { __esModule: true, default: new Proxy({}, { get: (_target, key) => String(key) }) },
     // Legacy callers have no verified accountId and must retain the old shell.
     "@/components/touchline/TouchlineCustomerUtilityShell": { __esModule: true, default: () => { throw Error("Legacy fixture must not enter customer shell"); }, customerUtilityRoute: (path: string) => ["/notifications", "/inbox", "/football-search"].includes(path) ? "notifications" : null },
     "@/lib/supabase/client": { createClient: () => { throw Error("SSR must not authenticate or sign out"); } },
@@ -27,12 +39,12 @@ function render(locale: string, draftLocalesEnabled = false, isOwner = false, pa
     "@/lib/touchlineArena/i18n": { TOUCHLINE_LOCALE_STORAGE_KEY },
     "@/lib/touchlineArena/arena-shell-i18n": { getTouchlineArenaShellCopy },
   };
-  const exports: { ArenaAdminShell?: React.ComponentType<{ children?: React.ReactNode; profileName: string; profileEmail: string; isOwner: boolean; draftLocalesEnabled: boolean }> } = {};
+  const exports: { ArenaAdminShell?: React.ComponentType<{ children?: React.ReactNode; accountId?: string; profileName: string; profileEmail: string; isOwner: boolean; draftLocalesEnabled: boolean }> } = {};
   runInNewContext(ts.transpileModule(source, { compilerOptions: {
     target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true,
   } }).outputText, { exports, require: (name: string) => { assert.ok(Object.hasOwn(modules, name), name); return modules[name]; } });
   return renderToStaticMarkup(React.createElement(exports.ArenaAdminShell!, {
-    profileName: "Official $&", profileEmail: "fixture@example.test", isOwner, draftLocalesEnabled,
+    accountId: options.accountId, profileName: "Official $&", profileEmail: "fixture@example.test", isOwner, draftLocalesEnabled,
   }, React.createElement("p", null, "Unchanged page content")));
 }
 
@@ -83,4 +95,18 @@ test("admin paths cannot opt into drafts and owner navigation remains operationa
   assert.ok(ownerCustomer.includes("TouchLine Owner"));
   const ownerSwitchHref = auth.touchLineAuthEntryHref("/admin/login", "en-GB", "/notifications?lang=es-ES");
   assert.ok(ownerCustomer.includes(`href="${ownerSwitchHref.replaceAll("&", "&amp;")}"`));
+});
+
+test("admin mounts one canonical selector with verified account and closed locale gates in either menu state", () => {
+  const accountId = "11111111-1111-4111-8111-111111111111";
+  for (const menuOpen of [false, true]) for (const requested of ["pt-BR", "en-GB", "ar-SA"]) {
+    const selectorProps: Record<string, unknown>[] = [];
+    const html = render(requested, true, true, "/admin/cards", { accountId, menuOpen, selectorProps });
+    assert.equal(selectorProps.length, 1, "the hidden rail and mobile dialog must not duplicate locale hosts");
+    assert.deepEqual(JSON.parse(JSON.stringify(selectorProps[0])), { locale: requested === "pt-BR" ? "pt-BR" : "en-GB", context: { mode: "account", accountId }, draftLocalesEnabled: false, siteLocalesEnabled: false });
+    assert.equal((html.match(/data-canonical-language-selector/g) ?? []).length, 1);
+  }
+  const selectorProps: Record<string, unknown>[] = [];
+  render("pt-BR", false, true, "/admin/cards", { selectorProps });
+  assert.equal(selectorProps.length, 0, "an absent verified account must not be inferred from email or owner presentation");
 });

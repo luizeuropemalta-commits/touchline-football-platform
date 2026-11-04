@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Gift, Plus } from "lucide-react";
 
 function stableKey(prefix: string, parts: string[]) {
@@ -9,6 +9,7 @@ function stableKey(prefix: string, parts: string[]) {
 
 export function CreatePromotionForm({ locale = "en-GB" }: { locale?: "en-GB" | "pt-BR" }) {
   const pt = locale === "pt-BR";
+  const fieldId = useId();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState("draft");
@@ -37,14 +38,23 @@ export function CreatePromotionForm({ locale = "en-GB" }: { locale?: "en-GB" | "
 
   return (
     <div className="grid gap-3">
-      <input value={name} onChange={(event) => setName(event.target.value)} placeholder={pt ? "Nome da promoção" : "Promotion name"} className="h-11 rounded-2xl border border-white/[.08] bg-black/30 px-3 text-xs font-bold text-white" />
-      <input value={description} onChange={(event) => setDescription(event.target.value)} placeholder={pt ? "Descrição" : "Description"} className="h-11 rounded-2xl border border-white/[.08] bg-black/30 px-3 text-xs font-bold text-white" />
-      <select value={status} onChange={(event) => setStatus(event.target.value)} className="h-11 rounded-2xl border border-white/[.08] bg-black/30 px-3 text-xs font-bold text-white">
-        <option value="draft">{pt ? "Rascunho" : "Draft"}</option>
-        <option value="active">{pt ? "Ativa" : "Active"}</option>
-        <option value="paused">{pt ? "Pausada" : "Paused"}</option>
-        <option value="ended">{pt ? "Encerrada" : "Ended"}</option>
-      </select>
+      <div className="grid min-w-0 gap-1.5 font-bold text-slate-300">
+        <label htmlFor={`${fieldId}-name`} className="text-sm">{pt ? "Nome da promoção" : "Promotion name"}</label>
+        <input id={`${fieldId}-name`} value={name} onChange={(event) => setName(event.target.value)} placeholder={pt ? "Nome da promoção" : "Promotion name"} className="h-11 min-w-0 rounded-2xl border border-white/[.08] bg-black/30 px-3 text-base font-bold text-white" />
+      </div>
+      <div className="grid min-w-0 gap-1.5 font-bold text-slate-300">
+        <label htmlFor={`${fieldId}-description`} className="text-sm">{pt ? "Descrição" : "Description"}</label>
+        <input id={`${fieldId}-description`} value={description} onChange={(event) => setDescription(event.target.value)} placeholder={pt ? "Descrição" : "Description"} className="h-11 min-w-0 rounded-2xl border border-white/[.08] bg-black/30 px-3 text-base font-bold text-white" />
+      </div>
+      <div className="grid min-w-0 gap-1.5 font-bold text-slate-300">
+        <label htmlFor={`${fieldId}-status`} className="text-sm">{pt ? "Estado da promoção" : "Promotion status"}</label>
+        <select id={`${fieldId}-status`} value={status} onChange={(event) => setStatus(event.target.value)} className="h-11 min-w-0 rounded-2xl border border-white/[.08] bg-black/30 px-3 text-base font-bold text-white">
+          <option value="draft">{pt ? "Rascunho" : "Draft"}</option>
+          <option value="active">{pt ? "Ativa" : "Active"}</option>
+          <option value="paused">{pt ? "Pausada" : "Paused"}</option>
+          <option value="ended">{pt ? "Encerrada" : "Ended"}</option>
+        </select>
+      </div>
       <button type="button" onClick={createPromotion} disabled={busy || !name.trim()} className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-[#a3ff12] px-5 text-[9px] font-black text-[#071007] disabled:opacity-50">
         <Plus size={14} /> {{ idle: pt ? "Criar" : "Create", busy: pt ? "Criando" : "Creating", success: pt ? "Criada" : "Created", error: pt ? "Falha ao criar" : "Create failed" }[message]}
       </button>
@@ -54,6 +64,7 @@ export function CreatePromotionForm({ locale = "en-GB" }: { locale?: "en-GB" | "
 
 export function GrantCreditForm({ locale = "en-GB" }: { locale?: "en-GB" | "pt-BR" }) {
   const pt = locale === "pt-BR";
+  const fieldId = useId();
   const [userId, setUserId] = useState("");
   const [amount, setAmount] = useState("");
   const [reason, setReason] = useState("");
@@ -91,10 +102,22 @@ export function GrantCreditForm({ locale = "en-GB" }: { locale?: "en-GB" | "pt-B
 
   return (
     <div className="grid gap-3">
-      <input value={userId} onChange={(event) => setUserId(event.target.value)} placeholder={pt ? "ID do usuário ClubOwner" : "Clubowner user ID"} className="h-11 rounded-2xl border border-white/[.08] bg-black/30 px-3 text-xs font-bold text-white" />
-      <input value={amount} onChange={(event) => setAmount(event.target.value)} placeholder={pt ? "Valor em TC" : "Amount in TC"} type="number" min="0" step="0.01" className="h-11 rounded-2xl border border-white/[.08] bg-black/30 px-3 text-xs font-bold text-white" />
-      <input value={reason} onChange={(event) => setReason(event.target.value)} placeholder={pt ? "Motivo obrigatório" : "Required reason"} className="h-11 rounded-2xl border border-white/[.08] bg-black/30 px-3 py-3 text-xs font-bold text-white" />
-      <input value={idempotencyKey} onChange={(event) => setIdempotencyKey(event.target.value)} placeholder={computedKey} className="h-11 rounded-2xl border border-white/[.08] bg-black/30 px-3 text-xs font-bold text-white" />
+      <div className="grid min-w-0 gap-1.5 font-bold text-slate-300">
+        <label htmlFor={`${fieldId}-userId`} className="text-sm">{pt ? "ID do usuário ClubOwner" : "ClubOwner user ID"}</label>
+        <input id={`${fieldId}-userId`} value={userId} onChange={(event) => setUserId(event.target.value)} placeholder={pt ? "ID do usuário ClubOwner" : "Clubowner user ID"} className="h-11 min-w-0 rounded-2xl border border-white/[.08] bg-black/30 px-3 text-base font-bold text-white" />
+      </div>
+      <div className="grid min-w-0 gap-1.5 font-bold text-slate-300">
+        <label htmlFor={`${fieldId}-amount`} className="text-sm">{pt ? "Valor em TC" : "Amount in TC"}</label>
+        <input id={`${fieldId}-amount`} value={amount} onChange={(event) => setAmount(event.target.value)} placeholder={pt ? "Valor em TC" : "Amount in TC"} type="number" min="0" step="0.01" className="h-11 min-w-0 rounded-2xl border border-white/[.08] bg-black/30 px-3 text-base font-bold text-white" />
+      </div>
+      <div className="grid min-w-0 gap-1.5 font-bold text-slate-300">
+        <label htmlFor={`${fieldId}-reason`} className="text-sm">{pt ? "Motivo obrigatório" : "Required reason"}</label>
+        <input id={`${fieldId}-reason`} value={reason} onChange={(event) => setReason(event.target.value)} placeholder={pt ? "Motivo obrigatório" : "Required reason"} className="h-11 min-w-0 rounded-2xl border border-white/[.08] bg-black/30 px-3 py-3 text-base font-bold text-white" />
+      </div>
+      <div className="grid min-w-0 gap-1.5 font-bold text-slate-300">
+        <label htmlFor={`${fieldId}-idempotencyKey`} className="text-sm">{pt ? "Chave de idempotência (opcional)" : "Idempotency key (optional)"}</label>
+        <input id={`${fieldId}-idempotencyKey`} value={idempotencyKey} onChange={(event) => setIdempotencyKey(event.target.value)} placeholder={computedKey} className="h-11 min-w-0 rounded-2xl border border-white/[.08] bg-black/30 px-3 text-base font-bold text-white" />
+      </div>
       <button type="button" onClick={grantCredit} disabled={busy || !userId.trim() || !reason.trim() || Number(amount) <= 0} className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-[#a3ff12] px-5 text-[9px] font-black text-[#071007] disabled:opacity-50">
         <Gift size={14} /> {{ idle: pt ? "Conceder" : "Grant", busy: pt ? "Concedendo" : "Granting", success: pt ? "Concedido" : "Granted", error: pt ? "Falha ao conceder" : "Grant failed" }[message]}
       </button>

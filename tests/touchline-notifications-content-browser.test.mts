@@ -10,7 +10,7 @@ import { chromium, webkit, expect } from "@playwright/test";
 import { getTouchlineNotificationCentreCopy } from "../lib/touchlineArena/notification-centre-i18n.ts";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
-const viewports = [{ width: 1280, height: 900 }, { width: 844, height: 390 }, { width: 390, height: 844 }];
+const viewports = [{ width: 1440, height: 900 }, { width: 1280, height: 900 }, { width: 844, height: 390 }, { width: 667, height: 375 }];
 const locales = ["pt-BR", "ar-SA"];
 const syntheticPreferences = {
   accountId: "11111111-1111-4111-8111-111111111111",
@@ -25,9 +25,10 @@ const syntheticPreferences = {
   explicitConsentAt: null, updatedAt: null,
 };
 
-test("actual Notifications presentation keeps native quiet-time controls reachable in its read-only local canvas", {
+test("actual Notifications presentation reflows quiet-time controls without horizontal panning below1280px", {
   skip: process.env.TOUCHLINE_RUN_NOTIFICATIONS_CONTENT_BROWSER_TESTS !== "1", timeout: 180_000,
 }, async t => {
+  assert.notEqual(process.env.TOUCHLINE_LOCAL_IGNORE_MEMORY_GATE, "1", "memory bypass is not allowed for this matrix");
   const engineFilter = process.env.TOUCHLINE_NOTIFICATIONS_CONTENT_ENGINE;
   const widthFilter = process.env.TOUCHLINE_NOTIFICATIONS_CONTENT_WIDTH;
   const localeFilter = process.env.TOUCHLINE_NOTIFICATIONS_CONTENT_LOCALE;
@@ -39,11 +40,12 @@ test("actual Notifications presentation keeps native quiet-time controls reachab
   const selectedLocales = locales.filter(l => localeFilter === undefined || l === localeFilter);
   const selectedCases = engines.length * selectedViewports.length * selectedLocales.length;
   assert.ok(selectedCases > 0);
-  t.diagnostic(JSON.stringify({ selectedCases, fullMatrixCases: 12, engineFilter, widthFilter, localeFilter,
+  t.diagnostic(JSON.stringify({ selectedCases, fullMatrixCases: 16, engineFilter, widthFilter, localeFilter,
     scope: "actual page declarations/handlers/CSS, client mount, synthetic GET only; no Next hydration, native Safari, account or consent delivery proof" }));
   const capacity = () => {
     if (process.platform === "darwin" && !process.env.CI && process.env.TOUCHLINE_LOCAL_BROWSER_DISK_RESERVE_MIB !== undefined) {
-      requireBrowserCapacity(root, { darwinFreePercent: true });
+      requireBrowserCapacity(root, { darwinFreePercent: true,
+      allowModerateDarwinPressure: !process.env.CI && process.env.TOUCHLINE_LOCAL_ALLOW_MODERATE_PRESSURE === "1" });
       return;
     }
     const fs = statfsSync(root);
@@ -126,7 +128,7 @@ test("actual Notifications presentation keeps native quiet-time controls reachab
           const main = page.locator("main");
           // Native time fields do not consistently expose a textbox role.
           const times = main.locator('input[type="time"]'), timezone = main.locator(`input[aria-label=${JSON.stringify(copy.quietTimezone)}]`);
-          const first = times.nth(0), last = times.nth(1), quietRow = first.locator("..");
+          const first = times.nth(0), last = times.nth(1), quietRow = first.locator("xpath=ancestor::div[1]");
           const rail = main.locator(":scope > div > div").first();
           await expect(times).toHaveCount(2);
           await expect(first).toHaveValue("21:35"); await expect(last).toHaveValue("06:45"); await expect(timezone).toHaveValue("Europe/Malta");
@@ -147,9 +149,9 @@ test("actual Notifications presentation keeps native quiet-time controls reachab
                 boxSizing: style.boxSizing, overflowX: style.overflowX, appearance: style.appearance,
                 before: getComputedStyle(input, '::before').content, after: getComputedStyle(input, '::after').content };
             });
-            return { controls, rowWidth: node.getBoundingClientRect().width, columns: getComputedStyle(node).gridTemplateColumns.split(" ").length,
+            return { compact: matchMedia("(max-width:1279px)").matches, innerWidth, clientWidth: document.documentElement.clientWidth, controls, rowWidth: node.getBoundingClientRect().width, columns: getComputedStyle(node).gridTemplateColumns.split(" ").length,
               sameRow: boxes.every(b => Math.abs(b.top - boxes[0].top) < 1),
-              separate: boxes.every((a, i) => boxes.every((b, j) => i === j || a.right <= b.left + 1 || b.right <= a.left + 1)),
+              separate: boxes.every((a, i) => boxes.every((b, j) => i === j || a.right <= b.left + 1 || b.right <= a.left + 1 || a.bottom <= b.top + 1 || b.bottom <= a.top + 1)),
               dimensions: boxes.map(b => ({ width: b.width, height: b.height })),
               fontSizes: inputs.map(input => parseFloat(getComputedStyle(input).fontSize)),
               fit: inputs.every(input => input.scrollWidth <= input.clientWidth + 1),
@@ -162,11 +164,22 @@ test("actual Notifications presentation keeps native quiet-time controls reachab
           const beforeAssert = path.join(screenshots, `${engine.name()}-${viewport.width}x${viewport.height}-${locale}-before-geometry-assert.png`);
           await page.screenshot({ path: beforeAssert, animations: "disabled" });
           t.diagnostic(`Pre-assert screenshot: ${beforeAssert}`);
-          assert.equal(geometry.columns, 3); assert.equal(geometry.sameRow, true); assert.equal(geometry.separate, true);
+          if (viewport.width === 1440) assert.equal(geometry.compact, false);
+          if (viewport.width < 1280) assert.equal(geometry.compact, true);
+          assert.equal(geometry.columns, geometry.compact ? 2 : 3);
+          assert.equal(geometry.sameRow, !geometry.compact); assert.equal(geometry.separate, true);
+          if (geometry.compact) assert.equal(await rail.evaluate(node => node.scrollWidth <= node.clientWidth + 1), true, "responsive content rail must not need horizontal scroll");
           assert.ok(geometry.dimensions.every(b => b.width >= 44 && b.height >= 44));
           assert.ok(geometry.fontSizes.every(size => size >= 12)); assert.equal(geometry.fit, true); assert.equal(geometry.documentFits, true);
           await expect.poll(() => rail.evaluate(node => getComputedStyle(node).overflowX)).toBe("auto");
           await page.keyboard.press("Tab");
+          // Finish the preceding keyboard reveal before setting the independent
+          // preventScroll baseline. The rail schedules a native-focus recheck
+          // on the next frame; sampling earlier can blame that Tab for a later
+          // programmatic focus movement that did not happen.
+          await page.evaluate(() => new Promise<void>(resolve => {
+            requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+          }));
           await first.evaluate(node => window.scrollTo({ top: node.getBoundingClientRect().top + scrollY - 60, behavior: "instant" }));
           const stable = await page.evaluate(() => ({ x: scrollX, y: scrollY }));
           if (process.env.TOUCHLINE_NOTIFICATIONS_FOCUS_TRACE === '1' && engine.name() === 'webkit') {

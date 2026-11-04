@@ -8,6 +8,7 @@ import { touchlineLivePresentationStore } from "../../lib/touchlineArena/live-pr
 // Observation only: this does not subscribe, poll, or inject a publication.
 export const transportDigest = () => touchlineLivePresentationStore.getSnapshot()?.sportsPublication?.publication.contentDigest ?? null;
 export const transportEpoch = () => touchlineLivePresentationStore.getSnapshot()?.requestEpoch ?? 0;
+export const transportRequestEpoch = () => touchlineLivePresentationStore.getRequestEpoch();
 
 /** Synthetic public inputs; real table, score, styles, reader and transport. */
 export default function OfficialLeagueTablePublicationBrowserFixture({

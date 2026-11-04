@@ -32,6 +32,7 @@ function fixture(input: Input = {}) {
     "lucide-react": new Proxy({}, { get: () => empty }),
     "@/components/logo": { Logo: ({ href }: { href?: string }) => React.createElement("a", { href, "data-logo": true }, "TouchLine") },
     "@/components/auth-ambient-audio": { AuthAmbientAudio: empty },
+    "@/components/auth-language-switcher": { AuthLanguageSwitcher: empty },
     "@/lib/supabase/client": { createClient: () => { throw Error("No auth calls during render"); } },
   };
   function load(file: string): ModuleExports {

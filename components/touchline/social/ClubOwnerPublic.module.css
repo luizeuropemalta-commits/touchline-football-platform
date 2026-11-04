@@ -1,5 +1,5 @@
-.shell { min-height: 100dvh; padding: max(1.25rem, env(safe-area-inset-top)) max(1.25rem, env(safe-area-inset-right)) max(2rem, env(safe-area-inset-bottom)) max(1.25rem, env(safe-area-inset-left)); color: #edf7f2; background: #07110b; }
-.content { width: min(100%, 72rem); margin-inline: auto; }
+.shell { min-height: 100dvh; color: #edf7f2; background: #07110b; }
+.content { box-sizing: border-box; width: min(100%, 72rem); margin-inline: auto; padding: max(1.25rem, env(safe-area-inset-top)) max(1.25rem, env(safe-area-inset-right)) max(2rem, env(safe-area-inset-bottom)) max(1.25rem, env(safe-area-inset-left)); }
 .navigation { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; margin-bottom: 2rem; }
 .sections { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem; align-items: start; }
 .panel { min-width: 0; padding: clamp(1rem, 3vw, 2rem); border: 1px solid #37604b; border-radius: 1rem; background: #0d1c14; overflow-wrap: anywhere; }
@@ -52,7 +52,7 @@
   -webkit-mask-composite: xor;
   mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   mask-composite: exclude;
-  animation: portraitNeonOrbit 2s linear infinite;
+  animation: portraitNeonOrbit 2s linear infinite; animation-play-state: var(--touchline-decoration-motion, paused);
 }
 .avatar[data-plan="unconfirmed"] .avatarPortrait::after { display: none; }
 @keyframes portraitNeonOrbit { to { transform: rotate(360deg); } }

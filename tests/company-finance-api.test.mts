@@ -31,6 +31,20 @@ test("routes reject unauthorised or errored session before database and cross-or
  for(const options of [{auth:false},{authError:true}]){const h=harness(options);assert.equal((await h.POST(h.req())).init.status,403);assert.equal((await h.GET(h.req())).init.status,403);assert.deepEqual(h.counts(),{reads:0,inserts:0,rpcs:0});}
  const h=harness();assert.equal((await h.POST(h.req(command,"https://other.test"))).init.status,403);assert.equal(h.counts().inserts,0);
 });
+test("existing canonical contract UUID variants preserve linked obligations, amounts and authorization",async()=>{
+ const legacyContract="33333333-3333-1333-c333-333333333333";
+ const linked={kind:"obligations",requestId:id,fields:{supplier_id:id,contract_id:legacyContract.toUpperCase(),source_reference:"synthetic invoice",issued_on:"2026-10-01",due_on:"2026-10-31",amount:"12.34",unit_exponent:2,currency:"EUR",created_by:"forged"}};
+ const parsed=core.parseCompanyCommand(linked,actor,"2026-11-03");
+ assert.deepEqual(parsed.row,{id,created_by:actor,supplier_id:id,contract_id:legacyContract,source_reference:"synthetic invoice",issued_on:"2026-10-01",due_on:"2026-10-31",amount_minor:1234,unit_exponent:2,currency:"EUR"});
+ const valid=harness();assert.equal((await valid.POST(valid.req(linked))).init.status,201);assert.deepEqual(valid.proposed(),parsed.row);assert.deepEqual(valid.counts(),{reads:1,inserts:1,rpcs:0});
+ for(const options of [{auth:false},{authError:true}]){const denied=harness(options);assert.equal((await denied.POST(denied.req(linked))).init.status,403);assert.deepEqual(denied.counts(),{reads:0,inserts:0,rpcs:0});}
+ const origin=harness();assert.equal((await origin.POST(origin.req(linked,"https://other.test"))).init.status,403);assert.deepEqual(origin.counts(),{reads:0,inserts:0,rpcs:0});
+ for(const invalid of ["not-a-uuid",legacyContract.replaceAll("-",""),"{"+legacyContract+"}",legacyContract+"x",legacyContract.replace("c333","g333"),{}]){
+  const bad=harness();assert.equal((await bad.POST(bad.req({...linked,fields:{...linked.fields,contract_id:invalid}}))).init.status,400);assert.deepEqual(bad.counts(),{reads:0,inserts:0,rpcs:0});
+ }
+ // PostgreSQL's UUID type stores all 128 bits; generation versions are not authorization.
+ for(const version of ["0","6","7","8","9","f"]){const versionId=`33333333-3333-${version}333-c333-333333333333`;assert.equal(core.parseCompanyCommand({...linked,fields:{...linked.fields,contract_id:versionId}},actor,"2026-11-03").row.contract_id,versionId);}
+});
 test("API creates once or replays exact actor-bound record; conflicts and missing schema remain explicit",async()=>{
  const h=harness();assert.equal((await h.POST(h.req())).init.status,201);assert.equal(h.proposed().created_by,actor);
  const same=harness({existing:{id,name:"Supplier",created_by:actor}});assert.equal((await same.POST(same.req())).init.status,200);assert.equal(same.counts().inserts,0);

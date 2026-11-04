@@ -98,7 +98,7 @@ export async function loadTouchLineRankedCardCatalog(
   providedAdmin?: SupabaseClient | null,
   options: Readonly<{ includeGoalCandidates?: boolean }> = {},
 ): Promise<ClubOwnerSquadCard[]> {
-  if (state.phase !== "ranked" || state.scoringVersion !== "player_scoring_v4" || !state.seasonId || !state.players.length) return [];
+  if (state.phase !== "ranked" || state.scoringVersion !== "player_scoring_v4" || !state.seasonId || (!state.players.length && !state.cardGoals?.rows.length)) return [];
   const seasonId = state.seasonId;
   const admin = providedAdmin ?? createAdminClient();
   if (!admin) return [];
@@ -134,7 +134,7 @@ export async function loadTouchLineRankedCardCatalog(
       publishedRankingState: state,
       providedPlayerRows: playersPromise,
     })),
-    diagnostics.measure("publication", () => loadCompleteTouchlineCataloguePresentations(playerIds, catalogueAdmin)),
+    diagnostics.measure("publication", () => loadCompleteTouchlineCataloguePresentations(playerIds, catalogueAdmin, state.currentProjection)),
   ]);
   diagnostics.seal();
   const [{ players, clubData }, { data: squadData }, { data: fixtureData }, seasonPoints, published] = await branches;
@@ -144,9 +144,11 @@ export async function loadTouchLineRankedCardCatalog(
   const playerById = new Map(players.flatMap((row) => text(row.id) ? [[text(row.id)!, row] as const] : []));
   const clubById = new Map(rows(clubData).flatMap((row) => text(row.id) ? [[text(row.id)!, row] as const] : []));
   const squadByPlayerId = new Map<string, Row>();
+  const currentBindings = new Map(state.currentProjection?.bindings.map(row => [row.playerId,row]) ?? []);
   for (const row of rows(squadData)) {
     const playerId = text(row.player_id);
-    if (playerId && !squadByPlayerId.has(playerId)) squadByPlayerId.set(playerId, row);
+    if (playerId && !squadByPlayerId.has(playerId)
+      && (!state.currentProjection || currentBindings.get(playerId)?.clubId === row.club_id)) squadByPlayerId.set(playerId, row);
   }
   const matchByPlayerId = new Map<string, Row>();
   for (const row of rows(fixtureData)) {

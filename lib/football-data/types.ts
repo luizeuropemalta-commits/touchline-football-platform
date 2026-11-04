@@ -147,6 +147,13 @@ export type TouchlineCoach = {
   nationality?: string;
   countryId?: string;
   teamId?: string;
+  /** Derived only by the validated TouchLine catalogue, never provider metadata. */
+  catalogueAssociation?: Readonly<{
+    kind: "current" | "historical";
+    providerId: string;
+    teamId: string;
+    publicationId: string | null;
+  }>;
   source: FootballDataSourceRef;
 };
 

@@ -49,7 +49,11 @@ test("ClubHub uses the canonical published ranking comparator rather than UUID t
 
 test("profile card, summary, current-season panel and zoom share the published total including null", () => {
   const source = readFileSync(new URL("../app/touchline-players/[player]/page.tsx", import.meta.url), "utf8");
-  assert.ok(source.includes("const totalRatingText = competition.totalRating;"), "Profile must not prefer mutable currentSeason");
+  assert.match(
+    source,
+    /const totalRatingText = resolveTouchlineSeasonPlayer\(\{\s*authority: \{ playerRanking: profileRanking, coachLeader: null \}, enabled: true,\s*playerId: canonicalPlayerId, providerPlayerId: canonicalProviderPlayerId, seasonId: profileSeasonId,\s*\}\)\?\.totalRating \?\? null;/,
+    "Profile must retain the identity-bound published season total, including null, without a mutable currentSeason fallback",
+  );
   assert.ok(!source.includes("value: playerStatistics.currentSeason.summary.totalRating"), "Zoom must use the same published total");
   assert.match(source, /<TouchlineSeasonValue unavailable=\{text\.unavailable\}>\{cumulativeRatingText\}<\/TouchlineSeasonValue>/);
   assert.match(source, /<TouchlinePlayerSeasonScope enabled=\{liveProfileSeason\}/);

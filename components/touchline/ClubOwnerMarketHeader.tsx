@@ -1,13 +1,14 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import ClubOwnerSearchTrigger from "./social/ClubOwnerSearchDialog";
 import { peopleLocale } from "@/lib/touchlineArena/clubowner-public-contract";
 import { useState } from "react";
 import { useConfirmedClubCollection } from "./fantasy/ClubCollectionContext";
 import { CLUB_ACQUISITION_BUDGETS } from "@/lib/touchlineFantasy/club-acquisition";
 import { getClubCollectionBudgetCopy } from "@/lib/touchlineFantasy/market-budget-i18n";
-import { CalendarDays, Camera, ChevronRight } from "lucide-react";
+import { CalendarDays, Camera, ChevronRight, Trophy } from "lucide-react";
 import { getTouchlineClubOwnerMarketCopy } from "@/lib/touchlineArena/club-owner-market-i18n";
 import { getClubOwnerPlanShowcaseCopy, type ClubOwnerPlanPreview } from "@/lib/touchlineArena/club-owner-plan-showcase";
 import { resolveTouchlineCatalogueLocale } from "@/lib/touchlineArena/catalogue-locale";
@@ -78,13 +79,18 @@ export default function ClubOwnerMarketHeader({ owner, locale, accountId, avatar
   const validity = planActive && expiry && Number.isFinite(expiry.getTime())
     ? copy.planUntil.replace("{date}", new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeZone: "UTC" }).format(expiry)) : null;
   return <header className={styles.header} data-clubowner-header="true" data-plan-preview={displayedTier} tabIndex={-1}>
-    <section className={styles.profile} data-cover-preview="true" data-active-plan={currentTier ?? undefined} aria-labelledby="clubowner-heading">
+    <section className={styles.profile} data-touchline-decoration-motion="true" data-cover-preview="true" data-active-plan={currentTier ?? undefined} aria-labelledby="clubowner-heading">
       {displayedTier ? <svg className={styles.coverPattern} viewBox="0 0 600 340" aria-hidden="true" focusable="false">
         <rect x="20" y="20" width="560" height="300" rx="2" />
         <path d="M300 20v300M20 95h78v150H20M580 95h-78v150h78M20 133h30v74H20M580 133h-30v74h30" />
         <circle cx="300" cy="170" r="53" /><circle cx="300" cy="170" r="2" />
       </svg> : null}
-      <div className={styles.title}><h1>ClubOwner</h1></div>
+      <div className={styles.title}><h1>ClubOwner</h1>
+        <Link href={`/rankings?lang=${encodeURIComponent(resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled))}`} className={`${controls.link} ${styles.rankingLink}`} data-clubowner-ranking-link="true">
+          <Trophy size={42} aria-hidden="true" />
+          <span className={styles.rankingLabel}>{metricsCopy.ranking}<strong aria-label={rank === null ? metricsCopy.unavailable : undefined}>{rank ?? "—"}</strong></span>
+        </Link>
+      </div>
       <div className={styles.identity}>
         <div className={styles.portrait}>
           {owner && accountId && avatarContext?.accountId === accountId && avatarContext.uploadAllowed === true
@@ -104,7 +110,6 @@ export default function ClubOwnerMarketHeader({ owner, locale, accountId, avatar
           <span className={styles.eyebrow}>{copy.yourProfile}</span>
           <h2 id="clubowner-heading">{name}</h2>
           <dl className={styles.facts}>
-            <div><dt>{metricsCopy.ranking}</dt><dd aria-label={rank === null ? metricsCopy.unavailable : undefined}>{rank ?? "—"}</dd></div>
             <div><dt>{metricsCopy.followers}</dt><dd aria-label={followers === null ? metricsCopy.unavailable : undefined}>{followers ?? "—"}</dd></div>
           </dl>
           {publicDiscoveryEnabled ? <>
@@ -113,7 +118,7 @@ export default function ClubOwnerMarketHeader({ owner, locale, accountId, avatar
         </div>
       </div>
     </section>
-    {!identityOnly ? <section className={styles.bank} data-plan-state={planActive ? "active" : "inactive"} data-active-plan={currentTier ?? undefined} aria-labelledby="clubowner-plan-heading">
+    {!identityOnly ? <section className={styles.bank} data-touchline-decoration-motion="true" data-plan-state={planActive ? "active" : "inactive"} data-active-plan={currentTier ?? undefined} aria-labelledby="clubowner-plan-heading">
       <div className={styles.bankHeading}><CalendarDays size={25} aria-hidden="true" /><h2 id="clubowner-plan-heading">{copy.plan}</h2>
         <button type="button" className={`${controls.link} ${styles.viewPlans}`} onClick={() => setPlansOpen(true)} aria-haspopup="dialog">{viewPlansLabel}<ChevronRight size={13} aria-hidden="true" /></button>
       </div>

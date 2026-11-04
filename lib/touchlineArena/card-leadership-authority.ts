@@ -1,3 +1,4 @@
+import { coachCompetitionFromRanking } from "./coach-competition-projection.ts";
 import type { TouchlineActiveRankingState } from "./card-ranking-live";
 import type { TouchLineCoachRankingState } from "./coach-ranking-server";
 
@@ -36,12 +37,16 @@ export function resetPlayerLeadershipSeed(seed: TouchlineActiveRankingState | nu
 
 export function advancePlayerLeadershipRead(previous: PlayerLeadershipReadState, read: { state: TouchlineActiveRankingState; revision: number; requestEpoch: number; publicationDigest?: string } | null): PlayerLeadershipReadState {
   if (!read || read.revision <= previous.revision || read.requestEpoch <= previous.requestFloor) return previous;
-  if (read.state.phase === "preseason") return { ...previous, current: read.state, revision: read.revision };
+  const currentSeason = read.state.currentProjection?.version === 1
+    && read.state.currentProjection.currentSeasonId === read.state.seasonId;
+  if (read.state.phase === "preseason") return { ...previous, current: read.state,
+    watermark: currentSeason ? read.state : previous.watermark, revision: read.revision };
   if (read.publicationDigest && /^[0-9a-f]{32}$/.test(read.publicationDigest)) {
     // The active shared publication can legitimately reactivate a deduplicated
     // older snapshot after a VAR/reversal. Creation time is not activation order.
     const seed = previous.watermark;
-    if (seed?.phase === "ranked" && (read.state.seasonId !== seed.seasonId || read.state.leagueKey !== seed.leagueKey)) {
+    if (seed?.phase === "ranked" && (read.state.leagueKey !== seed.leagueKey
+      || read.state.seasonId !== seed.seasonId && !currentSeason)) {
       return { ...previous, revision: read.revision };
     }
     return { ...previous, current: read.state, watermark: read.state, revision: read.revision };
@@ -60,7 +65,10 @@ export function buildTouchlineCardLeadershipValue(
   const verifiedCoaches = coaches?.phase === "ranked" && coaches.snapshotId && coaches.seasonId
     && coaches.scoringVersion === "coach_scoring_v2"
     && coaches.rows.every((row, index) => row.rank === index + 1 && row.coachProviderId && Number.isFinite(row.touchlinePoints))
-    && new Set(coaches.rows.map(row => row.coachProviderId)).size === coaches.rows.length ? coaches : null;
+    && new Set(coaches.rows.map(row => row.coachProviderId)).size === coaches.rows.length ? coaches
+    : coaches?.phase === "preseason" && coaches.currentProjection?.version === 1
+      && coaches.currentProjection.scope.seasonId === coaches.seasonId && coaches.rows.length === 0
+      && coaches.snapshotId === null ? coaches : null;
   const leaders = verifiedCoaches?.rows.filter((row) => row.rank === 1) ?? [];
   const coachLeader = leaders.length === 1 && coaches?.snapshotId && coaches.seasonId
     && coaches.scoringVersion === "coach_scoring_v2" && leaders[0]!.coachProviderId
@@ -92,10 +100,17 @@ export function advanceCardLeadershipRead(previous: CardLeadershipReadState, rea
     || !/^[0-9a-f]{32}$/.test(read.publicationDigest)) return previous;
   const player = read.state.phase === "ranked" ? read.state : null;
   const coach = read.coachRanking;
-  const seasonId = player?.seasonId ?? coach?.seasonId ?? null;
-  if ((coach && (coach.phase !== "ranked" || !coach.snapshotId || !coach.seasonId || coach.scoringVersion !== "coach_scoring_v2"))
-    || (player && coach && player.seasonId !== coach.seasonId)
-    || (seasonId && previous.seasonId && seasonId !== previous.seasonId)
+  const seasonId = read.state.seasonId ?? coach?.seasonId ?? null;
+  const currentPlayerSeason = read.state.currentProjection?.version === 1
+    && read.state.currentProjection.currentSeasonId === read.state.seasonId;
+  const currentCoachSeason = coach?.currentProjection?.version === 1
+    && coach.currentProjection.scope.seasonId === coach.seasonId;
+  const confirmedNewSeason = Boolean(currentPlayerSeason || currentCoachSeason);
+  if ((coach && (coach.scoringVersion !== "coach_scoring_v2" || !coach.seasonId
+      || !(coach.phase === "ranked" && coach.snapshotId
+        || coach.phase === "preseason" && currentCoachSeason && coach.snapshotId === null && coach.rows.length === 0)))
+    || (read.state.seasonId && coach && read.state.seasonId !== coach.seasonId)
+    || (seasonId && previous.seasonId && seasonId !== previous.seasonId && !confirmedNewSeason)
     || (player && previous.leagueKey && player.leagueKey !== previous.leagueKey)) return { ...previous, revision: read.revision };
   return { ...previous, current: buildTouchlineCardLeadershipValue(read.state, coach), revision: read.revision,
     seasonId: seasonId ?? previous.seasonId, leagueKey: player?.leagueKey ?? previous.leagueKey };
@@ -114,10 +129,8 @@ export function resolveCoachCardPoints(input: {
   if (input.publishedTouchlinePoints != null) return Number.isFinite(input.publishedTouchlinePoints) ? input.publishedTouchlinePoints : null;
   if (input.liveRankingPoints && !input.editable && input.authority?.coachRanking !== undefined) {
     const ranking = input.authority.coachRanking;
-    if (!ranking || ranking.phase !== "ranked" || !ranking.snapshotId || !ranking.seasonId
-      || ranking.scoringVersion !== "coach_scoring_v2" || !input.coachProviderId) return null;
-    const rows = ranking.rows.filter(row => row.coachProviderId === input.coachProviderId);
-    return rows.length === 1 && Number.isFinite(rows[0]!.touchlinePoints) ? rows[0]!.touchlinePoints : null;
+    if (!ranking || !input.coachProviderId) return null;
+    return coachCompetitionFromRanking(ranking, input.coachProviderId)?.totalTouchlinePoints ?? null;
   }
   return input.slotStatus === "audited" && Number.isFinite(input.slotPoints) ? input.slotPoints! : null;
 }

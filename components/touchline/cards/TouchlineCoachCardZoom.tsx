@@ -101,7 +101,7 @@ export default function TouchlineCoachCardZoom({
   const cardPoints = sharedCompetition ? competition?.totalTouchlinePoints ?? null
     : publishedTouchlinePoints ?? competition?.totalTouchlinePoints ?? contract?.totalTouchlinePoints ?? null;
   const cardCrown = sharedCompetition ? competition?.rank === 1 : showLeadershipCrown;
-  const { locale: presentationLocale, copy } = resolveTouchlineCoachZoomPresentation(locale, draftLocalesEnabled);
+  const { locale: presentationLocale, copy } = resolveTouchlineCoachZoomPresentation(locale, draftLocalesEnabled, coach);
   const portuguese = presentationLocale === "pt-BR";
   const palette = touchlineCardTierPalette(slot.cardTier);
   const verifiedRecord = sharedCompetition ? competition : competition ?? contract;
@@ -122,7 +122,7 @@ export default function TouchlineCoachCardZoom({
   ];
   const performanceFields: TouchlineCardZoomDetails["fields"] = verifiedRecord
     ? [
-        ...(competition
+        ...(competition?.rank != null
           ? [{ label: copy.competitionRank, value: `#${competition.rank}`, icon: portuguese ? "coach-rank-position" : "coach-rank", group: "performance" as const, kind: "stat" as const }]
           : []),
         { label: "TouchLine Points", value: String(verifiedRecord.totalTouchlinePoints), icon: "rating", group: "performance", primary: true, kind: "rating-total" },

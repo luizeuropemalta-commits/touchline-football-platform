@@ -1,7 +1,8 @@
 import { validateCompanyMoney } from "./company-finance.ts";
 export const companyKinds = ["suppliers", "contracts", "obligations", "settlements"] as const;
 export type CompanyKind = typeof companyKinds[number];
-const uuidPattern=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+// Match stored PostgreSQL UUID identities, including canonical legacy variants.
+const uuidPattern=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const bad=()=>{throw new Error("INVALID_INPUT");};
 function uuid(value:unknown){if(typeof value!=="string"||!uuidPattern.test(value))return bad();return value.toLowerCase();}
 function text(value:unknown,max=1024){if(typeof value!=="string"||!value.trim()||value.length>max)return bad();return value.trim();}

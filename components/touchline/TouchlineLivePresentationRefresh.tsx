@@ -12,7 +12,9 @@ import { touchlineLivePresentationStore } from "@/lib/touchlineArena/live-presen
 
 type Props = {
   initialPlayerRankingSnapshotId?: string | null;
+  initialCurrentPlayerRankingRevision?: string | null;
   initialCoachRankingSnapshotId?: string | null;
+  initialCurrentCoachRankingRevision?: string | null;
   /** Server-only facts (official XI/table cache) are not yet in the sports envelope. */
   serverRefreshAfterMs?: number | null;
   /** One context boundary such as T−24/T−1, checked on the shared read. */
@@ -27,7 +29,9 @@ type Props = {
  */
 export default function TouchlineLivePresentationRefresh({
   initialPlayerRankingSnapshotId,
+  initialCurrentPlayerRankingRevision,
   initialCoachRankingSnapshotId,
+  initialCurrentCoachRankingRevision,
   serverRefreshAfterMs = null,
   serverRefreshAt = null,
   serverRefreshScope = null,
@@ -56,7 +60,11 @@ export default function TouchlineLivePresentationRefresh({
     return () => touchlineLivePresentationStore.completeRouteRefresh(owner);
   }, []);
   const watchesPlayerRanking = initialPlayerRankingSnapshotId !== undefined;
+  const watchesCurrentPlayerRanking = watchesPlayerRanking || initialCurrentPlayerRankingRevision !== undefined;
+  const currentPlayerRevisionRef = useRef(initialCurrentPlayerRankingRevision ?? null);
   const watchesCoachRanking = initialCoachRankingSnapshotId !== undefined;
+  const watchesCurrentCoachRanking = watchesCoachRanking || initialCurrentCoachRankingRevision !== undefined;
+  const currentCoachRevisionRef = useRef(initialCurrentCoachRankingRevision ?? null);
   const hasObservedPublicationRef = useRef(false);
   const latestVerifiedRef = useRef<Pick<
     TouchlineLivePresentationState,
@@ -71,6 +79,8 @@ export default function TouchlineLivePresentationRefresh({
     // A late Server Component tree must not roll back an acknowledged client
     // signal. Before the first read, updated SSR props remain the baseline.
     if (hasObservedPublicationRef.current) return;
+    currentPlayerRevisionRef.current = initialCurrentPlayerRankingRevision ?? null;
+    currentCoachRevisionRef.current = initialCurrentCoachRankingRevision ?? null;
     latestVerifiedRef.current = {
       playerRankingSnapshotId: watchesPlayerRanking
         ? initialPlayerRankingSnapshotId ?? null
@@ -83,13 +93,15 @@ export default function TouchlineLivePresentationRefresh({
   }, [
     initialCoachRankingSnapshotId,
     initialPlayerRankingSnapshotId,
+    initialCurrentPlayerRankingRevision,
+    initialCurrentCoachRankingRevision,
     watchesCoachRanking,
     watchesPlayerRanking,
   ]);
 
   useEffect(() => {
     lastServerRefreshRef.current ??= Date.now();
-    return touchlineLivePresentationStore.subscribe(({ state }, claimRefresh, refreshPending) => {
+    return touchlineLivePresentationStore.subscribe(({ state, sportsPublication }, claimRefresh, refreshPending) => {
       if (isRefreshingRef.current || refreshPending) return;
       const trackedState = mergeTouchlineLivePresentationRevision(
         latestVerifiedRef.current,
@@ -101,7 +113,16 @@ export default function TouchlineLivePresentationRefresh({
       // for that publication; retain the acknowledged digest across renders
       // and effect restarts so router.refresh cannot create a refresh loop.
       // The merge preserves a known digest when an absent/null one arrives.
-      const changed = touchlineLivePresentationRevisionChanged(latestVerifiedRef.current, trackedState);
+      const previousCurrentPlayerRevision = currentPlayerRevisionRef.current;
+      const currentPlayerRevision = watchesCurrentPlayerRanking
+        ? sportsPublication?.currentPlayerRanking?.revision ?? null : previousCurrentPlayerRevision;
+      const previousCurrentCoachRevision = currentCoachRevisionRef.current;
+      const currentCoachRevision = watchesCurrentCoachRanking
+        ? sportsPublication?.currentCoachRanking?.currentRevision ?? null : previousCurrentCoachRevision;
+      const changed = touchlineLivePresentationRevisionChanged(latestVerifiedRef.current, trackedState)
+        || currentPlayerRevision !== previousCurrentPlayerRevision || currentCoachRevision !== previousCurrentCoachRevision;
+      currentPlayerRevisionRef.current = currentPlayerRevision;
+      currentCoachRevisionRef.current = currentCoachRevision;
       const previousRevision = latestVerifiedRef.current;
       const previouslyObserved = hasObservedPublicationRef.current;
       const previousRefreshAt = lastServerRefreshRef.current;
@@ -121,6 +142,8 @@ export default function TouchlineLivePresentationRefresh({
           try { router.refresh(); }
           catch (error) {
             latestVerifiedRef.current = previousRevision;
+            currentPlayerRevisionRef.current = previousCurrentPlayerRevision;
+            currentCoachRevisionRef.current = previousCurrentCoachRevision;
             hasObservedPublicationRef.current = previouslyObserved;
             lastServerRefreshRef.current = previousRefreshAt;
             for (const at of dueWakes) { wakesRef.current.acknowledged.delete(at); wakesRef.current.pending.add(at); }
@@ -129,8 +152,8 @@ export default function TouchlineLivePresentationRefresh({
           }
         });
       }
-    });
-  }, [router, watchesCoachRanking, watchesPlayerRanking, serverRefreshAfterMs, startTransition]);
+    }, watchesCurrentPlayerRanking || watchesCurrentCoachRanking);
+  }, [router, watchesCoachRanking, watchesPlayerRanking, watchesCurrentPlayerRanking, watchesCurrentCoachRanking, serverRefreshAfterMs, startTransition]);
 
   return null;
 }

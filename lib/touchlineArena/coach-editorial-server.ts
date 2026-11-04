@@ -1,4 +1,5 @@
 import "server-only";
+import { isAuthSessionMissingError } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { isOwnerEmail } from "@/lib/admin/owner";
@@ -11,6 +12,7 @@ export function coachEditorialDependencies(): CoachEditorialDependencies {
   return { enabled: coachEditorialEnabled(), actor: async () => {
     const session = await createClient(); if (!session) throw new Error("AUTH_UNAVAILABLE");
     const result = await resolveServerReadWithin(session.auth.getUser(), null, 8_000);
+    if (result?.data.user === null && isAuthSessionMissingError(result.error)) return null;
     if (!result || result.error) throw new Error("AUTH_UNAVAILABLE");
     const user = result.data.user;
     return user ? { id: user.id, owner: isOwnerEmail(user.email), allowed: !user.is_anonymous && hasTouchLineArenaAccess(user) } : null;

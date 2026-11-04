@@ -1,81 +1,78 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { createRequire } from "node:module";
+import { runInNewContext } from "node:vm";
 import test from "node:test";
+import React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import ts from "typescript";
+import { CARD_ART_PERIMETER_PATHS, resolvePlayerCardArtPerimeterPath } from "../lib/touchlineArena/card-art-perimeter-paths.ts";
 
-const tiers = [
-  "ruby-red",
-  "sapphire-blue",
-  "amethyst-purple",
-  "radiant-gold",
-  "emerald-green",
-  "clear-diamond",
-  "diamond-gold",
-] as const;
+const source = readFileSync(new URL("../components/touchline/cards/TouchlineCardPerimeterTrace.tsx", import.meta.url), "utf8");
+const realRequire = createRequire(import.meta.url);
+const moduleBox = { exports: {} as { TouchlineCardPerimeterTrace: React.ComponentType<{ tier?: string | null; variant?: "player" | "coach"; frameUrl?: string | null }> } };
+const compiled = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText;
+runInNewContext(compiled, { exports: moduleBox.exports, module: moduleBox, require(specifier: string) {
+  if (specifier === "react/jsx-runtime") return realRequire(specifier);
+  if (specifier === "@/lib/touchlineArena/card-art-perimeter-paths") return { CARD_ART_PERIMETER_PATHS, resolvePlayerCardArtPerimeterPath };
+  throw new Error(`Unexpected trace import: ${specifier}`);
+} });
+const Trace = moduleBox.exports.TouchlineCardPerimeterTrace;
 
-const source = readFileSync(
-  new URL("../components/touchline/cards/TouchlineCardPerimeterTrace.tsx", import.meta.url),
-  "utf8",
-);
-
-const expectedPlayerRailCentres = {
-  "ruby-red": [21, 412],
-  "sapphire-blue": [18, 412],
-  "amethyst-purple": [14, 417],
-  "radiant-gold": [15, 414],
-  "emerald-green": [25, 411],
-  "clear-diamond": [19, 412],
-  "diamond-gold": [29, 400],
-} as const;
-
-const expectedCoachRailCentres = {
-  "ruby-red": [95, 711],
-  "sapphire-blue": [79, 726],
-  "amethyst-purple": [78, 730],
-  "radiant-gold": [89, 715],
-  "emerald-green": [78, 725],
-  "clear-diamond": [76, 748],
-  "diamond-gold": [80, 733],
-} as const;
-
-function railCentresFor(tier: (typeof tiers)[number], variant: "player" | "coach") {
-  const table = variant === "player"
-    ? "TOUCHLINE_PLAYER_PERIMETER_SIDE_CENTRES"
-    : "TOUCHLINE_COACH_PERIMETER_SIDE_CENTRES";
-  const tableStart = source.indexOf(`export const ${table}`);
-  const tableEnd = source.indexOf("};", tableStart);
-  const tableSource = source.slice(tableStart, tableEnd);
-  const match = tableSource.match(new RegExp(`"${tier}": \\[([0-9]+), ([0-9]+)\\]`));
-  assert.ok(match, `${tier} must have a ${variant} rail calibration`);
-  return [Number(match[1]), Number(match[2])] as const;
+function render(props: React.ComponentProps<typeof Trace>) { return renderToStaticMarkup(React.createElement(Trace, props)); }
+function assertMeasuredPath(html: string, expected: string, variant: "player" | "coach") {
+  assert.ok(html, "approved art has a permanent neon");
+  assert.match(html, /aria-hidden="true"/); assert.match(html, /focusable="false"/);
+  assert.match(html, new RegExp(`data-touchline-card-neon-trace-variant="${variant}"`));
+  const paths = [...html.matchAll(/<path\b[^>]*\bd="([^"]+)"/g)].map(match => match[1]);
+  assert.equal(paths.length, 5, "base, core and all three vector halos are preserved");
+  for (const path of paths) assert.equal(path, expected, "draw the actual asset contour, not an unrelated polygon used after an approval check");
+  assert.equal((html.match(/pathLength="100"/g) ?? []).length, 5);
+  assert.equal((html.match(/data-touchline-card-neon-trace-run="true"/g) ?? []).length, 1);
+  assert.match(html, variant === "coach" ? /viewBox="0 0 810 1080" preserveAspectRatio="xMidYMid meet"/ : /viewBox="0 0 430 691" preserveAspectRatio="none"/);
 }
 
-test("all seven player and coach frames receive a tier-specific centred perimeter path", () => {
-  const playerPaths = new Set<string>();
-  const coachPaths = new Set<string>();
-
-  for (const tier of tiers) {
-    const playerRailCentres = railCentresFor(tier, "player");
-    const coachRailCentres = railCentresFor(tier, "coach");
-    const playerPath = `M123 18H307L${playerRailCentres[1]} 98V593L307 680H123L${playerRailCentres[0]} 593V98Z`;
-    const coachPath = `M232 28H578L${coachRailCentres[1]} 153V926L578 1063H232L${coachRailCentres[0]} 926V153Z`;
-    playerPaths.add(playerPath);
-    coachPaths.add(coachPath);
-
-    // Both rails are measured from the real source frame, not inferred from
-    // a shared fallback. The bottom remains deliberately proud of the art.
-    assert.deepEqual(playerRailCentres, expectedPlayerRailCentres[tier]);
-    assert.deepEqual(coachRailCentres, expectedCoachRailCentres[tier]);
-    assert.ok(playerRailCentres[0] < playerRailCentres[1], `${tier} player rails must remain ordered`);
-    assert.ok(coachRailCentres[0] < coachRailCentres[1], `${tier} coach rails must remain ordered`);
-    assert.equal(playerPath, `M123 18H307L${playerRailCentres[1]} 98V593L307 680H123L${playerRailCentres[0]} 593V98Z`);
-    assert.equal(coachPath, `M232 28H578L${coachRailCentres[1]} 153V926L578 1063H232L${coachRailCentres[0]} 926V153Z`);
+test("all147 measured official artwork contours are actually rendered by the shared neon", () => {
+  const players = Object.entries(CARD_ART_PERIMETER_PATHS.player);
+  assert.equal(players.length, 140);
+  for (const [key, measured] of players) {
+    const tier = key.split("/").at(-1)!;
+    const frameUrl = key.replace("/templates/clubs/", "/templates/zoom/clubs/") + ".webp";
+    assertMeasuredPath(render({ tier, frameUrl }), measured, "player");
   }
-
-  assert.equal(playerPaths.size, 7, "player tiers must not reuse one unmeasured side path");
-  assert.equal(coachPaths.size, 7, "coach tiers must not reuse one unmeasured side path");
+  const coaches = Object.entries(CARD_ART_PERIMETER_PATHS.coach);
+  assert.equal(coaches.length, 7);
+  for (const [tier, measured] of coaches) assertMeasuredPath(render({ tier, variant: "coach" }), measured, "coach");
 });
 
-test("an unknown tier fails safely to the legacy neutral path", () => {
-  assert.match(source, /if \(!isPerimeterTier\(tier\)\) return TOUCHLINE_CARD_PERIMETER_PATH/);
-  assert.match(source, /export const TOUCHLINE_CARD_PERIMETER_PATH = "M123 18H307L393 98V593L307 680H123L36 593V98Z"/);
+test("compact, zoom and encoded asset URLs resolve the same actual contour; unknown assets stay empty", () => {
+  const key = "/touchlineArena/cards/templates/clubs/Newcastle United/market-tiers/sapphire-blue";
+  const expected = CARD_ART_PERIMETER_PATHS.player[key];
+  for (const size of ["", "zoom/", "compact/", "live-compact/"]) {
+    const frameUrl = key.replace("/templates/clubs/", `/templates/${size}clubs/`).replace("Newcastle United", "Newcastle%20United") + ".webp?v=synthetic#same-art";
+    assertMeasuredPath(render({ tier: "sapphire-blue", frameUrl }), expected, "player");
+  }
+  for (const tier of [null, undefined, "neutral", "constructor", "toString", "unknown"]) {
+    assert.equal(render({ tier, variant: "coach" }), "");
+    assert.equal(render({ tier, frameUrl: key + ".webp" }), "");
+  }
+  for (const frameUrl of [null, undefined, "/unapproved.webp", "/touchlineArena/cards/templates/clubs/Missing/market-tiers/sapphire-blue.webp", "%broken"]) {
+    assert.equal(render({ tier: "sapphire-blue", frameUrl }), "");
+  }
+});
+
+
+test("the rendered contour catalogue remains bound to the147 unchanged official source assets", () => {
+  const generated = readFileSync(new URL("../lib/touchlineArena/card-art-perimeter-paths.ts", import.meta.url), "utf8");
+  const assetEntries = [...generated.matchAll(/^\/\/ ([a-f0-9]{64})  (public\/touchlineArena\/cards\/templates\/zoom\/[^\r\n]+)$/gm)];
+  assert.equal(assetEntries.length, 147);
+  assert.equal(new Set(assetEntries.map(entry => entry[2])).size, 147);
+  for (const [, expected, asset] of assetEntries) {
+    const actual = createHash("sha256").update(readFileSync(new URL(`../${asset}`, import.meta.url))).digest("hex");
+    assert.equal(actual, expected, `Measured contour source changed: ${asset}`);
+  }
+  const generatorHash = generated.match(/^\/\/ Generator SHA-256: ([a-f0-9]{64})$/m)?.[1];
+  assert.ok(generatorHash);
+  assert.equal(createHash("sha256").update(readFileSync(new URL("../scripts/generate-touchline-card-perimeter-paths.mjs", import.meta.url))).digest("hex"), generatorHash);
 });

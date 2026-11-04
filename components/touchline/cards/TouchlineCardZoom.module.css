@@ -72,9 +72,12 @@
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
   padding: calc(20px + env(safe-area-inset-top, 0px)) calc(20px + env(safe-area-inset-right, 0px)) calc(20px + env(safe-area-inset-bottom, 0px)) calc(20px + env(safe-area-inset-left, 0px));
-  background: var(--touchline-modal-backdrop, rgba(0, 5, 6, .72));
-
- -webkit-backdrop-filter: var(--touchline-modal-blur, blur(8px)); backdrop-filter: var(--touchline-modal-blur, blur(8px)); }
+  /* Keep the source card and page fully behind the open card view, including
+     the gaps between its detail panels. An opaque surface needs no blur. */
+  background: #020809;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
 
 .panel {
   position: relative;
@@ -651,4 +654,9 @@
   .panelWithDetails .identityDetails .detailsHeader { padding-inline-end: 52px; }
   .panelWithDetails .detailsHeader h2 { font-size: clamp(22px, 3vw, 32px); line-height: 1.05; }
   .panelWithDetails .identityGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 16px; }
+}
+
+/* Keep native touch zoom free of an additional filtered full-dialog surface. */
+@media (hover: none), (pointer: coarse) {
+  .panel { filter: none; }
 }

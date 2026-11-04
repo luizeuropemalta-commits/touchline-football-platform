@@ -45,12 +45,12 @@ test("billing webhook reconciles current provider state under a fenced lease and
     const stored = async (id: string) => (await db.query<Row>("select * from public.billing_invoices where stripe_invoice_id=$1", [id])).rows[0];
     const alerts = async (id: string) => Number((await db.query<{ n: number }>("select count(*)::int n from public.billing_alerts where stripe_object_id=$1 and resolved_at is null", [id])).rows[0].n);
     const receipt = async (id: string) => (await db.query<Row>("select * from public.stripe_webhook_events where stripe_event_id=$1", [id])).rows[0];
-    function harness(id: string, options: { configured?: boolean; invalidSignature?: boolean } = {}) {
+    function harness(id: string, options: { configured?: boolean; invalidSignature?: boolean; mode?: "test" | "live"; wrongAccount?: boolean } = {}) {
       const control = { event: eventFor(`evt_${id}`, invoice(`in_${id}`)), current: invoice(`in_${id}`), reads: 0, rpcs: [] as string[], providerFailure: false, providerMissing: false, loseCommitReply: false, onRead: null as null | (() => Promise<void>) };
       const mod = { exports: {} as { POST(request: Request): Promise<Reply> } };
       vm.runInNewContext(compiled, {
         exports: mod.exports, Date, Set,
-        process: { env: { STRIPE_WEBHOOK_SECRET: options.configured === false ? undefined : "fixture-signing-secret" } },
+        process: { env: { STRIPE_WEBHOOK_SECRET: options.configured === false ? undefined : "fixture-signing-secret", TOUCHLINE_STRIPE_LIVE_ACCOUNT_ID: "acct_fixtureLive" } },
         require(name: string) {
           if (name === "next/server") return { NextResponse: { json: (body: Row, init?: { status?: number }) => ({ body, status: init?.status ?? 200 }) } };
           if (name === "@/lib/supabase/admin") return { createAdminClient: () => ({ rpc: async (name: string, args: Row) => {
@@ -61,7 +61,7 @@ test("billing webhook reconciles current provider state under a fenced lease and
               return { data, error: null };
             } catch (error) { return { data: null, error: { message: String(error) } }; }
           } }) };
-          if (name === "@/lib/stripe/client") return { getStripe: () => ({ webhooks: { constructEvent(raw: string, signature: string, secret: string) {
+          if (name === "@/lib/stripe/client") return { configuredStripeMode: () => options.mode ?? "test", getStripe: () => ({ accounts: { retrieve: async () => ({ id: options.wrongAccount ? "acct_other" : "acct_fixtureLive" }) }, webhooks: { constructEvent(raw: string, signature: string, secret: string) {
             assert.equal(raw, "signed-fixture"); assert.equal(signature, "fixture-signature"); assert.equal(secret, "fixture-signing-secret");
             if (options.invalidSignature) throw new Error("PRIVATE_SIGNATURE_ERROR");
             return structuredClone(control.event);
@@ -83,6 +83,21 @@ test("billing webhook reconciles current provider state under a fenced lease and
         const h = harness("reject", options); const r = await h.post(); assert.equal(r.status, options.configured === false ? 503 : 400);
         assert.equal(h.control.reads, 0); assert.deepEqual(h.control.rpcs, []);
       }
+    });
+    await t.test("mode/account rejection happens before any durable claim, including existing event IDs", async () => {
+      const paid = harness("mode_fence"); assert.equal((await paid.post()).status, 200);
+      const invoiceBefore = await stored("in_mode_fence"), receiptBefore = await receipt("evt_mode_fence");
+      assert.equal(receiptBefore.livemode, false);
+      const foreign = harness("mode_fence"); foreign.control.event.livemode = true;
+      assert.equal((await foreign.post()).status, 400);
+      assert.deepEqual(foreign.control.rpcs, []); assert.equal(foreign.control.reads, 0);
+      const wrong = harness("wrong_live_account", { mode: "live", wrongAccount: true });
+      wrong.control.event.livemode = true; wrong.control.event.data.object.livemode = true;
+      assert.equal((await wrong.post()).status, 500);
+      assert.deepEqual(wrong.control.rpcs, []); assert.equal(wrong.control.reads, 0);
+      assert.equal(await receipt("evt_wrong_live_account"), undefined);
+      assert.deepEqual(await stored("in_mode_fence"), invoiceBefore);
+      assert.deepEqual(await receipt("evt_mode_fence"), receiptBefore);
     });
     await t.test("late failure uses current paid invoice; later genuine open and equal timestamps are accepted", async () => {
       const h = harness("order"); assert.equal((await h.post()).status, 200);

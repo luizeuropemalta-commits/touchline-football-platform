@@ -1,13 +1,14 @@
+import { matchesAvatarRetentionTarget, type AvatarRetentionTarget } from "./club-owner-avatar-retention-target.ts";
 import { awaitAvatarStep, createAvatarEnvironmentGuard, isAvatarAccountId } from "./club-owner-avatar-upload-contract.ts";
 
-type Config = Readonly<{ supabaseOrigin: string; serviceRoleKey: string; assertEnvironment: () => void; fetchImpl: typeof fetch }>;
+type Config = Readonly<{ target?: AvatarRetentionTarget; supabaseOrigin: string; serviceRoleKey: string; assertEnvironment: () => void; fetchImpl: typeof fetch }>;
 /** Read-only POST contract verified in installed storage-js 2.108.2,
  * StorageFileApi.list(). No runtime credentials, recursive paths or retries.
  * One original in-flight job per factory; timeout cannot release a stuck job.
  */
 export function createAvatarRetentionListStorage(config: Config) {
   const { supabaseOrigin, serviceRoleKey, fetchImpl } = config;
-  if (supabaseOrigin !== "https://xgxbwqxjssxxuihuwmgy.supabase.co" || typeof serviceRoleKey !== "string"
+  if (!matchesAvatarRetentionTarget(config.target, supabaseOrigin, serviceRoleKey) || typeof serviceRoleKey !== "string"
     || !serviceRoleKey.trim() || /[\r\n]/.test(serviceRoleKey) || typeof fetchImpl !== "function" || typeof config.assertEnvironment !== "function") throw Error("QA_RETENTION_LIST_CONFIGURATION");
   const assertEnvironment = createAvatarEnvironmentGuard(config.assertEnvironment);
   let busy = false;

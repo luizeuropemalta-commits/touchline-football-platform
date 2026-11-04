@@ -6,7 +6,7 @@ import ts from 'typescript';
 
 const source = readFileSync(new URL('../lib/touchlineArena/visible-decoration-motion.ts', import.meta.url), 'utf8');
 
-for (const animationName of ['touchline-card-perimeter-trace', 'ClubOwnerPlanShowcase_planIconSweep__test']) test(`shared ${animationName} pauses offscreen/hidden, resumes, discovers streamed decorations and cleans up`, () => {
+for (const animationName of ['touchline-card-perimeter-trace', 'ClubOwnerPlanShowcase_planIconSweep__test', 'ClubOwnerMarketHeader_clubOwnerGreenSweep__test', 'ClubOwnerMarketHeader_clubOwnerPhotoNeonSweep__test', 'ClubOwnerMarketHeader_clubOwnerGoldSweep__test', 'ClubOwnerPublic_portraitNeonOrbit__test']) test(`shared ${animationName} pauses offscreen/hidden, resumes, discovers streamed decorations and cleans up`, () => {
   class Element {
     isConnected = true;
     state = 'paused';

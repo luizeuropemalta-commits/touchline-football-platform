@@ -2,10 +2,12 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
-import test from "node:test";
+import test, { before } from "node:test";
 import { fileURLToPath } from "node:url";
-import { chromium, expect, firefox, webkit } from "@playwright/test";
+import { chromium, expect, firefox, webkit, type Browser } from "@playwright/test";
 import { bundleIsolatedBrowserFixture } from "./helpers/touchline-isolated-browser-bundle.mts";
+
+import { requireBrowserCapacity } from "./helpers/touchline-browser-capacity.mts";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const require = createRequire(import.meta.url);
@@ -38,36 +40,67 @@ async function headerFixture() {
   return { ...bundle, css: `${compiler.build(candidates)}\n${bundle.css}` };
 }
 
-test("real BrandHeader navigation endpoints remain reachable with visible keyboard focus in PT, DE and AR", { timeout: 90_000 }, async t => {
-  const fixture = await headerFixture();
+const capacity = () => {
+  assert.notEqual(process.env.TOUCHLINE_LOCAL_IGNORE_MEMORY_GATE, "1", "memory bypass is not allowed for this matrix");
+  requireBrowserCapacity(root, { darwinFreePercent: true,
+    allowModerateDarwinPressure: !process.env.CI && process.env.TOUCHLINE_LOCAL_ALLOW_MODERATE_PRESSURE === "1" });
+};
+let fixture: Awaited<ReturnType<typeof headerFixture>>;
+before(async () => {
+  capacity();
+  fixture = await headerFixture();
+}, { timeout: 90_000 });
+// Top-level tests are serial under Node's default root concurrency of one.
+// No enclosing suite inherits the CLI aggregate timeout across all engines.
+for (const engine of [chromium, webkit, firefox]) test(`real BrandHeader navigation endpoints remain reachable with visible keyboard focus in PT, DE and AR — ${engine.name()}`, { timeout: 90_000 }, async t => {
+  capacity();
   t.diagnostic(`Real modules: ${fixture.sources.join(", ")}. Real client mount/handlers; no media provider, downloaded font, real account or Next route transition proof.`);
   const failures: unknown[] = [];
-  for (const engine of [chromium, webkit, firefox]) {
-    const browser = await engine.launch({ headless: true });
-    try {
-      const page = await browser.newPage({ reducedMotion: "reduce" });
-      const pageErrors: string[] = [];
-      page.on("pageerror", error => pageErrors.push(error.message));
-      await page.route("**/*", route => route.abort());
-      // macOS WebKit can require Option-Tab to include links. Probe a native
-      // link first (as the existing XI keyboard tests do), without changing the
-      // user's keyboard preferences or adding tabindex to product elements.
-      const probe = '<!doctype html><a id="native-link" href="#native">Link</a><input id="native-input">';
+  const engineStartedAt = performance.now();
+  let browser: Browser | undefined;
+  let launching: Promise<Browser> | undefined;
+  let closing: Promise<void> | undefined;
+  const close = async () => {
+    // The after hook also awaits a pending launch, so the next serial engine
+    // cannot begin while a timed-out launch is still creating its browser.
+    const owned = browser ?? await launching?.catch(() => undefined);
+    if (owned) await (closing ??= owned.close());
+  };
+  const abort = () => { void close().catch(error => t.diagnostic(`Browser abort cleanup failed: ${String(error)}`)); };
+  t.signal.addEventListener("abort", abort, { once: true });
+  t.after(async () => { t.signal.removeEventListener("abort", abort); await close(); });
+  try {
+    t.signal.throwIfAborted();
+    launching = engine.launch({ headless: true });
+    browser = await launching;
+    // A timeout during launch must close the browser that resolves afterwards.
+    if (t.signal.aborted) { await close(); t.signal.throwIfAborted(); }
+    const page = await browser.newPage({ reducedMotion: "reduce" });
+    const pageErrors: string[] = [];
+    page.on("pageerror", error => pageErrors.push(error.message));
+    await page.route("**/*", route => route.abort());
+    // macOS WebKit can require Option-Tab to include links. Probe a native
+    // link first (as the existing XI keyboard tests do), without changing the
+    // user's keyboard preferences or adding tabindex to product elements.
+    const probe = '<!doctype html><a id="native-link" href="#native">Link</a><input id="native-input">';
+    await page.setContent(probe);
+    await page.keyboard.press("Tab");
+    let forward = "Tab";
+    if (!await page.locator("#native-link").evaluate(element => element === document.activeElement)) {
+      assert.equal(engine.name(), "webkit", "Chromium and Firefox Tab must focus a native link");
+      assert.equal(await page.locator("#native-input").evaluate(element => element === document.activeElement), true, "only the known native link-skipping preference permits Option-Tab");
       await page.setContent(probe);
-      await page.keyboard.press("Tab");
-      let forward = "Tab";
-      if (!await page.locator("#native-link").evaluate(element => element === document.activeElement)) {
-        assert.equal(engine.name(), "webkit", "Chromium and Firefox Tab must focus a native link");
-        assert.equal(await page.locator("#native-input").evaluate(element => element === document.activeElement), true, "only the known native link-skipping preference permits Option-Tab");
-        await page.setContent(probe);
-        forward = "Alt+Tab";
-        await page.keyboard.press(forward);
-        assert.equal(await page.locator("#native-link").evaluate(element => element === document.activeElement), true, "Option-Tab must reach the native link");
-      }
-      const backward = forward === "Tab" ? "Shift+Tab" : "Alt+Shift+Tab";
-      t.diagnostic(`${engine.name()} native full-navigation key: ${forward}`);
-      for (const locale of ["pt-BR", "de-DE", "ar-SA"]) {
-        for (const width of [320, 390, 768, 844, 1024, 1280, 1920]) {
+      forward = "Alt+Tab";
+      await page.keyboard.press(forward);
+      assert.equal(await page.locator("#native-link").evaluate(element => element === document.activeElement), true, "Option-Tab must reach the native link");
+    }
+    const backward = forward === "Tab" ? "Shift+Tab" : "Alt+Shift+Tab";
+    t.diagnostic(`${engine.name()} native full-navigation key: ${forward}`);
+    for (const locale of ["pt-BR", "de-DE", "ar-SA"]) {
+      for (const width of [320, 390, 768, 844, 1024, 1280, 1920]) {
+        const scenarioStartedAt = performance.now();
+        t.diagnostic(JSON.stringify({ browser: engine.name(), locale, width, event: "scenario-start" }));
+        try {
           await page.setViewportSize({ width, height: 900 });
           // Start a fresh document, including native sequential focus state.
           // setContent alone can retain Firefox's prior keyboard anchor.
@@ -189,10 +222,16 @@ test("real BrandHeader navigation endpoints remain reachable with visible keyboa
           assert.equal(cleanup.cancelled, 2, "blur and real unmount cleanup cancel both pending focus frames");
           assert.equal(cleanup.pending, 0);
           assert.equal(cleanup.focusStable, true, "handler does not steal the requested focus");
+        } finally {
+          t.diagnostic(JSON.stringify({ browser: engine.name(), locale, width, event: "scenario-end", durationMs: performance.now() - scenarioStartedAt }));
         }
       }
-      assert.deepEqual(pageErrors, []);
-    } finally { await browser.close(); }
+    }
+    assert.deepEqual(pageErrors, []);
+    assert.equal(failures.length, 0, `Navigation or its focus ring is clipped/unreachable: ${JSON.stringify(failures)}`);
+  } finally {
+    t.signal.removeEventListener("abort", abort);
+    await close();
+    t.diagnostic(JSON.stringify({ browser: engine.name(), event: "engine-end", durationMs: performance.now() - engineStartedAt }));
   }
-  assert.equal(failures.length, 0, `Navigation or its focus ring is clipped/unreachable: ${JSON.stringify(failures)}`);
 });

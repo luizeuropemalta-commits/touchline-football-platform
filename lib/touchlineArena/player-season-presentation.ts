@@ -23,7 +23,9 @@ export function resolveTouchlineSeasonPlayer(input: {
   if (ranking.phase === "preseason") return null;
   if (!ranking.snapshotId || !ranking.seasonId || ranking.leagueKey !== "touchline-england"
     || ranking.scoringVersion !== "player_scoring_v4"
-    || input.seasonId && input.seasonId !== ranking.seasonId) return undefined;
+    || input.seasonId && input.seasonId !== ranking.seasonId
+      && !(ranking.currentProjection?.version === 1
+        && ranking.currentProjection.currentSeasonId === ranking.seasonId)) return undefined;
   const id = input.playerId?.trim().toLowerCase();
   // An unresolved identity is not an authoritative removal. Keep the seed;
   // never borrow another player's total through provider-only matching.
@@ -31,10 +33,16 @@ export function resolveTouchlineSeasonPlayer(input: {
   const rows = ranking.players.filter(row => row.playerId.toLowerCase() === id);
   const row = rows.length === 1 ? rows[0] : null;
   const providerId = String(input.providerPlayerId ?? "").trim();
-  if (!row || providerId && String(row.providerPlayerId ?? "").trim() !== providerId) return null;
+  if (row && providerId && String(row.providerPlayerId ?? "").trim() !== providerId) return null;
+  const history = ranking.currentProjection?.currentSeasonId === ranking.seasonId
+    ? ranking.seasonTotals?.filter(value => value.playerId.toLowerCase() === id) ?? [] : [];
+  const historical = history.length === 1 ? history[0] : null;
+  if (historical && providerId && String(historical.providerPlayerId ?? "").trim() !== providerId) return null;
+  const total = row ? row.totalRating : historical?.totalRating ?? null;
+  if (!row && !historical) return null;
   return { seasonId: ranking.seasonId, snapshotId: ranking.snapshotId,
-    totalRating: Number.isFinite(row.totalRating) ? row.totalRating : null,
-    positionRank: row.positionRank, positionGroup: row.positionGroup };
+    totalRating: typeof total === "number" && Number.isFinite(total) ? total : null,
+    positionRank: row?.positionRank ?? null, positionGroup: row?.positionGroup ?? null };
 }
 
 /** Display only: never change the catalogue used by trades, lineup or ordering. */

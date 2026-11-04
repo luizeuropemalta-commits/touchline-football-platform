@@ -8,8 +8,7 @@ import { hasTouchLineArenaAccess } from "./auth-access";
 import { createClubOwnerAvatarPersistence } from "./club-owner-avatar-persistence";
 import { awaitAvatarStep, isAvatarAccountId, projectAvatarRecoveryContext } from "./club-owner-avatar-upload-contract";
 import { getClubOwnerAvatarControlAdmission } from "./club-owner-avatar-control-admission";
-import { TOUCHLINE_QA_ORIGIN } from "./public-origin";
-import { inspectTouchlineQaVercelEnvironment } from "@/lib/touchlinePreview/qa-environment-verifier-core";
+import { resolveClubOwnerAvatarRuntimeAdmission } from "./club-owner-avatar-runtime-admission";
 import { resolveTouchlineDataSource } from "@/lib/touchlineMirror/runtime";
 import { projectClubOwnerAvatarSelectionContext } from "./club-owner-avatar-selection-contract";
 
@@ -72,8 +71,8 @@ export function createClubOwnerAvatarContextReader() {
       const hostname = requestHeaders.get("host");
       if (!hostname) return null;
       const local = allowsClubOwnerAvatarLocalEnvironment(environment, `http://${hostname}`);
-      if ((!local && hostname !== new URL(TOUCHLINE_QA_ORIGIN).hostname) || requestHeaders.get("x-touchline-isolated-preview") !== null
-        || (!local && inspectTouchlineQaVercelEnvironment({ environment, requestHostname: hostname }).status !== "PASS")) return null;
+      if (requestHeaders.get("x-touchline-isolated-preview") !== null
+        || !resolveClubOwnerAvatarRuntimeAdmission(environment, `${local ? "http" : "https"}://${hostname}`)) return null;
       guard();
       const client = createAdminClient();
       guard();

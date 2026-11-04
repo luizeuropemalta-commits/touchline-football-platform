@@ -1,9 +1,12 @@
-import { matchesClubSeasonPaidEvidence, type ClubSeasonPaymentEvidence, type ClubSeasonTestOrder } from './club-season-test-catalogue.ts';
+import { clubSeasonTestPayment, type ClubSeasonTestOrder } from './club-season-test-catalogue.ts';
+import { matchesClubSeasonPaymentEvidence, validClubSeasonSession, type ClubSeasonPaymentEvidence,
+  type ClubSeasonOrderPayment } from './club-season-payment-contract.ts';
 export type SeasonWebhookSubject = { orderId: string; sessionId: string; ownerId: string;
   seasonId: string; plan: string; previousPaidPlan?: string;
   kind: 'payment'|'expired'|'risk'; riskType?: 'charge.refunded'|'charge.dispute.created';
-  evidence?: ClubSeasonPaymentEvidence };
-export type SeasonWebhookOrder = ClubSeasonTestOrder & { state: string };
+  evidence?: ClubSeasonPaymentEvidence;
+  providerContext?: Pick<ClubSeasonOrderPayment, 'mode'|'accountId'|'profileId'|'catalogueVersion'> };
+export type SeasonWebhookOrder = ClubSeasonTestOrder & { state: string; payment?: ClubSeasonOrderPayment };
 export type SeasonWebhookStore = {
   read(orderId: string): Promise<SeasonWebhookOrder|null>;
   fulfill(orderId: string,eventId: string,evidence: ClubSeasonPaymentEvidence): Promise<unknown>;
@@ -20,6 +23,13 @@ export async function processClubSeasonWebhook(eventId:string, subject:SeasonWeb
   if (order.userId!==subject.ownerId || order.seasonId!==subject.seasonId || order.plan!==subject.plan
     || order.previousPaidPlan!==subject.previousPaidPlan
     || (order.sessionId && order.sessionId!==subject.sessionId)) throw new Error('SEASON_EVENT_MISMATCH');
+  const payment = order.payment ?? clubSeasonTestPayment(order.plan);
+  const context = subject.providerContext;
+  if (!validClubSeasonSession(subject.sessionId, payment.mode)
+    || (context ? context.mode !== payment.mode || context.accountId !== payment.accountId
+      || context.profileId !== payment.profileId || context.catalogueVersion !== payment.catalogueVersion
+      : payment.mode !== 'test')) throw new Error('SEASON_EVENT_MISMATCH');
+  // Context is checked for paid/risk/expired alike, before terminal replay.
   if(subject.kind==='risk') {
     if(!subject.riskType) throw new Error('SEASON_EVENT_MISMATCH');
     await store.review(order.id,eventId,subject.riskType,subject.sessionId);
@@ -31,7 +41,7 @@ export async function processClubSeasonWebhook(eventId:string, subject:SeasonWeb
     if (order.state==='paid' || order.state==='review' || order.state==='refunded') return {received:true,duplicate:true};
     const end=Date.parse(order.seasonEndsAt);
     const evidenceTime=Number.isFinite(end)&&now>=end?end-1:now;
-    if (!subject.evidence || !matchesClubSeasonPaidEvidence({...order,sessionId:subject.sessionId},subject.evidence,evidenceTime)) {
+    if (!subject.evidence || !matchesClubSeasonPaymentEvidence({...order,payment,sessionId:subject.sessionId},subject.evidence,evidenceTime)) {
       throw new Error('SEASON_PAYMENT_UNCONFIRMED');
     }
     if(now>=end) await store.review(order.id,eventId,'season.payment_late',subject.sessionId);

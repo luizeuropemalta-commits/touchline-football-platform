@@ -5,7 +5,7 @@ test('database mapper rejects corrupted payment snapshots and RPC adapter keeps 
  const source=new URL('../lib/stripe/club-season-order-store.server.ts',import.meta.url).href;
  const script=`
   import assert from 'node:assert/strict';
-  const {mapClubSeasonStoredOrder,createClubSeasonOrderStore}=await import(${JSON.stringify(source)});
+  const {mapClubSeasonStoredOrder,createClubSeasonOrderStore,mapClubSeasonPaymentStoredOrder,createClubSeasonPaymentOrderStore}=await import(${JSON.stringify(source)});
   const row={id:'22222222-2222-4222-8222-222222222222',user_id:'11111111-1111-4111-8111-111111111111',
    season_id:'33333333-3333-4333-8333-333333333333',plan:'master',previous_paid_plan:'standard',state:'pending',
    session_id:null,amount_minor:4000,currency:'eur',provider_account:'acct_1Tl6XQH0T0OdBC6s',
@@ -25,6 +25,32 @@ test('database mapper rejects corrupted payment snapshots and RPC adapter keeps 
   await store.prepare(row.user_id,'master');await store.attach(row.user_id,row.id,'cs_test_bound');
   assert.deepEqual(calls,[{name:'touchline_club_prepare_season_test_order',args:{p_user_id:row.user_id,p_plan:'master'}},
    {name:'touchline_club_attach_season_test_session',args:{p_user_id:row.user_id,p_order_id:row.id,p_session_id:'cs_test_bound'}}]);
+  const profile={mode:'live',accountId:'acct_fixtureLive',profileId:'fixture-live-v1',catalogueVersion:'fixture-20261103',
+    returnOrigin:'https://return.example.test',catalogue:{standard:{productId:'prod_standard',priceId:'price_standard'},
+      master:{productId:'prod_master',priceId:'price_master'},vip:{productId:'prod_vip',priceId:'price_vip'}}};
+  const liveRow={...row,provider_account:profile.accountId,payment_mode:'live',payment_profile_id:profile.profileId,
+    catalogue_version:profile.catalogueVersion,product_id:'prod_master',price_id:'price_master',return_origin:profile.returnOrigin};
+  assert.throws(()=>mapClubSeasonStoredOrder(liveRow),/SEASON_STORAGE_UNAVAILABLE/);
+  assert.throws(()=>mapClubSeasonStoredOrder({...liveRow,payment_mode:'test',provider_account:row.provider_account}),/SEASON_STORAGE_UNAVAILABLE/);
+  const liveMapped=mapClubSeasonPaymentStoredOrder(liveRow);
+  assert.equal(liveMapped.payment.mode,'live');assert.equal(liveMapped.amountMinor,4000);
+  assert.equal(mapClubSeasonPaymentStoredOrder(row).payment.mode,'test');
+  for(const patch of [{payment_mode:'other'},{payment_profile_id:null},{catalogue_version:''},
+    {return_origin:'http://return.example.test'},{session_id:'cs_test_wrong'}]) {
+    assert.throws(()=>mapClubSeasonPaymentStoredOrder({...liveRow,...patch}),/SEASON_STORAGE_UNAVAILABLE/);
+  }
+  const liveCalls=[];
+  const liveStore=createClubSeasonPaymentOrderStore({rpc:async(name,args)=>{liveCalls.push({name,args});
+    return {data:name.includes('attach')?{...liveRow,session_id:'cs_live_bound'}:liveRow,error:null};}},profile);
+  await liveStore.prepare(row.user_id,'master');await liveStore.attach(row.user_id,row.id,'cs_live_bound');
+  assert.deepEqual(liveCalls,[{name:'touchline_club_prepare_season_order',args:{p_user_id:row.user_id,p_plan:'master',p_profile_id:profile.profileId}},
+    {name:'touchline_club_attach_season_session',args:{p_user_id:row.user_id,p_order_id:row.id,p_session_id:'cs_live_bound',
+      p_mode:'live',p_account_id:profile.accountId,p_profile_id:profile.profileId,p_catalogue_version:profile.catalogueVersion}}]);
+  for(const patch of [{provider_account:'acct_other'},{payment_profile_id:'other-profile'},{catalogue_version:'other'},
+    {product_id:'prod_other'},{price_id:'price_other'}]) {
+    const badLive=createClubSeasonPaymentOrderStore({rpc:async()=>({data:{...liveRow,...patch},error:null})},profile);
+    await assert.rejects(badLive.prepare(row.user_id,'master'),/SEASON_STORAGE_UNAVAILABLE/);
+  }
   const bad=createClubSeasonOrderStore({rpc:async()=>({data:null,error:{message:'SECRET db details'}})});
   await assert.rejects(bad.prepare(row.user_id,'master'),/^Error: SEASON_STORAGE_UNAVAILABLE$/);
  `;

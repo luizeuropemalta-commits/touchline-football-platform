@@ -73,7 +73,7 @@ function harness(options: { legacy?: boolean; statsFailure?: boolean; competitio
     return query;
   } };
   const readPoints = runInNewContext(`${code("public-season-player-points-server")}\nreadPublicSeasonPlayerPoints;`, {
-    createAdminClient: () => null, loadTouchLineActiveRanking: () => assert.fail("must retain supplied snapshot"), projectTouchlineCardStatsByPosition,
+    createAdminClient: () => null, loadTouchLinePublishedPlayerRanking: () => assert.fail("must retain supplied snapshot"), projectTouchlineCardStatsByPosition,
   });
   const publication = runInNewContext(`${code("card-publication-read-model")}\nloadTouchlinePublishedCardPresentations;`, {
     ...provisional,

@@ -80,7 +80,14 @@ test("the public player profile preserves market value on exactly its three Exac
 
 test("the player profile retains its canonical rating, identity, position, and ranking inputs", () => {
   assert.match(source, /const \{ card, exactPlayer, club, isLocalCard \} = profile;/);
-  assert.match(source, /const totalRatingText = competition\.totalRating;/);
+  assert.match(
+    source,
+    /const profileRanking = profileSeasonId && activeRanking\.seasonId === profileSeasonId\s*\? activeRanking : TOUCHLINE_PRESEASON_RANKING_STATE;/,
+  );
+  assert.match(
+    source,
+    /const totalRatingText = resolveTouchlineSeasonPlayer\(\{\s*authority: \{ playerRanking: profileRanking, coachLeader: null \}, enabled: true,\s*playerId: canonicalPlayerId, providerPlayerId: canonicalProviderPlayerId, seasonId: profileSeasonId,\s*\}\)\?\.totalRating \?\? null;/,
+  );
   assert.match(source, /exactPlayer\.totalRating = totalRatingText;/);
   assert.match(
     source,

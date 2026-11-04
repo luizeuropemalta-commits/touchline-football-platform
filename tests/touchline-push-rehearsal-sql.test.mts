@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createECDH } from 'node:crypto';
+import webPush from 'web-push';
 import test from 'node:test';
 import { createPushRehearsalStore } from '../lib/touchlineArena/push-rehearsal-store.ts';
 import { handlePushRehearsal, type PushRehearsalDependencies } from '../lib/touchlineArena/push-rehearsal-handler.ts';
@@ -170,8 +171,7 @@ test('persistent phone rehearsal reservation boundary (local SQL only)', { skip:
             [args.p_reservation,args.p_actor,args.p_request,args.p_outcome])).rows[0].value};
         }};},
       };
-      const ecdh=createECDH('prime256v1');ecdh.generateKeys();
-      const vapid={subject:'mailto:qa@example.invalid',publicKey:ecdh.getPublicKey().toString('base64url'),privateKey:ecdh.getPrivateKey().toString('base64url')};
+      const vapid={...webPush.generateVAPIDKeys(),subject:'mailto:qa@example.invalid'};
       let transportCalls=0;
       const transport:typeof fetch=async(url,init)=>{
         transportCalls++;assert.equal(url,subscription.endpoint);assert.equal(init?.method,'POST');assert.equal(init?.redirect,'error');

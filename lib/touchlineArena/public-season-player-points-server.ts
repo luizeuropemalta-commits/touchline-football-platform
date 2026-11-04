@@ -1,7 +1,7 @@
 import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import { loadTouchLineActiveRanking } from "./card-ranking-server";
+import { loadTouchLinePublishedPlayerRanking } from "./card-ranking-server";
 import type { TouchlineActiveRankingState } from "./card-ranking-live";
 
 import type { TouchlinePublicSeasonPlayerPoints } from "./matchday-player-points";
@@ -70,7 +70,7 @@ export async function readPublicSeasonPlayerPoints(
       .eq("provider_competition_id", TOUCHLINE_ENGLAND_COMPETITION_PROVIDER_ID)
       .maybeSingle();
   const [activeRanking, competitionResult] = await Promise.all([
-    options.publishedRankingState ?? loadTouchLineActiveRanking(),
+    options.publishedRankingState ?? loadTouchLinePublishedPlayerRanking(),
     competitionRead,
   ]);
   // The published V3 snapshot is the canonical source for the cumulative

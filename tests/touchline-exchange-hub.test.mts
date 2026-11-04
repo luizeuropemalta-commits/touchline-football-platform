@@ -185,7 +185,7 @@ test("candidate binds the optional trusted owner before using it in dialogs", ()
   const client = readFileSync(new URL("../app/fantasy/FantasyGameweekClient.tsx", import.meta.url), "utf8");
   const signature = client.slice(client.indexOf("export default function FantasyGameweekClient({"), client.indexOf("initialSnapshot: TouchlineFantasySnapshot"));
   assert.match(signature, /\bclubOwner\s*,/);
-  assert.match(client, /<ClubOwnerNegotiationRoom[^>]+plan=\{collection\.state\?\.plan\} agentNotice=\{<ClubOwnerExchangeHub /);
+  assert.match(client, /<ClubOwnerNegotiationRoom[^>]+plan=\{exchangePlan\} agentNotice=\{<ClubOwnerExchangeHub /);
   assert.equal((client.match(/<ClubOwnerExchangeHub /g) ?? []).length, 1, "the real notice and dialogs are not duplicated below the roster");
 });
 

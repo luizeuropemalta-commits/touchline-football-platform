@@ -1,3 +1,4 @@
+import { avatarRetentionTarget, matchesAvatarRetentionTarget, type AvatarRetentionTarget } from "./club-owner-avatar-retention-target.ts";
 import { awaitAvatarStep, createAvatarEnvironmentGuard } from "./club-owner-avatar-upload-contract.ts";
 import type { AvatarRetentionRpc } from "./club-owner-avatar-retention-worker.ts";
 const signatures: Readonly<Record<string, readonly string[]>> = Object.freeze({
@@ -8,7 +9,7 @@ const signatures: Readonly<Record<string, readonly string[]>> = Object.freeze({
   touchline_register_qa_avatar_retention_candidate: ["p_project_ref", "p_actor", "p_operation", "p_digest", "p_object_key"],
   touchline_ack_qa_avatar_retention_discovery: ["p_project_ref", "p_actor", "p_operation", "p_attempt", "p_expected_offset", "p_next_offset", "p_complete"],
 });
-type Config = Readonly<{ supabaseOrigin: string; serviceRoleKey: string; assertEnvironment: () => void; fetchImpl: typeof fetch }>;
+type Config = Readonly<{ target?: AvatarRetentionTarget; supabaseOrigin: string; serviceRoleKey: string; assertEnvironment: () => void; fetchImpl: typeof fetch }>;
 
 /** Native-fetch bridge for a server runtime: six fixed RPCs, no SDK downloads,
  * default environment, credentials lookup or retry. One unresolved native job
@@ -16,17 +17,21 @@ type Config = Readonly<{ supabaseOrigin: string; serviceRoleKey: string; assertE
  */
 export function createAvatarRetentionRpc(config: Config): AvatarRetentionRpc {
   const { supabaseOrigin, serviceRoleKey, fetchImpl } = config;
-  if (supabaseOrigin !== "https://xgxbwqxjssxxuihuwmgy.supabase.co" || typeof serviceRoleKey !== "string"
+  if (!matchesAvatarRetentionTarget(config.target, supabaseOrigin, serviceRoleKey) || typeof serviceRoleKey !== "string"
     || !serviceRoleKey.trim() || /[\r\n]/.test(serviceRoleKey) || typeof config.assertEnvironment !== "function"
     || typeof fetchImpl !== "function") throw Error("QA_RETENTION_RPC_CONFIGURATION");
+  const target = avatarRetentionTarget(config.target);
+  const selectedSignatures = Object.fromEntries(Object.entries(signatures).map(([name, args]) => target.mode === "qa"
+    ? [name, args] : [name.replace("_qa_", "_"), ["p_profile_id", ...args]]));
   const assertEnvironment = createAvatarEnvironmentGuard(config.assertEnvironment); let busy = false;
   return async (name, args, outerSignal) => {
     const failure = () => ({ data: null, error: { code: "QA_RETENTION_RPC_UNCONFIRMED" } });
     let timer: ReturnType<typeof setTimeout> | undefined;
     try {
       assertEnvironment(); outerSignal.throwIfAborted();
-      const expected = Object.hasOwn(signatures, name) ? signatures[name] : null;
-      if (busy || !expected || args.p_project_ref !== "xgxbwqxjssxxuihuwmgy" || Object.keys(args).length !== expected.length
+      const expected = Object.hasOwn(selectedSignatures, name) ? selectedSignatures[name] : null;
+      if (busy || !expected || args.p_project_ref !== target.projectRef
+        || (target.mode === "production" && args.p_profile_id !== target.profileId) || Object.keys(args).length !== expected.length
         || expected.some(key => !Object.hasOwn(args, key))
         || Object.values(args).some(value => !["string", "number", "boolean"].includes(typeof value)
           || (typeof value === "string" && value.length > 256) || (typeof value === "number" && !Number.isSafeInteger(value)))) return failure();

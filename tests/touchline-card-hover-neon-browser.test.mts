@@ -4,13 +4,13 @@ import { existsSync, mkdtempSync, readFileSync, realpathSync, statSync, writeFil
 import path from "node:path";
 import { tmpdir } from "node:os";
 import test from "node:test";
-import { chromium, webkit, expect } from "@playwright/test";
+import { chromium, webkit, expect, type Locator } from "@playwright/test";
 import { requireBrowserCapacity } from "./helpers/touchline-browser-capacity.mts";
 
 const root = path.resolve(import.meta.dirname, "..");
 const enabled = process.env.TOUCHLINE_RUN_CARD_NEON_BROWSER_TESTS === "1";
 
-test("real cards light only on pointer hover, animate their perimeter and never duplicate frame bitmap", { skip: !enabled, timeout: 240_000 }, async t => {
+test("real cards keep tier neon without hover, animate their perimeter and never duplicate frame bitmap", { skip: !enabled, timeout: 240_000 }, async t => {
   const capacity = () => requireBrowserCapacity(root, { darwinFreePercent: true,
     allowLowDarwinDisk: process.env.TOUCHLINE_LOCAL_ALLOW_500MIB_RESERVE === "1" && !process.env.CI });
   capacity();
@@ -72,7 +72,7 @@ test("real cards light only on pointer hover, animate their perimeter and never 
           const smallTrace = small.locator('[data-touchline-card-neon-trace="true"]');
           for (let entry = 0; entry < 2; entry++) {
             await page.mouse.move(1, 1);
-            await expect.poll(() => smallTrace.evaluate(node => getComputedStyle(node).opacity)).toBe("0");
+            await expect.poll(() => smallTrace.evaluate(node => getComputedStyle(node).opacity)).toBe("1");
             await small.hover();
             await expect.poll(() => smallTrace.evaluate(node => getComputedStyle(node).opacity)).toBe("1");
             assert.equal(await small.evaluate(node => getComputedStyle(node, "::before").content), "none");
@@ -91,7 +91,7 @@ test("real cards light only on pointer hover, animate their perimeter and never 
           const trace = surface.locator('[data-touchline-card-neon-trace="true"]');
           const run = trace.locator('[data-touchline-card-neon-trace-run="true"]');
           await page.mouse.move(1, 1);
-          await expect.poll(() => trace.evaluate(node => getComputedStyle(node).opacity)).toBe("0");
+          await expect.poll(() => trace.evaluate(node => getComputedStyle(node).opacity)).toBe("1");
           assert.equal(await surface.evaluate(node => getComputedStyle(node, "::before").content), "none", "no duplicate bitmap layer");
           await surface.hover();
           try {
@@ -118,7 +118,13 @@ test("real cards light only on pointer hover, animate their perimeter and never 
           assert.notEqual(after, before, "perimeter light advances");
           await page.screenshot({path:path.join(output, `${engine.name()}-${club}-${tier}-${kind}-hover.png`), fullPage:true});
           await page.mouse.move(1, 1);
-          await expect.poll(() => trace.evaluate(node => getComputedStyle(node).opacity)).toBe("0");
+          await expect.poll(() => trace.evaluate(node => getComputedStyle(node).opacity)).toBe("1");
+          // Geometry uses the resting card; wait for the real hover-leave
+          // transform without disabling the independently animated neon.
+          await expect.poll(() => surface.evaluate(node => {
+            const transform = getComputedStyle(node).transform;
+            return transform === "none" || new DOMMatrixReadOnly(transform).isIdentity;
+          })).toBe(true);
           await page.screenshot({path:path.join(output, `${engine.name()}-${club}-${tier}-${kind}-rest.png`), fullPage:true});
           const crest = expanded.locator('[data-touchline-card-crest="true"]');
           await expect.poll(() => crest.evaluate(node => (node as HTMLImageElement).complete && (node as HTMLImageElement).naturalWidth > 0)).toBe(true);
@@ -156,18 +162,67 @@ test("real cards light only on pointer hover, animate their perimeter and never 
         if(url.origin!==origin || route.request().method()!=="GET") return route.abort();
         if(url.pathname==="/") return route.fulfill({contentType:"text/html",body:`<meta name="viewport" content="width=device-width,initial-scale=1"><style>${globalCss}${bundle.css}body{background:#07120e;color:white}</style><div id="root"></div>`});
         const asset=path.resolve(publicRoot, `.${decodeURIComponent(url.pathname)}`);
-        if(asset.startsWith(publicRoot+path.sep)&&existsSync(asset)&&statSync(asset).isFile()&&realpathSync(asset).startsWith(publicRoot+path.sep)) return route.fulfill({body:readFileSync(asset)});
+        if(asset.startsWith(publicRoot+path.sep)&&existsSync(asset)&&statSync(asset).isFile()&&realpathSync(asset).startsWith(publicRoot+path.sep)) {
+          const extension = path.extname(asset).toLowerCase();
+          const contentType = extension === ".json" ? "application/json" : extension === ".svg" ? "image/svg+xml" : `image/${extension.slice(1)}`;
+          return route.fulfill({ contentType, body: readFileSync(asset) });
+        }
         return route.fulfill({status:503,contentType:"application/json",body:'{"ok":false}'});
       });
+      const requireTouchArtworkDecoded = async (surface: Locator, stage: string) => {
+        for (const asset of ["frame", "crest"] as const) {
+          await expect(surface.locator(`img[data-touchline-card-${asset}="true"]`)).toHaveCount(1);
+        }
+        const images = surface.locator("img");
+        const imageCount = await images.count();
+        assert.ok(imageCount >= 2, `${stage} contains the actual frame and crest`);
+        for (let index = 0; index < imageCount; index++) {
+          const image = images.nth(index);
+          await expect(image).toBeVisible();
+          try {
+            await expect.poll(() => image.evaluate(node => {
+              const img = node as HTMLImageElement;
+              return img.complete && img.naturalWidth > 0 && img.naturalHeight > 0 && img.currentSrc.length > 0;
+            })).toBe(true);
+            const decoded = await image.evaluate(async node => {
+              const img = node as HTMLImageElement;
+              const requestedSource = img.currentSrc;
+              await img.decode();
+              const declaredSources = [img.src, ...img.srcset.split(",").map(candidate => candidate.trim().split(/\s+/)[0]).filter(Boolean)]
+                .map(source => new URL(source, document.baseURI).href);
+              return { complete: img.complete, width: img.naturalWidth, height: img.naturalHeight,
+                currentSrc: img.currentSrc, stableSource: img.currentSrc === requestedSource,
+                declaredSource: declaredSources.includes(img.currentSrc) };
+            });
+            assert.ok(decoded.complete && decoded.width > 0 && decoded.height > 0 && decoded.stableSource && decoded.declaredSource, `${stage} image ${index} must decode its selected artwork`);
+            assert.equal(new URL(decoded.currentSrc).origin, origin);
+            await expect.poll(() => image.evaluate(node => getComputedStyle(node).opacity)).toBe("1");
+          } finally {
+            t.diagnostic(JSON.stringify({ engine: engine.name(), stage, index, image: await image.evaluate(node => {
+              const img = node as HTMLImageElement;
+              return { src: img.src, srcset: img.srcset, currentSrc: img.currentSrc, complete: img.complete,
+                naturalWidth: img.naturalWidth, naturalHeight: img.naturalHeight, opacity: getComputedStyle(img).opacity, rect: img.getBoundingClientRect().toJSON() };
+            }) }));
+          }
+        }
+        await expect(images).toHaveCount(imageCount);
+        const inner = surface.locator('[data-coach-card-inner="true"], [data-card-price-version]');
+        await expect(inner).toHaveCount(1);
+        await expect.poll(() => inner.evaluate(node => getComputedStyle(node).opacity)).toBe("1");
+      };
       await touch.goto(origin);
       await touch.addScriptTag({content:`(() => {${bundle.script}})()`});
+      for (const kind of ["player", "coach"]) {
+        await requireTouchArtworkDecoded(touch.locator(`[data-fixture-kind="${kind}"] .touchline-card-surface`).first(), `${kind}-touch-before`);
+      }
       await touch.screenshot({path:path.join(output,`${engine.name()}-touch-before.png`),fullPage:true});
       t.diagnostic(`Touch fixture ${output}`);
       for(const kind of ["player","coach"]){
         await touch.locator(`[data-fixture-kind="${kind}"] [data-touchline-card-zoom="trigger"]`).tap();
         const surface=touch.locator('[data-card-zoom="expanded"] .touchline-card-surface').first();
         await expect(surface).toBeVisible();
-        assert.equal(await surface.locator('[data-touchline-card-neon-trace="true"]').evaluate(node=>getComputedStyle(node).opacity),"0","touch/zoom cannot leave neon lit");
+        await requireTouchArtworkDecoded(surface, `${kind}-touch-zoom`);
+        assert.equal(await surface.locator('[data-touchline-card-neon-trace="true"]').evaluate(node=>getComputedStyle(node).opacity),"1","touch/zoom keeps the permanent tier neon visible");
         await touch.screenshot({path:path.join(output,`${engine.name()}-${kind}-touch.png`),fullPage:true});
         await touch.keyboard.press("Escape");
       }

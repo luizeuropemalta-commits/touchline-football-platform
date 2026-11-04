@@ -17,6 +17,7 @@ import * as catalogueLocale from "../lib/touchlineArena/catalogue-locale.ts";
 import { AuthSessionMissingError } from "@supabase/supabase-js";
 import { cardGoalsLeaderIds } from "../lib/touchlineArena/card-goals-leadership.ts";
 import { TOUCHLINE_PRESEASON_RANKING_STATE } from "../lib/touchlineArena/card-ranking-live.ts";
+import * as seasonPresentation from "../lib/touchlineArena/player-season-presentation.ts";
 import * as rankingSummary from "../lib/touchlineArena/published-ranking-summary.ts";
 import type { ClubOwnerStandingsRead } from "../lib/touchlineArena/club-owner-standings-server.ts";
 
@@ -37,6 +38,7 @@ function loadPage(path: string, modules: Record<string, unknown>, exportName = "
     if (name === "@/lib/touchlineArena/ranking-load-diagnostics") return { createRankingLoadDiagnostics: () => createRankingLoadDiagnostics({}) };
     if (name === "@/lib/touchlineArena/rankings-highlight-projection") return { projectTouchlineRankingsHighlights };
     if (name === "@/lib/touchlineArena/card-goals-leadership") return { cardGoalsLeaderIds };
+    if (name === "@/lib/touchlineArena/player-season-presentation") return seasonPresentation;
     if (name === "@/lib/touchlineArena/published-ranking-summary") return rankingSummary;
     if (name === "@/components/touchline/cards/TouchlineCardLeadershipProvider") return {
       useTouchlineCardLeadershipAuthority: () => null,

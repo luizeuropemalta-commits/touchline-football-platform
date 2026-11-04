@@ -39,33 +39,21 @@ const componentStyles = readFileSync(
 const page = readFileSync(new URL("../app/touchline-clubs/page.tsx", import.meta.url), "utf8");
 const directoryLoad = () => import("../lib/touchlineArena/club-hub-directory-i18n.ts");
 
-test("ClubHub exposes the seven canonical player and coach borders with real representative boundaries", () => {
+test("ClubHub shows canonical current rankings while the seven official card artworks remain intact", () => {
   assert.equal(TOUCHLINE_COACH_TIER_GALLERY.length, 7);
-  assert.equal(new Set(TOUCHLINE_COACH_TIER_GALLERY.map((item) => item.tierKey)).size, 7);
-
+  assert.equal(new Set(TOUCHLINE_COACH_TIER_GALLERY.map(item => item.tierKey)).size, 7);
   for (const item of TOUCHLINE_COACH_TIER_GALLERY) {
     assert.match(item.compactArtUrl, /^\/touchlineArena\/cards\/templates\/live-compact\/coaches\/.+\.webp$/);
-    assert.equal(
-      existsSync(new URL(`../public${item.compactArtUrl}`, import.meta.url)),
-      true,
-      `missing local coach category asset for ${item.tierKey}`,
-    );
+    assert.equal(existsSync(new URL(`../public${item.compactArtUrl}`, import.meta.url)), true);
   }
-
-  assert.match(component, /alt=""/);
   assert.equal((component.match(/<ul className=\{styles\.grid\}/g) ?? []).length, 2);
-  assert.match(component, /selectTouchlinePlayerTierRepresentatives\(playerCards\)/);
-  assert.match(component, /selectTouchlineCoachTierRepresentativesFromRanking\(coachRanking\)/);
-  assert.match(component, /TouchlineEliteExactCard/);
-  assert.match(component, /TouchlineCoachCard/);
-  assert.match(component, /assetLoading="eager"/);
-  assert.match(component, /frameLoading="eager"/);
-  assert.match(componentStyles, /data-coach-card-inner="true"/);
-  assert.match(componentStyles, /data-touchline-card-frame="true"/);
-  assert.match(component, /dictionary\.representativePendingDescription/);
-  assert.match(component, /data-coach-representative="pending"/);
-  assert.match(component, /tl-shield-lime\.svg/);
-  assert.doesNotMatch(component, /gallery\.compactArtUrl/);
+  assert.doesNotMatch(component, /selectTouchlinePlayerTierRepresentatives|selectTouchlineCoachTierRepresentativesFromRanking|data-coach-representative/);
+  assert.match(component, /playerEntries\?\.slice\(0, 7\)/);
+  assert.match(component, /coachRanking\.rows\.slice\(0, 7\)/);
+  assert.match(component, /TouchlineEliteExactCard/); assert.match(component, /TouchlineCoachCard/);
+  assert.match(component, /assetLoading="eager"/); assert.match(component, /frameLoading="eager"/);
+  assert.match(componentStyles, /data-coach-card-inner="true"/); assert.match(componentStyles, /data-touchline-card-frame="true"/);
+  assert.match(component, /dictionary\.unavailable/); assert.match(component, /dictionary\.empty/);
   assert.doesNotMatch(component, /TOUCHLINE_DEMO_COACH|competition-card-offer|retailPrice|touchCredit|\bfetch\(/);
 });
 
@@ -120,7 +108,7 @@ function realBrandHeader(menu: Record<string, unknown>) {
   });
 }
 
-test("the public ClubHub keeps language selection at the top and player borders before coach borders without the league table", async () => {
+test("the public ClubHub keeps language selection at the top and player ranking before coach ranking without the league table", async () => {
   const forbid = () => assert.fail("Menu SSR must not start auth, lifecycle or football reads");
   const menuSource = readFileSync(new URL("../components/touchline/AccountLocaleMenu.tsx", import.meta.url), "utf8");
   const menu = compileMenuBoundary(menuSource, {
@@ -145,7 +133,8 @@ test("the public ClubHub keeps language selection at the top and player borders 
       "@/lib/touchlineArena/catalogue-locale": catalogueLocale,
       "@/lib/touchlineArena/account-locale-context-server": { loadAccountLocaleContext: async () => { contextLoads++; return context; } },
       "@/lib/touchlineArena/coach-ranking-server": { loadTouchLineCoachRanking: forbid },
-      "@/lib/touchlineArena/ranked-card-catalog-server": { loadTouchlinePublishedCardShowcaseCatalog: forbid },
+      "@/lib/touchlineArena/current-player-ranking-server": { loadTouchlineCurrentPlayerRankingView: forbid },
+      "@/lib/touchlineArena/coach-ranking-snapshot-server": { EMPTY_COACH_RANKING: { phase: "unavailable", snapshotId: null, rows: [] } },
       "@/lib/touchlineArena/demo-data": clubs,
       "@/lib/touchlineArena/i18n": i18n,
       "@/lib/touchlineArena/club-hub-directory-i18n": await directoryLoad(),
@@ -179,9 +168,9 @@ test("the public ClubHub keeps language selection at the top and player borders 
       assert.equal(choices[index].includes('selected=""'), locale === effective);
     }
   }
-  assert.match(page, /loadTouchlinePublishedCardShowcaseCatalog\(\)/);
+  assert.match(page, /loadTouchlineCurrentPlayerRankingView\(\)/);
   assert.match(page, /loadTouchLineCoachRanking\(\)/);
-  assert.match(page, /<TouchlineCoachCategoryShowcase draftLocalesEnabled=\{draftLocalesEnabled\} locale=\{locale\} playerCards=\{publishedPlayerCards\} coachRanking=\{coachRanking\} \/>/);
+  assert.match(page, /<TouchlineCoachCategoryShowcase draftLocalesEnabled=\{draftLocalesEnabled\} locale=\{locale\} playerEntries=\{playerEntries\} coachRanking=\{coachRanking\} \/>/);
   assert.doesNotMatch(page, /TouchlineOfficialLeagueTable|loadTouchlineOfficialLeagueTable|official-league-table/);
 
   const playerSection = component.indexOf("touchline-player-border-title");
@@ -223,8 +212,8 @@ test("directory catalogue keeps six exact messages, protected names and six clos
   for (const locale of [undefined, null, "", "pt", "constructor", "__proto__"]) assert.deepEqual(mod.getTouchlineClubHubDirectoryCopy(locale), directoryExpected["en-GB"]);
 });
 
-async function directoryView({ lang, future = false, sentinel = false, context = { mode: "guest" }, malicious = false }: {
-  lang: unknown; future?: boolean; sentinel?: boolean; context?: object; malicious?: boolean;
+async function directoryView({ lang, future = false, sentinel = false, context = { mode: "guest" }, malicious = false, footballFailure }: {
+  lang: unknown; future?: boolean; sentinel?: boolean; context?: object; malicious?: boolean; footballFailure?: "players" | "coach" | "both";
 }) {
   // Run the real async page; only auth/data/network and leaf components are doubles.
   // Resolve its existing async showcase separately, without asking SSR to run RSC.
@@ -243,8 +232,9 @@ async function directoryView({ lang, future = false, sentinel = false, context =
     "@/components/touchline/TouchlineBrandHeader": { default: Leaf },
     "@/lib/touchlineArena/catalogue-locale": catalogueLocale,
     "@/lib/touchlineArena/account-locale-context-server": { loadAccountLocaleContext: async () => { contextLoads++; return context; } },
-    "@/lib/touchlineArena/coach-ranking-server": { loadTouchLineCoachRanking: async () => { loaders.push("coach"); return { snapshotId: "unchanged-snapshot" }; } },
-    "@/lib/touchlineArena/ranked-card-catalog-server": { loadTouchlinePublishedCardShowcaseCatalog: async () => { loaders.push("cards"); return []; } },
+    "@/lib/touchlineArena/coach-ranking-server": { loadTouchLineCoachRanking: async () => { loaders.push("coach"); if (footballFailure === "coach" || footballFailure === "both") throw new Error("synthetic-coach-unavailable"); return { snapshotId: "unchanged-snapshot", currentRevision: "current-coach-revision" }; } },
+    "@/lib/touchlineArena/current-player-ranking-server": { loadTouchlineCurrentPlayerRankingView: async () => { loaders.push("players"); if (footballFailure === "players" || footballFailure === "both") throw new Error("synthetic-player-unavailable"); return { phase: "ready", snapshotId: "player-snapshot", currentRevision: "current-membership-revision", rows: [] }; } },
+    "@/lib/touchlineArena/coach-ranking-snapshot-server": { EMPTY_COACH_RANKING: { phase: "unavailable", snapshotId: null, rows: [] } },
     "@/lib/touchlineArena/demo-data": { ...clubs, TOUCHLINE_ENGLAND_CLUBS_BY_RANK: registry },
     "@/lib/touchlineArena/i18n": i18n,
     "@/lib/touchlineArena/club-hub-directory-i18n": { getTouchlineClubHubDirectoryCopy: (value: string, enabled = false) => {
@@ -308,14 +298,31 @@ test("directory keeps captured account context, query fallback and independent s
     const view = await directoryView({ lang: "pt-BR", context });
     assert.equal(view.contextLoads, 1); assert.equal(view.brandHeader.props.accountLocaleContext, context);
     const result = await (view.showcase.type as (props: object) => Promise<React.ReactElement<Record<string, unknown>>>)(view.showcase.props);
-    assert.deepEqual(view.loaders, ["cards", "coach"]);
+    assert.deepEqual(view.loaders, ["players", "coach"]);
     const leaves = childElements(result); assert.equal(leaves[0].props.initialCoachRankingSnapshotId, "unchanged-snapshot");
-    assert.equal(leaves[1].props.locale, "pt-BR"); assert.deepEqual(leaves[1].props.playerCards, []);
-    assert.deepEqual(leaves[1].props.coachRanking, { snapshotId: "unchanged-snapshot" });
+    assert.equal(leaves[0].props.initialPlayerRankingSnapshotId, "player-snapshot");
+    assert.equal(leaves[0].props.initialCurrentPlayerRankingRevision, "current-membership-revision");
+    assert.equal(leaves[1].props.locale, "pt-BR"); assert.deepEqual(leaves[1].props.playerEntries, []);
+    assert.equal(leaves[0].props.initialCurrentCoachRankingRevision, "current-coach-revision");
+    assert.deepEqual(leaves[1].props.coachRanking, { snapshotId: "unchanged-snapshot", currentRevision: "current-coach-revision" });
   }
   for (const lang of [undefined, null, "", "unknown", ["pt-BR", "en-GB"]]) {
     const view = await directoryView({ lang }); assert.equal(view.effective, "en-GB");
     assert.ok(view.grid.every(card => (card.props.href as string).endsWith("?lang=en-GB")));
+  }
+});
+
+test("directory ranking read failure keeps the independent section and never substitutes historical representatives", async () => {
+  for (const footballFailure of ["players", "coach", "both"] as const) {
+    const view = await directoryView({ lang: "pt-BR", footballFailure });
+    const result = await (view.showcase.type as (props: object) => Promise<React.ReactElement<Record<string, unknown>>>)(view.showcase.props);
+    const [refresh, gallery] = childElements(result);
+    assert.equal(view.contextLoads, 1); assert.deepEqual(view.loaders, ["players", "coach"]);
+    assert.equal(gallery.props.playerEntries === null, footballFailure !== "coach");
+    assert.equal(refresh.props.initialPlayerRankingSnapshotId, footballFailure === "coach" ? "player-snapshot" : null);
+    assert.equal(refresh.props.initialCurrentPlayerRankingRevision, footballFailure === "coach" ? "current-membership-revision" : null);
+    assert.equal(refresh.props.initialCurrentCoachRankingRevision, footballFailure === "players" ? "current-coach-revision" : null);
+    assert.deepEqual(gallery.props.coachRanking, footballFailure === "players" ? { snapshotId: "unchanged-snapshot", currentRevision: "current-coach-revision" } : { phase: "unavailable", snapshotId: null, rows: [] });
   }
 });
 

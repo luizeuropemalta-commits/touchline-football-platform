@@ -97,7 +97,6 @@ body::before {
     radial-gradient(ellipse 82% 16% at 50% 0%, rgba(146, 207, 255, .22), transparent 70%),
     repeating-linear-gradient(102deg, transparent 0 7.5%, rgba(89, 188, 255, .085) 8.2%, transparent 9.6% 16%),
     linear-gradient(180deg, rgba(255,255,255,.02), transparent 38%);
-  filter: blur(.2px);
   opacity: .82;
 }
 button, a, input, textarea, select { font: inherit; }
@@ -889,6 +888,13 @@ a, button { outline: none; }
   user-select: none;
 }
 
+/* Player shells can reserve controls or a column wider than their artwork.
+   Follow that renderer's canvas dimensions; coach presentation is unchanged. */
+[data-touchline-card-neon-trace="true"][data-touchline-card-neon-trace-variant="player"] {
+  width: var(--touchline-card-neon-frame-width, 100%);
+  height: var(--touchline-card-neon-frame-height, 100%);
+}
+
 [data-touchline-card-neon-trace-base="true"] {
   fill: none;
   stroke: currentColor;
@@ -907,17 +913,35 @@ a, button { outline: none; }
   stroke-width: 2.2;
   stroke-dasharray: 16 84;
   stroke-dashoffset: 0;
-  opacity: .9;
-  transition: opacity 240ms ease;
   animation: touchline-card-perimeter-trace 2s linear infinite;
   animation-play-state: var(--touchline-decoration-motion, paused);
 }
+
+/* Opacity belongs to individual strokes, not the animated group: avoid
+   flattening its complete bounds into another translucent card surface. */
+[data-touchline-card-neon-trace-run-core="true"],
+path[data-touchline-card-neon-trace-run="true"] {
+  opacity: .9;
+  transition: opacity 240ms ease;
+}
+
+[data-touchline-card-neon-trace-halo] {
+  display: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+[data-touchline-card-neon-trace-halo="base"] { stroke-width: 3.6; opacity: .07; }
+[data-touchline-card-neon-trace-halo="run-outer"] { stroke-width: 8.2; opacity: .06; }
+[data-touchline-card-neon-trace-halo="run-inner"] { stroke-width: 4.8; opacity: .18; }
 
 .touchline-card-surface:is(:hover, :focus-within, [data-neon-active="true"]) [data-touchline-card-neon-trace-base="true"] {
   opacity: .4;
 }
 
-.touchline-card-surface:is(:hover, :focus-within, [data-neon-active="true"]) [data-touchline-card-neon-trace-run="true"] {
+.touchline-card-surface:is(:hover, :focus-within, [data-neon-active="true"]) [data-touchline-card-neon-trace-run-core="true"],
+.touchline-card-surface:is(:hover, :focus-within, [data-neon-active="true"]) path[data-touchline-card-neon-trace-run="true"] {
   opacity: 1;
 }
 
@@ -926,17 +950,10 @@ a, button { outline: none; }
   to { stroke-dashoffset: -100; }
 }
 
-/* Keep the original animated perimeter; never duplicate the frame bitmap.
-   A zoomed/selected/focused card stays unlit until a real hover pointer enters.
-   Keyboard focus remains represented by the zoom trigger's focus marker. */
+/* The original tier perimeter stays visible for mouse, keyboard and touch.
+   Its motion runs only while visible; no extra copy of the card is created. */
 .touchline-card-surface[data-card-motion="true"] [data-touchline-card-neon-trace="true"] {
-  opacity: 0;
-  transition: opacity 180ms ease;
-}
-@media (hover: hover) and (pointer: fine) {
-  .touchline-card-surface[data-card-motion="true"]:hover [data-touchline-card-neon-trace="true"] {
-    opacity: 1;
-  }
+  opacity: 1;
 }
 
 [data-touchline-card-crest-host="true"] {
@@ -947,7 +964,7 @@ a, button { outline: none; }
   place-items: center;
   isolation: isolate;
   overflow: visible;
-  transform: translateZ(0);
+  transform: none;
   transform-origin: center;
   transition: transform 180ms ease;
 }
@@ -1409,6 +1426,20 @@ a, button { outline: none; }
   }
 }
 
+/* Phone landscape remains a touch surface above the portrait breakpoint. */
+@media (pointer: coarse) and (orientation: landscape) {
+  .auth-entry-content input:not([type="checkbox"]):not([type="radio"]),
+  .auth-entry-content select,
+  [data-touchline-customer-utility] .auth-language-switcher select {
+    font-size: 16px;
+  }
+
+  .auth-entry-content .auth-language-switcher select,
+  [data-touchline-customer-utility] .auth-language-switcher select {
+    min-height: 44px;
+  }
+}
+
 .auth-cinematic-shade {
   position: absolute;
   inset: 0;
@@ -1443,4 +1474,28 @@ a, button { outline: none; }
   .auth-cinematic-video { display: none; }
   .auth-cinematic-media { background-position: center; }
   .auth-route-transition { transition-duration: 1ms; }
+}
+
+/* Touch devices retain native pinch/pan and the coloured perimeter. Avoid
+   allocating filtered card-sized surfaces as Safari enlarges the page. */
+@media (hover: none), (pointer: coarse) {
+  :root { --touchline-modal-blur: none; }
+  [data-touchline-card-neon-trace="true"] { filter: none; }
+  /* Layered vector strokes retain a soft tier-coloured halo without filtering
+     the card-sized SVG. The sharp original base/core remain on top. */
+  [data-touchline-card-neon-trace-halo] { display: inline; }
+}
+
+/* Touch surfaces keep the panel artwork without extra full-panel filter layers. */
+@media (hover: none), (pointer: coarse) {
+  .glass,
+  .auth-cinematic .stadium-scoreboard {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  .glass-hover,
+  .glass-hover:hover {
+    transform: none;
+    filter: none;
+  }
 }

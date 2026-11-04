@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useMemo, useRef, useState, type PointerEvent } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, RotateCcw, Save, ShieldCheck } from "lucide-react";
+import { verifiedTimestampLabel } from "@/lib/touchlineArena/verified-timestamp-label";
 
 import TouchlinePitchSurface from "@/components/touchline/pitch/TouchlinePitchSurface";
 import {
@@ -171,7 +172,7 @@ export default function FormationCalibrationStudio({ locale, registry, history }
 
       <section className={styles.history}>
         <header><span>VERSION HISTORY</span><h2>{formationCode}</h2></header>
-        <div>{formationHistory.length ? formationHistory.map((entry) => <article key={entry.id}><div><strong>v{entry.geometryVersion}</strong><span>{entry.status}</span>{entry.rollbackOfVersion ? <small>rollback of v{entry.rollbackOfVersion}</small> : null}</div><p>{entry.changeReason}</p><time>{new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(new Date(entry.publishedAt))}</time><button type="button" disabled={entry.status === "published" || busy} onClick={() => void command({ action: "rollback", formationCode, targetVersion: entry.geometryVersion, reason: `Rollback to v${entry.geometryVersion}: ${reason}` })}>{statusCopy(locale, "Rollback as new version", "Rollback como nova versão")}</button></article>) : <p>{statusCopy(locale, "Code default is active; the first validated save creates version 1.", "O padrão do código está ativo; o primeiro save validado cria a versão 1.")}</p>}</div>
+        <div>{formationHistory.length ? formationHistory.map((entry) => <article key={entry.id}><div><strong>v{entry.geometryVersion}</strong><span>{entry.status}</span>{entry.rollbackOfVersion ? <small>rollback of v{entry.rollbackOfVersion}</small> : null}</div><p>{entry.changeReason}</p><time dateTime={entry.publishedAt}>{verifiedTimestampLabel(entry.publishedAt, "Europe/Malta")}</time><button type="button" disabled={entry.status === "published" || busy} onClick={() => void command({ action: "rollback", formationCode, targetVersion: entry.geometryVersion, reason: `Rollback to v${entry.geometryVersion}: ${reason}` })}>{statusCopy(locale, "Rollback as new version", "Rollback como nova versão")}</button></article>) : <p>{statusCopy(locale, "Code default is active; the first validated save creates version 1.", "O padrão do código está ativo; o primeiro save validado cria a versão 1.")}</p>}</div>
       </section>
     </main>
   );

@@ -1,3 +1,6 @@
+import { buildTouchlineRankingSnapshot } from '../lib/touchlineArena/card-ranking.ts';
+import { TOUCHLINE_CARD_PRICE_TABLE_VERSION } from '../lib/touchlineArena/card-rules.ts';
+import { projectTouchlineCurrentPlayerRanking } from '../lib/touchlineArena/current-player-ranking.ts';
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { stripTypeScriptTypes } from "node:module";
@@ -117,8 +120,10 @@ test("50 ranking consumers share the real store and coalesce mount revalidation 
   assert.equal(notified, 50);
   assert.equal(page.requests.length, 3, "all new mounts require only one newer signal");
   await page.finish(2, sportsSignal());
+  assert.equal(notified, 50, "membership must be read even if immutable digest is unchanged");
+  await page.finish(3, { ok: true, data: sports() });
   assert.equal(notified, 100);
-  assert.equal(page.requests.length, 3, "the immutable sports payload is fetched only once");
+  assert.equal(page.requests.length, 4, "one shared current-view read for all consumers");
   assert.equal(page.events.get("online")?.size, 1);
   assert.equal(page.timers.size, 1);
   stops.slice(0, 49).forEach(stop => stop());
@@ -128,7 +133,7 @@ test("50 ranking consumers share the real store and coalesce mount revalidation 
   assert.ok([...page.events.values()].every(set => set.size === 0));
 });
 
-test("30 sports consumers accept one frozen payload with the signal, reuse it until publication changes", async () => {
+test("30 sports consumers share fresh current views while preserving the immutable source", async () => {
   const page = harness();
   const seen: unknown[] = [];
   const stops = Array.from({ length: 30 }, () => page.store.subscribe(read => seen.push(read.sportsPublication), true));
@@ -142,11 +147,14 @@ test("30 sports consumers accept one frozen payload with the signal, reuse it un
   const previous = page.store.getSnapshot()!.sportsPublication!;
   assert.equal(Object.isFrozen(previous.live.fixtures[0].homeTeam), true);
   page.fire(10_000); await page.finish(2, sportsSignal());
-  assert.equal(page.requests.length, 3, "unchanged immutable publication needs no second payload request");
+  assert.equal(page.requests.length, 4, "current membership is re-read on the same cadence");
   assert.equal(page.store.getSnapshot()!.sportsPublication, previous);
-  page.fire(10_000); await page.finish(3, sportsSignal("b"));
-  assert.equal(page.store.getSnapshot()!.sportsPublication, previous);
-  await page.finish(4, { ok: true, data: sports("b", 1) });
+  await page.finish(3, { ok: true, data: sports() });
+  assert.deepEqual(page.store.getSnapshot()!.sportsPublication, previous);
+  const fresh = page.store.getSnapshot()!.sportsPublication;
+  page.fire(10_000); await page.finish(4, sportsSignal("b"));
+  assert.equal(page.store.getSnapshot()!.sportsPublication, fresh);
+  await page.finish(5, { ok: true, data: sports("b", 1) });
   assert.equal(page.store.getSnapshot()!.sportsPublication!.live.fixtures[0].homeScore, 1, "VAR correction replaces, not adds");
   assert.equal(previous.live.fixtures[0].homeScore, 2, "previous immutable snapshot is preserved");
   stops.forEach(stop => stop());
@@ -327,4 +335,31 @@ test("revalidation during timeout resumes through one backoff; hidden abort wait
   page.hidden(false); await page.finish(2, state("resumed"));
   assert.equal(page.requests.length, 3);
   assert.equal(page.store.getSnapshot()!.state.playerRankingSnapshotId, "resumed"); stop();
+});
+
+
+test("same raw snapshot A -> outside league -> A refreshes current eligibility without a new publication", async () => {
+  const id = (n: number) => `10000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
+  const built = buildTouchlineRankingSnapshot({snapshotId:'A',roundId:'1',status:'published',generatedAt:'2026-11-04T10:00:00Z',source:'sportmonks-audited',
+    players:['GK','CB','RB','CM','RW','ST'].map((position,i)=>({playerId:id(i+10),providerPlayerId:String(200+i),name:`Player ${i}`,clubName:'Club',position,totalRating:100-i,minutesPlayed:90,appearances:1}))});
+  const raw = {phase:'ranked' as const,leagueKey:'touchline-england',snapshotId:'A',roundId:'1',publishedAt:'2026-11-04T10:00:00Z',priceTableVersion:TOUCHLINE_CARD_PRICE_TABLE_VERSION,
+    scoringVersion:'player_scoring_v4' as const,coverageStatus:'complete_for_scoring' as const,seasonId:id(2),fixtureIds:['1'],expectedFixtureIds:['1'],totalScorePoints:0,players:built.players};
+  const scope = {competitionId:id(1),seasonId:id(2),providerSeasonId:'70001',effectiveSeason:'2026-27'};
+  const admissions = raw.players.map(row=>({playerId:row.playerId,providerPlayerId:String(row.providerPlayerId),clubId:id(3),membershipId:id(Number(row.providerPlayerId)+100),status:'eligible' as const}));
+  const envelope = sports();
+  const page = harness(); const seen: Array<string | null> = [];
+  const stop = page.store.subscribe(read=>seen.push(read.sportsPublication?.currentPlayerRanking?.revision ?? null),true);
+  const states = [admissions, admissions.map(row=>row.playerId===id(10)?{...row,status:'outside-league' as const,membershipId:null}:row), admissions];
+  const revisions = ['1'.repeat(64),'2'.repeat(64),'1'.repeat(64)];
+  for (let i=0;i<states.length;i++) {
+    if(i)page.fire(10_000);
+    await page.finish(i*2,{...sportsSignal(),playerRankingSnapshotId:'A'});
+    const currentPlayerRanking=projectTouchlineCurrentPlayerRanking({raw,scope,admissions:states[i]!,revision:revisions[i]!});
+    assert.equal(currentPlayerRanking.phase,'ready');
+    await page.finish(i*2+1,{ok:true,data:{...envelope,publication:{...envelope.publication,playerRankingSnapshotId:'A'},playerRanking:raw,currentPlayerRanking}});
+    const accepted=page.store.getSnapshot()!.sportsPublication!;
+    assert.deepEqual(accepted.playerRanking,parseTouchlineSportsPublication({...envelope,publication:{...envelope.publication,playerRankingSnapshotId:'A'},playerRanking:raw})!.playerRanking);
+    assert.equal(accepted.currentPlayerRanking!.state!.players.some(row=>row.playerId===id(10)),i!==1);
+  }
+  assert.deepEqual(seen,revisions);assert.equal(page.requests.length,6);stop();
 });

@@ -1,3 +1,4 @@
+import { validClubSeasonSession, type ClubSeasonPaymentMode } from "./club-season-payment-contract.ts";
 const responseHeaders = { "Cache-Control": "private, no-store" };
 const fail = (error: string, status: number) => Response.json({ ok: false, error }, { status, headers: responseHeaders });
 
@@ -10,6 +11,7 @@ export type ClubSeasonCheckoutStatus = {
 /** This endpoint reads the committed order. Return URL parameters never grant access. */
 export async function handleClubSeasonCheckoutStatus(request: Request, dependencies: {
   configured(): boolean;
+  payment?: { mode: ClubSeasonPaymentMode; accountId: string };
   authenticate(): Promise<string | null>;
   read(ownerId: string, sessionId: string): Promise<unknown>;
 }): Promise<Response> {
@@ -19,7 +21,7 @@ export async function handleClubSeasonCheckoutStatus(request: Request, dependenc
     if (!ownerId) return fail("AUTH_REQUIRED", 401);
     const params = new URL(request.url).searchParams;
     const sessionId = params.get("session_id");
-    if (params.size !== 1 || !sessionId || sessionId.length > 255 || !/^cs_test_[A-Za-z0-9]+$/.test(sessionId)) {
+    if (params.size !== 1 || !sessionId || sessionId.length > 255 || !validClubSeasonSession(sessionId, dependencies.payment?.mode ?? "test")) {
       return fail("INVALID_REQUEST", 400);
     }
     const value = await dependencies.read(ownerId, sessionId);
@@ -27,6 +29,9 @@ export async function handleClubSeasonCheckoutStatus(request: Request, dependenc
     if (typeof value !== "object" || Array.isArray(value)) throw new Error("Invalid order");
     const row = value as Record<string, unknown>;
     // Check identity even though the adapter also restricts the database query.
+    if (dependencies.payment && (row.payment_mode !== dependencies.payment.mode || row.provider_account !== dependencies.payment.accountId)) {
+      return fail("SEASON_ORDER_NOT_FOUND", 404);
+    }
     if (row.user_id !== ownerId || row.session_id !== sessionId) return fail("SEASON_ORDER_NOT_FOUND", 404);
     if (!["pending", "paid", "review", "expired", "refunded"].includes(String(row.state))
       || !["standard", "master", "vip"].includes(String(row.plan))
@@ -37,7 +42,7 @@ export async function handleClubSeasonCheckoutStatus(request: Request, dependenc
       status: row.state === "refunded" ? "review" : row.state as ClubSeasonCheckoutStatus["status"],
       plan: row.plan as ClubSeasonCheckoutStatus["plan"], seasonEndsAt: row.season_ends_at,
     };
-    return Response.json({ ok: true, ...result }, { headers: responseHeaders });
+    return Response.json({ ok: true, ...result, ...(dependencies.payment?.mode === "live" ? { paymentMode: "live" } : {}) }, { headers: responseHeaders });
   } catch (error) {
     if (error instanceof Error && error.message === "SEASON_CUSTOMER_ACCESS_REQUIRED") return fail(error.message, 403);
     return fail("SEASON_CHECKOUT_UNAVAILABLE", 503);

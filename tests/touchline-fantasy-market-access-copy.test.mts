@@ -151,7 +151,8 @@ test("actual complete window section preserves calendar vs permission, read-only
             const status = state ? (open ? expected.open : expected.closed) : expected.unavailable;
             const chosenSection = marketPage ? elements.find(node => hasClass(node, "myClubMarketStatus") && node.getText(tree).includes('data-market-status-compact="true"'))! : section;
             const html = renderMarkup(chosenSection, { locale, pt: locale === "pt-BR", marketPage, snapshot: { entitlementActive }, activeGameweek: state ? { state } : null, deadlineReached });
-            assert.ok(html.includes(`data-market-open="${open}"`));
+            if (marketPage && !state) assert.doesNotMatch(html, /data-market-open=/);
+            else assert.ok(html.includes(`data-market-open="${open}"`));
             assert.ok(html.includes(`aria-label="${expected.statusAria}"`));
             if (!marketPage) {
             assert.ok(html.includes(`<span>${expected.lineupWindow}</span>`));

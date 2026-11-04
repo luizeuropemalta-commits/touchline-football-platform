@@ -112,9 +112,9 @@ export function createTouchlineLivePresentationStore() {
           scheduleAfter(ERROR_RETRY_MS);
           return;
         }
-        if (sportsPublication?.publication.contentDigest !== state.livePresentationSnapshotId
-          || sportsPublication.publication.playerRankingSnapshotId !== state.playerRankingSnapshotId
-          || sportsPublication.publication.coachRankingSnapshotId !== state.coachRankingSnapshotId) {
+        // Current membership can change without any historical sports snapshot
+        // changing. Re-read it on this existing shared cadence, never per card.
+        {
           const publicationResponse = await fetch(PUBLICATION_URL, { cache: "no-store", signal: controller.signal });
           if (!isCurrent()) return;
           if (!publicationResponse.ok) { scheduleAfter(ERROR_RETRY_MS); return; }

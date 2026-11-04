@@ -536,7 +536,8 @@ test("missing owner and empty facts remain honest fallbacks without invented acc
     assert.match(html, new RegExp(`<h2 id="clubowner-heading">${baseline[locale].nameUnavailable}`));
     assert.ok(html.includes(`alt="${baseline[locale].nameUnavailable}"`));
     assert.match(html, /src="\/icons\/touchline-512.png"/);
-    assert.equal((html.match(/<dd[^>]*>—<\/dd>/g) ?? []).length, 2);
+    assert.equal((html.match(/<dd[^>]*>—<\/dd>/g) ?? []).length, 1);
+    assert.ok(html.includes(`<strong aria-label="${profileMetrics.getClubOwnerProfileMetricsCopy(locale).unavailable}">—</strong>`), "unavailable rank remains honest in the cover trophy");
     assert.equal((html.match(/disabled=""/g) ?? []).length, 1);
   }
 });
@@ -549,7 +550,7 @@ test("actual rendered header and plan catalogue use the same selected locale", (
   assert.ok(calls.every(locale => locale === 'pt-BR'));
   for (const key of ["nameUnavailable", "photoAria", "photoUnavailable", "yourProfile", "plan", "marketPowerUnavailable", "planStandard", "planActive"]) assert.ok(html.includes(markerCopy[key]), key);
   for (const key of ["proMember", "proAccess", "proPrivileges"]) assert.ok(!html.includes(markerCopy[key]));
-  assert.match(html, /<div class="title"><h1>ClubOwner<\/h1><\/div>/);
+  assert.match(html, /<div class="title"><h1>ClubOwner<\/h1><a[^>]*data-clubowner-ranking-link="true"/);
   assert.doesNotMatch(html, /<span>TOUCHLINE<\/span>/);
   assert.equal((html.match(/disabled=""/g) ?? []).length, 1);
 });
@@ -619,7 +620,7 @@ test("an account without a plan stays unassigned while exploration offers exactl
   assert.doesNotMatch(html, /data-current-plan="true"/);
 });
 
-test("profile preserves identity with ranking and followers only across eight locales", async () => {
+test("cover trophy owns ranking while portrait facts contain followers only across eight locales", async () => {
   assert.equal(profileMetrics.getClubOwnerProfileMetricsCopy("pt-BR").ranking, "Ranking");
   assert.equal(profileMetrics.getClubOwnerProfileMetricsCopy("en-GB").ranking, "Ranking");
   const owner = { name: "Real Owner", avatarUrl: "/actual-owner.webp", city: "Old city", nationality: "Old nation", since: "1900" };
@@ -634,12 +635,17 @@ test("profile preserves identity with ranking and followers only across eight lo
     for (const label of [labels.followers, labels.ranking]) assert.ok(html.includes(label));
     assert.doesNotMatch(html, new RegExp(labels.points.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
     const facts = html.match(/<dl class="facts">([\s\S]*?)<\/dl>/)?.[1] ?? "";
-    assert.ok(facts.indexOf(labels.ranking) >= 0);
-    assert.ok(facts.indexOf(labels.followers) > facts.indexOf(labels.ranking));
+    assert.equal(facts.includes(labels.ranking), false);
+    assert.ok(facts.includes(labels.followers));
+    assert.equal((facts.match(/<dt>/g) ?? []).length, 1);
+    const rankingLink = html.match(/<a[^>]*data-clubowner-ranking-link="true"[^>]*>([\s\S]*?)<\/a>/)?.[1] ?? "";
+    assert.ok(rankingLink.includes(labels.ranking));
+    assert.match(rankingLink, /<svg[^>]*aria-hidden="true"/);
+    assert.ok(html.includes(`href="/rankings?lang=${encodeURIComponent(code)}"`));
     assert.doesNotMatch(html, /class="followers"/);
     assert.match(html, /class="photoStatus" id="clubowner-photo-status" role="status"/);
     const expectedRank = { "en-GB": "7th", "pt-BR": "7º", "es-ES": "7.º", "it-IT": "7º", "fr-FR": "7e", "ar-SA": "المركز ٧", "tr-TR": "7.", "de-DE": "7." }[code];
-    assert.ok(html.includes(`<dd>${expectedRank}</dd>`));
+    assert.ok(rankingLink.includes(`<strong>${expectedRank}</strong>`));
     assert.ok(!html.includes(`<dt>${labels.following}</dt>`));
     assert.match(html, /Real Owner/);
     assert.doesNotMatch(html, /Old city|Old nation|1900|999/);

@@ -19,9 +19,12 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { Logo } from "@/components/logo";
+import { AuthLanguageSwitcher } from "@/components/auth-language-switcher";
+import { useTouchlineDialog, useTouchlineDialogScrollLock } from "@/components/touchline/a11y/TouchlineDialog";
+import styles from "./arena-admin-shell.module.css";
 import TouchlineCustomerUtilityShell, { customerUtilityRoute } from "@/components/touchline/TouchlineCustomerUtilityShell";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -154,8 +157,8 @@ function NavigationLink({
         <Icon size={16} aria-hidden="true" />
       </span>
       <span className="min-w-0">
-        <span className="block truncate text-[11px] font-black">{item.label}</span>
-        <span className="mt-0.5 block truncate text-[8px] text-slate-600 group-hover:text-slate-500">
+        <span className="block text-sm font-black">{item.label}</span>
+        <span className="mt-0.5 block text-xs leading-relaxed text-slate-400 group-hover:text-slate-300">
           {item.description}
         </span>
       </span>
@@ -228,6 +231,32 @@ export function ArenaAdminShell({
   const [menuOpen, setMenuOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const [signOutError, setSignOutError] = useState("");
+  const menuTriggerRef = useRef<HTMLButtonElement>(null);
+  const menuCloseRef = useRef<HTMLButtonElement>(null);
+  const { dialogProps: menuDialogProps } = useTouchlineDialog<HTMLDivElement>({
+    open: menuOpen,
+    label: shellCopy.officialAdmin,
+    initialFocusRef: menuCloseRef,
+    returnFocusRef: menuTriggerRef,
+    containEveryTab: true,
+    onDismiss: () => setMenuOpen(false),
+  });
+  useTouchlineDialogScrollLock(menuOpen);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    // A hidden modal must never keep the desktop page inert after rotation.
+    const desktop = window.matchMedia("(min-width: 1280px)");
+    const dismissOnDesktop = () => {
+      if (desktop.matches) setMenuOpen(false);
+    };
+    desktop.addEventListener("change", dismissOnDesktop);
+    const frame = window.requestAnimationFrame(dismissOnDesktop);
+    return () => {
+      desktop.removeEventListener("change", dismissOnDesktop);
+      window.cancelAnimationFrame(frame);
+    };
+  }, [menuOpen]);
 
   async function signOut() {
     setSigningOut(true);
@@ -274,7 +303,7 @@ export function ArenaAdminShell({
     >{children}</TouchlineCustomerUtilityShell>;
   }
 
-  const navigation = (
+  const renderNavigation = (showLocale: boolean) => (
     <aside className="flex h-full w-[272px] max-w-[calc(100vw-2rem)] flex-col overflow-y-auto overscroll-contain border-r border-white/[.08] bg-[#030a0d]/95 px-4 py-5 text-white backdrop-blur-2xl">
       <div className="px-2">
         <Logo light />
@@ -282,6 +311,17 @@ export function ArenaAdminShell({
           {shellCopy.arenaOperations}
         </p>
       </div>
+
+      {showLocale && accountId ? (
+        <div className={styles.localeControl}>
+          <AuthLanguageSwitcher
+            locale={locale}
+            context={{ mode: "account", accountId }}
+            draftLocalesEnabled={false}
+            siteLocalesEnabled={false}
+          />
+        </div>
+      ) : null}
 
       <nav aria-label="TouchLine" className="mt-7 space-y-1">
         <p className="mb-2 px-3 text-[8px] font-black uppercase tracking-[.18em] text-slate-700">
@@ -342,29 +382,32 @@ export function ArenaAdminShell({
   );
 
   return (
-    <div dir="ltr" className="relative min-h-[100dvh] overflow-x-clip bg-[#02080a] text-white">
+    <div dir="ltr" className={`${styles.shell} relative min-h-[100dvh] overflow-x-clip bg-[#02080a] text-white`}>
       <div
         aria-hidden="true"
         className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_72%_0%,rgba(30,167,111,.15),transparent_34%),radial-gradient(circle_at_18%_78%,rgba(19,141,179,.09),transparent_32%),linear-gradient(180deg,#061014_0%,#020709_100%)]"
       />
 
-      <div className="fixed inset-y-0 left-0 z-40 hidden xl:block">{navigation}</div>
+      {/* Only one locale host observes the verified account at a time. */}
+      <div className="fixed inset-y-0 left-0 z-40 hidden xl:block">{renderNavigation(!menuOpen)}</div>
 
       {menuOpen ? (
-        <div className="fixed inset-0 z-50 flex xl:hidden">
+        <div {...menuDialogProps} id="touchline-admin-navigation" className="fixed inset-0 z-50 flex xl:hidden">
           <button
             type="button"
             aria-label={shellCopy.closeNavigation}
+            tabIndex={-1}
             className="absolute inset-0 bg-black/75 backdrop-blur-sm"
             onClick={() => setMenuOpen(false)}
           />
           <div className="relative">
-            {navigation}
+            {renderNavigation(true)}
             <button
               type="button"
               aria-label={shellCopy.closeMenu}
+              ref={menuCloseRef}
               onClick={() => setMenuOpen(false)}
-              className="absolute right-4 top-4 grid size-9 place-items-center rounded-xl border border-white/10 bg-black/30 text-slate-300"
+              className={`${styles.menuClose} absolute right-4 top-4 grid size-11 place-items-center rounded-xl border border-white/10 bg-black/30 text-slate-300`}
             >
               <X size={18} />
             </button>
@@ -374,20 +417,24 @@ export function ArenaAdminShell({
 
       <div className="relative min-w-0 xl:ml-[272px]">
         <header className="sticky top-0 z-30 border-b border-white/[.08] bg-[#030a0d]/80 backdrop-blur-2xl">
-          <div className="mx-auto flex h-[68px] w-full max-w-[1500px] items-center gap-3 px-4 sm:px-6 xl:px-8">
+          <div className={`${styles.toolbar} mx-auto flex min-h-[68px] w-full max-w-[1500px] items-center gap-3 px-4 sm:px-6 xl:px-8`}>
             <button
               type="button"
               aria-label={shellCopy.openMenu}
+              aria-expanded={menuOpen}
+              aria-controls={menuOpen ? "touchline-admin-navigation" : undefined}
+              aria-haspopup="dialog"
+              ref={menuTriggerRef}
               onClick={() => setMenuOpen(true)}
               className="grid size-10 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/[.035] text-slate-300 xl:hidden"
             >
               <Menu size={19} />
             </button>
-            <div className="min-w-0">
-              <p className="truncate text-[9px] font-black uppercase tracking-[.2em] text-[#a3ff12]">
+            <div className={`${styles.toolbarIdentity} min-w-0`}>
+              <p className="text-xs font-black uppercase tracking-[.12em] text-[#a3ff12]">
                 TouchLine England
               </p>
-              <p className="mt-1 truncate text-[10px] text-slate-500">
+              <p className="mt-1 text-xs text-slate-400">
                 {isOwner ? shellCopy.officialAdmin : shellCopy.account}
               </p>
             </div>

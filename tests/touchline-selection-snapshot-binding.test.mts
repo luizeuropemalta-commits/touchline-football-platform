@@ -75,3 +75,20 @@ test("player profile and player ranking pin crown authority to their displayed r
   assert.match(playerRanking, /initialPlayerRankingSnapshotId=\{activeRanking\.snapshotId\}/);
   assert.match(playerRanking, /<TouchlinePlayerCardRankingsPublication[\s\S]*?seedRanking=\{activeRanking\}/);
 });
+
+
+test("current Top XI is withheld if any published slot is ineligible, with original selection unchanged", async () => {
+  const before=JSON.stringify(record);
+  const players=TOUCHLINE_SELECTION_SLOTS.map((_,i)=>({playerId:`player-${i}`,providerPlayerId:String(100+i)}));
+  const current={...ranking,players,currentProjection:{version:1}};
+  assert.ok(await harness().load(current));
+  assert.equal(await harness().load({...current,players:players.slice(1)}),null);
+  assert.equal(JSON.stringify(record),before);
+  assert.ok(await harness().load(ranking),"historical published selection remains readable explicitly");
+});
+test("current XI cannot mix an ineligible canonical ID with another eligible provider ID", async () => {
+  const mixed=structuredClone(record);
+  Object.assign(mixed.selection_payload.players[0]!.player,{providerPlayerId:'101'});
+  const players=TOUCHLINE_SELECTION_SLOTS.map((_,i)=>({playerId:`player-${i}`,providerPlayerId:String(100+i)}));
+  assert.equal(await harness(mixed).load({...ranking,players,currentProjection:{version:1}}),null);
+});

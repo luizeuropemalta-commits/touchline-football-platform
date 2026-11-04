@@ -180,13 +180,16 @@ test("fixture module lowering initializes ESM dependencies before body in source
   dependency.value = 11; assert.equal(fixtureModule.exports.read?.(), 11, "named import must remain a live property read");
 });
 
-function bundleProduct(): Bundle {
+function bundleProduct(withMarketHeader = false): Bundle {
   return bundleIsolatedBrowserFixture({
     entryPath: "app/fantasy/FantasyGameweekClient.tsx",
+    additionalEntryPaths: withMarketHeader ? ["components/touchline/ClubOwnerMarketHeader.tsx", "components/touchline/fantasy/ClubCollectionContext.tsx"] : [],
     requiredSources: ["app/fantasy/FantasyGameweekClient.tsx", "app/fantasy/fantasy.module.css",
       "lib/touchlineFantasy/domain.ts", "components/touchline/fantasy/TouchlineGameweekCard.tsx",
       "components/touchline/cards/TouchlineCardZoom.tsx", "components/touchline/cards/TouchlineEliteExactCard.tsx",
-      "components/touchline/pitch/TouchlinePitchSurface.tsx"],
+      "components/touchline/pitch/TouchlinePitchSurface.tsx",
+      ...(withMarketHeader ? ["components/touchline/ClubOwnerMarketHeader.tsx", "components/touchline/ClubOwnerMarketHeader.module.css",
+        "components/touchline/fantasy/ClubCollectionContext.tsx"] : [])],
     mountScript: `
       function markPhase(phase){window.fixtureMountPhase=phase;console.info('XI_MOUNT_PHASE '+JSON.stringify({phase,atMs:Math.round(performance.now())}));}
       markPhase('module-load');
@@ -195,7 +198,15 @@ function bundleProduct(): Bundle {
       Element.prototype.scrollIntoView=function(options){window.fixtureScrolls.push({id:this.id,behavior:options?.behavior});return nativeScroll.call(this,options);};
       window.unmountFixture=()=>flushSync(()=>root.unmount());
       markPhase('render-start');
-      flushSync(()=>root.render(React.createElement(React.StrictMode,null,React.createElement(Fantasy,window.fixtureProps))));
+      ${withMarketHeader ? `const MarketHeader=loadAdditionalEntry('components/touchline/ClubOwnerMarketHeader.tsx').default;
+      const {ClubCollectionProvider}=loadAdditionalEntry('components/touchline/fantasy/ClubCollectionContext.tsx');
+      const snapshot=window.fixtureProps.initialSnapshot;
+      const authority=snapshot.config.seasonId?{expectedAccountId:snapshot.userId,expectedSeasonId:snapshot.config.seasonId}:null;
+      const marketHeader=React.createElement(MarketHeader,{owner:null,locale:window.fixtureProps.locale,
+        collectionEnabled:window.fixtureProps.collectionEnabled,
+        plan:snapshot.plan,activePlanKey:snapshot.marketAccess?.planKey??null,activePlanBudget:snapshot.marketAccess?.budgetEur});` : ""}
+      flushSync(()=>root.render(React.createElement(React.StrictMode,null,
+        ${withMarketHeader ? "React.createElement(ClubCollectionProvider,{initialRead:null,authority},marketHeader,React.createElement(Fantasy,window.fixtureProps))" : "React.createElement(Fantasy,window.fixtureProps)"})));
       markPhase('render-returned');
     `,
   });
@@ -206,7 +217,7 @@ const modes: Mode[] = [{ locale: "en-GB", touch: false, reduced: false }, { loca
 test("original market mounted: explicit destination cancellation delayed confirmation", {
   skip: process.env.TOUCHLINE_RUN_ORIGINAL_MARKET_BROWSER !== "1", timeout: 180_000,
 }, async t => {
-  const bundle = bundleProduct();
+  const bundle = bundleProduct(true);
   const engine = process.env.TOUCHLINE_MARKET_ENGINE === "webkit" ? webkit : chromium;
   const browser = await engine.launch({ headless: true, timeout: 15_000 });
   try {
@@ -217,6 +228,8 @@ test("original market mounted: explicit destination cancellation delayed confirm
       });
       try {
         const { page, list } = fixture;
+        const balance = page.locator('[data-account-market-power="true"] strong');
+        await expect(balance).toHaveText("475,000,000");
         if(area === "reserves") assert.ok(fixture.collection?.players.every(p => p.primaryDetail === undefined), "legacy fixture must NOT backfill stored contracts");
         const opening = page.locator('button[data-guided-action="true"]').first();
         await expect(opening).toBeEnabled(); await opening.click();
@@ -234,15 +247,18 @@ test("original market mounted: explicit destination cancellation delayed confirm
         await expect(signingConfirmation.getByRole("button", { name: "Confirm signing", exact: true })).toBeEnabled();
         if (process.env.TOUCHLINE_MARKET_CAPTURE_DIR) await list.screenshot({ path: `${process.env.TOUCHLINE_MARKET_CAPTURE_DIR}/original-market-${engine.name()}-${area}.png`, animations: "disabled" });
         assert.equal(fixture.collectionWrites.length, 0, "staging is not a purchase");
+        await expect(balance).toHaveText("475,000,000");
         await list.getByRole("button", { name: /Back to pitch/i }).click();
         await expect(destination).toHaveCount(0);
         assert.equal(fixture.collectionWrites.length, 0, "cancel before confirmation has no write");
+        await expect(balance).toHaveText("475,000,000");
         await opening.click();
         await list.getByRole("button", { name: "Sign", exact: true }).click();
         await signingConfirmation.getByRole("button", { name: "Confirm signing", exact: true }).click();
         await expect.poll(() => fixture.collectionWrites.length).toBe(1);
         assert.deepEqual([fixture.collectionWrites[0].area, fixture.collectionWrites[0].slot, fixture.collectionWrites[0].expectedRevision], [area, 0, 34]);
         assert.equal(fixture.collection?.players.length, 34, "no optimistic contract before receipt");
+        await expect(balance).toHaveText("475,000,000");
         await expect(signingConfirmation.getByRole("button", { name: "Confirm signing", exact: true })).toBeDisabled();
         if (area === "outside") {
           await list.getByRole("button", { name: /Back to pitch/i }).click();
@@ -251,10 +267,11 @@ test("original market mounted: explicit destination cancellation delayed confirm
           // Observe that before measuring navigation caused by the late receipt.
           await expect(fixture.pitch).toBeFocused();
           await page.evaluate("window.fixtureScrolls=[]");
+          await expect(balance).toHaveText("475,000,000");
         }
         fixture.releaseCollection();
         await expect.poll(() => fixture.collection?.players.length).toBe(35);
-        await expect(page.locator("output").filter({ hasText: "Squad balance" })).toContainText("474,000,000");
+        await expect(balance).toHaveText("474,000,000");
         await expect(destination).toHaveCount(0);
         assert.equal(fixture.collectionWrites.length, 1);
         assert.equal(fixture.collection?.balanceEur, 474_000_000);
@@ -270,7 +287,7 @@ test("original market mounted: explicit destination cancellation delayed confirm
 test("original market zoom signing mounted: staged confirmation only", {
   skip: process.env.TOUCHLINE_RUN_MARKET_ZOOM_SIGNING_BROWSER !== "1", timeout: 90_000,
 }, async () => {
-  const bundle = bundleProduct();
+  const bundle = bundleProduct(true);
   const browser = await chromium.launch({ headless: true, timeout: 15_000 });
   try {
     const fixture = await openFixture(browser, bundle, { locale: "en-GB", touch: false, reduced: true }, {
@@ -278,10 +295,13 @@ test("original market zoom signing mounted: staged confirmation only", {
     });
     try {
       const { page, list } = fixture;
+      const balance = page.locator('[data-account-market-power="true"] strong');
+      await expect(balance).toHaveText("475,000,000");
       const noWrites = () => { assert.equal(fixture.collectionWrites.length, 0); assert.equal(fixture.writes.length, 0); };
       assert.equal(fixture.collection?.players.length, 34);
       assert.ok(fixture.collection?.players.every(player => player.primaryDetail === undefined));
       noWrites();
+      await expect(balance).toHaveText("475,000,000");
       await page.locator('button[data-guided-action="true"]').first().click();
       const destination = list.locator("[data-collection-market-destination]");
       await expect(destination).toHaveAttribute("data-collection-market-destination", "reserves:0");
@@ -292,6 +312,7 @@ test("original market zoom signing mounted: staged confirmation only", {
       await expect(actions).toHaveCount(1);
       await expect(actions.getByRole("button", { name: "Confirm signing", exact: true })).toHaveCount(0);
       noWrites();
+      await expect(balance).toHaveText("475,000,000");
       await actions.getByRole("button", { name: "Sign", exact: true }).click();
       const confirm = actions.getByRole("button", { name: "Confirm signing", exact: true });
       await expect(confirm).toBeEnabled();
@@ -300,6 +321,7 @@ test("original market zoom signing mounted: staged confirmation only", {
       await expect(inline).toHaveAttribute("data-collection-signing-confirmation", "fictional-reserves-0");
       await expect(destination.getByRole("button", { name: "Confirm signing", exact: true, includeHidden: true })).toHaveCount(0);
       noWrites();
+      await expect(balance).toHaveText("475,000,000");
       await confirm.click();
       await expect.poll(() => fixture.collectionWrites.length).toBe(1);
       const command = fixture.collectionWrites[0];
@@ -308,11 +330,12 @@ test("original market zoom signing mounted: staged confirmation only", {
       assert.equal(command.expectedSeasonId, fixture.collection?.seasonId);
       assert.equal(fixture.collection?.players.length, 34, "held receipt must not create an optimistic contract");
       assert.equal(fixture.collection?.balanceEur, 475_000_000);
+      await expect(balance).toHaveText("475,000,000");
       assert.equal(fixture.writes.length, 0, "signing must not submit a lineup");
       await expect(confirm).toBeDisabled();
       fixture.releaseCollection();
       await expect.poll(() => fixture.collection?.players.length).toBe(35);
-      await expect(page.locator("output").filter({ hasText: "Squad balance" })).toContainText("474,000,000");
+      await expect(balance).toHaveText("474,000,000");
       assert.equal(fixture.collection?.balanceEur, 474_000_000);
       assert.equal(fixture.collection?.players.filter(player => player.area === "reserves" && player.slot === 0 && player.playerId === "fictional-reserves-0").length, 1);
       assert.equal(fixture.collection?.players.filter(player => player.primaryDetail === undefined).length, 34);
@@ -458,7 +481,7 @@ async function openFixture(browser: Browser, bundle: Bundle, mode: Mode, options
       if (url.origin !== origin) { unexpected.push(`${method} external:${url.hostname}`); await route.abort("blockedbyclient"); return; }
       if (url.pathname === "/fixture" && method === "GET") { await route.fulfill({ contentType: "text/html", body: html }); return; }
       if (options.emptyAccount && url.pathname === "/api/touchline-fantasy/prepare" && method === "POST") {
-        // A missing round remains unconfirmed. Its warning must not replace the shell.
+        // A missing round remains unconfirmed. Silent recovery must preserve the shell.
         prepareRequests++;
         assert.deepEqual(request.postDataJSON(), { expectedAccountId: snapshot.userId, gameweekId: snapshot.activeGameweek!.id });
         await route.fulfill({ json: { ok: false } }); return;
@@ -1111,9 +1134,9 @@ test("Arena overlay keeps its coach off the touchline, canonical formation and a
         });
         const measurement = { name, formationCode, locale: mode.locale, locked, viewport, boxes, layoutState };
         console.log(`XI_ARENA_BEFORE_BOUNDS ${JSON.stringify(measurement)}`);
-        const scrollingField = viewport.width <= 1180;
         const outsideViewport = Object.entries(boxes).some(([label, box]) => box.x < 0 || box.y < 0
-          || box.x + box.width > viewport.width + 1 || (!(scrollingField && label === "field") && box.y + box.height > viewport.height + 1));
+          || box.x + box.width > viewport.width + 1 || (label !== "field" && box.y + box.height > viewport.height + 1)
+          || (label === "field" && box.y >= viewport.height));
         if (outsideViewport) {
           const prefix = `/private/tmp/touchline-arena-bounds-${name}-${formationCode}-20261025`;
           writeFileSync(`${prefix}.json`, JSON.stringify(measurement, null, 2));
@@ -1122,30 +1145,34 @@ test("Arena overlay keeps its coach off the touchline, canonical formation and a
         }
         for (const [label, box] of [["field", fieldBox], ["coach", coachBox], ["formation", formationBox], ["points", pointsBox], ["close", closeBox]] as const) {
           assert.ok(box.x >= 0 && box.y >= 0 && box.x + box.width <= viewport.width + 1
-            && ((scrollingField && label === "field") || box.y + box.height <= viewport.height + 1), `${label} clipped outside ${name} viewport`);
+            && (label === "field" ? box.y < viewport.height : box.y + box.height <= viewport.height + 1), `${label} clipped outside ${name} viewport`);
         }
         assert.ok(Math.abs(fieldBox.width / fieldBox.height - 105 / 68) < .001, "regulation field ratio stays intact");
-        if (scrollingField) {
-          const beforeScroll = await page.evaluate(() => ({ x: scrollX, y: scrollY }));
-          const scrollProof = await dialog.evaluate(node => {
-            const surface = node.querySelector<HTMLElement>('[data-touchline-pitch-surface]')!;
-            const host = surface.parentElement!, style = getComputedStyle(host);
-            node.scrollTop = node.scrollHeight;
-            const pitch = surface.getBoundingClientRect(), outer = node.getBoundingClientRect();
-            return { scrollTop: node.scrollTop, scrollHeight: node.scrollHeight, clientHeight: node.clientHeight,
-              overflow: getComputedStyle(node).overflowY, pitchBottom: pitch.bottom, outerBottom: outer.bottom,
-              width: node.scrollWidth, clientWidth: node.clientWidth, pitchWidth: pitch.width,
-              availableWidth: host.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) };
-          });
-          console.log(`XI_ARENA_SCROLL_PROOF ${JSON.stringify({ name, formationCode, ...scrollProof })}`);
-          assert.equal(scrollProof.overflow, "auto");
-          assert.ok(Math.abs(scrollProof.pitchWidth - Math.min(scrollProof.availableWidth, 1400)) <= 1, "landscape field keeps its full available width");
-          assert.ok(scrollProof.pitchBottom <= scrollProof.outerBottom + 1, "whole field remains reachable through the Arena overlay");
-          assert.ok(scrollProof.width <= scrollProof.clientWidth + 1, "Arena must not scroll horizontally");
-          if (viewport.height <= 390) assert.ok(scrollProof.scrollTop > 0, "phone field uses actual vertical scrolling rather than miniature cards");
-          assert.deepEqual(await page.evaluate(() => ({ x: scrollX, y: scrollY })), beforeScroll, "Arena scroll does not move the document");
-          await dialog.evaluate(node => { node.scrollTop = 0; });
-        }
+        // The canonical Arena deliberately uses a full-width field and overlay
+        // scrolling at every viewport; do not shrink desktop cards to fit height.
+        const beforeScroll = await page.evaluate(() => ({ x: scrollX, y: scrollY }));
+        const scrollProof = await dialog.evaluate(node => {
+          const surface = node.querySelector<HTMLElement>('[data-touchline-pitch-surface]')!;
+          const host = surface.parentElement!, style = getComputedStyle(host);
+          node.scrollTop = node.scrollHeight;
+          const pitch = surface.getBoundingClientRect(), outer = node.getBoundingClientRect();
+          return { scrollTop: node.scrollTop, scrollHeight: node.scrollHeight, clientHeight: node.clientHeight,
+            overflow: getComputedStyle(node).overflowY, pitchBottom: pitch.bottom, outerBottom: outer.bottom, outerTop: outer.top,
+            pitchMaxWidth: getComputedStyle(surface).maxWidth,
+            width: node.scrollWidth, clientWidth: node.clientWidth, pitchWidth: pitch.width,
+            availableWidth: host.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) };
+        });
+        console.log(`XI_ARENA_SCROLL_PROOF ${JSON.stringify({ name, formationCode, ...scrollProof })}`);
+        assert.equal(scrollProof.overflow, "auto");
+        assert.ok(Math.abs(scrollProof.pitchWidth - scrollProof.availableWidth) <= 1, "Arena field keeps its full available width at every viewport");
+        assert.equal(scrollProof.pitchMaxWidth, "none", "the canonical field has no obsolete 1400px cap");
+        assert.ok(scrollProof.pitchBottom <= scrollProof.outerBottom + 1 && scrollProof.pitchBottom > scrollProof.outerTop,
+          "the bottom of the whole field remains visible at the end of overlay scrolling");
+        assert.ok(scrollProof.width <= scrollProof.clientWidth + 1, "Arena must not scroll horizontally");
+        if (viewport.height <= 390 || fieldBox.y + fieldBox.height > viewport.height + 1)
+          assert.ok(scrollProof.scrollTop > 0, "an over-height field uses actual vertical scrolling rather than miniature cards");
+        assert.deepEqual(await page.evaluate(() => ({ x: scrollX, y: scrollY })), beforeScroll, "Arena scroll does not move the document");
+        await dialog.evaluate(node => { node.scrollTop = 0; });
         assert.ok(Math.abs(coachBox.x + coachBox.width / 2 - fieldBox.x - fieldBox.width / 2) <= 6,
           "coach must align to the canonical halfway line");
         assert.ok(coachBox.y + coachBox.height <= fieldBox.y + 2, "coach must stay outside the grass above its touchline");
@@ -1300,7 +1327,7 @@ test("diagnostic: WebKit EN native and real XI keyboard navigation", { skip: !en
 test("empty ClubOwner preserves pitch, bench, outside slots, Exchange and embedded Live even when recovery fails", {
   skip: process.env.TOUCHLINE_RUN_COLLECTION_BROWSER_TESTS !== "1", timeout: 120_000,
 }, async () => {
-  const bundle = bundleProduct();
+  const bundle = bundleProduct(true);
   for (const engine of [chromium, webkit]) {
     const browser = await engine.launch({ headless: true, timeout: 15_000 });
     try {
@@ -1322,27 +1349,29 @@ test("empty ClubOwner preserves pitch, bench, outside slots, Exchange and embedd
           await expect(liveRail).toHaveAttribute('data-fixture-carousel', 'continuous');
           await expect.poll(() => h.livePresentationReads).toBeGreaterThan(0);
           await expect(liveRail.getByRole('link')).toHaveCount(0); // no fabricated fixtures during unavailable reads
-          await expect(h.confirm).toBeDisabled();
+          await expect(h.confirm).toHaveCount(0);
           for (const button of await h.page.locator('[data-collection-area] button').all()) await expect(button).toBeDisabled();
           // No confirmed collection/coach exists, even when the market is open.
-          // Recovery is automatic and its explicit retry is read-only; never click
-          // a disabled player slot or manufacture ownership to reach the warning.
+          // Recovery is automatic and silent. The removed manual confirmation
+          // and recovery controls must not return or manufacture ownership.
           for (const button of await h.pitch.locator('[data-touchline-pitch-surface] button').all()) await expect(button).toBeDisabled();
           await expect.poll(() => h.collectionReads).toBeGreaterThan(0);
+          await expect(h.page.locator('[data-fantasy-continuity]')).toHaveCount(0);
+          await expect(h.page.getByRole('button', { name: 'Check saved lineup', exact: true })).toHaveCount(0);
           if (!locked && !expiredDeadline && !unconfirmedBudget) {
-            const continuity = h.page.locator('[data-fantasy-continuity="unconfirmed"]');
-            await expect(continuity).toBeVisible();
-            assert.equal(h.prepareRequests, 1, "StrictMode must not duplicate the automatic preparation");
-            const readsBefore = h.stateReads;
-            await continuity.getByRole('button', { name: 'Check saved lineup', exact: true }).click();
-            await expect.poll(() => h.stateReads).toBeGreaterThan(readsBefore);
-            await expect(continuity).toBeVisible();
-            assert.equal(h.prepareRequests, 1, "explicit continuity recovery must not replay preparation");
+            await expect.poll(() => h.prepareRequests).toBe(1);
+            await expect.poll(() => h.stateReads).toBe(1);
           } else {
-            await expect(h.page.locator('[data-fantasy-continuity]')).toHaveCount(0);
             assert.equal(h.prepareRequests, 0, "closed or unconfirmed collection cannot prepare a round");
             if (locked || unconfirmedBudget) await expect(h.page.getByRole('alert')).toBeVisible();
           }
+          // Recheck after the shell and asynchronous recovery read settled:
+          // StrictMode cannot replay preparation or expose manual retry controls.
+          await expect(h.pitch.locator('[data-touchline-pitch-surface] button')).toHaveCount(11);
+          await expect(h.confirm).toHaveCount(0);
+          await expect(h.page.locator('[data-fantasy-continuity]')).toHaveCount(0);
+          assert.equal(h.prepareRequests, !locked && !expiredDeadline && !unconfirmedBudget ? 1 : 0);
+          if (!locked && !expiredDeadline && !unconfirmedBudget) assert.equal(h.stateReads, 1);
           console.log(`XI_EMPTY_CONTINUITY ${JSON.stringify({ engine: engine.name(), ...scenario,
             collectionReads: h.collectionReads, prepareRequests: h.prepareRequests, stateReads: h.stateReads })}`);
           assert.equal(h.writes.length, 0);
@@ -1480,7 +1509,7 @@ test("collection DOM: original plus slots 4+5 and 15, purchase confirmed before 
     livePresentationSnapshotId: null, mode: "idle", pollAfterMs: null, resumeAt: null,
   });
   assert.ok(livePresentationState, "T34 must return a DTO accepted by the real presentation-state parser");
-  const bundle = bundleProduct();
+  const bundle = bundleProduct(true);
   for (const engine of [chromium, webkit]) {
     const browser = await engine.launch({ headless: true, timeout: 15_000 });
     try {
@@ -1500,11 +1529,12 @@ test("collection DOM: original plus slots 4+5 and 15, purchase confirmed before 
           const targetGroup = area === "reserves" ? reserveGroups.nth(0) : outside;
           const target = targetGroup.locator('[data-collection-slot="0"]');
           const opening = target.locator('[data-collection-placeholder="true"]');
-          const balance = page.locator("output").filter({ hasText: mode.locale === "pt-BR" ? "Saldo do elenco" : "Squad balance" });
+          const balance = page.locator('[data-account-market-power="true"] strong');
+          const formattedBalance = (value: number) => new Intl.NumberFormat(mode.locale, { maximumFractionDigits: 0 }).format(value);
           const originalContracts = fixture.collection!.players.map(player => ({ ...player }));
           assert.equal(originalContracts.length, 34);
           assert.equal(fixture.collection?.balanceEur, 475_000_000);
-          await expect(balance).toContainText("475");
+          await expect(balance).toHaveText(formattedBalance(475_000_000));
           await expect(opening).toBeEnabled();
           const emptyBounds = await opening.boundingBox();
           assert.ok(emptyBounds && Math.abs(emptyBounds.width - 44) <= 1 && Math.abs(emptyBounds.height - 44) <= 1,
@@ -1523,7 +1553,7 @@ test("collection DOM: original plus slots 4+5 and 15, purchase confirmed before 
           assert.equal(fixture.collectionWrites.length, 0, "staging must not purchase");
           assert.equal(fixture.writes.length, 0, "staging must not submit the XI");
           await expect(target.locator('[data-touchline-card-zoom="trigger"]')).toHaveCount(0);
-          await expect(balance).toContainText("475");
+          await expect(balance).toHaveText(formattedBalance(475_000_000));
           if (process.env.TOUCHLINE_COLLECTION_CAPTURE_PREFIX) await list.screenshot({
             path: `${process.env.TOUCHLINE_COLLECTION_CAPTURE_PREFIX}-${engine.name()}-${mode.locale}-${area}-staged.png`, animations: "disabled",
           });
@@ -1537,11 +1567,11 @@ test("collection DOM: original plus slots 4+5 and 15, purchase confirmed before 
           assert.deepEqual(fixture.collection?.players, originalContracts, "held receipt must not create an optimistic contract");
           assert.equal(fixture.collection?.balanceEur, 475_000_000);
           await expect(target.locator('[data-touchline-card-zoom="trigger"]')).toHaveCount(0);
-          await expect(balance).toContainText("475");
+          await expect(balance).toHaveText(formattedBalance(475_000_000));
           fixture.releaseCollection();
           await expect(target.locator('[data-touchline-card-zoom="trigger"]')).toHaveCount(1);
           await expect(destination).toHaveCount(0);
-          await expect(balance).toContainText("474");
+          await expect(balance).toHaveText(formattedBalance(474_000_000));
           assert.equal(fixture.collectionWrites.length, 1);
           assert.equal(fixture.collection?.balanceEur, 474_000_000);
           assert.equal(fixture.collection?.players.length, 35);
@@ -1567,7 +1597,7 @@ test("collection DOM: original plus slots 4+5 and 15, purchase confirmed before 
           await page.reload({ waitUntil: "domcontentloaded" });
           await expect.poll(() => fixture.livePresentationReads).toBeGreaterThan(presentationReadsBeforeReload);
           await expect(target.locator('[data-touchline-card-zoom="trigger"]')).toHaveCount(1);
-          await expect(balance).toContainText("474");
+          await expect(balance).toHaveText(formattedBalance(474_000_000));
           assert.equal(fixture.collectionWrites.length, 1, "reload must read confirmed ownership, never repurchase");
           assert.equal(fixture.writes.length, 0, "collection signing must not submit the XI");
           console.log(`T34_ALLOWED_READS ${JSON.stringify({ engine: engine.name(), locale: mode.locale, area,
@@ -1695,7 +1725,9 @@ test("real My Club XI DOM: replace, focus, explicit save and readback", { skip: 
 test("compact market clock remains visible with completed setup and before squad symbols", {
   skip: process.env.TOUCHLINE_RUN_MARKET_CLOCK_BROWSER !== "1", timeout: 120_000,
 }, async () => {
-  const bundle = bundleProduct();
+  // Match /clubowner: the real header owns the balance portal before Fantasy.
+  // A standalone Fantasy mount intentionally has no compact header clock.
+  const bundle = bundleProduct(true);
   for (const engine of [chromium, webkit]) {
     const browser = await engine.launch({headless:true});
     try {
@@ -1703,11 +1735,21 @@ test("compact market clock remains visible with completed setup and before squad
       try {
         for (const width of [1280,844]) {
           await h.page.setViewportSize({width,height:844});
+          const header = h.page.locator('[data-clubowner-header="true"]');
+          const slot = header.locator('#clubowner-market-clock-slot[data-market-clock-placement="balance"]');
+          await expect(header).toBeVisible();
+          await expect(slot).toHaveCount(1);
           const status = h.page.locator('[data-market-status-compact="true"]');
           await expect(status).toBeVisible();
+          await expect(slot.locator('[data-market-status-compact="true"]')).toHaveCount(1);
           await expect(status.locator('[data-market-clock-phase="closing"]')).toBeVisible();
-          await expect(status.locator('i svg')).toBeVisible();
+          const clock = status.locator('[data-market-clock-simple="true"]');
+          await expect(clock).toHaveAttribute('data-market-open', 'true');
+          await expect(clock.locator('strong')).toHaveText('Market open');
+          await expect(clock.locator('time')).toHaveCount(0);
           const statusBox=await status.boundingBox(), pitchBox=await h.pitch.boundingBox();
+          const balanceBox=await header.locator('[data-account-market-power="true"]').boundingBox();
+          assert.ok(balanceBox && statusBox && balanceBox.y+balanceBox.height<=statusBox.y,'clock follows the account balance in the real header');
           assert.ok(statusBox && pitchBox && statusBox.y+statusBox.height<=pitchBox.y,'clock precedes squad');
           assert.equal(await status.evaluate(e=>e.scrollWidth>e.clientWidth+1),false);
           await h.page.screenshot({path:`/private/tmp/touchline-market-clock-${engine.name()}-${width}-20261030.png`,fullPage:true});

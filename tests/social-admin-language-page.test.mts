@@ -28,8 +28,7 @@ test("real social Admin page renders both languages and keeps history, checksums
     assert.match(html, new RegExp(`lang=${locale}&amp;draftPage=2&amp;reviewPage=1`));
     assert.match(html, new RegExp(`lang=${locale}&amp;draftPage=1&amp;reviewPage=0`));
     assert.match(html, new RegExp(`lang=${locale}&amp;draftPage=1&amp;reviewPage=2`));
-    assert.match(html, /lang=pt-BR&amp;draftPage=1&amp;reviewPage=1/);
-    assert.match(html, /lang=en-GB&amp;draftPage=1&amp;reviewPage=1/);
+    assert.doesNotMatch(html, /<a\b[^>]*>\s*(?:Português|English)\s*<\/a>/);
   }
   assert.equal(JSON.stringify(pt.calls), JSON.stringify(en.calls), "language never changes server queries or private media signing");
 });

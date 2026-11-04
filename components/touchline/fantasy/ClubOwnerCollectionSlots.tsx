@@ -162,8 +162,8 @@ export function ClubOwnerCollectionSlots({ state, catalogue, area, start = 0, co
           title={copy.changePlayer}
           onClick={() => onChoose({ area, slot })}><ArrowLeftRight aria-hidden="true" /></button> : null}
         {owned && onPriorityChange && prioritySlots.length ? <label className={layout.priority}>
-          {pt ? "Prioridade" : "Priority"}
-          <select aria-label={`${pt ? "Prioridade de substituição" : "Substitution priority"} · ${card?.name ?? positionName}`}
+          {copy.outsidePriority}
+          <select aria-label={`${copy.outsidePriorityAria} · ${position} · ${card?.name ?? positionName}`}
             disabled={!enabled || prioritySlots.length < 2} value={slot}
             onChange={event => { const target = Number(event.currentTarget.value); if (enabled && prioritySlots.some(entry => entry.slot === target)) onPriorityChange(owned.playerId, target); }}>
             {prioritySlots.map((entry, index) => <option key={entry.slot} value={entry.slot}>{index + 1}</option>)}

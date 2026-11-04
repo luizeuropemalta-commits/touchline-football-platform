@@ -1,7 +1,9 @@
+import { matchesAvatarRetentionTarget, type AvatarRetentionTarget } from "./club-owner-avatar-retention-target.ts";
 import { awaitAvatarStep, createAvatarEnvironmentGuard, isAvatarAccountId } from "./club-owner-avatar-upload-contract.ts";
 
 export type AvatarRetentionCandidate = Readonly<{ actorId: string; operationId: string; digest: string; objectKey: string }>;
 type Config = Readonly<{
+  target?: AvatarRetentionTarget;
   supabaseOrigin: string;
   serviceRoleKey: string;
   assertEnvironment: () => void;
@@ -18,7 +20,7 @@ type Config = Readonly<{
  */
 export function createAvatarRetentionStorage(config: Config) {
   const { supabaseOrigin, serviceRoleKey, fetchImpl, authorize } = config;
-  if (supabaseOrigin !== "https://xgxbwqxjssxxuihuwmgy.supabase.co" || !serviceRoleKey.trim()
+  if (!matchesAvatarRetentionTarget(config.target, supabaseOrigin, serviceRoleKey) || !serviceRoleKey.trim()
     || /[\r\n]/.test(serviceRoleKey) || typeof config.assertEnvironment !== "function"
     || typeof authorize !== "function" || typeof fetchImpl !== "function") throw Error("QA_RETENTION_CONFIGURATION");
   const assertEnvironment = createAvatarEnvironmentGuard(config.assertEnvironment);

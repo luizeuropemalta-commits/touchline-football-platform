@@ -190,8 +190,15 @@ export function AdminCardEngineConsole({ locale: localeInput, players, playersAv
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const file = useRef<HTMLInputElement>(null);
+  const feedbackRevision = useRef(0);
+  const changeTab = (next: string) => {
+    if (next === tab) return;
+    feedbackRevision.current++;
+    setTab(next); setError(""); setResult(null);
+  };
   const options = players.map((player) => <option key={player.id} value={player.providerPlayerId}>{player.name} · {player.club} {t("· provider")} {player.providerPlayerId}</option>);
   const call = async (action: "preview" | "create" | "approve" | "publish" | "rollback", batchId?: string) => {
+    const revision = feedbackRevision.current;
     setBusy(true); setError(""); setResult(null);
     try {
       const response = await fetch("/api/admin/card-engine", {
@@ -201,24 +208,32 @@ export function AdminCardEngineConsole({ locale: localeInput, players, playersAv
       });
       const payload = await response.json() as Record<string, unknown>;
       if (!response.ok) throw new Error(String(payload.error ?? commandFailure));
-      setResult(payload); if (action !== "preview") window.location.reload();
-    } catch (cause) { setError(safeError(cause, commandFailure)); }
+      if (revision === feedbackRevision.current) setResult(payload);
+      // Navigation invalidates presentation only; an accepted command still refreshes.
+      if (action !== "preview") window.location.reload();
+    } catch (cause) {
+      // A command failure remains visible even if its originating tab changed.
+      if (action !== "preview" || revision === feedbackRevision.current) setError(safeError(cause, commandFailure));
+    }
     finally { setBusy(false); }
   };
   const onFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const selected = event.currentTarget.files?.[0]; if (!selected) return;
+    const revision = feedbackRevision.current;
     setError("");
     try {
       if (selected.size > 250_000) throw new Error("File exceeds the 250 KB import limit.");
-      setText(await selected.text()); setSourceType("csv");
-    } catch (cause) { setError(safeError(cause, "Unable to read import file.")); }
+      const contents = await selected.text();
+      if (revision !== feedbackRevision.current) return;
+      setText(contents); setSourceType("csv");
+    } catch (cause) { if (revision === feedbackRevision.current) setError(safeError(cause, "Unable to read import file.")); }
   };
-  const addSingle = (providerPlayerId: string) => { setText(`provider_player_id,display_name,shirt_number,market_value_eur,card_template_key\n${providerPlayerId},,,,`); setSourceType("single_edit"); setTab("single"); };
+  const addSingle = (providerPlayerId: string) => { setText(`provider_player_id,display_name,shirt_number,market_value_eur,card_template_key\n${providerPlayerId},,,,`); setSourceType("single_edit"); changeTab("single"); };
   const summary = result?.summary as Record<string, unknown> | undefined;
   return <div className="space-y-6">
     <div className="flex flex-wrap gap-2">{[
       ["inbox", "Inbox"], ["single", "Single Edit"], ["bulk", "Bulk Import"], ["review", "Review & Publish"], ["overrides", "Overrides"], ["quality", "Data Quality"], ["audit", "Audit History"],
-    ].map(([key, label]) => <button key={key} aria-pressed={tab === key} onClick={() => setTab(key)} className={`rounded-xl border px-3 py-2 text-[10px] font-black ${tab === key ? "border-[#a3ff12]/50 bg-[#a3ff12]/10 text-[#caff6d]" : "border-white/10 text-slate-400"}`}>{t(label)}</button>)}</div>
+    ].map(([key, label]) => <button key={key} aria-pressed={tab === key} onClick={() => changeTab(key)} className={`rounded-xl border px-3 py-2 text-[10px] font-black ${tab === key ? "border-[#a3ff12]/50 bg-[#a3ff12]/10 text-[#caff6d]" : "border-white/10 text-slate-400"}`}>{t(label)}</button>)}</div>
     {!migrationReady ? <section className="rounded-2xl border border-amber-300/30 bg-amber-300/[.04] p-5 text-sm text-amber-100"><ShieldAlert className="mb-3" size={18}/>{t("Card Engine records are unavailable. Actions remain blocked until reading is restored.")}</section> : null}
     {tab === "inbox" ? <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{!playersAvailable ? <p role="status">{t("Candidates are unavailable.")}</p> : !players.length ? <p role="status">{t("No candidates available for review.")}</p> : null}{players.slice(0, 10).map((player) => <article key={player.id} className="rounded-2xl border border-white/10 bg-black/20 p-4"><p className="text-sm font-black text-white">{player.name}</p><p className="mt-1 text-xs text-slate-500">{player.club} · TouchLine {player.providerPlayerId}</p><p className="mt-3 text-[10px] font-black text-amber-200">{t("PENDING CARD REVIEW")}</p><button onClick={() => addSingle(player.providerPlayerId)} className="mt-3 rounded-lg border border-cyan-300/30 px-3 py-2 text-[10px] font-black text-cyan-100">{t("Open safely")}</button></article>)}</section> : null}
     {tab === "single" ? <section className="rounded-2xl border border-white/10 bg-black/20 p-5"><label htmlFor="card-engine-player" className="text-xs font-black text-white">{t("Canonical TouchLine player")} <span className="text-slate-500">{t("(identity is blocked from editing)")}</span></label><select id="card-engine-player" onChange={(event) => addSingle(event.target.value)} className="mt-3 w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-3 text-sm text-white"><option value="">{t("Choose canonical player")}</option>{options}</select><p className="mt-4 text-xs text-slate-500">{t("Edit only display name, shirt number, approved manual Market Value, or card template. Football facts and transfers remain TouchLine verified.")}</p></section> : null}

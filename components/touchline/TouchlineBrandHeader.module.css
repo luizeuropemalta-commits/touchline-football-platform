@@ -35,9 +35,10 @@
 .brandAccessory a:hover { text-decoration: underline; }
 .brandAccessory a:focus-visible { outline: 2px solid #a3ff12; outline-offset: 3px; }
 @media (max-width: 1000px) {
-  .frame[data-centered-navigation="true"] .row { gap: 12px; grid-template-columns: minmax(0, 1fr) auto; }
-  .frame[data-centered-navigation="true"] .row > :first-child { grid-column: 1; grid-row: 1; }
-  .frame[data-centered-navigation="true"] .row > :last-child { grid-column: 2; grid-row: 1; min-width: 0; max-width: min(200px, 45vw); }
+  .row, .frame[data-centered-navigation="true"] .row { display: flex; flex-wrap: wrap; gap: 12px; }
+  .row > :first-child { flex: 0 0 auto; max-width: 100%; }
+  .row > :last-child { flex: 0 0 auto; margin-inline-start: auto; max-width: 100%; }
+  .navigationSlot { order: 3; flex-basis: 100%; }
   .navigationSlot { max-width: none; grid-column: 1 / -1; grid-row: 2; justify-self: stretch; justify-content:flex-start; overflow-x:auto; padding:7px; scroll-padding:7px; scrollbar-width:thin; }
   .navigationSlot > nav { justify-content: center; }
   .navigationSlot > * { flex-shrink:0; }

@@ -560,3 +560,56 @@
 .ownerAvatar > a > span > span > span { width: 100%; height: 100%; min-width: 0; flex-basis: auto; }
 
 .ownerAvatar > span > span > span, .ownerAvatar > span > span > img { width: 100%; height: 100%; min-width: 0; flex-basis: auto; }
+
+/* Touch landscape tables: readable labels and a 44px public-profile link.
+   Card artwork and intrinsic typography stay intact; XI names cannot size cards. */
+@media (orientation: landscape) and (hover: none), (orientation: landscape) and (pointer: coarse) {
+  .coachList .rowIdentity strong,
+  .ownerTableList .rowIdentity strong { font-size: 14px; line-height: 1.35; }
+  .coachList .rowIdentity span,
+  .ownerTableList .rowIdentity span,
+  .coachRecord dt,
+  .coachList .pointsValue span,
+  .ownerTableList .pointsValue span { font-size: 12px; line-height: 1.4; }
+  .coachList li > b,
+  .ownerTableList li > b,
+  .coachRecord dd { font-size: 14px; line-height: 1.4; }
+  .coachList .pointsValue strong,
+  .ownerTableList .pointsValue strong { font-size: 18px; line-height: 1.2; }
+  .awardIdentity strong { font-size: 14px; line-height: 1.35; }
+  .awardIdentity b { font-size: 18px; line-height: 1.2; }
+  .awardHeader span,
+  .awardIdentity > span { overflow-wrap: anywhere; }
+  .clubOwnerTableHeader,
+  .hero p,
+  .hero > div > span,
+  .summary dt,
+  .sectionHeading p,
+  .sectionHeading > span,
+  .pitchHint,
+  .awardHeader span,
+  .awardIdentity > span,
+  .awardIdentity small,
+  .awardPending,
+  .coachRankingPanel > header > span,
+  .coachRankingPanel > header > p { font-size: 12px; }
+  /* Same neutral ink, raised opacity for normal-size interface text. */
+  .coachList .rowIdentity span,
+  .ownerTableList .rowIdentity span,
+  .coachList .pointsValue span,
+  .ownerTableList .pointsValue span,
+  .coachList li > b,
+  .ownerTableList li > b,
+  .clubOwnerTableHeader,
+  .awardIdentity small { color: rgba(245, 248, 245, .62); }
+  .ownerTableList li { grid-template-columns: 38px 48px minmax(0, 1fr) auto 36px; }
+  /* The outer 1px border leaves the nested 100%-sized link exactly 44px. */
+  .ownerAvatar { width: 46px; height: 46px; font-size: 12px; }
+  .ownerAvatar > span { align-items: center; justify-content: center; }
+  /* A name must not raise the grid track's min-content width and inflate its
+     card. Six percent preserves room for both head awards and compact labels. */
+  .pitchPlayer { grid-template-columns: minmax(0, 1fr); width: min(64px, 6%); }
+  .pitchIdentity { font-size: 10px; line-height: 1.2; padding: 1px 4px; width: max-content; max-width: 96px; }
+  .pitchIdentity strong { max-width: 100%; }
+  .positionLabel { font-size: 11px; }
+}

@@ -903,3 +903,30 @@
 .myClubMarketStatus[data-market-status-compact="true"] .clockDigits span { min-width: 36px; padding: 5px 8px; }
 .myClubMarketStatus[data-market-status-compact="true"] .clockDigits b { font-size: 22px; }
 .myClubMarketStatus[data-market-status-compact="true"] .marketClock > p { font-size: 11px; line-height: 1.4; }
+
+/* Market presents a single state and, only in the final 24 hours, opening time. */
+.marketClock[data-market-clock-simple="true"] { min-width: 0; }
+.marketClock[data-market-clock-simple="true"][data-market-open="true"] .clockRule { color: var(--lime); }
+.marketClock[data-market-clock-simple="true"][data-market-open="false"] .clockRule { color: #ff726c; }
+.myClubMarketStatus[data-market-status-compact="true"] .marketClock[data-market-clock-simple="true"] .clockDigits small { font-size: 12px; }
+.myClubCommand[data-fantasy-context="market"] .myClubMarketHeading[data-market-heading="status"] .marketClock[data-market-clock-simple="true"] .clockRule { animation: none; }
+
+.myClubMarketStatus[data-market-status-compact="true"] .marketClock[data-market-clock-simple="true"][data-market-open="true"] .clockRule { color: var(--lime); }
+.myClubMarketStatus[data-market-status-compact="true"] .marketClock[data-market-clock-simple="true"][data-market-open="false"] .clockRule { color: #ff726c; }
+
+/* An independent future schedule cannot colour an unavailable current state. */
+.myClubMarketStatus[data-market-status-compact="true"] .marketClock[data-market-clock-simple="true"]:not([data-market-open]) .clockRule,
+.myClubCommand[data-fantasy-context="market"] .myClubMarketHeading[data-market-heading="status"] .marketClock[data-market-clock-simple="true"]:not([data-market-open]) .clockRule { color: var(--gold); }
+
+/* The original card neon remains visible; touch needs no outer raster shadow.
+   The more specific invalid-slot warning retains its red state treatment. */
+@media (hover: none), (pointer: coarse) {
+  .myClubCard,
+  .myClubTacticalSlot > span,
+  .myClubTacticalSlot:not(:disabled):hover > span,
+  .myClubMarketResults article > span,
+  .pitchCard,
+  .selectedCoachSummary > span,
+  .coachGrid > article > span,
+  .marketCard { filter: none; }
+}

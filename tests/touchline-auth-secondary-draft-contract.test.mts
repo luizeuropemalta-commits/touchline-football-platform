@@ -43,7 +43,21 @@ test('auth operations use the separate public release flag; private draft remain
   assert.match(form,/redirectTo: buildTouchLineAuthCallbackUrl\(resetPasswordHref\)/);
   assert.match(form,/body: JSON.stringify\(\{ email: normalizedEmail \}\)/);
   assert.match(reset,/body: JSON.stringify\(\{ password \}\)/);
-  assert.equal((reset.match(/fetch\("\/api\/auth\/recovery"/g)||[]).length,2);
+  // GET and POST share a deadline helper. Guard the transport destination,
+  // not duplicated fetch syntax; the real request lifecycle has its own tests.
+  const recoverySource=ts.createSourceFile('reset-password-form.tsx',reset,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
+  const recoveryRequests:ts.CallExpression[]=[];
+  const visit=(node:ts.Node)=>{
+    if(ts.isCallExpression(node)&&ts.isIdentifier(node.expression)&&node.expression.text==='fetch') recoveryRequests.push(node);
+    ts.forEachChild(node,visit);
+  };
+  visit(recoverySource);
+  assert.ok(recoveryRequests.length>0,'recovery must use the private API');
+  for(const request of recoveryRequests) {
+    const destination=request.arguments[0];
+    assert.ok(destination&&ts.isStringLiteral(destination),'recovery destination cannot depend on a presentation locale');
+    assert.equal(destination.text,'/api/auth/recovery');
+  }
   assert.match(reset,/siteLocalesEnabled = false/);
   assert.match(reset,/const normalizedLocale = normalizeTouchLineAuthLocale\(locale, siteLocalesEnabled\)/);
   for(const source of [form,reset]) {

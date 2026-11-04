@@ -285,3 +285,13 @@
 
 /* Keep own-goal attribution visible on touch screens, not only in a tooltip. */
 .ownGoalMark { margin-inline-start: 4px; font-size: 9px; font-weight: 700; color: #d8ff94; text-decoration: none; }
+
+/* Keep large touch-landscape panels out of the backdrop-filter compositor.
+   Card artwork, perimeter neon, crests and desktop/portrait effects are unchanged. */
+@media (orientation: landscape) and (hover: none), (orientation: landscape) and (pointer: coarse) {
+  .fixtureRail,
+  .matchPanel {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}

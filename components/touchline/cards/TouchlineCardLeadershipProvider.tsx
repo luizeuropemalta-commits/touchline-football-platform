@@ -27,10 +27,20 @@ export function TouchlineCardLeadershipProvider({ value, children, livePlayerUpd
   const liveUpdates = livePlayerUpdates || liveCoachUpdates;
   // Existing store results pre-dating this mount cannot replace its server seed.
   const scopeKey = JSON.stringify([pathname, allowed, livePlayerUpdates, liveCoachUpdates, expectedSeasonId ?? null]);
-  const seedKey = `${scopeKey}:${value.playerRanking?.phase}:${value.playerRanking?.leagueKey}:${value.playerRanking?.seasonId}:${value.playerRanking?.snapshotId}:${value.playerRanking?.publishedAt}:${value.coachRanking?.phase}:${value.coachRanking?.seasonId}:${value.coachRanking?.snapshotId}:${value.coachLeader?.snapshotId}`;
-  const [accepted, setAccepted] = useState<CardLeadershipSeedState>(() => ({ seedKey, scopeKey, hasAcceptedRead: false, state: resetCardLeadershipSeed(value, getTouchlineRankingReadRevision(), getTouchlineRankingRequestEpoch()) }));
+  const seedKey = `${scopeKey}:${value.playerRanking?.phase}:${value.playerRanking?.leagueKey}:${value.playerRanking?.seasonId}:${value.playerRanking?.snapshotId}:${value.playerRanking?.publishedAt}:${value.playerRanking?.currentProjection?.revision}:${value.coachRanking?.phase}:${value.coachRanking?.seasonId}:${value.coachRanking?.snapshotId}:${value.coachRanking?.currentRevision}:${value.coachLeader?.snapshotId}`;
+  const [accepted, setAccepted] = useState<CardLeadershipSeedState>(() => ({ seedKey, scopeKey, hasAcceptedRead: false,
+    serverSeasonId: value.playerRanking?.seasonId ?? value.coachRanking?.seasonId ?? value.coachLeader?.seasonId ?? null,
+    serverLeagueKey: value.playerRanking?.leagueKey ?? null, state: resetCardLeadershipSeed(value, getTouchlineRankingReadRevision(), getTouchlineRankingRequestEpoch()) }));
   const read = useTouchlineRankingRead(liveUpdates && allowed);
-  const scopedRead = expectedSeasonId && read && (
+  // A parsed current projection can advance the mounted page to the next
+  // canonical season. Unconfirmed foreign-season reads remain inadmissible.
+  const confirmedCurrentSeason = read && (
+    read.state.currentProjection?.version === 1
+      && read.state.currentProjection.currentSeasonId === read.state.seasonId
+    || read.coachRanking?.currentProjection?.version === 1
+      && read.coachRanking.currentProjection.scope.seasonId === read.coachRanking.seasonId
+  );
+  const scopedRead = expectedSeasonId && read && !confirmedCurrentSeason && (
     read.state.seasonId && read.state.seasonId !== expectedSeasonId
     || read.coachRanking?.seasonId && read.coachRanking.seasonId !== expectedSeasonId
   ) ? null : read;
@@ -47,7 +57,9 @@ export function TouchlineCardLeadershipProvider({ value, children, livePlayerUpd
   return <AuthorityContext.Provider value={resolved}>
     {refreshRootSeed ? <TouchlineLivePresentationRefresh
       initialPlayerRankingSnapshotId={value.playerRanking?.snapshotId ?? null}
+      initialCurrentPlayerRankingRevision={value.playerRanking?.currentProjection?.revision ?? null}
       initialCoachRankingSnapshotId={value.coachLeader?.snapshotId ?? null}
+      initialCurrentCoachRankingRevision={value.coachRanking?.currentRevision ?? null}
     /> : null}
     {children}
   </AuthorityContext.Provider>;

@@ -94,9 +94,9 @@ test("continuous strip wraps both directions to an identical visual run without 
 });
 
 test("continuous strip speed is elapsed-time based and never catches up after suspension", () => {
-  assert.ok(Math.abs(fixtureStripFrameDistance(1000 / 60) * 60 - 30) < 1e-9);
-  assert.ok(Math.abs(fixtureStripFrameDistance(1000 / 30) * 30 - 30) < 1e-9);
-  assert.equal(fixtureStripFrameDistance(10_000), 1.5);
+  assert.ok(Math.abs(fixtureStripFrameDistance(1000 / 60) * 60 - 45) < 1e-9);
+  assert.ok(Math.abs(fixtureStripFrameDistance(1000 / 30) * 30 - 45) < 1e-9);
+  assert.equal(fixtureStripFrameDistance(10_000), 2.25);
   assert.equal(fixtureStripFrameDistance(-1), 0);
 });
 

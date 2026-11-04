@@ -28,7 +28,7 @@ const ClubOwnerSearchTrigger = runInNewContext(extract("components/touchline/soc
 }) as React.ComponentType<Record<string, unknown>>;
 const Header = runInNewContext(headerCode, { React, useState: () => [false, () => {}], styles: css, controls: css, planStyles: css,
   Image: () => React.createElement("span"), Link: ({ children, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement>) => React.createElement("a", props, children),
-  Camera: () => null, useConfirmedClubCollection: () => ({ verificationStatus: "confirmed" }), CLUB_ACQUISITION_BUDGETS: {},
+  Camera: () => null, Trophy: () => React.createElement("svg", { "aria-hidden": true }), useConfirmedClubCollection: () => ({ verificationStatus: "confirmed" }), CLUB_ACQUISITION_BUDGETS: {},
   ClubOwnerSearchTrigger, peopleLocale, peopleCopy, publicOwnerSettingsHref, getTouchlineClubOwnerMarketCopy: () => ({}), getClubOwnerPlanShowcaseCopy, resolveTouchlineCatalogueLocale,
   formatClubOwnerRankingPosition, getClubOwnerProfileMetricsCopy: () => ({ ...getClubOwnerProfileMetricsCopy("en-GB"), followers: "Followers", unavailable: "Unavailable" }), getClubCollectionBudgetCopy: () => ({}),
 }) as React.ComponentType<Record<string, unknown>>;

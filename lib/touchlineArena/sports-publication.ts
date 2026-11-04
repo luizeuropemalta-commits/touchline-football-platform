@@ -1,3 +1,5 @@
+import { parseTouchlineCurrentCoachRanking } from "./current-coach-ranking.ts";
+import { parseTouchlineCurrentPlayerRanking, type TouchlineCurrentPlayerRanking } from './current-player-ranking.ts';
 import { parseCoachCatalogueTransport } from "./coach-catalogue-contract.ts";
 import { parseTouchlineActiveRankingState, type TouchlineActiveRankingState } from "./card-ranking-live.ts";
 import type { TouchLineCoachRankingState, TouchLineCoachRankingRow } from "./coach-ranking-server";
@@ -18,6 +20,9 @@ export type TouchlineSportsPublication = Readonly<{
     liveScoreSnapshotDigest: string;
   }>;
   playerRanking: TouchlineActiveRankingState | null;
+  /** Fresh derived eligibility; deliberately outside the immutable publication digest. */
+  currentPlayerRanking?: TouchlineCurrentPlayerRanking;
+  currentCoachRanking?: TouchLineCoachRankingState | null;
   coachRanking: TouchLineCoachRankingState | null;
   live: Readonly<{ fetchedAt: string; fixtures: readonly TouchlinePublicFixture[] }>;
 }>;
@@ -39,7 +44,7 @@ function coachRecord(value: unknown): TouchlineCoachRecord | null {
 
 function coachRanking(value: unknown): TouchLineCoachRankingState | null {
   const input = object(value);
-  if (!input || input.phase !== "ranked" || !text(input.snapshotId) || !text(input.seasonId)
+  if (!input || input.currentProjection !== undefined || input.phase !== "ranked" || !text(input.snapshotId) || !text(input.seasonId)
     || input.scoringVersion !== "coach_scoring_v2" || !timestamp(input.generatedAt)
     || !Array.isArray(input.fixtureIds) || !input.fixtureIds.every(text)
     || new Set(input.fixtureIds).size !== input.fixtureIds.length || !Array.isArray(input.rows)) return null;
@@ -85,7 +90,18 @@ export function parseTouchlineSportsPublication(value: unknown): TouchlineSports
     || (publication.coachRankingSnapshotId === null ? input.coachRanking !== null
       : !coach || coach.snapshotId !== publication.coachRankingSnapshotId)
     || (player && coach && player.seasonId !== coach.seasonId)) return null;
+  const currentPlayerRanking = input.currentPlayerRanking === undefined ? undefined
+    : parseTouchlineCurrentPlayerRanking(input.currentPlayerRanking, player);
+  if (currentPlayerRanking === null) return null;
+  const currentCoachRanking = input.currentCoachRanking === undefined ? undefined
+    : input.currentCoachRanking === null ? null : parseTouchlineCurrentCoachRanking(input.currentCoachRanking, coach);
+  if (input.currentCoachRanking != null && !currentCoachRanking) return null;
+  if (currentPlayerRanking?.scope && currentCoachRanking?.currentProjection
+    && (currentPlayerRanking.scope.seasonId !== currentCoachRanking.currentProjection.scope.seasonId
+      || currentPlayerRanking.scope.competitionId !== currentCoachRanking.currentProjection.scope.competitionId)) return null;
   return {
+    ...(currentPlayerRanking ? { currentPlayerRanking } : {}),
+    ...(currentCoachRanking !== undefined ? { currentCoachRanking } : {}),
     version: 1, scopeKey: "touchline-england",
     publication: { snapshotId: publication.snapshotId, contentDigest: publication.contentDigest,
       publishedAt: publication.publishedAt, playerRankingSnapshotId: publication.playerRankingSnapshotId,

@@ -24,7 +24,7 @@ export function TouchlineCoachProfilePublication({ coachProviderId, seed, season
 export function TouchlineCoachProfileValue({ field, fallback = "—" }: { field: "rank" | "matches" | "season"; fallback?: string }) {
   const competition = useContext(ProfileContext);
   if (!competition) return <>{fallback}</>;
-  return <>{field === "rank" ? `#${competition.rank}` : field === "season" ? competition.seasonLabel
+  return <>{field === "rank" ? competition.rank === null ? fallback : `#${competition.rank}` : field === "season" ? competition.seasonLabel
     : competition.home.wins + competition.home.draws + competition.home.losses
       + competition.away.wins + competition.away.draws + competition.away.losses}</>;
 }

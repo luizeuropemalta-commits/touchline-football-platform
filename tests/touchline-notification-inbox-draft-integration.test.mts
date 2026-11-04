@@ -98,7 +98,9 @@ test("Inbox presentation preserves side-by-side message/actions in a local real 
   assert.match(css, /\.canvas\s*\{[^}]*min-width:\s*760px;/s);
   assert.match(css, /grid-template-columns:\s*minmax\(0, 1fr\) minmax\(200px, 240px\)/);
   assert.match(css, /overflow-wrap:\s*anywhere/);
-  assert.doesNotMatch(css, /@media|text-overflow|zoom|transform/);
+  // The real composed browser matrix verifies responsive reflow while the
+  // desktop columns and non-truncation contract remain asserted here.
+  assert.doesNotMatch(css, /text-overflow|zoom|transform/);
   assert.doesNotMatch(inboxSource, /<style>|@media/);
   assert.match(read("components/touchline/TouchlineGlobalNavigation.module.css"), /\.link,[\s\S]*?min-height:\s*44px;/);
 });

@@ -528,38 +528,47 @@ function NotificationsContent({ draftLocalesEnabled = false }: { draftLocalesEna
               </label>
 
               <div className={`grid gap-3 ${styles.quietHours}`}>
-                <input
+                <label className={styles.field}>
+                  <span>{copy.quietStart}</span>
+                  <input
                   disabled={editingDisabled}
-                  aria-label={copy.quietStart}
-                  type="time"
-                  value={preferences.quietHours.start}
-                  onChange={(event) => setPreferences((current) => ({
-                    ...current,
-                    quietHours: { ...current.quietHours, start: event.target.value },
-                  }))}
-                  className="h-11 rounded-2xl border border-white/[.08] bg-black/30 px-3 text-xs font-bold text-white"
-                />
-                <input
+                    aria-label={copy.quietStart}
+                    type="time"
+                    value={preferences.quietHours.start}
+                    onChange={(event) => setPreferences((current) => ({
+                      ...current,
+                      quietHours: { ...current.quietHours, start: event.target.value },
+                    }))}
+                    className="h-11 rounded-2xl border border-white/[.08] bg-black/30 px-3 text-xs font-bold text-white"
+                  />
+                </label>
+                <label className={styles.field}>
+                  <span>{copy.quietEnd}</span>
+                  <input
                   disabled={editingDisabled}
-                  aria-label={copy.quietEnd}
-                  type="time"
-                  value={preferences.quietHours.end}
-                  onChange={(event) => setPreferences((current) => ({
-                    ...current,
-                    quietHours: { ...current.quietHours, end: event.target.value },
-                  }))}
-                  className="h-11 rounded-2xl border border-white/[.08] bg-black/30 px-3 text-xs font-bold text-white"
-                />
-                <input
+                    aria-label={copy.quietEnd}
+                    type="time"
+                    value={preferences.quietHours.end}
+                    onChange={(event) => setPreferences((current) => ({
+                      ...current,
+                      quietHours: { ...current.quietHours, end: event.target.value },
+                    }))}
+                    className="h-11 rounded-2xl border border-white/[.08] bg-black/30 px-3 text-xs font-bold text-white"
+                  />
+                </label>
+                <label className={styles.field}>
+                  <span>{copy.quietTimezone}</span>
+                  <input
                   disabled={editingDisabled}
-                  aria-label={copy.quietTimezone}
-                  value={preferences.quietHours.timezone}
-                  onChange={(event) => setPreferences((current) => ({
-                    ...current,
-                    quietHours: { ...current.quietHours, timezone: event.target.value },
-                  }))}
-                  className="h-11 rounded-2xl border border-white/[.08] bg-black/30 px-3 text-xs font-bold text-white"
-                />
+                    aria-label={copy.quietTimezone}
+                    value={preferences.quietHours.timezone}
+                    onChange={(event) => setPreferences((current) => ({
+                      ...current,
+                      quietHours: { ...current.quietHours, timezone: event.target.value },
+                    }))}
+                    className="h-11 rounded-2xl border border-white/[.08] bg-black/30 px-3 text-xs font-bold text-white"
+                  />
+                </label>
               </div>
             </div>
           </Panel>
@@ -569,38 +578,50 @@ function NotificationsContent({ draftLocalesEnabled = false }: { draftLocalesEna
           <PanelHeading kicker={copy.personalScope} title={copy.filters} icon={ShieldCheck} />
           <div className="p-5">
             <div className={`grid gap-3 ${styles.scopes}`}>
-              <input
+              <label className={styles.field}>
+                <span>{copy.clubs}</span>
+                <input
                   disabled={editingDisabled}
-                aria-label={copy.clubs}
-                value={joinScope(preferences.settings.scopes.clubs)}
-                onChange={(event) => updateScope("clubs", event.target.value)}
-                placeholder={copy.clubsPlaceholder}
-                className="h-11 rounded-2xl border border-white/[.08] bg-black/30 px-3 text-xs font-bold text-white placeholder:text-slate-700"
-              />
-              <input
+                  aria-label={copy.clubs}
+                  value={joinScope(preferences.settings.scopes.clubs)}
+                  onChange={(event) => updateScope("clubs", event.target.value)}
+                  placeholder={copy.clubsPlaceholder}
+                  className="h-11 rounded-2xl border border-white/[.08] bg-black/30 px-3 text-xs font-bold text-white placeholder:text-slate-700"
+                />
+              </label>
+              <label className={styles.field}>
+                <span>{copy.players}</span>
+                <input
                   disabled={editingDisabled}
-                aria-label={copy.players}
-                value={joinScope(preferences.settings.scopes.players)}
-                onChange={(event) => updateScope("players", event.target.value)}
-                placeholder={copy.playersPlaceholder}
-                className="h-11 rounded-2xl border border-white/[.08] bg-black/30 px-3 text-xs font-bold text-white placeholder:text-slate-700"
-              />
-              <input
+                  aria-label={copy.players}
+                  value={joinScope(preferences.settings.scopes.players)}
+                  onChange={(event) => updateScope("players", event.target.value)}
+                  placeholder={copy.playersPlaceholder}
+                  className="h-11 rounded-2xl border border-white/[.08] bg-black/30 px-3 text-xs font-bold text-white placeholder:text-slate-700"
+                />
+              </label>
+              <label className={styles.field}>
+                <span>{copy.competitions}</span>
+                <input
                   disabled={editingDisabled}
-                aria-label={copy.competitions}
-                value={joinScope(preferences.settings.scopes.competitions)}
-                onChange={(event) => updateScope("competitions", event.target.value)}
-                placeholder={copy.competitionsPlaceholder}
-                className="h-11 rounded-2xl border border-white/[.08] bg-black/30 px-3 text-xs font-bold text-white placeholder:text-slate-700"
-              />
-              <input
+                  aria-label={copy.competitions}
+                  value={joinScope(preferences.settings.scopes.competitions)}
+                  onChange={(event) => updateScope("competitions", event.target.value)}
+                  placeholder={copy.competitionsPlaceholder}
+                  className="h-11 rounded-2xl border border-white/[.08] bg-black/30 px-3 text-xs font-bold text-white placeholder:text-slate-700"
+                />
+              </label>
+              <label className={styles.field}>
+                <span>{copy.fixtures}</span>
+                <input
                   disabled={editingDisabled}
-                aria-label={copy.fixtures}
-                value={joinScope(preferences.settings.scopes.fixtures)}
-                onChange={(event) => updateScope("fixtures", event.target.value)}
-                placeholder={copy.fixturesPlaceholder}
-                className="h-11 rounded-2xl border border-white/[.08] bg-black/30 px-3 text-xs font-bold text-white placeholder:text-slate-700"
-              />
+                  aria-label={copy.fixtures}
+                  value={joinScope(preferences.settings.scopes.fixtures)}
+                  onChange={(event) => updateScope("fixtures", event.target.value)}
+                  placeholder={copy.fixturesPlaceholder}
+                  className="h-11 rounded-2xl border border-white/[.08] bg-black/30 px-3 text-xs font-bold text-white placeholder:text-slate-700"
+                />
+              </label>
             </div>
 
             <div className={`mt-5 flex items-center justify-between gap-3 rounded-2xl border border-white/[.07] bg-black/20 p-4 ${styles.saveRow}`}>

@@ -10,7 +10,7 @@
 }
 
 .canvas {
-  /* Preserve the two-panel layout while the rail owns narrow-screen scroll. */
+  /* Keep the two-panel desktop composition; smaller viewports reflow below. */
   min-width: 1160px;
   overflow-wrap: anywhere;
 }
@@ -61,4 +61,33 @@
 .canvas input[type="time"]:focus {
   outline: 1px solid rgba(34, 211, 238, .7);
   outline-offset: 3px;
+}
+
+.field {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  min-width: 0;
+  gap: 8px;
+  color: #e2e8f0;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+@media (pointer: coarse) and (orientation: landscape) {
+  .canvas input:not([type="checkbox"]):not([type="radio"]),
+  .canvas select {
+    font-size: 16px;
+  }
+}
+
+/* Preferences remain fully reachable in phone landscape without side panning. */
+@media (max-width: 1279px) {
+  .canvas { min-width: 0; width: 100%; }
+  .panels { grid-template-columns: minmax(0, 1fr); }
+  .quietHours,
+  .scopes { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .quietHours > :last-child { grid-column: 1 / -1; }
+  .saveRow { flex-wrap: wrap; }
+  .saveRow > div { min-width: 0; flex: 1 1 15rem; }
+  .saveRow > button { max-width: 100%; }
 }

@@ -1,5 +1,5 @@
 /** Presentation only: all three visual runs use the same published fixtures. */
-export const FIXTURE_STRIP_PIXELS_PER_SECOND = 30;
+export const FIXTURE_STRIP_PIXELS_PER_SECOND = 45;
 
 export function wrapFixtureStripOffset(offset: number, cycleWidth: number): number {
   if (!Number.isFinite(cycleWidth) || cycleWidth <= 0) return 0;

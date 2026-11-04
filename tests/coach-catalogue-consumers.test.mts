@@ -8,6 +8,7 @@ import { legacyCoachCatalogue, parseCoachCatalogue, UNAVAILABLE_COACH_CATALOGUE,
 import { classifyTouchlineCoach } from "../lib/touchlineArena/coach-classification.ts";
 import { createTouchlineArenaCoachSlot } from "../lib/touchlineArena/coach-card.ts";
 import { CLUB_COACH_VALUES, inspectClubAcquisition } from "../lib/touchlineFantasy/club-acquisition.ts";
+import { coachCompetitionFromRanking } from "../lib/touchlineArena/coach-competition-projection.ts";
 
 function publishedCatalogue() {
   const history=legacyCoachCatalogue().current.map(e=>({id:randomUUID(),publicationId:randomUUID(),providerId:e.coach.providerId,teamId:e.coach.teamId,name:e.coach.name,nationality:e.coach.nationality,countryId:e.coach.countryId,countryCode3:e.countryCode3,sourceKind:"legacy_seed_bootstrap",observedAt:e.fetchedAt,classification:e.classification}));
@@ -19,6 +20,7 @@ function fantasyReader(catalogue:CoachCatalogue) {
   const exports:Record<string,unknown>={};
   const modules:Record<string,unknown>={"@/lib/touchlineArena/coach-catalogue-server":{loadCoachCatalogue:async()=>catalogue},
     "@/lib/touchlineArena/coach-ranking-server":{loadTouchLineCoachRanking:async()=>({phase:"unavailable",rows:[]})},
+    "@/lib/touchlineArena/coach-competition-projection":{coachCompetitionFromRanking},
     "@/lib/touchlineArena/coach-card":{createTouchlineArenaCoachSlot}};
   const source=readFileSync(new URL("../lib/touchlineFantasy/server.ts",import.meta.url),"utf8")+"\nexports.loadCoachesForTest=loadCoaches;";
   runInNewContext(ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports,require:(name:string)=>modules[name]??{}});

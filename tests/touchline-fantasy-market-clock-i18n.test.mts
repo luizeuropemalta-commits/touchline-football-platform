@@ -6,6 +6,9 @@ import ts from 'typescript';
 import * as jsx from 'react/jsx-runtime';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { resolveTouchlineFantasyMarketClock, formatTouchlineFantasyDeadline } from '../lib/touchlineFantasy/domain.ts';
+import type { TouchlineFantasySnapshot } from '../lib/touchlineFantasy/server.ts';
+import { TOUCHLINE_DEFAULT_FORMATION_GEOMETRY_REGISTRY } from '../lib/touchlineArena/formation-geometry.ts';
+import { getTouchlineFantasyMarketAccessCopy } from '../lib/touchlineFantasy/market-access-i18n.ts';
 import { TOUCHLINE_APPROVED_LOCALES, isTouchLineLocaleComplete } from '../lib/touchlineArena/i18n.ts';
 
 const codes = ['en-GB', 'pt-BR', 'es-ES', 'it-IT', 'fr-FR', 'ar-SA', 'tr-TR', 'de-DE'] as const;
@@ -23,7 +26,7 @@ function rounds(phase: 'closing' | 'opening' | 'awaiting-final' | 'syncing', sec
 // Actual clock function + JSX, with only React lifecycle/time controlled. The
 // real canonical resolver and London formatter are used; no window algorithm
 // or rendering implementation is copied into the fixture.
-function renderClock(input: { locale: string; gameweeks?: Gameweeks; nowMs?: number | null; marketStatus?: string; qaOverride?: string; bindings?: object; hideAwaitingFinalHeading?: boolean; draftLocalesEnabled?: boolean }) {
+function renderClock(input: { locale: string; gameweeks?: Gameweeks; nowMs?: number | null; marketStatus?: string; qaOverride?: string; bindings?: object; hideAwaitingFinalHeading?: boolean; draftLocalesEnabled?: boolean; compactStatus?: boolean; isMarketOpen?: boolean }) {
   const source = readFileSync(new URL('../app/fantasy/FantasyGameweekClient.tsx', import.meta.url), 'utf8');
   const ast = ts.createSourceFile('Fantasy.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
   const declarations = ast.statements.filter(node => ts.isFunctionDeclaration(node) && ['MarketWindowClock', 'countdownUnit'].includes(node.name?.text ?? ''));
@@ -45,7 +48,7 @@ function renderClock(input: { locale: string; gameweeks?: Gameweeks; nowMs?: num
     Date: class ClockDate extends Date { static now() { return now; } },
     window: { setInterval(_callback: () => void, delay: number) { intervals.push(delay); return 7; }, clearInterval(id: number) { cleared.push(id); } },
   });
-  const html = renderToStaticMarkup(exports.MarketWindowClock!({ locale: input.locale, gameweeks: input.gameweeks ?? [], marketStatus: input.marketStatus, qaOverride: input.qaOverride, hideAwaitingFinalHeading: input.hideAwaitingFinalHeading, draftLocalesEnabled: input.draftLocalesEnabled }));
+  const html = renderToStaticMarkup(exports.MarketWindowClock!({ locale: input.locale, gameweeks: input.gameweeks ?? [], marketStatus: input.marketStatus, qaOverride: input.qaOverride, hideAwaitingFinalHeading: input.hideAwaitingFinalHeading, draftLocalesEnabled: input.draftLocalesEnabled, compactStatus: input.compactStatus, isMarketOpen: input.isMarketOpen }));
   for (const effect of effects) effect()();
   assert.deepEqual(intervals, [1000]); assert.deepEqual(cleared, [7]); assert.deepEqual(ticks, [now]);
   return html;
@@ -122,7 +125,7 @@ test('ClubOwner closed panel keeps the canonical final-whistle reopening rule wi
   const bindings = await load();
   const client = readFileSync(new URL('../app/fantasy/FantasyGameweekClient.tsx', import.meta.url), 'utf8');
   const css = readFileSync(new URL('../app/fantasy/fantasy.module.css', import.meta.url), 'utf8');
-  assert.match(client, /<MarketWindowClock gameweeks=\{gameweeks\} locale=\{locale\} draftLocalesEnabled=\{draftLocalesEnabled\} hideAwaitingFinalHeading \/>/);
+  assert.match(client, /<MarketWindowClock gameweeks=\{gameweeks\} locale=\{locale\} draftLocalesEnabled=\{draftLocalesEnabled\} compactStatus isMarketOpen=\{qaClubMarketOpen \? true : activeGameweek\?\.state \? marketOpen : undefined\} marketStatus=\{marketStatusLabel\} \/>/);
   assert.match(css, /\.myClubMarketHeading\[data-market-heading="status"\] \.marketClock\[data-market-clock-phase="awaiting-final"\] > p \{[^}]*font-size: clamp\(14px, \.9vw, 16px\)/);
   for (const locale of codes) {
     const copy = bindings.getTouchlineFantasyMarketClockCopy(locale, true);
@@ -215,3 +218,102 @@ test('QA override stays separate from the official schedule and never invents a 
  for(const phase of ['closing','opening'] as const) assert.ok(renderClock({locale,gameweeks:rounds(phase),bindings}).includes('<em>GW 6</em>'));
  }
  });
+
+
+test('compact Market shows only the confirmed state and an opening countdown within 24 hours', async () => {
+  const bindings = await load();
+  for (const locale of codes) {
+    const copy = bindings.getTouchlineFantasyMarketClockCopy(locale, true);
+    for (const phase of ['closing', 'opening', 'awaiting-final', 'syncing'] as const) {
+      for (const seconds of [1, 3661, 86400, 86401, 90000]) {
+        const gameweeks = rounds(phase, seconds);
+        const html = renderClock({ locale, gameweeks, bindings, compactStatus: true, isMarketOpen: phase === 'closing', draftLocalesEnabled: true });
+        const open = phase === 'closing';
+        assert.ok(html.includes(`<strong class="clockRule">${open ? copy.open : copy.closed}</strong>`), `${locale} ${phase}`);
+        assert.equal((html.match(/class="clockRule"/g) ?? []).length, 1);
+        assert.doesNotMatch(html, /class="clockHeading"|<p>|TOUCHLINE · MARKET|<em>/);
+        assert.ok(!html.includes(copy.awaitingFinal));
+        if (phase === 'opening' && seconds <= 86400) {
+          assert.match(html, /class="clockDigits" aria-hidden="true"/);
+          assert.ok(html.includes(`dateTime="${gameweeks[0].marketOpensAt}"`));
+          assert.ok(html.includes(`aria-label="${copy.reopensIn}"`), 'opening context remains accessible without a visual heading');
+        } else assert.doesNotMatch(html, /clockDigits|<time/);
+      }
+    }
+    for (const nowMs of [null, now]) {
+      const unknown = renderClock({ locale, nowMs, bindings, compactStatus: true, draftLocalesEnabled: true });
+      assert.ok(unknown.includes(copy.unconfirmedStatus));
+      assert.doesNotMatch(unknown, /clockDigits|<time|data-market-open=/);
+    }
+    for (const phase of ['opening', 'awaiting-final'] as const) {
+      const qa = renderClock({ locale, gameweeks: rounds(phase), bindings, compactStatus: true, isMarketOpen: true, qaOverride: 'QA override marker', draftLocalesEnabled: true });
+      assert.ok(qa.includes(`<strong class="clockRule">${copy.open}</strong>`));
+      assert.match(qa, /data-market-open="true"/);
+      assert.match(qa, /data-market-test-override="true"/);
+      assert.doesNotMatch(qa, /QA override marker|clockDigits|<time|<p>/);
+    }
+  }
+  const client = readFileSync(new URL('../app/fantasy/FantasyGameweekClient.tsx', import.meta.url), 'utf8');
+  assert.equal((client.match(/compactStatus isMarketOpen=\{qaClubMarketOpen \? true : activeGameweek\?\.state \? marketOpen : undefined\}/g) ?? []).length, 2, 'both Market placements share the compact presentation');
+});
+
+
+test('both real compact consumers preserve unavailable when a valid snapshot has no active round', async () => {
+  const bindings = await load();
+  const source = readFileSync(new URL('../app/fantasy/FantasyGameweekClient.tsx', import.meta.url), 'utf8');
+  const ast = ts.createSourceFile('Fantasy.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const consumers: ts.JsxSelfClosingElement[] = [], declarations: string[] = [];
+  let wrapperState: string | undefined;
+  const selected = new Set(['snapshot', 'activeGameweek', 'qaClubMarketOpen', 'marketOpen', 'marketStatusLabel']);
+  function visit(node: ts.Node) {
+    if (ts.isJsxOpeningElement(node) && node.attributes.properties.some(attribute => ts.isJsxAttribute(attribute)
+      && attribute.name.getText(ast) === 'data-market-status-compact')) {
+      const attribute = node.attributes.properties.find(attribute => ts.isJsxAttribute(attribute) && attribute.name.getText(ast) === 'data-market-open');
+      assert.ok(attribute && ts.isJsxAttribute(attribute) && attribute.initializer && ts.isJsxExpression(attribute.initializer));
+      wrapperState = attribute.initializer.expression?.getText(ast);
+    }
+    if (ts.isVariableDeclaration(node) && selected.has(node.name.getText(ast))) declarations.push(`const ${node.getText(ast)};`);
+    if (ts.isJsxSelfClosingElement(node) && node.tagName.getText(ast) === 'MarketWindowClock'
+      && node.attributes.properties.some(attribute => ts.isJsxAttribute(attribute) && attribute.name.getText(ast) === 'compactStatus')) consumers.push(node);
+    ts.forEachChild(node, visit);
+  }
+  visit(ast);
+  assert.equal(consumers.length, 2);
+  assert.equal(declarations.length, selected.size);
+  assert.ok(wrapperState);
+  const css = readFileSync(new URL('../app/fantasy/fantasy.module.css', import.meta.url), 'utf8');
+  const neutral = css.match(/([^{}]+\.marketClock\[data-market-clock-simple="true"\]:not\(\[data-market-open\]\) \.clockRule) \{ color: var\(--gold\); \}/)?.[1];
+  assert.ok(neutral?.includes('.myClubMarketStatus[data-market-status-compact="true"]'), 'portal unknown state must keep the neutral colour');
+  assert.ok(neutral?.includes('.myClubMarketHeading[data-market-heading="status"]'), 'secondary unknown state must keep the neutral colour');
+  const javascript = ts.transpileModule(`${declarations.join('\n')}\nexport const consumers = [${consumers.map(node => node.getText(ast)).join(',')}];\nexport const wrapperOpen = ${wrapperState};`, {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX },
+  }).outputText;
+  const snapshot: TouchlineFantasySnapshot = {
+    userId: '20000000-0000-4000-8000-000000000001', entitlementActive: true, plan: { active: true, expiresAt: null },
+    qaClubMarketOpen: false, config: { budgetEur: 100000000, maxPlayersPerClub: 11, lockOffsetMinutes: 0 },
+    gameweeks: [], activeGameweek: null, userGameweek: null, selections: [], catalogue: [], coaches: [], lineupAlerts: [],
+    formationRegistry: TOUCHLINE_DEFAULT_FORMATION_GEOMETRY_REGISTRY, gameweekScore: 0, seasonScore: 0,
+    matchHistory: [], gameweekRanking: [], seasonRanking: [],
+  };
+  for (const locale of codes) {
+    const copy = getTouchlineFantasyMarketAccessCopy(locale, true);
+    // Also retain an unavailable current round when the independent clock has
+    // a future scheduled window; that schedule is not an active-round state.
+    for (const gameweeks of [snapshot.gameweeks, rounds('opening')]) for (const nowMs of [null, now]) {
+      const exports: { consumers?: Array<{ props: Parameters<typeof renderClock>[0] }>; wrapperOpen?: string } = {};
+      runInNewContext(javascript, { exports, require(name: string) { assert.equal(name, 'react/jsx-runtime'); return jsx; },
+        initialSnapshot: snapshot, live: null, collectionEnabled: true, deadlineReached: false,
+        locale, draftLocalesEnabled: true, gameweeks, marketAccessCopy: copy,
+        collectionBudgetCopy: { qaMarketOpen: 'QA override marker' }, MarketWindowClock: function ConsumerBoundary() { return null; },
+      });
+      assert.equal(exports.wrapperOpen, undefined, 'the real portal wrapper must also preserve unknown state');
+      for (const consumer of exports.consumers!) {
+        assert.equal(consumer.props.isMarketOpen, undefined, 'the real consumer must preserve unknown calendar state');
+        assert.equal(consumer.props.marketStatus, copy.unavailable);
+        const html = renderClock({ ...consumer.props, nowMs, bindings });
+        assert.ok(html.includes(`<strong class="clockRule">${copy.unavailable}</strong>`));
+        assert.doesNotMatch(html, /data-market-open=|clockDigits|<time/);
+      }
+    }
+  }
+});

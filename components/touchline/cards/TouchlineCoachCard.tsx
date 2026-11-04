@@ -166,7 +166,7 @@ export default function TouchlineCoachCard({
     renderedHeightPercent: number;
   } | null>(null);
   const layout = layoutOverride ?? storedLayout;
-  const copy = getTouchlineCoachCardCopy(locale, draftLocalesEnabled);
+  const copy = getTouchlineCoachCardCopy(locale, draftLocalesEnabled, coach ?? null);
   const signingPresentation = resolveCoachSigningPricePresentation(locale, draftLocalesEnabled);
   const tier = touchlineArenaTierForKey(slot.cardTier) ?? touchlineArenaTierForKey("ruby-red")!;
   const tierPalette = touchlineCardTierPalette(tier.key);

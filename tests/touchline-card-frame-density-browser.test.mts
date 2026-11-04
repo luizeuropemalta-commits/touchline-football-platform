@@ -246,19 +246,24 @@ if (process.argv[2] === "--compile-fixture") {
   } finally { t.signal.removeEventListener("abort", abort); await browser.close(); }
 });
 
-if (process.argv[2] !== "--compile-fixture") test("real coach gallery at responsive widths DPR1 selects frames without identity overlap", {
+if (process.argv[2] !== "--compile-fixture") test("real current player and coach galleries preserve frame quality and interactions at responsive widths", {
   skip: process.env.TOUCHLINE_RUN_FRAME_DENSITY_BROWSER !== "1" || !galleryOnly, timeout: 120_000,
 }, async t => {
   const engineName = process.env.TOUCHLINE_FRAME_DENSITY_ENGINE ?? "chromium";
   assert.ok(["chromium", "webkit"].includes(engineName));
   for (const name of ["TOUCHLINE_FRAME_DENSITY_TIER", "TOUCHLINE_FRAME_DENSITY_DPR", "TOUCHLINE_FRAME_DENSITY_COACH_WIDTH", "TOUCHLINE_FRAME_DENSITY_FALLBACK"])
-    assert.equal(process.env[name], undefined, "gallery case owns its full gallery, viewport760 and DPR1; do not mix renderer filters");
+    assert.equal(process.env[name], undefined, "gallery case owns both full galleries; do not mix renderer filters");
   const galleryWidth = Number(process.env.TOUCHLINE_FRAME_DENSITY_GALLERY_WIDTH ?? "760");
-  assert.ok([760, 844, 1280].includes(galleryWidth), "gallery width must cover a real2/4/7 column breakpoint");
+  assert.ok([667, 760, 844, 1280, 1440].includes(galleryWidth), "gallery width must cover a real2/4/7 column breakpoint");
+  assert.ok([undefined, "0", "1"].includes(process.env.TOUCHLINE_FRAME_DENSITY_GALLERY_TOUCH), "explicit local touch fixture selector");
+  const touch = process.env.TOUCHLINE_FRAME_DENSITY_GALLERY_TOUCH === "1";
+  assert.ok(!touch || [667, 844].includes(galleryWidth), "touch matrix uses actual landscape667/844");
+  const viewport = { width: galleryWidth, height: touch ? galleryWidth === 667 ? 375 : 390 : 900 };
+  const dpr = touch ? 3 : 1;
   const capacity = () => requireBrowserCapacity(root, { darwinFreePercent: true, allowModerateDarwinPressure: process.env.TOUCHLINE_LOCAL_MODERATE_MEMORY === "1" });
   capacity(); t.signal.throwIfAborted();
   const output = mkdtempSync("/private/tmp/touchline-frame-density-");
-  t.diagnostic(`Real gallery evidence: ${output}; width${galleryWidth}/DPR1, local saved representatives, unavailable live ranking; no Next/native/QA proof.`);
+  t.diagnostic(`Real gallery evidence: ${output}; width${galleryWidth}/DPR${dpr}/touch${touch}, synthetic current ranking over real seed identities; no Next/native/QA proof.`);
   execFileSync(process.execPath, ["--experimental-strip-types", import.meta.filename, "--compile-fixture", output], {
     cwd: root, timeout: 30_000, maxBuffer: 1024 * 1024, stdio: "pipe" });
   capacity(); t.signal.throwIfAborted();
@@ -270,11 +275,11 @@ if (process.argv[2] !== "--compile-fixture") test("real coach gallery at respons
   const abort = () => { void browser.close().catch(() => {}); }; t.signal.addEventListener("abort", abort, { once: true });
   const denied: string[] = [], errors: string[] = [], requests: string[] = [], reports: unknown[] = [];
   const save = (status: string) => writeFileSync(path.join(output, "gallery-evidence.json"), JSON.stringify({ status, engineName,
-    viewport: { width: galleryWidth, height: 900 }, dpr: 1, requests, denied, errors, reports,
-    limits: "Real gallery and directory CSS, saved local representatives, unavailable ranking, empty player catalogue; no Next route, live facts, modal, physical-device or QA acceptance." }, null, 2));
+    viewport, dpr, touch, requests, denied, errors, reports,
+    limits: "Real gallery and directory CSS, synthetic ranking with real seed coaches, synthetic player identities and original seven-tier player artwork; no Next route, live facts, modal, physical-device or QA acceptance." }, null, 2));
   try {
     t.signal.throwIfAborted(); capacity();
-    const context = await browser.newContext({ viewport: { width: galleryWidth, height: 900 }, deviceScaleFactor: 1,
+    const context = await browser.newContext({ viewport, deviceScaleFactor: dpr, hasTouch: touch,
       reducedMotion: "reduce", serviceWorkers: "block" });
     try {
       const page = await context.newPage(); page.setDefaultTimeout(5000);
@@ -284,25 +289,71 @@ if (process.argv[2] !== "--compile-fixture") test("real coach gallery at respons
         const request = route.request(), url = new URL(request.url()); requests.push(url.pathname);
         if (request.method() !== "GET" || url.origin !== origin) { denied.push(request.url()); await route.abort(); return; }
         if (url.pathname === "/touchline-clubs") {
-          await route.fulfill({ contentType: "text/html; charset=utf-8", body: `<!doctype html><html lang="en-GB"><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>${css}</style></head><body><div id="root"></div><script>${script.replaceAll("</script", "<\\/script")}</script></body></html>` }); return;
+          await route.fulfill({ contentType: "text/html; charset=utf-8", body: `<!doctype html><html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${css}</style></head><body><div id="root"></div><script>${script.replaceAll("</script", "<\\/script")}</script></body></html>` }); return;
         }
         const file = path.resolve(publicRoot, `.${decodeURIComponent(url.pathname)}`);
         if (file.startsWith(publicRoot + path.sep) && existsSync(file) && statSync(file).isFile() && realpathSync(file).startsWith(publicRoot + path.sep)) { await route.fulfill({ path: file }); return; }
         denied.push(url.pathname); await route.abort();
       });
       await page.goto(`${origin}/touchline-clubs`, { waitUntil: "domcontentloaded" });
-      assert.equal(await page.evaluate(() => devicePixelRatio), 1);
+      assert.equal(await page.evaluate(() => document.characterSet), "UTF-8", "gallery fixture preserves Unicode copy and currency");
+      assert.equal(await page.evaluate(() => devicePixelRatio), dpr);
+      const media = () => page.evaluate(() => ({ coarse: matchMedia("(pointer: coarse)").matches, reduced: matchMedia("(prefers-reduced-motion: reduce)").matches, width: innerWidth, height: innerHeight }));
+      assert.deepEqual(await media(), { coarse: touch, reduced: true, ...viewport });
+      // Every player is the real component and local full-size artwork. The
+      // input is declared synthetic; these checks do not validate ranking facts.
+      const playerGallery = page.locator('section[aria-labelledby="touchline-player-border-title"]');
+      const playerFrames = playerGallery.locator('[data-touchline-card-frame="true"]');
+      await expect(playerFrames).toHaveCount(7);
+      await expect(playerGallery.locator('li[data-ranking-leader="true"]')).toHaveCount(1);
+      for (let index = 0; index < 7; index++) {
+        capacity(); t.signal.throwIfAborted();
+        const frame = playerFrames.nth(index); await frame.scrollIntoViewIfNeeded(); await expect(frame).toBeVisible();
+        const measured = await frame.evaluate(async element => {
+          const image = element as HTMLImageElement; await image.decode();
+          const raw = new Image(); raw.src = image.currentSrc; await raw.decode();
+          const tile = image.closest("li")!, identity = tile.querySelector<HTMLElement>(":scope > a > span:last-child")!;
+          const visual = identity.previousElementSibling!, box = image.getBoundingClientRect(), identityBox = identity.getBoundingClientRect(), visualBox = visual.getBoundingClientRect();
+          const name = identity.querySelector("strong")!, label = identity.querySelector("small")!;
+          return { kind: "player", tier: tile.getAttribute("data-tier"), currentSrc: image.currentSrc, delivery: image.getAttribute("data-card-delivery"),
+            pixelWidth: raw.naturalWidth, pixelHeight: raw.naturalHeight, width: box.width, height: box.height,
+            frameIdentityGap: identityBox.top - box.bottom, visualIdentityGap: identityBox.top - visualBox.bottom,
+            documentWidth: document.documentElement.scrollWidth, viewport: innerWidth,
+            nameFont: parseFloat(getComputedStyle(name).fontSize), labelFont: parseFloat(getComputedStyle(label).fontSize),
+            rank: tile.querySelector('a > span')?.textContent, profileHref: tile.querySelector("a")?.getAttribute("href") };
+        });
+        reports.push(measured); save("in-progress");
+        assert.equal(measured.delivery, "zoom-optimized");
+        assert.match(decodeURIComponent(new URL(measured.currentSrc).pathname), /^\/touchlineArena\/cards\/templates\/zoom\/clubs\/Manchester City\/market-tiers\/[^/]+\.webp$/);
+        assert.equal(new URL(measured.currentSrc).origin, origin);
+        assert.deepEqual([measured.pixelWidth, measured.pixelHeight], [430, 691]);
+        assert.ok(measured.width > 0 && measured.width <= 380);
+        assert.ok(Math.abs(measured.height / measured.width - 691 / 430) < .001);
+        assert.ok(measured.frameIdentityGap >= 7.5 && measured.visualIdentityGap >= 7.5, "player metadata follows the complete artwork envelope");
+        assert.ok(measured.documentWidth <= measured.viewport);
+        assert.equal(measured.rank, `#${index + 1}`); assert.match(measured.profileHref ?? "", /^\/touchline-players\//);
+        if (touch) { assert.ok(measured.nameFont >= 14); assert.ok(measured.labelFont >= 12); }
+        if (index === 0) {
+          await frame.locator("xpath=ancestor::li[1]").evaluate(element => element.scrollIntoView({ block: "start" }));
+          await page.screenshot({ path: path.join(output, `${engineName}-gallery${galleryWidth}-dpr${dpr}-player-top.png`), animations: "disabled" });
+          await frame.locator("xpath=ancestor::li[1]").evaluate(element => element.scrollIntoView({ block: "end" }));
+          await page.screenshot({ path: path.join(output, `${engineName}-gallery${galleryWidth}-dpr${dpr}-player-bottom.png`), animations: "disabled" });
+          assert.deepEqual(await media(), { coarse: touch, reduced: true, ...viewport });
+        }
+      }
+      const playerLink = playerGallery.locator('li > a').first();
+      await playerLink.focus(); await expect(playerLink).toBeFocused();
+      assert.notEqual(await playerLink.evaluate(element => getComputedStyle(element).outlineStyle), "none");
       const gallery = page.locator('section[aria-labelledby="touchline-coach-border-title"]');
       await gallery.scrollIntoViewIfNeeded();
       const frames = gallery.locator('[data-touchline-card-frame="true"]');
-      // The saved fallback catalogue has six verified representatives and no
-      // ruby-red representative. Preserve that honest pending state; do not
-      // invent a seventh coach merely to exercise an image.
+      // Seven real coach cards; duplicate Radiant Gold is legitimate. No placeholder
+      // can satisfy an artwork/geometry assertion under the current-ranking UI.
       await expect(gallery.locator("li[data-tier]")).toHaveCount(7);
-      await expect(gallery.locator('[data-tier="ruby-red"] [data-coach-representative="pending"]')).toHaveCount(1);
-      await expect(frames).toHaveCount(6);
-      assert.deepEqual(await frames.evaluateAll(nodes => nodes.map(node => node.closest("li")?.getAttribute("data-tier"))), tiers.slice(0, 6));
-      for (let index = 0; index < 6; index++) {
+      await expect(gallery.locator('[data-coach-representative="pending"]')).toHaveCount(0);
+      await expect(frames).toHaveCount(7);
+      assert.deepEqual(await frames.evaluateAll(nodes => nodes.map(node => node.closest("li")?.getAttribute("data-tier"))), [...tiers.slice(0, 6), "radiant-gold"]);
+      for (let index = 0; index < 7; index++) {
         capacity();
         const frame = frames.nth(index); await frame.scrollIntoViewIfNeeded(); await expect(frame).toBeVisible();
         await expect(frame).toHaveCSS("opacity", "1");
@@ -327,7 +378,14 @@ if (process.argv[2] !== "--compile-fixture") test("real coach gallery at respons
         reports.push(measured); save("in-progress");
         // Save the actual card before assertions so a failed geometry check
         // retains the overlapping frame/text instead of only a passing image.
-        if (index === 0) await frame.locator("xpath=ancestor::li[1]").screenshot({ path: path.join(output, `${engineName}-gallery${galleryWidth}-dpr1-first-coach.png`), animations: "disabled" });
+        if (index === 0) {
+          const tile = frame.locator("xpath=ancestor::li[1]");
+          await tile.evaluate(element => element.scrollIntoView({ block: "start" }));
+          await page.screenshot({ path: path.join(output, `${engineName}-gallery${galleryWidth}-dpr${dpr}-coach-top.png`), animations: "disabled" });
+          await tile.evaluate(element => element.scrollIntoView({ block: "end" }));
+          await page.screenshot({ path: path.join(output, `${engineName}-gallery${galleryWidth}-dpr${dpr}-coach-bottom.png`), animations: "disabled" });
+          assert.deepEqual(await media(), { coarse: touch, reduced: true, ...viewport });
+        }
         assert.equal(measured.display, "compact");
         assert.equal(measured.gridColumns.trim().split(/\s+/).length, galleryWidth <= 760 ? 2 : galleryWidth <= 1180 ? 4 : 7);
         assert.ok(measured.width > 0 && measured.width <= 380);
@@ -344,8 +402,27 @@ if (process.argv[2] !== "--compile-fixture") test("real coach gallery at respons
         assert.ok(measured.frameIdentityGap >= 7.5 && measured.visualIdentityGap >= 7.5,
           "real identity link must follow the artwork and its wrapper with the existing8px grid gap");
       }
+      await expect(gallery.locator('li[data-ranking-leader="true"]')).toHaveCount(1);
+      const trigger = gallery.locator('[data-touchline-card-zoom="trigger"] [role="button"]').first();
+      await trigger.focus(); await expect(trigger).toBeFocused(); await page.keyboard.press("Enter");
+      const dialog = page.locator('[data-touchline-card-zoom="dialog"]'); await expect(dialog).toBeVisible();
+      await expect(dialog.locator('[data-touchline-card-frame="true"]')).toBeVisible();
+      const activeDialogFocus = () => page.evaluate(() => ({ tag: document.activeElement?.tagName ?? null,
+        label: document.activeElement?.getAttribute("aria-label") ?? null,
+        insideDialog: Boolean(document.activeElement?.closest('[data-touchline-card-zoom="dialog"]')) }));
+      t.diagnostic(JSON.stringify({ phase: "gallery-zoom-before-focus-readiness", engineName, galleryWidth, focus: await activeDialogFocus() }));
+      await expect(dialog.getByRole("button", { name: "Close card", exact: true })).toBeFocused();
+      t.diagnostic(JSON.stringify({ phase: "gallery-zoom-focus-ready", engineName, galleryWidth, focus: await activeDialogFocus() }));
+      await page.keyboard.press("Escape"); await expect(dialog).toHaveCount(0); await expect(trigger).toBeFocused();
+      await expect(gallery.locator('li[data-tier]')).toHaveCount(7);
+      const reduced = await page.locator('[data-touchline-card-neon-trace="true"]').evaluateAll(nodes => nodes.map(node => ({
+        opacity: getComputedStyle(node).opacity,
+        running: node.getAnimations({ subtree: true }).some(animation => animation.playState === "running"),
+      })));
+      assert.ok(reduced.length >= 14); assert.ok(reduced.every(row => row.opacity === "1" && !row.running), "reduced motion retains the visible contour without a running animation");
+      assert.deepEqual(await media(), { coarse: touch, reduced: true, ...viewport });
       assert.deepEqual(denied, []); assert.deepEqual(errors, []); save("passed-real-gallery-isolated-delivery");
-      t.diagnostic(`GALLERY_FRAME_DENSITY_PROOF 6 real gallery frames plus verified ruby-red pending state: ${output}`);
+      t.diagnostic(`GALLERY_FRAME_DENSITY_PROOF 7 real player frames and7 real coach frames from synthetic current ranking: ${output}`);
     } finally { await context.close(); }
   } catch (error) { save("failed-or-capacity-blocked"); throw error; }
   finally { t.signal.removeEventListener("abort", abort); await browser.close(); }

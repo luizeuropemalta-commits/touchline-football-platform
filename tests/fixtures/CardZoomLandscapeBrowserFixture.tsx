@@ -1,3 +1,4 @@
+import TouchlineDecorationMotion from "../../components/touchline/TouchlineDecorationMotion";
 import TouchlineGameweekCard from "../../components/touchline/fantasy/TouchlineGameweekCard";
 import TouchlineCoachCardZoom from "../../components/touchline/cards/TouchlineCoachCardZoom";
 import { TouchlineCardLeadershipProvider } from "../../components/touchline/cards/TouchlineCardLeadershipProvider";
@@ -43,6 +44,7 @@ const coach: TouchlineCoach = { id: "synthetic-landscape-coach", providerId: "99
 
 export default function CardZoomLandscapeBrowserFixture() {
   return <TouchlineCardLeadershipProvider value={authority}>
+    <TouchlineDecorationMotion />
     <main style={{ minHeight: 1700, padding: "550px 80px 300px" }}>
       <div style={{ display: "flex", gap: 48, alignItems: "end" }}>
         <div data-landscape-subject="player" style={{ width: 80 }}>

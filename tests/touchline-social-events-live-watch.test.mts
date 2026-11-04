@@ -6,15 +6,12 @@ import { fileURLToPath } from "node:url";
 import test from "node:test";
 import tailwind from "@tailwindcss/postcss";
 
-test("Tailwind excludes the generated ancestor required to isolate events, without hiding application sources", async () => {
+test("Tailwind disables automatic discovery and includes only the explicit product sources", async () => {
   const stylesheet = new URL("../app/globals.css", import.meta.url);
   const css = await readFile(stylesheet, "utf8");
-  const exclusions = [...css.matchAll(/@source\s+not\s+["']([^"']+)["']\s*;/g)].map(match => match[1]);
-  assert.ok(exclusions.includes("../artifacts"), "Next watches generated ancestor directories recursively");
-  const resolved = new URL("../artifacts", stylesheet);
-  assert.equal(fileURLToPath(resolved), fileURLToPath(new URL("../artifacts", import.meta.url)));
-  assert.match(css, /^@import "tailwindcss";/, "keep automatic discovery of actual application sources");
-  assert.ok(!exclusions.includes("..") && !exclusions.includes("../app") && !exclusions.includes("../components"), "do not hide application code from discovery");
+  assert.match(css, /^@import "tailwindcss" source\(none\);/, "automatic discovery must stay disabled so generated ancestors cannot become watched inputs");
+  const productSources = [...css.matchAll(/^@source\s+["']([^"']+)["']\s*;/gm)].map(match => match[1]);
+  assert.deepEqual(productSources, ["./", "../components", "../lib", "../data"], "include all product roots explicitly without opening archives, tests or artifact ancestors");
 });
 
 test("real Tailwind/PostCSS dependencies cannot watch the events directory through an ancestor", async () => {

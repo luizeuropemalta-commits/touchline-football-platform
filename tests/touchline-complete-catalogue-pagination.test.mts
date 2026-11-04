@@ -94,7 +94,7 @@ function scenario(options: Options = {}) {
   const shared = {
     createAdminClient: () => admin,
     projectTouchlineCardStatsByPosition,
-    loadTouchLineActiveRanking: async () => {
+    loadTouchLinePublishedPlayerRanking: async () => {
       rankingReads++;
       return { phase: "ranked", scoringVersion: "player_scoring_v4", seasonId: SEASON, players: ids.map((playerId, n) => ({ playerId, totalRating: n === 1 ? null : n === 2 ? 0 : 13.2 + rankingReads - 1 })) };
     },

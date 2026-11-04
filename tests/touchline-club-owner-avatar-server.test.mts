@@ -16,6 +16,7 @@ import * as isolation from "../lib/touchlinePreview/isolation.ts";
 import * as admission from "../lib/touchlineArena/club-owner-avatar-resource-admission.ts";
 import * as controlAdmission from "../lib/touchlineArena/club-owner-avatar-control-admission.ts";
 import * as localAdmission from "../lib/touchlineArena/club-owner-avatar-local-admission.ts";
+import * as runtimeAdmission from "../lib/touchlineArena/club-owner-avatar-runtime-admission.ts";
 import * as audience from "../lib/touchlineArena/club-owner-avatar-audience.ts";
 import { createClubOwnerAvatarClient } from "../lib/touchlineArena/club-owner-avatar-client.ts";
 import * as avatarClient from "../lib/touchlineArena/club-owner-avatar-client.ts";
@@ -137,6 +138,7 @@ function load(name = "createClubOwnerAvatarServer", clock = performance, replace
     "./club-owner-avatar-resource-admission.ts": admission, ...replacements,
     "./club-owner-avatar-control-admission.ts": controlAdmission,
     "./club-owner-avatar-local-admission.ts": localAdmission,
+    "./club-owner-avatar-runtime-admission.ts": runtimeAdmission,
     "./club-owner-avatar-audience.ts": audience,
   };
   const exports: Record<string, unknown> = {};

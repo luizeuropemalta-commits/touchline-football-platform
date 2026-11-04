@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+import { currentRankingCandidateIds, projectTouchlineCurrentPlayerRanking } from "../lib/touchlineArena/current-player-ranking.ts";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
@@ -67,10 +69,23 @@ function harness() {
     publish(ranking: unknown) {
       const parsed = parseTouchlineActiveRankingState(ranking);
       const digest = (++epoch).toString(16).padStart(32, "0");
+      // Synthetic canonical identities include every goals-only candidate;
+      // the real projector supplies current ranks without inventing rating rows.
+      const currentScope = { competitionId: id(60), seasonId: id(50), providerSeasonId: "70001", effectiveSeason: "2026-27" };
+      const players = new Map(parsed?.players.map(row => [row.playerId, row]) ?? []);
+      const admissions = currentRankingCandidateIds(parsed).map(playerId => ({
+        playerId, providerPlayerId: String(players.get(playerId)?.providerPlayerId ?? Number(playerId.slice(-12))),
+        clubId: id(70), membershipId: id(1000 + Number(playerId.slice(-12))), status: "eligible" as const,
+      }));
+      const currentPlayerRanking = parsed ? projectTouchlineCurrentPlayerRanking({ raw: parsed, scope: currentScope, admissions,
+        revision: createHash("sha256").update(JSON.stringify([parsed.snapshotId, currentScope, admissions])).digest("hex"),
+      }) : undefined;
+      if (currentPlayerRanking) assert.equal(currentPlayerRanking.phase, "ready");
       const publication = parseTouchlineSportsPublication({ version: 1, scopeKey: "touchline-england", publication: {
         snapshotId: id(99), contentDigest: digest, publishedAt: "2026-10-23T08:00:00Z",
         playerRankingSnapshotId: parsed?.snapshotId ?? null, coachRankingSnapshotId: null, liveScoreSnapshotDigest: "a".repeat(32),
-      }, playerRanking: ranking, coachRanking: null, live: { fetchedAt: "2026-10-23T08:00:00Z", fixtures: [] } });
+      }, ...(currentPlayerRanking ? { currentPlayerRanking, currentCoachRanking: null } : {}),
+      playerRanking: ranking, coachRanking: null, live: { fetchedAt: "2026-10-23T08:00:00Z", fixtures: [] } });
       if (!publication) return;
       sharedListener?.({ generation: epoch, requestEpoch: epoch, receivedAt: 0, sportsPublication: publication,
         state: { version: 1, available: true, playerRankingSnapshotId: publication.publication.playerRankingSnapshotId,

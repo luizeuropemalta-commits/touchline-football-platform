@@ -296,13 +296,13 @@ test("compact strip loops smoothly, pauses for accessible interaction and preser
           assert.ok(Math.abs(sample.cycle - initialGeometry.cycle) < .01, `motion does not resize its own cycle: ${motionDiagnostic}`);
         }
         assert.ok(motion.distance > 3, `automatic forward motion must occur: ${motionDiagnostic}`);
-        // 30px/s is the product speed. Allow one pixel for quantized scrollLeft;
+        // 45px/s is the approved product speed. Allow one pixel for quantized scrollLeft;
         // long frames may slow movement, but must never cause catch-up jumps.
-        assert.ok(motion.distance <= motion.elapsed * .03 + 1, `bounded forward speed across loop seams: ${motionDiagnostic}`);
+        assert.ok(motion.distance <= motion.elapsed * .045 + 1, `bounded forward speed across loop seams: ${motionDiagnostic}`);
         for (let index = 1; index < motion.samples.length; index++) {
           const previous = motion.samples[index - 1], current = motion.samples[index];
           const distance = forwardDistance(previous.offset, current.offset, current.cycle);
-          assert.ok(distance <= Math.min(current.time - previous.time, 50) * .03 + 1,
+          assert.ok(distance <= Math.min(current.time - previous.time, 50) * .045 + 1,
             `bounded frame motion without catch-up jumps: ${motionDiagnostic}`);
         }
         const focusedOriginal = page.locator('[data-fixture-run="original"] .fixture').first();

@@ -57,3 +57,18 @@ test("accepted revisions permit decreases/reactivation, preserve mount floor, fa
   accepted = advanceCardLeadershipRead(accepted, { ...read, revision: 10, state: TOUCHLINE_PRESEASON_RANKING_STATE });
   assert.equal(projectTouchlineSeasonCard(card, accepted.current, true).seasonTotalRating, null);
 });
+
+
+test("a canonical new-season projection replaces mounted old-season totals, while unconfirmed foreign facts do not", () => {
+  const current = { ...ranking(7, "next-season"), currentProjection: { version: 1 as const, revision: "a".repeat(64),
+    competitionId: "competition", currentSeasonId: "next-season", sourceSnapshotId: "new-season-snapshot",
+    sourcePlayerCount: 1, eligiblePlayerCount: 1, effectiveSeason: "2027-28", bindings: [] } };
+  const input = { enabled: true, playerId: current.players[0]!.playerId,
+    providerPlayerId: current.players[0]!.providerPlayerId, seasonId: "old-season" };
+  const facts = resolveTouchlineSeasonPlayer({ ...input, authority: buildTouchlineCardLeadershipValue(current, null) });
+  assert.equal(facts?.totalRating, 7);
+  assert.equal(facts?.seasonId, "next-season");
+  assert.equal(resolveTouchlineSeasonPlayer({ ...input, authority: buildTouchlineCardLeadershipValue(ranking(999, "foreign"), null) }), undefined);
+  const invalid = { ...current, currentProjection: { ...current.currentProjection, currentSeasonId: "different" } };
+  assert.equal(resolveTouchlineSeasonPlayer({ ...input, authority: buildTouchlineCardLeadershipValue(invalid, null) }), undefined);
+});

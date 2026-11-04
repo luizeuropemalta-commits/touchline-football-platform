@@ -39,8 +39,7 @@
   padding: 8px;
 }
 
-/* Maintain the desktop message/actions arrangement. Narrow screens scroll
-   this local canvas instead of shrinking controls or stacking the aside. */
+/* Preserve desktop message/actions columns; smaller viewports reflow below. */
 .canvas { min-width: 760px; width: 100%; }
 .canvas ol { display: grid; gap: 12px; padding: 0; list-style: none; }
 .canvas li,
@@ -63,3 +62,17 @@
 .canvas aside small { color: #b8c9bc; }
 .canvas aside button { white-space: normal; overflow-wrap: anywhere; }
 .back { margin-top: 24px; white-space: normal; scroll-margin-block: 6px; }
+
+/* On smaller viewports, place message actions below their own message. */
+@media (max-width: 1279px) {
+  .canvas { min-width: 0; }
+  .canvas li { grid-template-columns: minmax(0, 1fr); }
+  .canvas aside {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+    text-align: start;
+  }
+  .canvas aside button { max-width: 100%; margin-inline-start: auto; }
+}

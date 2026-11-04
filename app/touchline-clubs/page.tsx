@@ -10,7 +10,8 @@ import { loadTouchLineCoachRanking } from "@/lib/touchlineArena/coach-ranking-se
 import ClubHubCrestTrace from "@/components/touchline/ClubHubCrestTrace";
 import TouchlineClubPerimeterTrace from "@/components/touchline/TouchlineClubPerimeterTrace";
 import ClubHubCardLink from "@/components/touchline/ClubHubCardLink";
-import { loadTouchlinePublishedCardShowcaseCatalog } from "@/lib/touchlineArena/ranked-card-catalog-server";
+import { loadTouchlineCurrentPlayerRankingView } from "@/lib/touchlineArena/current-player-ranking-server";
+import { EMPTY_COACH_RANKING } from "@/lib/touchlineArena/coach-ranking-snapshot-server";
 import { TOUCHLINE_ENGLAND_CLUBS_BY_RANK } from "@/lib/touchlineArena/demo-data";
 import type { TouchLineLocale } from "@/lib/touchlineArena/i18n";
 import { resolveTouchlineCatalogueLocale } from "@/lib/touchlineArena/catalogue-locale";
@@ -32,13 +33,21 @@ function languageQuery(locale: TouchLineLocale) {
 }
 
 async function ClubShowcase({ locale, draftLocalesEnabled = false }: { locale: TouchLineLocale; draftLocalesEnabled?: boolean }) {
-  const [publishedPlayerCards, coachRanking] = await Promise.all([
-    loadTouchlinePublishedCardShowcaseCatalog(), loadTouchLineCoachRanking(),
+  const [playerRead, coachRead] = await Promise.allSettled([
+    loadTouchlineCurrentPlayerRankingView(), loadTouchLineCoachRanking(),
   ]);
+  const playerRanking = playerRead.status === "fulfilled" ? playerRead.value : null;
+  const coachRanking = coachRead.status === "fulfilled" ? coachRead.value : EMPTY_COACH_RANKING;
+  const playerEntries = !playerRanking || playerRanking.phase === "unavailable" ? null : playerRanking.rows;
   return (
     <>
-      <TouchlineLivePresentationRefresh initialCoachRankingSnapshotId={coachRanking.snapshotId} />
-      <TouchlineCoachCategoryShowcase draftLocalesEnabled={draftLocalesEnabled} locale={locale} playerCards={publishedPlayerCards} coachRanking={coachRanking} />
+      <TouchlineLivePresentationRefresh
+        initialPlayerRankingSnapshotId={playerRanking?.snapshotId ?? null}
+        initialCurrentPlayerRankingRevision={playerRanking?.currentRevision ?? null}
+        initialCoachRankingSnapshotId={coachRanking.snapshotId}
+        initialCurrentCoachRankingRevision={coachRanking.currentRevision ?? null}
+      />
+      <TouchlineCoachCategoryShowcase draftLocalesEnabled={draftLocalesEnabled} locale={locale} playerEntries={playerEntries} coachRanking={coachRanking} />
     </>
   );
 }

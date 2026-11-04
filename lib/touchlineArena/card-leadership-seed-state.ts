@@ -9,6 +9,9 @@ export type CardLeadershipSeedState = Readonly<{
   seedKey: string;
   scopeKey: string;
   hasAcceptedRead: boolean;
+  /** First explicit server anchors in the scope; a live read never rewrites these. */
+  serverSeasonId: string | null;
+  serverLeagueKey: string | null;
   state: CardLeadershipReadState;
 }>;
 
@@ -36,13 +39,19 @@ export function reconcileCardLeadershipSeed(
   // A first explicit server anchor is a scope transition too. Otherwise a
   // simultaneous read from S1 could beat the newly supplied S2 seed merely
   // because the mount began without a season/league to compare against.
+  const serverSeasonChanged = Boolean(seasonId && seasonId !== previous.serverSeasonId);
+  const serverLeagueChanged = Boolean(leagueKey && leagueKey !== previous.serverLeagueKey);
+  const catchesUpToAcceptedRead = previous.hasAcceptedRead
+    && (!seasonId || seasonId === previous.state.seasonId)
+    && (!leagueKey || leagueKey === previous.state.leagueKey);
   const scopeChanged = input.scopeKey !== previous.scopeKey
-    || Boolean(seasonId && seasonId !== previous.state.seasonId)
-    || Boolean(leagueKey && leagueKey !== previous.state.leagueKey);
+    || ((serverSeasonChanged || serverLeagueChanged) && !catchesUpToAcceptedRead);
   const reset = (): CardLeadershipSeedState => ({
     seedKey: input.seedKey,
     scopeKey: input.scopeKey,
     hasAcceptedRead: false,
+    serverSeasonId: seasonId,
+    serverLeagueKey: leagueKey,
     state: resetCardLeadershipSeed(input.value, input.revision, input.requestFloor),
   });
   if (scopeChanged) return reset();
@@ -53,6 +62,11 @@ export function reconcileCardLeadershipSeed(
   const hasAcceptedRead = previous.hasAcceptedRead || state.current !== previous.state.current;
   const seedChanged = input.seedKey !== previous.seedKey;
   if (seedChanged && !hasAcceptedRead) return reset();
-  if (!seedChanged && state === previous.state && hasAcceptedRead === previous.hasAcceptedRead) return previous;
-  return { seedKey: input.seedKey, scopeKey: input.scopeKey, hasAcceptedRead, state };
+  // A seedless mount can accept live facts before its first compatible SSR.
+  // Fill that missing anchor once without resetting the accepted read/floor.
+  const serverSeasonId = previous.serverSeasonId ?? seasonId;
+  const serverLeagueKey = previous.serverLeagueKey ?? leagueKey;
+  if (!seedChanged && state === previous.state && hasAcceptedRead === previous.hasAcceptedRead
+    && serverSeasonId === previous.serverSeasonId && serverLeagueKey === previous.serverLeagueKey) return previous;
+  return { seedKey: input.seedKey, scopeKey: input.scopeKey, hasAcceptedRead, serverSeasonId, serverLeagueKey, state };
 }

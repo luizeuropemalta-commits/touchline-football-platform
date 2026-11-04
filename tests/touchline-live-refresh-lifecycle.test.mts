@@ -1,3 +1,11 @@
+import { createHash } from "node:crypto";
+import { buildTouchlineRankingSnapshot } from "../lib/touchlineArena/card-ranking.ts";
+import { parseTouchlineActiveRankingState } from "../lib/touchlineArena/card-ranking-live.ts";
+import { TOUCHLINE_CARD_PRICE_TABLE_VERSION } from "../lib/touchlineArena/card-rules.ts";
+import { legacyCoachCatalogue, parseCoachCatalogueTransport } from "../lib/touchlineArena/coach-catalogue-contract.ts";
+import { projectTouchlineCurrentPlayerRanking } from "../lib/touchlineArena/current-player-ranking.ts";
+import { projectTouchlineCurrentCoachRanking } from "../lib/touchlineArena/current-coach-ranking.ts";
+import { parseTouchlineSportsPublication, type TouchlineSportsPublication } from "../lib/touchlineArena/sports-publication.ts";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { stripTypeScriptTypes } from "node:module";
@@ -5,6 +13,39 @@ import test from "node:test";
 import { setImmediate } from "node:timers/promises";
 import vm from "node:vm";
 import { parseTouchlineLivePresentationState, mergeTouchlineLivePresentationRevision, touchlineLivePresentationRevisionChanged } from "../lib/touchlineArena/live-presentation-state.ts";
+
+
+const id = (n:number) => `10000000-0000-4000-8000-${String(n).padStart(12,"0")}`;
+const scope = {competitionId:id(50),seasonId:id(51),providerSeasonId:"70001",effectiveSeason:"2026-27"};
+const publishedEntries = legacyCoachCatalogue().current.map((entry,index)=>({...entry,
+  internalId:id(1000+index),publicationId:id(2000+index),sourceKind:"sportmonks.fixture.coaches" as const}));
+const catalogue = parseCoachCatalogueTransport({phase:"ready",revision:1,current:publishedEntries,history:publishedEntries});
+assert.equal(catalogue?.phase,"ready");
+function publication(playerRevision:string, coachRevision:string|null, digest:string) {
+  const timestamp="2026-11-04T12:00:00Z";
+  const built=buildTouchlineRankingSnapshot({snapshotId:playerRevision,roundId:"synthetic",source:"simulation",status:"published",generatedAt:timestamp,
+    players:["GK","CB","RB","CM","RW","ST"].map((position,index)=>({playerId:id(index+1),providerPlayerId:String(index+101),
+      name:`Synthetic ${index}`,clubName:"Synthetic club",position,totalRating:10,minutesPlayed:90,appearances:1}))});
+  const player=parseTouchlineActiveRankingState({phase:"ranked",leagueKey:"touchline-england",snapshotId:playerRevision,roundId:"synthetic",
+    publishedAt:timestamp,priceTableVersion:TOUCHLINE_CARD_PRICE_TABLE_VERSION,scoringVersion:"player_scoring_v4",coverageStatus:"complete",
+    seasonId:scope.seasonId,fixtureIds:["123"],expectedFixtureIds:["123"],totalScorePoints:0,players:built.players});
+  assert.ok(player);
+  const admissions=player.players.map(row=>({playerId:row.playerId,providerPlayerId:String(row.providerPlayerId),clubId:id(70),
+    membershipId:id(100+Number(row.playerId.slice(-12))),status:"eligible" as const}));
+  const currentPlayerRanking=projectTouchlineCurrentPlayerRanking({raw:player,scope,admissions,
+    revision:createHash("sha256").update(JSON.stringify([playerRevision,scope,admissions])).digest("hex")});
+  assert.equal(currentPlayerRanking.phase,"ready");
+  const coach=coachRevision===null?null:{phase:"ranked" as const,snapshotId:coachRevision,seasonId:scope.seasonId,scoringVersion:"coach_scoring_v2" as const,
+    fixtureIds:["123"],generatedAt:timestamp,rows:[{rank:1,coachProviderId:catalogue!.current[0]!.coach.providerId,coachName:"Synthetic coach",clubName:"Synthetic club",
+      wins:1,draws:0,losses:0,awayWins:0,touchlinePoints:3,home:{wins:1,draws:0,losses:0,touchlinePoints:3},away:{wins:0,draws:0,losses:0,touchlinePoints:0}}]};
+  const currentCoachRanking=coach===null?null:projectTouchlineCurrentCoachRanking(coach,catalogue!,{...scope,
+    clubs:catalogue!.current.map(entry=>({providerTeamId:entry.coach.teamId!,name:"Synthetic club"}))});
+  const envelope=parseTouchlineSportsPublication({version:1,scopeKey:"touchline-england",
+    publication:{snapshotId:id(99),contentDigest:digest,publishedAt:timestamp,playerRankingSnapshotId:playerRevision,
+      coachRankingSnapshotId:coachRevision,liveScoreSnapshotDigest:"e".repeat(32)},
+    playerRanking:player,coachRanking:coach,currentPlayerRanking,currentCoachRanking,live:{fetchedAt:timestamp,fixtures:[]}});
+  assert.ok(envelope,"fixture must pass real raw/current/envelope parsers");return envelope;
+}
 
 async function lifecycle(seeds = [{ initialPlayerRankingSnapshotId: "old" }] as Array<{
   initialPlayerRankingSnapshotId?: string; initialCoachRankingSnapshotId?: string;
@@ -18,6 +59,9 @@ async function lifecycle(seeds = [{ initialPlayerRankingSnapshotId: "old" }] as 
   let failNextRefresh = false;
   let readingBody = false;
   const pending: Array<(value: unknown) => void> = [];
+  const signals: AbortSignal[] = [];
+  const sportsBySignal = new Map<AbortSignal,TouchlineSportsPublication>();
+  const payloadReads = new Map<AbortSignal,number>();
   const refs: Array<{ current: unknown }> = [];
   const effects: Array<{ dependencies: readonly unknown[]; cleanup?: () => void }> = [];
   let refCursor = 0;
@@ -45,9 +89,17 @@ async function lifecycle(seeds = [{ initialPlayerRankingSnapshotId: "old" }] as 
     },
     useRouter: () => router,
     useTransition: () => [transitionPending, transition],
-    parseTouchlineLivePresentationState, mergeTouchlineLivePresentationRevision, touchlineLivePresentationRevisionChanged,
-    fetch: async () => {
-      const body = new Promise(resolve => { pending.push(resolve); });
+    parseTouchlineLivePresentationState, mergeTouchlineLivePresentationRevision, touchlineLivePresentationRevisionChanged, parseTouchlineSportsPublication,
+    fetch: async (url:string, options:{signal:AbortSignal}) => {
+      assert.ok(options.signal);
+      if(url==="/api/touchline-arena/sports-publication") {
+        const reads=(payloadReads.get(options.signal)??0)+1;payloadReads.set(options.signal,reads);
+        assert.equal(reads,1,"all mounted masks share one verified sports payload per signal cycle");
+        const data=sportsBySignal.get(options.signal);assert.ok(data,"sports response belongs to this request controller");
+        return {ok:true,json:async()=>({ok:true,data})};
+      }
+      assert.equal(url,"/api/touchline-arena/live-presentation-state");
+      const body = new Promise(resolve => { pending.push(resolve); signals.push(options.signal); });
       return { ok: true, json: () => { readingBody = true; return body; } };
     },
   });
@@ -66,6 +118,18 @@ async function lifecycle(seeds = [{ initialPlayerRankingSnapshotId: "old" }] as 
   render();
   for (let i = 0; i < 10 && !readingBody; i += 1) await Promise.resolve();
   assert.equal(readingBody, true, "pause must occur after response headers, during body read");
+  const finish = async (request = 0, revision = "new", liveRevision?: string | null, coachRevision: string | null = null, includeDigest = true) => {
+    // Normal lifecycle cases represent a verified publication. The explicit
+    // absent/null negative remains separate and cannot fabricate a payload.
+    const logicalDigest=includeDigest ? liveRevision===undefined ? `ranking:${revision}:${coachRevision??"none"}` : liveRevision : undefined;
+    const digest=typeof logicalDigest==="string" ? createHash("sha256").update(logicalDigest).digest("hex").slice(0,32) : logicalDigest;
+    if(typeof digest==="string") sportsBySignal.set(signals[request]!,publication(revision,coachRevision,digest));
+    pending[request]({version:1,available:true,playerRankingSnapshotId:revision,coachRankingSnapshotId:coachRevision,
+      ...(digest!==undefined?{livePresentationSnapshotId:digest}:{}),mode:"idle",pollAfterMs:null,resumeAt:null});
+    await setImmediate();
+    if(transitionPending){render();if(!holdTransition){transitionPending=false;render();}}
+    return refreshes;
+  };
   return {
     stop: () => effects.forEach(effect => { effect.cleanup?.(); effect.cleanup = undefined; }),
     rerender: async (restartEffect = false) => {
@@ -78,6 +142,8 @@ async function lifecycle(seeds = [{ initialPlayerRankingSnapshotId: "old" }] as 
     offline: () => { navigator.onLine = false; listeners.get("offline")?.(); },
     show: () => { document.hidden = false; listeners.get("visibilitychange")?.(); },
     online: () => { navigator.onLine = true; listeners.get("online")?.(); },
+    // Existing request-count assertions count shared state cycles; payload
+    // cardinality is independently asserted above for each controller.
     requests: () => pending.length,
     advance: (ms: number) => { now += ms; },
     failNextRefresh: () => { failNextRefresh = true; },
@@ -88,16 +154,8 @@ async function lifecycle(seeds = [{ initialPlayerRankingSnapshotId: "old" }] as 
       const next = timers.entries().next().value;
       if (next) { timers.delete(next[0]); next[1].run(); }
     },
-    finish: async (request = 0, revision = "new", liveRevision?: string | null, coachRevision: string | null = null) => {
-      pending[request]({ version: 1, available: true, playerRankingSnapshotId: revision, coachRankingSnapshotId: coachRevision,
-        ...(liveRevision !== undefined ? { livePresentationSnapshotId: liveRevision } : {}), mode: "idle", pollAfterMs: null, resumeAt: null });
-      await setImmediate();
-      if (transitionPending) {
-        render();
-        if (!holdTransition) { transitionPending = false; render(); }
-      }
-      return refreshes;
-    },
+    finish,
+    finishAbsent: (request=0,revision="new") => finish(request,revision,undefined,null,false),
   };
 }
 
@@ -181,7 +239,7 @@ test("the acknowledged Live digest survives rerenders and polling-effect restart
 
 test("absent and null Live revisions do not refresh or erase an acknowledged publication", async () => {
   const page = await lifecycle();
-  assert.equal(await page.finish(0, "old"), 0);
+  assert.equal(await page.finishAbsent(0, "old"), 0);
   page.online();
   assert.equal(await page.finish(1, "old", null), 0);
   page.online();

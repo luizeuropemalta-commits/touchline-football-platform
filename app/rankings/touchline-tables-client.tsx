@@ -316,7 +316,10 @@ function TopCoachAward({ coachRanking: seed, copy, locale, draftLocalesEnabled =
   const topCoachRow = topSevenCoaches[0] ?? null;
   const topCoachClub = topCoachRow ? findTouchLineClub(topCoachRow.clubName) ?? null : null;
   const topCoachIdentity = topCoachRow && topCoachClub
-    ? catalogueCoachForTeamHistory(coachRanking.catalogue ?? legacyCoachCatalogue(), topCoachRow.coachProviderId, topCoachClub.teamId)
+    ? coachRanking.currentProjection
+      ? coachRanking.catalogue?.current.find(entry => entry.coach.providerId === topCoachRow.coachProviderId
+        && entry.coach.teamId === topCoachClub.teamId) ?? null
+      : catalogueCoachForTeamHistory(coachRanking.catalogue ?? legacyCoachCatalogue(), topCoachRow.coachProviderId, topCoachClub.teamId)
     : null;
   const topCoachClassification = topCoachRow
     ? topCoachIdentity?.classification
@@ -340,7 +343,7 @@ function TopCoachAward({ coachRanking: seed, copy, locale, draftLocalesEnabled =
     ? {
         snapshotId: coachRanking.snapshotId,
         seasonId: coachRanking.seasonId,
-        seasonLabel: seasonCopy.currentSeason,
+        seasonLabel: coachRanking.currentProjection?.scope.effectiveSeason ?? seasonCopy.currentSeason,
         rank: topCoachRow.rank,
         scoringVersion: coachRanking.scoringVersion,
         home: topCoachRow.home,

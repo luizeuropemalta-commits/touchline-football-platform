@@ -37,8 +37,8 @@ function subscribe(listener: () => void) {
       if (!publication || publication.publication.contentDigest !== read.state.livePresentationSnapshotId
         || publication.publication.playerRankingSnapshotId !== read.state.playerRankingSnapshotId
         || publication.publication.coachRankingSnapshotId !== read.state.coachRankingSnapshotId) return;
-      currentState = publication.playerRanking ?? TOUCHLINE_PRESEASON_RANKING_STATE;
-      completedRead = { state: currentState, coachRanking: publication.coachRanking, revision: read.generation, requestEpoch: read.requestEpoch,
+      currentState = publication.currentPlayerRanking?.state ?? TOUCHLINE_PRESEASON_RANKING_STATE;
+      completedRead = { state: currentState, coachRanking: publication.currentCoachRanking ?? null, revision: read.generation, requestEpoch: read.requestEpoch,
         publicationDigest: publication.publication.contentDigest };
       emitChange();
     }, true);

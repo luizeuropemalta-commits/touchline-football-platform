@@ -1,5 +1,7 @@
 import { type TouchLineLocale } from "./i18n.ts";
 import { resolveTouchlineCatalogueLocale } from "./catalogue-locale.ts";
+import type { TouchlineCoach } from "../football-data/types";
+import { coachAssociationPresentation } from "./coach-association-presentation.ts";
 
 const enGB = {
   currentClub: "Current club", nationality: "Nationality", role: "Role", firstTeamCoach: "First-team coach", dateOfBirth: "Date of birth", cardTier: "Card tier",
@@ -64,7 +66,13 @@ export const TOUCHLINE_COACH_ZOOM_CATALOGUES = {
 /** One gated locale for both copy and existing formatters; retain the full
  * locale code so later approved locales are not silently collapsed to EN/PT.
  */
-export function resolveTouchlineCoachZoomPresentation(locale?: string | null, draftLocalesEnabled = false): Readonly<{ locale: TouchLineLocale; copy: TouchlineCoachZoomCopy }> {
+export function resolveTouchlineCoachZoomPresentation(locale?: string | null, draftLocalesEnabled = false, coach?: TouchlineCoach | null): Readonly<{ locale: TouchLineLocale; copy: TouchlineCoachZoomCopy }> {
   const presentationLocale = resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled);
-  return { locale: presentationLocale, copy: TOUCHLINE_COACH_ZOOM_CATALOGUES[presentationLocale] };
+  const copy = TOUCHLINE_COACH_ZOOM_CATALOGUES[presentationLocale];
+  if (coach === undefined) return { locale: presentationLocale, copy };
+  const association = coachAssociationPresentation(coach, presentationLocale, draftLocalesEnabled);
+  return { locale: presentationLocale, copy: association.kind === "current" ? copy : { ...copy,
+    currentClub: association.club, firstTeamCoach: association.role, verifiedIdentity: association.identity,
+    ...(association.kind === "historical" ? { coachEyebrow: association.identity } : {}),
+  } };
 }

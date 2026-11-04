@@ -1,5 +1,7 @@
 import type { TouchLineLocale } from "./i18n.ts";
 import { resolveTouchlineCatalogueLocale } from "./catalogue-locale.ts";
+import type { TouchlineCoach } from "../football-data/types";
+import { coachAssociationPresentation } from "./coach-association-presentation.ts";
 
 const enGB = {
   metadataFallback: "Coach profile | TouchLine England", heroEyebrow: "REAL FOOTBALL · COACH",
@@ -117,8 +119,14 @@ export const TOUCHLINE_COACH_PROFILE_CATALOGUES = {
   },
 } as const satisfies Readonly<Record<TouchLineLocale, TouchlineCoachProfileCopy>>;
 
-export function getTouchlineCoachProfileCopy(locale?: string | null, draftLocalesEnabled = false): TouchlineCoachProfileCopy {
-  return TOUCHLINE_COACH_PROFILE_CATALOGUES[resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled)];
+export function getTouchlineCoachProfileCopy(locale?: string | null, draftLocalesEnabled = false, coach?: TouchlineCoach | null): TouchlineCoachProfileCopy & Readonly<{ associationNote?: string }> {
+  const copy = TOUCHLINE_COACH_PROFILE_CATALOGUES[resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled)];
+  if (coach === undefined) return copy;
+  const association = coachAssociationPresentation(coach, locale, draftLocalesEnabled);
+  return association.kind === "current" ? copy : { ...copy,
+    verifiedBy: association.identity, officialProfile: association.identity, currentClubHeading: association.club,
+    ...(association.kind === "historical" ? { heroEyebrow: association.identity, associationNote: association.note } : {}),
+  };
 }
 
 const reasonKeys = {

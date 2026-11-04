@@ -3,6 +3,7 @@ import test from "node:test";
 import vm from "node:vm";
 import { readFileSync } from "node:fs";
 import ts from "typescript";
+import { coachCompetitionFromRanking } from "../lib/touchlineArena/coach-competition-projection.ts";
 
 const compiled = ts.transpileModule(readFileSync(new URL("../lib/touchlineFantasy/server.ts", import.meta.url), "utf8"), {
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
@@ -32,6 +33,7 @@ function fixture(entitlementError = false) {
   const exports: Record<string, (user: { id: string }) => Promise<unknown>> = {};
   vm.runInNewContext(compiled, { exports, process: { env: {} }, require: (name: string) => {
     if (name === "@/lib/supabase/admin") return { createAdminClient: () => admin };
+    if (name === "@/lib/touchlineArena/coach-competition-projection") return { coachCompetitionFromRanking };
     if (name === "@/lib/touchlineArena/formation-geometry-server") return { readTouchlineFormationGeometryRegistry: async () => ({}) };
     if (name === "./gameweek-lifecycle") return { reconcileTouchlineFantasyGameweeks: async () => { events.push("lifecycle"); return { error: null, reconciled: 0 }; } };
     if (name === "./market-plan-policy") return { resolveTouchlineFantasyMarketAccess: () => null };

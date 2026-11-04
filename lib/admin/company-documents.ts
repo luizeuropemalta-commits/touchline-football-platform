@@ -2,7 +2,9 @@ import { createHash } from "node:crypto";
 export const COMPANY_DOCUMENT_BUCKET = "touchline-company-documents";
 export const COMPANY_DOCUMENT_LIMIT = 3 * 1024 * 1024;
 export function documentUuid(value: string | null): string {
- if (!value || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)) throw new Error("INVALID_INPUT");
+ // Existing PostgreSQL UUID identities need not use an RFC version/variant.
+ // Keep the canonical hexadecimal shape; authorization remains in each route.
+ if (!value || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)) throw new Error("INVALID_INPUT");
  return value.toLowerCase();
 }
 export function documentFilename(value: string | null): string {

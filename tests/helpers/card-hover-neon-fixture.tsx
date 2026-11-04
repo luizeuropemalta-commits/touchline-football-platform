@@ -2,10 +2,11 @@ import type { CSSProperties } from "react";
 import pitchStyles from "../../app/fantasy/fantasy.module.css";
 import TouchlineDecorationMotion from "../../components/touchline/TouchlineDecorationMotion";
 import TouchlineCoachCardZoom from "../../components/touchline/cards/TouchlineCoachCardZoom";
+import TouchlineEliteExactCard from "../../components/touchline/cards/TouchlineEliteExactCard";
 import TouchlineGameweekCard from "../../components/touchline/fantasy/TouchlineGameweekCard";
 import { createTouchlineArenaCoachSlot } from "../../lib/touchlineArena/coach-card";
 import type { TouchlineCoach } from "../../lib/football-data/types";
-import type { ClubOwnerSquadCard } from "../../lib/touchlineArena/demo-data";
+import { squadCardToExactPlayer, type ClubOwnerSquadCard } from "../../lib/touchlineArena/demo-data";
 
 // Synthetic identities, real components and local artwork. No account or data writes.
 const coach: TouchlineCoach = {
@@ -26,6 +27,16 @@ export default function CardHoverNeonFixture() {
   const tier = tiers.find(value => value === new URLSearchParams(window.location.search).get("tier")) ?? "sapphire-blue";
   const clubName = new URLSearchParams(window.location.search).get("club") ?? "Arsenal";
   const tierPlayer = { ...player, clubName, editorialCard: { ...player.editorialCard!, tierKey: tier } };
+  const diagnostic = new URLSearchParams(window.location.search).get("diagnostic");
+  if (diagnostic === "editable" || diagnostic === "removal") return <main style={{ padding: 24 }}>
+    <TouchlineDecorationMotion />
+    <section data-fixture-kind={diagnostic} style={{ width: 430, maxWidth: "100%" }}>
+      <TouchlineEliteExactCard player={squadCardToExactPlayer(tierPlayer)}
+        isEditable={diagnostic === "editable"} isRemovalMarkerEnabled={diagnostic === "removal"}
+        ignoreStoredLayout persistLayoutToMaster={false} subscribeToRanking={false}
+        rankingMode="preview" showSocialMetrics={false} runtimeLocaleOverride="en-GB" />
+    </section>
+  </main>;
   return <main style={{ display: "flex", gap: 32, padding: 24 }}>
     <TouchlineDecorationMotion />
     <section data-fixture-kind="player" className={pitchStyles.myClubTacticalSlot} style={{ width: 96, position: "relative", transform: "none" }}><span style={{width:96,"--touchline-card-static-scale":96/430} as CSSProperties}>

@@ -1,3 +1,4 @@
+import type { AvatarRetentionTarget } from "./club-owner-avatar-retention-target.ts";
 import { timingSafeEqual } from "node:crypto";
 import { Buffer } from "node:buffer";
 import { createAvatarRetentionListStorage } from "./club-owner-avatar-retention-list-storage.ts";
@@ -6,7 +7,7 @@ import { runAvatarRetentionBatch, type AvatarRetentionRpc } from "./club-owner-a
 import { awaitAvatarStep, createAvatarEnvironmentGuard } from "./club-owner-avatar-upload-contract.ts";
 import { avatarRetentionConfigurationFailure } from "./club-owner-avatar-retention-configuration.ts";
 
-type Config = Readonly<{ enabled: boolean; supabaseOrigin: string; serviceRoleKey: string; assertEnvironment: () => void }>;
+type Config = Readonly<{ target?: AvatarRetentionTarget; enabled: boolean; supabaseOrigin: string; serviceRoleKey: string; assertEnvironment: () => void }>;
 type Dependencies = Readonly<{ rpc: AvatarRetentionRpc; fetchImpl: typeof fetch }>;
 const paths = new Set(["/touchline-avatar-retention", "/functions/v1/touchline-avatar-retention"]);
 /** LOCAL composition only, not a deployed route or scheduler. JWT payload checks
@@ -15,9 +16,9 @@ const paths = new Set(["/touchline-avatar-retention", "/functions/v1/touchline-a
  * One instance must be shared by its future host; no distributed admission claim.
  */
 export function createAvatarRetentionServer(config: Config, deps: Dependencies): (request: Request) => Promise<Response> {
-  const { enabled, supabaseOrigin, serviceRoleKey } = config;
+  const { enabled, supabaseOrigin, serviceRoleKey, target } = config;
   const { rpc: rawRpc, fetchImpl: rawFetch } = deps;
-  const configured = avatarRetentionConfigurationFailure(supabaseOrigin, serviceRoleKey) === null
+  const configured = avatarRetentionConfigurationFailure(supabaseOrigin, serviceRoleKey, target) === null
     && typeof config.assertEnvironment === "function" && typeof rawRpc === "function" && typeof rawFetch === "function";
   const assertEnvironment = createAvatarEnvironmentGuard(config.assertEnvironment);
   const expectedAuthorization = Buffer.from(`Bearer ${serviceRoleKey}`);
@@ -31,7 +32,7 @@ export function createAvatarRetentionServer(config: Config, deps: Dependencies):
   const fetchImpl: typeof fetch = (input, init) => track(() => rawFetch(input, init));
   // One list factory is retained for the whole handler lifetime, including late
   // original fetch/body work after a caller has abandoned its timeout race.
-  const storage = configured ? createAvatarRetentionListStorage({ supabaseOrigin, serviceRoleKey, assertEnvironment, fetchImpl }) : null;
+  const storage = configured ? createAvatarRetentionListStorage({ target, supabaseOrigin, serviceRoleKey, assertEnvironment, fetchImpl }) : null;
   const response = (status: number, data: object = { status: "unavailable" }) => Response.json(data, { status, headers: { "cache-control": "no-store" } });
   return async request => {
     if (enabled !== true || !configured || !storage) return response(503);
@@ -74,10 +75,10 @@ export function createAvatarRetentionServer(config: Config, deps: Dependencies):
     const guard = () => { assertEnvironment(); signal.throwIfAborted(); };
     try {
       guard();
-      const discovery = await runAvatarRetentionDiscoveryPage({ supabaseOrigin, assertEnvironment, rpc, listPage: storage.listPage }, signal);
+      const discovery = await runAvatarRetentionDiscoveryPage({ target, supabaseOrigin, assertEnvironment, rpc, listPage: storage.listPage }, signal);
       guard();
       if (discovery.status !== "processed") return response(503);
-      const cleanup = await runAvatarRetentionBatch({ supabaseOrigin, serviceRoleKey, assertEnvironment, rpc, fetchImpl }, signal);
+      const cleanup = await runAvatarRetentionBatch({ target, supabaseOrigin, serviceRoleKey, assertEnvironment, rpc, fetchImpl }, signal);
       guard();
       if (cleanup.status !== "processed" || cleanup.unknown !== 0) return response(503);
       return response(200, { status: "processed", discovery: { listed: discovery.listed, registered: discovery.registered, denied: discovery.denied, skipped: discovery.skipped },

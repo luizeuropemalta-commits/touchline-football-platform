@@ -1,4 +1,5 @@
 import "server-only";
+import { matchesAvatarRuntimeAdmission, type AvatarRuntimeAdmission } from "./club-owner-avatar-runtime-admission.ts";
 import { allowsClubOwnerAvatarAudience, parseClubOwnerAvatarAudience } from "./club-owner-avatar-audience.ts";
 import { AuthSessionMissingError, type SupabaseClient } from "@supabase/supabase-js";
 import { hasTouchLineArenaAccess } from "./auth-access.ts";
@@ -23,6 +24,7 @@ export type ClubOwnerAvatarServerConfig = Readonly<{
   serviceRoleKey?: string;
   dataSource?: string;
   environment?: string;
+  runtimeAdmission?: AvatarRuntimeAdmission;
   deploymentMode?: string;
   publicDeploymentMode?: string;
 }>;
@@ -49,9 +51,10 @@ function reply(status: number, error: string) {
 function configuredServer(config: ClubOwnerAvatarServerConfig, dependencies: ClubOwnerAvatarServerDependencies) {
   return (httpsOrigin(config.requestOrigin) || allowsClubOwnerAvatarLocalCore(config)) && httpsOrigin(config.supabaseOrigin)
     && config.publicSupabaseOrigin === config.supabaseOrigin && config.dataSource === "direct"
-    && (config.environment === "qa" || config.environment === "local")
+    && (config.environment === "qa" || config.environment === "local"
+      || (config.environment === "production" && matchesAvatarRuntimeAdmission(config.runtimeAdmission, config)))
     && config.deploymentMode === config.publicDeploymentMode
-    && (config.deploymentMode === undefined || config.deploymentMode === TOUCHLINE_QA_PREVIEW_MODE)
+    && (config.deploymentMode === undefined || (config.environment !== "production" && config.deploymentMode === TOUCHLINE_QA_PREVIEW_MODE))
     && typeof config.serviceRoleKey === "string" && config.serviceRoleKey.trim().length > 0 && !/[\r\n]/.test(config.serviceRoleKey)
     && typeof dependencies.createSessionClient === "function" && typeof dependencies.createPrivilegedClient === "function"
     && typeof dependencies.isOwnerEmail === "function" && typeof dependencies.fetchImpl === "function";

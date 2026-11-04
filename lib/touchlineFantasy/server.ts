@@ -24,6 +24,7 @@ import {
 import type { ClubOwnerSquadCard } from "@/lib/touchlineArena/demo-data";
 import { createTouchlineArenaCoachSlot, type TouchlineArenaCoachSlot } from "@/lib/touchlineArena/coach-card";
 import { loadTouchLineCoachRanking } from "@/lib/touchlineArena/coach-ranking-server";
+import { coachCompetitionFromRanking } from "@/lib/touchlineArena/coach-competition-projection";
 import type { TouchlineCoachCompetitionSnapshot } from "@/lib/touchlineArena/coach-scoring";
 import { formatTouchlineMarketValueEur } from "@/lib/touchlineArena/editorial-card-profile";
 import { canonicalSportmonksPlayerId } from "@/lib/touchlineArena/match-card-indicator";
@@ -340,31 +341,14 @@ async function loadCoaches(admin: NonNullable<ReturnType<typeof createAdminClien
     const clubId = text(club?.id);
     const clubName = text(club?.name);
     if (!clubId || !clubName || !classification) return [];
-    const rankingRow = coachRanking.phase === "ranked"
-      ? coachRanking.rows.find((candidate) => candidate.coachProviderId === coach.providerId) ?? null
-      : null;
-    const competition: TouchlineCoachCompetitionSnapshot | null = rankingRow
-      && coachRanking.snapshotId
-      && coachRanking.seasonId
-      && coachRanking.scoringVersion
-      ? {
-        snapshotId: coachRanking.snapshotId,
-        seasonId: coachRanking.seasonId,
-        seasonLabel: "2026-27",
-        rank: rankingRow.rank,
-        scoringVersion: coachRanking.scoringVersion,
-        home: rankingRow.home,
-        away: rankingRow.away,
-        totalTouchlinePoints: rankingRow.touchlinePoints,
-      }
-      : null;
+    const competition = coachCompetitionFromRanking(coachRanking, coach.providerId, "2026-27");
     const baseSlot = createTouchlineArenaCoachSlot(coach, classification.finalPosition, classification.tierKey);
     return [{
       id: coach.providerId,
       selectable: catalogue.current.some(entry => entry.coach.providerId === coach.providerId),
       ...(catalogue.phase === "ready" ? { catalogueRevision: catalogue.revision!, cataloguePublicationId: publicationId! } : {}),
       coach,
-      slot: competition ? {
+      slot: competition?.snapshotId ? {
         ...baseSlot,
         touchlinePoints: competition.totalTouchlinePoints,
         status: "audited" as const,

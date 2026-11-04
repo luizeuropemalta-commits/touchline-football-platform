@@ -13,6 +13,7 @@ import { resolveTouchLinePresentationLocale } from "../lib/touchlineArena/root-l
 import { resolveTouchlineCatalogueLocale } from "../lib/touchlineArena/catalogue-locale.ts";
 import { getTouchlineCardZoomCopy } from "../lib/touchlineArena/card-zoom-i18n.ts";
 import { coachCompetitionFromRanking } from "../lib/touchlineArena/coach-competition-projection.ts";
+import { legacyCoachCatalogue } from "../lib/touchlineArena/coach-catalogue-contract.ts";
 
 type CopyModule = typeof import("../lib/touchlineArena/coach-zoom-i18n.ts");
 const locales = ["en-GB", "pt-BR", "es-ES", "it-IT", "fr-FR", "ar-SA", "tr-TR", "de-DE"] as const;
@@ -54,7 +55,7 @@ function fixture(copy?: Partial<CopyModule>) {
   const Panel = compile("../components/touchline/cards/TouchlineCardZoom.tsx").TouchlineCardZoomDetailsPanel as React.ComponentType<Record<string, unknown>>;
   return {
     formatLocales,
-    produce(locale: string, records: object = { competition, contract }, coach: object = { displayName: "Coach <&> $&", nationality: "Portugal", dateOfBirth: "1980-02-03" }) {
+    produce(locale: string, records: object = { competition, contract }, coach: object = { ...legacyCoachCatalogue().current[0].coach, displayName: "Coach <&> $&", nationality: "Portugal", dateOfBirth: "1980-02-03" }) {
       return Coach({ locale, coach, slot: { cardTier: "ruby-red" }, clubName: "Canonical Club", profileHref: "/touchline-coaches/789?lang=unchanged", publishedTouchlinePoints: 88, showLeadershipCrown: true, ...records }).props;
     },
     render(props: ZoomProps) { return renderToStaticMarkup(React.createElement(Panel, { details: props.details, locale: props.locale })); },
@@ -127,7 +128,8 @@ test("real catalogue to producer to panel preserves EN/PT copy, canonical values
     assert.equal(fallback.details.performanceSubtitle, text.verifiedOnly);
     const missing = view.produce(locale, { competition: null, contract: null }, { displayName: "Canonical Coach" });
     assert.equal(missing.details.fields.filter(({ group }) => group === "identity").length, 3);
-    assert.deepEqual(Array.from(missing.details.fields.filter(({ group }) => group === "performance"), ({ value }) => value), [text.verifiedIdentity, text.awaitingVerifiedData]);
+    assert.deepEqual(Array.from(missing.details.fields.filter(({ group }) => group === "performance"), ({ value }) => value), [locale === "pt-BR" ? "Identidade do treinador" : "Coach identity", text.awaitingVerifiedData]);
+    assert.ok(!JSON.stringify(missing.details).includes(text.verifiedIdentity));
     assert.doesNotMatch(view.render(missing), /class="ratingHero"/);
   }
 });

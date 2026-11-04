@@ -2,9 +2,9 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isOwnerEmail, ownerEmails } from "@/lib/admin/owner";
-import { inspectTouchlineQaVercelEnvironment } from "@/lib/touchlinePreview/qa-environment-verifier-core";
+import { resolveClubOwnerAvatarRuntimeAdmission } from "./club-owner-avatar-runtime-admission";
 import { resolveTouchlineDataSource } from "@/lib/touchlineMirror/runtime";
-import { TOUCHLINE_QA_ORIGIN } from "./public-origin";
+import { TOUCHLINE_PUBLIC_ORIGIN, TOUCHLINE_QA_ORIGIN } from "./public-origin";
 import { createAvatarEnvironmentGuard, awaitAvatarStep } from "./club-owner-avatar-upload-contract";
 import { createClubOwnerAvatarReader } from "./club-owner-avatar-storage";
 import { getClubOwnerAvatarResourceAdmission, type ClubOwnerAvatarResourceScope } from "./club-owner-avatar-resource-admission";
@@ -23,19 +23,21 @@ type Dependencies = { createAdminClient: () => Pick<SupabaseClient, "rpc"> | nul
 export function createPublicOwnerAvatarService(input: Environment, dependencies: Dependencies) {
   const environment = Object.freeze({ ...input }), deps = { ...dependencies };
   const assertCurrent = createAvatarEnvironmentGuard(deps.assertEnvironment);
-  // Same explicit development/QA-only admission as the private photo flow.
+  // Same explicit runtime admission as the private photo flow.
   // This permits URL projection locally; serving still validates the actual
   // request origin below. Never synthesize Vercel variables for a local host.
   const local = allowsClubOwnerAvatarLocalEnvironment(environment, "http://localhost:3100");
+  const admission = resolveClubOwnerAvatarRuntimeAdmission(environment, local ? "http://localhost:3100"
+    : environment.VERCEL_ENV === "production" ? TOUCHLINE_PUBLIC_ORIGIN : TOUCHLINE_QA_ORIGIN);
   const enabled = environment.TOUCHLINE_CLUBOWNER_PUBLIC_ENABLED === "true"
     && environment.TOUCHLINE_CLUBOWNER_PUBLIC_AVATAR_ENABLED === "true"
     && environment.TOUCHLINE_CLUB_OWNER_AVATAR_READ_ENABLED === "true"
     && environment.TOUCHLINE_CLUB_OWNER_AVATAR_RETENTION_READY === "true"
     && deps.ownersConfigured && resolveTouchlineDataSource(environment) === "direct"
-    && (local || inspectTouchlineQaVercelEnvironment({ environment, requestHostname: new URL(TOUCHLINE_QA_ORIGIN).hostname }).status === "PASS");
+    && admission !== null;
   let client: Pick<SupabaseClient, "rpc"> | null | undefined;
-  const allowsOrigin = (origin: string) => local
-    ? allowsClubOwnerAvatarLocalEnvironment(environment, origin) : origin === TOUCHLINE_QA_ORIGIN;
+  const allowsOrigin = (origin: string) => admission !== null && (local
+    ? allowsClubOwnerAvatarLocalEnvironment(environment, origin) : origin === admission.requestOrigin);
   async function read(ids: readonly string[], outerSignal: AbortSignal) {
     assertCurrent(); outerSignal.throwIfAborted();
     if (!enabled || !ids.length || ids.length > 20 || ids.some(id => !publicOwnerId(id) || id !== id.toLowerCase())
@@ -59,7 +61,7 @@ export function createPublicOwnerAvatarService(input: Environment, dependencies:
       try {
         const requestOrigin = new URL(request.url).origin;
         const origin = local && allowsClubOwnerAvatarLocalEnvironment(environment, requestOrigin)
-          ? requestOrigin : local ? "http://localhost:3100" : TOUCHLINE_QA_ORIGIN;
+          ? requestOrigin : admission?.requestOrigin ?? TOUCHLINE_QA_ORIGIN;
         return await handlePublicOwnerAvatar(request, publicId, { enabled, origin }, {
           assertEnvironment: assertCurrent,
           async read(id, signal) {

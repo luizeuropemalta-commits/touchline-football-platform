@@ -63,6 +63,8 @@ export type ClubOwnerSquadCard = {
   /** Immutable ranking evidence; never borrow tiebreaks from mutable season stats. */
   publishedRanking?: Readonly<{
     snapshotId: string;
+    officialRank?: number | null;
+    currentRevision?: string;
     providerPlayerId: string | number | null;
     totalRating: number | null;
     minutesPlayed: number | null;

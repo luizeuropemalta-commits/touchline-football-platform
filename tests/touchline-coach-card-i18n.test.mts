@@ -172,7 +172,10 @@ test("public runtime copy stays gated and missing coach identity remains explici
   for (const locale of locales) {
     const copy = locale === "pt-BR" ? baseline["pt-BR"] : baseline["en-GB"];
     const html = render(locale, { coach: null });
-    for (const key of ["awaitingCoach", "coachPending", "nationality", "currentClub", "firstTeamManager", "result", "cards"] as const) assert.ok(html.includes(copy[key]), `${locale}/${key}`);
+    for (const key of ["awaitingCoach", "coachPending", "nationality", "result", "cards"] as const) assert.ok(html.includes(copy[key]), `${locale}/${key}`);
+    const neutral = copyModule.getTouchlineCoachCardCopy(locale, false, null);
+    assert.ok(html.includes(neutral.currentClub)); assert.ok(html.includes(neutral.firstTeamManager));
+    assert.ok(!html.includes(copy.currentClub)); assert.ok(!html.includes(copy.firstTeamManager));
     assert.doesNotMatch(html, /aria-label="(?:Home fixture|Away fixture|Partida em casa|Partida fora de casa)"/);
     assert.equal(copyModule.getTouchlineCoachCardCopy(locale).awaitingCoach, copy.awaitingCoach);
   }

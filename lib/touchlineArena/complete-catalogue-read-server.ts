@@ -199,9 +199,11 @@ export function createCompleteTouchlineCatalogueAdmin<T extends SupabaseClient>(
   return facade as unknown as T;
 }
 
-export async function loadCompleteTouchlineCataloguePresentations(playerIds: readonly string[], admin: SupabaseClient) {
+export async function loadCompleteTouchlineCataloguePresentations(playerIds: readonly string[], admin: SupabaseClient,
+  current?: NonNullable<import('./card-ranking-live').TouchlineActiveRankingState['currentProjection']>) {
   const ids = [...new Set(playerIds.map((id) => id.trim().toLowerCase()).filter(Boolean))].sort();
   const result = new Map<string, TouchlinePublicEditorialCardPresentation>();
+  const currentBindings = new Map(current?.bindings.map(row => [row.playerId,{clubId:row.clubId,membershipId:row.membershipId}]) ?? []);
   // Keep the existing two-batch ceiling, but refill each free slot immediately.
   // A slow sibling must not stall independent publication reads. Merge only
   // after all reads succeed, in input order rather than completion order.
@@ -214,7 +216,10 @@ export async function loadCompleteTouchlineCataloguePresentations(playerIds: rea
     while (!failed && next < batches.length) {
       const index = next++;
       try {
-        results[index] = await loadTouchlinePublishedCardPresentations({ playerIds: batches[index], providedAdmin: admin });
+        results[index] = await loadTouchlinePublishedCardPresentations({ playerIds: batches[index], providedAdmin: admin,
+          ...(current ? { requireCompleteRead: true,
+            requiredScope: { competitionId: current.competitionId, effectiveSeason: current.effectiveSeason },
+            requiredBindings: new Map(batches[index].map(id => [id,currentBindings.get(id)!])) } : {}) });
       } catch (error) {
         failed = true;
         throw error;

@@ -6,6 +6,7 @@ import React from "react";
 import * as runtime from "react/jsx-runtime";
 import { renderToStaticMarkup } from "react-dom/server";
 import ts from "typescript";
+import * as paymentContract from "../lib/stripe/club-season-payment-contract.ts";
 import type { ClubSeasonCheckoutReturnProps } from "../components/touchline/ClubSeasonCheckoutReturn.tsx";
 
 type Element = React.ReactElement<Record<string, unknown>>;
@@ -51,6 +52,7 @@ function fixture(fetcher: typeof fetch, initial: Partial<ClubSeasonCheckoutRetur
       if (name === "react") return react;
       if (name === "react/jsx-runtime") return runtime;
       if (name === "next/navigation") return { useRouter: () => router };
+      if (name.includes("club-season-payment-contract")) return paymentContract;
       if (name.endsWith(".module.css")) return { default: { arena: "shared-arena-button" } };
       throw new Error(name);
     },
@@ -160,4 +162,70 @@ test("session change and unmount ignore stale results and clean up timers", asyn
   const newSignal = view.calls[1].options?.signal; view.unmount();
   assert.equal(newSignal?.aborted, true); assert.equal(view.timerCount(), 0); resolve(response("paid")); await view.settle();
   assert.equal(view.refreshes(), 0); assert.equal(view.timerCount(), 0);
+});
+
+
+test("explicit Live return uses neutral payment copy and refreshes only after mode-confirmed paid ledger", async () => {
+  for (const locale of ["pt-BR", "en-GB"]) {
+    let checks = 0;
+    const view = fixture(async () => Response.json({ ok: true, paymentMode: "live", status: ++checks === 1 ? "pending" : "paid" }),
+      { paymentMode: "live", sessionId: "cs_live_one", locale });
+    assert.doesNotMatch(view.html(), /teste|test payment|simulation|simulação/i);
+    await view.settle(); assert.equal(view.refreshes(), 0); await view.advance(3_000);
+    assert.equal(view.refreshes(), 1); assert.equal(view.calls.length, 2);
+    assert.match(view.html(), locale === "pt-BR" ? /Pagamento confirmado/ : /Payment confirmed/);
+    assert.match(view.html(), /data-season-payment-mode="live"/);
+    await view.advance(60_000); assert.equal(view.refreshes(), 1); assert.equal(view.calls.length, 2);
+  }
+});
+
+test("unknown capability and cross-mode return IDs never query or grant success", async () => {
+  for (const props of [
+    { paymentMode: null, sessionId: "cs_live_one" },
+    { paymentMode: null, sessionId: "cs_test_one" },
+    { paymentMode: null, checkout: "cancelled" as const },
+    { paymentMode: "live" as const, sessionId: "cs_test_one" },
+    { paymentMode: "test" as const, sessionId: "cs_live_one" },
+  ]) {
+    const view = fixture(async () => { throw new Error("must not request"); }, props); await view.settle();
+    assert.equal(view.calls.length, 0); assert.equal(view.refreshes(), 0); assert.equal(view.timerCount(), 0);
+    assert.match(view.html(), /data-season-checkout-return="unavailable"/);
+    if (props.paymentMode === null) assert.doesNotMatch(view.html(), /teste|simulação/i);
+  }
+});
+
+test("Live status without explicit Live evidence and TEST cross-mode evidence cannot claim payment", async () => {
+  for (const value of [
+    { ok: true, status: "paid" }, { ok: true, status: "paid", paymentMode: "test" },
+    { ok: true, status: "paid", paymentMode: null }, { ok: true, status: "paid", paymentMode: "other" },
+  ]) {
+    const view = fixture(async () => Response.json(value), { paymentMode: "live", sessionId: "cs_live_one" });
+    await view.settle(); assert.equal(view.refreshes(), 0); assert.match(view.html(), /data-season-checkout-return="unavailable"/);
+    assert.doesNotMatch(view.html(), /Pagamento confirmado/);
+  }
+  const testView = fixture(async () => Response.json({ ok: true, status: "paid", paymentMode: "live" }));
+  await testView.settle(); assert.equal(testView.refreshes(), 0);
+  assert.match(testView.html(), /Não foi possível consultar o pagamento de teste/);
+});
+
+test("Live cancellation, review and expiry remain non-success and unconfigured mode cancels in-flight request", async () => {
+  const cancelled = fixture(async () => { throw new Error("must not request"); },
+    { paymentMode: "live", sessionId: "cs_live_one", checkout: "cancelled" });
+  await cancelled.settle(); assert.equal(cancelled.calls.length, 0); assert.equal(cancelled.refreshes(), 0);
+  assert.match(cancelled.html(), /Retorno do pagamento/); assert.doesNotMatch(cancelled.html(), /teste|simulação/i);
+  for (const status of ["review", "expired"]) {
+    const view = fixture(async () => Response.json({ ok: true, status, paymentMode: "live" }),
+      { paymentMode: "live", sessionId: "cs_live_one" });
+    await view.settle(); await view.advance(60_000);
+    assert.equal(view.refreshes(), 0); assert.equal(view.calls.length, 1); assert.equal(view.timerCount(), 0);
+    assert.doesNotMatch(view.html(), /teste|simulação|Pagamento confirmado/i);
+  }
+  let resolve!: (response: Response) => void;
+  const changed = fixture(async () => new Promise<Response>(done => { resolve = done; }),
+    { paymentMode: "live", sessionId: "cs_live_one" });
+  const signal = changed.calls[0].options?.signal;
+  changed.update({ paymentMode: null }); assert.equal(signal?.aborted, true);
+  resolve(Response.json({ ok: true, status: "paid", paymentMode: "live" })); await changed.settle();
+  assert.equal(changed.refreshes(), 0); assert.equal(changed.timerCount(), 0);
+  assert.match(changed.html(), /data-season-checkout-return="unavailable"/);
 });

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui";
 import TouchlineEliteExactCard, { type TouchlineEliteExactPlayer } from "@/components/touchline/cards/TouchlineEliteExactCard";
-import { parseTouchlineActiveRankingState, type TouchlineActiveRankingState } from "@/lib/touchlineArena/card-ranking-live";
+import { parseTouchlineRankingPresentation, type TouchlineActiveRankingState } from "@/lib/touchlineArena/card-ranking-live";
 
 const STATIC_SCALE = 0.78;
 
@@ -19,7 +19,7 @@ export default function PlayerLeaderCrownFixture({ player, locale }: { player: T
         if (controller.signal.aborted) return;
         const response = await fetch("/api/touchline-arena/card-ranking/active", { method: "GET", cache: "no-store", signal: controller.signal });
         if (!response.ok) throw new Error("Ranking read unavailable");
-        const state = parseTouchlineActiveRankingState(await response.json());
+        const state = parseTouchlineRankingPresentation(await response.json());
         if (!controller.signal.aborted) setRead({ revision, state, status: state ? "ready" : "invalid" });
       })
       .catch(() => { if (!controller.signal.aborted) setRead({ revision, state: null, status: "error" }); });

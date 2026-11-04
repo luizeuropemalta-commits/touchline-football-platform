@@ -11,7 +11,7 @@ import {
 } from "@/lib/football-data/public-premier-squad-server";
 import { buildTouchLineClubMatchdayPresentation } from "@/lib/touchlineArena/club-lineup";
 import { createTouchlineArenaCoachSlot, type TouchlineArenaCoachSlot } from "@/lib/touchlineArena/coach-card";
-import { loadTouchLineCoachRanking } from "@/lib/touchlineArena/coach-ranking-server";
+import { loadTouchLineHistoricalCoachRanking } from "@/lib/touchlineArena/coach-ranking-server";
 import { TOUCHLINE_ENGLAND_CLUBS, type ClubOwnerSquadCard, type TouchLineClubVisual } from "@/lib/touchlineArena/demo-data";
 import { loadCoachCatalogue } from "@/lib/touchlineArena/coach-catalogue-server";
 import { catalogueCoachForTeam, catalogueCoachForTeamHistory, type CoachCatalogueEntry } from "@/lib/touchlineArena/coach-catalogue-contract";
@@ -184,7 +184,7 @@ export async function readTouchlineSocialLineupDraft(input: {
 
   const [squadResult, coachRanking] = await Promise.all([
     readPublicPremierSquad(teamId, { providedAdmin: admin }),
-    loadTouchLineCoachRanking(),
+    loadTouchLineHistoricalCoachRanking(),
   ]);
   if (squadResult.status !== 200 || squadResult.body.ok === false) {
     return { ok: false, reason: "published-squad-unavailable" };

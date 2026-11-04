@@ -4,7 +4,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { Script } from "node:vm";
 import test from "node:test";
-import { chromium, firefox, webkit, expect } from "@playwright/test";
+import { chromium, firefox, webkit, expect, type BrowserContext, type Page } from "@playwright/test";
 import sharp from "sharp";
 import { peopleCopy, publicOwnerAvatarHref, publicOwnerHref, publicOwnerNameMatchesQuery, type PeopleLocale, type PublicOwnerSearchResult } from "../lib/touchlineArena/clubowner-public-contract.ts";
 import { bundleIsolatedBrowserFixture } from "./helpers/touchline-isolated-browser-bundle.mts";
@@ -44,6 +44,105 @@ test("ClubOwner search modal compiles real components, hooks, portal and scoped 
   writeFileSync(resolve(evidence, "dialog-bundle-source-receipt.json"), JSON.stringify({ scope: "Bundle compilation only; no DOM, network or hosted proof", sources: bundle.sources.map(path => ({ path, sha256: createHash("sha256").update(readFileSync(path)).digest("hex") })) }, null, 2) + "\n");
 });
 
+// Native calibration and event evidence reuse the existing XI keyboard oracle.
+async function recordKeyboardProbe(page: Page, key: "Tab" | "Alt+Tab") {
+  const before = await page.evaluate(() => {
+    const describe = (node: EventTarget | null) => node instanceof HTMLElement ? {
+      tag: node.tagName, id: node.id.slice(0, 100), text: (node.textContent ?? "").trim().slice(0, 120),
+      tabIndex: node.tabIndex, disabled: "disabled" in node ? Boolean(node.disabled) : false,
+    } : null;
+    // Read defaultPrevented after dispatch has finished, not in a capture-phase
+    // microtask that might run before the product's delegated event listeners.
+    const records: Array<() => object> = [];
+    const listener = (event: Event) => {
+      if (records.length >= 12) return;
+      const target = describe(event.target);
+      records.push(() => ({ type: event.type, target, defaultPrevented: event.defaultPrevented,
+        key: event instanceof KeyboardEvent ? event.key : null,
+        altKey: event instanceof KeyboardEvent ? event.altKey : null }));
+    };
+    const events = ["keydown", "keyup", "focusin"];
+    for (const event of events) window.addEventListener(event, listener, true);
+    const host = window as Window & { fixtureKeyboardProbe?: { read: () => object; stop: () => void } };
+    host.fixtureKeyboardProbe = {
+      read: () => ({ activeElement: describe(document.activeElement), documentFocused: document.hasFocus(), events: records.map(read => read()) }),
+      stop: () => { for (const event of events) window.removeEventListener(event, listener, true); delete host.fixtureKeyboardProbe; },
+    };
+    return { activeElement: describe(document.activeElement), documentFocused: document.hasFocus() };
+  });
+  let failure: unknown;
+  try {
+    await page.keyboard.press(key);
+  } catch (error) { failure = error; }
+  const after = await page.evaluate(() => {
+    const probe = (window as Window & { fixtureKeyboardProbe?: { read: () => object; stop: () => void } }).fixtureKeyboardProbe;
+    try { return probe?.read() ?? { unavailable: true }; } finally { probe?.stop(); }
+  }).catch(error => { failure ??= error; return { unavailable: true }; });
+  return { evidence: { key, before, after }, failure };
+}
+
+type KeyboardKey = "Tab" | "Alt+Tab";
+type KeyboardObservation = {
+  documentFocused: boolean;
+  activeElement: { tag: string; id: string } | null;
+  events: Array<{ type: string; key: string | null; defaultPrevented: boolean }>;
+};
+type NativeObservation = { key: KeyboardKey; beforeFocused: boolean; after: KeyboardObservation };
+function assertKeyboardObservation(observation: NativeObservation) {
+  assert.equal(observation.beforeFocused, true, "Document must be focused before keyboard navigation");
+  assert.equal(observation.after.documentFocused, true, "Document lost focus during keyboard navigation");
+  assert.ok(Array.isArray(observation.after.events), "Keyboard event evidence missing");
+  assert.ok(observation.after.events.some(event => event.type === "keydown" && event.key === "Tab"), "Tab keydown missing");
+  assert.ok(observation.after.events.some(event => event.type === "keyup" && event.key === "Tab"), "Tab keyup missing");
+  assert.ok(observation.after.events.every(event => event.defaultPrevented === false), "Keyboard navigation was cancelled");
+}
+function checkedKeyboardProbe(probe: Awaited<ReturnType<typeof recordKeyboardProbe>>): NativeObservation {
+  if (probe.failure) throw probe.failure;
+  const after = probe.evidence.after as KeyboardObservation;
+  const observation = { key: probe.evidence.key, beforeFocused: probe.evidence.before.documentFocused, after };
+  assertKeyboardObservation(observation);
+  return { ...observation, after: { ...after,
+    activeElement: after.activeElement ? { tag: after.activeElement.tag, id: after.activeElement.id } : null } };
+}
+async function calibrateSearchKeyboard(context: BrowserContext, details: { engine: string; locale: PeopleLocale; width: number }): Promise<KeyboardKey> {
+  // Separate native document in the same viewport/touch context; never calibrate
+  // against the product target or synthesize focus on its behalf.
+  const control = await context.newPage();
+  const probes: Array<Awaited<ReturnType<typeof recordKeyboardProbe>>["evidence"]> = [];
+  const unexpected: string[] = [];
+  let selectedKey: KeyboardKey | null = null;
+  try {
+    await control.route("**/*", async route => { unexpected.push(route.request().method()); await route.abort("blockedbyclient"); });
+    await control.setContent('<!doctype html><html lang="en"><meta charset="utf-8"><body><a id="native-anchor" href="#native-input">Native link</a><button id="native-button" type="button">Native button</button><input id="native-input" aria-label="Native input"></body></html>');
+    const anchor = control.locator("#native-anchor");
+    await anchor.focus(); await expect(anchor).toBeFocused();
+    const tabProbe = await recordKeyboardProbe(control, "Tab"); probes.push(tabProbe.evidence);
+    const tab = checkedKeyboardProbe(tabProbe);
+    if (tab.after.activeElement?.tag === "BUTTON" && tab.after.activeElement.id === "native-button") {
+      selectedKey = "Tab";
+    } else {
+      assert.equal(details.engine, "webkit", "Chromium and Firefox must reach a native button using Tab");
+      assert.deepEqual(tab.after.activeElement, { tag: "INPUT", id: "native-input" }, "WebKit native Tab has an unexpected target");
+      await anchor.focus(); await expect(anchor).toBeFocused();
+      const alternateProbe = await recordKeyboardProbe(control, "Alt+Tab"); probes.push(alternateProbe.evidence);
+      const alternate = checkedKeyboardProbe(alternateProbe);
+      assert.deepEqual(alternate.after.activeElement, { tag: "BUTTON", id: "native-button" }, "WebKit Alt+Tab must reach the native button");
+      selectedKey = "Alt+Tab";
+    }
+    assert.deepEqual(unexpected, [], "Native calibration must make no network request");
+    return selectedKey;
+  } finally {
+    console.log(`SEARCH_KEYBOARD_CALIBRATION ${JSON.stringify({ ...details, selectedKey, probes, unexpected })}`);
+    await control.close();
+  }
+}
+
+async function pressCalibratedSearchKey(page: Page, key: KeyboardKey, details: { engine: string; locale: PeopleLocale; width: number; phase: string }) {
+  const probe = await recordKeyboardProbe(page, key);
+  console.log(`SEARCH_KEYBOARD_PRODUCT ${JSON.stringify({ ...details, ...probe.evidence })}`);
+  if (probe.failure) throw probe.failure;
+}
+
 // Real React components, focus/scroll-lock hooks, fetch callbacks and scoped CSS.
 // Forty synthetic public owners and intercepted HTTP model the boundary only;
 // this does not prove database ranking, RLS, hosted sessions or an iPhone device.
@@ -56,7 +155,7 @@ for (const engine of [chromium, webkit, firefox]) test(`ClubOwner search modal r
   const lime = readFileSync("app/globals.css", "utf8").match(/--lime:\s*(#[a-f0-9]{6})/i)?.[1]; assert.ok(lime);
   const limeRgb = `rgb(${[1, 3, 5].map(index => parseInt(lime.slice(index, index + 2), 16)).join(", ")})`;
   mkdirSync(evidence, { recursive: true });
-  const results: { locale: PeopleLocale; width: number; puts: number; listReads: number; profileReads: number; imageReads: number; touch: boolean; screenshot: string; portraitsScreenshot: string; followingScreenshot: string }[] = [];
+  const results: { locale: PeopleLocale; width: number; puts: number; listReads: number; profileReads: number; imageReads: number; touch: boolean; keyboardKey: KeyboardKey; screenshot: string; portraitsScreenshot: string; followingScreenshot: string }[] = [];
   const browser = await engine.launch({ headless: true });
   try {
     for (const locale of ["pt-BR", "en-GB"] as const) for (const width of [390, 1280]) {
@@ -67,13 +166,17 @@ for (const engine of [chromium, webkit, firefox]) test(`ClubOwner search modal r
         rank: i + 1, followerCount: 100 - i, following: false, viewer: "member", planKey: portraitPlans[i % 5],
         avatarUrl: i < 5 ? publicOwnerAvatarHref(`11111111-2222-4333-8444-${String(i + 1).padStart(12, "0")}`, "a".repeat(64)) : null,
       }));
+      const metadataIds: string[] = [];
       const friend = people[39];
       friend.displayName = "Luiz José da Silva";
       const context = await browser.newContext({ viewport: { width, height: 844 }, hasTouch: width === 390, isMobile: width === 390 && engine.name() !== "firefox", serviceWorkers: "block", reducedMotion: "reduce" });
       try {
+        const keyboardKey = await calibrateSearchKeyboard(context, { engine: engine.name(), locale, width });
         await context.route("**/*", async route => {
           const request = route.request(), url = new URL(request.url());
           if (url.origin !== origin) return route.abort();
+          // WebKit routes local object URLs too; leave native blob decoding intact.
+          if (url.protocol === "blob:") return route.continue();
           requests.push({ method: request.method(), path: url.pathname, query: url.search });
           if (url.pathname.endsWith("/avatar")) {
             const index = people.findIndex(person => person.avatarUrl === url.pathname + url.search);
@@ -101,8 +204,13 @@ for (const engine of [chromium, webkit, firefox]) test(`ClubOwner search modal r
             if (failNextWrite) { failNextWrite = false; return route.fulfill({ status: 503, json: { error: "UNCERTAIN_WRITE" } }); }
             return route.fulfill({ json: { profile: friend } });
           }
-          if (url.pathname === `/api/touchline/clubowners/${friend.publicId}`) {
-            assert.equal(request.method(), "GET"); profileReads++; return route.fulfill({ json: { profile: friend } });
+          if (/^\/api\/touchline\/clubowners\/[a-f0-9-]{36}$/.test(url.pathname)) {
+            assert.equal(request.method(), "GET");
+            const publicId = url.pathname.split("/").at(-1)!;
+            const profile = people.find(person => person.publicId === publicId);
+            assert.ok(profile, "Metadata reads must match a known synthetic public identity");
+            metadataIds.push(publicId); profileReads++;
+            return route.fulfill({ json: { profile } });
           }
           if (url.pathname !== "/") return route.abort();
           return route.fulfill({ contentType: "text/html", body: `<!doctype html><html lang="${locale}"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>:root{--lime:${lime}}*{box-sizing:border-box}body{margin:0;background:#030b09;color:#edf7ed;font:16px system-ui}main{padding:20px}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}button,input{font:inherit}${bundle.css}</style><div id="root"></div><script>window.searchLocale=${JSON.stringify(locale)};${bundle.script.replace(/<\/script/gi, "<\\/script")}</script></html>` });
@@ -130,6 +238,8 @@ for (const engine of [chromium, webkit, firefox]) test(`ClubOwner search modal r
           await expect(fallback).toHaveCSS("border-top-color", portraitRings[index]);
         }
         assert.equal(imageReads, 5, "Private/null photos do not load; confirmed portraits are loaded once");
+        for (const person of people.slice(0, 5)) assert.ok(metadataIds.includes(person.publicId),
+          "Visible portraits reconcile consent/version against their own current public profile");
         const firstFollow = dialog.getByRole("listitem").first().getByRole("button", { name: copy.follow, exact: true });
         await firstFollow.scrollIntoViewIfNeeded(); await page.mouse.move(0, 0); await input.focus();
         await expect(firstFollow).toHaveAttribute("data-action", "follow"); await expect(firstFollow).toHaveAttribute("aria-pressed", "false");
@@ -139,7 +249,7 @@ for (const engine of [chromium, webkit, firefox]) test(`ClubOwner search modal r
           assert.equal(await page.evaluate(() => matchMedia("(pointer: coarse)").matches), true);
           await expect(firstFollow).not.toHaveCSS("background-color", limeRgb); await expect(firstFollow).toHaveCSS("transform", "none");
         } else await expect(firstFollow).toHaveCSS("background-color", limeRgb);
-        await page.mouse.move(0, 0); await dialog.getByRole("listitem").first().getByRole("link").last().focus(); await page.keyboard.press("Tab");
+        await page.mouse.move(0, 0); await dialog.getByRole("listitem").first().getByRole("link").last().focus(); await pressCalibratedSearchKey(page, keyboardKey, { engine: engine.name(), locale, width, phase: "first-follow" });
         await expect(firstFollow).toBeFocused(); await expect(firstFollow).toHaveCSS("background-color", limeRgb);
         await input.focus();
         const portraitsScreenshot = resolve(evidence, `search-${engine.name()}-${locale}-${width}-plan-portraits.png`);
@@ -176,9 +286,10 @@ for (const engine of [chromium, webkit, firefox]) test(`ClubOwner search modal r
         await expect(dialog.getByText(copy.writeError, { exact: true })).toBeVisible();
         await expect(dialog.getByRole("button", { name: copy.follow, exact: true })).toBeDisabled();
         assert.equal(puts, 1); assert.equal(listReads, beforeFollowReads, "follow must not submit the search form");
+        const profileReadsBeforeRecovery = profileReads;
         await dialog.getByRole("button", { name: copy.retry, exact: true }).click();
         await expect(dialog.getByRole("button", { name: `${copy.following}: ${copy.unfollow}`, exact: true })).toBeEnabled();
-        assert.equal(puts, 1); assert.equal(profileReads, 1, "uncertain follow is reconciled by GET, not replayed PUT");
+        assert.equal(puts, 1); assert.equal(profileReads, profileReadsBeforeRecovery + 1, "uncertain follow is reconciled by one GET, not replayed PUT");
         const following = dialog.getByRole("button", { name: `${copy.following}: ${copy.unfollow}`, exact: true });
         await expect(following).toHaveAttribute("aria-pressed", "true"); await expect(following).toHaveText(copy.following);
         await expect(following.locator("svg[aria-hidden='true']")).toHaveCount(1);
@@ -215,7 +326,7 @@ for (const engine of [chromium, webkit, firefox]) test(`ClubOwner search modal r
         assert.equal(listReads, readsBeforeCursorRecovery + 1);
         assert.equal(new URL(requests.filter(request => request.path === "/api/touchline/clubowners").at(-1)!.query, origin).searchParams.get("cursor"), null, "stale cursor retries restart the ranking snapshot");
         await expect(dialog.getByRole("link", { name: copy.manageProfile, exact: true })).toHaveCount(0);
-        await dialog.getByRole("button", { name: copy.moreResults, exact: true }).focus(); await page.keyboard.press("Tab"); await expect(dialog.getByRole("button", { name: copy.close, exact: true })).toBeFocused();
+        await dialog.getByRole("button", { name: copy.moreResults, exact: true }).focus(); await pressCalibratedSearchKey(page, keyboardKey, { engine: engine.name(), locale, width, phase: "close-after-more-results" }); await expect(dialog.getByRole("button", { name: copy.close, exact: true })).toBeFocused();
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `${locale}/${width} page overflow`);
         assert.ok(await dialog.evaluate(el => el.scrollWidth <= el.clientWidth + 1), `${locale}/${width} dialog overflow`);
         const screenshot = resolve(evidence, `search-${engine.name()}-${locale}-${width}.png`); await page.screenshot({ path: screenshot });
@@ -226,7 +337,7 @@ for (const engine of [chromium, webkit, firefox]) test(`ClubOwner search modal r
         await compact.click(); await expect(input).toBeFocused(); await dialog.getByRole("button", { name: copy.close, exact: true }).click();
         await expect(compact).toBeFocused(); assert.equal(puts, 2);
         assert.ok(requests.filter(request => request.method !== "GET").every(request => request.path.endsWith("/follow")));
-        assert.deepEqual(errors, []); results.push({ locale, width, puts, listReads, profileReads, imageReads, touch: width === 390, screenshot, portraitsScreenshot, followingScreenshot });
+        assert.deepEqual(errors, []); results.push({ locale, width, puts, listReads, profileReads, imageReads, touch: width === 390, keyboardKey, screenshot, portraitsScreenshot, followingScreenshot });
       } finally { await context.close(); }
     }
     assert.equal(results.length, 4);

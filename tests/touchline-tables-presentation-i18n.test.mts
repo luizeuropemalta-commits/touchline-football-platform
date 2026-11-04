@@ -1,3 +1,4 @@
+import { classifyTouchlineCoach } from "../lib/touchlineArena/coach-classification.ts";
 import * as coachCatalogue from "../lib/touchlineArena/coach-catalogue-contract.ts";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -457,4 +458,38 @@ test("real exported wrapper uses server policy OFF/ON without accepting forged q
       }
     }
   } finally { delete releaseEnv.TOUCHLINE_SITE_LOCALES_ENABLED; }
+});
+
+
+test("current coach award keeps the approved appointment and border when later history differs", async () => {
+  const h = await harness("pt-BR", true);
+  const uuid = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
+  const current = coachCatalogue.legacyCoachCatalogue().current.map((entry, index) => ({
+    id: uuid(index + 1), publicationId: uuid(index + 101), providerId: entry.coach.providerId,
+    teamId: entry.coach.teamId, name: entry.coach.name, nationality: entry.coach.nationality,
+    countryId: entry.coach.countryId, countryCode3: entry.countryCode3, sourceKind: entry.sourceKind,
+    observedAt: entry.fetchedAt, classification: entry.classification,
+  }));
+  const leader = current.find(entry => entry.providerId === h.ranked.rows[0]!.coachProviderId)!;
+  const historical = { ...leader, publicationId: uuid(501), name: "Historical name only",
+    classification: classifyTouchlineCoach({ coachProviderId: leader.providerId }) };
+  assert.notEqual(historical.classification.tierKey, leader.classification.tierKey);
+  const catalogue = coachCatalogue.parseCoachCatalogue({ revision: 2, current, history: [...current, historical] });
+  assert.equal(catalogue.phase, "ready");
+  const state = { ...h.ranked, catalogue, currentProjection: { version: 1,
+    scope: { seasonId: h.ranked.seasonId, effectiveSeason: "2026-27" } } };
+  const tree = h.render("TouchlineFeaturedCoach", { coachRanking: state });
+  const zoom = nodes(tree).find(node => node.props.competition)!;
+  const coach = zoom.props.coach as { name: string; catalogueAssociation: { publicationId: string } };
+  assert.equal(coach.name, leader.name);
+  assert.equal(coach.catalogueAssociation.publicationId, leader.publicationId);
+  assert.equal((zoom.props.slot as { cardTier: string }).cardTier, leader.classification.tierKey);
+  assert.equal(tree.props["data-coach-tier-frame"], leader.classification.tierKey);
+  assert.equal((zoom.props.competition as { rank: number }).rank, 1);
+  assert.equal(zoom.props.publishedTouchlinePoints, h.ranked.rows[0]!.touchlinePoints);
+  assert.ok(String(zoom.props.profileHref).includes(leader.providerId));
+  assert.ok(!html(tree).includes("Historical name only"));
+  const missingCurrent = { ...state, catalogue: { ...catalogue, current: catalogue.current.filter(entry => entry.coach.providerId !== leader.providerId) } };
+  const withdrawn = h.render("TouchlineFeaturedCoach", { coachRanking: missingCurrent });
+  assert.equal(nodes(withdrawn).some(node => node.props.competition), false, "No historical fallback for a current award");
 });

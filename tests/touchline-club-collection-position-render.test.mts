@@ -243,3 +243,33 @@ test("missing card remains in its real position group and reserve range preserve
   for (const button of reserve.slots.flatMap(children).filter(child => child.type === "button")) (button.props.onClick as () => void)();
   assert.deepEqual(reserve.chosen, [{ area: "reserves", slot: 6 }]);
 });
+
+test("outside priorities are per position, preserve real slot IDs and never include the bench", () => {
+  const orderedPlayers = [
+    { playerId: "cb-last", position: "CB", area: "outside", slot: 9 },
+    { playerId: "cb-bench", position: "CB", area: "reserves", slot: 1 },
+    { playerId: "cb-first", position: "CB", area: "outside", slot: 1 },
+    { playerId: "outside-keeper", position: "GK", area: "outside", slot: 0 },
+    { playerId: "cb-second", position: "CB", area: "outside", slot: 3 },
+  ];
+  const priorityChanges: { playerId: string; slot: number }[] = [];
+  const props = { state: { players: orderedPlayers }, catalogue: orderedPlayers.map(p => ({ id: p.playerId, canonicalPlayerId: p.playerId, name: p.playerId })),
+    locale: "pt-BR", onPriorityChange: (playerId: string, slot: number) => priorityChanges.push({ playerId, slot }) };
+  const result = render(props);
+  const selectors = result.elements.filter(element => element.type === "select");
+  assert.equal(selectors.length, 4);
+  assert.ok(!result.html.includes("cb-bench"));
+  const first = selectors.find(element => element.props["aria-label"] === "Prioridade entre os jogadores de fora da partida · CB · cb-first")!;
+  assert.ok(first);
+  const options = React.Children.toArray(first.props.children as React.ReactNode) as Element[];
+  assert.deepEqual(options.map(option => [option.props.value, option.props.children]), [[1, 1], [3, 2], [9, 3]]);
+  const change = first.props.onChange as (event: { currentTarget: { value: string } }) => void;
+  change({ currentTarget: { value: "9" } });
+  change({ currentTarget: { value: "0" } });
+  assert.deepEqual(priorityChanges, [{ playerId: "cb-first", slot: 9 }], "another position cannot receive this priority");
+  const closed = render({ ...props, enabled: false });
+  const disabled = closed.elements.find(element => element.type === "select" && element.props.value === 1)!;
+  assert.equal(disabled.props.disabled, true);
+  (disabled.props.onChange as typeof change)({ currentTarget: { value: "3" } });
+  assert.equal(priorityChanges.length, 1, "a closed market cannot reorder the outside players");
+});

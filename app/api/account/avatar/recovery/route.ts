@@ -1,12 +1,10 @@
 import "server-only";
+import { resolveClubOwnerAvatarRuntimeAdmission } from "@/lib/touchlineArena/club-owner-avatar-runtime-admission";
 import { parseClubOwnerAvatarAudience } from "@/lib/touchlineArena/club-owner-avatar-audience";
-import { allowsClubOwnerAvatarLocalEnvironment } from "@/lib/touchlineArena/club-owner-avatar-local-admission";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isOwnerEmail, ownerEmails } from "@/lib/admin/owner";
 import { createClubOwnerAvatarRecoveryServer } from "@/lib/touchlineArena/club-owner-avatar-server";
-import { TOUCHLINE_QA_ORIGIN } from "@/lib/touchlineArena/public-origin";
-import { inspectTouchlineQaVercelEnvironment } from "@/lib/touchlinePreview/qa-environment-verifier-core";
 import { resolveTouchlineDataSource } from "@/lib/touchlineMirror/runtime";
 
 export const runtime = "nodejs";
@@ -20,21 +18,20 @@ const unavailable = () => Response.json({ ok: false, state: "unknown", error: "A
 export async function POST(request: Request) {
   try {
     const environment = { ...process.env }, target = new URL(request.url);
-    const local = allowsClubOwnerAvatarLocalEnvironment(environment, target.origin);
+    const admission = resolveClubOwnerAvatarRuntimeAdmission(environment, target.origin);
     const expires = performance.now() + 8_000, accountId = environment.TOUCHLINE_CLUB_OWNER_AVATAR_UPLOAD_ACCOUNT_ID;
     const audience = environment.TOUCHLINE_CLUB_OWNER_AVATAR_AUDIENCE;
     if (environment.TOUCHLINE_CLUB_OWNER_AVATAR_READ_ENABLED !== "true" || environment.TOUCHLINE_CLUB_OWNER_AVATAR_UPLOAD_ENABLED !== "true"
-      || parseClubOwnerAvatarAudience({ audience, accountId }) === null || (!local && target.origin !== TOUCHLINE_QA_ORIGIN)
-      || (!local && inspectTouchlineQaVercelEnvironment({ environment, requestHostname: target.hostname }).status !== "PASS")
+      || parseClubOwnerAvatarAudience({ audience, accountId }) === null || !admission
       || resolveTouchlineDataSource(environment) !== "direct" || ownerEmails().length === 0) return unavailable();
     const assertSnapshot = () => {
       if (Object.keys(environment).length !== Object.keys(process.env).length
         || Object.keys(environment).some(key => process.env[key] !== environment[key])) throw Error("AVATAR_CONFIGURATION_CHANGED");
     };
     assertSnapshot(); const supabaseOrigin = new URL(environment.SUPABASE_URL!).origin;
-    const serve = createClubOwnerAvatarRecoveryServer({ enabled: true, accountId, audience, requestOrigin: local ? target.origin : TOUCHLINE_QA_ORIGIN,
+    const serve = createClubOwnerAvatarRecoveryServer({ enabled: true, accountId, audience, requestOrigin: admission.requestOrigin,
       supabaseOrigin, publicSupabaseOrigin: new URL(environment.NEXT_PUBLIC_SUPABASE_URL!).origin,
-      serviceRoleKey: environment.SUPABASE_SERVICE_ROLE_KEY, dataSource: "direct", environment: local ? "local" : "qa",
+      serviceRoleKey: environment.SUPABASE_SERVICE_ROLE_KEY, dataSource: "direct", environment: admission.kind, runtimeAdmission: admission,
       deploymentMode: environment.TOUCHLINE_DEPLOYMENT_MODE, publicDeploymentMode: environment.NEXT_PUBLIC_TOUCHLINE_DEPLOYMENT_MODE,
     }, {
       assertEnvironment: assertSnapshot,

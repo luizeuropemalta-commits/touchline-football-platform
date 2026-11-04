@@ -15,7 +15,7 @@ const source = ts.transpileModule(readFileSync(new URL("../components/reset-pass
 function render(locale: string, enabled: boolean, status: string) {
   const modules: Record<string, unknown> = {
     "react/jsx-runtime": jsx,
-    react: { useEffect() {}, useState(initial: unknown) { return [initial === "checking" ? status : initial, () => {}]; } },
+    react: { useEffect() {}, useRef(current: unknown) { return { current }; }, useState(initial: unknown) { return [initial === "checking" ? status : initial, () => {}]; } },
     "next/link": { default: ({ children, ...props }: React.ComponentProps<"a">) => React.createElement("a", props, children) },
     "lucide-react": { ArrowRight: () => null, Eye: () => null, EyeOff: () => null, Loader2: () => null },
     "./ui": { Button: () => null, Input: () => null },

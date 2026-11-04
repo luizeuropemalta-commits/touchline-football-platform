@@ -5,6 +5,7 @@ import vm from "node:vm";
 import { readFileSync } from "node:fs";
 import ts from "typescript";
 import { rankTouchlineFantasyManagers } from "../lib/touchlineFantasy/domain.ts";
+import { coachCompetitionFromRanking } from "../lib/touchlineArena/coach-competition-projection.ts";
 
 type Row = Record<string, unknown>;
 type Result = { data: unknown; error: unknown };
@@ -75,6 +76,7 @@ function fixture(options: { configuration?: Promise<Result>; entitlement?: Promi
   };
   const modules: Record<string, unknown> = {
     "./domain": { rankTouchlineFantasyManagers },
+    "@/lib/touchlineArena/coach-competition-projection": { coachCompetitionFromRanking },
     "./gameweek-score-status": { projectGameweekScoreStatus },
     "@/lib/touchlineArena/club-owner-standings-server": {
       readClubOwnerStandingViewsForSeason: async (client: unknown, season: string, owner: string) => {

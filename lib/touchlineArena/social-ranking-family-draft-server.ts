@@ -1,3 +1,4 @@
+import { readTouchlineCurrentLeagueScope, readTouchlineCurrentPlayerRanking } from "./current-player-eligibility-server";
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -93,7 +94,7 @@ function integer(value: unknown) {
   return Number.isInteger(number) ? number : null;
 }
 
-async function readActiveRankingBundle(admin: Admin) {
+async function readActiveRankingBundle(admin: Admin, currentOnly: boolean) {
   const active = await admin.from("touchline_card_ranking_active_snapshots")
     .select("snapshot_id").eq("league_key", TOUCHLINE_ENGLAND_LEAGUE_KEY).maybeSingle();
   const snapshotId = text(active.data?.snapshot_id);
@@ -115,6 +116,7 @@ async function readActiveRankingBundle(admin: Admin) {
       playerId: player.playerId, providerPlayerId: player.providerPlayerId,
       positionGroup: player.positionGroup, positionRank: player.positionRank,
       groupSize: player.groupSize, totalRating: player.totalRating,
+      minutesPlayed: player.minutesPlayed, appearances: player.appearances,
       tierKey: player.tierKey, priceTc: player.priceTc,
     })),
   });
@@ -126,14 +128,23 @@ async function readActiveRankingBundle(admin: Admin) {
     || players.some((player) => !UUID.test(player.playerId)
       || !NUMERIC_ID.test(String(player.providerPlayerId ?? ""))
       || player.totalRating === null || !Number.isFinite(player.totalRating))) return null;
-  const cards = await loadTouchLineRankedCardCatalog(state, admin);
+  const current = currentOnly ? await readTouchlineCurrentPlayerRanking(admin, state, await readTouchlineCurrentLeagueScope(admin)) : null;
+  if (currentOnly && (current?.phase !== "ready" || !current.state)) return null;
+  const admitted = current?.state ?? state;
+  const cards = await loadTouchLineRankedCardCatalog(admitted, admin);
+  const sourceById = new Map(players.map(row => [row.playerId,row]));
+  const cardsById = new Map(cards.map(row => [row.canonicalPlayerId,row]));
+  const candidates = currentOnly ? admitted.players.map(row => ({
+    ...sourceById.get(row.playerId)!, ...row,
+    clubName: cardsById.get(row.playerId)?.clubName ?? "",
+  })) as readonly TouchlineRankedPlayer[] : players as readonly TouchlineRankedPlayer[];
   const topThree = selectTouchlineSocialRankingTopThree({
-    rankingPlayers: players as readonly TouchlineRankedPlayer[], cards,
+    rankingPlayers: candidates, cards,
   });
   if (!topThree) return null;
   return {
-    state,
-    players: players as readonly TouchlineRankedPlayer[],
+    state: admitted,
+    players: candidates,
     cards,
     topThree,
     publishedAt: timestamp(row.published_at)!,
@@ -198,7 +209,10 @@ export async function readTouchlineSocialRankingFamilyDraft(input: Readonly<{
   const sourceStart = await readTouchlineSocialSourceRevisionCheckpoint([]);
   const admin = createAdminClient();
   if (!sourceStart || !admin) return { ok: false, reason: "qa-read-model-unavailable" };
-  const ranking = await readActiveRankingBundle(admin);
+  // New current-ranking drafts use current eligibility; immutable historic
+  // receipts and match/hat-trick hero evidence keep their original contract.
+  const ranking = await readActiveRankingBundle(admin,
+    input.contentType === "GAMEWEEK_RANKING_PREVIEW" || input.contentType === "GAMEWEEK_RANKING_FINAL");
   if (!ranking) return { ok: false, reason: "active-v3-ranking-unavailable" };
 
   let anchorFixtureId = fixtureId;

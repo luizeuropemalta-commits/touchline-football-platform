@@ -53,3 +53,15 @@ test('ordinary requests stay sanitized and only real login draft URL may reconst
   const approved=exports.nextResponseWithPresentationLocale(request('/login','en-GB','ar-SA'));
   assert.equal(approved.forwardedHeaders.has(rootLocale.TOUCHLINE_LOGIN_PRESENTATION_LOCALE_HEADER),false);
 });
+
+
+test('ordinary QA and product requests cannot activate the inert preview envelope through a client header',()=>{
+  for(const path of ['/preview','/intro','/clubowner','/admin','/login']) for(const injected of ['true','TRUE','false','attacker-controlled']) {
+    const input=request(path,'en-GB','ar-SA');
+    input.headers.set(TOUCHLINE_ISOLATED_PREVIEW_HEADER,injected);
+    const result=exports.nextResponseWithPresentationLocale(input);
+    assert.equal(result.forwardedHeaders.has(TOUCHLINE_ISOLATED_PREVIEW_HEADER),false,`${path}: injected ${injected}`);
+    assert.equal(result.forwardedHeaders.get('x-preserve-test'),'ordinary-header');
+    assert.equal(input.headers.get(TOUCHLINE_ISOLATED_PREVIEW_HEADER),injected,'original request remains untouched');
+  }
+});

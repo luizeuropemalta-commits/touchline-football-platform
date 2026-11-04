@@ -33,9 +33,15 @@ export type TouchlineActiveRankingPlayer = Pick<
   | "appearances"
   | "tierKey"
   | "priceTc"
->;
+> & { officialRank?: number | null };
 
 export type TouchlineActiveRankingState = {
+  /** A read-time current view, never a replacement for the audited source snapshot. */
+  currentProjection?: Readonly<{ version: 1; revision: string; competitionId: string; currentSeasonId: string;
+    sourceSnapshotId: string | null; sourcePlayerCount: number; eligiblePlayerCount: number;
+    effectiveSeason: string; bindings: readonly Readonly<{playerId:string;clubId:string;membershipId:string}>[] }>;
+  /** Same-season historical totals only: never current positions or crown authority. */
+  seasonTotals?: readonly Readonly<{playerId:string;providerPlayerId:string|number|null;totalRating:number|null}>[];
   cardGoals?: CardGoalsPublication | null;
   phase: "preseason" | "ranked";
   leagueKey: string;
@@ -119,11 +125,34 @@ function isRankingPlayer(value: unknown): value is TouchlineActiveRankingPlayer 
   );
 }
 
+/** Strict immutable-publication decoder. Current projections have a separate contract. */
 export function parseTouchlineActiveRankingState(value: unknown): TouchlineActiveRankingState | null {
+  return parseRankingState(value, false);
+}
+
+/** Consumers may explicitly read a derived current view without relabelling it as a publication. */
+export function parseTouchlineRankingPresentation(value: unknown): TouchlineActiveRankingState | null {
+  return parseRankingState(value, true);
+}
+
+function parseRankingState(value: unknown, allowCurrent: boolean): TouchlineActiveRankingState | null {
   if (!value || typeof value !== "object") return null;
   const candidate = value as Partial<TouchlineActiveRankingState>;
 
-  if (candidate.phase === "preseason") return TOUCHLINE_PRESEASON_RANKING_STATE;
+  const projection = candidate.currentProjection;
+  if (projection && (!allowCurrent || projection.version !== 1
+    || typeof projection.revision !== "string" || projection.revision.length !== 64 || !/^[0-9a-f]{64}$/.test(projection.revision)
+    || typeof projection.competitionId !== "string" || !projection.competitionId.length
+    || typeof projection.currentSeasonId !== "string" || !projection.currentSeasonId.length
+    || !Number.isSafeInteger(projection.sourcePlayerCount) || projection.sourcePlayerCount < 0
+    || !Number.isSafeInteger(projection.eligiblePlayerCount) || projection.eligiblePlayerCount < 0
+    || projection.eligiblePlayerCount > projection.sourcePlayerCount
+    || typeof projection.effectiveSeason !== "string" || projection.effectiveSeason.length !== 7 || !/^\d{4}-\d{2}$/.test(projection.effectiveSeason)
+    || !Array.isArray(projection.bindings) || projection.bindings.some(row => !row || typeof row !== "object") || new Set(projection.bindings.map(row => row.playerId)).size !== projection.bindings.length
+    || projection.bindings.some(row => [row.playerId,row.clubId,row.membershipId].some(id => typeof id !== "string" || id.length !== 36 || !/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/.test(id))))) return null;
+  if (candidate.phase === "preseason") return projection
+    ? { ...TOUCHLINE_PRESEASON_RANKING_STATE, seasonId: projection.currentSeasonId, currentProjection: projection }
+    : TOUCHLINE_PRESEASON_RANKING_STATE;
   if (
     candidate.phase !== "ranked"
     || candidate.leagueKey !== TOUCHLINE_ENGLAND_LEAGUE_KEY
@@ -140,12 +169,19 @@ export function parseTouchlineActiveRankingState(value: unknown): TouchlineActiv
     || [...candidate.fixtureIds].sort().join("\n") !== [...candidate.expectedFixtureIds].sort().join("\n")
     || candidate.totalScorePoints !== 0
     || !Array.isArray(candidate.players)
-    || candidate.players.length === 0
+    || (!projection && candidate.players.length === 0)
     || !candidate.players.every(isRankingPlayer)
   ) {
     return null;
   }
 
+  if (projection && (candidate.seasonId !== projection.currentSeasonId
+    || candidate.snapshotId !== projection.sourceSnapshotId
+    || candidate.players.length !== projection.eligiblePlayerCount
+    || !Array.isArray(candidate.seasonTotals) || candidate.seasonTotals.length !== projection.sourcePlayerCount
+    || candidate.seasonTotals.some(row => !row || typeof row !== "object" || !normalizePlayerId(row.playerId)
+      || !normalizePlayerId(row.providerPlayerId) || !(row.totalRating === null || typeof row.totalRating === "number" && Number.isFinite(row.totalRating)))
+    || new Set(candidate.seasonTotals.map(row => row.playerId)).size !== candidate.seasonTotals.length)) return null;
   const identifiers = new Set<string>();
   const groupRanks = new Map<TouchlinePositionRankingGroup, Set<number>>();
   for (const player of candidate.players) {
@@ -164,6 +200,7 @@ export function parseTouchlineActiveRankingState(value: unknown): TouchlineActiv
   for (const group of TOUCHLINE_POSITION_RANKING_GROUPS) {
     const players = candidate.players.filter((player) => player.positionGroup === group);
     const ranks = groupRanks.get(group);
+    if (projection && players.length === 0) continue;
     if (
       players.length === 0
       || !ranks
@@ -173,6 +210,11 @@ export function parseTouchlineActiveRankingState(value: unknown): TouchlineActiv
     ) {
       return null;
     }
+  }
+  if (projection) {
+    const ordered = [...candidate.players].filter(player => player.totalRating !== null).sort(compareTouchlineRankingPlayers);
+    if (ordered.some((player, index) => player.officialRank !== index + 1)
+      || candidate.players.some(player => player.totalRating === null && player.officialRank !== null)) return null;
   }
   const publishedLeadership = parsePublishedTouchlinePlayerLeadership({
     value: candidate.leadershipDecision,
@@ -190,6 +232,7 @@ export function parseTouchlineActiveRankingState(value: unknown): TouchlineActiv
     ? null : publishedLeadership;
   return {
     phase: "ranked",
+    ...(projection ? { currentProjection: projection, seasonTotals: candidate.seasonTotals } : {}),
     leagueKey: candidate.leagueKey,
     snapshotId: candidate.snapshotId!,
     roundId: candidate.roundId!,
@@ -216,7 +259,7 @@ export function touchlinePlayerCrownEligibility(input: {
   state?: TouchlineActiveRankingState | null;
   playerId?: string | number | null;
 }) {
-  const state = parseTouchlineActiveRankingState(input.state) ?? TOUCHLINE_PRESEASON_RANKING_STATE;
+  const state = parseTouchlineRankingPresentation(input.state) ?? TOUCHLINE_PRESEASON_RANKING_STATE;
   if (state.phase !== "ranked" || !state.snapshotId) return false;
   const playerId = normalizePlayerId(input.playerId);
   const player = state.players.find((entry) => normalizePlayerId(entry.playerId) === playerId);
@@ -234,7 +277,7 @@ export function resolveTouchlineCardCompetition(input: {
   providerPlayerId?: string | number | null;
 }): TouchlineResolvedCardCompetition {
   const startingTier = touchlineArenaTierForKey(TOUCHLINE_CARD_STARTING_TIER_KEY)!;
-  const state = parseTouchlineActiveRankingState(input.state) ?? TOUCHLINE_PRESEASON_RANKING_STATE;
+  const state = parseTouchlineRankingPresentation(input.state) ?? TOUCHLINE_PRESEASON_RANKING_STATE;
 
   if (state.phase !== "ranked") {
     return {

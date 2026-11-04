@@ -1,12 +1,14 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, realpathSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, realpathSync, statSync, statfsSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { setTimeout as pause } from "node:timers/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { chromium, firefox, webkit, expect, type Page } from "@playwright/test";
 import { bundleIsolatedBrowserFixture } from "./helpers/touchline-isolated-browser-bundle.mts";
-import { requireBrowserCapacity } from "./helpers/touchline-browser-capacity.mts";
+import { browserDiskReserve, requireBrowserCapacity } from "./helpers/touchline-browser-capacity.mts";
 
 const repo = fileURLToPath(new URL("../", import.meta.url));
 const origin = "https://season-checkout-fixture.invalid";
@@ -56,7 +58,41 @@ test("season checkout offers and return states render safely across PT/EN and th
   const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
     <style>*{box-sizing:border-box}body{margin:0;background:#07120e;color:#f6ffec;font:16px/1.5 Arial,sans-serif}button{font:inherit}
     #root{min-height:100dvh}${bundle.css}</style></head><body><div id="root"></div></body></html>`;
+  // Existing site-frame pattern: wait only for transient pressure2 to return to1.
+  // Keep the shared guard authoritative; never retry functional assertions or I/O failures.
+  const waitForNormalCapacity = async (engineName: string) => {
+    if (process.platform !== "darwin") return;
+    const deadline = performance.now() + 10_000;
+    let announced = false;
+    while (true) {
+      t.signal.throwIfAborted();
+      const disk = statfsSync(repo, { bigint: true });
+      const freeDiskBytes = disk.bavail * disk.bsize;
+      assert.ok(freeDiskBytes > browserDiskReserve(process.platform, false, process.env), "existing browser disk reserve required");
+      const query = (command: string, args: string[]) => {
+        const remaining = Math.floor(deadline - performance.now());
+        assert.ok(remaining > 0, "normal capacity did not return within10 seconds");
+        return execFileSync(command, args, { encoding: "utf8", timeout: Math.min(1000, remaining), maxBuffer: 64 * 1024 });
+      };
+      const pressure = query("sysctl", ["-n", "kern.memorystatus_vm_pressure_level"]).trim();
+      assert.ok(pressure === "1" || pressure === "2", "critical or unknown memory pressure aborts immediately");
+      const free = Number(query("memory_pressure", []).match(/System-wide memory free percentage: (\d+)%/)?.[1]);
+      assert.ok(Number.isFinite(free) && free >= 25 && free <= 100, "at least25% free memory required");
+      const remaining = deadline - performance.now();
+      assert.ok(remaining > 0, "normal capacity did not return within10 seconds");
+      if (pressure === "1") {
+        if (announced) t.diagnostic(JSON.stringify({ capacityRecovered: engineName, pressure, freeMemoryPercent: free, freeDiskBytes: String(freeDiskBytes) }));
+        return;
+      }
+      if (!announced) {
+        t.diagnostic(JSON.stringify({ capacityWait: engineName, pressure, freeMemoryPercent: free, freeDiskBytes: String(freeDiskBytes), maximumWaitMs: 10_000 }));
+        announced = true;
+      }
+      await pause(Math.min(250, remaining), undefined, { signal: t.signal });
+    }
+  };
   for (const engine of [chromium, firefox, webkit]) {
+    await waitForNormalCapacity(engine.name());
     requireBrowserCapacity(repo); assert.ok(existsSync(engine.executablePath()), "installed browsers only");
     const browser = await engine.launch({ headless: true });
     try {

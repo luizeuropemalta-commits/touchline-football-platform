@@ -1,3 +1,4 @@
+import type { AvatarRetentionTarget } from "./club-owner-avatar-retention-target.ts";
 import { timingSafeEqual } from "node:crypto";
 import { Buffer } from "node:buffer";
 import { avatarRetentionConfigurationFailure } from "./club-owner-avatar-retention-configuration.ts";
@@ -5,6 +6,7 @@ import { avatarRetentionConfigurationFailure } from "./club-owner-avatar-retenti
 /** Trigger-only adapter for pg_net's mandatory JSON body. The privileged worker
  * remains bodyless and keeps its existing authentication and retention policy. */
 export function createAvatarRetentionScheduler(config: {
+  target?: AvatarRetentionTarget;
   enabled: boolean;
   supabaseOrigin: string;
   serviceRoleKey: string;
@@ -17,7 +19,7 @@ export function createAvatarRetentionScheduler(config: {
   return async (request: Request): Promise<Response> => {
     try {
       config.assertEnvironment();
-      if (!config.enabled || avatarRetentionConfigurationFailure(config.supabaseOrigin, config.serviceRoleKey) || !/^[A-Za-z0-9_-]{43,128}$/.test(config.triggerSecret)) return reply(503);
+      if (!config.enabled || avatarRetentionConfigurationFailure(config.supabaseOrigin, config.serviceRoleKey, config.target) || !/^[A-Za-z0-9_-]{43,128}$/.test(config.triggerSecret)) return reply(503);
       const url = new URL(request.url);
       if (!["/touchline-avatar-retention-scheduler", "/functions/v1/touchline-avatar-retention-scheduler"].includes(url.pathname)) return reply(404);
       if (request.method !== "POST") return reply(405);

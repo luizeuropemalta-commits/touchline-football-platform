@@ -303,7 +303,7 @@ test("coach page retains all three notFound guards before ranking reads", async 
 
 test("coach page keeps the football calculations, identity lookup and CSS contracts after profile publication extraction", () => {
   assert.match(source, /const competition = coachCompetitionFromRanking\(coachRanking, entry\.coach\.providerId, TOUCHLINE_ENGLAND_SEASON\)/);
-  assert.match(source, /const scoredSlot = competition \?/);
+  assert.match(source, /const scoredSlot = competition\?\.snapshotId \?/);
   assert.match(source, /providerEventIds: \[\.\.\.coachRanking\.fixtureIds\]/);
   assert.match(source, /<TouchlineCoachCard[\s\S]*?liveRankingPoints/);
   assert.doesNotMatch(source, /offer\.displayPrice|Official price|Preço oficial|WalletCards/);

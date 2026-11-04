@@ -184,6 +184,7 @@
   width: var(--coach-nameplate-w, 72%);
   display: grid;
   justify-items: center;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1px;
   isolation: isolate;
   padding: 7px 8px 8px;
@@ -229,10 +230,11 @@
 
 .nameplate strong {
   max-width: 100%;
-  overflow: hidden;
+  overflow-x: clip;
+  overflow-y: visible;
   color: white;
   font-family: "Bebas Neue", "Anton", Impact, Inter, sans-serif;
-  font-size: clamp(12px, calc(var(--coach-name-size, 5.2cqw) * 1.16), 35px);
+  font-size: clamp(14px, calc(var(--coach-name-size, 5.2cqw) * 1.5), 44px);
   line-height: 1;
   font-weight: 1000;
   letter-spacing: -.015em;
@@ -249,13 +251,35 @@
 }
 
 .nameplate[data-coach-name-fit="medium"] strong {
-  font-size: clamp(11px, calc(var(--coach-name-size, 5.2cqw) * 1.02), 31px);
+  /* Use the clear space beside the plaque while keeping its centre and
+     vertical anchors fixed. The full name remains inside the card artwork. */
+  width: max-content;
+  max-width: calc(100% + 12cqw);
+  font-size: clamp(12px, calc(var(--coach-name-size, 5.2cqw) * 1.24), 37px);
   letter-spacing: -.025em;
 }
 
+/* Long names use the available plaque width on two lines instead of losing
+   their final surname behind the card. Secondary labels leave room for it. */
+.nameplate[data-coach-name-fit="long"] {
+  padding-block: 0;
+  row-gap: 0;
+}
+
 .nameplate[data-coach-name-fit="long"] strong {
-  font-size: clamp(9px, calc(var(--coach-name-size, 5.2cqw) * .86), 27px);
+  min-width: 0;
+  font-size: clamp(8px, calc(var(--coach-name-size, 5.2cqw) * .96), 30px);
   letter-spacing: -.035em;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.nameplate[data-coach-name-fit="long"] small {
+  font-size: clamp(3px, 1.8cqw, 8px);
+}
+
+.nameplate[data-coach-name-fit="long"] > span {
+  font-size: clamp(5px, 2.08cqw, 12px);
 }
 
 /* A waiting-state sentence is longer than an actual coach name. Keep it
@@ -276,6 +300,18 @@
   text-shadow: 0 2px 8px rgba(0,0,0,.84), 0 0 10px color-mix(in srgb, var(--coach-tier-accent) 24%, transparent);
   text-transform: uppercase;
   white-space: nowrap;
+}
+
+
+/* A short touch-landscape zoom keeps the same three text lines and authored
+   anchors. Fixed 15px vertical padding would consume the gap to the stats. */
+@media (orientation: landscape) and (max-height: 520px) and (hover: none),
+       (orientation: landscape) and (max-height: 520px) and (pointer: coarse) {
+  .shell[data-coach-card-display="zoom"] .nameplate {
+    padding-block: min(.5px, .3cqw);
+    padding-inline: min(8px, 2cqw);
+    row-gap: 0;
+  }
 }
 
 .stats {
@@ -488,8 +524,12 @@
 .shell[data-coach-card-display="compact"] .nameplate strong,
 .shell[data-coach-card-display="compact"] .nameplate[data-coach-name-fit="medium"] strong,
 .shell[data-coach-card-display="compact"] .nameplate[data-coach-name-fit="long"] strong {
-  font-size: clamp(3.4px, var(--coach-name-size, 5.2cqw), 6px);
+  font-size: clamp(4px, calc(var(--coach-name-size, 5.2cqw) * 1.2), 8px);
   line-height: .94;
+}
+
+.shell[data-coach-card-display="compact"] .nameplate[data-coach-name-fit="long"] strong {
+  font-size: clamp(3.4px, var(--coach-name-size, 5.2cqw), 7.2px);
 }
 
 .shell[data-coach-card-display="compact"] .stats {

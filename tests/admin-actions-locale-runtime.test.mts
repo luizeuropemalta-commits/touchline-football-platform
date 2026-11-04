@@ -92,6 +92,11 @@ function harness(scenario: Scenario) {
   let resolveResponse: ((response: ResponseFixture) => void) | undefined;
   const hooks = {
     ...React,
+    useId() {
+      const slot = cursor++;
+      if (!Object.hasOwn(state, slot)) state[slot] = `synthetic-field-${slot}`;
+      return state[slot];
+    },
     useRef(initial: unknown) {
       const slot = cursor++;
       if (!Object.hasOwn(state, slot)) state[slot] = { current: initial };

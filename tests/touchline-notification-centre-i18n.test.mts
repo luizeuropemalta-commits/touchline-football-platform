@@ -227,7 +227,9 @@ test("presentation keeps fixed desktop groups inside one real focus rail without
   assert.match(css, /\.scopes\s*\{\s*grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\)/);
   assert.match(css, /\.scopePanel\s*\{\s*grid-column:\s*1 \/ -1;/);
   assert.match(css, /\.saveRow\s*\{\s*flex-wrap:\s*nowrap;/);
-  assert.doesNotMatch(css, /@media|zoom|transform|font-size/);
+  // Reflow, computed fonts and persistent labels are exercised against real
+  // CSS in touchline-customer-auth-landscape-browser.test.mts.
+  assert.doesNotMatch(css, /zoom|transform|text-overflow/);
   assert.doesNotMatch(read(path), /(?:sm|md|xl):(?:grid-cols|col-span|flex-row)|flex-col|text-\[(?:8|9|10)px\]|truncate/);
   f.unmount();
 });

@@ -77,12 +77,12 @@ async function renderCoachProfilePage({
   const [{ coach: coachParam }, query] = await Promise.all([params, searchParams]);
   const requestedLocale = Array.isArray(query.lang) ? query.lang[0] : query.lang;
   const locale = resolveTouchlineCatalogueLocale(requestedLocale, draftLocalesEnabled);
-  const copy = getTouchlineCoachProfileCopy(locale, draftLocalesEnabled);
-  const cardCopy = getTouchlineCoachCardCopy(locale, draftLocalesEnabled);
   const matchCopy = getTouchlineMatchCentreCopy(locale, draftLocalesEnabled);
   const catalogue = await loadCoachCatalogue();
   const entry = catalogueCoachForId(catalogue, coachParam) ?? (catalogue.phase === "legacy" ? catalogue.current.find(({ coach }) => coachSlug(coach.displayName) === coachSlug(coachParam)) : null);
   if (!entry) notFound();
+  const copy = getTouchlineCoachProfileCopy(locale, draftLocalesEnabled, entry.coach);
+  const cardCopy = getTouchlineCoachCardCopy(locale, draftLocalesEnabled, entry.coach);
   const nationalityLabel = localizedCountryLabel(entry.coach.nationality, locale, draftLocalesEnabled) ?? "—";
 
   const classification = entry.classification;
@@ -94,7 +94,7 @@ async function renderCoachProfilePage({
   ]);
   const competition = coachCompetitionFromRanking(coachRanking, entry.coach.providerId, TOUCHLINE_ENGLAND_SEASON);
   const slot = createTouchlineArenaCoachSlot(entry.coach, null, classification.tierKey);
-  const scoredSlot = competition ? {
+  const scoredSlot = competition?.snapshotId ? {
     ...slot,
     touchlinePoints: competition.totalTouchlinePoints,
     status: "audited" as const,
@@ -129,6 +129,7 @@ async function renderCoachProfilePage({
           <span>{copy.heroEyebrow}</span>
           <h1>{entry.coach.displayName}</h1>
           <p>{nationalityLabel} · {club.name}</p>
+          {copy.associationNote ? <p>{copy.associationNote}</p> : null}
           <dl className="coach-profile-identity-grid">
             <div><dt>{cardCopy.currentClub}</dt><dd>{club.name}</dd></div>
             <div><dt>{cardCopy.nationality}</dt><dd>{nationalityLabel}</dd></div>

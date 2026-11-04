@@ -1,3 +1,4 @@
+import { readTouchlineCurrentLeagueScope, readTouchlineCurrentPlayerRanking } from "./current-player-eligibility-server";
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -114,6 +115,7 @@ async function readActivePublishedRanking(admin: Admin) {
       positionRank: player.positionRank,
       groupSize: player.groupSize,
       totalRating: player.totalRating,
+      minutesPlayed: player.minutesPlayed, appearances: player.appearances,
       tierKey: player.tierKey,
       priceTc: player.priceTc,
     })),
@@ -131,13 +133,17 @@ async function readActivePublishedRanking(admin: Admin) {
       || !player.clubName?.trim()
       || (player.totalRating !== null && !Number.isFinite(player.totalRating))
     ))) return null;
+  const current = await readTouchlineCurrentPlayerRanking(admin, parsed, await readTouchlineCurrentLeagueScope(admin));
+  if (current.phase !== "ready" || !current.state) return null;
+  const sourceById = new Map(players.map(row => [row.playerId,row]));
+  const admittedPlayers = current.state.players.map(row => ({ ...sourceById.get(row.playerId)!, ...row }));
   return {
     snapshotId: parsed.snapshotId!,
     seasonId: parsed.seasonId!,
     publishedAt: parsed.publishedAt!,
     scoringVersion: parsed.scoringVersion as "player_scoring_v4",
     coverageStatus: parsed.coverageStatus!,
-    players,
+    players: admittedPlayers,
   } as const;
 }
 

@@ -144,7 +144,8 @@ test("real Card Engine PT/EN tabs, payloads, denied errors, pending states and l
           await page.setViewportSize({ width, height: 900 });
           const html = await cardEngineFixture().render({ lang: locale });
           await page.setContent(`<html lang="${locale}"><meta charset="utf-8"><style>${css}body{margin:0;padding:16px;background:#07110e;color:#fff}</style>${html}</html>`);
-          await expect(page.getByRole("navigation")).toContainText(pt ? "Voltar ao Admin" : "Back to Admin");
+          await expect(page.getByRole("link", { name: pt ? "Voltar ao Admin" : "Back to Admin", exact: true })).toHaveAttribute("href", `/admin?lang=${locale}`);
+          await expect(page.getByRole("link", { name: /^(Português|English)$/ })).toHaveCount(0);
           assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `${engine.name()}/${locale}/${width}: overflow`);
           if (out && width !== 844) assert.ok((await page.screenshot({ path: `${out}/${engine.name()}-${locale}-${width}.png`, fullPage: false })).byteLength > 0);
           renders++;

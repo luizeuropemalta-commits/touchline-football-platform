@@ -1,3 +1,4 @@
+import { syntheticProductionEnvironment, syntheticProjectCredential } from "./helpers/touchline-production-runtime-fixture.mts";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
@@ -43,13 +44,7 @@ test("the protected V3 rebuild route preserves the dedicated QA branch", () => {
   assert.match(route, /TOUCHLINE_QA_SUPABASE_PROJECT_REF === QA_PROJECT_REF/);
 });
 
-const productionEnvironment = {
-  VERCEL_ENV: "production", VERCEL_PROJECT_ID: "prj_GtCzQlIE8AJdm0hSf7GB5yOWejmM",
-  VERCEL_ORG_ID: "team_P1d7YNrmUObvbJJTJRlGcXoz", TOUCHLINE_PRODUCTION_DATA_SYNC_ENABLED: "true",
-  SUPABASE_URL: "https://xgxbwqxjssxxuihuwmgy.supabase.co",
-  NEXT_PUBLIC_SUPABASE_URL: "https://xgxbwqxjssxxuihuwmgy.supabase.co",
-  NEXT_PUBLIC_TOUCHLINE_AUTH_ORIGIN: "https://touchline.com.br",
-};
+const productionEnvironment = syntheticProductionEnvironment();
 
 function rebuildRoute(environment: Record<string, string | undefined>, owner = false, scorerOk = true) {
   const calls: string[] = [];
@@ -84,6 +79,11 @@ test("Production rebuild remains authenticated and reports scoring failure", asy
 
 for (const change of [
   { TOUCHLINE_PRODUCTION_DATA_SYNC_ENABLED: undefined },
+  { TOUCHLINE_PRODUCTION_SUPABASE_PROJECT_REF: undefined },
+  { TOUCHLINE_PRODUCTION_SUPABASE_PROJECT_REF: "xgxbwqxjssxxuihuwmgy",
+    SUPABASE_URL: "https://xgxbwqxjssxxuihuwmgy.supabase.co", NEXT_PUBLIC_SUPABASE_URL: "https://xgxbwqxjssxxuihuwmgy.supabase.co" },
+  { NEXT_PUBLIC_SUPABASE_ANON_KEY: undefined },
+  { SUPABASE_SERVICE_ROLE_KEY: syntheticProjectCredential("service_role", "xgxbwqxjssxxuihuwmgy") },
   { SUPABASE_URL: "https://wrong.supabase.co" },
   { VERCEL_ENV: "development" },
   { TOUCHLINE_DEPLOYMENT_MODE: "isolated-preview" },

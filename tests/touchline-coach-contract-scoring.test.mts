@@ -219,7 +219,7 @@ test("the compact coach card renders exactly the verified Home or Away context",
   assert.match(coachCard, /fixtureContext === "home"/);
   assert.equal(getTouchlineCoachCardCopy("en-GB").homeFixtureAria, "Home fixture");
   assert.equal(getTouchlineCoachCardCopy("en-GB").awayFixtureAria, "Away fixture");
-  assert.match(coachCard, /const copy = getTouchlineCoachCardCopy\(locale, draftLocalesEnabled\)/);
+  assert.match(coachCard, /const copy = getTouchlineCoachCardCopy\(locale, draftLocalesEnabled, coach \?\? null\)/);
   assert.match(coachCard, /aria-label=\{copy\.homeFixtureAria\}/);
   assert.match(coachCard, /aria-label=\{copy\.awayFixtureAria\}/);
   assert.doesNotMatch(coachCard, />AWAY</);
@@ -259,7 +259,7 @@ test("coach zoom centres the shared card between canonical identity and verified
     dateOfBirth: "Date of birth", cardTier: "Card tier", competitionRank: "Competition rank",
     homeRecord: "Home · W-D-L", awayRecord: "Away · W-D-L", awaitingVerifiedData: "Awaiting verified data",
   } as const;
-  assert.match(coachZoom, /const \{ locale: presentationLocale, copy \} = resolveTouchlineCoachZoomPresentation\(locale, draftLocalesEnabled\)/);
+  assert.match(coachZoom, /const \{ locale: presentationLocale, copy \} = resolveTouchlineCoachZoomPresentation\(locale, draftLocalesEnabled, coach\)/);
   for (const key of Object.keys(expected) as (keyof typeof expected)[]) {
     assert.equal(copy[key], expected[key]);
     assert.match(coachZoom, new RegExp(`(?:label|value): copy\\.${key}\\b`));

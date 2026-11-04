@@ -60,7 +60,7 @@ test("every TouchLine card keeps the permanent tier neon contract", () => {
   assert.match(trace, /focusable="false"/);
   assert.match(trace, /pathLength="100"/);
   assert.match(trace, /fill="none"/);
-  assert.match(trace, /TOUCHLINE_CARD_PERIMETER_PATH/);
+  assert.match(trace, /const path = approvedArtwork/);
   assert.match(traceCss, /pointer-events: none/);
   assert.match(traceCss, /overflow: visible/);
   assert.match(traceCss, /@keyframes touchline-card-perimeter-trace/);
@@ -123,41 +123,9 @@ test("every TouchLine card keeps the permanent tier neon contract", () => {
   assert.match(exactCard, /selectedId !== neonInstanceId/);
 });
 
-test("the perimeter trace centres each official player and coach rail without changing its approved lower extent", () => {
-  const trace = source("components/touchline/cards/TouchlineCardPerimeterTrace.tsx");
-
-  for (const tier of [
-    "ruby-red",
-    "sapphire-blue",
-    "amethyst-purple",
-    "radiant-gold",
-    "emerald-green",
-    "clear-diamond",
-    "diamond-gold",
-  ]) {
-    assert.match(trace, new RegExp(`"${tier}": \\[`));
-  }
-
-  assert.match(trace, /TOUCHLINE_PLAYER_PERIMETER_SIDE_CENTRES/);
-  assert.match(trace, /TOUCHLINE_COACH_PERIMETER_SIDE_CENTRES/);
-  assert.match(trace, /"ruby-red": \[21, 412\]/);
-  assert.match(trace, /"sapphire-blue": \[18, 412\]/);
-  assert.match(trace, /"amethyst-purple": \[14, 417\]/);
-  assert.match(trace, /"radiant-gold": \[15, 414\]/);
-  assert.match(trace, /"emerald-green": \[25, 411\]/);
-  assert.match(trace, /"clear-diamond": \[19, 412\]/);
-  assert.match(trace, /"diamond-gold": \[29, 400\]/);
-  assert.match(trace, /"ruby-red": \[95, 711\]/);
-  assert.match(trace, /"sapphire-blue": \[79, 726\]/);
-  assert.match(trace, /"amethyst-purple": \[78, 730\]/);
-  assert.match(trace, /"radiant-gold": \[89, 715\]/);
-  assert.match(trace, /"emerald-green": \[78, 725\]/);
-  assert.match(trace, /"clear-diamond": \[76, 748\]/);
-  assert.match(trace, /"diamond-gold": \[80, 733\]/);
-  assert.match(trace, /viewBox=\{isCoach \? "0 0 810 1080" : "0 0 430 691"\}/);
-  assert.match(trace, /M123 18H307L\$\{right\} 98V593L307 680H123L\$\{left\} 593V98Z/);
-  assert.match(trace, /M232 28H578L\$\{right\} 153V926L578 1063H232L\$\{left\} 926V153Z/);
-});
+// The full real-component rendering contract for all147 measured assets is
+// verified in touchline-card-perimeter-trace.test.mts. The previous polygon
+// coordinate assertion deliberately required the exterior overshoot now fixed.
 
 test("card controls stay inside the master safe zone and contracting stays outside the artwork", () => {
   const layout = JSON.parse(source("public/touchlineArena/card-layouts/master-shirt-back-layout.json"));

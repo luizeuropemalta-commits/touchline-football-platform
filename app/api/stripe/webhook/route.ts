@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getStripe } from "@/lib/stripe/client";
+import { getStripe, configuredStripeMode } from "@/lib/stripe/client";
 
 export const maxDuration = 60;
 const supported = new Set(["invoice.created", "invoice.finalized", "invoice.updated", "invoice.voided", "invoice.marked_uncollectible", "invoice.deleted", "invoice.paid", "invoice.payment_failed", "invoice.payment_action_required"]);
@@ -27,13 +27,15 @@ function projectInvoice(invoice: Stripe.Invoice) {
 
 export async function POST(request: Request) {
   const stripe = getStripe();
+  const paymentMode = configuredStripeMode();
   const admin = createAdminClient();
   const secret = process.env.STRIPE_WEBHOOK_SECRET;
-  if (!stripe || !admin || !secret) return NextResponse.json({ error: "Webhook is not configured." }, { status: 503 });
+  if (!stripe || !admin || !secret || !paymentMode) return NextResponse.json({ error: "Webhook is not configured." }, { status: 503 });
 
   let event: Stripe.Event;
   try {
     event = stripe.webhooks.constructEvent(await request.text(), request.headers.get("stripe-signature") || "", secret);
+    if (event.livemode !== (paymentMode === "live")) throw new Error("BILLING_PAYMENT_MODE_MISMATCH");
   } catch {
     return NextResponse.json({ error: "Invalid signature." }, { status: 400 });
   }
@@ -42,6 +44,10 @@ export async function POST(request: Request) {
   try {
     // This existing billing store is for the configured account, not Connect.
     if (event.account) throw new Error("BILLING_ACCOUNT_NOT_SUPPORTED");
+    if (paymentMode === "live") {
+      const account = await stripe.accounts.retrieve(null);
+      if (account.id !== process.env.TOUCHLINE_STRIPE_LIVE_ACCOUNT_ID) throw new Error("BILLING_ACCOUNT_MISMATCH");
+    }
     const source = supported.has(event.type) ? projectInvoice(event.data.object as Stripe.Invoice) : null;
     const { data: claim, error: claimError } = await admin.rpc("touchline_billing_claim_event", { p_event: {
       id: event.id, type: event.type, created: event.created, livemode: event.livemode,

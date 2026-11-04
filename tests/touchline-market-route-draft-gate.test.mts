@@ -9,6 +9,26 @@ import React from "react";
 import * as jsxRuntime from "react/jsx-runtime";
 import ts from "typescript";
 import * as marketPolicy from "../lib/touchlineFantasy/market-plan-policy.ts";
+import * as paymentContract from "../lib/stripe/club-season-payment-contract.ts";
+import * as testCatalogue from "../lib/stripe/club-season-test-catalogue.ts";
+
+// Load the real server configuration with a closed, synthetic environment.
+// Only the server-only marker is inert; every functional dependency is real.
+const paymentConfiguration: Record<string, unknown> = {};
+const paymentDependencies: Record<string, unknown> = {
+  "server-only": {},
+  "./club-season-payment-contract.ts": paymentContract,
+  "./club-season-test-catalogue.ts": testCatalogue,
+};
+runInNewContext(ts.transpileModule(readFileSync(new URL("../lib/stripe/club-season-configuration.server.ts", import.meta.url), "utf8"), {
+  compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+}).outputText, {
+  exports: paymentConfiguration, process: { env: {} }, URL,
+  require(name: string) {
+    assert.ok(Object.hasOwn(paymentDependencies, name), `Unexpected payment dependency: ${name}`);
+    return paymentDependencies[name];
+  },
+});
 
 const siteLocaleEnv: Record<string, string | undefined> = {};
 const siteLocalePolicy: Record<string, unknown> = {};
@@ -73,6 +93,7 @@ function fixture(options: { user?: User | null; configured?: boolean; rejectAuth
     } },
     "@/lib/touchlineFantasy/club-collection-presentation": { clubCollectionPresentationEnabled },
     "@/lib/touchlineArena/site-locales-release": siteLocalePolicy,
+    "@/lib/stripe/club-season-configuration.server": paymentConfiguration,
     "@/lib/stripe/club-season-offers.server": { readClubSeasonCheckoutOffers: async (accountId: string) => {
       assert.equal(accountId, user?.id);
       assert.ok(events.includes("getUser"), "Quotes require the verified account first");
