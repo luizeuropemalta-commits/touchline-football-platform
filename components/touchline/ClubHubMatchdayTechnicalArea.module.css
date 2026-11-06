@@ -55,3 +55,9 @@
   .coach, .bench { padding: 15px 14px; }
   .coach { justify-items: start; }
 }
+
+/* Local pinch-zoom comparison: avoid filtering the complete card subtree.
+   Original card artwork, resolution and perimeter neon remain unchanged. */
+@media (hover: none), (pointer: coarse) {
+  .card, .cards li:hover .card, .cards li:focus-within .card { filter: none; }
+}

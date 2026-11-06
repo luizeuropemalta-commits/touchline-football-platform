@@ -640,3 +640,9 @@
 
 
 }
+
+/* Local pinch-zoom comparison: avoid filtering the complete card subtree.
+   Original card artwork, resolution and perimeter neon remain unchanged. */
+@media (hover: none), (pointer: coarse) {
+  .card, .player:hover .card, .player:focus-within .card { filter: none; }
+}

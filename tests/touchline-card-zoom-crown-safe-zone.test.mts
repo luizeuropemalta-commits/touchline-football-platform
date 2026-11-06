@@ -10,7 +10,7 @@ function source(relativePath: string) {
 test("ordinary zoom cards omit absent crowns while persistent dialogs retain a stable crown stage", () => {
   const css = source("components/touchline/cards/TouchlineCardZoom.module.css");
   const zoom = source("components/touchline/cards/TouchlineCardZoom.tsx");
-  assert.match(css, /\.cardColumn:not\(\[data-touchline-card-zoom-persistent-stage="true"\]\):not\(:has\(\[data-card-golden-ball="true"\], \[data-coach-ranking-leader="true"\]\)\) \{\s*padding-top: 0;/);
+  assert.match(css, /\.cardColumn:not\(\[data-touchline-card-zoom-persistent-stage="true"\]\):not\(:has\(:is\(\[data-card-golden-ball="true"\], \[data-card-head-award="true"\]\), \[data-coach-ranking-leader="true"\]\)\) \{\s*padding-top: 0;/);
   assert.match(zoom, /data-touchline-card-zoom-persistent-stage=\{presentationMode === "dialog-only" \? "true" : undefined\}/);
   assert.match(css, /\.cardColumn \{[^}]*padding-top: var\(--touchline-card-zoom-crown-safe-top\)/);
 });
@@ -24,7 +24,7 @@ test("the shared card zoom reserves a Golden Ball or coach-crown safe zone", () 
   assert.match(zoomCss, /\.cardColumn \{[\s\S]*?padding-top: var\(--touchline-card-zoom-crown-safe-top\)/);
   assert.match(zoomCss, /\.cardColumn \{[\s\S]*?overflow: visible/);
   assert.match(zoomCss, /\.trigger \{[\s\S]*?display: flow-root[\s\S]*?overflow: visible/);
-  assert.match(zoomCss, /\.expandedCard > \[data-card-golden-ball="true"\],[\s\S]*?margin-top: 0 !important/);
+  assert.match(zoomCss, /\.expandedCard > :is\(\[data-card-golden-ball="true"\], \[data-card-head-award="true"\]\),[\s\S]*?margin-top: 0 !important/);
   assert.match(zoomCss, /100dvh - 72px - var\(--touchline-card-zoom-crown-safe-top\)/);
   assert.match(zoomCss, /--touchline-card-zoom-crown-safe-top: clamp\(82px, 21vw, 98px\)/);
   assert.match(zoomCss, /--touchline-card-zoom-crown-safe-top: calc\(var\(--touchline-card-zoom-width\) \* \.30\)/);
@@ -39,7 +39,7 @@ test("player and coach profiles reserve the same uncropped leader award envelope
 
   assert.match(playerProfile, /\.identityBand \{[\s\S]*?overflow: visible/);
   assert.match(playerProfile, /\.cardFrame \{[\s\S]*?padding-top: clamp\(98px, 16vw, 128px\)/);
-  assert.match(playerProfile, /\.cardFrame > \[data-card-golden-ball="true"\] \{[\s\S]*?margin-top: 0 !important/);
+  assert.match(playerProfile, /\.cardFrame > :is\(\[data-card-golden-ball="true"\], \[data-card-head-award="true"\]\) \{[\s\S]*?margin-top: 0 !important/);
   assert.match(playerProfile, /width: 310px;[\s\S]*?padding-top: clamp\(82px, 21vw, 98px\)/);
   assert.match(coachProfile, /\.coach-profile-card \{ width:min\(100%,300px\); justify-self:center; padding-top:0; box-sizing:border-box; overflow:visible; \}/);
   assert.match(coachProfile, /\.coach-profile-card:has\(> \[data-coach-ranking-leader="true"\]\) \{ padding-top:96px; \}/);

@@ -632,15 +632,15 @@ test("cover trophy owns ranking while portrait facts contain followers only acro
   for (const { code } of TOUCHLINE_APPROVED_LOCALES) {
     const labels = profileMetrics.getClubOwnerProfileMetricsCopy(code, true);
     const html = renderHeader(owner, code, await loadCopy(), { rankingPosition: 7, draftLocalesEnabled: true });
-    for (const label of [labels.followers, labels.ranking]) assert.ok(html.includes(label));
+    for (const label of [labels.followers, "Rank"]) assert.ok(html.includes(label));
     assert.doesNotMatch(html, new RegExp(labels.points.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
     const facts = html.match(/<dl class="facts">([\s\S]*?)<\/dl>/)?.[1] ?? "";
     assert.equal(facts.includes(labels.ranking), false);
     assert.ok(facts.includes(labels.followers));
     assert.equal((facts.match(/<dt>/g) ?? []).length, 1);
     const rankingLink = html.match(/<a[^>]*data-clubowner-ranking-link="true"[^>]*>([\s\S]*?)<\/a>/)?.[1] ?? "";
-    assert.ok(rankingLink.includes(labels.ranking));
-    assert.match(rankingLink, /<svg[^>]*aria-hidden="true"/);
+    assert.ok(rankingLink.includes("<span>Rank</span>"));
+    assert.match(rankingLink, /<img(?=[^>]*alt="")[^>]*src="\/touchlineArena\/trophies\/touchline-england-league-trophy-lion-cup-candidate-v4-text.png"/);
     assert.ok(html.includes(`href="/rankings?lang=${encodeURIComponent(code)}"`));
     assert.doesNotMatch(html, /class="followers"/);
     assert.match(html, /class="photoStatus" id="clubowner-photo-status" role="status"/);

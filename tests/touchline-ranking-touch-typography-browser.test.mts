@@ -48,7 +48,7 @@ async function inspect(page: Page, styles: Styles) {
       xi: { box: pitchBox, border:["borderLeftWidth","borderRightWidth","borderTopWidth","borderBottomWidth"].map(key=>parseFloat(getComputedStyle(pitch).getPropertyValue(key.replace(/[A-Z]/g,c=>"-"+c.toLowerCase())))), slots: nodes('[data-best-eleven-player]').map(el => ({ style: el.getAttribute("style"),
         relative: [box(el).x - pitchBox.x, box(el).y - pitchBox.y, box(el).width, box(el).height],
         name: (()=>{const node=el.querySelector(`.${s.pitchIdentity} strong`)!;return {text:node.textContent,clientWidth:node.clientWidth,scrollWidth:node.scrollWidth,overflow:getComputedStyle(node).textOverflow};})(),
-        decorations: [...el.querySelectorAll('[data-touchline-player-golden-ball="true"],[data-touchline-golden-boot="true"]')].map(box),
+        decorations: [...el.querySelectorAll('[data-touchline-player-golden-ball="true"],[data-touchline-golden-boot="true"],[data-touchline-position-golden-award]')].map(box),
         card: box(el.querySelector(".touchline-card-surface")!), labels: [...el.querySelectorAll(`.${s.pitchIdentity},.${s.positionLabel}`)].map(box) })) },
     };
   }, styles);
@@ -270,7 +270,7 @@ test(`ranking typography ${requestedEngine}: real tables/awards/XI keep original
           await page.screenshot({path:path.join(output,`${locale}-${item.width}-xi-uniform-bottom.png`)});
           assert.deepEqual(uniform.media,after.media);
           assert.equal(uniform.xi.slots.length,11);
-          assert.equal(uniform.xi.slots.flatMap(slot=>slot.decorations).length,2,"both original Golden Ball and Golden Boot assets remain visible");
+          assert.equal(uniform.xi.slots.flatMap(slot=>slot.decorations).length,4,"Golden Ball, Golden Boot, Golden Gloves and Golden Shield remain visible");
           for(let i=0;i<11;i++){
             const old=before.cards[i],card=uniform.cards[i];
             assert.deepEqual({textSizes:card.textSizes,paths:card.paths,images:card.images.map(({src,natural})=>({src,natural}))},

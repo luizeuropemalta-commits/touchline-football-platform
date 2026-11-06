@@ -1,3 +1,37 @@
+
+### 2026-11-06 — QA card synchronization release candidate verified locally
+
+Owner authorized one Git-native QA build; remote budget0/1 at this checkpoint. Baseline d6e6f49d, branch qa; prior local branch preserved as archive/qa-checkpoint-20261106. Scope: descriptive DEF/CS persistence without changing V4 ratings; approved position-rating gloves/shield; touch crest-filter crash fix; fine contour neon; transparent ClubOwner trophy. Production/.com.br/DNS/liveStripe untouched.
+
+Verification: complete suite8196 definitions,8088PASS plus2capacity-only failures recovered by unchanged full carousel owning-file4/4PASS;106 optional definitions ALL independently accounted for PASS in82groups, no pending IDs. Final campaign2026-11-06T11-53-48-154Z-bDff6v revalidated65 current-source receipts and executed41, preserving prior failed evidence. Test harness corrections retain original behavior/security assertions; no new skip. New mobile XI award/name overlap corrected with touch-only5% envelope and vertically centered position label, same tactical anchors/art/effects; all four head awards included in geometric assertions. WebKit five viewport/input configurations in both languagesPASS; affected source regressions90/90PASS. TypeScriptPASS; fullESLint0errors/13existingwarnings; governance/input/static-readiness/diffPASS. Static readiness is not inauguration/Production approval.
+
+Local optimized buildPASS,136pages, Next16.2.11; exact QA environment/persona preflightPASS. Independent source review no unresolvedP0/P1. Evidence in continuity workspace work/release-20261106 and /tmp/touchline-local-build-20261106.log. Local native-iPhone C2 temporary-filter evidence remains distinct from permanent hosted verification; new native pinch test not claimed.
+
+QA rollback target dpl_3t627VBnBGL2h167a3wXA9kG61B7 READY/SHA d6e6f49d. Required Preview/qa environment names/scopes verified; only canonical project Git trigger, no duplicate path. Before deploy5033fixture rows rating/points hash8542f50080a56d4ef1d3a734c7facba9;572season rows,5CS/0DEF under old hosted writer. New-code hosted sync and persistence verification remain pending. Missing provider DEF components must remain unknown, never fabricatedzero. Commit/push/READY/alias/smoke/logs will be recorded in the external release receipt after publication.
+
+## 2026-11-06 — Neon fino, ajuste local de legibilidade
+
+DAILY CSS-only: app/globals.css base .55px e core1.1px non-scaling-stroke; hover/focus reforça halo sobre path medido, currentColor do tier, sem caixa ou novo filtro. IAB ranking mostrou cor gold/ruby correta e dashoffset variando entre amostras sem hover, stroke1.1px confirmado. Focal11PASS/0SKIP, diff-checkPASS. Sem novo typecheck/build (CSS-only), sem teste físico iPhone ou verificação completa de hover nesta etapa. Sem commit/deploy; Production intacta. Captura work/trophy-cover-20261105/neon-restored.png no workspace. Gates completos de release pendentes.
+
+## Refinamento v2 — 2026-11-05
+
+Proprietário pediu composição mais discreta, sem novos elementos. Somente CSS: troféu124x186 desktop/88x132 intermediário/76x114 estreito; Rank em marfim, menor/peso500; espaço20px e linha curta64px. Visual IAB1440 e844 landscape inspecionado, sem overflow844. TypeScript PASS; focal28PASS/0SKIP; revisão independente de fonte sem regressão; diff-check PASS. Nenhum deploy/commit, Production intacta. Build de produção e matriz física permanecem pendentes antes de release. Evidência desktop-v2.png. Demais campos/gates do RESULT.md permanecem com mesmos limites.
+
+## 2026-11-05 — Troféu ClubOwner, prévia local para avaliação
+
+DAILY: troféu original ampliado e Rank/posição em destaque, sem fundo ou filtros no troféu. Alterados header TSX/CSS e expectativas visuais antigas do teste. Focal 28/28 PASS, 0 SKIP; TypeScript/lint sem erros, diff-check PASS. Inspeção IAB desktop1440 e landscape667/844; ranking real2º, clique e retorno conferidos, sem overflow horizontal móvel. Revisão independente sem bloqueio. Preview somente local; sem commit/deploy/build de produção. Aceite do proprietário e gates de release pendentes; alterações anteriores preservadas. Relatório: work/trophy-cover-20261105/RESULT.md no workspace da conversa.
+
+## 2026-11-05 — Pinch-close iPhone: C2 sem queda relatada, correção dos escudos salva localmente
+
+- P1 CRITICAL ENGINEERING. iPhone13ProMax/iOS26.6.2: Console confirmou WebContent encerrado por jetsam/memory-highwater. A retirada apenas dos filtros dos números falhou; esconder números inteiros também falhou, após mais repetições. Proprietário esclareceu queda ao FECHAR o zoom, intermitente.
+- C1 incompleto: regra temporária selecionou34escudos, mas17filtros permaneciam por especificidade. C2 aplicou filter:none e transition:none inline!important; computedRemaining0 confirmado. Proprietário relatou cerca de50ciclos sem queda, confirmou10 e ordenou salvar no código. Relato físico é evidência do C2 temporário, não de novo deploy.
+- Salvo somente o delta definitivo app/touchline-crest-visibility.css: regra touch (hover:none OU pointer:coarse), URLs literais/otimizadas, especificidade(0,2,2) vence contornos(0,2,1). Mantém imagens, dimensões, números, bordas e neon; remove também contornos brancos filtrados de Liverpool/Forest/Spurs no toque, contraste ainda deve ser revisto. Desktop fine+hover preservado.
+- Experimento de rasterizar números retirado da candidata e preservado no workspace/withdrawn-number-experiment; TouchlineShirtNumber.tsx voltou byte-exatoHEAD. Não incluir os161assets no release. Demais mudanças anteriores de troféu/CSS XI/banco e arquivos dev preservadas, sem aprovação coletiva implícita.
+- Verificação local:14testes focais PASS,0FAIL/SKIP; TypeScript pós-delta PASS; diff-checkPASS; revisão independenteGO de fonte. Browser local recebeu CSS compilado, números originais11filters/0rasters e desktop34escudos filtrados. Não declarar verificação mobile completa da folha salva nem build de produção novo.
+- Layers estimou53camadas/362.15MB; escala consultada depois1.099. Total não caiu com C2, logo não declarar eliminação de toda memória ou mecanismo interno exclusivo. Ensaios D/E de fundo/stacking ficam adiados. Console reiniciou lista após reconexão; não alegar log contínuo limpo pós50.
+- HEADd6e6f49d4c33760e0161960319bffb6abaad2369; nenhum commit/push/deploy nesta correção. QA publicado anterior dpl_3t627VBnBGL2h167a3wXA9kG61B7; orçamento anterior1/1 consumido. Production/.com.br/DNS/Stripe Live NOT TOUCHED. Pendentes:reload físico com CSS salva, contraste dos3contornos, gates completos antes de futura publicaçãoQA autorizada.
+- Evidência: work/mobile-pinch-20261105/physical-iphone-reproduction.json e saved-crest-filter-c2-independent-review-mobile-finish.json no workspace de continuidade. Caffeinate-di72000 PID50319 verificado; não altera autenticação/bloqueio.
+
 ## 2026-11-04 — QA publicada e P2 de nome corrigido localmente; novo deploy não autorizado
 
 QA READY:7ca7dff84d1694b91b7468a041a6a7065dee7802 / dpl_46oUpDxtMqzmt2e5jex2k3fDK7cS, alias confirmado. Build remoto autorizado1/1 consumido; não há autorização adicional até este registro. OFF HTTP13PASS/3FAIL preservado, complementado por renderização real de404/avatar512/ranking→perfil. IAB autenticado não equivale a iPhone físico ou navegador anônimo. ON HTTP14PASS/2limitaçõesSSR; nenhum recibo antigo reclassificado.
@@ -6745,3 +6779,22 @@ Esta entrada supera apenas estados antigos de foto bloqueada e servidor local at
 
 ## 2026-11-02 — retomada apos reinicio
 Build consolidado concluido exit 0 apos persona QA PASS. Evidencias: artifacts/post-restart-build-20261102.log e artifacts/post-restart-typecheck-20261102.log. WIP preservado; nenhum deploy ou alteracao Production. Proximo: validacao renderizada e integracoes pendentes.
+
+
+## 2026-11-06 — Golden Gloves / Golden Shield local implementation
+- Approved transparent PNGs copied into public/touchline/awards. Shared player-card head-award layout reused; no deploy or database writes.
+- Positional awards use parsed current ranking totalRating, canonical ranking tie-breaks, goalkeeper / centre-back only. Missing publication or missing tie evidence withholds award.
+- 10 focused tests passed, zero skips; TypeScript passed; targeted ESLint and diff check passed. Independent review found stale safe-zone test selectors, corrected and rerun.
+- Actual local IAB rendered both awards in desktop 1440x900 and phone landscape 844x390, zoom open/close verified. Evidence: workspace work/golden-awards-20261106/. Native iPhone, full build, remote QA publication remain pending.
+- Separate DEF/CS finding: current player-season-statistics-store uses touchLinePlayerFixtureScoreV4(rating), persists raw provider/event statistics but does not provide scoringStatistics to buildTouchLinePlayerSeasonAggregate. Legacy V2 player-fixture-scoring calculated clean-sheets and def-score. Thus supplementary derived values are not persisted in V4. Read-only QA audit: 658 published cards, 555 season rows, 0 DEF, 0 CS, 11 saves; 5033 V4 fixture settlements also lack DEF/CS. Correct supplementary pipeline without changing V4 ratings; QA recomputation and verification still pending.
+- Production, DNS, Stripe unchanged; remote builds consumed: 0.
+
+
+## 2026-11-06 — DEF / CS corrective pipeline (not released)
+- Added player-fixture-supplementary-statistics.ts and store integration, restoring descriptive CS/DEF without touching V4 ratings. Season supplementary aggregation includes positive-minute appearances even if rating absent; unused bench excluded.
+- 86 focused tests PASS, 0 skips; tsc, targeted ESLint, diff-check PASS. Independent review completed including SQL negative-input and exact-fixture coverage guards.
+- QA read audit: 572 season rows match settled goals/assists/yellow/red totals, all 90 stored completed fixtures have V4 settlements, latest completed 2026-11-02. This is internal stored-data consistency, not fresh provider reconciliation.
+- QA dry-run twice with rollback: 2767 fixture rows,454 season CS,1 season DEF; ratings hash 8542f50080a56d4ef1d3a734c7facba9 unchanged. Scoped apply committed to QA xgxbwqxjssxxuihuwmgy; rollback manifest saved in workspace work/supplementary-stats-20261106/qa-application-receipt.json. No ratings/ranking snapshots changed.
+- Important external runtime finding: old hosted sync immediately overwrote recomposed fields. Verified count fell from454 CS/1DEF to5 CS/0DEF, updated_at2026-11-06T08:13:09Z. DO NOT claim persistent QA correction. Publish corrected sync code through release gates then repeat guarded recomputation based on refreshed evidence. Do not disable scheduler or add a masking DB trigger.
+- DEF coverage remains external/incomplete: only150/2767 appearances have all five required provider components. Do not substitute missing values with zero. One player had complete season coverage in rehearsal.
+- Build, full suite, device/runtime post-release verification pending. Production not touched; no deployment or remote build consumed.

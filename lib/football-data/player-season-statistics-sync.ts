@@ -112,7 +112,9 @@ export function buildTouchLinePlayerSeasonAggregate(input: {
     .at(-1) ?? null;
   // Legacy V2/V3 settlement metadata may be present for audit, but public
   // player aggregation is derived only from Sportmonks appearance ratings.
-  const scoredFixtures = synchronizedFixtures.filter((fixture) => fixture.scoringIncluded !== false);
+  const scoredFixtures = synchronizedFixtures.filter((fixture) =>
+    (fixture.lineups ?? []).some(member => String(member.playerId ?? "") === input.providerPlayerId && isStartedOrEntered(member)),
+  );
   const fixtureSetComplete = fixtures.length > 0
     && allLineupsAvailable
     && expectedFixtureIds.length === aggregatedFixtureIds.length;

@@ -16,3 +16,15 @@
 ) {
   filter: url("#touchline-proportional-crest-outline") !important;
 }
+
+/* Pinch-close on iOS can exhaust WebContent memory while filtered crests are
+   rescaled. The physical QA trial retained the original images, numbers and
+   neon and survived about 50 cycles with crest filters/transitions disabled.
+   Include optimized image URLs and outrank the silhouette rules above; disabling
+   only the generic shadow left the SVG outline filters active. */
+@media (hover: none), (pointer: coarse) {
+  :root body img:is([src*="/club-logos/"], [src*="%2Fclub-logos%2F"]) {
+    filter: none !important;
+    transition: none !important;
+  }
+}

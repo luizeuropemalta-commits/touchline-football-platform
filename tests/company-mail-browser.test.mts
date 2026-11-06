@@ -42,7 +42,9 @@ test("mail review PT/EN recovers errors, paginates and renders untrusted text sa
    await page.getByLabel(portuguese?"Observação da conferência":"Review note",{exact:true}).fill("Verified original");
    const save=page.getByRole("button",{name:portuguese?"Registrar conferência":"Record review",exact:true});await save.click();
    await expect(page.getByText(portuguese?/Conferência não confirmada/:/Review not confirmed/)).toBeVisible();
-   reviewFail=false;await save.click();await expect(page.getByText("Invoice 42",{exact:true})).toBeVisible();
+   reviewFail=false;
+   const confirmedRefresh=page.waitForResponse(response=>{const url=new URL(response.url());return response.request().method()==="GET"&&url.pathname==="/api/admin/company-finance/mail"&&url.searchParams.get("kind")==="evidence"&&url.searchParams.get("page")==="0";});
+   await save.click();await confirmedRefresh;await expect(page.getByText("Invoice 42",{exact:true})).toBeVisible();
    assert.equal(reviews.length,2);assert.equal(reviews[0].requestId,reviews[1].requestId);assert.ok(!JSON.stringify(reviews).includes("actor_id"));
    await page.getByRole("button",{name:portuguese?"Próxima":"Next",exact:true}).click();await expect(page.getByText(portuguese?/Nenhum registro nesta página/:/No records on this page/)).toBeVisible();
    await page.getByRole("button",{name:portuguese?"Pendências de leitura":"Reading issues",exact:true}).click();await expect(page.getByText(/MAIL_CONTENT_LIMIT/)).toBeVisible();

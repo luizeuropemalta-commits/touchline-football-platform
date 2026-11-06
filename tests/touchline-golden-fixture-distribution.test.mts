@@ -167,7 +167,7 @@ test("fixture persistence keeps points unavailable and delegates lineup lifecycl
   assert.match(source, /scoring_version: v4PointResult\.scoringVersion/);
   assert.match(source, /scoring_coverage_status: v4PointResult\.coverageStatus/);
   assert.match(source, /isTouchLineSettledFixtureStatus\(fixture\.status\)/);
-  assert.match(source, /statistics_payload: \{ \.\.\.statistics, \.\.\.eventStatistics \}/);
+  assert.match(source, /statistics_payload: \{ \.\.\.statistics, \.\.\.eventStatistics, \.\.\.supplementaryStatistics \}/);
   assert.match(source, /events === null \? \{\} : touchLinePlayerFixtureEventStatistics\(providerPlayerId, events\)/);
   assert.doesNotMatch(source, /\.from\("football_player_fixture_statistics"\)/);
   assert.doesNotMatch(source, /touchLinePlayerFixturePoints\(/);

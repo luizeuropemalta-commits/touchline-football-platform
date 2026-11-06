@@ -6,7 +6,7 @@ import test from "node:test";
 import {execFileSync} from "node:child_process";
 type Row=Record<string,unknown>;
 const deps:Row={};
-for(const f of ["fixture-settlement","player-season-statistics-sync","player-fixture-scoring","player-score-engine-v3","player-score-engine-v4","player-ranking-coverage","player-season-membership-grouping","resilient-batch-upsert","official-team-sheet-readiness"]) Object.assign(deps,await import(`../lib/football-data/${f}.ts`));
+for(const f of ["fixture-settlement","player-season-statistics-sync","player-fixture-scoring","player-fixture-supplementary-statistics","player-score-engine-v3","player-score-engine-v4","player-ranking-coverage","player-season-membership-grouping","resilient-batch-upsert","official-team-sheet-readiness"]) Object.assign(deps,await import(`../lib/football-data/${f}.ts`));
 const rawSource=process.env.TOUCHLINE_PAGINATION_BASELINE==="1" ? execFileSync("git",["show","HEAD:lib/football-data/player-season-statistics-store.ts"],{encoding:"utf8"}) : readFileSync(new URL("../lib/football-data/player-season-statistics-store.ts",import.meta.url),"utf8");
 const source=stripTypeScriptTypes(rawSource).replace(/^import[\s\S]*?;\s*$/gm,"").replace("export async function syncTouchLinePlayerSeasonStatistics","async function syncTouchLinePlayerSeasonStatistics");
 const player={id:"player-target",provider:"sportmonks",provider_player_id:"1",position:"Midfielder"};
@@ -251,4 +251,29 @@ for(const table of ["football_player_season_statistics","touchline_player_fixtur
  assert.equal(x.result.v4FixtureRowsWritten,0);assert.equal(x.result.v3FixtureRowsWritten,0);assert.equal(x.result.fixtureRowsWritten,0);
  assert.ok(!x.writes.some(w=>w.table==="football_player_fixture_statistics"));
  if(table==="football_player_season_statistics")assert.ok(!x.writes.some(w=>w.table==="touchline_player_fixture_score_settlements"));
+});
+
+test('auxiliary CS uses opponent score at home and away without changing V4 rating',async()=>{
+ for(const away of [false,true]) {
+  const data=tables(1);Object.assign(data.football_fixtures[0],away?{home_club_id:'opponent',away_club_id:'club-a',home_score:0,away_score:2}:{home_score:2,away_score:0});
+  const x=await execute(data);const row=x.writes.find(w=>w.table==='touchline_player_fixture_score_settlements')!.rows[0];
+  assert.equal((row.statistics_payload as Row)['clean-sheets'],1);
+  assert.equal(row.touchline_points,7);
+  assert.equal((x.aggregate!.position_statistics_payload as Row)['clean-sheets'],1);
+ }
+});
+test('live CS remains unknown even while rating is available',async()=>{
+ const data=tables(1);data.football_fixtures[0].status='live';
+ const x=await execute(data);const row=x.writes.find(w=>w.table==='touchline_player_fixture_score_settlements')!.rows[0];
+ assert.equal((row.statistics_payload as Row)['clean-sheets'],undefined);
+});
+test('clean sheet aggregate includes appearance without rating and excludes unused bench',async()=>{
+ const data=tables(2);
+ const first=(data.football_fantasy_fixture_feeds[0].lineups_payload as Row[])[0];
+ first.statistics=[{code:'minutes-played',value:90}];
+ const second=(data.football_fantasy_fixture_feeds[1].lineups_payload as Row[])[0];
+ Object.assign(second,{isStarter:false,isSubstitute:true,statistics:[{code:'minutes-played',value:0}]});
+ const x=await execute(data);
+ assert.equal((x.aggregate!.position_statistics_payload as Row)['clean-sheets'],1);
+ assert.equal((x.aggregate!.summary_payload as Row).totalRating,null);
 });

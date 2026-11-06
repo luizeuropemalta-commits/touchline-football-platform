@@ -23,6 +23,9 @@ async function traceState(trace: Locator) {
     const base = node.querySelector('[data-touchline-card-neon-trace-base="true"]')!;
     return {
       filter: getComputedStyle(node).filter, opacity: getComputedStyle(node).opacity,
+      interactionActive: node.closest('.touchline-card-surface')?.matches(':hover, :focus-within, [data-neon-active="true"]') ?? false,
+      baseWidth: Number(getComputedStyle(base).strokeWidth.replace('px', '')),
+      coreWidth: Number(getComputedStyle(core).strokeWidth.replace('px', '')),
       groupOpacity: getComputedStyle(runner).opacity, coreOpacity: getComputedStyle(core).opacity,
       dash: getComputedStyle(runner).strokeDasharray, duration: getComputedStyle(runner).animationDuration,
       color: getComputedStyle(node).color, coreStroke: getComputedStyle(core).stroke,
@@ -178,10 +181,16 @@ test(`card halo (${engineName}): measured artwork contour, persistent glow and c
               assert.equal(state.corePath, state.basePath); assert.equal(state.coreStroke, state.color);
               assert.equal(state.duration, "2s"); assert.match(state.dash, /^16(?:px)?[, ]+84(?:px)?$/);
               assert.equal(state.halos.length, 3);
+              assert.equal(state.baseWidth, .55, "fine stationary contour remains readable at every scale");
+              assert.equal(state.coreWidth, 1.1, "travelling LED retains its fine non-scaling width");
               if (touch) assert.equal(state.filter, "none"); else assert.match(state.filter, /drop-shadow/);
               for (const halo of state.halos) {
                 assert.equal(halo.path, state.basePath); assert.equal(halo.stroke, state.color); assert.equal(halo.filter, "none");
-                assert.equal(halo.display !== "none", touch); assert.ok(Number(halo.opacity) > 0 && Number(halo.opacity) < .25);
+                assert.equal(halo.display !== "none", touch || (halo.role === "base" && state.interactionActive));
+                assert.ok(Number(halo.opacity) > 0 && Number(halo.opacity) < .25);
+                if (halo.role === "base" && state.interactionActive) {
+                  assert.equal(halo.width, 3); assert.equal(Number(halo.opacity), .2);
+                }
                 if (halo.role?.startsWith("run-")) assert.equal(halo.dash, state.dash, "runner halo inherits the original dash pattern");
               }
               await freezeTrace(trace);

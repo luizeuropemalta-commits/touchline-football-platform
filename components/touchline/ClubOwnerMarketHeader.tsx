@@ -8,7 +8,7 @@ import { useState } from "react";
 import { useConfirmedClubCollection } from "./fantasy/ClubCollectionContext";
 import { CLUB_ACQUISITION_BUDGETS } from "@/lib/touchlineFantasy/club-acquisition";
 import { getClubCollectionBudgetCopy } from "@/lib/touchlineFantasy/market-budget-i18n";
-import { CalendarDays, Camera, ChevronRight, Trophy } from "lucide-react";
+import { CalendarDays, Camera, ChevronRight } from "lucide-react";
 import { getTouchlineClubOwnerMarketCopy } from "@/lib/touchlineArena/club-owner-market-i18n";
 import { getClubOwnerPlanShowcaseCopy, type ClubOwnerPlanPreview } from "@/lib/touchlineArena/club-owner-plan-showcase";
 import { resolveTouchlineCatalogueLocale } from "@/lib/touchlineArena/catalogue-locale";
@@ -87,8 +87,8 @@ export default function ClubOwnerMarketHeader({ owner, locale, accountId, avatar
       </svg> : null}
       <div className={styles.title}><h1>ClubOwner</h1>
         <Link href={`/rankings?lang=${encodeURIComponent(resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled))}`} className={`${controls.link} ${styles.rankingLink}`} data-clubowner-ranking-link="true">
-          <Trophy size={42} aria-hidden="true" />
-          <span className={styles.rankingLabel}>{metricsCopy.ranking}<strong aria-label={rank === null ? metricsCopy.unavailable : undefined}>{rank ?? "—"}</strong></span>
+          <Image src="/touchlineArena/trophies/touchline-england-league-trophy-lion-cup-candidate-v4-text.png" alt="" width={160} height={240} unoptimized className={styles.rankingTrophy} />
+          <span className={styles.rankingLabel}><span>Rank</span><strong aria-label={rank === null ? metricsCopy.unavailable : undefined}>{rank ?? "—"}</strong></span>
         </Link>
       </div>
       <div className={styles.identity}>

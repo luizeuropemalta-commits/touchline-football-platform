@@ -1,4 +1,5 @@
 "use client";
+import { touchlinePositionGoldenAward } from "@/lib/touchlineArena/position-golden-awards";
 
 /* eslint-disable @next/next/no-img-element */
 
@@ -977,7 +978,11 @@ export function TouchlineEliteExactCard({
   // cannot cut the award at their boundary.
   // Zoom and profile stages already reserve this space and override the
   // margin locally without changing card or award calibration.
-  const hasHeadAward = hasGoldenBall || hasGoldenBoot;
+  const positionGoldenAward = !isEditable && editorialCard && allowsInheritedCardLeadership(awardPath)
+    ? touchlinePositionGoldenAward(activeRanking, player.canonicalPlayerId) : null;
+  const hasHeadAward = hasGoldenBall || hasGoldenBoot || Boolean(positionGoldenAward);
+  const headAwardCount = Number(hasGoldenBall) + Number(hasGoldenBoot) + Number(Boolean(positionGoldenAward));
+  const awardOffset = (index: number) => `translateX(${(-50 + (index - (headAwardCount - 1) / 2) * 112)}%)`;
   // The selected artwork is only used by a published card. An asset cannot
   // turn an unpublished football player into a game card.
   const assignedVisualTemplateUrl = cleanCardTemplateUrl(player.cardTemplateUrl);
@@ -1413,6 +1418,8 @@ export function TouchlineEliteExactCard({
       data-card-neon="permanent-tier-art"
       data-card-golden-ball={hasGoldenBall ? "true" : "false"}
       data-card-golden-boot={hasGoldenBoot ? "true" : "false"}
+      data-card-position-golden-award={positionGoldenAward?.key}
+      data-card-head-award={hasHeadAward ? "true" : "false"}
       data-neon-active={forceNeonActive || isNeonActive ? "true" : "false"}
       onClick={(event) => {
         // Arena owns one exclusive selection. Its cards must not keep a second,
@@ -1474,7 +1481,7 @@ export function TouchlineEliteExactCard({
               : `calc(${playerLeaderGoldenBallStyle.width}px * ${headAwardScale})`,
             height: "auto",
             zIndex: 90,
-            transform: hasGoldenBoot ? "translateX(-108%)" : "translateX(-50%)",
+            transform: awardOffset(0),
             transformOrigin: "bottom center",
             pointerEvents: "none",
             userSelect: "none",
@@ -1493,9 +1500,25 @@ export function TouchlineEliteExactCard({
           height: hasStaticRenderScale
             ? `calc(${-basePlayerLeaderGoldenBallStyle.top - 8}px * ${goldenBallRenderScale} * ${headAwardScale})`
             : `calc(${Math.max(0, -playerLeaderGoldenBallStyle.top - 8 * scale)}px * ${headAwardScale})`,
-          transform: hasGoldenBall ? "translateX(7%)" : "translateX(-50%)",
+          transform: awardOffset(Number(hasGoldenBall)),
           transformOrigin: "bottom center" }}
       /> : null}
+      {positionGoldenAward ? <img src={positionGoldenAward.asset} alt={positionGoldenAward.label}
+        data-touchline-position-golden-award={positionGoldenAward.key} draggable={false}
+        loading={imageLoading} decoding={imageLoading === "lazy" ? "async" : "sync"}
+        style={{ position: "absolute", left: "50%", zIndex: 90, objectFit: "contain",
+          pointerEvents: "none", userSelect: "none",
+          top: hasStaticRenderScale
+            ? `calc(${basePlayerLeaderGoldenBallStyle.top}px * ${goldenBallRenderScale} * ${headAwardScale})`
+            : `calc(${playerLeaderGoldenBallStyle.top}px * ${headAwardScale})`,
+          width: hasStaticRenderScale
+            ? `calc(${basePlayerLeaderGoldenBallStyle.width}px * ${goldenBallRenderScale} * ${headAwardScale})`
+            : `calc(${playerLeaderGoldenBallStyle.width}px * ${headAwardScale})`,
+          height: hasStaticRenderScale
+            ? `calc(${-basePlayerLeaderGoldenBallStyle.top - 8}px * ${goldenBallRenderScale} * ${headAwardScale})`
+            : `calc(${Math.max(0, -playerLeaderGoldenBallStyle.top - 8 * scale)}px * ${headAwardScale})`,
+          transform: awardOffset(Number(hasGoldenBall) + Number(hasGoldenBoot)),
+          transformOrigin: "bottom center" }} /> : null}
       <TouchlineCardPerimeterTrace tier={marketTier?.key ?? "neutral"} frameUrl={failedFrameUrl === versionedCardTemplateUrl ? null : versionedCardTemplateUrl} />
       {neutralIdentity ? (
         <div

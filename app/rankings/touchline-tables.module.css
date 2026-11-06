@@ -383,7 +383,7 @@
   padding-top: 44px;
   box-sizing: content-box;
 }
-.podiumCard :global([data-card-golden-ball="true"]) {
+.podiumCard :global(:is([data-card-golden-ball="true"], [data-card-head-award="true"])) {
   margin-top: 0 !important;
 }
 .podiumIdentity { display: grid; justify-items: center; min-width: 0; gap: 3px; margin-top: -2px; text-align: center; }
@@ -607,9 +607,11 @@
   .ownerAvatar { width: 46px; height: 46px; font-size: 12px; }
   .ownerAvatar > span { align-items: center; justify-content: center; }
   /* A name must not raise the grid track's min-content width and inflate its
-     card. Six percent preserves room for both head awards and compact labels. */
-  .pitchPlayer { grid-template-columns: minmax(0, 1fr); width: min(64px, 6%); }
+     card. Five percent leaves clearance for all four head-award types and names. */
+  .pitchPlayer { grid-template-columns: minmax(0, 1fr); width: min(64px, 5%); }
   .pitchIdentity { font-size: 10px; line-height: 1.2; padding: 1px 4px; width: max-content; max-width: 96px; }
   .pitchIdentity strong { max-width: 100%; }
-  .positionLabel { font-size: 11px; }
+  /* Keep the position beside the card, away from the previous row's name
+     when a head award adds space above the artwork. */
+  .positionLabel { font-size: 11px; top: 50%; transform: translateY(-50%); }
 }

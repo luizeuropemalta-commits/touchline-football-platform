@@ -6,7 +6,7 @@ import { touchlinePlayerLeaderGoldenBallStyle } from "../lib/touchlineArena/play
 test("Top three share one card stage and reserve the Golden Ball without lowering its card", () => {
   const css = readFileSync(new URL("../app/rankings/touchline-tables.module.css", import.meta.url), "utf8");
   assert.match(css, /\.podiumCard\s*\{[^}]*padding-top: 44px;/);
-  assert.match(css, /\.podiumCard :global\(\[data-card-golden-ball="true"\]\)\s*\{\s*margin-top: 0 !important;/);
+  assert.match(css, /\.podiumCard :global\(:is\(\[data-card-golden-ball="true"\], \[data-card-head-award="true"\]\)\)\s*\{\s*margin-top: 0 !important;/);
   assert.match(css, /\.playerPodium li\s*(?:,\s*\.podiumPlaceholder\s*)?\{[^}]*align-content: start;/);
   const tablet = css.slice(css.indexOf("@media (max-width: 860px)"), css.indexOf("@media (max-width: 680px)"));
   assert.match(tablet, /\.rankingHighlights\s*\{[^}]*grid-template-columns: minmax\(0, 1fr\);/);

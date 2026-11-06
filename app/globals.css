@@ -1499,3 +1499,24 @@ path[data-touchline-card-neon-trace-run="true"] {
     filter: none;
   }
 }
+
+/* Keep a fine readable travelling LED even when the official artwork is scaled
+   down. Hover reinforces only the measured silhouette, never a rectangle. */
+[data-touchline-card-neon-trace-base="true"] {
+  vector-effect: non-scaling-stroke;
+  stroke-width: .55px;
+}
+[data-touchline-card-neon-trace-run-core="true"],
+path[data-touchline-card-neon-trace-run="true"] {
+  vector-effect: non-scaling-stroke;
+  stroke-width: 1.1px;
+}
+.touchline-card-surface:is(:hover, :focus-within, [data-neon-active="true"]) [data-touchline-card-neon-trace-halo="base"] {
+  display: inline;
+  vector-effect: non-scaling-stroke;
+  stroke-width: 3px;
+  opacity: .2;
+}
+.touchline-card-surface:is(:hover, :focus-within, [data-neon-active="true"]) [data-touchline-card-neon-trace-base="true"] {
+  opacity: .8;
+}

@@ -61,8 +61,18 @@ test("shared card places awards above the art and keeps eligibility independent"
   assert.match(card,/hasGoldenBoot \? <TouchlineGoldenBootHead/);
   assert.doesNotMatch(card,/TouchlineGoldenBootFoot/);
   assert.match(card,/const hasHeadAward = hasGoldenBall \|\| hasGoldenBoot/);
-  assert.match(card,/translateX\(-108%\)/);
-  assert.match(card,/translateX\(7%\)/);
+  assert.match(card,/const headAwardCount = Number\(hasGoldenBall\) \+ Number\(hasGoldenBoot\) \+ Number\(Boolean\(positionGoldenAward\)\)/);
+  assert.match(card,/transform: awardOffset\(0\)/);
+  assert.match(card,/transform: awardOffset\(Number\(hasGoldenBall\)\)/);
+  assert.match(card,/transform: awardOffset\(Number\(hasGoldenBall\) \+ Number\(hasGoldenBoot\)\)/);
+  const offsetExpression = card.match(/const awardOffset = \(index: number\) => (`[^`]+`);/)?.[1];
+  assert.ok(offsetExpression);
+  for (const headAwardCount of [1, 2, 3]) {
+    const offset = new Function("index", "headAwardCount", `return ${offsetExpression}`);
+    const offsets = Array.from({ length: headAwardCount }, (_, index) => Number(offset(index, headAwardCount).match(/-?[0-9.]+/)[0]));
+    assert.equal(offsets.reduce((sum, value) => sum + value, 0) / headAwardCount, -50);
+    for (let index = 1; index < offsets.length; index++) assert.equal(offsets[index] - offsets[index - 1], 112);
+  }
   assert.match(card,/data-card-golden-ball=\{hasGoldenBall \? "true" : "false"\}/);
 });
 

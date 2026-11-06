@@ -1,3 +1,4 @@
+import { touchLinePlayerFixtureSupplementaryStatistics } from "../lib/football-data/player-fixture-supplementary-statistics.ts";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { stripTypeScriptTypes } from "node:module";
@@ -58,7 +59,7 @@ async function execute(input: { feeds?: Row[]; fixtures?: Row[]; players?: Row[]
     return query;
   } };
   const sync = runInNewContext(`${code}\nsyncTouchLinePlayerSeasonStatistics;`, {
-    isTouchLineSettledFixtureStatus, buildTouchLinePlayerSeasonAggregate, touchLinePlayerFixtureEventStatistics,
+    touchLinePlayerFixtureSupplementaryStatistics, isTouchLineSettledFixtureStatus, buildTouchLinePlayerSeasonAggregate, touchLinePlayerFixtureEventStatistics,
     touchLinePlayerFixtureScoreV4, classifyTouchLinePlayerRankingCoverage, groupTouchLinePlayerSeasonMemberships,
     upsertTouchLineRowsResiliently,
     inspectTouchlineOfficialTeamSheet,

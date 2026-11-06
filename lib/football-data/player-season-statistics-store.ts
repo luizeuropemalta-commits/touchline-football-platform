@@ -1,3 +1,4 @@
+import { touchLinePlayerFixtureSupplementaryStatistics } from "./player-fixture-supplementary-statistics";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { recoverMissingLineupIdentities } from "./player-identity-recovery";
 
@@ -628,6 +629,14 @@ export async function syncTouchLinePlayerSeasonStatistics(admin: SupabaseClient,
       const isParticipant = (resolvedAppearanceStatus === "started" || resolvedAppearanceStatus === "substitute")
         && typeof minutesPlayed === "number" && minutesPlayed > 0;
       const v4PointResult = touchLinePlayerFixtureScoreV4(isParticipant ? rating : null);
+      const supplementaryStatistics = touchLinePlayerFixtureSupplementaryStatistics({
+        position: membership.football_players?.provider_position ?? membership.football_players?.position,
+        appearanceStatus: resolvedAppearanceStatus, minutesPlayed, statistics,
+        teamGoalsConceded: settlementStatus === "final" && lineupClubId
+          ? lineupClubId === fixture.home_club_id ? fixture.away_score
+            : lineupClubId === fixture.away_club_id ? fixture.home_score : null
+          : null,
+      });
       // `member` is the mapped raw Sportmonks lineup row. Therefore this flag
       // can only represent an authoritative omission in a final provider
       // payload; a missing/mis-mapped member never reaches this branch.
@@ -653,6 +662,7 @@ export async function syncTouchLinePlayerSeasonStatistics(admin: SupabaseClient,
         rating,
         eventStatistics,
         v4PointResult,
+        supplementaryStatistics,
         isParticipant,
         providerRatingAbsentFromFinalLineup,
         settlementStatus,
@@ -669,12 +679,13 @@ export async function syncTouchLinePlayerSeasonStatistics(admin: SupabaseClient,
         clubId: membership.club_id,
         clubName: membership.football_clubs?.name ?? null,
       },
-      eligibleFixtures: fixtureSettlements.map(({ fixture, feed, lineups, v4PointResult, isParticipant, providerRatingAbsentFromFinalLineup, rankingCoverageStatus }) => {
+      eligibleFixtures: fixtureSettlements.map(({ fixture, feed, lineups, v4PointResult, supplementaryStatistics, isParticipant, providerRatingAbsentFromFinalLineup, rankingCoverageStatus }) => {
         return {
           fixtureId: fixture.id,
           lineups,
           events: feed ? fantasyEvents(feed.events_payload) : null,
           latestSyncAt: feed?.last_synced_at ?? null,
+          scoringStatistics: supplementaryStatistics,
           touchlinePoints: v4PointResult.points,
           scoringIncluded: isParticipant && !providerRatingAbsentFromFinalLineup,
           scoringComplete: v4PointResult.coverageStatus === "complete",
@@ -715,6 +726,7 @@ export async function syncTouchLinePlayerSeasonStatistics(admin: SupabaseClient,
         rating,
         eventStatistics,
         v4PointResult,
+        supplementaryStatistics,
         settlementStatus,
         rankingCoverageStatus,
       } = settlement;
@@ -733,7 +745,7 @@ export async function syncTouchLinePlayerSeasonStatistics(admin: SupabaseClient,
           rating: touchLinePlayerFixtureScoreV4(rating).rating,
           touchline_points: v4PointResult.points,
           touchline_points_breakdown: v4PointResult.contributions,
-          statistics_payload: { ...statistics, ...eventStatistics },
+          statistics_payload: { ...statistics, ...eventStatistics, ...supplementaryStatistics },
           scoring_coverage_status: v4PointResult.coverageStatus,
           ranking_coverage_status: rankingCoverageStatus,
           missing_scoring_facts: v4PointResult.missingFacts,
