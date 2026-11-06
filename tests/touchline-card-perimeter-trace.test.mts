@@ -20,38 +20,51 @@ runInNewContext(compiled, { exports: moduleBox.exports, module: moduleBox, requi
 } });
 const Trace = moduleBox.exports.TouchlineCardPerimeterTrace;
 
+const expectedRails: Record<string, number[]> = {
+  "ruby-red": [21,412,95,711], "sapphire-blue": [18,412,79,726],
+  "amethyst-purple": [14,417,78,730], "radiant-gold": [15,414,89,715],
+  "emerald-green": [25,411,78,725], "clear-diamond": [19,412,76,748],
+  "diamond-gold": [29,400,80,733],
+};
+function originalTrace(tier: string, variant: "player" | "coach") {
+  const [left,right,coachLeft,coachRight] = expectedRails[tier];
+  return variant === "player"
+    ? `M123 18H307L${right} 98V593L307 680H123L${left} 593V98Z`
+    : `M232 28H578L${coachRight} 153V926L578 1063H232L${coachLeft} 926V153Z`;
+}
+
 function render(props: React.ComponentProps<typeof Trace>) { return renderToStaticMarkup(React.createElement(Trace, props)); }
-function assertMeasuredPath(html: string, expected: string, variant: "player" | "coach") {
+function assertOriginalTrace(html: string, expected: string, variant: "player" | "coach") {
   assert.ok(html, "approved art has a permanent neon");
   assert.match(html, /aria-hidden="true"/); assert.match(html, /focusable="false"/);
   assert.match(html, new RegExp(`data-touchline-card-neon-trace-variant="${variant}"`));
   const paths = [...html.matchAll(/<path\b[^>]*\bd="([^"]+)"/g)].map(match => match[1]);
   assert.equal(paths.length, 5, "base, core and all three vector halos are preserved");
-  for (const path of paths) assert.equal(path, expected, "draw the actual asset contour, not an unrelated polygon used after an approval check");
+  for (const path of paths) assert.equal(path, expected, "preserve the original travelling trace requested by the owner");
   assert.equal((html.match(/pathLength="100"/g) ?? []).length, 5);
   assert.equal((html.match(/data-touchline-card-neon-trace-run="true"/g) ?? []).length, 1);
   assert.match(html, variant === "coach" ? /viewBox="0 0 810 1080" preserveAspectRatio="xMidYMid meet"/ : /viewBox="0 0 430 691" preserveAspectRatio="none"/);
 }
 
-test("all147 measured official artwork contours are actually rendered by the shared neon", () => {
+test("all147 approved artworks retain the original centred-rail neon", () => {
   const players = Object.entries(CARD_ART_PERIMETER_PATHS.player);
   assert.equal(players.length, 140);
-  for (const [key, measured] of players) {
+  for (const [key] of players) {
     const tier = key.split("/").at(-1)!;
     const frameUrl = key.replace("/templates/clubs/", "/templates/zoom/clubs/") + ".webp";
-    assertMeasuredPath(render({ tier, frameUrl }), measured, "player");
+    assertOriginalTrace(render({ tier, frameUrl }), originalTrace(tier, "player"), "player");
   }
   const coaches = Object.entries(CARD_ART_PERIMETER_PATHS.coach);
   assert.equal(coaches.length, 7);
-  for (const [tier, measured] of coaches) assertMeasuredPath(render({ tier, variant: "coach" }), measured, "coach");
+  for (const [tier] of coaches) assertOriginalTrace(render({ tier, variant: "coach" }), originalTrace(tier, "coach"), "coach");
 });
 
-test("compact, zoom and encoded asset URLs resolve the same actual contour; unknown assets stay empty", () => {
+test("compact, zoom and encoded asset URLs resolve the same original trace; unknown assets stay empty", () => {
   const key = "/touchlineArena/cards/templates/clubs/Newcastle United/market-tiers/sapphire-blue";
-  const expected = CARD_ART_PERIMETER_PATHS.player[key];
+  const expected = "M123 18H307L412 98V593L307 680H123L18 593V98Z";
   for (const size of ["", "zoom/", "compact/", "live-compact/"]) {
     const frameUrl = key.replace("/templates/clubs/", `/templates/${size}clubs/`).replace("Newcastle United", "Newcastle%20United") + ".webp?v=synthetic#same-art";
-    assertMeasuredPath(render({ tier: "sapphire-blue", frameUrl }), expected, "player");
+    assertOriginalTrace(render({ tier: "sapphire-blue", frameUrl }), expected, "player");
   }
   for (const tier of [null, undefined, "neutral", "constructor", "toString", "unknown"]) {
     assert.equal(render({ tier, variant: "coach" }), "");

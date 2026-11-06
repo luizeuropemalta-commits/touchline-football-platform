@@ -52,6 +52,7 @@ import { clubOwnerStandingsNote, type ClubOwnerStanding } from "@/lib/touchlineA
 import { getClubOwnerProfileMetricsCopy } from "@/lib/touchlineArena/club-owner-profile-metrics";
 import { useTouchlineCardLeadershipAuthority } from "@/components/touchline/cards/TouchlineCardLeadershipProvider";
 import type { TouchlineActiveRankingState } from "@/lib/touchlineArena/card-ranking-live";
+import { touchlinePositionGoldenAward, TOUCHLINE_POSITION_GOLDEN_AWARDS } from "@/lib/touchlineArena/position-golden-awards";
 import { projectTouchlinePublishedRankingAwards } from "@/lib/touchlineArena/published-ranking-awards";
 import { projectTouchlinePublishedRankingSummary, type TouchlineRankingSummaryIndex } from "@/lib/touchlineArena/published-ranking-summary";
 import {
@@ -385,10 +386,8 @@ function TopCoachAward({ coachRanking: seed, copy, locale, draftLocalesEnabled =
                   />
                 </div>
                 <div className={styles.awardIdentity}>
-                  <span>{presentationCopy.seasonLeader}</span>
                   <strong>{topCoachRow.coachName}</strong>
                   <small>{topCoachRow.clubName}</small>
-                  <b>{topCoachRow.touchlinePoints} {touchlineRankingPointsLabel(topCoachRow.touchlinePoints, locale, copy.pointsShort, draftLocalesEnabled)}</b>
                 </div>
               </div>
             ) : <RankingPending copy={copy} />}
@@ -463,7 +462,7 @@ function PodiumHeading({ locale, draftLocalesEnabled = false, headingRef }: { lo
 
 function AwardEnvelope() {
   return <div className={styles.awardPodium} aria-hidden="true">
-    {["best-player", "golden-boot", "best-coach"].map((award) => <div className={styles.awardPlaceholder} key={award} />)}
+    {["best-player", "golden-boot", "golden-gloves", "golden-shield", "best-coach"].map((award) => <div className={styles.awardPlaceholder} key={award} />)}
   </div>;
 }
 
@@ -551,6 +550,25 @@ export function TouchlineRankingPodium({ catalogue, seedRanking, coachRanking, c
                   <div className={styles.awardIdentity}><strong>{goldenBootCard.shortName}</strong><small>{`${goldenBootCard.clubName} · ${localizedPositionLabel(goldenBootCard.position, locale, draftLocalesEnabled)}`}</small></div>
                 </div>) : <p className={styles.awardPending}>{presentationCopy.goldenBootPending}</p>}
               </li>
+              {(["goalkeeper", "centre-back"] as const).map((position) => {
+                const award = TOUCHLINE_POSITION_GOLDEN_AWARDS[position];
+                const card = awards.rating.phase === "ready" ? awards.rating.cards.find(candidate =>
+                  touchlinePositionGoldenAward(ranking, candidate.canonicalPlayerId ?? candidate.id)?.key === award.key) : null;
+                return <li className={styles.awardEntry} data-ranking-award={award.key} key={award.key}>
+                  <header className={styles.awardHeader}>
+                    <img src={award.asset} alt="" width={34} height={34} />
+                    <div><span>{award.label}</span><h3>{position === "goalkeeper" ? presentationCopy.bestGoalkeeper : presentationCopy.bestDefender}</h3></div>
+                  </header>
+                  {card ? <div className={styles.awardBody}>
+                    <div className={styles.awardPlayerCard}>
+                      <TablePlayerCardZoom draftLocalesEnabled={draftLocalesEnabled} card={card} locale={locale} canEditCardEngine={canEditCardEngine}
+                        presentationMode="trigger-only" open={isSelected(card, award.key)}
+                        onOpenChange={(open, trigger) => openSelected(card, award.key, open, trigger)} />
+                    </div>
+                    <div className={styles.awardIdentity}><strong>{card.shortName}</strong><small>{card.clubName} · {localizedPositionLabel(card.position, locale, draftLocalesEnabled)}</small></div>
+                  </div> : <div className={styles.awardPending}><RankingPending copy={copy} /></div>}
+                </li>;
+              })}
               <li className={styles.awardCoachSlot}><TopCoachAward draftLocalesEnabled={draftLocalesEnabled} coachRanking={resolvedCoachRanking} copy={copy} locale={locale} /></li>
             </ol>
             {/* Identity, not which current award slot happens to render it, owns this dialog. */}

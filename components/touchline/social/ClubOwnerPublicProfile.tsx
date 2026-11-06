@@ -1,7 +1,8 @@
 "use client";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Check } from "lucide-react";
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { touchLineAuthEntryHref } from "@/lib/touchlineArena/auth-i18n";
 import { parsePublicOwnerProfile, peopleCopy, publicOwnerHref, type PeopleLocale, type PublicOwnerProfile } from "@/lib/touchlineArena/clubowner-public-contract";
 import { PublicOwnersRequestError, usePublicOwnersRequest } from "./usePublicOwnersRequest";
@@ -10,7 +11,8 @@ import styles from "./ClubOwnerPublic.module.css";
 import ClubOwnerPublicAvatar from "./ClubOwnerPublicAvatar";
 import ClubOwnerPublicMarket from "./ClubOwnerPublicMarket";
 
-export default function ClubOwnerPublicProfile({ locale, publicId, enabled, initial }: { locale: PeopleLocale; publicId: string; enabled: boolean; initial: { status: number; profile: PublicOwnerProfile | null } }) {
+export default function ClubOwnerPublicProfile({ locale, publicId, enabled, initial, squad }: { squad?: ReactNode; locale: PeopleLocale; publicId: string; enabled: boolean; initial: { status: number; profile: PublicOwnerProfile | null } }) {
+  const router = useRouter();
   const copy = peopleCopy(locale), io = usePublicOwnersRequest();
   const [profile, setProfile] = useState(initial.profile), [status, setStatus] = useState(initial.status);
   const [busy, setBusy] = useState(false), lock = useRef(false);
@@ -23,7 +25,7 @@ export default function ClubOwnerPublicProfile({ locale, publicId, enabled, init
       const next = parsePublicOwnerProfile((await io.request(write ? `${endpoint}/follow` : `${endpoint}?include=standing`, write ? { active: !profile!.following } : undefined)).profile);
       if (!next || next.publicId.toLowerCase() !== publicId.toLowerCase()
         || (write && (next.following !== !profile!.following || next.viewer !== "member"))) throw new Error("PROFILE_RECEIPT_UNCONFIRMED");
-      if (io.alive()) { setProfile(next); setStatus(200); setUncertain(false); }
+      if (io.alive()) { setProfile(next); setStatus(200); setUncertain(false); if (!write) router.refresh(); }
     } catch (error) {
       if (io.alive()) {
         if (write) setUncertain(true);
@@ -49,6 +51,7 @@ export default function ClubOwnerPublicProfile({ locale, publicId, enabled, init
     </div>
     </header>
     {uncertain ? <p role="alert">{copy.writeError}</p> : null}
+    {profile.viewer !== "guest" ? squad : null}
     {profile.viewer === "member" ? <ClubOwnerPublicMarket key={profile.publicId} publicId={profile.publicId} locale={locale} /> : null}
   </section>;
 }

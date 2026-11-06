@@ -88,7 +88,7 @@ export default function ClubOwnerMarketHeader({ owner, locale, accountId, avatar
       <div className={styles.title}><h1>ClubOwner</h1>
         <Link href={`/rankings?lang=${encodeURIComponent(resolveTouchlineCatalogueLocale(locale, draftLocalesEnabled))}`} className={`${controls.link} ${styles.rankingLink}`} data-clubowner-ranking-link="true">
           <Image src="/touchlineArena/trophies/touchline-england-league-trophy-lion-cup-candidate-v4-text.png" alt="" width={160} height={240} unoptimized className={styles.rankingTrophy} />
-          <span className={styles.rankingLabel}><span>Rank</span><strong aria-label={rank === null ? metricsCopy.unavailable : undefined}>{rank ?? "—"}</strong></span>
+          <span className={styles.rankingLabel}><span className={styles.rankingLeague}><Image src="/touchlineArena/shared/country-flags-4x3/gb-eng.svg" alt="England" width={24} height={18} unoptimized /><span>TouchLine<br />England League</span></span><span className={styles.rankingCaption}>Rank</span><strong aria-label={rank === null ? metricsCopy.unavailable : undefined}>{rank ?? "—"}</strong></span>
         </Link>
       </div>
       <div className={styles.identity}>

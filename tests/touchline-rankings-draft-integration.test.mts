@@ -1,3 +1,4 @@
+import * as positionGoldenAwards from "../lib/touchlineArena/position-golden-awards.ts";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
@@ -46,6 +47,7 @@ function compile(source: string, modules: Record<string, unknown> = {}) {
       if (name === "@/lib/touchlineArena/published-ranking-awards") return { projectTouchlinePublishedRankingAwards };
       if (name === "@/lib/touchlineArena/touchline-ranking-zoom-selection") return rankingZoom;
       if (name === "@/lib/touchlineArena/published-ranking-summary") return rankingSummary;
+      if (name === "@/lib/touchlineArena/position-golden-awards") return positionGoldenAwards;
       if (name === "react") return React;
       if (name === "react/jsx-runtime") return jsx;
       if (name === "lucide-react") return icons;

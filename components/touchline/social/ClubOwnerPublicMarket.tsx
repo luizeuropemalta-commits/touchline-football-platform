@@ -9,7 +9,7 @@ import controls from '../TouchlineGlobalNavigation.module.css';
 import styles from './ClubOwnerPublicMarket.module.css';
 
 const words = {
-  'pt-BR': { title: 'Mercado de trocas', intro: 'Cards anunciados por este ClubOwner. O restante do elenco é privado.', loading: 'Consultando mercado…',
+  'pt-BR': { title: 'Mercado de trocas', intro: 'Cards anunciados por este ClubOwner.', loading: 'Consultando mercado…',
     empty: 'Nenhum card anunciado para troca.', error: 'Não foi possível confirmar o mercado. Atualize os dados.', refresh: 'Atualizar mercado',
     own: 'Seu card anunciado', choose: 'Escolha seu card', incoming: 'Card recebido', outgoing: 'Card oferecido', fee: 'Taxa de negociação', difference: 'Diferença em TC', bonus: 'Bônus para quem recebe a proposta',
     propose: 'Preparar proposta', send: 'Enviar proposta', sending: 'Enviando…', sent: 'Proposta confirmada no Exchange. A troca depende do aceite.',
@@ -19,7 +19,7 @@ const words = {
     closed: 'Esta proposta não está disponível nas condições atuais da temporada ou da rodada.', storage: 'Não foi possível guardar a confirmação deste envio. Abra seu Exchange para continuar.',
     estimate: 'Valores da proposta. A confirmação final aparece no Exchange; nenhum card é transferido antes do aceite.', login: 'Entre em uma conta ClubOwner para consultar o mercado.',
     unavailable: 'O mercado de trocas está temporariamente indisponível.', limited: 'Aguarde um minuto antes de consultar novamente.', cancelled: 'Voltar aos cards' },
-  'en-GB': { title: 'Transfer market', intro: 'Cards listed by this ClubOwner. The rest of the squad is private.', loading: 'Checking the market…',
+  'en-GB': { title: 'Transfer market', intro: 'Cards listed by this ClubOwner.', loading: 'Checking the market…',
     empty: 'No cards listed for exchange.', error: 'The market could not be confirmed. Refresh the data.', refresh: 'Refresh market',
     own: 'Your listed card', choose: 'Choose your card', incoming: 'Card received', outgoing: 'Card offered', fee: 'Negotiation fee', difference: 'Difference in TC', bonus: 'Bonus for the proposal recipient',
     propose: 'Prepare proposal', send: 'Send proposal', sending: 'Sending…', sent: 'Proposal confirmed in Exchange. The trade requires acceptance.',

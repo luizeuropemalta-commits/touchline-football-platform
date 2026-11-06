@@ -126,7 +126,7 @@ test("podium client projects one persistent dialog host while its selected ident
   assert.equal(expressionText(jsxAttribute(dialog, "open"), source), "selection !== null");
   assert.equal(expressionText(jsxAttribute(dialog, "details"), source), "selectedPresentation?.details");
   assert.match(expressionText(jsxAttribute(dialog, "detailsContent"), source) ?? "", /selection\s*&&\s*!selectedPresentation/);
-  assert.deepEqual(triggerModes, ["trigger-only", "trigger-only"], "Ball and Boot controls remain triggers, not competing dialog hosts");
+  assert.deepEqual(triggerModes, ["trigger-only", "trigger-only", "trigger-only"], "Ball, Boot and position award controls remain triggers, not competing dialog hosts");
 });
 
 test("podium source receives explicit seed/catalogue, preserves owner actions and has no name-preview fallback", () => {

@@ -639,7 +639,7 @@ test("cover trophy owns ranking while portrait facts contain followers only acro
     assert.ok(facts.includes(labels.followers));
     assert.equal((facts.match(/<dt>/g) ?? []).length, 1);
     const rankingLink = html.match(/<a[^>]*data-clubowner-ranking-link="true"[^>]*>([\s\S]*?)<\/a>/)?.[1] ?? "";
-    assert.ok(rankingLink.includes("<span>Rank</span>"));
+    assert.ok(rankingLink.includes('<span class="rankingCaption">Rank</span>'));
     assert.match(rankingLink, /<img(?=[^>]*alt="")[^>]*src="\/touchlineArena\/trophies\/touchline-england-league-trophy-lion-cup-candidate-v4-text.png"/);
     assert.ok(html.includes(`href="/rankings?lang=${encodeURIComponent(code)}"`));
     assert.doesNotMatch(html, /class="followers"/);

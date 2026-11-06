@@ -1,0 +1,15 @@
+.squad { padding: clamp(16px, 3vw, 40px); border-top: 1px solid var(--plan-color, #849b74); }
+.squad header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.squad h2 { font-size: clamp(24px, 3vw, 36px); }
+.squad h3 { margin: 24px 0 16px; font-size: 16px; color: #bcf080; }
+.coach { display: grid; justify-items: center; gap: 12px; padding-bottom: 24px; }
+.pitch { position: relative; aspect-ratio: 1.54; width: 100%; }
+.pitchSlot { position: absolute; width: 9%; transform: translate(-50%, -50%); z-index: 2; }
+.vacancy { display: grid; place-items: center; aspect-ratio: .65; border: 1px dashed #64705e; border-radius: 14px; font-size: clamp(10px, 1vw, 13px); text-align: center; color: #b9c6ba; padding: 4px; }
+.rail { display: flex; gap: 24px; overflow-x: auto; padding: 20px 8px; }
+.reserve { position: relative; flex: 0 0 105px; }
+@media (max-width: 900px) { .squad { padding: 16px; } .rail { gap: 18px; } .reserve { flex-basis: 82px; } }
+
+.coachCard { width: 120px; max-width: 100%; }
+
+.availability { position: absolute; z-index: 8; top: 22px; left: -18px; display: grid; place-items: center; width: 48px; height: 48px; }

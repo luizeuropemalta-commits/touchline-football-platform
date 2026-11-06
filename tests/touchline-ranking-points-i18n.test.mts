@@ -57,7 +57,6 @@ function descendants(scope: ts.Node, predicate: (node: ts.Node) => boolean): ts.
 }
 
 for (const [consumer, row] of [
-  ["TopCoachAward", "topCoachRow"],
   ["TouchlineCoachRankingTable", "coach"],
   ["TouchlineRankingEnding", "owner"],
 ] as const) {
@@ -69,8 +68,7 @@ for (const [consumer, row] of [
     assert.equal(calls.length, 1, "one real points-label binding per consumer");
     assert.deepEqual(calls[0].arguments.map(argument => argument.getText(ast)), [`${row}.touchlinePoints`, "locale", "copy.pointsShort", "draftLocalesEnabled"]);
     const fragments = descendants(scope, node => ts.isJsxElement(node)
-      && (row === "topCoachRow" ? node.openingElement.tagName.getText(ast) === "b"
-        : node.openingElement.tagName.getText(ast) === "div" && node.openingElement.attributes.getText(ast).includes("styles.pointsValue"))
+      && (node.openingElement.tagName.getText(ast) === "div" && node.openingElement.attributes.getText(ast).includes("styles.pointsValue"))
       && node.getText(ast).includes("touchlineRankingPointsLabel"));
     assert.equal(fragments.length, 1);
     const label = await loadLabel();
@@ -84,7 +82,7 @@ for (const [consumer, row] of [
         require: (name: string) => { assert.equal(name, "react/jsx-runtime"); return jsx; },
       });
       const html = renderToStaticMarkup(exports.view as React.ReactElement);
-      assert.ok(html.includes(row === "topCoachRow" ? `<b>${points} ` : `<strong>${points}</strong>`), html);
+      assert.ok(html.includes(`<strong>${points}</strong>`), html);
       assert.ok(html.includes(enabled ? expected : "pts"), html);
       assert.ok(html.indexOf(String(points)) < html.indexOf(enabled ? expected : "pts"), "numeric value stays before its unit");
     }

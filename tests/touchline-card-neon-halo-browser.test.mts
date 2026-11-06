@@ -1,3 +1,4 @@
+import { CARD_ART_PERIMETER_PATHS, resolvePlayerCardArtPerimeterPath } from "../lib/touchlineArena/card-art-perimeter-paths.ts";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -208,27 +209,26 @@ test(`card halo (${engineName}): measured artwork contour, persistent glow and c
             const measuredStates = await Promise.all((await traces.all()).map(trace => traceState(trace)));
             const correspondence = await scope.locator('.touchline-card-surface').evaluateAll(measureCardArtwork);
             const savedPaths = await traces.evaluateAll(nodes => nodes.map(node => [...node.querySelectorAll('path')].map(part => part.getAttribute('d'))));
-            // Prior source160f15fe: DOM-only diagnostic. Keep all5nodes, effects,
-            // timing and art; no component/product data or CSS is replaced.
-            const centres = {
-              player: { 'ruby-red':[21,412], 'sapphire-blue':[18,412], 'amethyst-purple':[14,417], 'radiant-gold':[15,414], 'emerald-green':[25,411], 'clear-diamond':[19,412], 'diamond-gold':[29,400] },
-              coach: { 'ruby-red':[95,711], 'sapphire-blue':[79,726], 'amethyst-purple':[78,730], 'radiant-gold':[89,715], 'emerald-green':[78,725], 'clear-diamond':[76,748], 'diamond-gold':[80,733] },
-            };
+            // Compare restored original rails with the previous measured artwork contour.
+            // Keep all five strokes, effects, art and animation phase unchanged.
+            const referencePaths = await Promise.all((await traces.all()).map(async trace => {
+              const variant = await trace.getAttribute('data-touchline-card-neon-trace-variant');
+              if (variant === 'coach') return CARD_ART_PERIMETER_PATHS.coach[tier as keyof typeof CARD_ART_PERIMETER_PATHS.coach];
+              const src = await trace.evaluate(node => node.closest('.touchline-card-surface')?.querySelector('img[data-touchline-card-frame="true"]')?.getAttribute('src'));
+              return resolvePlayerCardArtPerimeterPath(src);
+            }));
+            assert.ok(referencePaths.every(Boolean), 'Every comparison uses verified original artwork');
             try {
-              await traces.evaluateAll((nodes, input) => nodes.forEach(node => {
-                const coach = node.getAttribute('data-touchline-card-neon-trace-variant') === 'coach';
-                const table = coach ? input.centres.coach : input.centres.player;
-                const [left,right] = table[input.tier as keyof typeof table];
-                const polygon = coach ? `M232 28H578L${right} 153V926L578 1063H232L${left} 926V153Z`
-                  : `M123 18H307L${right} 98V593L307 680H123L${left} 593V98Z`;
+              await traces.evaluateAll((nodes, references) => nodes.forEach((node, index) => {
+                const reference = references[index]!;
                 const paths = [...node.querySelectorAll('path')];
-                if (paths.length !== 5 || paths.some(part => part.getAttribute('d') === polygon)) throw new Error('Expected five new contour strokes');
-                paths.forEach(part => part.setAttribute('d', polygon));
-              }), { tier, centres });
+                if (paths.length !== 5 || paths.some(part => part.getAttribute('d') === reference)) throw new Error('Expected five restored original rail strokes');
+                paths.forEach(part => part.setAttribute('d', reference));
+              }), referencePaths);
               for (const trace of await traces.all()) await freezeTrace(trace);
               const polygonStates = await Promise.all((await traces.all()).map(trace => traceState(trace)));
               assert.deepEqual(polygonStates.map(withoutPaths), measuredStates.map(withoutPaths), 'Only path geometry changes in the comparison');
-              await page.screenshot({ path: path.join(output, `${prefix}-previous-polygon.png`) });
+              await page.screenshot({ path: path.join(output, `${prefix}-previous-measured-contour.png`) });
             } finally {
               await traces.evaluateAll((nodes, paths) => nodes.forEach((node,index) => [...node.querySelectorAll('path')]
                 .forEach((part,pathIndex) => part.setAttribute('d', paths[index][pathIndex]!))), savedPaths);
@@ -240,7 +240,7 @@ test(`card halo (${engineName}): measured artwork contour, persistent glow and c
             }));
             assert.deepEqual(referenceFrames, frames, "reference and vector rendering use identical original image bytes and geometry");
             reports.push({ touch, viewport, tier, label, frames, correspondence,
-              reference: "Previous polygon d only; same5paths, effects, art and650ms phase" });
+              reference: "Previous measured contour d only; same5paths, effects, art and650ms phase" });
             writeReport();
           };
           await savePair(page.locator("main"), "compact");

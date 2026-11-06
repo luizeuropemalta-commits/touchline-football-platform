@@ -1,4 +1,6 @@
 import "server-only";
+// Shared public card readers; never expose account snapshots or lifecycle writes.
+export { loadCatalogue, loadCoaches };
 import { createClubCollectionStore } from "./club-collection-server";
 import { projectGameweekScoreStatus, type GameweekScoreStatus } from "./gameweek-score-status";
 import { readClubOwnerStandingViewsForSeason } from "@/lib/touchlineArena/club-owner-standings-server";

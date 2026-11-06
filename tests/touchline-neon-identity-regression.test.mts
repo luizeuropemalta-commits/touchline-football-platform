@@ -60,7 +60,8 @@ test("every TouchLine card keeps the permanent tier neon contract", () => {
   assert.match(trace, /focusable="false"/);
   assert.match(trace, /pathLength="100"/);
   assert.match(trace, /fill="none"/);
-  assert.match(trace, /const path = approvedArtwork/);
+  assert.match(trace, /if \(!approvedArtwork \|\| !isPerimeterTier\(tier\)\) return null/);
+  assert.match(trace, /const path = touchlineCardPerimeterPath\(tier, variant\)/);
   assert.match(traceCss, /pointer-events: none/);
   assert.match(traceCss, /overflow: visible/);
   assert.match(traceCss, /@keyframes touchline-card-perimeter-trace/);

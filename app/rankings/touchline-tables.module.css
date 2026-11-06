@@ -234,11 +234,11 @@
 .coachRankingPanel { display: grid; grid-template-rows: auto auto; min-height: 0; align-self: start; }
 
 /* Awards replace the former oversized coach rail. Every prize now sits in one
-   balanced, compact row under the XI: Best Player, Golden Boot and Best Coach. */
+   balanced, compact row under the XI with all five season awards. */
 .awardPodium {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: clamp(10px, 1.4vw, 18px);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: clamp(6px, .7vw, 10px);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -271,7 +271,7 @@
 .goldenBallIcon { object-fit: contain; }
 .awardHeader > div { display: grid; gap: 2px; min-width: 0; }
 .awardHeader span { color: var(--gold); font-size: 8px; font-weight: 950; letter-spacing: .13em; }
-.awardHeader h3 { margin: 0; color: #f5f8f5; font-size: clamp(14px, 1.5vw, 18px); line-height: 1.08; letter-spacing: -.025em; }
+.awardHeader h3 { overflow-wrap: anywhere; margin: 0; color: #f5f8f5; font-size: clamp(14px, 1.5vw, 18px); line-height: 1.08; letter-spacing: -.025em; }
 .awardBody { display: grid; justify-items: center; align-content: start; min-height: 0; padding: 13px 12px 14px; }
 .awardPlayerCard,
 .awardCoachCardLink { display: block; width: min(126px, 68%); color: inherit; }
@@ -297,7 +297,11 @@
 .awardIdentity small { max-width: 100%; overflow: hidden; color: rgba(245, 248, 245, .5); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
 .awardIdentity b { margin-top: 2px; color: var(--gold); font-size: 15px; }
 .awardPending { align-self: center; margin: 0; padding: 22px 18px; color: rgba(245, 248, 245, .63); font-size: 11px; line-height: 1.5; text-align: center; }
-.awardCoachSlot { min-width: 0; list-style: none; }
+.awardCoachSlot { min-width: 0; list-style: none; display: grid; }
+.awardCoachSlot > .topCoachPanel { align-self: stretch; height: 100%; }
+.awardHeader { padding-inline: 10px; gap: 6px; }
+.awardHeader > img, .awardHeader > svg { flex-shrink: 0; }
+.awardIdentity small { white-space: normal; overflow-wrap: anywhere; }
 .topCoachPanel {
   --touchline-perimeter-radius: 26px;
   align-self: start;
@@ -344,12 +348,12 @@
 
 .rankingHighlights {
   display: grid;
-  grid-template-columns: minmax(0, 1.45fr) minmax(330px, .75fr);
+  grid-template-columns: minmax(0, 2.4fr) minmax(300px, 1fr);
   gap: clamp(16px, 2vw, 28px);
   padding: 4px 0 30px;
 }
 
-.podiumPanel { padding: clamp(20px, 2.5vw, 32px); }
+.podiumPanel { padding: clamp(20px, 2.5vw, 32px); align-self: start; }
 .playerPodium {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -468,7 +472,7 @@
   .summary { max-width: 800px; }
   .rankStage { grid-template-columns: minmax(0, 1fr); }
   .topCoachCardLink { width: min(210px, 80%); }
-  .rankingHighlights { grid-template-columns: minmax(0, 1.25fr) minmax(300px, .75fr); }
+  .rankingHighlights { grid-template-columns: minmax(0, 1fr); }
 }
 
 @media (max-width: 860px) {
@@ -615,3 +619,6 @@
      when a head award adds space above the artwork. */
   .positionLabel { font-size: 11px; top: 50%; transform: translateY(-50%); }
 }
+
+/* Equal award headers keep all five cards on the same baseline. */
+.awardEntry > .awardHeader, .topCoachPanel > .awardHeader { min-height: 76px; box-sizing: border-box; }

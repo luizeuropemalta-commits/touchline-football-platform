@@ -30,9 +30,7 @@ test('fluid comparison cards keep original frames and reserve equal award cleara
   assert.match(css, /\.swapPreview \{[^}]*--touchline-card-reserve-head-award:1/);
 });
 
-test('both reserve banks share a gap exactly ten percent above the prior spacing', () => {
+test('reserve bank provides the approved wider responsive spacing and equal award clearance', () => {
   const css = readFileSync(new URL('../components/touchline/fantasy/ClubOwnerCollectionSlots.module.css', import.meta.url), 'utf8');
-  const gap = css.match(/\.technicalRow \.slots \{ gap:([\d.]+)px;/);
-  assert.ok(gap);
-  assert.equal(Number(gap[1]), 4 * 1.1);
+  assert.match(css, /\.technicalRow \.slots \{[^}]*--touchline-card-reserve-head-award:1;[^}]*gap:clamp\(12px,1\.2vw,20px\)/);
 });

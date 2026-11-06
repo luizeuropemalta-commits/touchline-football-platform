@@ -32,11 +32,13 @@ function loader(options: { stubNestedSearch?: boolean; react?: object; reactScop
       setTimeout: options.timers?.setTimeout ?? setTimeout, clearTimeout: options.timers?.clearTimeout ?? clearTimeout,
       fetch: options.fetch ?? (() => assert.fail("Unexpected network")),
       require(name: string): unknown {
+        if (name === "@/lib/touchlineArena/clubowner-public-squad-server") return { readPublicOwnerSquad: async () => null };
+        if (name === "@/components/touchline/cards/TouchlineCardLeadershipLayout" || name === "@/components/touchline/social/ClubOwnerPublicSquad") return { __esModule: true, default: () => null };
         if (name === "react") return options.react && (!options.reactScope || options.reactScope.includes(path)) ? options.react : React;
         if (name === "react-dom") return ReactDOM;
         if (name === "react/jsx-runtime") return jsx;
         if (name === "lucide-react") return icons;
-        if (name === "next/navigation") return { redirect: (url: string) => { throw new Error("REDIRECT:" + url); } };
+        if (name === "next/navigation") return { useRouter: () => ({ refresh: () => undefined }), redirect: (url: string) => { throw new Error("REDIRECT:" + url); } };
         if (name === "@/lib/touchlineArena/catalogue-locale") return catalogueLocale;
         if (name === "@/lib/touchlineArena/site-locales-release") return { isTouchLineSiteLocalesEnabled: () => false };
         if (name === "@/lib/touchlineArena/account-locale-context-server") return { loadAccountLocaleContext: async () => ({ mode: "guest" }) };

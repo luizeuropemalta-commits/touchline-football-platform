@@ -1,3 +1,6 @@
+import { readPublicOwnerSquad } from "@/lib/touchlineArena/clubowner-public-squad-server";
+import ClubOwnerPublicSquad from "@/components/touchline/social/ClubOwnerPublicSquad";
+import TouchlineCardLeadershipLayout from "@/components/touchline/cards/TouchlineCardLeadershipLayout";
 import type { Metadata } from "next";
 import ClubOwnerPublicProfile from "@/components/touchline/social/ClubOwnerPublicProfile";
 import TouchlineBrandHeader from "@/components/touchline/TouchlineBrandHeader";
@@ -21,11 +24,12 @@ export default async function PublicClubOwnerPage({ params, searchParams }: { pa
   const response = await handlePublicOwners(new Request("https://touchline.local/api/touchline/clubowners?include=standing"), "profile", deps, route.publicId);
   const data = await response.json();
   const profile = response.ok ? parsePublicOwnerProfile(data.profile) : null;
+  const squad = profile && profile.viewer !== "guest" ? await readPublicOwnerSquad(route.publicId).catch(() => null) : null;
   return <main className={styles.shell} lang={locale}>
     <TouchlineBrandHeader href={`/clubowner?lang=${encodeURIComponent(locale)}`} locale={locale} accountLocaleContext={accountLocaleContext} draftLocalesEnabled={draftLocalesEnabled}
       navigation={<TouchlineGlobalNavigation locale={locale} draftLocalesEnabled={draftLocalesEnabled} currentRoute="market" surface={accountLocaleContext.mode === "account" ? "authenticated" : "public"} showAudioControl={false} />} />
     <div className={styles.content}>
-      <ClubOwnerPublicProfile key={route.publicId} locale={peopleLocale(locale)} publicId={route.publicId} enabled={deps.enabled} initial={{ status: response.status, profile }} />
+      <ClubOwnerPublicProfile key={route.publicId} locale={peopleLocale(locale)} publicId={route.publicId} enabled={deps.enabled} initial={{ status: response.status, profile }} squad={squad ? <TouchlineCardLeadershipLayout><ClubOwnerPublicSquad squad={squad} locale={locale} /></TouchlineCardLeadershipLayout> : profile && profile.viewer !== "guest" ? <p role="status">{locale === "pt-BR" ? "Não foi possível carregar o elenco. Atualize os dados para tentar novamente." : "The squad could not be loaded. Refresh the data to try again."}</p> : undefined} />
     </div>
   </main>;
 }

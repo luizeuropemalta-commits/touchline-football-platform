@@ -70,3 +70,18 @@ test("read failures or mismatched gameweek return unavailable, not fabricated ab
   for(const fail of ["touchline_fantasy_gameweeks","football_fixtures","football_fantasy_fixture_feeds"]) assert.equal(await read({fail}),null);
   assert.equal(await read({wrongWeek:true}),null);
 });
+
+test("provider recovery removes injury and suspension badges on the next read without erasing match statistics", async () => {
+  for (const record of [item, {...item, category: "suspension", reason: "red card"}, {...item, category: "suspension", reason: "five yellow cards"}]) {
+    const events = [{type: "Yellowcard"}, {type: "Redcard"}];
+    const options = {feeds: [{...feed, sidelined_payload: [record], events_payload: events}]};
+    const db = database(options);
+    const load = () => readGameweekPlayerAvailability(db.admin,"season","week",[playerId],[card]);
+    assert.equal((await load())?.length, 1);
+    options.feeds[0].sidelined_payload = [{...record, completed: true}];
+    assert.deepEqual(await load(), []);
+    options.feeds[0].sidelined_payload = [];
+    assert.deepEqual(await load(), []);
+    assert.deepEqual(options.feeds[0].events_payload, events);
+  }
+});
